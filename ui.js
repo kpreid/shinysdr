@@ -10,6 +10,8 @@
   function SpectrumPlot(buffer, canvas, view) {
     var ctx = canvas.getContext("2d");
     ctx.canvas.width = parseInt(getComputedStyle(canvas).width);
+    //ctx.strokeStyle = "currentColor";
+    ctx.strokeStyle = getComputedStyle(canvas).color;
     this.draw = function () {
       var w = ctx.canvas.width;
       var h = ctx.canvas.height;
@@ -49,9 +51,10 @@
       for (var x = 0; x < w; x++) {
         var base = x * 4;
         var intensity = buffer[Math.round(x * scale)] * colorScale;
+        var redBound = 255 - intensity / 4;
         data[base] = intensity;
-        data[base + 1] = intensity * 2;
-        data[base + 2] = intensity * 4;
+        data[base + 1] = Math.min(intensity * 2, redBound);
+        data[base + 2] = Math.min(intensity * 4, redBound);
         data[base + 3] = 255;
       }
       ctx.putImageData(ibuf, 0, 0);
@@ -67,7 +70,11 @@
   function loop() {
     window.webkitRequestAnimationFrame(function() {
       for (var i = fft.length - 1; i >= 0; i--) {
-        fft[i] = 2 + Math.log(1 + Math.random() * 4) + 3 * Math.exp(-Math.pow(i - 512, 2) / 100);
+        var v = 2 + Math.log(1 + Math.random() * 4);
+        v += 3 * Math.exp(-Math.pow(i - 512, 2) / 100);
+        v += 1.5 * Math.exp(-Math.pow(i - 1024, 2) / 100);
+        v += 6 * Math.exp(-Math.pow(i - 1536, 2) / 100);
+        fft[i] = v;
       }
       widgets.forEach(sending("draw"));
       loop();
