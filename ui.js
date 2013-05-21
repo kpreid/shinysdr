@@ -123,30 +123,41 @@
         places[i].text.data = valueStr[last - i] || '\u00A0';
       }
       var numMarks = Math.floor((valueStr.replace("-", "").length - 1) / 3);
-      console.log(numMarks);
       for (var i = 0; i < marks.length; i++) {
         marks[i].style.visibility = i < numMarks ? "visible" : "hidden";
       }
     };
   }
   
-  var tuner = 1234;
+  var state = {
+    tuner: 1234,
+    demod: 0
+  };
   
   var fft = new Float32Array(2048);
   
   var widgets = [];
   widgets.push(new SpectrumPlot(fft, document.getElementById("spectrum"), view));
   widgets.push(new WaterfallPlot(fft, document.getElementById("waterfall"), view));
-  
-  var knob = new Knob({
-    get: function() { return tuner; },
-    set: function(v) { tuner = v; }
-  });
-  document.getElementsByClassName("sidebar")[0].appendChild(knob.element);
-  widgets.push(knob);
+
+  var widgetTypes = Object.create(null);
+  widgetTypes.Knob = Knob;
+  function makeBinding(name) {
+    return {
+      get: function() { return state[name]; },
+      set: function(v) { state[name] = v; }
+    };
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("[data-widget]"), function (el) {
+    var widget = new widgetTypes[el.getAttribute("data-widget")](
+      makeBinding(el.getAttribute("data-target")));
+    widgets.push(widget);
+    el.parentNode.replaceChild(widget.element, el);
+  })
   
   // Mock Fourier-transformed-signal source
   setInterval(function() {
+    var tuner = state.tuner;
     for (var i = fft.length - 1; i >= 0; i--) {
       var first = (tuner + i) % fft.length;
       var v = 2 + Math.log(1 + Math.random() * 4);
