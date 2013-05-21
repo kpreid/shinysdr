@@ -71,14 +71,14 @@
         var mark = container.appendChild(document.createElement("span"));
         mark.className = "knob-mark";
         mark.textContent = ",";
+        mark.style.visibility = "hidden";
         marks.unshift(mark);
         // TODO: make marks responsive to scroll events (doesn't matter which neighbor, or split in the middle, as long as they do something).
       }
       var digit = container.appendChild(document.createElement("span"));
       digit.className = "knob-digit";
       digit.tabIndex = -1;
-      var digitText = digit.appendChild(document.createTextNode("0"));
-      digitText.data = "0";
+      var digitText = digit.appendChild(document.createTextNode("\u00A0"));
       places[i] = {element: digit, text: digitText};
       var scale = Math.pow(10, i);
       digit.addEventListener("mousewheel", function(event) { // Not in FF
