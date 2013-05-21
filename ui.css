@@ -42,3 +42,18 @@ body {
   background-color: #777;
   color: #00FFAA;
 }
+
+/* widgets: knob */
+.knob {
+  background: black;
+  color: white;
+  white-space: nowrap;
+  font-family: monospace;
+  font-size: 2.8em;
+}
+.knob-digit {
+}
+.knob-mark {
+  font-family: 'Arial', sans-serif;
+  font-size: 0.8em;
+}

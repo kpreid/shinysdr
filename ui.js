@@ -61,13 +61,89 @@
     };
   }
   
-  var tuner = 0;
+  function Knob(target) {
+    var container = this.element = document.createElement("span");
+    container.className = "knob";
+    var places = [];
+    var marks = [];
+    for (var i = 8; i >= 0; i--) (function(i) {
+      if (i % 3 == 2) {
+        var mark = container.appendChild(document.createElement("span"));
+        mark.className = "knob-mark";
+        mark.textContent = ",";
+        marks.unshift(mark);
+        // TODO: make marks responsive to scroll events (doesn't matter which neighbor, or split in the middle, as long as they do something).
+      }
+      var digit = container.appendChild(document.createElement("span"));
+      digit.className = "knob-digit";
+      digit.tabIndex = -1;
+      var digitText = digit.appendChild(document.createTextNode("0"));
+      digitText.data = "0";
+      places[i] = {element: digit, text: digitText};
+      var scale = Math.pow(10, i);
+      digit.addEventListener("mousewheel", function(event) { // Not in FF
+        // TODO: deal with high-res/accelerated scrolling
+        var adjust = event.wheelDelta > 0 ? 1 : -1;
+        target.set(adjust * scale + target.get());
+        event.preventDefault();
+        event.stopPropagation();
+      }, true);
+      digit.addEventListener("keypress", function(event) {
+        // TODO: arrow keys/backspace
+        var input = parseInt(String.fromCharCode(event.charCode), 10);
+        if (isNaN(input)) return;
+        
+        var value = target.get();
+        var negative = value < 0;
+        if (negative) { value = -value; }
+        var currentDigitValue = Math.floor(value / scale) % 10;
+        value += (input - currentDigitValue) * scale;
+        if (negative) { value = -value; }
+        target.set(value);
+        
+        if (i > 0) {
+          places[i - 1].element.focus();
+        } else {
+          digit.blur();
+        }
+        
+        event.preventDefault();
+        event.stopPropagation();
+      }, true);
+    }(i));
+    var lastShownValue = -1;
+    
+    this.draw = function () {
+      var value = target.get();
+      if (value === lastShownValue) return;
+      lastShownValue = value;
+      var valueStr = "" + value;
+      var last = valueStr.length - 1;
+      for (var i = 0; i < places.length; i++) {
+        places[i].text.data = valueStr[last - i] || '\u00A0';
+      }
+      var numMarks = Math.floor((valueStr.replace("-", "").length - 1) / 3);
+      console.log(numMarks);
+      for (var i = 0; i < marks.length; i++) {
+        marks[i].style.visibility = i < numMarks ? "visible" : "hidden";
+      }
+    };
+  }
+  
+  var tuner = 1234;
   
   var fft = new Float32Array(2048);
   
   var widgets = [];
   widgets.push(new SpectrumPlot(fft, document.getElementById("spectrum"), view));
   widgets.push(new WaterfallPlot(fft, document.getElementById("waterfall"), view));
+  
+  var knob = new Knob({
+    get: function() { return tuner; },
+    set: function(v) { tuner = v; }
+  });
+  document.getElementsByClassName("sidebar")[0].appendChild(knob.element);
+  widgets.push(knob);
   
   // Mock Fourier-transformed-signal source
   setInterval(function() {
