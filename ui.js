@@ -61,24 +61,34 @@
     };
   }
   
+  var tuner = 0;
+  
   var fft = new Float32Array(2048);
   
   var widgets = [];
   widgets.push(new SpectrumPlot(fft, document.getElementById("spectrum"), view));
   widgets.push(new WaterfallPlot(fft, document.getElementById("waterfall"), view));
   
-  function loop() {
+  // Mock Fourier-transformed-signal source
+  setInterval(function() {
+    for (var i = fft.length - 1; i >= 0; i--) {
+      var first = (tuner + i) % fft.length;
+      var v = 2 + Math.log(1 + Math.random() * 4);
+      v += 3 * Math.exp(-Math.pow(first - 512, 2) / 100);
+      v += 1.5 * Math.exp(-Math.pow(first - 1024, 2) / 100);
+      v += 6 * Math.exp(-Math.pow(first - 1536, 2) / 100);
+      fft[i] = v;
+    }
+    doDisplay();
+  }, 1000/20);
+  
+  var displayQueued = false;
+  function doDisplay() {
+    if (displayQueued) { return; }
+    displayQueued = true;
     window.webkitRequestAnimationFrame(function() {
-      for (var i = fft.length - 1; i >= 0; i--) {
-        var v = 2 + Math.log(1 + Math.random() * 4);
-        v += 3 * Math.exp(-Math.pow(i - 512, 2) / 100);
-        v += 1.5 * Math.exp(-Math.pow(i - 1024, 2) / 100);
-        v += 6 * Math.exp(-Math.pow(i - 1536, 2) / 100);
-        fft[i] = v;
-      }
+      displayQueued = false;
       widgets.forEach(sending("draw"));
-      loop();
     });
   }
-  loop();
 }());
