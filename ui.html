@@ -2,11 +2,19 @@
 <html><head>
   <title>SDR UI draft</title>
   <link rel="stylesheet" href="ui.css">
-</head><body>
+</head><body class="controlpanel">
 
 <div class="hscalegroup">
   <canvas id="spectrum" class="hscale"></canvas>
   <canvas id="waterfall" class="hscale"></canvas>
+</div>
+
+<div class="sidebar">
+  <form>
+    <label><input type=radio name=mode value=am>AM</label>
+    <label><input type=radio name=mode value=nfm>Narrow FM</label>
+    <label><input type=radio name=mode value=wfm>Wide FM</label>
+  </form>
 </div>
 
 <script src="ui.js"></script>
