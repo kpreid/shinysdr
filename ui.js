@@ -8,7 +8,9 @@
   }
   
   var view = {
-    fullScale: 10
+    fullScale: 10,
+    // width of spectrum display from center frequency in Hz
+    halfBandwidth: 1.5e6
   };
   
   function SpectrumPlot(buffer, canvas, view) {
@@ -138,24 +140,28 @@
     container.className = 'freqscale';
     container.appendChild(document.createTextNode('0 MHz'));
     var lastShownValue = NaN;
-    var step = 500;
     this.draw = function() {
       var freq = tunerSource.get();
       if (freq === lastShownValue) return;
       lastShownValue = freq;
       
+      var scale = 100 / (view.halfBandwidth * 2);
+      var step = 0.5e6;
+      var lower = freq - view.halfBandwidth;
+      var upper = freq + view.halfBandwidth;
+      
       container.textContent = "";
-      for (var i = freq - mod(freq, step); i <= freq + 2048; i += step) {
+      for (var i = lower - mod(lower, step); i <= upper; i += step) {
         var label = container.appendChild(document.createElement("span"));
         label.className = "freqscale-label";
-        label.textContent = String(i);
-        label.style.left = ((i - freq) / fft.length * 100) + "%";
+        label.textContent = (i / 1e6) + "MHz";
+        label.style.left = ((i - freq) * scale + 50) + "%";
       }
     };
   }
   
   var state = {
-    tuner: 1234,
+    tuner: 1e6,
     demod: 0
   };
   
@@ -188,12 +194,14 @@
   // Mock Fourier-transformed-signal source
   setInterval(function() {
     var tuner = state.tuner;
+    var step = view.halfBandwidth * 2 / fft.length;
+    var zeroPos = tuner - view.halfBandwidth;
     for (var i = fft.length - 1; i >= 0; i--) {
-      var first = (tuner + i) % fft.length;
-      var v = 2 + Math.log(1 + Math.random() * 4);
-      v += 3 * Math.exp(-Math.pow(first - 512, 2) / 100);
-      v += 1.5 * Math.exp(-Math.pow(first - 1024, 2) / 100);
-      v += 6 * Math.exp(-Math.pow(first - 1536, 2) / 100);
+      var first = (zeroPos + i * step);
+      var v = 2 + Math.random() * 1;
+      v += 3 * Math.exp(-Math.pow(first - 1e6, 2) / 100e6);
+      v += 1.5 * Math.exp(-Math.pow(first - 1.5e6, 2) / 100e6);
+      v += 6 * Math.exp(-Math.pow(first - 2e6, 2) / 100e6);
       fft[i] = v;
     }
     doDisplay();
