@@ -7,6 +7,12 @@
     return function (obj) { obj[name](); };
   }
   
+  var freqDB = [
+    {freq: 1e6, label: "Station 1"},
+    {freq: 1.5e6, label: "Station 2"},
+    {freq: 2e6, label: "Station 3"},
+  ];
+  
   var view = {
     fullScale: 10,
     // width of spectrum display from center frequency in Hz
@@ -136,27 +142,46 @@
   }
   
   function FreqScale(tunerSource) {
-    var container = this.element = document.createElement('div');
-    container.className = 'freqscale';
-    container.appendChild(document.createTextNode('0 MHz'));
+    var outer = this.element = document.createElement("div");
+    outer.className = "freqscale";
+    var numbers = outer.appendChild(document.createElement("div"));
+    numbers.className = "freqscale-numbers";
+    var stations = outer.appendChild(document.createElement("div"));
+    stations.className = "freqscale-stations";
     var lastShownValue = NaN;
+    // TODO: reuse label nodes instead of reallocating...if that's cheaper
     this.draw = function() {
-      var freq = tunerSource.get();
-      if (freq === lastShownValue) return;
-      lastShownValue = freq;
+      var centerFreq = tunerSource.get();
+      if (centerFreq === lastShownValue) return;
+      lastShownValue = centerFreq;
       
       var scale = 100 / (view.halfBandwidth * 2);
       var step = 0.5e6;
-      var lower = freq - view.halfBandwidth;
-      var upper = freq + view.halfBandwidth;
+      var lower = centerFreq - view.halfBandwidth;
+      var upper = centerFreq + view.halfBandwidth;
       
-      container.textContent = "";
-      for (var i = lower - mod(lower, step); i <= upper; i += step) {
-        var label = container.appendChild(document.createElement("span"));
-        label.className = "freqscale-label";
-        label.textContent = (i / 1e6) + "MHz";
-        label.style.left = ((i - freq) * scale + 50) + "%";
+      function position(freq) {
+        return ((freq - centerFreq) * scale + 50) + "%";
       }
+      
+      numbers.textContent = "";
+      for (var i = lower - mod(lower, step); i <= upper; i += step) {
+        var label = numbers.appendChild(document.createElement("span"));
+        label.className = "freqscale-number";
+        label.textContent = (i / 1e6) + "MHz";
+        label.style.left = position(i);
+      }
+      
+      stations.textContent = "";
+      freqDB.forEach(function (record) {
+        var freq = record.freq;
+        if (freq >= lower && freq <= upper) {
+          var el = stations.appendChild(document.createElement("span"));
+          el.className = "freqscale-station";
+          el.textContent = record.label;
+          el.style.left = position(freq);
+        }
+      });
     };
   }
   
