@@ -85,7 +85,12 @@ body {
 .freqscale-station {
   position: absolute;
   -webkit-transform-origin: center left;
-  -webkit-transform: rotate(-90deg) translate(.6em, 0);
-  color: white;
+  -webkit-transform: rotate(-90deg) translate(.9em, 0);
   white-space: nowrap;
+
+  border: .1em solid #777;
+  background: #555;
+  border-radius: .3em;
+  color: white;
+  opacity: 0.5;
 }
