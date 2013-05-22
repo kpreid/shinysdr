@@ -57,3 +57,14 @@ body {
   font-family: 'Arial', sans-serif;
   font-size: 0.8em;
 }
+
+/* widgets: frequency scale */
+.freqscale {
+  -webkit-flex-shrink: 0;
+  height: 1em;
+  position: relative;
+  overflow: hidden;
+}
+.freqscale-label {
+  position: absolute;
+}

@@ -1,4 +1,8 @@
 (function () {
+  function mod(value, modulus) {
+    return (value % modulus + modulus) % modulus;
+  }
+
   function sending(name) {
     return function (obj) { obj[name](); };
   }
@@ -129,6 +133,27 @@
     };
   }
   
+  function FreqScale(tunerSource) {
+    var container = this.element = document.createElement('div');
+    container.className = 'freqscale';
+    container.appendChild(document.createTextNode('0 MHz'));
+    var lastShownValue = NaN;
+    var step = 500;
+    this.draw = function() {
+      var freq = tunerSource.get();
+      if (freq === lastShownValue) return;
+      lastShownValue = freq;
+      
+      container.textContent = "";
+      for (var i = freq - mod(freq, step); i <= freq + 2048; i += step) {
+        var label = container.appendChild(document.createElement("span"));
+        label.className = "freqscale-label";
+        label.textContent = String(i);
+        label.style.left = ((i - freq) / fft.length * 100) + "%";
+      }
+    };
+  }
+  
   var state = {
     tuner: 1234,
     demod: 0
@@ -142,6 +167,7 @@
 
   var widgetTypes = Object.create(null);
   widgetTypes.Knob = Knob;
+  widgetTypes.FreqScale = FreqScale;
   function makeBinding(name) {
     return {
       get: function() { return state[name]; },
@@ -149,8 +175,12 @@
     };
   }
   Array.prototype.forEach.call(document.querySelectorAll("[data-widget]"), function (el) {
-    var widget = new widgetTypes[el.getAttribute("data-widget")](
-      makeBinding(el.getAttribute("data-target")));
+    var T = widgetTypes[el.getAttribute("data-widget")];
+    if (!T) {
+      console.error('Bad widget type:', el);
+      return;
+    }
+    var widget = new T(makeBinding(el.getAttribute("data-target")));
     widgets.push(widget);
     el.parentNode.replaceChild(widget.element, el);
   })
