@@ -15,6 +15,27 @@
     {freq: 2e6, label: "Station 3"},
   ];
   
+  // Prepare to load real data using JSONP callback
+  window.sdr_data = function (json) {
+    json.forEach(function (table) {
+      var columns = table[0];
+      table.slice(1).forEach(function (row) {
+        var record = Object.create(null);
+        columns.forEach(function (name, index) {
+          record[name] = row[index];
+        });
+        var freqMHz = parseFloat(record.Frequency);
+        if (isNaN(freqMHz)) {
+          console.log('Bad freq!', record);
+        }
+        freqDB.push({
+          freq: freqMHz * 1e6,
+          label: record.Name
+        })
+      })
+    });
+  }
+  
   var view = {
     fullScale: 10,
     // width of spectrum display from center frequency in Hz
