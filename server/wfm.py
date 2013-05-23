@@ -2,6 +2,7 @@
 
 from gnuradio import audio
 from gnuradio import blks2
+from gnuradio import blocks
 from gnuradio import eng_notation
 from gnuradio import filter
 from gnuradio import gr
@@ -25,6 +26,7 @@ class wfm(gr.top_block):
 		self.variable_0 = variable_0 = (input_rate/demod_rate, demod_rate/audio_rate)
 		self.rec_freq = rec_freq = 97.7e6
 		self.hw_freq = hw_freq = 98e6
+		self.fftsize = fftsize = 2048
 		self.band_filter = band_filter = demod_rate*7.0/16.0
 
 		##################################################
@@ -41,7 +43,17 @@ class wfm(gr.top_block):
 		self.osmosdr_source_c_0_0.set_bb_gain(20, 0)
 		self.osmosdr_source_c_0_0.set_antenna("", 0)
 		self.osmosdr_source_c_0_0.set_bandwidth(0, 0)
-		  
+		
+		self.spectrum_probe = blocks.probe_signal_vf(fftsize)
+		self.spectrum_fft = blks2.logpwrfft_c(
+			sample_rate=input_rate,
+			fft_size=fftsize,
+			ref_scale=2,
+			frame_rate=30,
+			avg_alpha=1.0,
+			average=False,
+		)
+		
 		self.freq_xlating_fir_filter_xxx_0 = filter.freq_xlating_fir_filter_ccc(int(input_rate/demod_rate), (gr.firdes.low_pass(1.0, input_rate, band_filter, 8*100e3, gr.firdes.WIN_HAMMING)), (rec_freq-hw_freq), input_rate)
 		self.blks2_fm_demod_cf_0 = blks2.fm_demod_cf(
 			channel_rate=demod_rate,
@@ -60,6 +72,8 @@ class wfm(gr.top_block):
 		self.connect((self.osmosdr_source_c_0_0, 0), (self.freq_xlating_fir_filter_xxx_0, 0))
 		self.connect((self.freq_xlating_fir_filter_xxx_0, 0), (self.blks2_fm_demod_cf_0, 0))
 		self.connect((self.blks2_fm_demod_cf_0, 0), (self.audio_sink_0, 0))
+		self.connect((self.osmosdr_source_c_0_0, 0), (self.spectrum_fft, 0))
+		self.connect((self.spectrum_fft, 0), (self.spectrum_probe, 0))
 
 
 	def get_input_rate(self):
@@ -113,6 +127,17 @@ class wfm(gr.top_block):
 	def set_band_filter(self, band_filter):
 		self.band_filter = band_filter
 		self.freq_xlating_fir_filter_xxx_0.set_taps((gr.firdes.low_pass(1.0, self.input_rate, self.band_filter, 8*100e3, gr.firdes.WIN_HAMMING)))
+
+	def get_fftsize(self):
+		return self.fftsize
+
+	def set_fftsize(self, fftsize):
+		self.fftsize = fftsize
+		# TODO er, missing some updaters? GRC didn't generate any
+
+	def get_spectrum_fft(self):
+		return self.spectrum_probe.level()
+
 
 if __name__ == '__main__':
 	parser = OptionParser(option_class=eng_option, usage="%prog: [options]")

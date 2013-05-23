@@ -16,12 +16,13 @@
     r.send(data);
     console.log(url, data);
   }
-  function xhrget(url, callback) {
+  function xhrget(url, callback, binary) {
     var r = new XMLHttpRequest();
     r.open('GET', url, true);
+    if (binary) r.responseType = 'arraybuffer';
     r.onreadystatechange = function() {
       if (r.readyState === 4) {
-        callback(r.responseText);
+        callback(binary ? r.response : r.responseText);
       }
     }
     r.send();
@@ -55,7 +56,8 @@
   }
   
   var view = {
-    fullScale: 10,
+    fullScale: 100,
+    referenceLevel: 0,
     // width of spectrum display from center frequency in Hz
     halfBandwidth: 1.5e6
   };
@@ -71,8 +73,8 @@
       var len = buffer.length;
       var scale = ctx.canvas.width / len;
       var yScale = -h / view.fullScale;
-      var yZero = h;
-      
+      var yZero = -view.referenceLevel;
+
       ctx.clearRect(0, 0, w, h);
       
       ctx.lineWidth = 0.5;
@@ -94,7 +96,8 @@
       var h = ctx.canvas.height;
       var len = buffer.length;
       var scale = len / ctx.canvas.width;
-      var colorScale = 255 / view.fullScale;
+      var cScale = 255 / view.fullScale;
+      var cZero = 255 - view.referenceLevel * cScale;
       
       // scroll
       ctx.drawImage(ctx.canvas, 0, 0, w, h-1, 0, 1, w, h-1);
@@ -103,7 +106,7 @@
       var data = ibuf.data;
       for (var x = 0; x < w; x++) {
         var base = x * 4;
-        var intensity = buffer[Math.round(x * scale)] * colorScale;
+        var intensity = buffer[Math.round(x * scale)] * cScale + cZero;
         var redBound = 255 - intensity / 4;
         data[base] = intensity;
         data[base + 1] = Math.min(intensity * 2, redBound);
@@ -269,19 +272,22 @@
   
   // Mock Fourier-transformed-signal source
   setInterval(function() {
-    var tuner = states.hw_freq.get();
-    var step = view.halfBandwidth * 2 / fft.length;
-    var zeroPos = tuner - view.halfBandwidth;
-    for (var i = fft.length - 1; i >= 0; i--) {
-      var first = (zeroPos + i * step);
-      var v = 2 + Math.random() * 1;
-      v += 3 * Math.exp(-Math.pow(first - 1e6, 2) / 100e6);
-      v += 1.5 * Math.exp(-Math.pow(first - 1.5e6, 2) / 100e6);
-      v += 6 * Math.exp(-Math.pow(first - 2e6, 2) / 100e6);
-      fft[i] = v;
-    }
+    //var tuner = states.hw_freq.get();
+    //var step = view.halfBandwidth * 2 / fft.length;
+    //var zeroPos = tuner - view.halfBandwidth;
+    //for (var i = fft.length - 1; i >= 0; i--) {
+    //  var first = (zeroPos + i * step);
+    //  var v = 2 + Math.random() * 1;
+    //  v += 3 * Math.exp(-Math.pow(first - 1e6, 2) / 100e6);
+    //  v += 1.5 * Math.exp(-Math.pow(first - 1.5e6, 2) / 100e6);
+    //  v += 6 * Math.exp(-Math.pow(first - 2e6, 2) / 100e6);
+    //  fft[i] = v;
+    //}
+    xhrget('/spectrum_fft', function(data) {
+      fft.set(new Float32Array(data));
+    }, true);
     doDisplay();
-  }, 1000/20);
+  }, 1000/5);
   
   var displayQueued = false;
   function doDisplay() {
