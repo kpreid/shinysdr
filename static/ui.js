@@ -16,6 +16,16 @@
     r.send(data);
     console.log(url, data);
   }
+  function xhrget(url, callback) {
+    var r = new XMLHttpRequest();
+    r.open('GET', url, true);
+    r.onreadystatechange = function() {
+      if (r.readyState === 4) {
+        callback(r.responseText);
+      }
+    }
+    r.send();
+  }
   
   var freqDB = [
     {freq: 1e6, label: "Station 1"},
@@ -216,9 +226,20 @@
     };
   }
   
-  var state = {
-    tuner: 97.7e6,
-    demod: 0
+  function RemoteState(name, assumed, parser) {
+    var value = assumed;
+    xhrget(name, function(remote) {
+      value = parser(remote);
+    });
+    this.get = function() { return value; },
+    this.set = function(newValue) {
+      value = newValue;
+      xhrput(name, String(newValue));
+    };
+  }
+  var states = {
+    hw_freq: new RemoteState('/hw_freq', 0, parseFloat),
+    rec_freq: new RemoteState('/rec_freq', 0, parseFloat)
   };
   
   var fft = new Float32Array(2048);
@@ -230,32 +251,25 @@
   var widgetTypes = Object.create(null);
   widgetTypes.Knob = Knob;
   widgetTypes.FreqScale = FreqScale;
-  function makeBinding(name) {
-    return {
-      get: function() { return state[name]; },
-      set: function(v) {
-        state[name] = v;
-        // TODO: temporary kludge for testing
-        if (name === 'tuner') {
-          xhrput('/rec_freq', String(v));
-        }
-      }
-    };
-  }
   Array.prototype.forEach.call(document.querySelectorAll("[data-widget]"), function (el) {
     var T = widgetTypes[el.getAttribute("data-widget")];
     if (!T) {
       console.error('Bad widget type:', el);
       return;
     }
-    var widget = new T(makeBinding(el.getAttribute("data-target")));
+    var stateObj = states[el.getAttribute("data-target")];
+    if (!stateObj) {
+      console.error('Bad widget target:', el);
+      return;
+    }
+    var widget = new T(stateObj);
     widgets.push(widget);
     el.parentNode.replaceChild(widget.element, el);
-  })
+  });
   
   // Mock Fourier-transformed-signal source
   setInterval(function() {
-    var tuner = state.tuner;
+    var tuner = states.hw_freq.get();
     var step = view.halfBandwidth * 2 / fft.length;
     var zeroPos = tuner - view.halfBandwidth;
     for (var i = fft.length - 1; i >= 0; i--) {

@@ -30,6 +30,7 @@ block = wfm.wfm()
 print 'Web server...'
 root = static.File('static/')
 root.indexNames = ['index.html']
+root.putChild('hw_freq', NumberResource(block, 'hw_freq'))
 root.putChild('rec_freq', NumberResource(block, 'rec_freq'))
 reactor.listenTCP(8100, server.Site(root))
 
