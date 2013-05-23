@@ -7,12 +7,19 @@ import wfm  # temporary name to be improved
 
 class NumberResource(resource.Resource):
     isLeaf = True
+    defaultContentType = 'text/plain'
     def __init__(self, target, field):
         '''Uses GRC-generated accessors.'''
         self.target = target
         self.field = field
     def render_GET(self, request):
-        getattr(self.target, 'set_' + self.field)(-getattr(self.target, 'get_' + self.field)())
+        print 'GET number'
+        return str(getattr(self.target, 'get_' + self.field)())
+    def render_PUT(self, request):
+        data = request.content.read()
+        print 'PUT number', data
+        getattr(self.target, 'set_' + self.field)(float(data))
+        request.setResponseCode(204)
         return ''
 
 # Create SDR component
@@ -23,7 +30,7 @@ block = wfm.wfm()
 print 'Web server...'
 root = static.File('static/')
 root.indexNames = ['index.html']
-root.putChild('poke', NumberResource(block, 'rec_freq'))
+root.putChild('rec_freq', NumberResource(block, 'rec_freq'))
 reactor.listenTCP(8100, server.Site(root))
 
 # Initialize SDR (slow)

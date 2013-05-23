@@ -9,6 +9,14 @@
     return function (obj) { obj[name](); };
   }
   
+  function xhrput(url, data) {
+    var r = new XMLHttpRequest();
+    r.open('PUT', url, true);
+    r.setRequestHeader('Content-Type', 'text/plain');
+    r.send(data);
+    console.log(url, data);
+  }
+  
   var freqDB = [
     {freq: 1e6, label: "Station 1"},
     {freq: 1.5e6, label: "Station 2"},
@@ -209,7 +217,7 @@
   }
   
   var state = {
-    tuner: 1e6,
+    tuner: 97.7e6,
     demod: 0
   };
   
@@ -225,7 +233,13 @@
   function makeBinding(name) {
     return {
       get: function() { return state[name]; },
-      set: function(v) { state[name] = v; }
+      set: function(v) {
+        state[name] = v;
+        // TODO: temporary kludge for testing
+        if (name === 'tuner') {
+          xhrput('/rec_freq', String(v));
+        }
+      }
     };
   }
   Array.prototype.forEach.call(document.querySelectorAll("[data-widget]"), function (el) {
