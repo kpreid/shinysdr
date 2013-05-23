@@ -19,19 +19,19 @@ class wfm(gr.top_block):
 		##################################################
 		# Variables
 		##################################################
-		self.samp_rate = samp_rate = 3200000
-		self.band_rate = band_rate = 128e3
+		self.input_rate = input_rate = 3200000
+		self.demod_rate = demod_rate = 128e3
 		self.audio_rate = audio_rate = 32000
-		self.variable_0 = variable_0 = (samp_rate/band_rate, band_rate/audio_rate)
+		self.variable_0 = variable_0 = (input_rate/demod_rate, demod_rate/audio_rate)
 		self.rec_freq = rec_freq = 97.7e6
 		self.hw_freq = hw_freq = 98e6
-		self.band_filter = band_filter = band_rate*7.0/16.0
+		self.band_filter = band_filter = demod_rate*7.0/16.0
 
 		##################################################
 		# Blocks
 		##################################################
 		self.osmosdr_source_c_0_0 = osmosdr.source_c( args="nchan=" + str(1) + " " + "rtl=0" )
-		self.osmosdr_source_c_0_0.set_sample_rate(samp_rate)
+		self.osmosdr_source_c_0_0.set_sample_rate(input_rate)
 		self.osmosdr_source_c_0_0.set_center_freq(hw_freq, 0)
 		self.osmosdr_source_c_0_0.set_freq_corr(0, 0)
 		self.osmosdr_source_c_0_0.set_iq_balance_mode(0, 0)
@@ -42,10 +42,10 @@ class wfm(gr.top_block):
 		self.osmosdr_source_c_0_0.set_antenna("", 0)
 		self.osmosdr_source_c_0_0.set_bandwidth(0, 0)
 		  
-		self.freq_xlating_fir_filter_xxx_0 = filter.freq_xlating_fir_filter_ccc(int(samp_rate/band_rate), (gr.firdes.low_pass(1.0, samp_rate, band_filter, 8*100e3, gr.firdes.WIN_HAMMING)), (rec_freq-hw_freq), samp_rate)
+		self.freq_xlating_fir_filter_xxx_0 = filter.freq_xlating_fir_filter_ccc(int(input_rate/demod_rate), (gr.firdes.low_pass(1.0, input_rate, band_filter, 8*100e3, gr.firdes.WIN_HAMMING)), (rec_freq-hw_freq), input_rate)
 		self.blks2_fm_demod_cf_0 = blks2.fm_demod_cf(
-			channel_rate=band_rate,
-			audio_decim=int(band_rate/audio_rate),
+			channel_rate=demod_rate,
+			audio_decim=int(demod_rate/audio_rate),
 			deviation=50000,
 			audio_pass=15000,
 			audio_stop=16000,
@@ -62,29 +62,29 @@ class wfm(gr.top_block):
 		self.connect((self.blks2_fm_demod_cf_0, 0), (self.audio_sink_0, 0))
 
 
-	def get_samp_rate(self):
-		return self.samp_rate
+	def get_input_rate(self):
+		return self.input_rate
 
-	def set_samp_rate(self, samp_rate):
-		self.samp_rate = samp_rate
-		self.osmosdr_source_c_0_0.set_sample_rate(self.samp_rate)
-		self.set_variable_0((self.samp_rate/self.band_rate, self.band_rate/self.audio_rate))
-		self.freq_xlating_fir_filter_xxx_0.set_taps((gr.firdes.low_pass(1.0, self.samp_rate, self.band_filter, 8*100e3, gr.firdes.WIN_HAMMING)))
+	def set_input_rate(self, input_rate):
+		self.input_rate = input_rate
+		self.osmosdr_source_c_0_0.set_sample_rate(self.input_rate)
+		self.set_variable_0((self.input_rate/self.demod_rate, self.demod_rate/self.audio_rate))
+		self.freq_xlating_fir_filter_xxx_0.set_taps((gr.firdes.low_pass(1.0, self.input_rate, self.band_filter, 8*100e3, gr.firdes.WIN_HAMMING)))
 
-	def get_band_rate(self):
-		return self.band_rate
+	def get_demod_rate(self):
+		return self.demod_rate
 
-	def set_band_rate(self, band_rate):
-		self.band_rate = band_rate
-		self.set_variable_0((self.samp_rate/self.band_rate, self.band_rate/self.audio_rate))
-		self.set_band_filter(self.band_rate*7.0/16.0)
+	def set_demod_rate(self, demod_rate):
+		self.demod_rate = demod_rate
+		self.set_variable_0((self.input_rate/self.demod_rate, self.demod_rate/self.audio_rate))
+		self.set_band_filter(self.demod_rate*7.0/16.0)
 
 	def get_audio_rate(self):
 		return self.audio_rate
 
 	def set_audio_rate(self, audio_rate):
 		self.audio_rate = audio_rate
-		self.set_variable_0((self.samp_rate/self.band_rate, self.band_rate/self.audio_rate))
+		self.set_variable_0((self.input_rate/self.demod_rate, self.demod_rate/self.audio_rate))
 
 	def get_variable_0(self):
 		return self.variable_0
@@ -112,7 +112,7 @@ class wfm(gr.top_block):
 
 	def set_band_filter(self, band_filter):
 		self.band_filter = band_filter
-		self.freq_xlating_fir_filter_xxx_0.set_taps((gr.firdes.low_pass(1.0, self.samp_rate, self.band_filter, 8*100e3, gr.firdes.WIN_HAMMING)))
+		self.freq_xlating_fir_filter_xxx_0.set_taps((gr.firdes.low_pass(1.0, self.input_rate, self.band_filter, 8*100e3, gr.firdes.WIN_HAMMING)))
 
 if __name__ == '__main__':
 	parser = OptionParser(option_class=eng_option, usage="%prog: [options]")
