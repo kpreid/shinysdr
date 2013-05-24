@@ -311,12 +311,16 @@
   }, 1000/30);
   
   var displayQueued = false;
+  function drawWidgetCb(widget) {
+    widget.draw();
+  }
+  function frameCb() {
+    displayQueued = false;
+    widgets.forEach(drawWidgetCb);
+  }
   function doDisplay() {
     if (displayQueued) { return; }
     displayQueued = true;
-    window.webkitRequestAnimationFrame(function() {
-      displayQueued = false;
-      widgets.forEach(sending("draw"));
-    });
+    window.webkitRequestAnimationFrame(frameCb);
   }
 }());
