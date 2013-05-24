@@ -38,9 +38,10 @@
   (function () {
     // Wikipedia currently says FM channels are numbered like so, but no one uses the numbers. Well, I'll use the numbers, just to start from integers. http://en.wikipedia.org/wiki/FM_broadcasting_in_the_USA
     for (var channel = 200; channel <= 300; channel++) {
+      var freqMHz = (channel - 200) * 0.2 + 87.9;
       freqDB.push({
-        freq: (channel - 200) * 0.2e6 + 87.9e6,
-        label: 'FM ' + channel
+        freq: freqMHz * 1e6,
+        label: 'FM ' /*+ channel*/ + freqMHz.toFixed(1)
       });
     }
   }());
