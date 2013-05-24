@@ -203,7 +203,7 @@
       var value = target.get();
       if (value === lastShownValue) return;
       lastShownValue = value;
-      var valueStr = "" + value;
+      var valueStr = String(Math.round(value));
       var last = valueStr.length - 1;
       for (var i = 0; i < places.length; i++) {
         places[i].text.data = valueStr[last - i] || '\u00A0';
