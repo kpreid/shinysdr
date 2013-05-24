@@ -54,7 +54,9 @@ class wfm(gr.top_block):
 			average=True,
 		)
 		
-		self.freq_xlating_fir_filter_xxx_0 = filter.freq_xlating_fir_filter_ccc(int(input_rate/demod_rate), (gr.firdes.low_pass(1.0, input_rate, band_filter, 8*100e3, gr.firdes.WIN_HAMMING)), (rec_freq-hw_freq), input_rate)
+		self.freq_xlating_fir_filter_xxx_0 = filter.freq_xlating_fir_filter_ccc(int(input_rate/demod_rate), (gr.firdes.low_pass(1.0, input_rate, band_filter, 8*100e3, gr.firdes.WIN_HAMMING)), 0, input_rate)
+		self._update_band_center()
+		
 		self.blks2_fm_demod_cf_0 = blks2.fm_demod_cf(
 			channel_rate=demod_rate,
 			audio_decim=int(demod_rate/audio_rate),
@@ -78,6 +80,8 @@ class wfm(gr.top_block):
 		self.connect((self.osmosdr_source_c_0_0, 0), (self.spectrum_fft, 0))
 		self.connect((self.spectrum_fft, 0), (self.spectrum_probe, 0))
 
+	def _update_band_center(self):
+		self.freq_xlating_fir_filter_xxx_0.set_center_freq(self.hw_freq - self.rec_freq)
 
 	def get_input_rate(self):
 		return self.input_rate
@@ -114,7 +118,7 @@ class wfm(gr.top_block):
 
 	def set_rec_freq(self, rec_freq):
 		self.rec_freq = rec_freq
-		self.freq_xlating_fir_filter_xxx_0.set_center_freq((self.rec_freq-self.hw_freq))
+		self._update_band_center()
 
 	def get_hw_freq(self):
 		return self.hw_freq
@@ -122,7 +126,7 @@ class wfm(gr.top_block):
 	def set_hw_freq(self, hw_freq):
 		self.hw_freq = hw_freq
 		self.osmosdr_source_c_0_0.set_center_freq(self.hw_freq, 0)
-		self.freq_xlating_fir_filter_xxx_0.set_center_freq((self.rec_freq-self.hw_freq))
+		self._update_band_center()
 
 	def get_band_filter(self):
 		return self.band_filter
