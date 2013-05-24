@@ -21,12 +21,12 @@ class wfm(gr.top_block):
 		# Variables
 		##################################################
 		self.input_rate = input_rate = 3200000
-		self.demod_rate = demod_rate = 128e3
-		self.audio_rate = audio_rate = 32000
+		self.demod_rate = demod_rate =  128000
+		self.audio_rate = audio_rate =   32000
 		self.rec_freq = rec_freq = 97.7e6
 		self.hw_freq = hw_freq = 98e6
 		self.fftsize = fftsize = 2048
-		self.band_filter = band_filter = demod_rate*7.0/16.0
+		self.band_filter = band_filter = 75000
 
 		# TODO: remove this debug output
 		print "Band filter: ", band_filter
@@ -64,7 +64,7 @@ class wfm(gr.top_block):
 		self.blks2_fm_demod_cf_0 = blks2.fm_demod_cf(
 			channel_rate=demod_rate,
 			audio_decim=int(demod_rate/audio_rate),
-			deviation=50000,
+			deviation=75000,
 			audio_pass=15000,
 			audio_stop=16000,
 			gain=0.5,
