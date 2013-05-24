@@ -52,8 +52,8 @@
   }
   
   var view = {
-    fullScale: 100,
-    referenceLevel: 0,
+    minLevel: -100,
+    maxLevel: 0,
     // width of spectrum display from center frequency in Hz
     halfBandwidth: 1.5e6
   };
@@ -68,8 +68,8 @@
       var h = ctx.canvas.height;
       var len = buffer.length;
       var scale = ctx.canvas.width / len;
-      var yScale = -h / view.fullScale;
-      var yZero = -view.referenceLevel;
+      var yScale = -h / (view.maxLevel - view.minLevel);
+      var yZero = -view.maxLevel * yScale;
 
       ctx.clearRect(0, 0, w, h);
       
@@ -92,8 +92,8 @@
       var h = ctx.canvas.height;
       var len = buffer.length;
       var scale = len / ctx.canvas.width;
-      var cScale = 255 / view.fullScale;
-      var cZero = 255 - view.referenceLevel * cScale;
+      var cScale = 255 / (view.maxLevel - view.minLevel);
+      var cZero = 255 - view.maxLevel * cScale;
       
       // scroll
       ctx.drawImage(ctx.canvas, 0, 0, w, h-1, 0, 1, w, h-1);
