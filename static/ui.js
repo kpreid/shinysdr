@@ -178,7 +178,7 @@
     container.className = "knob";
     var places = [];
     var marks = [];
-    for (var i = 8; i >= 0; i--) (function(i) {
+    for (var i = 9; i >= 0; i--) (function(i) {
       if (i % 3 == 2) {
         var mark = container.appendChild(document.createElement("span"));
         mark.className = "knob-mark";
