@@ -72,7 +72,7 @@
     maxLevel: 0
   };
   
-  function SpectrumPlot(buffer, canvas, view) {
+  function SpectrumPlot(fftCell, canvas, view) {
     var ctx = canvas.getContext('2d');
     ctx.canvas.width = parseInt(getComputedStyle(canvas).width);
     ctx.lineWidth = 1;
@@ -97,6 +97,7 @@
     }
     
     this.draw = function () {
+      var buffer = fftCell.get();
       w = ctx.canvas.width;
       h = ctx.canvas.height;
       bandwidth = states.input_rate.get();
@@ -143,15 +144,24 @@
     }, false);
   }
   
-  function WaterfallPlot(buffer, canvas, view) {
-    canvas.width = buffer.length;
+  function WaterfallPlot(fftCell, canvas, view) {
     var ctx = canvas.getContext("2d");
-    var ibuf = ctx.createImageData(ctx.canvas.width, 1);
+    var ibuf;
     this.draw = function () {
-      var w = ctx.canvas.width;
-      var h = ctx.canvas.height;
+      var buffer = fftCell.get();
+      
+      // rescale to discovered fft size
+      var w = buffer.length;
+      if (canvas.width !== w || !ibuf) {
+        // assignment clears canvas
+        canvas.width = w;
+        // reallocate
+        ibuf = ctx.createImageData(w, 1);
+      }
+      
+      var h = canvas.height;
       var len = buffer.length;
-      var scale = len / ctx.canvas.width;
+      var scale = len / w;
       var cScale = 255 / (view.maxLevel - view.minLevel);
       var cZero = 255 - view.maxLevel * cScale;
       
@@ -304,7 +314,7 @@
     };
   }
   
-  function RemoteState(name, assumed, parser) {
+  function RemoteCell(name, assumed, parser) {
     var value = assumed;
     makeXhrGetter(name, function(remote) {
       value = parser(remote);
@@ -315,18 +325,45 @@
       xhrput(name, String(newValue));
     };
   }
+  function SpectrumCell() {
+    var VSIZE = Float32Array.BYTES_PER_ELEMENT;
+    var fft = new Float32Array(0);
+    // TODO: Better mechanism than XHR
+    var spectrumQueued = false;
+    var spectrumGetter = makeXhrGetter('/spectrum_fft', function(data) {
+      spectrumQueued = false;
+      // swap first and second halves for drawing convenience so that center frequency is at halfFFTSize rather than 0
+      if (data.byteLength / VSIZE !== fft.length) {
+        fft = new Float32Array(data.byteLength / VSIZE);
+      }
+      var halfFFTSize = fft.length / 2;
+      fft.set(new Float32Array(data, 0, halfFFTSize), halfFFTSize);
+      fft.set(new Float32Array(data, halfFFTSize * VSIZE, halfFFTSize), 0);
+      doDisplay();
+    }, true);
+    setInterval(function() {
+      if (!spectrumQueued) {
+        spectrumGetter.go();
+        spectrumQueued = true;
+      }
+    }, 1000/30);
+    
+    this.get = function() {
+      return fft;
+    }
+  }
+  
   var states = {
-    hw_freq: new RemoteState('/hw_freq', 0, parseFloat),
-    rec_freq: new RemoteState('/rec_freq', 0, parseFloat),
-    audio_gain: new RemoteState('/audio_gain', 0, parseFloat),
-    input_rate: new RemoteState('/input_rate', 1000000, parseInt)
+    hw_freq: new RemoteCell('/hw_freq', 0, parseFloat),
+    rec_freq: new RemoteCell('/rec_freq', 0, parseFloat),
+    audio_gain: new RemoteCell('/audio_gain', 0, parseFloat),
+    input_rate: new RemoteCell('/input_rate', 1000000, parseInt),
+    spectrum: new SpectrumCell(),
   };
   
-  var fft = new Float32Array(2048);
-  
   var widgets = [];
-  widgets.push(new SpectrumPlot(fft, document.getElementById("spectrum"), view));
-  widgets.push(new WaterfallPlot(fft, document.getElementById("waterfall"), view));
+  widgets.push(new SpectrumPlot(states.spectrum, document.getElementById("spectrum"), view));
+  widgets.push(new WaterfallPlot(states.spectrum, document.getElementById("waterfall"), view));
 
   var widgetTypes = Object.create(null);
   widgetTypes.Knob = Knob;
@@ -347,25 +384,6 @@
     widgets.push(widget);
     el.parentNode.replaceChild(widget.element, el);
   });
-  
-  // Retrieve FFT data
-  // TODO: Better mechanism than XHR
-  // TODO: Derive FFT size from server
-  var halfFFTSize = fft.length / 2;
-  var spectrumQueued = false;
-  var spectrumGetter = makeXhrGetter('/spectrum_fft', function(data) {
-    spectrumQueued = false;
-    // swap first and second halves for drawing convenience so that center frequency is at halfFFTSize rather than 0
-    fft.set(new Float32Array(data, 0, halfFFTSize), halfFFTSize);
-    fft.set(new Float32Array(data, halfFFTSize * 4, halfFFTSize), 0);
-    doDisplay();
-  }, true);
-  setInterval(function() {
-    if (!spectrumQueued) {
-      spectrumGetter.go();
-      spectrumQueued = true;
-    }
-  }, 1000/30);
   
   var displayQueued = false;
   function drawWidgetCb(widget) {
