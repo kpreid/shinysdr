@@ -144,31 +144,46 @@
     }, false);
   }
   
-  function WaterfallPlot(fftCell, canvas, view) {
+  function WaterfallPlot(fftCell, centerFreqCell, canvas, view) {
     var ctx = canvas.getContext("2d");
-    var ibuf;
+    // circular buffer of ImageData objects
+    var slices = [];
+    var slicePtr = 0;
+    var lastDrawnCenterFreq = NaN;
     this.draw = function () {
       var buffer = fftCell.get();
+      var h = canvas.height;
+      var currentCenterFreq = centerFreqCell.get();
+      
+      // TODO: We don't actually want the current known center frequency, we want the center frequency _which the FFT came from_, but don't have that info currently.
+      // TODO: Implement averaging in the spectrum plot so that the FFT given to the waterfall is un-averaged
       
       // rescale to discovered fft size
       var w = buffer.length;
-      if (canvas.width !== w || !ibuf) {
+      if (canvas.width !== w) {
+        console.log('reset');
         // assignment clears canvas
         canvas.width = w;
         // reallocate
-        ibuf = ctx.createImageData(w, 1);
+        slices = [];
+        slicePtr = 0;
       }
       
-      var h = canvas.height;
-      var len = buffer.length;
-      var scale = len / w;
+      // Find slice to write into
+      var ibuf;
+      if (slices.length < h) {
+        slices.push([ibuf = ctx.createImageData(w, 1), currentCenterFreq]);
+      } else {
+        var record = slices[slicePtr];
+        slicePtr = mod(slicePtr + 1, h);
+        ibuf = record[0];
+        record[1] = currentCenterFreq;
+      }
+      
+      // Generate image slice from latest FFT data.
+      var scale = buffer.length / w;
       var cScale = 255 / (view.maxLevel - view.minLevel);
       var cZero = 255 - view.maxLevel * cScale;
-      
-      // scroll
-      ctx.drawImage(ctx.canvas, 0, 0, w, h-1, 0, 1, w, h-1);
-      
-      // new data
       var data = ibuf.data;
       for (var x = 0; x < w; x++) {
         var base = x * 4;
@@ -179,7 +194,23 @@
         data[base + 2] = Math.min(intensity * 4, redBound);
         data[base + 3] = 255;
       }
-      ctx.putImageData(ibuf, 0, 0);
+      
+      if (lastDrawnCenterFreq === currentCenterFreq) {
+        // Scroll
+        ctx.drawImage(ctx.canvas, 0, 0, w, h-1, 0, 1, w, h-1);
+        // Paint newest slice
+        ctx.putImageData(ibuf, 0, 0);
+      } else {
+        // Paint slices onto canvas
+        ctx.clearRect(0, 0, w, h);
+        var sliceCount = slices.length;
+        var offsetScale = w / states.input_rate.get();  // TODO parameter for rate
+        for (var i = sliceCount - 1; i >= 0; i--) {
+          var slice = slices[mod(i + slicePtr, sliceCount)];
+          var offset = slice[1] - currentCenterFreq;
+          ctx.putImageData(slice[0], Math.round(offset * offsetScale), sliceCount - i);
+        }
+      }
     };
   }
   
@@ -363,7 +394,7 @@
   
   var widgets = [];
   widgets.push(new SpectrumPlot(states.spectrum, document.getElementById("spectrum"), view));
-  widgets.push(new WaterfallPlot(states.spectrum, document.getElementById("waterfall"), view));
+  widgets.push(new WaterfallPlot(states.spectrum, states.hw_freq, document.getElementById("waterfall"), view));
 
   var widgetTypes = Object.create(null);
   widgetTypes.Knob = Knob;
