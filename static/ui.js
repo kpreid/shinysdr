@@ -59,10 +59,10 @@
   };
   
   function SpectrumPlot(buffer, canvas, view) {
-    var ctx = canvas.getContext("2d");
+    var ctx = canvas.getContext('2d');
     ctx.canvas.width = parseInt(getComputedStyle(canvas).width);
-    //ctx.strokeStyle = "currentColor";
-    ctx.strokeStyle = getComputedStyle(canvas).color;
+    ctx.lineWidth = 0.5;
+    var cssColor = getComputedStyle(canvas).color;
     this.draw = function () {
       var w = ctx.canvas.width;
       var h = ctx.canvas.height;
@@ -73,12 +73,27 @@
 
       ctx.clearRect(0, 0, w, h);
       
-      ctx.lineWidth = 0.5;
+      //ctx.strokeStyle = 'currentColor';  // in spec, doesn't work
+      ctx.strokeStyle = cssColor;
       ctx.beginPath();
       ctx.moveTo(0, yZero + buffer[0] * yScale);
       for (var i = 1; i < len; i++) {
         ctx.lineTo(i * scale, yZero + buffer[i] * yScale);
       }
+      ctx.stroke();
+      
+      // TODO: marks ought to be part of a distinct widget
+      var offset = states.rec_freq.get() - states.hw_freq.get();
+      var rfreqX = w/2 + offset * ctx.canvas.width / view.halfBandwidth;
+      ctx.strokeStyle = 'gray';
+      ctx.beginPath();
+      ctx.moveTo(w/2, 0);
+      ctx.lineTo(w/2, h);
+      ctx.stroke();
+      ctx.strokeStyle = 'white';
+      ctx.beginPath();
+      ctx.moveTo(rfreqX, 0);
+      ctx.lineTo(rfreqX, h);
       ctx.stroke();
     };
   }
