@@ -23,11 +23,15 @@ class wfm(gr.top_block):
 		self.input_rate = input_rate = 3200000
 		self.demod_rate = demod_rate = 128e3
 		self.audio_rate = audio_rate = 32000
-		self.variable_0 = variable_0 = (input_rate/demod_rate, demod_rate/audio_rate)
 		self.rec_freq = rec_freq = 97.7e6
 		self.hw_freq = hw_freq = 98e6
 		self.fftsize = fftsize = 2048
 		self.band_filter = band_filter = demod_rate*7.0/16.0
+
+		# TODO: remove this debug output
+		print "Band filter: ", band_filter
+		print "Input decimation: ", input_rate/demod_rate
+		print "Audio decimation: ", demod_rate/audio_rate
 
 		##################################################
 		# Blocks
@@ -89,7 +93,6 @@ class wfm(gr.top_block):
 	def set_input_rate(self, input_rate):
 		self.input_rate = input_rate
 		self.osmosdr_source_c_0_0.set_sample_rate(self.input_rate)
-		self.set_variable_0((self.input_rate/self.demod_rate, self.demod_rate/self.audio_rate))
 		self.freq_xlating_fir_filter_xxx_0.set_taps((gr.firdes.low_pass(1.0, self.input_rate, self.band_filter, 8*100e3, gr.firdes.WIN_HAMMING)))
 
 	def get_demod_rate(self):
@@ -97,7 +100,6 @@ class wfm(gr.top_block):
 
 	def set_demod_rate(self, demod_rate):
 		self.demod_rate = demod_rate
-		self.set_variable_0((self.input_rate/self.demod_rate, self.demod_rate/self.audio_rate))
 		self.set_band_filter(self.demod_rate*7.0/16.0)
 
 	def get_audio_rate(self):
@@ -105,13 +107,6 @@ class wfm(gr.top_block):
 
 	def set_audio_rate(self, audio_rate):
 		self.audio_rate = audio_rate
-		self.set_variable_0((self.input_rate/self.demod_rate, self.demod_rate/self.audio_rate))
-
-	def get_variable_0(self):
-		return self.variable_0
-
-	def set_variable_0(self, variable_0):
-		self.variable_0 = variable_0
 
 	def get_rec_freq(self):
 		return self.rec_freq
