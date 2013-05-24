@@ -248,7 +248,7 @@
     this.draw = function () {
       var value = Math.log(target.get()) / Math.LN10;
       var shown = slider.valueAsNumber;
-      if (value === shown) return;
+      if (Math.abs(value - shown) < 1e-8) return;
       slider.valueAsNumber = value;
     };
   }
