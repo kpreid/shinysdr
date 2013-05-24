@@ -43,6 +43,7 @@ root = static.File('static/')
 root.indexNames = ['index.html']
 root.putChild('hw_freq', NumberResource(block, 'hw_freq'))
 root.putChild('rec_freq', NumberResource(block, 'rec_freq'))
+root.putChild('audio_gain', NumberResource(block, 'audio_gain'))
 root.putChild('spectrum_fft', FloatsResource(block, 'spectrum_fft'))
 reactor.listenTCP(8100, server.Site(root))
 

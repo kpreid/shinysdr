@@ -64,6 +64,8 @@ class wfm(gr.top_block):
 			gain=0.5,
 			tau=75e-6,
 		)
+		
+		self.audio_gain_block = gr.multiply_const_vff((0.5,))
 		self.audio_sink_0 = audio.sink(audio_rate, "", False)
 
 		##################################################
@@ -71,7 +73,8 @@ class wfm(gr.top_block):
 		##################################################
 		self.connect((self.osmosdr_source_c_0_0, 0), (self.freq_xlating_fir_filter_xxx_0, 0))
 		self.connect((self.freq_xlating_fir_filter_xxx_0, 0), (self.blks2_fm_demod_cf_0, 0))
-		self.connect((self.blks2_fm_demod_cf_0, 0), (self.audio_sink_0, 0))
+		self.connect((self.blks2_fm_demod_cf_0, 0), (self.audio_gain_block, 0))
+		self.connect((self.audio_gain_block, 0), (self.audio_sink_0, 0))
 		self.connect((self.osmosdr_source_c_0_0, 0), (self.spectrum_fft, 0))
 		self.connect((self.spectrum_fft, 0), (self.spectrum_probe, 0))
 
@@ -134,6 +137,12 @@ class wfm(gr.top_block):
 	def set_fftsize(self, fftsize):
 		self.fftsize = fftsize
 		# TODO er, missing some updaters? GRC didn't generate any
+
+	def get_audio_gain(self):
+		return self.audio_gain_block.k()[0]
+
+	def set_audio_gain(self, k):
+		self.audio_gain_block.set_k((k,))
 
 	def get_spectrum_fft(self):
 		return self.spectrum_probe.level()

@@ -240,6 +240,19 @@
     };
   }
   
+  function LogSlider(target, slider) {
+    this.element = slider;
+    slider.addEventListener('change', function(event) {
+      target.set(Math.pow(10, slider.valueAsNumber));
+    }, false);
+    this.draw = function () {
+      var value = Math.log(target.get()) / Math.LN10;
+      var shown = slider.valueAsNumber;
+      if (value === shown) return;
+      slider.valueAsNumber = value;
+    };
+  }
+  
   function RemoteState(name, assumed, parser) {
     var value = assumed;
     xhrget(name, function(remote) {
@@ -253,7 +266,8 @@
   }
   var states = {
     hw_freq: new RemoteState('/hw_freq', 0, parseFloat),
-    rec_freq: new RemoteState('/rec_freq', 0, parseFloat)
+    rec_freq: new RemoteState('/rec_freq', 0, parseFloat),
+    audio_gain: new RemoteState('/audio_gain', 0, parseFloat)
   };
   
   var fft = new Float32Array(2048);
@@ -265,6 +279,7 @@
   var widgetTypes = Object.create(null);
   widgetTypes.Knob = Knob;
   widgetTypes.FreqScale = FreqScale;
+  widgetTypes.LogSlider = LogSlider;
   Array.prototype.forEach.call(document.querySelectorAll("[data-widget]"), function (el) {
     var T = widgetTypes[el.getAttribute("data-widget")];
     if (!T) {
@@ -276,7 +291,7 @@
       console.error('Bad widget target:', el);
       return;
     }
-    var widget = new T(stateObj);
+    var widget = new T(stateObj, el);
     widgets.push(widget);
     el.parentNode.replaceChild(widget.element, el);
   });
