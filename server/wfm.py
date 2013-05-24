@@ -54,8 +54,8 @@ class wfm(gr.top_block):
 			fft_size=fftsize,
 			ref_scale=2,
 			frame_rate=30,
-			avg_alpha=0.5,
-			average=True,
+			avg_alpha=1.0,
+			average=False,
 		)
 		
 		self.freq_xlating_fir_filter_xxx_0 = filter.freq_xlating_fir_filter_ccc(int(input_rate/demod_rate), (gr.firdes.low_pass(1.0, input_rate, band_filter, 8*100e3, gr.firdes.WIN_HAMMING)), 0, input_rate)

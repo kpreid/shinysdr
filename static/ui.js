@@ -77,7 +77,7 @@
     ctx.canvas.width = parseInt(getComputedStyle(canvas).width);
     ctx.lineWidth = 1;
     var cssColor = getComputedStyle(canvas).color;
-    var w, h, bandwidth; // updated in draw
+    var w, h, bandwidth, averageBuffer; // updated in draw
     
     function relFreqToX(freq) {
       return w * (1/2 + freq / bandwidth);
@@ -106,6 +106,15 @@
       var yScale = -h / (view.maxLevel - view.minLevel);
       var yZero = -view.maxLevel * yScale;
       
+      // averaging
+      // TODO: Get separate averaged and unaveraged FFTs from server so that averaging behavior is not dependent on frame rate over the network
+      if (!averageBuffer || averageBuffer.length !== len) {
+        averageBuffer = new Float32Array(buffer);
+      }
+      for (var i = 0; i < len; i++) {
+        averageBuffer[i] = averageBuffer[i] * 0.5 + buffer[i] * 0.5;
+      }
+      
       ctx.clearRect(0, 0, w, h);
       
       // TODO: marks ought to be part of a distinct widget
@@ -120,9 +129,9 @@
       //ctx.strokeStyle = 'currentColor';  // in spec, doesn't work
       ctx.strokeStyle = cssColor;
       ctx.beginPath();
-      ctx.moveTo(0, yZero + buffer[0] * yScale);
+      ctx.moveTo(0, yZero + averageBuffer[0] * yScale);
       for (var i = 1; i < len; i++) {
-        ctx.lineTo(i * scale, yZero + buffer[i] * yScale);
+        ctx.lineTo(i * scale, yZero + averageBuffer[i] * yScale);
       }
       ctx.stroke();
       
@@ -156,12 +165,10 @@
       var currentCenterFreq = centerFreqCell.get();
       
       // TODO: We don't actually want the current known center frequency, we want the center frequency _which the FFT came from_, but don't have that info currently.
-      // TODO: Implement averaging in the spectrum plot so that the FFT given to the waterfall is un-averaged
       
       // rescale to discovered fft size
       var w = buffer.length;
       if (canvas.width !== w) {
-        console.log('reset');
         // assignment clears canvas
         canvas.width = w;
         // reallocate
