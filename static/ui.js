@@ -332,8 +332,12 @@
   
   // Retrieve FFT data
   // TODO: Better mechanism than XHR
+  // TODO: Derive FFT size from server
+  var halfFFTSize = fft.length / 2;
   var spectrumGetter = makeXhrGetter('/spectrum_fft', function(data) {
-    fft.set(new Float32Array(data));
+    // swap first and second halves for drawing convenience so that center frequency is at halfFFTSize rather than 0
+    fft.set(new Float32Array(data, 0, halfFFTSize), halfFFTSize);
+    fft.set(new Float32Array(data, halfFFTSize * 4, halfFFTSize), 0);
   }, true);
   setInterval(function() {
     spectrumGetter.go();
