@@ -28,11 +28,7 @@
     r.send();
   }
   
-  var freqDB = [
-    {freq: 1e6, label: "Station 1"},
-    {freq: 1.5e6, label: "Station 2"},
-    {freq: 2e6, label: "Station 3"},
-  ];
+  var freqDB = [];
   
   // Prepare to load real data using JSONP callback
   window.sdr_data = function (json) {
