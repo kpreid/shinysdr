@@ -100,6 +100,21 @@
       ctx.lineTo(rfreqX, h);
       ctx.stroke();
     };
+    function clickTune(event) {
+      // TODO: works only because canvas is at the left edge
+      var x = event.clientX / parseInt(getComputedStyle(canvas).width);
+      var offsetFreq = (x * 2 - 1) / 2 * view.halfBandwidth;
+      states.rec_freq.set(states.hw_freq.get() + offsetFreq);
+      event.stopPropagation();
+      event.preventDefault(); // no selection
+    }
+    canvas.addEventListener('mousedown', function(event) {
+      event.preventDefault();
+      document.addEventListener('mousemove', clickTune, true);
+      document.addEventListener('mouseup', function(event) {
+        document.removeEventListener('mousemove', clickTune, true);
+      }, true);
+    }, false);
   }
   
   function WaterfallPlot(buffer, canvas, view) {
