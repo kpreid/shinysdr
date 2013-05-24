@@ -57,9 +57,7 @@
   
   var view = {
     minLevel: -100,
-    maxLevel: 0,
-    // width of spectrum display from center frequency in Hz
-    halfBandwidth: 1.5e6
+    maxLevel: 0
   };
   
   function SpectrumPlot(buffer, canvas, view) {
@@ -67,10 +65,10 @@
     ctx.canvas.width = parseInt(getComputedStyle(canvas).width);
     ctx.lineWidth = 1;
     var cssColor = getComputedStyle(canvas).color;
-    var w, h; // updated in draw
+    var w, h, bandwidth; // updated in draw
     
     function relFreqToX(freq) {
-      return w * (1/2 + freq / view.halfBandwidth);
+      return w * (1/2 + freq / bandwidth);
     }
     function drawHair(freq) {
       var x = relFreqToX(freq);
@@ -89,6 +87,7 @@
     this.draw = function () {
       w = ctx.canvas.width;
       h = ctx.canvas.height;
+      bandwidth = states.input_rate.get();
       var len = buffer.length;
       var scale = ctx.canvas.width / len;
       var yScale = -h / (view.maxLevel - view.minLevel);
@@ -118,7 +117,7 @@
     function clickTune(event) {
       // TODO: works only because canvas is at the left edge
       var x = event.clientX / parseInt(getComputedStyle(canvas).width);
-      var offsetFreq = (x * 2 - 1) / 2 * view.halfBandwidth;
+      var offsetFreq = (x * 2 - 1) / 2 * bandwidth;
       states.rec_freq.set(states.hw_freq.get() + offsetFreq);
       event.stopPropagation();
       event.preventDefault(); // no selection
@@ -244,10 +243,11 @@
       if (centerFreq === lastShownValue) return;
       lastShownValue = centerFreq;
       
-      var scale = 100 / (view.halfBandwidth * 2);
+      var bandwidth = states.input_rate.get();
+      var scale = 100 / bandwidth;
       var step = 0.5e6;
-      var lower = centerFreq - view.halfBandwidth;
-      var upper = centerFreq + view.halfBandwidth;
+      var lower = centerFreq - bandwidth / 2;
+      var upper = centerFreq + bandwidth / 2;
       
       function position(freq) {
         return ((freq - centerFreq) * scale + 50) + "%";
@@ -301,7 +301,8 @@
   var states = {
     hw_freq: new RemoteState('/hw_freq', 0, parseFloat),
     rec_freq: new RemoteState('/rec_freq', 0, parseFloat),
-    audio_gain: new RemoteState('/audio_gain', 0, parseFloat)
+    audio_gain: new RemoteState('/audio_gain', 0, parseFloat),
+    input_rate: new RemoteState('/input_rate', 1000000, parseInt)
   };
   
   var fft = new Float32Array(2048);

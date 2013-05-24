@@ -85,15 +85,16 @@ class wfm(gr.top_block):
 		self.connect((self.spectrum_fft, 0), (self.spectrum_probe, 0))
 
 	def _update_band_center(self):
-		self.freq_xlating_fir_filter_xxx_0.set_center_freq(self.hw_freq - self.rec_freq)
+		self.freq_xlating_fir_filter_xxx_0.set_center_freq(self.rec_freq - self.hw_freq)
 
 	def get_input_rate(self):
 		return self.input_rate
 
-	def set_input_rate(self, input_rate):
-		self.input_rate = input_rate
-		self.osmosdr_source_c_0_0.set_sample_rate(self.input_rate)
-		self.freq_xlating_fir_filter_xxx_0.set_taps((gr.firdes.low_pass(1.0, self.input_rate, self.band_filter, 8*100e3, gr.firdes.WIN_HAMMING)))
+	# TODO: this looks unsafe (doesn't adjust decimation), fix or toss
+	#def set_input_rate(self, input_rate):
+	#	self.input_rate = input_rate
+	#	self.osmosdr_source_c_0_0.set_sample_rate(self.input_rate)
+	#	self.freq_xlating_fir_filter_xxx_0.set_taps((gr.firdes.low_pass(1.0, self.input_rate, self.band_filter, 8*100e3, gr.firdes.WIN_HAMMING)))
 
 	def get_demod_rate(self):
 		return self.demod_rate

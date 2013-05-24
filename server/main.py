@@ -23,7 +23,12 @@ class GRResource(resource.Resource):
         request.setResponseCode(204)
         return ''
 
-class NumberResource(GRResource):
+class IntResource(GRResource):
+    defaultContentType = 'text/plain'
+    def grparse(self, value):
+        return int(value)
+
+class FloatResource(GRResource):
     defaultContentType = 'text/plain'
     def grparse(self, value):
         return float(value)
@@ -41,9 +46,10 @@ block = wfm.wfm()
 print 'Web server...'
 root = static.File('static/')
 root.indexNames = ['index.html']
-root.putChild('hw_freq', NumberResource(block, 'hw_freq'))
-root.putChild('rec_freq', NumberResource(block, 'rec_freq'))
-root.putChild('audio_gain', NumberResource(block, 'audio_gain'))
+root.putChild('hw_freq', FloatResource(block, 'hw_freq'))
+root.putChild('rec_freq', FloatResource(block, 'rec_freq'))
+root.putChild('audio_gain', FloatResource(block, 'audio_gain'))
+root.putChild('input_rate', IntResource(block, 'input_rate'))
 root.putChild('spectrum_fft', FloatsResource(block, 'spectrum_fft'))
 reactor.listenTCP(8100, server.Site(root))
 
