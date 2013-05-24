@@ -65,7 +65,7 @@
   function SpectrumPlot(buffer, canvas, view) {
     var ctx = canvas.getContext('2d');
     ctx.canvas.width = parseInt(getComputedStyle(canvas).width);
-    ctx.lineWidth = 0.5;
+    ctx.lineWidth = 1;
     var cssColor = getComputedStyle(canvas).color;
     var w, h; // updated in draw
     
@@ -83,8 +83,6 @@
     function drawBand(freq1, freq2) {
       var x1 = relFreqToX(freq1);
       var x2 = relFreqToX(freq2);
-      x1 = Math.floor(x1) + 0.5;
-      x2 = Math.floor(x2) + 0.5;
       ctx.fillRect(x1, 0, x2 - x1, ctx.canvas.height);
     }
     
