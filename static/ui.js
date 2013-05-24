@@ -67,15 +67,45 @@
     ctx.canvas.width = parseInt(getComputedStyle(canvas).width);
     ctx.lineWidth = 0.5;
     var cssColor = getComputedStyle(canvas).color;
+    var w, h; // updated in draw
+    
+    function relFreqToX(freq) {
+      return w * (1/2 + freq / view.halfBandwidth);
+    }
+    function drawHair(freq) {
+      var x = relFreqToX(freq);
+      x = Math.floor(x) + 0.5;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, ctx.canvas.height);
+      ctx.stroke();
+    }
+    function drawBand(freq1, freq2) {
+      var x1 = relFreqToX(freq1);
+      var x2 = relFreqToX(freq2);
+      x1 = Math.floor(x1) + 0.5;
+      x2 = Math.floor(x2) + 0.5;
+      ctx.fillRect(x1, 0, x2 - x1, ctx.canvas.height);
+    }
+    
     this.draw = function () {
-      var w = ctx.canvas.width;
-      var h = ctx.canvas.height;
+      w = ctx.canvas.width;
+      h = ctx.canvas.height;
       var len = buffer.length;
       var scale = ctx.canvas.width / len;
       var yScale = -h / (view.maxLevel - view.minLevel);
       var yZero = -view.maxLevel * yScale;
-
+      
       ctx.clearRect(0, 0, w, h);
+      
+      // TODO: marks ought to be part of a distinct widget
+      var offset = states.rec_freq.get() - states.hw_freq.get();
+      ctx.fillStyle = '#444';
+      drawBand(offset - 56000, offset + 56000); // TODO get band_filter from server
+      ctx.strokeStyle = 'gray';
+      drawHair(0); // center frequency
+      ctx.strokeStyle = 'white';
+      drawHair(offset); // receiver
       
       //ctx.strokeStyle = 'currentColor';  // in spec, doesn't work
       ctx.strokeStyle = cssColor;
@@ -86,19 +116,6 @@
       }
       ctx.stroke();
       
-      // TODO: marks ought to be part of a distinct widget
-      var offset = states.rec_freq.get() - states.hw_freq.get();
-      var rfreqX = w/2 + offset * ctx.canvas.width / view.halfBandwidth;
-      ctx.strokeStyle = 'gray';
-      ctx.beginPath();
-      ctx.moveTo(w/2, 0);
-      ctx.lineTo(w/2, h);
-      ctx.stroke();
-      ctx.strokeStyle = 'white';
-      ctx.beginPath();
-      ctx.moveTo(rfreqX, 0);
-      ctx.lineTo(rfreqX, h);
-      ctx.stroke();
     };
     function clickTune(event) {
       // TODO: works only because canvas is at the left edge
