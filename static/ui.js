@@ -16,16 +16,20 @@
     r.send(data);
     console.log(url, data);
   }
-  function xhrget(url, callback, binary) {
+  function makeXhrGetter(url, callback, binary) {
     var r = new XMLHttpRequest();
-    r.open('GET', url, true);
     if (binary) r.responseType = 'arraybuffer';
     r.onreadystatechange = function() {
       if (r.readyState === 4) {
         callback(binary ? r.response : r.responseText);
       }
-    }
-    r.send();
+    };
+    return {
+      go: function() {
+        r.open('GET', url, true);
+        r.send();
+      }
+    };
   }
   
   var freqDB = [];
@@ -255,9 +259,9 @@
   
   function RemoteState(name, assumed, parser) {
     var value = assumed;
-    xhrget(name, function(remote) {
+    makeXhrGetter(name, function(remote) {
       value = parser(remote);
-    });
+    }, false).go();
     this.get = function() { return value; },
     this.set = function(newValue) {
       value = newValue;
@@ -298,12 +302,13 @@
   
   // Retrieve FFT data
   // TODO: Better mechanism than XHR
+  var spectrumGetter = makeXhrGetter('/spectrum_fft', function(data) {
+    fft.set(new Float32Array(data));
+  }, true);
   setInterval(function() {
-    xhrget('/spectrum_fft', function(data) {
-      fft.set(new Float32Array(data));
-    }, true);
+    spectrumGetter.go();
     doDisplay();
-  }, 1000/5);
+  }, 1000/30);
   
   var displayQueued = false;
   function doDisplay() {
