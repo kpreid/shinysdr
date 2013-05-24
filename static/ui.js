@@ -270,19 +270,9 @@
     el.parentNode.replaceChild(widget.element, el);
   });
   
-  // Mock Fourier-transformed-signal source
+  // Retrieve FFT data
+  // TODO: Better mechanism than XHR
   setInterval(function() {
-    //var tuner = states.hw_freq.get();
-    //var step = view.halfBandwidth * 2 / fft.length;
-    //var zeroPos = tuner - view.halfBandwidth;
-    //for (var i = fft.length - 1; i >= 0; i--) {
-    //  var first = (zeroPos + i * step);
-    //  var v = 2 + Math.random() * 1;
-    //  v += 3 * Math.exp(-Math.pow(first - 1e6, 2) / 100e6);
-    //  v += 1.5 * Math.exp(-Math.pow(first - 1.5e6, 2) / 100e6);
-    //  v += 6 * Math.exp(-Math.pow(first - 2e6, 2) / 100e6);
-    //  fft[i] = v;
-    //}
     xhrget('/spectrum_fft', function(data) {
       fft.set(new Float32Array(data));
     }, true);
