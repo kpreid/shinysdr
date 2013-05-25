@@ -45,7 +45,7 @@ class FMReceiver(Receiver):
 
 		input_rate = self.input_rate
 		audio_rate = self.audio_rate
-		band_filter = self.band_filter = deviation
+		band_filter = self.band_filter = 1.2 * deviation
 		demod_rate = 128000
 		# TODO: Choose demod rate based on matching input and audio rates and the band_filter
 		
@@ -57,7 +57,7 @@ class FMReceiver(Receiver):
 		##################################################
 		# Blocks
 		##################################################
-		self.band_filter_block = filter.freq_xlating_fir_filter_ccc(int(input_rate/demod_rate), (gr.firdes.low_pass(1.0, input_rate, band_filter, 8*100e3, gr.firdes.WIN_HAMMING)), 0, input_rate)
+		self.band_filter_block = filter.freq_xlating_fir_filter_ccc(int(input_rate/demod_rate), (gr.firdes.low_pass(1.0, input_rate, band_filter, band_filter * 0.5, gr.firdes.WIN_HAMMING)), 0, input_rate)
 		self._update_band_center()
 		
 		self.blks2_fm_demod_cf_0 = blks2.fm_demod_cf(
