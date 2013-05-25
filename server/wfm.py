@@ -145,7 +145,7 @@ class wfm(gr.top_block):
 		self.audio_gain_block.set_k((k,))
 
 	def get_spectrum_fft(self):
-		return self.spectrum_probe.level()
+		return (self.hw_freq, self.spectrum_probe.level())
 
 
 if __name__ == '__main__':

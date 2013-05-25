@@ -21,7 +21,7 @@
     if (binary) r.responseType = 'arraybuffer';
     r.onreadystatechange = function() {
       if (r.readyState === 4) {
-        callback(binary ? r.response : r.responseText);
+        callback(binary ? r.response : r.responseText, r);
       }
     };
     return {
@@ -153,7 +153,7 @@
     }, false);
   }
   
-  function WaterfallPlot(fftCell, centerFreqCell, canvas, view) {
+  function WaterfallPlot(fftCell, canvas, view) {
     var ctx = canvas.getContext("2d");
     // circular buffer of ImageData objects
     var slices = [];
@@ -162,7 +162,7 @@
     this.draw = function () {
       var buffer = fftCell.get();
       var h = canvas.height;
-      var currentCenterFreq = centerFreqCell.get();
+      var currentCenterFreq = fftCell.getCenterFreq();
       
       // TODO: We don't actually want the current known center frequency, we want the center frequency _which the FFT came from_, but don't have that info currently.
       
@@ -366,10 +366,12 @@
   function SpectrumCell() {
     var VSIZE = Float32Array.BYTES_PER_ELEMENT;
     var fft = new Float32Array(0);
+    var centerFreq = NaN;
     // TODO: Better mechanism than XHR
     var spectrumQueued = false;
-    var spectrumGetter = makeXhrGetter('/spectrum_fft', function(data) {
+    var spectrumGetter = makeXhrGetter('/spectrum_fft', function(data, xhr) {
       spectrumQueued = false;
+      
       // swap first and second halves for drawing convenience so that center frequency is at halfFFTSize rather than 0
       if (data.byteLength / VSIZE !== fft.length) {
         fft = new Float32Array(data.byteLength / VSIZE);
@@ -377,6 +379,8 @@
       var halfFFTSize = fft.length / 2;
       fft.set(new Float32Array(data, 0, halfFFTSize), halfFFTSize);
       fft.set(new Float32Array(data, halfFFTSize * VSIZE, halfFFTSize), 0);
+      
+      centerFreq = parseFloat(xhr.getResponseHeader('X-SDR-Center-Frequency'));
       doDisplay();
     }, true);
     setInterval(function() {
@@ -388,7 +392,10 @@
     
     this.get = function() {
       return fft;
-    }
+    };
+    this.getCenterFreq = function() {
+      return centerFreq;
+    };
   }
   
   var states = {
@@ -401,7 +408,7 @@
   
   var widgets = [];
   widgets.push(new SpectrumPlot(states.spectrum, document.getElementById("spectrum"), view));
-  widgets.push(new WaterfallPlot(states.spectrum, states.hw_freq, document.getElementById("waterfall"), view));
+  widgets.push(new WaterfallPlot(states.spectrum, document.getElementById("waterfall"), view));
 
   var widgetTypes = Object.create(null);
   widgetTypes.Knob = Knob;
