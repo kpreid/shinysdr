@@ -5,7 +5,7 @@ from twisted.internet import reactor
 
 import array # for binary stuff
 
-import wfm # temporary name to be improved
+import sdr.wfm # temporary name to be improved
 
 class GRResource(resource.Resource):
 	isLeaf = True
@@ -43,7 +43,7 @@ class SpectrumResource(GRResource):
 
 # Create SDR component (slow)
 print 'Flow graph...'
-block = wfm.wfm()
+block = sdr.wfm.wfm()
 
 # Initialize web server first so we start accepting
 print 'Web server...'
