@@ -5,41 +5,41 @@ from twisted.internet import reactor
 
 import array # for binary stuff
 
-import wfm  # temporary name to be improved
+import wfm # temporary name to be improved
 
 class GRResource(resource.Resource):
-    isLeaf = True
-    def __init__(self, target, field):
-        '''Uses GNU Radio style accessors.'''
-        self.target = target
-        self.field = field
-    def grrender(self, value, request):
-        return str(value)
-    def render_GET(self, request):
-        return self.grrender(getattr(self.target, 'get_' + self.field)(), request)
-    def render_PUT(self, request):
-        data = request.content.read()
-        getattr(self.target, 'set_' + self.field)(self.grparse(data))
-        request.setResponseCode(204)
-        return ''
+	isLeaf = True
+	def __init__(self, target, field):
+		'''Uses GNU Radio style accessors.'''
+		self.target = target
+		self.field = field
+	def grrender(self, value, request):
+		return str(value)
+	def render_GET(self, request):
+		return self.grrender(getattr(self.target, 'get_' + self.field)(), request)
+	def render_PUT(self, request):
+		data = request.content.read()
+		getattr(self.target, 'set_' + self.field)(self.grparse(data))
+		request.setResponseCode(204)
+		return ''
 
 class IntResource(GRResource):
-    defaultContentType = 'text/plain'
-    def grparse(self, value):
-        return int(value)
+	defaultContentType = 'text/plain'
+	def grparse(self, value):
+		return int(value)
 
 class FloatResource(GRResource):
-    defaultContentType = 'text/plain'
-    def grparse(self, value):
-        return float(value)
+	defaultContentType = 'text/plain'
+	def grparse(self, value):
+		return float(value)
 
 class SpectrumResource(GRResource):
-    defaultContentType = 'application/octet-stream'
-    def grrender(self, value, request):
-        (freq, fftdata) = value
-        # TODO: Use a more structured response rather than putting data in headers
-        request.setHeader('X-SDR-Center-Frequency', str(freq))
-        return array.array('f', fftdata).tostring()
+	defaultContentType = 'application/octet-stream'
+	def grrender(self, value, request):
+		(freq, fftdata) = value
+		# TODO: Use a more structured response rather than putting data in headers
+		request.setHeader('X-SDR-Center-Frequency', str(freq))
+		return array.array('f', fftdata).tostring()
 
 # Create SDR component
 print 'Flow graph...'
