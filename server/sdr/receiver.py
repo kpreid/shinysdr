@@ -32,7 +32,7 @@ class WFMReceiver(Receiver):
 
 		input_rate = self.input_rate
 		audio_rate = self.audio_rate
-		band_filter = 75000
+		self.band_filter = band_filter = 75000
 		demod_rate = 128000
 		
 		# TODO: Resample/twiddle rate as necessary.
@@ -75,6 +75,9 @@ class WFMReceiver(Receiver):
 	def set_input_center_freq(self, value):
 		self.input_center_freq = value
 		self._update_band_center()
+
+	def get_band_filter(self):
+		return self.band_filter
 
 	def get_rec_freq(self):
 		return self.rec_freq

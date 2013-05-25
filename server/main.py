@@ -75,6 +75,7 @@ def export(block, field, ctor):
 	root.putChild(field, ctor(block, field))
 export(top, 'running', StartStop)
 export(top, 'hw_freq', FloatResource)
+export(receiver, 'band_filter', FloatResource)
 export(receiver, 'rec_freq', FloatResource)
 export(receiver, 'audio_gain', FloatResource)
 export(top, 'input_rate', IntResource)

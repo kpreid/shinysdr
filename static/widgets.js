@@ -67,7 +67,8 @@ var sdr = sdr || {};
       // TODO: marks ought to be part of a distinct widget
       var offset = states.rec_freq.get() - states.hw_freq.get();
       ctx.fillStyle = '#444';
-      drawBand(offset - 56000, offset + 56000); // TODO get band_filter from server
+      var bandFilter = states.band_filter.get();
+      drawBand(offset - bandFilter, offset + bandFilter);
       ctx.strokeStyle = 'gray';
       drawHair(0); // center frequency
       ctx.strokeStyle = 'white';

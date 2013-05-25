@@ -107,7 +107,8 @@
       doDisplay();
     }, true);
     setInterval(function() {
-      if (!spectrumQueued) {
+      // TODO: Stop setInterval when not running
+      if (states.running.get() && !spectrumQueued) {
         spectrumGetter.go();
         spectrumQueued = true;
       }
@@ -125,6 +126,7 @@
     running: new RemoteCell('/running', false, JSON.parse),
     hw_freq: new RemoteCell('/hw_freq', 0, parseFloat),
     rec_freq: new RemoteCell('/rec_freq', 0, parseFloat),
+    band_filter: new RemoteCell('/band_filter', 0, parseFloat),
     audio_gain: new RemoteCell('/audio_gain', 0, parseFloat),
     input_rate: new RemoteCell('/input_rate', 1000000, parseInt),
     spectrum: new SpectrumCell(),
