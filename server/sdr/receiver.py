@@ -46,8 +46,12 @@ class FMReceiver(Receiver):
 		input_rate = self.input_rate
 		audio_rate = self.audio_rate
 		band_filter = self.band_filter = 1.2 * deviation
-		demod_rate = 128000
-		# TODO: Choose demod rate based on matching input and audio rates and the band_filter
+
+		# TODO: Choose demod rate principledly based on matching input and audio rates and the band_filter
+		if self.band_filter < 10000:
+			demod_rate = 64000
+		else:
+			demod_rate = 128000
 		
 		if input_rate % demod_rate != 0:
 			raise ValueError, 'Input rate %s is not a multiple of demodulator rate %s' % (self.input_rate, demod_rate)
