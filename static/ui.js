@@ -13,11 +13,12 @@
   var isDown = false;
   var queuedToRetry = Object.create(null);
   var isDownCheckXHR = new XMLHttpRequest();
+  var isDownCheckInterval;
   isDownCheckXHR.onreadystatechange = function() {
     if (isDownCheckXHR.readyState === 4) {
       if (isDownCheckXHR.status > 0 && isDownCheckXHR.status < 500) {
         isDown = false;
-        clearInterval(isDownCheck);
+        clearInterval(isDownCheckInterval);
         for (var key in states) {
           states[key].reload();
         }
@@ -42,7 +43,7 @@
           if (!isDown) {
             console.log('Network error, suspending activities');
             isDown = true;
-            setInterval(isDownCheck, 1000);
+            isDownCheckInterval = setInterval(isDownCheck, 1000);
           }
           retry();  // cause enqueueing under isDown condition
           return;
