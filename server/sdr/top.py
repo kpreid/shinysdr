@@ -11,9 +11,9 @@ from gnuradio.filter import firdes
 from gnuradio.gr import firdes
 from optparse import OptionParser
 import osmosdr
-import sdr.wfm
+import sdr.receiver
 
-class top(gr.top_block):
+class Top(gr.top_block):
 
 	def __init__(self):
 		gr.top_block.__init__(self, "SDR top block")
@@ -29,7 +29,7 @@ class top(gr.top_block):
 		##################################################
 		# Blocks
 		##################################################
-		self.demod = sdr.wfm.wfm(
+		self.receiver = sdr.receiver.WFMReceiver(
 			input_rate=input_rate,
 			input_center_freq=hw_freq,
 			audio_rate=audio_rate,
@@ -59,6 +59,7 @@ class top(gr.top_block):
 			average=False,
 		)
 		
+		# TODO: stereo audio out
 		# Note: audio sink is done in start()
 		self.audio_sink_0 = None
 		
@@ -66,16 +67,16 @@ class top(gr.top_block):
 		# Connections
 		##################################################
 		# Note: audio sink is done in start()
-		self.connect(self.osmosdr_source_c_0_0, self.demod)
+		self.connect(self.osmosdr_source_c_0_0, self.receiver)
 		self.connect(self.osmosdr_source_c_0_0, self.spectrum_fft, self.spectrum_probe)
 
 	def start(self):
 		# workaround problem with restarting audio sinks on Mac OS X
 		if self.audio_sink_0 is not None:
-			self.disconnect(self.demod, self.audio_sink_0)
+			self.disconnect(self.receiver, self.audio_sink_0)
 		self.audio_sink_0 = audio.sink(self.audio_rate, "", False)
-		self.connect(self.demod, self.audio_sink_0)
-		super(top, self).start()
+		self.connect(self.receiver, self.audio_sink_0)
+		super(Top, self).start()
 
 	def get_input_rate(self):
 		return self.input_rate
@@ -95,7 +96,7 @@ class top(gr.top_block):
 	def set_hw_freq(self, hw_freq):
 		self.hw_freq = hw_freq
 		self.osmosdr_source_c_0_0.set_center_freq(self.hw_freq, 0)
-		self.demod.set_input_center_freq(self.hw_freq)
+		self.receiver.set_input_center_freq(self.hw_freq)
 
 	def get_fftsize(self):
 		return self.fftsize

@@ -12,36 +12,41 @@ from gnuradio.gr import firdes
 from optparse import OptionParser
 import osmosdr
 
-class wfm(gr.hier_block2):
-
-	def __init__(self, input_rate=0, input_center_freq=0, audio_rate=0, rec_freq=0, audio_gain=1):
+class Receiver(gr.hier_block2):
+	def __init__(self, name, input_rate=0, input_center_freq=0, audio_rate=0, rec_freq=0, audio_gain=1):
 		gr.hier_block2.__init__(
-			self, 'Wide FM',
+			self, name,
 			gr.io_signature(1, 1, gr.sizeof_gr_complex*1),
-			# TODO: stereo out?
 			gr.io_signature(1, 1, gr.sizeof_float*1),
 		)
-
 		self.input_rate = input_rate
 		self.input_center_freq = input_center_freq
-		self.demod_rate = demod_rate = 128000
 		self.audio_rate = audio_rate
 		self.rec_freq = rec_freq
-		self.band_filter = band_filter = 75000
 		self.audio_gain = audio_gain
 
-		# TODO: remove this debug output
-		print "Band filter: ", band_filter
-		print "Input decimation: ", input_rate/demod_rate
-		print "Audio decimation: ", demod_rate/audio_rate
+
+class WFMReceiver(Receiver):
+	def __init__(self, **kwargs):
+		Receiver.__init__(self, 'Wideband FM', **kwargs)
+
+		input_rate = self.input_rate
+		audio_rate = self.audio_rate
+		band_filter = 75000
+		demod_rate = 128000
+		
+		# TODO: Resample/twiddle rate as necessary.
+		if input_rate % demod_rate != 0:
+			raise ValueError, 'Input rate %s is not a multiple of demodulator rate %s' % (self.input_rate, demod_rate)
+		if demod_rate % audio_rate != 0:
+			raise ValueError, 'Demodulator rate %s is not a multiple of audio rate %s' % (demod_rate, audio_rate)
 
 		##################################################
 		# Blocks
 		##################################################
-		self.freq_xlating_fir_filter_xxx_0 = filter.freq_xlating_fir_filter_ccc(int(input_rate/demod_rate), (gr.firdes.low_pass(1.0, input_rate, band_filter, 8*100e3, gr.firdes.WIN_HAMMING)), 0, input_rate)
+		self.band_filter_block = filter.freq_xlating_fir_filter_ccc(int(input_rate/demod_rate), (gr.firdes.low_pass(1.0, input_rate, band_filter, 8*100e3, gr.firdes.WIN_HAMMING)), 0, input_rate)
 		self._update_band_center()
 		
-		print demod_rate, " ", int(demod_rate/audio_rate), " ", audio_gain
 		self.blks2_fm_demod_cf_0 = blks2.fm_demod_cf(
 			channel_rate=demod_rate,
 			audio_decim=int(demod_rate/audio_rate),
@@ -52,20 +57,20 @@ class wfm(gr.hier_block2):
 		)
 		
 		# note: fm_demod has a gain parameter, but it is part of the filter, and cannot be adjusted
-		self.audio_gain_block = gr.multiply_const_vff((audio_gain,))
+		self.audio_gain_block = gr.multiply_const_vff((self.audio_gain,))
 		
 		##################################################
 		# Connections
 		##################################################
 		self.connect(
 			self,
-			self.freq_xlating_fir_filter_xxx_0,
+			self.band_filter_block,
 			self.blks2_fm_demod_cf_0,
 			self.audio_gain_block,
 			self)
 
 	def _update_band_center(self):
-		self.freq_xlating_fir_filter_xxx_0.set_center_freq(self.rec_freq - self.input_center_freq)
+		self.band_filter_block.set_center_freq(self.rec_freq - self.input_center_freq)
 
 	def set_input_center_freq(self, value):
 		self.input_center_freq = value
@@ -77,13 +82,6 @@ class wfm(gr.hier_block2):
 	def set_rec_freq(self, rec_freq):
 		self.rec_freq = rec_freq
 		self._update_band_center()
-
-	def get_band_filter(self):
-		return self.band_filter
-
-	def set_band_filter(self, band_filter):
-		self.band_filter = band_filter
-		self.freq_xlating_fir_filter_xxx_0.set_taps((gr.firdes.low_pass(1.0, self.input_rate, self.band_filter, 8*100e3, gr.firdes.WIN_HAMMING)))
 
 	def get_audio_gain(self):
 		return self.audio_gain_block.k()[0]

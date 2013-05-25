@@ -64,8 +64,8 @@ class StartStop(resource.Resource):
 
 # Create SDR component (slow)
 print 'Flow graph...'
-top = sdr.top.top()
-demod = top.demod
+top = sdr.top.Top()
+receiver = top.receiver
 
 # Initialize web server first so we start accepting
 print 'Web server...'
@@ -75,8 +75,8 @@ def export(block, field, ctor):
 	root.putChild(field, ctor(block, field))
 export(top, 'running', StartStop)
 export(top, 'hw_freq', FloatResource)
-export(demod, 'rec_freq', FloatResource)
-export(demod, 'audio_gain', FloatResource)
+export(receiver, 'rec_freq', FloatResource)
+export(receiver, 'audio_gain', FloatResource)
 export(top, 'input_rate', IntResource)
 export(top, 'spectrum_fft', SpectrumResource)
 reactor.listenTCP(8100, server.Site(root))
