@@ -65,6 +65,8 @@
         });
       })
     });
+
+    freqDB.sort(function(a, b) { return a.freq - b.freq; });
   }
   
   var view = {
@@ -366,6 +368,32 @@
     };
   }
   
+  function FreqList(rec_freq) {
+    var list = this.element = document.createElement('select');
+    list.className = 'freq-list';
+    list.multiple = true;
+    list.size = 20;
+    var last = 0;
+    this.draw = function () {
+      // TODO proper update strategy
+      if (freqDB.length === last) { return; }
+      last = freqDB.length;
+      
+      list.textContent = '';
+      freqDB.forEach(function (record) {
+        var freq = record.freq;
+        var item = list.appendChild(document.createElement('option'));
+        item.textContent = (record.freq / 1e6).toFixed(2) + ' ' + record.label;
+        item.addEventListener('click', function(event) {
+          // TODO: add a generic way to properly adjust hw_freq to match rec_freq
+          states.hw_freq.set(freq - 0.2e6);
+          rec_freq.set(freq);
+          event.stopPropagation();
+        }, false);
+      });
+    };
+  }
+  
   function LogSlider(target, slider) {
     this.element = slider;
     slider.addEventListener('change', function(event) {
@@ -441,6 +469,7 @@
   widgetTypes.Knob = Knob;
   widgetTypes.FreqScale = FreqScale;
   widgetTypes.LogSlider = LogSlider;
+  widgetTypes.FreqList = FreqList;
   Array.prototype.forEach.call(document.querySelectorAll("[data-widget]"), function (el) {
     var T = widgetTypes[el.getAttribute("data-widget")];
     if (!T) {

@@ -94,3 +94,9 @@ body {
   color: white;
   opacity: 0.5;
 }
+
+/* widgets: frequency database list */
+.freq-list {
+  width: 100%;
+  box-sizing: border-box;
+}
