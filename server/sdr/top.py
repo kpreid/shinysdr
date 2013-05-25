@@ -54,6 +54,7 @@ class Top(gr.top_block):
 			average=False,
 		)
 		
+		self._mode = None
 		self.set_mode('WFM') # triggers connect
 
 	def _do_connect(self):
@@ -73,6 +74,8 @@ class Top(gr.top_block):
 		return self._mode
 
 	def set_mode(self, kind):
+		if kind == self._mode:
+			return
 		if kind == 'NFM':
 			clas = sdr.receiver.NFMReceiver
 		elif kind == 'WFM':
