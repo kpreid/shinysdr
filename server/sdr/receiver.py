@@ -14,6 +14,8 @@ import osmosdr
 
 class Receiver(gr.hier_block2):
 	def __init__(self, name, input_rate=0, input_center_freq=0, audio_rate=0, rec_freq=0, audio_gain=1):
+		assert input_rate > 0
+		assert audio_rate > 0
 		gr.hier_block2.__init__(
 			self, name,
 			gr.io_signature(1, 1, gr.sizeof_gr_complex*1),
@@ -25,17 +27,16 @@ class Receiver(gr.hier_block2):
 		self.rec_freq = rec_freq
 		self.audio_gain = audio_gain
 
-
-class WFMReceiver(Receiver):
-	def __init__(self, **kwargs):
-		Receiver.__init__(self, 'Wideband FM', **kwargs)
+class FMReceiver(Receiver):
+	def __init__(self, name='FM', deviation=75000, **kwargs):
+		Receiver.__init__(self, name=name, **kwargs)
 
 		input_rate = self.input_rate
 		audio_rate = self.audio_rate
-		self.band_filter = band_filter = 75000
+		band_filter = self.band_filter = deviation
 		demod_rate = 128000
+		# TODO: Choose demod rate based on matching input and audio rates and the band_filter
 		
-		# TODO: Resample/twiddle rate as necessary.
 		if input_rate % demod_rate != 0:
 			raise ValueError, 'Input rate %s is not a multiple of demodulator rate %s' % (self.input_rate, demod_rate)
 		if demod_rate % audio_rate != 0:
@@ -50,7 +51,7 @@ class WFMReceiver(Receiver):
 		self.blks2_fm_demod_cf_0 = blks2.fm_demod_cf(
 			channel_rate=demod_rate,
 			audio_decim=int(demod_rate/audio_rate),
-			deviation=75000,
+			deviation=deviation,
 			audio_pass=15000,
 			audio_stop=16000,
 			tau=75e-6,
@@ -92,3 +93,10 @@ class WFMReceiver(Receiver):
 	def set_audio_gain(self, k):
 		self.audio_gain_block.set_k((k,))
 
+class NFMReceiver(FMReceiver):
+	def __init__(self, **kwargs):
+		FMReceiver.__init__(self, name='Narrowband FM', deviation=5000, **kwargs)
+
+class WFMReceiver(FMReceiver):
+	def __init__(self, **kwargs):
+		FMReceiver.__init__(self, name='Wideband FM', deviation=75000, **kwargs)
