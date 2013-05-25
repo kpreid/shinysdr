@@ -11,8 +11,9 @@ from gnuradio.filter import firdes
 from gnuradio.gr import firdes
 from optparse import OptionParser
 import osmosdr
+import sdr
 
-class Receiver(gr.hier_block2):
+class Receiver(gr.hier_block2, sdr.ExportedState):
 	def __init__(self, name, input_rate=0, input_center_freq=0, audio_rate=0, rec_freq=0, audio_gain=1, squelch_threshold=-100):
 		assert input_rate > 0
 		assert audio_rate > 0
@@ -38,6 +39,16 @@ class Receiver(gr.hier_block2):
 
 	def set_audio_gain(self, k):
 		self.audio_gain_block.set_k((k,))
+
+	def state_keys(self, callback):
+		super(Receiver, self).state_keys(callback)
+		#callback('input_rate')  # container set
+		#callback('input_center_freq')  # container set
+		#callback('audio_rate')  # container set
+		callback('rec_freq')
+		callback('audio_gain')
+		callback('squelch_threshold')
+
 
 class FMReceiver(Receiver):
 	def __init__(self, name='FM', deviation=75000, **kwargs):

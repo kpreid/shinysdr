@@ -5,9 +5,16 @@ from twisted.internet import reactor
 
 import array # for binary stuff
 import json
+import os
 
 import sdr.top
 import sdr.wfm
+
+filename = 'state.json'
+def noteDirty():
+	with open(filename, 'w') as f:
+		json.dump(top.state_to_json(), f)
+	pass
 
 class GRResource(resource.Resource):
 	isLeaf = True
@@ -23,6 +30,7 @@ class GRResource(resource.Resource):
 		data = request.content.read()
 		getattr(self.targetThunk(), 'set_' + self.field)(self.grparse(data))
 		request.setResponseCode(204)
+		noteDirty()
 		return ''
 
 class IntResource(GRResource):
@@ -70,8 +78,8 @@ class StartStop(resource.Resource):
 # Create SDR component (slow)
 print 'Flow graph...'
 top = sdr.top.Top()
-def gtop(): return top
-def grec(): return top.receiver
+if os.path.isfile(filename):
+	top.state_from_json(json.load(open(filename, 'r')))
 
 # Initialize web server first so we start accepting
 print 'Web server...'
@@ -79,6 +87,8 @@ root = static.File('static/')
 root.indexNames = ['index.html']
 def export(blockThunk, field, ctor):
 	root.putChild(field, ctor(blockThunk, field))
+def gtop(): return top
+def grec(): return top.receiver
 export(gtop, 'running', StartStop)
 export(gtop, 'hw_freq', FloatResource)
 export(gtop, 'mode', StringResource)

@@ -11,9 +11,10 @@ from gnuradio.filter import firdes
 from gnuradio.gr import firdes
 from optparse import OptionParser
 import osmosdr
+import sdr
 import sdr.receiver
 
-class Top(gr.top_block):
+class Top(gr.top_block, sdr.ExportedState):
 
 	def __init__(self):
 		gr.top_block.__init__(self, "SDR top block")
@@ -65,6 +66,20 @@ class Top(gr.top_block):
 
 		self.connect(self.osmosdr_source_c_0_0, self.receiver, self.audio_sink_0)
 		self.connect(self.osmosdr_source_c_0_0, self.spectrum_fft, self.spectrum_probe)
+
+	def state_keys(self, callback):
+		super(Top, self).state_keys(callback)
+		callback('mode')
+		#callback('input_rate')
+		#callback('audio_rate')
+		callback('hw_freq')
+		#callback('fftsize')
+		#callback('spectrum_fft')
+		callback('receiver_state')
+	def get_receiver_state(self):
+		return self.receiver.state_to_json()
+	def set_receiver_state(self, value):
+		self.receiver.state_from_json(value)
 
 	def start(self):
 		self._do_connect() # audio sink workaround
