@@ -386,5 +386,26 @@ var sdr = sdr || {};
   }
   widgets.Toggle = Toggle;
   
+  function Radio(config) {
+    var target = config.target;
+    var container = this.element = config.element;
+
+    Array.prototype.forEach.call(container.querySelectorAll('input[type=radio]'), function (rb) {
+      rb.addEventListener('change', function(event) {
+        target.set(rb.value);
+      }, false);
+    });
+    var seen = '';
+    this.draw = function () {
+      var value = config.target.get();
+      if (value === seen) return;
+      seen = value;
+      Array.prototype.forEach.call(container.querySelectorAll('input[type=radio]'), function (rb) {
+        rb.checked = rb.value === seen;
+      });
+    };
+  }
+  widgets.Radio = Radio;
+  
   Object.freeze(widgets);
 }());

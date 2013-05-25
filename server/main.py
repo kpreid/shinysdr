@@ -11,17 +11,17 @@ import sdr.wfm
 
 class GRResource(resource.Resource):
 	isLeaf = True
-	def __init__(self, target, field):
+	def __init__(self, targetThunk, field):
 		'''Uses GNU Radio style accessors.'''
-		self.target = target
+		self.targetThunk = targetThunk
 		self.field = field
 	def grrender(self, value, request):
 		return str(value)
 	def render_GET(self, request):
-		return self.grrender(getattr(self.target, 'get_' + self.field)(), request)
+		return self.grrender(getattr(self.targetThunk(), 'get_' + self.field)(), request)
 	def render_PUT(self, request):
 		data = request.content.read()
-		getattr(self.target, 'set_' + self.field)(self.grparse(data))
+		getattr(self.targetThunk(), 'set_' + self.field)(self.grparse(data))
 		request.setResponseCode(204)
 		return ''
 
@@ -35,6 +35,11 @@ class FloatResource(GRResource):
 	def grparse(self, value):
 		return float(value)
 
+class StringResource(GRResource):
+	defaultContentType = 'text/plain'
+	def grparse(self, value):
+		return value
+
 class SpectrumResource(GRResource):
 	defaultContentType = 'application/octet-stream'
 	def grrender(self, value, request):
@@ -45,8 +50,8 @@ class SpectrumResource(GRResource):
 
 class StartStop(resource.Resource):
 	isLeaf = True
-	def __init__(self, target, junk_field):
-		self.target = target
+	def __init__(self, targetThunk, junk_field):
+		self.target = targetThunk()
 		self.running = False
 	def render_GET(self, request):
 		return json.dumps(self.running)
@@ -65,21 +70,23 @@ class StartStop(resource.Resource):
 # Create SDR component (slow)
 print 'Flow graph...'
 top = sdr.top.Top()
-receiver = top.receiver
+def gtop(): return top
+def grec(): return top.receiver
 
 # Initialize web server first so we start accepting
 print 'Web server...'
 root = static.File('static/')
 root.indexNames = ['index.html']
-def export(block, field, ctor):
-	root.putChild(field, ctor(block, field))
-export(top, 'running', StartStop)
-export(top, 'hw_freq', FloatResource)
-export(receiver, 'band_filter', FloatResource)
-export(receiver, 'rec_freq', FloatResource)
-export(receiver, 'audio_gain', FloatResource)
-export(top, 'input_rate', IntResource)
-export(top, 'spectrum_fft', SpectrumResource)
+def export(blockThunk, field, ctor):
+	root.putChild(field, ctor(blockThunk, field))
+export(gtop, 'running', StartStop)
+export(gtop, 'hw_freq', FloatResource)
+export(gtop, 'mode', StringResource)
+export(grec, 'band_filter', FloatResource)
+export(grec, 'rec_freq', FloatResource)
+export(grec, 'audio_gain', FloatResource)
+export(gtop, 'input_rate', IntResource)
+export(gtop, 'spectrum_fft', SpectrumResource)
 reactor.listenTCP(8100, server.Site(root))
 
 # Actually process requests.

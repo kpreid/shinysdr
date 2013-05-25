@@ -29,13 +29,8 @@ class Top(gr.top_block):
 		##################################################
 		# Blocks
 		##################################################
-		self.receiver = sdr.receiver.WFMReceiver(
-			input_rate=input_rate,
-			input_center_freq=hw_freq,
-			audio_rate=audio_rate,
-			audio_gain=0.25,
-			rec_freq=97.7e6
-		)
+		self.receiver = None
+		self.audio_sink_0 = None
 		
 		self.osmosdr_source_c_0_0 = osmosdr.source_c( args="nchan=" + str(1) + " " + "rtl=0" )
 		self.osmosdr_source_c_0_0.set_sample_rate(input_rate)
@@ -59,24 +54,52 @@ class Top(gr.top_block):
 			average=False,
 		)
 		
-		# TODO: stereo audio out
-		# Note: audio sink is done in start()
-		self.audio_sink_0 = None
-		
-		##################################################
-		# Connections
-		##################################################
-		# Note: audio sink is done in start()
-		self.connect(self.osmosdr_source_c_0_0, self.receiver)
+		self.set_mode('wfm') # triggers connect
+
+	def _do_connect(self):
+		self.disconnect_all()
+
+		# workaround problem with restarting audio sinks on Mac OS X
+		self.audio_sink_0 = audio.sink(self.audio_rate, "", False)
+
+		self.connect(self.osmosdr_source_c_0_0, self.receiver, self.audio_sink_0)
 		self.connect(self.osmosdr_source_c_0_0, self.spectrum_fft, self.spectrum_probe)
 
 	def start(self):
-		# workaround problem with restarting audio sinks on Mac OS X
-		if self.audio_sink_0 is not None:
-			self.disconnect(self.receiver, self.audio_sink_0)
-		self.audio_sink_0 = audio.sink(self.audio_rate, "", False)
-		self.connect(self.receiver, self.audio_sink_0)
+		self._do_connect() # audio sink workaround
 		super(Top, self).start()
+
+	def get_mode(self):
+		return self._mode
+
+	def set_mode(self, kind):
+		if kind == 'nfm':
+			clas = sdr.receiver.NFMReceiver
+		elif kind == 'wfm':
+			clas = sdr.receiver.WFMReceiver
+		else:
+			raise ValueError, 'Unknown receiver type: ' + kind
+		self._mode = kind
+		self.lock()
+		if self.receiver is not None:
+			self.disconnect(self.receiver)
+			options = {
+				'audio_gain': self.receiver.get_audio_gain(),
+				'rec_freq': self.receiver.get_rec_freq(),
+			}
+		else:
+			options = {
+				'audio_gain': 0.25,
+				'rec_freq': 97.7e6,
+			}
+		self.receiver = clas(
+			input_rate=self.input_rate,
+			input_center_freq=self.hw_freq,
+			audio_rate=self.audio_rate,
+			**options
+		)
+		self._do_connect()
+		self.unlock()
 
 	def get_input_rate(self):
 		return self.input_rate
