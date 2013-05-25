@@ -5,7 +5,8 @@ from twisted.internet import reactor
 
 import array # for binary stuff
 
-import sdr.wfm # temporary name to be improved
+import sdr.top
+import sdr.wfm
 
 class GRResource(resource.Resource):
 	isLeaf = True
@@ -43,24 +44,25 @@ class SpectrumResource(GRResource):
 
 # Create SDR component (slow)
 print 'Flow graph...'
-block = sdr.wfm.wfm()
+top = sdr.top.top()
+demod = top.demod
 
 # Initialize web server first so we start accepting
 print 'Web server...'
 root = static.File('static/')
 root.indexNames = ['index.html']
-def export(field, ctor):
+def export(block, field, ctor):
 	root.putChild(field, ctor(block, field))
-export('hw_freq', FloatResource)
-export('rec_freq', FloatResource)
-export('audio_gain', FloatResource)
-export('input_rate', IntResource)
-export('spectrum_fft', SpectrumResource)
+export(top, 'hw_freq', FloatResource)
+export(demod, 'rec_freq', FloatResource)
+export(demod, 'audio_gain', FloatResource)
+export(top, 'input_rate', IntResource)
+export(top, 'spectrum_fft', SpectrumResource)
 reactor.listenTCP(8100, server.Site(root))
 
 # Initialize SDR
 print 'Starting...'
-block.start()
+top.start()
 
 # Actually process requests.
 print 'Ready.'
