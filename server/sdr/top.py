@@ -86,11 +86,13 @@ class Top(gr.top_block):
 			options = {
 				'audio_gain': self.receiver.get_audio_gain(),
 				'rec_freq': self.receiver.get_rec_freq(),
+				'squelch_threshold': self.receiver.get_squelch_threshold(),
 			}
 		else:
 			options = {
 				'audio_gain': 0.25,
 				'rec_freq': 97.7e6,
+				'squelch_threshold': -100
 			}
 		self.receiver = clas(
 			input_rate=self.input_rate,

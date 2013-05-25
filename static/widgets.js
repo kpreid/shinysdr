@@ -357,21 +357,26 @@ var sdr = sdr || {};
   }
   widgets.FreqList = FreqList;
   
-  function LogSlider(config) {
+  function Slider(config, getT, setT) {
     var target = config.target;
     var slider = this.element = config.element;
 
     slider.addEventListener('change', function(event) {
-      target.set(Math.pow(10, slider.valueAsNumber));
+      target.set(setT(slider.valueAsNumber));
     }, false);
     this.draw = function () {
-      var value = Math.log(target.get()) / Math.LN10;
+      var value = getT(target.get());
       var shown = slider.valueAsNumber;
-      if (Math.abs(value - shown) < 1e-8) return;
+      if (Math.abs(value - shown) < 1e-8) return;  // TODO adaptive
       slider.valueAsNumber = value;
     };
   }
-  widgets.LogSlider = LogSlider;
+  widgets.LinSlider = function(c) { return new Slider(c,
+    function (v) { return v; },
+    function (v) { return v; }); };
+  widgets.LogSlider = function(c) { return new Slider(c,
+    function (v) { return Math.log(v) / Math.LN10; },
+    function (v) { return Math.pow(10, v); }); };
   
   function Toggle(config) {
     var target = config.target;

@@ -13,7 +13,7 @@ from optparse import OptionParser
 import osmosdr
 
 class Receiver(gr.hier_block2):
-	def __init__(self, name, input_rate=0, input_center_freq=0, audio_rate=0, rec_freq=0, audio_gain=1):
+	def __init__(self, name, input_rate=0, input_center_freq=0, audio_rate=0, rec_freq=0, audio_gain=1, squelch_threshold=-100):
 		assert input_rate > 0
 		assert audio_rate > 0
 		gr.hier_block2.__init__(
@@ -26,6 +26,18 @@ class Receiver(gr.hier_block2):
 		self.audio_rate = audio_rate
 		self.rec_freq = rec_freq
 		self.audio_gain = audio_gain
+		
+		# TODO: squelch alpha needs to depend on intermediate sample rate
+		self.squelch_block = gr.simple_squelch_cc(squelch_threshold, 0.05)
+
+	def get_squelch_threshold(self):
+		return self.squelch_block.threshold()
+
+	def set_squelch_threshold(self, level):
+		self.squelch_block.set_threshold(level)
+
+	def set_audio_gain(self, k):
+		self.audio_gain_block.set_k((k,))
 
 class FMReceiver(Receiver):
 	def __init__(self, name='FM', deviation=75000, **kwargs):
@@ -66,6 +78,7 @@ class FMReceiver(Receiver):
 		self.connect(
 			self,
 			self.band_filter_block,
+			self.squelch_block,
 			self.blks2_fm_demod_cf_0,
 			self.audio_gain_block,
 			self)

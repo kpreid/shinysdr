@@ -132,6 +132,7 @@
     rec_freq: new RemoteCell('/rec_freq', 0, parseFloat),
     band_filter: new RemoteCell('/band_filter', 0, parseFloat),
     audio_gain: new RemoteCell('/audio_gain', 0, parseFloat),
+    squelch_threshold: new RemoteCell('/squelch_threshold', 0, parseFloat),
     input_rate: new RemoteCell('/input_rate', 1000000, parseInt),
     spectrum: new SpectrumCell(),
   };
