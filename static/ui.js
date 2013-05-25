@@ -41,6 +41,7 @@
       var freqMHz = (channel - 200) * 0.2 + 87.9;
       freqDB.push({
         freq: freqMHz * 1e6,
+        mode: 'WFM',
         label: 'FM ' /*+ channel*/ + freqMHz.toFixed(1)
       });
     }
@@ -61,6 +62,8 @@
         }
         freqDB.push({
           freq: freqMHz * 1e6,
+          // TODO: Not sure what distinction the data is actually making
+          mode: record.Mode === 'FM' ? 'NFM' : record.Mode,
           label: record.Name
         });
       })

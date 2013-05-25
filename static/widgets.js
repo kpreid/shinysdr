@@ -343,7 +343,11 @@ var sdr = sdr || {};
       freqDB.forEach(function (record) {
         var freq = record.freq;
         var item = list.appendChild(document.createElement('option'));
-        item.textContent = (record.freq / 1e6).toFixed(2) + ' ' + record.label;
+        item.textContent = (record.freq / 1e6).toFixed(2) + '  ' + record.mode + '  ' + record.label;
+        // TODO: generalize
+        if (!(record.mode == 'WFM' || record.mode == 'NFM')) {
+          item.disabled = true;
+        }
         item.addEventListener('click', function(event) {
           // TODO: add a generic way to properly adjust hw_freq to match rec_freq
           states.hw_freq.set(freq - 0.2e6);

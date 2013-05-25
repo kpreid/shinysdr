@@ -54,7 +54,7 @@ class Top(gr.top_block):
 			average=False,
 		)
 		
-		self.set_mode('wfm') # triggers connect
+		self.set_mode('WFM') # triggers connect
 
 	def _do_connect(self):
 		self.disconnect_all()
@@ -73,12 +73,12 @@ class Top(gr.top_block):
 		return self._mode
 
 	def set_mode(self, kind):
-		if kind == 'nfm':
+		if kind == 'NFM':
 			clas = sdr.receiver.NFMReceiver
-		elif kind == 'wfm':
+		elif kind == 'WFM':
 			clas = sdr.receiver.WFMReceiver
 		else:
-			raise ValueError, 'Unknown receiver type: ' + kind
+			raise ValueError, 'Unknown mode: ' + kind
 		self._mode = kind
 		self.lock()
 		if self.receiver is not None:
