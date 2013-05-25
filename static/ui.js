@@ -187,6 +187,27 @@
         record[1] = currentCenterFreq;
       }
       
+      // low-pass filter to remove the edge-to-center variation from the spectrum (disabled because I'm not sure fiddling with the data like this is a good idea until such time as I make it an option, and so on)
+      if (false) {
+        var filterspan = 160;
+        var filtersum = 0;
+        var count = 0;
+        var hpf = new Float32Array(w);
+        for (var i = -filterspan; i < w + filterspan; i++) {
+          if (i + filterspan < w) {
+            filtersum += buffer[i + filterspan];
+            count++;
+          }
+          if (i - filterspan >= 0) {
+            filtersum -= buffer[i - filterspan];
+            count--;
+          }
+          if (i >= 0 && i < w) {
+            hpf[i] = filtersum / count;
+          }
+        }
+      }
+      
       // Generate image slice from latest FFT data.
       var scale = buffer.length / w;
       var cScale = 255 / (view.maxLevel - view.minLevel);
@@ -194,7 +215,8 @@
       var data = ibuf.data;
       for (var x = 0; x < w; x++) {
         var base = x * 4;
-        var intensity = buffer[Math.round(x * scale)] * cScale + cZero;
+        var i = Math.round(x * scale);
+        var intensity = (buffer[i] /* - hpf[i]*/) * cScale + cZero;
         var redBound = 255 - intensity / 4;
         data[base] = intensity;
         data[base + 1] = Math.min(intensity * 2, redBound);
