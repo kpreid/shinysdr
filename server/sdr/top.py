@@ -64,10 +64,8 @@ class top(gr.top_block):
 		##################################################
 		# Connections
 		##################################################
-		self.connect((self.osmosdr_source_c_0_0, 0), (self.demod, 0))
-		self.connect((self.demod, 0), (self.audio_sink_0, 0))
-		self.connect((self.osmosdr_source_c_0_0, 0), (self.spectrum_fft, 0))
-		self.connect((self.spectrum_fft, 0), (self.spectrum_probe, 0))
+		self.connect(self.osmosdr_source_c_0_0, self.demod, self.audio_sink_0)
+		self.connect(self.osmosdr_source_c_0_0, self.spectrum_fft, self.spectrum_probe)
 
 	def get_input_rate(self):
 		return self.input_rate

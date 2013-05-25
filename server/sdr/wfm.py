@@ -57,9 +57,12 @@ class wfm(gr.hier_block2):
 		##################################################
 		# Connections
 		##################################################
-		self.connect((self, 0), (self.freq_xlating_fir_filter_xxx_0, 0))
-		self.connect((self.freq_xlating_fir_filter_xxx_0, 0), (self.blks2_fm_demod_cf_0, 0))
-		self.connect((self.blks2_fm_demod_cf_0, 0), self.audio_gain_block, (self, 0))
+		self.connect(
+			self,
+			self.freq_xlating_fir_filter_xxx_0,
+			self.blks2_fm_demod_cf_0,
+			self.audio_gain_block,
+			self)
 
 	def _update_band_center(self):
 		self.freq_xlating_fir_filter_xxx_0.set_center_freq(self.rec_freq - self.input_center_freq)
