@@ -41,7 +41,7 @@ class SpectrumResource(GRResource):
 		request.setHeader('X-SDR-Center-Frequency', str(freq))
 		return array.array('f', fftdata).tostring()
 
-# Create SDR component
+# Create SDR component (slow)
 print 'Flow graph...'
 block = wfm.wfm()
 
@@ -49,14 +49,16 @@ block = wfm.wfm()
 print 'Web server...'
 root = static.File('static/')
 root.indexNames = ['index.html']
-root.putChild('hw_freq', FloatResource(block, 'hw_freq'))
-root.putChild('rec_freq', FloatResource(block, 'rec_freq'))
-root.putChild('audio_gain', FloatResource(block, 'audio_gain'))
-root.putChild('input_rate', IntResource(block, 'input_rate'))
-root.putChild('spectrum_fft', SpectrumResource(block, 'spectrum_fft'))
+def export(field, ctor):
+	root.putChild(field, ctor(block, field))
+export('hw_freq', FloatResource)
+export('rec_freq', FloatResource)
+export('audio_gain', FloatResource)
+export('input_rate', IntResource)
+export('spectrum_fft', SpectrumResource)
 reactor.listenTCP(8100, server.Site(root))
 
-# Initialize SDR (slow)
+# Initialize SDR
 print 'Starting...'
 block.start()
 
