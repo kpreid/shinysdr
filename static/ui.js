@@ -9,27 +9,88 @@
     return function (obj) { obj[name](); };
   }
   
+  // Connectivity management
+  var isDown = false;
+  var queuedToRetry = Object.create(null);
+  var isDownCheckXHR = new XMLHttpRequest();
+  isDownCheckXHR.onreadystatechange = function() {
+    if (isDownCheckXHR.readyState === 4) {
+      if (isDownCheckXHR.status > 0 && isDownCheckXHR.status < 500) {
+        isDown = false;
+        clearInterval(isDownCheck);
+        for (var key in states) {
+          states[key].reload();
+        }
+        for (var key in queuedToRetry) {
+          var retrier = queuedToRetry[key];
+          delete queuedToRetry[key];
+          retrier();
+        }
+      }
+    }
+  };
+  function isDownCheck() {
+    isDownCheckXHR.open('HEAD', '/', true);
+    isDownCheckXHR.send();
+  }
+  
+  function makeXhrStateCallback(r, retry, whenReady) {
+    return function() {
+      if (r.readyState === 4) {
+        if (r.status === 0) {
+          // network error
+          if (!isDown) {
+            console.log('Network error, suspending activities');
+            isDown = true;
+            setInterval(isDownCheck, 1000);
+          }
+          retry();  // cause enqueueing under isDown condition
+          return;
+        }
+        isDown = false;
+        if (Math.floor(r.status / 100) == 2) {
+          whenReady();
+        } else {
+          console.log('XHR was not OK: ' + r.status);
+        }
+      }
+    };
+  }
   function xhrput(url, data) {
+    if (isDown) {
+      queuedToRetry['PUT ' + url] = function() { xhrput(url, data); };
+      return;
+    }
     var r = new XMLHttpRequest();
     r.open('PUT', url, true);
     r.setRequestHeader('Content-Type', 'text/plain');
+    r.onreadystatechange = makeXhrStateCallback(r,
+      function putRetry() {
+        xhrput(url, data); // causes enqueueing
+      },
+      function () {});
     r.send(data);
     console.log(url, data);
   }
   function makeXhrGetter(url, callback, binary) {
     var r = new XMLHttpRequest();
     if (binary) r.responseType = 'arraybuffer';
-    r.onreadystatechange = function() {
-      if (r.readyState === 4) {
-        callback(binary ? r.response : r.responseText, r);
-      }
-    };
-    return {
+    var self = {
       go: function() {
+        if (isDown) {
+          queuedToRetry['GET ' + url] = self.go;
+          return;
+        }
         r.open('GET', url, true);
         r.send();
       }
     };
+    r.onreadystatechange = makeXhrStateCallback(r,
+      self.go,
+      function () {
+        callback(binary ? r.response : r.responseText, r);
+      });
+    return self;
   }
   
   var freqDB = [];
@@ -80,9 +141,11 @@
   
   function RemoteCell(name, assumed, parser) {
     var value = assumed;
-    makeXhrGetter(name, function(remote) {
+    var getter = makeXhrGetter(name, function(remote) {
       value = parser(remote);
-    }, false).go();
+    }, false);
+    getter.go();
+    this.reload = getter.go.bind(getter);
     this.get = function() { return value; },
     this.set = function(newValue) {
       value = newValue;
@@ -123,6 +186,7 @@
     this.getCenterFreq = function() {
       return centerFreq;
     };
+    this.reload = function() {};
   }
   
   var states = {
@@ -138,13 +202,16 @@
   };
   
   // Kludge to let frequency preset widgets do their thing
-  states.preset = { set: function(freqRecord) {
-    // TODO: magic number
-    var freq = freqRecord.freq;
-    states.hw_freq.set(freq - 0.2e6);
-    states.mode.set(freqRecord.mode);
-    states.rec_freq.set(freq);
-  }};
+  states.preset = { 
+    reload: function() {},
+    set: function(freqRecord) {
+      // TODO: magic number
+      var freq = freqRecord.freq;
+      states.hw_freq.set(freq - 0.2e6);
+      states.mode.set(freqRecord.mode);
+      states.rec_freq.set(freq);
+    }
+  };
   
   var widgets = [];
   // TODO: make these widgets follow the same protocol as the others
