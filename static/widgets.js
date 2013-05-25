@@ -315,7 +315,7 @@ var sdr = sdr || {};
           el.style.left = position(freq);
           // TODO: be an <a> or <button>
           el.addEventListener('click', function(event) {
-            states.rec_freq.set(freq);
+            states.preset.set(record);
             event.stopPropagation();
           }, false);
         }
@@ -349,9 +349,7 @@ var sdr = sdr || {};
           item.disabled = true;
         }
         item.addEventListener('click', function(event) {
-          // TODO: add a generic way to properly adjust hw_freq to match rec_freq
-          states.hw_freq.set(freq - 0.2e6);
-          rec_freq.set(freq);
+          config.radio.preset.set(record);
           event.stopPropagation();
         }, false);
       });

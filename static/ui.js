@@ -136,6 +136,15 @@
     spectrum: new SpectrumCell(),
   };
   
+  // Kludge to let frequency preset widgets do their thing
+  states.preset = { set: function(freqRecord) {
+    // TODO: magic number
+    var freq = freqRecord.freq;
+    states.hw_freq.set(freq - 0.2e6);
+    states.mode.set(freqRecord.mode);
+    states.rec_freq.set(freq);
+  }};
+  
   var widgets = [];
   // TODO: make these widgets follow the same protocol as the others
   widgets.push(new sdr.widgets.SpectrumPlot({
