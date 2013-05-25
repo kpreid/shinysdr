@@ -78,6 +78,7 @@
     ctx.lineWidth = 1;
     var cssColor = getComputedStyle(canvas).color;
     var w, h, bandwidth, averageBuffer; // updated in draw
+    var lastDrawnCenterFreq = NaN;
     
     function relFreqToX(freq) {
       return w * (1/2 + freq / bandwidth);
@@ -108,7 +109,11 @@
       
       // averaging
       // TODO: Get separate averaged and unaveraged FFTs from server so that averaging behavior is not dependent on frame rate over the network
-      if (!averageBuffer || averageBuffer.length !== len) {
+      if (!averageBuffer
+          || averageBuffer.length !== len
+          || lastDrawnCenterFreq !== fftCell.getCenterFreq()) {
+        console.log('reset');
+        lastDrawnCenterFreq = fftCell.getCenterFreq();
         averageBuffer = new Float32Array(buffer);
       }
       for (var i = 0; i < len; i++) {
