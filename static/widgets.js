@@ -370,5 +370,20 @@ var sdr = sdr || {};
   }
   widgets.LogSlider = LogSlider;
   
+  function Toggle(config) {
+    var target = config.target;
+    var checkbox = this.element = config.element;
+
+    checkbox.addEventListener('change', function(event) {
+      target.set(checkbox.checked);
+    }, false);
+    this.draw = function () {
+      var value = target.get();
+      if (value === checkbox.checked) return;
+      checkbox.checked = value;
+    };
+  }
+  widgets.Toggle = Toggle;
+  
   Object.freeze(widgets);
 }());

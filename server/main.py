@@ -4,6 +4,7 @@ from twisted.web import static, server, resource
 from twisted.internet import reactor
 
 import array # for binary stuff
+import json
 
 import sdr.top
 import sdr.wfm
@@ -42,6 +43,25 @@ class SpectrumResource(GRResource):
 		request.setHeader('X-SDR-Center-Frequency', str(freq))
 		return array.array('f', fftdata).tostring()
 
+class StartStop(resource.Resource):
+	isLeaf = True
+	def __init__(self, target, junk_field):
+		self.target = target
+		self.running = False
+	def render_GET(self, request):
+		return json.dumps(self.running)
+	def render_PUT(self, request):
+		value = bool(json.load(request.content))
+		if value != self.running:
+			self.running = value
+			if value:
+				self.target.start()
+			else:
+				self.target.stop()
+				self.target.wait()
+		request.setResponseCode(204)
+		return ''
+
 # Create SDR component (slow)
 print 'Flow graph...'
 top = sdr.top.top()
@@ -53,16 +73,13 @@ root = static.File('static/')
 root.indexNames = ['index.html']
 def export(block, field, ctor):
 	root.putChild(field, ctor(block, field))
+export(top, 'running', StartStop)
 export(top, 'hw_freq', FloatResource)
 export(demod, 'rec_freq', FloatResource)
 export(demod, 'audio_gain', FloatResource)
 export(top, 'input_rate', IntResource)
 export(top, 'spectrum_fft', SpectrumResource)
 reactor.listenTCP(8100, server.Site(root))
-
-# Initialize SDR
-print 'Starting...'
-top.start()
 
 # Actually process requests.
 print 'Ready.'

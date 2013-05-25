@@ -59,13 +59,23 @@ class top(gr.top_block):
 			average=False,
 		)
 		
-		self.audio_sink_0 = audio.sink(audio_rate, "", False)
-
+		# Note: audio sink is done in start()
+		self.audio_sink_0 = None
+		
 		##################################################
 		# Connections
 		##################################################
-		self.connect(self.osmosdr_source_c_0_0, self.demod, self.audio_sink_0)
+		# Note: audio sink is done in start()
+		self.connect(self.osmosdr_source_c_0_0, self.demod)
 		self.connect(self.osmosdr_source_c_0_0, self.spectrum_fft, self.spectrum_probe)
+
+	def start(self):
+		# workaround problem with restarting audio sinks on Mac OS X
+		if self.audio_sink_0 is not None:
+			self.disconnect(self.demod, self.audio_sink_0)
+		self.audio_sink_0 = audio.sink(self.audio_rate, "", False)
+		self.connect(self.demod, self.audio_sink_0)
+		super(top, self).start()
 
 	def get_input_rate(self):
 		return self.input_rate
@@ -78,9 +88,6 @@ class top(gr.top_block):
 
 	def get_audio_rate(self):
 		return self.audio_rate
-
-	def set_audio_rate(self, audio_rate):
-		self.audio_rate = audio_rate
 
 	def get_hw_freq(self):
 		return self.hw_freq
@@ -104,7 +111,7 @@ class top(gr.top_block):
 if __name__ == '__main__':
 	parser = OptionParser(option_class=eng_option, usage="%prog: [options]")
 	(options, args) = parser.parse_args()
-	tb = wfm()
+	tb = top()
 	tb.start()
 	raw_input('Press Enter to quit: ')
 	tb.stop()

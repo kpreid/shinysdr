@@ -122,6 +122,7 @@
   }
   
   var states = {
+    running: new RemoteCell('/running', false, JSON.parse),
     hw_freq: new RemoteCell('/hw_freq', 0, parseFloat),
     rec_freq: new RemoteCell('/rec_freq', 0, parseFloat),
     audio_gain: new RemoteCell('/audio_gain', 0, parseFloat),
