@@ -66,12 +66,21 @@ var sdr = sdr || {};
       ctx.clearRect(0, 0, w, h);
       
       // TODO: marks ought to be part of a distinct widget
+      var squelch = Math.floor(yZero + states.squelch_threshold.get() * yScale) + 0.5;
+      ctx.strokeStyle = '#700';
+      ctx.beginPath();
+      ctx.moveTo(0, squelch);
+      ctx.lineTo(w, squelch);
+      ctx.stroke();
+      
       var offset = states.rec_freq.get() - states.hw_freq.get();
       ctx.fillStyle = '#444';
       var bandFilter = states.band_filter.get();
       drawBand(offset - bandFilter, offset + bandFilter);
+      
       ctx.strokeStyle = 'gray';
       drawHair(0); // center frequency
+      
       ctx.strokeStyle = 'white';
       drawHair(offset); // receiver
       
