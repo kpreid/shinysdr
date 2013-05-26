@@ -16,7 +16,8 @@ var sdr = sdr || {};
     var states = config.radio;
     
     var ctx = canvas.getContext('2d');
-    ctx.canvas.width = parseInt(getComputedStyle(canvas).width);
+    ctx.canvas.width = parseInt(getComputedStyle(canvas).width); // TODO on resize
+    ctx.canvas.height = parseInt(getComputedStyle(canvas).height);
     ctx.lineWidth = 1;
     var cssColor = getComputedStyle(canvas).color;
     var w, h, bandwidth, averageBuffer; // updated in draw
