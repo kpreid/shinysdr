@@ -358,6 +358,80 @@ var sdr = sdr || {};
   }
   widgets.FreqList = FreqList;
   
+  function Scanner(config) {
+    var radio = config.radio;
+    var hw_freq = radio.hw_freq;
+    var rec_freq = radio.rec_freq;
+    var preset = radio.preset;
+    var spectrum = radio.spectrum;
+    var freqDB = config.freqDB;
+
+    var scanInterval;
+    
+    function isSignalPresent() {
+      var targetFreq = rec_freq.get();
+      var band = 10e3;
+      
+      var curSpectrum = spectrum.get();
+      var bandwidth = radio.input_rate.get();
+      var scale = curSpectrum.length / bandwidth;
+      var centerFreq = spectrum.getCenterFreq();
+      function index(freq) {
+        return Math.floor((freq - centerFreq) * scale + curSpectrum.length / 2);
+      }
+      // TODO needs some averaging to avoid skipping at weak moments
+      var low = index(targetFreq - band);
+      var high = index(targetFreq + band);
+      var localPower = -Infinity;
+      for (var i = low; i < high; i++) {
+        if (i >= 0 && i < curSpectrum.length) {
+          localPower = Math.max(localPower, curSpectrum[i]);
+        }
+      }
+      //console.log(localPower);
+      return localPower > radio.squelch_threshold.get();
+    }
+    
+    function findNextChannel() {
+      var oldFreq = rec_freq.get();
+      // TODO: spatial index for freqDB
+      for (var i = 0; i < freqDB.length; i++) {
+        var record = freqDB[i];
+        var freq = record.freq;
+        if (freq <= oldFreq) continue;
+        if (record.mode === 'ignore') continue;
+        return record;
+      }
+      // loop around
+      return freqDB[0];
+    }
+
+    function runScan() {
+      if (spectrum.getCenterFreq() !== radio.hw_freq.get()) {
+        console.log('Not caught up...');
+      } else if (isSignalPresent()) {
+        console.log('Holding...');
+      } else {
+        preset.set(findNextChannel());
+      }
+    }
+
+    var container = this.element = document.createElement('form');
+    container.innerHTML = '<label><input type="checkbox">Scan</label>';
+    var toggle = container.querySelector('input');
+    toggle.addEventListener('change', function () {
+      if (toggle.checked && !scanInterval) {
+        scanInterval = setInterval(runScan, 250);
+      } else {
+        clearInterval(scanInterval);
+        scanInterval = undefined;
+      }
+    }, false);
+
+    this.draw = function () {};
+  }
+  widgets.Scanner = Scanner;
+  
   function Slider(config, getT, setT) {
     var target = config.target;
     var slider = this.element = config.element;

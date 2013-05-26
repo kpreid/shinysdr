@@ -245,10 +245,13 @@
       console.error('Bad widget type:', el);
       return;
     }
-    var stateObj = states[el.getAttribute("data-target")];
-    if (!stateObj) {
-      console.error('Bad widget target:', el);
-      return;
+    var stateObj;
+    if (el.hasAttribute('data-target')) {
+      stateObj = states[el.getAttribute("data-target")];
+      if (!stateObj) {
+        console.error('Bad widget target:', el);
+        return;
+      }
     }
     var widget = new T({
       target: stateObj,
