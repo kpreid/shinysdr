@@ -6,6 +6,7 @@ from twisted.internet import reactor
 import array # for binary stuff
 import json
 import os
+import shutil
 
 import sdr.top
 import sdr.wfm
@@ -15,6 +16,12 @@ def noteDirty():
 	with open(filename, 'w') as f:
 		json.dump(top.state_to_json(), f)
 	pass
+def restore(root):
+	if os.path.isfile(filename):
+		# make a backup in case this code version misreads the state and loses things on save
+		shutil.copyfile(filename, filename + '~')
+		root.state_from_json(json.load(open(filename, 'r')))
+	
 
 class GRResource(resource.Resource):
 	isLeaf = True
@@ -66,8 +73,7 @@ class SpectrumResource(GRResource):
 # Create SDR component (slow)
 print 'Flow graph...'
 top = sdr.top.Top()
-if os.path.isfile(filename):
-	top.state_from_json(json.load(open(filename, 'r')))
+restore(top)
 
 # Initialize web server first so we start accepting
 print 'Web server...'
