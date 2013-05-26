@@ -431,7 +431,7 @@ var sdr = sdr || {};
     var toggle = container.querySelector('input');
     toggle.addEventListener('change', function () {
       if (toggle.checked && !scanInterval) {
-        scanInterval = setInterval(runScan, 250);
+        scanInterval = setInterval(runScan, 50);
       } else {
         clearInterval(scanInterval);
         scanInterval = undefined;
