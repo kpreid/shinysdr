@@ -108,6 +108,8 @@ class Top(gr.top_block, sdr.ExportedState):
 			clas = sdr.receiver.NFMReceiver
 		elif kind == 'WFM':
 			clas = sdr.receiver.WFMReceiver
+		elif kind == 'AM':
+			clas = sdr.receiver.AMReceiver
 		else:
 			raise ValueError, 'Unknown mode: ' + kind
 		self._mode = kind

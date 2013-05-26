@@ -48,6 +48,66 @@ class Receiver(gr.hier_block2, sdr.ExportedState):
 		callback('rec_freq')
 		callback('audio_gain')
 		callback('squelch_threshold')
+	
+	def get_rec_freq(self):
+		return self.rec_freq
+	
+	def set_rec_freq(self, rec_freq):
+		self.rec_freq = rec_freq
+		self._update_band_center()
+
+class AMReceiver(Receiver):
+	def __init__(self, name='AM', **kwargs):
+		Receiver.__init__(self, name=name, **kwargs)
+	
+		input_rate = self.input_rate
+		audio_rate = self.audio_rate
+		demod_rate = 64000
+		self.band_filter = band_filter = 5000
+		
+		if input_rate % demod_rate != 0:
+			raise ValueError, 'Input rate %s is not a multiple of demodulator rate %s' % (self.input_rate, demod_rate)
+		if demod_rate % audio_rate != 0:
+			raise ValueError, 'Demodulator rate %s is not a multiple of audio rate %s' % (demod_rate, audio_rate)
+
+		self.band_filter_block = filter.freq_xlating_fir_filter_ccc(int(input_rate/demod_rate), (gr.firdes.low_pass(1.0, input_rate, band_filter, band_filter * 0.5, gr.firdes.WIN_HAMMING)), 0, input_rate)
+		self._update_band_center()
+		
+		self.demod_block = gr.complex_to_mag(1)
+		
+		# magic numbers borrowed from gqrx
+		resample_ratio = float(audio_rate)/demod_rate
+		pfbsize = 32
+		self.resampler_block = gr.pfb_arb_resampler_fff(
+			resample_ratio,
+			firdes.low_pass(pfbsize, pfbsize, 0.4*resample_ratio, 0.2*resample_ratio),
+			pfbsize)
+		self.audio_gain_block = gr.multiply_const_vff((self.audio_gain,))
+		
+		self.connect(
+			self,
+			self.band_filter_block,
+			self.squelch_block,
+			self.demod_block,
+			self.resampler_block,
+			self.audio_gain_block,
+			self)
+
+	def _update_band_center(self):
+		self.band_filter_block.set_center_freq(self.rec_freq - self.input_center_freq)
+
+	def set_input_center_freq(self, value):
+		self.input_center_freq = value
+		self._update_band_center()
+
+	def get_band_filter(self):
+		return self.band_filter
+
+	def get_audio_gain(self):
+		return self.audio_gain_block.k()[0]
+
+	def set_audio_gain(self, k):
+		self.audio_gain_block.set_k((k,))
 
 
 class FMReceiver(Receiver):
@@ -107,13 +167,6 @@ class FMReceiver(Receiver):
 
 	def get_band_filter(self):
 		return self.band_filter
-
-	def get_rec_freq(self):
-		return self.rec_freq
-
-	def set_rec_freq(self, rec_freq):
-		self.rec_freq = rec_freq
-		self._update_band_center()
 
 	def get_audio_gain(self):
 		return self.audio_gain_block.k()[0]
