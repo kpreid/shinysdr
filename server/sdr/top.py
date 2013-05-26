@@ -18,6 +18,7 @@ class Top(gr.top_block, sdr.ExportedState):
 
 	def __init__(self):
 		gr.top_block.__init__(self, "SDR top block")
+		self._running = False
 
 		##################################################
 		# Variables
@@ -69,6 +70,7 @@ class Top(gr.top_block, sdr.ExportedState):
 
 	def state_keys(self, callback):
 		super(Top, self).state_keys(callback)
+		callback('running')
 		callback('mode')
 		#callback('input_rate')
 		#callback('audio_rate')
@@ -84,6 +86,17 @@ class Top(gr.top_block, sdr.ExportedState):
 	def start(self):
 		self._do_connect() # audio sink workaround
 		super(Top, self).start()
+
+	def get_running(self):
+		return self._running
+	def set_running(self, value):
+		if value != self._running:
+			self._running = value
+			if value:
+				self.start()
+			else:
+				self.stop()
+				self.wait()
 
 	def get_mode(self):
 		return self._mode

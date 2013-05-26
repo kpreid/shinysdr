@@ -48,6 +48,13 @@ class StringResource(GRResource):
 	def grparse(self, value):
 		return value
 
+class BoolResource(GRResource):
+	defaultContentType = 'text/plain'
+	def grparse(self, value):
+		return bool(json.loads(value))
+	def grrender(self, value, request):
+		return json.dumps(value)
+
 class SpectrumResource(GRResource):
 	defaultContentType = 'application/octet-stream'
 	def grrender(self, value, request):
@@ -55,25 +62,6 @@ class SpectrumResource(GRResource):
 		# TODO: Use a more structured response rather than putting data in headers
 		request.setHeader('X-SDR-Center-Frequency', str(freq))
 		return array.array('f', fftdata).tostring()
-
-class StartStop(resource.Resource):
-	isLeaf = True
-	def __init__(self, targetThunk, junk_field):
-		self.target = targetThunk()
-		self.running = False
-	def render_GET(self, request):
-		return json.dumps(self.running)
-	def render_PUT(self, request):
-		value = bool(json.load(request.content))
-		if value != self.running:
-			self.running = value
-			if value:
-				self.target.start()
-			else:
-				self.target.stop()
-				self.target.wait()
-		request.setResponseCode(204)
-		return ''
 
 # Create SDR component (slow)
 print 'Flow graph...'
@@ -89,7 +77,7 @@ def export(blockThunk, field, ctor):
 	root.putChild(field, ctor(blockThunk, field))
 def gtop(): return top
 def grec(): return top.receiver
-export(gtop, 'running', StartStop)
+export(gtop, 'running', BoolResource)
 export(gtop, 'hw_freq', FloatResource)
 export(gtop, 'mode', StringResource)
 export(grec, 'band_filter', FloatResource)
