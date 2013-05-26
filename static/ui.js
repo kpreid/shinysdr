@@ -110,6 +110,15 @@
     }
   }());
   
+  // RTL internal spurious signals
+  [115.2e6, 125e6, 144e6, 172.192e6].forEach(function (freq) {
+    freqDB.push({
+      freq: freq,
+      mode: 'ignore',
+      label: '--'
+    })
+  });
+  
   // Prepare to load real data using JSONP callback
   window.sdr_data = function (json) {
     json.forEach(function (table) {

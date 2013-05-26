@@ -341,6 +341,7 @@ var sdr = sdr || {};
       
       list.textContent = '';
       freqDB.forEach(function (record) {
+        if (record.mode === 'ignore') return;
         var freq = record.freq;
         var item = list.appendChild(document.createElement('option'));
         item.textContent = (record.freq / 1e6).toFixed(2) + '  ' + record.mode + '  ' + record.label;
