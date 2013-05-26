@@ -398,8 +398,8 @@ var sdr = sdr || {};
           localPower = Math.max(localPower, curSpectrum[i]);
         }
       }
-      //console.log(localPower);
-      return localPower > radio.squelch_threshold.get();
+      // Arbitrary fudge factor because our algorithm here is lousy and doesn't match the server's squelch
+      return localPower + 10 > radio.squelch_threshold.get();
     }
     
     function findNextChannel() {
