@@ -212,14 +212,25 @@
     spectrum: new SpectrumCell(),
   };
   
+  // Takes center freq as parameter so it can be used on hypotheticals and so on.
+  function frequencyInRange(candidate, centerFreq) {
+    var halfBandwidth = states.input_rate.get() / 2;
+    var fromCenter = Math.abs(candidate - centerFreq) / halfBandwidth;
+    return fromCenter > 0.1 && // DC peak
+           fromCenter < 0.75;  // loss at edges
+  }
+  
   // Kludge to let frequency preset widgets do their thing
   states.preset = { 
     reload: function() {},
     set: function(freqRecord) {
-      // TODO: magic number
       var freq = freqRecord.freq;
-      states.hw_freq.set(freq - 0.2e6);
       states.mode.set(freqRecord.mode);
+      if (!frequencyInRange(freq, states.hw_freq.get())) {
+        //states.hw_freq.set(freq - 0.2e6);
+        // left side, just inside of frequencyInRange's test
+        states.hw_freq.set(freq + states.input_rate.get() * 0.374);
+      }
       states.rec_freq.set(freq);
     }
   };
