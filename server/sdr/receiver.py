@@ -73,9 +73,12 @@ class AMReceiver(Receiver):
 		self.band_filter_block = filter.freq_xlating_fir_filter_ccc(int(input_rate/demod_rate), (gr.firdes.low_pass(1.0, input_rate, band_filter, band_filter * 0.5, gr.firdes.WIN_HAMMING)), 0, input_rate)
 		self._update_band_center()
 		
+		# TODO: 0.1 is needed to avoid clipping; is there a better place to tweak our level vs. other receivers?
+		self.agc_block = gr.feedforward_agc_cc(1024, 0.1)
+		
 		self.demod_block = gr.complex_to_mag(1)
 		
-		# magic numbers borrowed from gqrx
+		# magic numbers from gqrx
 		resample_ratio = float(audio_rate)/demod_rate
 		pfbsize = 32
 		self.resampler_block = gr.pfb_arb_resampler_fff(
@@ -88,6 +91,7 @@ class AMReceiver(Receiver):
 			self,
 			self.band_filter_block,
 			self.squelch_block,
+			self.agc_block,
 			self.demod_block,
 			self.resampler_block,
 			self.audio_gain_block,
