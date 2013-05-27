@@ -152,6 +152,14 @@
     }
   };
   
+  // TODO better structure / move to server
+  var _scanList = [];
+  states.scan_presets = {
+    reload: function () {},
+    get: function () { return _scanList; },
+    set: function (list) { _scanList = list; }
+  };
+  
   var view = new sdr.widget.SpectrumView({
     radio: states,
     element: document.querySelector('.hscalegroup') // TODO relic

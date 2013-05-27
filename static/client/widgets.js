@@ -403,6 +403,9 @@ var sdr = sdr || {};
     list.multiple = true;
     list.size = 20;
     
+    // TODO kludge
+    var recordsForScanner = [];
+    
     var last = 0;
     var recordElements = [];
     function updateElements() {
@@ -434,6 +437,7 @@ var sdr = sdr || {};
     function addIfInFilter(item) {
       if (item._freq_record.label.indexOf(lastFilter) !== -1) {
         list.appendChild(item);
+        recordsForScanner.push(item._freq_record);
       }
     }
     
@@ -445,8 +449,14 @@ var sdr = sdr || {};
     }
     function updateView() {
       lastFilter = filterBox.value;
+      
+      // clear
       list.textContent = '';  // clear
+      recordsForScanner = [];
+      
       recordElements.forEach(addIfInFilter);
+      
+      states.scan_presets.set(recordsForScanner);
     }
     
     this.draw = function () {
@@ -464,7 +474,7 @@ var sdr = sdr || {};
     var rec_freq = radio.rec_freq;
     var preset = radio.preset;
     var spectrum = radio.spectrum;
-    var freqDB = config.freqDB;
+    var scan_presets = radio.scan_presets;
 
     var scanInterval;
     
@@ -494,16 +504,16 @@ var sdr = sdr || {};
     
     function findNextChannel() {
       var oldFreq = rec_freq.get();
+      var db = scan_presets.get();
       // TODO: spatial index for freqDB
-      for (var i = 0; i < freqDB.length; i++) {
-        var record = freqDB[i];
+      for (var i = 0; i < db.length; i++) {
+        var record = db[i];
         var freq = record.freq;
         if (freq <= oldFreq) continue;
-        if (record.mode === 'ignore') continue;
         return record;
       }
       // loop around
-      return freqDB[0];
+      return db[0];
     }
 
     function runScan() {
