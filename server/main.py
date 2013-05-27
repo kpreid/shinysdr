@@ -86,6 +86,7 @@ def gtop(): return top
 def grec(): return top.receiver
 export(gtop, 'running', BoolResource)
 export(gtop, 'hw_freq', FloatResource)
+export(gtop, 'hw_correction_ppm', FloatResource)
 export(gtop, 'mode', StringResource)
 export(grec, 'band_filter', FloatResource)
 export(grec, 'rec_freq', FloatResource)

@@ -27,6 +27,7 @@ class Top(gr.top_block, sdr.ExportedState):
 		self.audio_rate = audio_rate =   32000
 		self.hw_freq = hw_freq = 98e6
 		self.fftsize = fftsize = 2048
+		self.hw_correction_ppm = 0
 
 		##################################################
 		# Blocks
@@ -34,17 +35,17 @@ class Top(gr.top_block, sdr.ExportedState):
 		self.receiver = None
 		self.audio_sink_0 = None
 		
-		self.osmosdr_source_c_0_0 = osmosdr.source_c( args="nchan=" + str(1) + " " + "rtl=0" )
-		self.osmosdr_source_c_0_0.set_sample_rate(input_rate)
-		self.osmosdr_source_c_0_0.set_center_freq(hw_freq, 0)
-		self.osmosdr_source_c_0_0.set_freq_corr(0, 0)
-		self.osmosdr_source_c_0_0.set_iq_balance_mode(0, 0)
-		self.osmosdr_source_c_0_0.set_gain_mode(1, 0)
-		self.osmosdr_source_c_0_0.set_gain(10, 0)
-		self.osmosdr_source_c_0_0.set_if_gain(24, 0)
-		self.osmosdr_source_c_0_0.set_bb_gain(20, 0)
-		self.osmosdr_source_c_0_0.set_antenna("", 0)
-		self.osmosdr_source_c_0_0.set_bandwidth(0, 0)
+		self.osmosdr_source_block = osmosdr.source_c( args="nchan=" + str(1) + " " + "rtl=0" )
+		self.osmosdr_source_block.set_sample_rate(input_rate)
+		self.osmosdr_source_block.set_center_freq(hw_freq, 0)
+		self.osmosdr_source_block.set_freq_corr(0, 0)
+		self.osmosdr_source_block.set_iq_balance_mode(0, 0)
+		self.osmosdr_source_block.set_gain_mode(1, 0)
+		self.osmosdr_source_block.set_gain(10, 0)
+		self.osmosdr_source_block.set_if_gain(24, 0)
+		self.osmosdr_source_block.set_bb_gain(20, 0)
+		self.osmosdr_source_block.set_antenna("", 0)
+		self.osmosdr_source_block.set_bandwidth(0, 0)
 		
 		self.spectrum_probe = blocks.probe_signal_vf(fftsize)
 		self.spectrum_fft = blks2.logpwrfft_c(
@@ -65,8 +66,8 @@ class Top(gr.top_block, sdr.ExportedState):
 		# workaround problem with restarting audio sinks on Mac OS X
 		self.audio_sink_0 = audio.sink(self.audio_rate, "", False)
 
-		self.connect(self.osmosdr_source_c_0_0, self.receiver, self.audio_sink_0)
-		self.connect(self.osmosdr_source_c_0_0, self.spectrum_fft, self.spectrum_probe)
+		self.connect(self.osmosdr_source_block, self.receiver, self.audio_sink_0)
+		self.connect(self.osmosdr_source_block, self.spectrum_fft, self.spectrum_probe)
 
 	def state_keys(self, callback):
 		super(Top, self).state_keys(callback)
@@ -75,6 +76,7 @@ class Top(gr.top_block, sdr.ExportedState):
 		#callback('input_rate')
 		#callback('audio_rate')
 		callback('hw_freq')
+		callback('hw_correction_ppm')
 		#callback('fftsize')
 		#callback('spectrum_fft')
 		callback('receiver_state')
@@ -142,7 +144,7 @@ class Top(gr.top_block, sdr.ExportedState):
 	# TODO: this looks unsafe (doesn't adjust decimation), fix or toss
 	#def set_input_rate(self, input_rate):
 	#	self.input_rate = input_rate
-	#	self.osmosdr_source_c_0_0.set_sample_rate(self.input_rate)
+	#	self.osmosdr_source_block.set_sample_rate(self.input_rate)
 	#	self.freq_xlating_fir_filter_xxx_0.set_taps((gr.firdes.low_pass(1.0, self.input_rate, self.band_filter, 8*100e3, gr.firdes.WIN_HAMMING)))
 
 	def get_audio_rate(self):
@@ -153,7 +155,20 @@ class Top(gr.top_block, sdr.ExportedState):
 
 	def set_hw_freq(self, hw_freq):
 		self.hw_freq = hw_freq
-		self.osmosdr_source_c_0_0.set_center_freq(self.hw_freq, 0)
+		self._update_frequency()
+
+	def get_hw_correction_ppm(self):
+		return self.hw_correction_ppm
+	
+	def set_hw_correction_ppm(self, value):
+		self.hw_correction_ppm = value
+		# Not using the hardware feature because I only get garbled output from it
+		#self.osmosdr_source_block.set_freq_corr(value, 0)
+		self._update_frequency()
+		
+	def _update_frequency(self):
+		adj_freq = self.hw_freq * (1 + 1e-6 * self.hw_correction_ppm)
+		self.osmosdr_source_block.set_center_freq(adj_freq, 0)
 		self.receiver.set_input_center_freq(self.hw_freq)
 
 	def get_fftsize(self):
