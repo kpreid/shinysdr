@@ -1,98 +1,8 @@
 (function () {
-  "use strict";
+  'use strict';
   
-  function mod(value, modulus) {
-    return (value % modulus + modulus) % modulus;
-  }
-
-  function sending(name) {
-    return function (obj) { obj[name](); };
-  }
-  
-  // Connectivity management
-  var isDown = false;
-  var queuedToRetry = Object.create(null);
-  var isDownCheckXHR = new XMLHttpRequest();
-  var isDownCheckInterval;
-  isDownCheckXHR.onreadystatechange = function() {
-    if (isDownCheckXHR.readyState === 4) {
-      if (isDownCheckXHR.status > 0 && isDownCheckXHR.status < 500) {
-        isDown = false;
-        clearInterval(isDownCheckInterval);
-        for (var key in states) {
-          states[key].reload();
-        }
-        for (var key in queuedToRetry) {
-          var retrier = queuedToRetry[key];
-          delete queuedToRetry[key];
-          retrier();
-        }
-      }
-    }
-  };
-  function isDownCheck() {
-    isDownCheckXHR.open('HEAD', '/', true);
-    isDownCheckXHR.send();
-  }
-  
-  function makeXhrStateCallback(r, retry, whenReady) {
-    return function() {
-      if (r.readyState === 4) {
-        if (r.status === 0) {
-          // network error
-          if (!isDown) {
-            console.log('Network error, suspending activities');
-            isDown = true;
-            isDownCheckInterval = setInterval(isDownCheck, 1000);
-          }
-          retry();  // cause enqueueing under isDown condition
-          return;
-        }
-        isDown = false;
-        if (Math.floor(r.status / 100) == 2) {
-          whenReady();
-        } else {
-          console.log('XHR was not OK: ' + r.status);
-        }
-      }
-    };
-  }
-  function xhrput(url, data) {
-    if (isDown) {
-      queuedToRetry['PUT ' + url] = function() { xhrput(url, data); };
-      return;
-    }
-    var r = new XMLHttpRequest();
-    r.open('PUT', url, true);
-    r.setRequestHeader('Content-Type', 'text/plain');
-    r.onreadystatechange = makeXhrStateCallback(r,
-      function putRetry() {
-        xhrput(url, data); // causes enqueueing
-      },
-      function () {});
-    r.send(data);
-    console.log(url, data);
-  }
-  function makeXhrGetter(url, callback, binary) {
-    var r = new XMLHttpRequest();
-    if (binary) r.responseType = 'arraybuffer';
-    var self = {
-      go: function() {
-        if (isDown) {
-          queuedToRetry['GET ' + url] = self.go;
-          return;
-        }
-        r.open('GET', url, true);
-        r.send();
-      }
-    };
-    r.onreadystatechange = makeXhrStateCallback(r,
-      self.go,
-      function () {
-        callback(binary ? r.response : r.responseText, r);
-      });
-    return self;
-  }
+  var xhrput = sdr.network.xhrput;
+  var makeXhrGetter = sdr.network.makeXhrGetter;
   
   var freqDB = [];
   
@@ -212,6 +122,12 @@
     input_rate: new RemoteCell('/input_rate', 1000000, parseInt),
     spectrum: new SpectrumCell(),
   };
+  
+  sdr.network.addResyncHook(function () {
+    for (var key in states) {
+      states[key].reload();
+    }
+  });
   
   // Takes center freq as parameter so it can be used on hypotheticals and so on.
   function frequencyInRange(candidate, centerFreq) {
