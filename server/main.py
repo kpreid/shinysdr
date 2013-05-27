@@ -77,6 +77,7 @@ restore(top)
 
 # Initialize web server first so we start accepting
 print 'Web server...'
+port = 8100
 root = static.File('static/')
 root.indexNames = ['index.html']
 def export(blockThunk, field, ctor):
@@ -92,8 +93,8 @@ export(grec, 'audio_gain', FloatResource)
 export(grec, 'squelch_threshold', FloatResource)
 export(gtop, 'input_rate', IntResource)
 export(gtop, 'spectrum_fft', SpectrumResource)
-reactor.listenTCP(8100, server.Site(root))
+reactor.listenTCP(port, server.Site(root))
 
 # Actually process requests.
-print 'Ready.'
+print 'Ready. Visit http://localhost:' + str(port) + '/'
 reactor.run()
