@@ -108,6 +108,7 @@ var sdr = sdr || {};
       document.addEventListener('mouseup', function(event) {
         document.removeEventListener('mousemove', clickTune, true);
       }, true);
+      clickTune(event);
     }, false);
   }
   widgets.SpectrumPlot = SpectrumPlot;
