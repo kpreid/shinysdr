@@ -204,6 +204,7 @@
     });
     widgets.push(widget);
     el.parentNode.replaceChild(widget.element, el);
+    widget.element.className += ' ' + el.className; // TODO kludge
   });
   
   var displayQueued = false;

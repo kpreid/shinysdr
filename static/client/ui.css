@@ -5,14 +5,21 @@ html, body {
   height: 100%;
 }
 
-/* UI layout */
+/* UI layout incl widgets */
 .controlpanel {
   display: -webkit-flex;
   -webkit-flex-direction: row;
 }
 .controlpanel > .sidebar {
-  width: 20em;
-  padding: 1em;
+  width: 22em;
+  /*padding: 0.5em;*/
+  display: -webkit-flex;
+  -webkit-flex-direction: column;
+}
+.panel {
+  border: .1em outset;
+  padding: .2em;
+  -webkit-flex-shrink: 0; /* default value to be overridden */
 }
 
 /* main visualizations */
@@ -33,7 +40,7 @@ body {
   background-color: #BBB;
 }
 .sidebar {
-  box-shadow: inset 1em 0 .5em -1em white;
+  /*box-shadow: inset 1em 0 .5em -1em white;*/
 }
 #spectrum {
   background-color: #333;
@@ -96,6 +103,17 @@ body {
 }
 
 /* widgets: frequency database list */
+.panel.freq-list {
+  -webkit-flex: 2 2;
+  display: -webkit-flex;
+  -webkit-flex-direction: column;
+}
+.freq-list select {
+  -webkit-flex: 1 1;
+}
+.freq-list input {
+  /*-webkit-flex: 0 0;*/
+}
 .freq-list select, .freq-list input {
   width: 100%;
   margin: .1em 0;
