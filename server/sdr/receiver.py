@@ -29,7 +29,7 @@ class Receiver(gr.hier_block2, sdr.ExportedState):
 		self.audio_gain = audio_gain
 		
 		# TODO: squelch alpha needs to depend on intermediate sample rate
-		self.squelch_block = gr.simple_squelch_cc(squelch_threshold, 0.05)
+		self.squelch_block = gr.simple_squelch_cc(squelch_threshold, 0.005)
 
 	def get_squelch_threshold(self):
 		return self.squelch_block.threshold()
