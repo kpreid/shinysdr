@@ -355,8 +355,8 @@ var sdr = sdr || {};
         var freq = record.freq;
         var item = list.appendChild(document.createElement('option'));
         item.textContent = (record.freq / 1e6).toFixed(2) + '  ' + record.mode + '  ' + record.label;
-        // TODO: generalize
-        if (!(record.mode == 'WFM' || record.mode == 'NFM')) {
+        // TODO: generalize, get supported modes from server
+        if (!(record.mode === 'WFM' || record.mode === 'NFM' || record.mode === 'AM')) {
           item.disabled = true;
         }
         item.addEventListener('click', function(event) {
