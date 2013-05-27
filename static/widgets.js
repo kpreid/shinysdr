@@ -340,21 +340,32 @@ var sdr = sdr || {};
     var states = config.radio;
     var freqDB = config.freqDB;
 
-    var list = this.element = document.createElement('select');
-    list.className = 'freq-list';
+    var container = this.element = document.createElement('div');
+    container.className = 'freq-list';
+    // TODO: general class for widget containers
+    
+    var filterBox = container.appendChild(document.createElement('input'));
+    filterBox.type = 'search';
+    filterBox.addEventListener('input', refilter, false);
+    
+    var list = container.appendChild(document.createElement('select'));
     list.multiple = true;
     list.size = 20;
+    
     var last = 0;
-    this.draw = function () {
-      // TODO proper update strategy
-      if (freqDB.length === last) { return; }
+    var recordElements = [];
+    function updateElements() {
+      // TODO proper strategy for detecting freqDB changes
+      if (freqDB.length === last) { return false; }
       last = freqDB.length;
       
-      list.textContent = '';
+      recordElements.length = 0;
       freqDB.forEach(function (record) {
         if (record.mode === 'ignore') return;
         var freq = record.freq;
-        var item = list.appendChild(document.createElement('option'));
+        var item = document.createElement('option');
+        item._freq_record = record;
+        recordElements.push(item);
         item.textContent = (record.freq / 1e6).toFixed(2) + '  ' + record.mode + '  ' + record.label;
         // TODO: generalize, get supported modes from server
         if (!(record.mode === 'WFM' || record.mode === 'NFM' || record.mode === 'AM')) {
@@ -365,6 +376,33 @@ var sdr = sdr || {};
           event.stopPropagation();
         }, false);
       });
+      
+      return true;
+    }
+    
+    function addIfInFilter(item) {
+      if (item._freq_record.label.indexOf(lastFilter) !== -1) {
+        list.appendChild(item);
+      }
+    }
+    
+    var lastFilter;
+    function refilter() {
+      if (lastFilter !== filterBox.value) {
+        updateView();
+      }
+    }
+    function updateView() {
+      lastFilter = filterBox.value;
+      list.textContent = '';  // clear
+      recordElements.forEach(addIfInFilter);
+    }
+    
+    this.draw = function () {
+      if (updateElements()) {
+        updateView();
+      }
+      
     };
   }
   widgets.FreqList = FreqList;

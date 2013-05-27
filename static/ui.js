@@ -136,7 +136,8 @@
           freq: freqMHz * 1e6,
           // TODO: Not sure what distinction the data is actually making
           mode: record.Mode === 'FM' ? 'NFM' : record.Mode,
-          label: record.Name
+          label: record.Name,
+          notes: record.Comments
         });
       })
     });

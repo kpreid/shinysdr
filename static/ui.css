@@ -96,7 +96,8 @@ body {
 }
 
 /* widgets: frequency database list */
-.freq-list {
+.freq-list select, .freq-list input {
   width: 100%;
+  margin: .1em 0;
   box-sizing: border-box;
 }
