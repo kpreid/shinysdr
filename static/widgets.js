@@ -158,6 +158,15 @@ var sdr = sdr || {};
     var view = config.view;
     var states = config.radio;
 
+    // I have read recommendations that color gradient scales should not involve more than two colors, as certain transitions between colors read as overly significant. However, in this case (1) we are not intending the waterfall chart to be read quantitatively, and (2) we want to have distinguishable small variations across a large dynamic range.
+    var colors = [
+      [0, 0, 0],
+      [0, 0, 255],
+      [0, 200, 255],
+      [255, 255, 0],
+      [255, 0, 0]
+    ];
+
     var ctx = canvas.getContext("2d");
     // circular buffer of ImageData objects
     var slices = [];
@@ -212,17 +221,23 @@ var sdr = sdr || {};
       
       // Generate image slice from latest FFT data.
       var xScale = buffer.length / w;
-      var cScale = 255 / (view.maxLevel - view.minLevel);
-      var cZero = 255 - view.maxLevel * cScale;
+      var minInterpColor = 0;
+      var maxInterpColor = colors.length - 2;
+      var cScale = (colors.length - 1) / (view.maxLevel - view.minLevel);
+      var cZero = (colors.length - 1) - view.maxLevel * cScale;
       var data = ibuf.data;
       for (var x = 0; x < w; x++) {
         var base = x * 4;
         var i = Math.round(x * xScale);
-        var intensity = (buffer[i] /* - hpf[i]*/) * cScale + cZero;
-        var redBound = 255 - intensity / 4;
-        data[base] = intensity;
-        data[base + 1] = Math.min(intensity * 2, redBound);
-        data[base + 2] = Math.min(intensity * 4, redBound);
+        var colorVal = (buffer[i] /* - hpf[i]*/) * cScale + cZero;
+        var colorIndex = Math.max(minInterpColor, Math.min(maxInterpColor, Math.floor(colorVal)));
+        var colorInterp1 = colorVal - colorIndex;
+        var colorInterp0 = 1 - colorInterp1;
+        var color0 = colors[colorIndex];
+        var color1 = colors[colorIndex + 1];
+        data[base    ] = color0[0] * colorInterp0 + color1[0] * colorInterp1;
+        data[base + 1] = color0[1] * colorInterp0 + color1[1] * colorInterp1;
+        data[base + 2] = color0[2] * colorInterp0 + color1[2] * colorInterp1;
         data[base + 3] = 255;
       }
       
