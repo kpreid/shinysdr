@@ -182,7 +182,8 @@
   }));
 
   Array.prototype.forEach.call(document.querySelectorAll("[data-widget]"), function (el) {
-    var T = sdr.widgets[el.getAttribute("data-widget")];
+    var typename = el.getAttribute('data-widget');
+    var T = sdr.widgets[typename];
     if (!T) {
       console.error('Bad widget type:', el);
       return;
@@ -204,7 +205,7 @@
     });
     widgets.push(widget);
     el.parentNode.replaceChild(widget.element, el);
-    widget.element.className += ' ' + el.className; // TODO kludge
+    widget.element.className += ' ' + el.className + ' widget-' + typename; // TODO kludge
   });
   
   var displayQueued = false;

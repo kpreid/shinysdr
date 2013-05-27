@@ -390,10 +390,8 @@ var sdr = sdr || {};
     var rec_freq = config.target;
     var states = config.radio;
     var freqDB = config.freqDB;
-
+    
     var container = this.element = document.createElement('div');
-    container.className = 'freq-list';
-    // TODO: general class for widget containers
     
     var filterBox = container.appendChild(document.createElement('input'));
     filterBox.type = 'search';
