@@ -129,8 +129,6 @@ var sdr = sdr || {};
       var h = canvas.height;
       var currentCenterFreq = fftCell.getCenterFreq();
       
-      // TODO: We don't actually want the current known center frequency, we want the center frequency _which the FFT came from_, but don't have that info currently.
-      
       // rescale to discovered fft size
       var w = buffer.length;
       if (canvas.width !== w) {
