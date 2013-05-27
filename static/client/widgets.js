@@ -104,6 +104,7 @@ var sdr = sdr || {};
       var xScale = ctx.canvas.width / len;
       var yScale = -h / (view.maxLevel - view.minLevel);
       var yZero = -view.maxLevel * yScale;
+      var chosenCenterFreq = states.hw_freq.get();
       
       // averaging
       // TODO: Get separate averaged and unaveraged FFTs from server so that averaging behavior is not dependent on frame rate over the network
@@ -134,7 +135,7 @@ var sdr = sdr || {};
       drawBand(rec_freq_now - bandFilter, rec_freq_now + bandFilter);
       
       ctx.strokeStyle = 'gray';
-      drawHair(lastDrawnCenterFreq); // center frequency
+      drawHair(chosenCenterFreq); // center frequency
       
       ctx.strokeStyle = 'white';
       drawHair(rec_freq_now); // receiver
