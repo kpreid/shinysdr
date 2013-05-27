@@ -55,12 +55,6 @@
     freqDB.sort(function(a, b) { return a.freq - b.freq; });
   }
   
-  // TODO move this
-  var view = {
-    minLevel: -100,
-    maxLevel: 0
-  };
-  
   function RemoteCell(name, assumed, parser) {
     var value = assumed;
     var getter = makeXhrGetter(name, function(remote) {
@@ -152,6 +146,11 @@
     }
   };
   
+  var view = new sdr.widget.SpectrumView({
+    radio: states,
+    element: document.querySelector('.hscalegroup') // TODO relic
+  });
+  
   var widgets = [];
   // TODO: make these widgets follow the same protocol as the others
   widgets.push(new sdr.widgets.SpectrumPlot({
@@ -184,6 +183,7 @@
     var widget = new T({
       target: stateObj,
       element: el,
+      view: view, // TODO should be context-dependent
       freqDB: freqDB,
       radio: states // TODO: remove the need for this
     });
@@ -197,6 +197,7 @@
   }
   function frameCb() {
     displayQueued = false;
+    view.prepare();
     widgets.forEach(drawWidgetCb);
   }
   function doDisplay() {

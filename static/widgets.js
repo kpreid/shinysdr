@@ -2,12 +2,67 @@ var sdr = sdr || {};
 (function () {
   'use strict';
   
+  // support components module
+  var widget = sdr.widget = {};
+  
   // sdr.widgets contains *only* widget types and can be used as a lookup namespace
   var widgets = sdr.widgets = Object.create(null);
   
   function mod(value, modulus) {
     return (value % modulus + modulus) % modulus;
   }
+  
+  // Defines the display parameters and coordinate calculations of the spectrum widgets
+  function SpectrumView(config) {
+    var radio = config.radio;
+    var container = config.element;
+    var self = this;
+    
+    var bandwidth, centerFreq;
+    
+    this.prepare = function prepare() {
+      bandwidth = radio.input_rate.get();
+      centerFreq = radio.spectrum.getCenterFreq();
+    };
+    
+    // TODO legacy stubs
+    this.minLevel = -100;
+    this.maxLevel = 0;
+    
+    // Map a frequency to [0, 1] horizontal coordinate
+    this.freqTo01 = function freqTo01(freq) {
+      return (1/2 + (freq - centerFreq) / bandwidth);
+    };
+    this.freqToCSSLeft = function freqToCSSLeft(freq) {
+      return this.freqTo01(freq) * 100 + '%';
+    };
+    this.freqToCSSRight = function freqToCSSRight(freq) {
+      return (1 - this.freqTo01(freq)) * 100 + '%';
+    };
+    // Map [0, 1] coordinate to frequency
+    this.freqFrom01 = function freqTo01(x) {
+      return centerFreq + (x * 2 - 1) / 2 * bandwidth;
+    };
+    
+    this.addClickToTune = function addClickToTune(element) {
+      function clickTune(event) {
+        // TODO: works only because we're at the left edge
+        var x = event.clientX / parseInt(getComputedStyle(container).width);
+        radio.rec_freq.set(self.freqFrom01(x));
+        event.stopPropagation();
+        event.preventDefault(); // no selection
+      }
+      element.addEventListener('mousedown', function(event) {
+        event.preventDefault();
+        document.addEventListener('mousemove', clickTune, true);
+        document.addEventListener('mouseup', function(event) {
+          document.removeEventListener('mousemove', clickTune, true);
+        }, true);
+        clickTune(event);
+      }, false);
+    }
+  }
+  sdr.widget.SpectrumView = SpectrumView;
   
   function SpectrumPlot(config) {
     var fftCell = config.target;
@@ -20,23 +75,23 @@ var sdr = sdr || {};
     ctx.canvas.height = parseInt(getComputedStyle(canvas).height);
     ctx.lineWidth = 1;
     var cssColor = getComputedStyle(canvas).color;
-    var w, h, bandwidth, averageBuffer; // updated in draw
+    var w, h, averageBuffer; // updated in draw
     var lastDrawnCenterFreq = NaN;
     
     function relFreqToX(freq) {
-      return w * (1/2 + freq / bandwidth);
+      return w * (1/2 + freq);
     }
     function drawHair(freq) {
-      var x = relFreqToX(freq);
+      var x = w * view.freqTo01(freq);
       x = Math.floor(x) + 0.5;
       ctx.beginPath();
       ctx.moveTo(x, 0);
       ctx.lineTo(x, ctx.canvas.height);
       ctx.stroke();
     }
-    function drawBand(freq1, freq2) {
-      var x1 = relFreqToX(freq1);
-      var x2 = relFreqToX(freq2);
+    function drawBand(freq1, freq2, center) {
+      var x1 = w * view.freqTo01(freq1, center);
+      var x2 = w * view.freqTo01(freq2, center);
       ctx.fillRect(x1, 0, x2 - x1, ctx.canvas.height);
     }
     
@@ -44,9 +99,8 @@ var sdr = sdr || {};
       var buffer = fftCell.get();
       w = ctx.canvas.width;
       h = ctx.canvas.height;
-      bandwidth = states.input_rate.get();
       var len = buffer.length;
-      var scale = ctx.canvas.width / len;
+      var xScale = ctx.canvas.width / len;
       var yScale = -h / (view.maxLevel - view.minLevel);
       var yZero = -view.maxLevel * yScale;
       
@@ -73,43 +127,28 @@ var sdr = sdr || {};
       ctx.lineTo(w, squelch);
       ctx.stroke();
       
-      var offset = states.rec_freq.get() - states.hw_freq.get();
+      var rec_freq_now = states.rec_freq.get();
       ctx.fillStyle = '#444';
       var bandFilter = states.band_filter.get();
-      drawBand(offset - bandFilter, offset + bandFilter);
+      drawBand(rec_freq_now - bandFilter, rec_freq_now + bandFilter);
       
       ctx.strokeStyle = 'gray';
-      drawHair(0); // center frequency
+      drawHair(lastDrawnCenterFreq); // center frequency
       
       ctx.strokeStyle = 'white';
-      drawHair(offset); // receiver
+      drawHair(rec_freq_now); // receiver
       
       //ctx.strokeStyle = 'currentColor';  // in spec, doesn't work
       ctx.strokeStyle = cssColor;
       ctx.beginPath();
       ctx.moveTo(0, yZero + averageBuffer[0] * yScale);
       for (var i = 1; i < len; i++) {
-        ctx.lineTo(i * scale, yZero + averageBuffer[i] * yScale);
+        ctx.lineTo(i * xScale, yZero + averageBuffer[i] * yScale);
       }
       ctx.stroke();
       
     };
-    function clickTune(event) {
-      // TODO: works only because canvas is at the left edge
-      var x = event.clientX / parseInt(getComputedStyle(canvas).width);
-      var offsetFreq = (x * 2 - 1) / 2 * bandwidth;
-      states.rec_freq.set(states.hw_freq.get() + offsetFreq);
-      event.stopPropagation();
-      event.preventDefault(); // no selection
-    }
-    canvas.addEventListener('mousedown', function(event) {
-      event.preventDefault();
-      document.addEventListener('mousemove', clickTune, true);
-      document.addEventListener('mouseup', function(event) {
-        document.removeEventListener('mousemove', clickTune, true);
-      }, true);
-      clickTune(event);
-    }, false);
+    view.addClickToTune(canvas);
   }
   widgets.SpectrumPlot = SpectrumPlot;
   
@@ -172,13 +211,13 @@ var sdr = sdr || {};
       }
       
       // Generate image slice from latest FFT data.
-      var scale = buffer.length / w;
+      var xScale = buffer.length / w;
       var cScale = 255 / (view.maxLevel - view.minLevel);
       var cZero = 255 - view.maxLevel * cScale;
       var data = ibuf.data;
       for (var x = 0; x < w; x++) {
         var base = x * 4;
-        var i = Math.round(x * scale);
+        var i = Math.round(x * xScale);
         var intensity = (buffer[i] /* - hpf[i]*/) * cScale + cZero;
         var redBound = 255 - intensity / 4;
         data[base] = intensity;
@@ -204,6 +243,7 @@ var sdr = sdr || {};
         }
       }
     };
+    view.addClickToTune(canvas);
   }
   widgets.WaterfallPlot = WaterfallPlot;
   
@@ -282,6 +322,7 @@ var sdr = sdr || {};
     var tunerSource = config.target;
     var states = config.radio;
     var freqDB = config.freqDB;
+    var view = config.view;
 
     var outer = this.element = document.createElement("div");
     outer.className = "freqscale";
@@ -297,21 +338,16 @@ var sdr = sdr || {};
       lastShownValue = centerFreq;
       
       var bandwidth = states.input_rate.get();
-      var scale = 100 / bandwidth;
       var step = 0.5e6;
       var lower = centerFreq - bandwidth / 2;
       var upper = centerFreq + bandwidth / 2;
-      
-      function position(freq) {
-        return ((freq - centerFreq) * scale + 50) + "%";
-      }
       
       numbers.textContent = "";
       for (var i = lower - mod(lower, step); i <= upper; i += step) {
         var label = numbers.appendChild(document.createElement("span"));
         label.className = "freqscale-number";
         label.textContent = (i / 1e6) + "MHz";
-        label.style.left = position(i);
+        label.style.left = view.freqToCSSLeft(i);
       }
       
       stations.textContent = "";
@@ -321,7 +357,7 @@ var sdr = sdr || {};
           var el = stations.appendChild(document.createElement("span"));
           el.className = "freqscale-station";
           el.textContent = record.label;
-          el.style.left = position(freq);
+          el.style.left = view.freqToCSSLeft(freq);
           // TODO: be an <a> or <button>
           el.addEventListener('click', function(event) {
             states.preset.set(record);
