@@ -22,7 +22,8 @@ var sdr = sdr || {};
     
     this.prepare = function prepare() {
       bandwidth = radio.input_rate.get();
-      centerFreq = radio.spectrum.getCenterFreq();
+      centerFreq = radio.hw_freq.get();
+      // Note that this uses hw_freq, not the spectrum data center freq. This is correct because we want to align the coords with what we have selected, not the current data; and the WaterfallPlot is aware of this distinction.
     };
     
     // TODO legacy stubs
