@@ -70,7 +70,7 @@ class AMReceiver(Receiver):
 		if demod_rate % audio_rate != 0:
 			raise ValueError, 'Demodulator rate %s is not a multiple of audio rate %s' % (demod_rate, audio_rate)
 
-		self.band_filter_block = filter.freq_xlating_fir_filter_ccc(int(input_rate/demod_rate), (gr.firdes.low_pass(1.0, input_rate, band_filter, band_filter * 0.5, gr.firdes.WIN_HAMMING)), 0, input_rate)
+		self.band_filter_block = filter.freq_xlating_fir_filter_ccc(int(input_rate/demod_rate), (gr.firdes.low_pass(1.0, input_rate, band_filter, band_filter, gr.firdes.WIN_HAMMING)), 0, input_rate)
 		self._update_band_center()
 		
 		# TODO: 0.1 is needed to avoid clipping; is there a better place to tweak our level vs. other receivers?
@@ -136,7 +136,7 @@ class FMReceiver(Receiver):
 		##################################################
 		# Blocks
 		##################################################
-		self.band_filter_block = filter.freq_xlating_fir_filter_ccc(int(input_rate/demod_rate), (gr.firdes.low_pass(1.0, input_rate, band_filter, band_filter * 0.5, gr.firdes.WIN_HAMMING)), 0, input_rate)
+		self.band_filter_block = filter.freq_xlating_fir_filter_ccc(int(input_rate/demod_rate), (gr.firdes.low_pass(1.0, input_rate, band_filter, band_filter, gr.firdes.WIN_HAMMING)), 0, input_rate)
 		self._update_band_center()
 		
 		self.blks2_fm_demod_cf_0 = blks2.fm_demod_cf(
