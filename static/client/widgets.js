@@ -395,6 +395,7 @@ var sdr = sdr || {};
     
     var filterBox = container.appendChild(document.createElement('input'));
     filterBox.type = 'search';
+    filterBox.placeholder = 'Filter channels...';
     filterBox.addEventListener('input', refilter, false);
     
     var list = container.appendChild(document.createElement('select'));
