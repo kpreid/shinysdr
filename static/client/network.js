@@ -95,5 +95,23 @@ var sdr = sdr || {};
   }
   network.makeXhrGetter = makeXhrGetter;
   
+  // unlike makeXhrGetter, doesn't trigger isDown logic, not configured for polling
+  function externalGet(url, responseType, callback) {
+    var r = new XMLHttpRequest();
+    r.responseType = responseType;
+    r.onreadystatechange = function() {
+      if (r.readyState === 4) {
+        if (Math.floor(r.status / 100) == 2) {
+          callback(r.response);
+        } else {
+          //TODO error handling in UI
+        }
+      }
+    };
+    r.open('GET', url, true);
+    r.send();
+  }
+  network.externalGet = externalGet;
+  
   Object.freeze(network);
 }());

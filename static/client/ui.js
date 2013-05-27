@@ -20,40 +20,46 @@
     }
   }());
   
-  // RTL internal spurious signals
-  [115.2e6, 125e6, 144e6, 172.192e6].forEach(function (freq) {
-    freqDB.push({
-      freq: freq,
-      mode: 'ignore',
-      label: '--'
-    })
-  });
-  
-  // Prepare to load real data using JSONP callback
-  window.sdr_data = function (json) {
-    json.forEach(function (table) {
-      var columns = table[0];
-      table.slice(1).forEach(function (row) {
-        var record = Object.create(null);
-        columns.forEach(function (name, index) {
-          record[name] = row[index];
-        });
-        var freqMHz = parseFloat(record.Frequency);
-        if (isNaN(freqMHz)) {
-          console.log('Bad freq!', record);
-        }
-        freqDB.push({
-          freq: freqMHz * 1e6,
-          // TODO: Not sure what distinction the data is actually making
-          mode: record.Mode === 'FM' ? 'NFM' : record.Mode,
-          label: record.Name,
-          notes: record.Comments
-        });
-      })
-    });
+  // Read /dbs/ as an index containing links to CSV files in Chirp <http://chirp.danplanet.com/> generic format. No particular reason for choosing Chirp other than it was a the first source and format of machine-readable channel data I found to experiment with.
+  // TODO: Move and refactor this code
+  (function () {
+    sdr.network.externalGet('/dbs/', 'document', function(indexDoc) {
+      console.log(indexDoc);
+      var anchors = indexDoc.querySelectorAll('a[href]');
+      //console.log('Fetched database index with ' + anchors.length + ' links.');
+      Array.prototype.forEach.call(anchors, function (anchor) {
+        // Conveniently, the browser resolves URLs for us here
+        //console.log(anchor.href);
+        sdr.network.externalGet(anchor.href, 'text', function(csv) {
+          console.group(anchor.href);
+          var csvLines = csv.split(/[\r\n]+/);
+          var columns = csvLines.shift().split(/,/);
+          csvLines.forEach(function (line) {
+            if (/^\s*$/.test(line)) return;
+            var fields = line.split(/,/); // TODO handle quotes
+            var record = Object.create(null);
+            columns.forEach(function (name, index) {
+              record[name] = fields[index];
+            });
+            var freqMHz = parseFloat(record.Frequency);
+            if (isNaN(freqMHz)) {
+              console.log('Bad freq!', line, record);
+            }
+            freqDB.push({
+              freq: freqMHz * 1e6,
+              // TODO: Not sure what distinction the data is actually making
+              mode: record.Mode === 'FM' ? 'NFM' : record.Mode || '',
+              label: record.Name || '',
+              notes: record.Comment || ''
+            });
+          });
+          console.groupEnd();
 
-    freqDB.sort(function(a, b) { return a.freq - b.freq; });
-  }
+          freqDB.sort(function(a, b) { return a.freq - b.freq; });
+        });
+      });
+    });
+  }());
   
   function RemoteCell(name, assumed, parser) {
     var value = assumed;
