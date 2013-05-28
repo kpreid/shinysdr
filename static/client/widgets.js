@@ -371,17 +371,15 @@ var sdr = sdr || {};
       stations.textContent = "";
       freqDB.inBand(lower, upper).forEach(function (record) {
         var freq = record.freq;
-        if (freq >= lower && freq <= upper) {
-          var el = stations.appendChild(document.createElement("span"));
-          el.className = "freqscale-station";
-          el.textContent = record.label;
-          el.style.left = view.freqToCSSLeft(freq);
-          // TODO: be an <a> or <button>
-          el.addEventListener('click', function(event) {
-            states.preset.set(record);
-            event.stopPropagation();
-          }, false);
-        }
+        var el = stations.appendChild(document.createElement("span"));
+        el.className = "freqscale-station";
+        el.textContent = record.label;
+        el.style.left = view.freqToCSSLeft(freq);
+        // TODO: be an <a> or <button>
+        el.addEventListener('click', function(event) {
+          states.preset.set(record);
+          event.stopPropagation();
+        }, false);
       });
     };
   }
