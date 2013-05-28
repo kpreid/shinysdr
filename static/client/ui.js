@@ -27,6 +27,7 @@
     var centerFreq = NaN;
     // TODO: Better mechanism than XHR
     var spectrumQueued = false;
+    var generation = 0;
     var spectrumGetter = makeXhrGetter('/spectrum_fft', function(data, xhr) {
       spectrumQueued = false;
       
@@ -39,6 +40,8 @@
       fft.set(new Float32Array(data, halfFFTSize * VSIZE, halfFFTSize), 0);
       
       centerFreq = parseFloat(xhr.getResponseHeader('X-SDR-Center-Frequency'));
+      
+      generation++;
       doDisplay();
     }, true);
     setInterval(function() {
@@ -46,11 +49,16 @@
       if (states.running.get() && !spectrumQueued) {
         spectrumGetter.go();
         spectrumQueued = true;
+      } else {
+        doDisplay(); // for other stuff
       }
     }, 1000/30);
     
     this.get = function() {
       return fft;
+    };
+    this.getGeneration = function() {
+      return generation;
     };
     this.getCenterFreq = function() {
       return centerFreq;

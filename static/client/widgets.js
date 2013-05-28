@@ -96,7 +96,9 @@ var sdr = sdr || {};
       ctx.fillRect(x1, 0, x2 - x1, ctx.canvas.height);
     }
     
+    var lastGeneration = 0;
     this.draw = function () {
+      if (lastGeneration === (lastGeneration = fftCell.getGeneration())) return;
       var buffer = fftCell.get();
       w = ctx.canvas.width;
       h = ctx.canvas.height;
@@ -104,15 +106,16 @@ var sdr = sdr || {};
       var xScale = ctx.canvas.width / len;
       var yScale = -h / (view.maxLevel - view.minLevel);
       var yZero = -view.maxLevel * yScale;
-      var chosenCenterFreq = states.hw_freq.get();
+      var bufferCenterFreq = fftCell.getCenterFreq();
+      var viewCenterFreq = states.hw_freq.get();
       
       // averaging
       // TODO: Get separate averaged and unaveraged FFTs from server so that averaging behavior is not dependent on frame rate over the network
       if (!averageBuffer
           || averageBuffer.length !== len
-          || lastDrawnCenterFreq !== fftCell.getCenterFreq()) {
-        console.log('reset');
-        lastDrawnCenterFreq = fftCell.getCenterFreq();
+          || (lastDrawnCenterFreq !== bufferCenterFreq
+              && !isNaN(bufferCenterFreq))) {
+        lastDrawnCenterFreq = bufferCenterFreq;
         averageBuffer = new Float32Array(buffer);
       }
       for (var i = 0; i < len; i++) {
@@ -135,7 +138,7 @@ var sdr = sdr || {};
       drawBand(rec_freq_now - bandFilter, rec_freq_now + bandFilter);
       
       ctx.strokeStyle = 'gray';
-      drawHair(chosenCenterFreq); // center frequency
+      drawHair(viewCenterFreq); // center frequency
       
       ctx.strokeStyle = 'white';
       drawHair(rec_freq_now); // receiver
@@ -174,10 +177,13 @@ var sdr = sdr || {};
     var slices = [];
     var slicePtr = 0;
     var lastDrawnCenterFreq = NaN;
+
+    var lastGeneration = 0;
     this.draw = function () {
       var buffer = fftCell.get();
       var h = canvas.height;
-      var currentCenterFreq = fftCell.getCenterFreq();
+      var bufferCenterFreq = fftCell.getCenterFreq();
+      var viewCenterFreq = states.hw_freq.get();
       
       // rescale to discovered fft size
       var w = buffer.length;
@@ -189,74 +195,84 @@ var sdr = sdr || {};
         slicePtr = 0;
       }
       
-      // Find slice to write into
-      var ibuf;
-      if (slices.length < h) {
-        slices.push([ibuf = ctx.createImageData(w, 1), currentCenterFreq]);
-      } else {
-        var record = slices[slicePtr];
-        slicePtr = mod(slicePtr + 1, h);
-        ibuf = record[0];
-        record[1] = currentCenterFreq;
+      // can't draw with w=0
+      if (w === 0) {
+        return;
       }
       
-      // low-pass filter to remove the edge-to-center variation from the spectrum (disabled because I'm not sure fiddling with the data like this is a good idea until such time as I make it an option, and so on)
-      if (false) {
-        var filterspan = 160;
-        var filtersum = 0;
-        var count = 0;
-        var hpf = new Float32Array(w);
-        for (var i = -filterspan; i < w + filterspan; i++) {
-          if (i + filterspan < w) {
-            filtersum += buffer[i + filterspan];
-            count++;
+      // New data, or just repainting?
+      var newData = lastGeneration !== (lastGeneration = fftCell.getGeneration());
+      
+      if (newData) {
+        // Find slice to write into
+        var ibuf;
+        if (slices.length < h) {
+          slices.push([ibuf = ctx.createImageData(w, 1), bufferCenterFreq]);
+        } else {
+          var record = slices[slicePtr];
+          slicePtr = mod(slicePtr + 1, h);
+          ibuf = record[0];
+          record[1] = bufferCenterFreq;
+        }
+      
+        // low-pass filter to remove the edge-to-center variation from the spectrum (disabled because I'm not sure fiddling with the data like this is a good idea until such time as I make it an option, and so on)
+        if (false) {
+          var filterspan = 160;
+          var filtersum = 0;
+          var count = 0;
+          var hpf = new Float32Array(w);
+          for (var i = -filterspan; i < w + filterspan; i++) {
+            if (i + filterspan < w) {
+              filtersum += buffer[i + filterspan];
+              count++;
+            }
+            if (i - filterspan >= 0) {
+              filtersum -= buffer[i - filterspan];
+              count--;
+            }
+            if (i >= 0 && i < w) {
+              hpf[i] = filtersum / count;
+            }
           }
-          if (i - filterspan >= 0) {
-            filtersum -= buffer[i - filterspan];
-            count--;
-          }
-          if (i >= 0 && i < w) {
-            hpf[i] = filtersum / count;
-          }
+        }
+      
+        // Generate image slice from latest FFT data.
+        var xScale = buffer.length / w;
+        var minInterpColor = 0;
+        var maxInterpColor = colors.length - 2;
+        var cScale = (colors.length - 1) / (view.maxLevel - view.minLevel);
+        var cZero = (colors.length - 1) - view.maxLevel * cScale;
+        var data = ibuf.data;
+        for (var x = 0; x < w; x++) {
+          var base = x * 4;
+          var i = Math.round(x * xScale);
+          var colorVal = (buffer[i] /* - hpf[i]*/) * cScale + cZero;
+          var colorIndex = Math.max(minInterpColor, Math.min(maxInterpColor, Math.floor(colorVal)));
+          var colorInterp1 = colorVal - colorIndex;
+          var colorInterp0 = 1 - colorInterp1;
+          var color0 = colors[colorIndex];
+          var color1 = colors[colorIndex + 1];
+          data[base    ] = color0[0] * colorInterp0 + color1[0] * colorInterp1;
+          data[base + 1] = color0[1] * colorInterp0 + color1[1] * colorInterp1;
+          data[base + 2] = color0[2] * colorInterp0 + color1[2] * colorInterp1;
+          data[base + 3] = 255;
         }
       }
       
-      // Generate image slice from latest FFT data.
-      var xScale = buffer.length / w;
-      var minInterpColor = 0;
-      var maxInterpColor = colors.length - 2;
-      var cScale = (colors.length - 1) / (view.maxLevel - view.minLevel);
-      var cZero = (colors.length - 1) - view.maxLevel * cScale;
-      var data = ibuf.data;
-      for (var x = 0; x < w; x++) {
-        var base = x * 4;
-        var i = Math.round(x * xScale);
-        var colorVal = (buffer[i] /* - hpf[i]*/) * cScale + cZero;
-        var colorIndex = Math.max(minInterpColor, Math.min(maxInterpColor, Math.floor(colorVal)));
-        var colorInterp1 = colorVal - colorIndex;
-        var colorInterp0 = 1 - colorInterp1;
-        var color0 = colors[colorIndex];
-        var color1 = colors[colorIndex + 1];
-        data[base    ] = color0[0] * colorInterp0 + color1[0] * colorInterp1;
-        data[base + 1] = color0[1] * colorInterp0 + color1[1] * colorInterp1;
-        data[base + 2] = color0[2] * colorInterp0 + color1[2] * colorInterp1;
-        data[base + 3] = 255;
-      }
-      
-      if (lastDrawnCenterFreq === currentCenterFreq) {
+      if (newData && lastDrawnCenterFreq === viewCenterFreq) {
         // Scroll
         ctx.drawImage(ctx.canvas, 0, 0, w, h-1, 0, 1, w, h-1);
         // Paint newest slice
         ctx.putImageData(ibuf, 0, 0);
-      } else {
-        lastDrawnCenterFreq = currentCenterFreq;
+      } else if (lastDrawnCenterFreq !== viewCenterFreq) {
+        lastDrawnCenterFreq = viewCenterFreq;
         // Paint all slices onto canvas
         ctx.fillStyle = '#777';
         var sliceCount = slices.length;
         var offsetScale = w / states.input_rate.get();  // TODO parameter for rate
         for (var i = sliceCount - 1; i >= 0; i--) {
           var slice = slices[mod(i + slicePtr, sliceCount)];
-          var offset = slice[1] - currentCenterFreq;
+          var offset = slice[1] - viewCenterFreq;
           var y = sliceCount - i;
           
           // fill background so scrolling is of an opaque image
