@@ -429,8 +429,6 @@ var sdr = sdr || {};
     var states = config.radio;
     var freqDB = config.freqDB;
     
-    var currentFilter = freqDB;
-    
     var container = this.element = document.createElement('div');
     
     var filterBox = container.appendChild(document.createElement('input'));
@@ -469,14 +467,16 @@ var sdr = sdr || {};
       }
     }
     
-    var lastFilterText = '';
+    var currentFilter = freqDB;
+    var lastFilterText = null;
     function refilter() {
       if (lastFilterText !== filterBox.value) {
         lastFilterText = filterBox.value;
-        currentFilter = freqDB.string(lastFilterText);
+        currentFilter = freqDB.string(lastFilterText).type('channel');
         states.scan_presets.set(currentFilter);
       }
     }
+    refilter();
     
     var lastF, lastG;
     this.draw = function () {

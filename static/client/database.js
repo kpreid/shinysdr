@@ -5,14 +5,14 @@ var sdr = sdr || {};
   var STOP = {};
   
   function DatabaseView(db, filter) {
-    this._viewGeneration = 0;
+    this._viewGeneration = NaN;
     this._entries = [];
     this._db = db;
     this._filter = filter;
   }
   DatabaseView.prototype.forEach = function (callback) {
     var entries;
-    if (this._viewGeneration < this._db._viewGeneration) {
+    if (!(this._viewGeneration === this._db._viewGeneration)) {
       var filter = this._filter;
       entries = [];
       this._db.forEach(function(record) {
@@ -33,7 +33,7 @@ var sdr = sdr || {};
   };
   DatabaseView.prototype.first = function () {
     var filter = this._filter;
-    if (this._viewGeneration < this._db._viewGeneration) {
+    if (!(this._viewGeneration === this._db._viewGeneration)) {
       var got;
       this._db.forEach(function(record) {
         if (filter(record)) {
@@ -47,14 +47,19 @@ var sdr = sdr || {};
     }
   };
   DatabaseView.prototype.inBand = function (lower, upper) {
-    return new DatabaseView(this, function (record) {
+    return new DatabaseView(this, function inBandFilter(record) {
       return (record.freq || record.upperFreq) >= lower &&
              (record.freq || record.lowerFreq) <= upper;
     });
   };
+  DatabaseView.prototype.type = function (type) {
+    return new DatabaseView(this, function typeFilter(record) {
+      return record.type === type;
+    });
+  };
   DatabaseView.prototype.string = function (str) {
     var re = new RegExp(str, 'i');
-    return new DatabaseView(this, function (record) {
+    return new DatabaseView(this, function stringFilter(record) {
       return re.test(record.label) || re.test(record.notes);
     });
   };
@@ -64,6 +69,7 @@ var sdr = sdr || {};
   
   function Database() {
     DatabaseView.call(this, this);
+    this._viewGeneration = 0;
   }
   Database.prototype = Object.create(DatabaseView.prototype, {constructor: {value: Database}});
   // Generic FM channels
