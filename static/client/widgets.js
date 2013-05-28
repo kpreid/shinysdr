@@ -40,6 +40,9 @@ var sdr = sdr || {};
     this.freqToCSSRight = function freqToCSSRight(freq) {
       return (1 - this.freqTo01(freq)) * 100 + '%';
     };
+    this.freqToCSSLength = function freqToCSSLength(freq) {
+      return (freq / bandwidth * 100) + '%';
+    };
     // Map [0, 1] coordinate to frequency
     this.freqFrom01 = function freqTo01(x) {
       return centerFreq + (x * 2 - 1) / 2 * bandwidth;
@@ -367,10 +370,10 @@ var sdr = sdr || {};
 
     var outer = this.element = document.createElement("div");
     outer.className = "freqscale";
-    var numbers = outer.appendChild(document.createElement("div"));
-    numbers.className = "freqscale-numbers";
-    var stations = outer.appendChild(document.createElement("div"));
-    stations.className = "freqscale-stations";
+    var numbers = outer.appendChild(document.createElement('div'));
+    numbers.className = 'freqscale-numbers';
+    var labels = outer.appendChild(document.createElement('div'));
+    labels.className = 'freqscale-labels';
     var lastShownValue = NaN;
     // TODO: reuse label nodes instead of reallocating...if that's cheaper
     this.draw = function() {
@@ -383,7 +386,7 @@ var sdr = sdr || {};
       var lower = centerFreq - bandwidth / 2;
       var upper = centerFreq + bandwidth / 2;
       
-      numbers.textContent = "";
+      numbers.textContent = '';
       for (var i = lower - mod(lower, step); i <= upper; i += step) {
         var label = numbers.appendChild(document.createElement("span"));
         label.className = "freqscale-number";
@@ -391,18 +394,31 @@ var sdr = sdr || {};
         label.style.left = view.freqToCSSLeft(i);
       }
       
-      stations.textContent = "";
+      labels.textContent = '';
       freqDB.inBand(lower, upper).forEach(function (record) {
-        var freq = record.freq;
-        var el = stations.appendChild(document.createElement("span"));
-        el.className = "freqscale-station";
-        el.textContent = record.label;
-        el.style.left = view.freqToCSSLeft(freq);
-        // TODO: be an <a> or <button>
-        el.addEventListener('click', function(event) {
-          states.preset.set(record);
-          event.stopPropagation();
-        }, false);
+        switch (record.type) {
+          case 'channel':
+            var freq = record.freq;
+            var el = labels.appendChild(document.createElement('span'));
+            el.className = 'freqscale-channel';
+            el.textContent = record.label;
+            el.style.left = view.freqToCSSLeft(freq);
+            // TODO: be an <a> or <button>
+            el.addEventListener('click', function(event) {
+              states.preset.set(record);
+              event.stopPropagation();
+            }, false);
+            break;
+          case 'band':
+            var el = labels.appendChild(document.createElement('span'));
+            el.className = 'freqscale-band';
+            el.textContent = record.label;
+            el.style.left = view.freqToCSSLeft(record.lowerFreq);
+            el.style.width = view.freqToCSSLength(record.upperFreq - record.lowerFreq);
+            break;
+          default:
+            break;
+        }
       });
     };
   }
@@ -433,7 +449,14 @@ var sdr = sdr || {};
         var freq = record.freq;
         var item = document.createElement('option');
         record._view_element = item;
-        item.textContent = (record.freq / 1e6).toFixed(2) + '  ' + record.mode + '  ' + record.label;
+        switch (record.type) {
+          case 'channel':
+            item.textContent = (record.freq / 1e6).toFixed(2) + '  ' + record.mode + '  ' + record.label;
+            break;
+          case 'band':
+          default:
+            break;
+        }
         // TODO: generalize, get supported modes from server
         if (!(record.mode === 'WFM' || record.mode === 'NFM' || record.mode === 'AM')) {
           item.disabled = true;

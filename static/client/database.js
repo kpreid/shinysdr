@@ -48,7 +48,8 @@ var sdr = sdr || {};
   };
   DatabaseView.prototype.inBand = function (lower, upper) {
     return new DatabaseView(this, function (record) {
-      return record.freq >= lower && record.freq <= upper;
+      return (record.freq || record.upperFreq) >= lower &&
+             (record.freq || record.lowerFreq) <= upper;
     });
   };
   DatabaseView.prototype.string = function (str) {
@@ -72,6 +73,7 @@ var sdr = sdr || {};
       // not computing in MHz because that leads to roundoff error
       var freq = (channel - 200) * 2e5 + 879e5;
       this._entries.push({
+        type: 'channel',
         freq: freq,
         mode: 'WFM',
         label: 'FM ' /*+ channel*/ + (freq / 1e6).toFixed(1)
@@ -101,21 +103,32 @@ var sdr = sdr || {};
             columns.forEach(function (name, index) {
               record[name] = fields[index];
             });
-            var freqMHz = parseFloat(record.Frequency);
-            if (isNaN(freqMHz)) {
-              console.log('Bad freq!', line, record);
-            }
-            self._entries.push({
-              freq: freqMHz * 1e6,
+            var entry = {
               // TODO: Not sure what distinction the data is actually making
               mode: record.Mode === 'FM' ? 'NFM' : record.Mode || '',
               label: record.Name || '',
               notes: record.Comment || ''
-            });
+            };
+            var match;
+            if ((match = /^(\d+(?:\.\d+)?)(?:\s*-\s*(\d+(?:\.\d+)?))?$/.exec(record.Frequency))) {
+              if (match[2]) {
+                entry.type = 'band';
+                entry.lowerFreq = 1e6 * parseFloat(match[1]);
+                entry.upperFreq = 1e6 * parseFloat(match[2]);
+              } else {
+                entry.type = 'channel';
+                entry.freq = 1e6 * parseFloat(match[1]);
+              }
+            } else {
+              console.log('Bad freq!', line, record);
+            }
+            self._entries.push(entry);
           });
           console.groupEnd();
 
-          self._entries.sort(function(a, b) { return a.freq - b.freq; });
+          self._entries.sort(function(a, b) {
+            return (a.freq || a.lowerFreq) - (b.freq || b.lowerFreq);
+          });
         });
       });
     });

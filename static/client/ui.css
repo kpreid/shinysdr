@@ -94,24 +94,35 @@ body {
 .freqscale-numbers {
   overflow: hidden;
 }
-.freqscale-stations {
+.freqscale-labels {
   left: 0;
   top: 0;
 }
 .freqscale-number {
   position: absolute;
 }
-.freqscale-station {
-  position: absolute;
-  -webkit-transform-origin: center left;
-  -webkit-transform: rotate(-90deg) translate(.9em, 0);
-  white-space: nowrap;
-
+.freqscale-channel, .freqscale-band {
   border: .1em solid #777;
   background: #555;
   border-radius: .3em;
   color: white;
   opacity: 0.5;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.freqscale-channel {
+  position: absolute;
+  -webkit-transform-origin: center left;
+  -webkit-transform: rotate(-90deg) translate(1.8em, 0);
+}
+.freqscale-band {
+  font-size: .75em;
+  position: absolute;
+  bottom: 1.4em;
+  
+  text-align: center;
 }
 
 /* widgets: frequency database list */
