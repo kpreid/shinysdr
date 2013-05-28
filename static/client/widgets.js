@@ -249,6 +249,7 @@ var sdr = sdr || {};
         // Paint newest slice
         ctx.putImageData(ibuf, 0, 0);
       } else {
+        lastDrawnCenterFreq = currentCenterFreq;
         // Paint slices onto canvas
         ctx.clearRect(0, 0, w, h);
         var sliceCount = slices.length;
