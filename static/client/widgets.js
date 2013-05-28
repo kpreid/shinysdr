@@ -426,7 +426,6 @@ var sdr = sdr || {};
     list.multiple = true;
     list.size = 20;
     
-    var last = 0;
     function getElementForRecord(record) {
       if (record._view_element) {  // TODO HORRIBLE KLUDGE
         return record._view_element;
@@ -456,9 +455,11 @@ var sdr = sdr || {};
       }
     }
     
+    var lastF, lastG;
     this.draw = function () {
-      if (currentFilter.getGeneration() === last) { return false; }
-      last = currentFilter.getGeneration();
+      if (currentFilter === lastF && currentFilter.getGeneration() === lastG) return;
+      lastF = currentFilter;
+      lastG = currentFilter.getGeneration();
       
       list.textContent = '';
       currentFilter.forEach(function (record) {

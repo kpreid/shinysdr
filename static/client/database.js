@@ -53,7 +53,9 @@ var sdr = sdr || {};
   };
   DatabaseView.prototype.string = function (str) {
     var re = new RegExp(str, 'i');
-    return new DatabaseView(this, re.test.bind(re));
+    return new DatabaseView(this, function (record) {
+      return re.test(record.label) || re.test(record.notes);
+    });
   };
   DatabaseView.prototype.getGeneration = function () {
     return this._viewGeneration;
