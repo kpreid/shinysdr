@@ -250,15 +250,22 @@ var sdr = sdr || {};
         ctx.putImageData(ibuf, 0, 0);
       } else {
         lastDrawnCenterFreq = currentCenterFreq;
-        // Paint slices onto canvas
-        ctx.clearRect(0, 0, w, h);
+        // Paint all slices onto canvas
+        ctx.fillStyle = '#777';
         var sliceCount = slices.length;
         var offsetScale = w / states.input_rate.get();  // TODO parameter for rate
         for (var i = sliceCount - 1; i >= 0; i--) {
           var slice = slices[mod(i + slicePtr, sliceCount)];
           var offset = slice[1] - currentCenterFreq;
-          ctx.putImageData(slice[0], Math.round(offset * offsetScale), sliceCount - i);
+          var y = sliceCount - i;
+          
+          // fill background so scrolling is of an opaque image
+          ctx.fillRect(0, y, w, 1);
+          
+          // paint slice
+          ctx.putImageData(slice[0], Math.round(offset * offsetScale), y);
         }
+        ctx.fillRect(0, y+1, w, h);
       }
     };
     view.addClickToTune(canvas);
