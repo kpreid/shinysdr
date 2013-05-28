@@ -80,6 +80,9 @@ body {
 
 /* widgets: frequency scale */
 .freqscale {
+  font-family: 'Arial', sans-serif;
+  font-size: .75em;
+
   -webkit-flex-shrink: 0;
   height: 1em;
   position: relative;
@@ -102,11 +105,11 @@ body {
   position: absolute;
 }
 .freqscale-channel, .freqscale-band {
-  border: .1em solid #777;
-  background: #555;
   border-radius: .3em;
+
+  background: #555;
   color: white;
-  opacity: 0.5;
+  opacity: 0.7;
 
   white-space: nowrap;
   overflow: hidden;
@@ -115,12 +118,11 @@ body {
 .freqscale-channel {
   position: absolute;
   -webkit-transform-origin: center left;
-  -webkit-transform: rotate(-90deg) translate(1.8em, 0);
+  -webkit-transform: rotate(-90deg) translate(1.9em, 0);
 }
 .freqscale-band {
-  font-size: .75em;
   position: absolute;
-  bottom: 1.4em;
+  bottom: 1.15em;
   
   text-align: center;
 }
