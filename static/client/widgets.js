@@ -18,6 +18,7 @@ var sdr = sdr || {};
     var container = config.element;
     var self = this;
     
+    // per-drawing-frame parameters updated by prepare()
     var bandwidth, centerFreq;
     
     this.prepare = function prepare() {
@@ -26,13 +27,17 @@ var sdr = sdr || {};
       // Note that this uses hw_freq, not the spectrum data center freq. This is correct because we want to align the coords with what we have selected, not the current data; and the WaterfallPlot is aware of this distinction.
     };
     
+    // state
+    var pan = 0;
+    var zoom = 1;
+    
     // TODO legacy stubs
     this.minLevel = -100;
     this.maxLevel = 0;
     
     // Map a frequency to [0, 1] horizontal coordinate
     this.freqTo01 = function freqTo01(freq) {
-      return (1/2 + (freq - centerFreq) / bandwidth);
+      return pan + (1/2 + (freq - centerFreq) / bandwidth) * zoom;
     };
     this.freqToCSSLeft = function freqToCSSLeft(freq) {
       return this.freqTo01(freq) * 100 + '%';
@@ -41,11 +46,27 @@ var sdr = sdr || {};
       return (1 - this.freqTo01(freq)) * 100 + '%';
     };
     this.freqToCSSLength = function freqToCSSLength(freq) {
-      return (freq / bandwidth * 100) + '%';
+      return (freq / bandwidth * 100 * zoom) + '%';
     };
     // Map [0, 1] coordinate to frequency
-    this.freqFrom01 = function freqTo01(x) {
-      return centerFreq + (x * 2 - 1) / 2 * bandwidth;
+    this.freqFrom01 = function freqFrom01(x) {
+      var unzoomedX = (x - pan) / zoom;
+      return centerFreq + (unzoomedX * 2 - 1) / 2 * bandwidth;
+    };
+    
+    this.changeZoom = function changeZoom(delta, cursor01) {
+      // Find frequency to keep under the cursor
+      var cursorFreq = this.freqFrom01(cursor01);
+      
+      // Adjust and clamp zoom
+      var oldZoom = zoom;
+      zoom *= Math.exp(delta * 0.0005);
+      zoom = Math.max(1.0, zoom);
+      
+      // Adjust and clamp pan
+      pan = 0; // reset for following freqTo01 calculation
+      pan = cursor01 - this.freqTo01(cursorFreq);
+      pan = Math.max(1 - zoom, Math.min(0, pan));
     };
     
     this.addClickToTune = function addClickToTune(element) {
@@ -64,6 +85,13 @@ var sdr = sdr || {};
         }, true);
         clickTune(event);
       }, false);
+      element.addEventListener('mousewheel', function(event) { // Not in FF
+        // TODO: works only because we're at the left edge
+        var x = event.clientX / parseInt(getComputedStyle(container).width);
+        self.changeZoom(event.wheelDelta, x);
+        event.preventDefault();
+        event.stopPropagation();
+      }, true);
     }
   }
   sdr.widget.SpectrumView = SpectrumView;
@@ -93,9 +121,9 @@ var sdr = sdr || {};
       ctx.lineTo(x, ctx.canvas.height);
       ctx.stroke();
     }
-    function drawBand(freq1, freq2, center) {
-      var x1 = w * view.freqTo01(freq1, center);
-      var x2 = w * view.freqTo01(freq2, center);
+    function drawBand(freq1, freq2) {
+      var x1 = w * view.freqTo01(freq1);
+      var x2 = w * view.freqTo01(freq2);
       ctx.fillRect(x1, 0, x2 - x1, ctx.canvas.height);
     }
     
@@ -106,11 +134,14 @@ var sdr = sdr || {};
       w = ctx.canvas.width;
       h = ctx.canvas.height;
       var len = buffer.length;
-      var xScale = ctx.canvas.width / len;
-      var yScale = -h / (view.maxLevel - view.minLevel);
-      var yZero = -view.maxLevel * yScale;
       var bufferCenterFreq = fftCell.getCenterFreq();
       var viewCenterFreq = states.hw_freq.get();
+      var bandwidth = states.input_rate.get();
+      var xZero = view.freqTo01(viewCenterFreq - bandwidth/2) * ctx.canvas.width;
+      var xFullScale = view.freqTo01(viewCenterFreq + bandwidth/2) * ctx.canvas.width;
+      var xScale = (xFullScale - xZero) / len;
+      var yScale = -h / (view.maxLevel - view.minLevel);
+      var yZero = -view.maxLevel * yScale;
       
       // averaging
       // TODO: Get separate averaged and unaveraged FFTs from server so that averaging behavior is not dependent on frame rate over the network
@@ -149,9 +180,9 @@ var sdr = sdr || {};
       //ctx.strokeStyle = 'currentColor';  // in spec, doesn't work
       ctx.strokeStyle = cssColor;
       ctx.beginPath();
-      ctx.moveTo(0, yZero + averageBuffer[0] * yScale);
+      ctx.moveTo(xZero, yZero + averageBuffer[0] * yScale);
       for (var i = 1; i < len; i++) {
-        ctx.lineTo(i * xScale, yZero + averageBuffer[i] * yScale);
+        ctx.lineTo(xZero + i * xScale, yZero + averageBuffer[i] * yScale);
       }
       ctx.stroke();
       
@@ -185,8 +216,14 @@ var sdr = sdr || {};
     this.draw = function () {
       var buffer = fftCell.get();
       var h = canvas.height;
+      var bandwidth = states.input_rate.get();
       var bufferCenterFreq = fftCell.getCenterFreq();
       var viewCenterFreq = states.hw_freq.get();
+      
+      // adjust canvas's display width to zoom
+      // TODO don't recompute
+      canvas.style.marginLeft = view.freqToCSSLeft(viewCenterFreq - bandwidth/2);
+      canvas.style.width = view.freqToCSSLength(bandwidth);
       
       // rescale to discovered fft size
       var w = buffer.length;
@@ -375,11 +412,14 @@ var sdr = sdr || {};
     var labels = outer.appendChild(document.createElement('div'));
     labels.className = 'freqscale-labels';
     var lastShownValue = NaN;
+    var lastViewParam = NaN;
     // TODO: reuse label nodes instead of reallocating...if that's cheaper
     this.draw = function() {
       var centerFreq = tunerSource.get();
-      if (centerFreq === lastShownValue) return;
+      var viewParam = '' + view.freqTo01(0) + view.freqTo01(centerFreq);  // TODO kludge
+      if (centerFreq === lastShownValue && viewParam === lastViewParam) return;
       lastShownValue = centerFreq;
+      lastViewParam = viewParam;
       
       var bandwidth = states.input_rate.get();
       var step = 0.5e6;
