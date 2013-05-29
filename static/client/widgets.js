@@ -512,7 +512,10 @@ var sdr = sdr || {};
         record._view_element = item;
         switch (record.type) {
           case 'channel':
-            item.textContent = (record.freq / 1e6).toFixed(2) + '  ' + record.mode + '  ' + record.label;
+            var notes = record.notes || '';
+            var label = notes.indexOf(record.label) === 0 /* TODO KLUDGE for current sloppy data sources */ ? notes : record.label;
+            item.textContent = (record.freq / 1e6).toFixed(2) + ' (' + record.mode + ') ' + label;
+            item.title = notes;
             break;
           case 'band':
           default:
