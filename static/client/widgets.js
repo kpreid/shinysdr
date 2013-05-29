@@ -425,15 +425,28 @@ var sdr = sdr || {};
       lastViewParam = viewParam;
       
       var bandwidth = states.input_rate.get();
-      var step = 0.5e6;
-      var lower = centerFreq - bandwidth / 2;
-      var upper = centerFreq + bandwidth / 2;
+      var lower = view.freqFrom01(0);
+      var upper = view.freqFrom01(1);
+      
+      // We could try to calculate the step using logarithms, but floating-point error would be tiresome.
+      // TODO: Make these thresholds less magic-numbery, and take the font size/screen size into consideration.
+      var step = 1;
+      while (isFinite(step) && (upper - lower) / step > 10) {
+        step *= 10;
+      }
+      if ((upper - lower) / step < 2) {
+        step /= 4;
+      } else if ((upper - lower) / step < 4) {
+        step /= 2;
+      }
       
       numbers.textContent = '';
-      for (var i = lower - mod(lower, step); i <= upper; i += step) {
-        var label = numbers.appendChild(document.createElement("span"));
-        label.className = "freqscale-number";
-        label.textContent = (i / 1e6) + "MHz";
+      for (var i = lower - mod(lower, step), sanity = 1000;
+           sanity > 0 && i <= upper;
+           sanity--, i += step) {
+        var label = numbers.appendChild(document.createElement('span'));
+        label.className = 'freqscale-number';
+        label.textContent = (i / 1e6) + 'M';  // Hz is obvious
         label.style.left = view.freqToCSSLeft(i);
       }
       
