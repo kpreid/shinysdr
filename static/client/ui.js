@@ -19,6 +19,10 @@
     this.set = function(newValue) {
       value = newValue;
       xhrput(name, String(newValue));
+      if (name === '/mode') {
+        // TODO KLUDGE: this dependency exists but there's no general way to get it. also there's no guarantee we'll get the new value. This should be replaced by having the server stream state update notifications.
+        states.band_filter.reload();
+      }
     };
   }
   function SpectrumCell() {
