@@ -369,7 +369,13 @@ var sdr = sdr || {};
         var value = target.get();
         var negative = value < 0;
         if (negative) { value = -value; }
-        var currentDigitValue = Math.floor(value / scale) % 10;
+        var currentDigitValue;
+        if (scale === 1) {
+          // When setting last digit, clear any hidden fractional digits as well
+          currentDigitValue = (value / scale) % 10;
+        } else {
+          currentDigitValue = Math.floor(value / scale) % 10;
+        }
         value += (input - currentDigitValue) * scale;
         if (negative) { value = -value; }
         target.set(value);
