@@ -490,7 +490,7 @@ var sdr = sdr || {};
   function FreqList(config) {
     var rec_freq = config.target;
     var states = config.radio;
-    var freqDB = config.freqDB;
+    var dataSource = config.freqDB.inBand(50e6, 2200e6); // TODO recognize hardware limits somewhere central
     
     var container = this.element = document.createElement('div');
     
@@ -530,12 +530,12 @@ var sdr = sdr || {};
       }
     }
     
-    var currentFilter = freqDB;
+    var currentFilter = dataSource;
     var lastFilterText = null;
     function refilter() {
       if (lastFilterText !== filterBox.value) {
         lastFilterText = filterBox.value;
-        currentFilter = freqDB.string(lastFilterText).type('channel');
+        currentFilter = dataSource.string(lastFilterText).type('channel');
         states.scan_presets.set(currentFilter);
       }
     }
