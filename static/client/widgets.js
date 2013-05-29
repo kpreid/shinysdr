@@ -81,6 +81,7 @@ var sdr = sdr || {};
         event.preventDefault(); // no selection
       }
       element.addEventListener('mousedown', function(event) {
+        if (event.button !== 0) return;  // don't react to right-clicks etc.
         event.preventDefault();
         document.addEventListener('mousemove', clickTune, true);
         document.addEventListener('mouseup', function(event) {
