@@ -10,11 +10,16 @@ html, body {
   display: -webkit-flex;
   -webkit-flex-direction: row;
 }
+.controlpanel > .hscalegroup { /* TODO wrongish selector */
+  -webkit-flex: 1 2;
+  width: auto;
+}
 .controlpanel > .sidebar {
-  width: 22em;
+  width: 17em;
   /*padding: 0.5em;*/
   display: -webkit-flex;
   -webkit-flex-direction: column;
+  -webkit-flex: 0 1 auto;
 }
 .panel {
   border: .1em outset;
@@ -26,12 +31,12 @@ html, body {
 .hscalegroup {
   display: -webkit-flex;
   -webkit-flex-direction: column;
-  width: 100%;
   height: 100%;
   overflow: hidden; /* for the benefit of positioned labels */
 }
 .hscale {
   width: 100%;
+  -webkit-flex: 100 100;
   height: 50%;
 }
 

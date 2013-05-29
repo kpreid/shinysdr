@@ -490,7 +490,8 @@ var sdr = sdr || {};
   function FreqList(config) {
     var rec_freq = config.target;
     var states = config.radio;
-    var dataSource = config.freqDB.inBand(50e6, 2200e6); // TODO recognize hardware limits somewhere central
+    var dataSource = config.freqDB
+        .inBand(50e6, 2200e6); // TODO recognize hardware limits somewhere central
     
     var container = this.element = document.createElement('div');
     
