@@ -13,6 +13,7 @@ var sdr = sdr || {};
   }
   
   // Defines the display parameters and coordinate calculations of the spectrum widgets
+  var MAX_ZOOM_BINS = 60; // Maximum zoom shows this many FFT bins
   function SpectrumView(config) {
     var radio = config.radio;
     var container = config.element;
@@ -55,13 +56,15 @@ var sdr = sdr || {};
     };
     
     this.changeZoom = function changeZoom(delta, cursor01) {
+      var maxZoom = radio.spectrum.get().length / MAX_ZOOM_BINS;
+      
       // Find frequency to keep under the cursor
       var cursorFreq = this.freqFrom01(cursor01);
       
       // Adjust and clamp zoom
       var oldZoom = zoom;
-      zoom *= Math.exp(delta * 0.0005);
-      zoom = Math.max(1.0, zoom);
+      zoom *= Math.exp(-delta * 0.0005);
+      zoom = Math.min(maxZoom, Math.max(1.0, zoom));
       
       // Adjust and clamp pan
       pan = 0; // reset for following freqTo01 calculation
