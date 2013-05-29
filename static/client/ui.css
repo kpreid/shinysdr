@@ -102,6 +102,7 @@ body {
   top: 0;
 }
 .freqscale-number {
+  border-left: 1px solid; /* hairline marking actual freq */
   position: absolute;
 }
 .freqscale-channel, .freqscale-band {
