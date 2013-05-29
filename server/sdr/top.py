@@ -26,7 +26,7 @@ class Top(gr.top_block, sdr.ExportedState):
 		self.input_rate = input_rate = 3200000
 		self.audio_rate = audio_rate =   32000
 		self.hw_freq = hw_freq = 98e6
-		self.fftsize = fftsize = 2048
+		self.fftsize = fftsize = 4096
 		self.hw_correction_ppm = 0
 
 		##################################################
