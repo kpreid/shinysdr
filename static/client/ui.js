@@ -4,20 +4,35 @@
   var xhrput = sdr.network.xhrput;
   var makeXhrGetter = sdr.network.makeXhrGetter;
   
-  var freqDB = new sdr.Database();
+  // TODO: rework notifier design so that the model-stuff like freqDB doesn't depend on view-stuff like the scheduler
+  var scheduler = new sdr.events.Scheduler();
+  
+  var freqDB = new sdr.Database(scheduler);
   freqDB.addFM();
   freqDB.addFromCatalog('/dbs/');
   
+  function Cell() {
+    this.n = new sdr.events.Notifier(scheduler);
+  }
+  Cell.prototype.depend = function(listener) {
+    this.n.listen(listener);
+    return this.get();
+  };
+  Cell.prototype.reload = function() {};
+  
   function RemoteCell(name, assumed, parser) {
+    Cell.call(this);
     var value = assumed;
     var getter = makeXhrGetter(name, function(remote) {
       value = parser(remote);
-    }, false);
+      this.n.notify();
+    }.bind(this), false);
     getter.go();
     this.reload = getter.go.bind(getter);
     this.get = function() { return value; },
     this.set = function(newValue) {
       value = newValue;
+      this.n.notify();
       xhrput(name, String(newValue));
       if (name === '/mode') {
         // TODO KLUDGE: this dependency exists but there's no general way to get it. also there's no guarantee we'll get the new value. This should be replaced by having the server stream state update notifications.
@@ -25,13 +40,14 @@
       }
     };
   }
+  RemoteCell.prototype = Object.create(Cell.prototype, {constructor: {value: RemoteCell}});
   function SpectrumCell() {
+    Cell.call(this);
     var VSIZE = Float32Array.BYTES_PER_ELEMENT;
     var fft = new Float32Array(0);
     var centerFreq = NaN;
     // TODO: Better mechanism than XHR
     var spectrumQueued = false;
-    var generation = 0;
     var spectrumGetter = makeXhrGetter('/spectrum_fft', function(data, xhr) {
       spectrumQueued = false;
       
@@ -45,30 +61,24 @@
       
       centerFreq = parseFloat(xhr.getResponseHeader('X-SDR-Center-Frequency'));
       
-      generation++;
-      doDisplay();
-    }, true);
+      this.n.notify();
+    }.bind(this), true);
     setInterval(function() {
       // TODO: Stop setInterval when not running
       if (states.running.get() && !spectrumQueued) {
         spectrumGetter.go();
         spectrumQueued = true;
-      } else {
-        doDisplay(); // for other stuff
       }
     }, 1000/30);
     
     this.get = function() {
       return fft;
     };
-    this.getGeneration = function() {
-      return generation;
-    };
     this.getCenterFreq = function() {
       return centerFreq;
     };
-    this.reload = function() {};
   }
+  SpectrumCell.prototype = Object.create(Cell.prototype, {constructor: {value: SpectrumCell}});
   
   var states = {
     running: new RemoteCell('/running', false, JSON.parse),
@@ -98,7 +108,7 @@
   }
   
   // Kludge to let frequency preset widgets do their thing
-  states.preset = { 
+  states.preset = {
     reload: function() {},
     set: function(freqRecord) {
       var freq = freqRecord.freq;
@@ -114,13 +124,15 @@
   
   // TODO better structure / move to server
   var _scanView = freqDB;
-  states.scan_presets = {
-    reload: function () {},
-    get: function () { return _scanView; },
-    set: function (view) { _scanView = view; }
+  states.scan_presets = new Cell();
+  states.scan_presets.get = function () { return _scanView; };
+  states.scan_presets.set = function (view) {
+    _scanView = view;
+    this.n.notify();
   };
   
   var view = new sdr.widget.SpectrumView({
+    scheduler: scheduler,
     radio: states,
     element: document.querySelector('.hscalegroup') // TODO relic
   });
@@ -128,12 +140,14 @@
   var widgets = [];
   // TODO: make these widgets follow the same protocol as the others
   widgets.push(new sdr.widgets.SpectrumPlot({
+    scheduler: scheduler,
     target: states.spectrum,
     element: document.getElementById("spectrum"),
     view: view,
     radio: states // TODO: remove the need for this
   }));
   widgets.push(new sdr.widgets.WaterfallPlot({
+    scheduler: scheduler,
     target: states.spectrum,
     element: document.getElementById("waterfall"),
     view: view,
@@ -156,6 +170,7 @@
       }
     }
     var widget = new T({
+      scheduler: scheduler,
       target: stateObj,
       element: el,
       view: view, // TODO should be context-dependent
@@ -167,18 +182,4 @@
     widget.element.className += ' ' + el.className + ' widget-' + typename; // TODO kludge
   });
   
-  var displayQueued = false;
-  function drawWidgetCb(widget) {
-    widget.draw();
-  }
-  function frameCb() {
-    displayQueued = false;
-    view.prepare();
-    widgets.forEach(drawWidgetCb);
-  }
-  function doDisplay() {
-    if (displayQueued) { return; }
-    displayQueued = true;
-    window.webkitRequestAnimationFrame(frameCb);
-  }
 }());

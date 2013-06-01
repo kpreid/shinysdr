@@ -9,10 +9,14 @@ var sdr = sdr || {};
     this._entries = [];
     this._db = db;
     this._filter = filter;
+    this.n = this._db.n;
   }
+  DatabaseView.prototype._isUpToDate = function () {
+    return this._viewGeneration === this._db._viewGeneration && this._db._isUpToDate();
+  };
   DatabaseView.prototype.forEach = function (callback) {
     var entries;
-    if (!(this._viewGeneration === this._db._viewGeneration)) {
+    if (!this._isUpToDate()) {
       var filter = this._filter;
       entries = [];
       this._db.forEach(function(record) {
@@ -33,7 +37,7 @@ var sdr = sdr || {};
   };
   DatabaseView.prototype.first = function () {
     var filter = this._filter;
-    if (!(this._viewGeneration === this._db._viewGeneration)) {
+    if (!this._isUpToDate()) {
       var got;
       this._db.forEach(function(record) {
         if (filter(record)) {
@@ -67,11 +71,15 @@ var sdr = sdr || {};
     return this._viewGeneration;
   };
   
-  function Database() {
+  function Database(scheduler) {
+    this.n = new sdr.events.Notifier(scheduler);
     DatabaseView.call(this, this);
     this._viewGeneration = 0;
   }
   Database.prototype = Object.create(DatabaseView.prototype, {constructor: {value: Database}});
+  Database.prototype._isUpToDate = function () {
+    return true;
+  };
   // Generic FM channels
   Database.prototype.addFM = function () {
     // Wikipedia currently says FM channels are numbered like so, but no one uses the numbers. Well, I'll use the numbers, just to start from integers. http://en.wikipedia.org/wiki/FM_broadcasting_in_the_USA
@@ -85,21 +93,20 @@ var sdr = sdr || {};
         label: 'FM ' /*+ channel*/ + (freq / 1e6).toFixed(1)
       });
     }
-    this._viewGeneration++;
+    finishModification.call(this);
   };
   // Read the given resource as an index containing links to CSV files in Chirp <http://chirp.danplanet.com/> generic format. No particular reason for choosing Chirp other than it was a the first source and format of machine-readable channel data I found to experiment with.
   Database.prototype.addFromCatalog = function (url) {
     // TODO: refactor this code
     var self = this;
     sdr.network.externalGet(url, 'document', function(indexDoc) {
-      console.log(indexDoc);
       var anchors = indexDoc.querySelectorAll('a[href]');
       //console.log('Fetched database index with ' + anchors.length + ' links.');
       Array.prototype.forEach.call(anchors, function (anchor) {
         // Conveniently, the browser resolves URLs for us here
         //console.log(anchor.href);
         sdr.network.externalGet(anchor.href, 'text', function(csv) {
-          console.group(anchor.href);
+          console.group('Parsing ' + anchor.href);
           var csvLines = csv.split(/[\r\n]+/);
           var columns = csvLines.shift().split(/,/);
           csvLines.forEach(function (line) {
@@ -132,14 +139,19 @@ var sdr = sdr || {};
           });
           console.groupEnd();
 
-          self._entries.sort(function(a, b) {
-            return (a.freq || a.lowerFreq) - (b.freq || b.lowerFreq);
-          });
+          finishModification.call(self);
         });
       });
     });
-    this._viewGeneration++;
   };
+  
+  function finishModification() {
+    this._entries.sort(function(a, b) {
+      return (a.freq || a.lowerFreq) - (b.freq || b.lowerFreq);
+    });
+    this._viewGeneration++;
+    this.n.notify();
+  }
   
   sdr.Database = Database;
 }());

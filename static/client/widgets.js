@@ -19,14 +19,19 @@ var sdr = sdr || {};
     var container = config.element;
     var self = this;
     
-    // per-drawing-frame parameters updated by prepare()
+    var n = this.n = new sdr.events.Notifier(config.scheduler);
+    
+    // per-drawing-frame parameters
     var bandwidth, centerFreq;
     
-    this.prepare = function prepare() {
-      bandwidth = radio.input_rate.get();
-      centerFreq = radio.hw_freq.get();
+    function prepare() {
+      // TODO: unbreakable notify loop here; need to be lazy
+      bandwidth = radio.input_rate.depend(prepare);
+      centerFreq = radio.hw_freq.depend(prepare);
+      n.notify();
       // Note that this uses hw_freq, not the spectrum data center freq. This is correct because we want to align the coords with what we have selected, not the current data; and the WaterfallPlot is aware of this distinction.
-    };
+    }
+    prepare();
     
     // state
     var pan = 0;
@@ -70,6 +75,8 @@ var sdr = sdr || {};
       pan = 0; // reset for following freqTo01 calculation
       pan = cursor01 - this.freqTo01(cursorFreq);
       pan = Math.max(1 - zoom, Math.min(0, pan));
+      
+      n.notify();
     };
     
     this.addClickToTune = function addClickToTune(element) {
@@ -131,16 +138,17 @@ var sdr = sdr || {};
       ctx.fillRect(x1, 0, x2 - x1, ctx.canvas.height);
     }
     
-    var lastGeneration = 0;
-    this.draw = function () {
-      if (lastGeneration === (lastGeneration = fftCell.getGeneration())) return;
-      var buffer = fftCell.get();
+    function draw() {
+      var buffer = fftCell.depend(draw);
+      var bufferCenterFreq = fftCell.getCenterFreq();
+      
       w = ctx.canvas.width;
       h = ctx.canvas.height;
       var len = buffer.length;
-      var bufferCenterFreq = fftCell.getCenterFreq();
-      var viewCenterFreq = states.hw_freq.get();
-      var bandwidth = states.input_rate.get();
+      
+      view.n.listen(draw);
+      var viewCenterFreq = states.hw_freq.depend(draw);
+      var bandwidth = states.input_rate.depend(draw);
       var xZero = view.freqTo01(viewCenterFreq - bandwidth/2) * ctx.canvas.width;
       var xFullScale = view.freqTo01(viewCenterFreq + bandwidth/2) * ctx.canvas.width;
       var xScale = (xFullScale - xZero) / len;
@@ -163,16 +171,16 @@ var sdr = sdr || {};
       ctx.clearRect(0, 0, w, h);
       
       // TODO: marks ought to be part of a distinct widget
-      var squelch = Math.floor(yZero + states.squelch_threshold.get() * yScale) + 0.5;
+      var squelch = Math.floor(yZero + states.squelch_threshold.depend(draw) * yScale) + 0.5;
       ctx.strokeStyle = '#700';
       ctx.beginPath();
       ctx.moveTo(0, squelch);
       ctx.lineTo(w, squelch);
       ctx.stroke();
       
-      var rec_freq_now = states.rec_freq.get();
+      var rec_freq_now = states.rec_freq.depend(draw);
       ctx.fillStyle = '#444';
-      var bandFilter = states.band_filter.get();
+      var bandFilter = states.band_filter.depend(draw);
       drawBand(rec_freq_now - bandFilter, rec_freq_now + bandFilter);
       
       ctx.strokeStyle = 'gray';
@@ -189,9 +197,10 @@ var sdr = sdr || {};
         ctx.lineTo(xZero + i * xScale, yZero + averageBuffer[i] * yScale);
       }
       ctx.stroke();
-      
-    };
+    }
     view.addClickToTune(canvas);
+    
+    draw();
   }
   widgets.SpectrumPlot = SpectrumPlot;
   
@@ -216,16 +225,23 @@ var sdr = sdr || {};
     var slicePtr = 0;
     var lastDrawnCenterFreq = NaN;
 
-    var lastGeneration = 0;
-    this.draw = function () {
-      var buffer = fftCell.get();
-      var h = canvas.height;
-      var bandwidth = states.input_rate.get();
+    var newData = false;
+    function fftListener() {
+      newData = true;
+      draw();
+    }
+    
+    function draw() {
+      var buffer = fftCell.depend(fftListener);
       var bufferCenterFreq = fftCell.getCenterFreq();
-      var viewCenterFreq = states.hw_freq.get();
+
+      var h = canvas.height;
+      var bandwidth = states.input_rate.depend(draw);
+      var viewCenterFreq = states.hw_freq.depend(draw);
       
       // adjust canvas's display width to zoom
-      // TODO don't recompute
+      // TODO this can be independent of other drawing
+      view.n.listen(draw);
       canvas.style.marginLeft = view.freqToCSSLeft(viewCenterFreq - bandwidth/2);
       canvas.style.width = view.freqToCSSLength(bandwidth);
       
@@ -243,9 +259,6 @@ var sdr = sdr || {};
       if (w === 0) {
         return;
       }
-      
-      // New data, or just repainting?
-      var newData = lastGeneration !== (lastGeneration = fftCell.getGeneration());
       
       if (newData) {
         // Find slice to write into
@@ -313,7 +326,7 @@ var sdr = sdr || {};
         // Paint all slices onto canvas
         ctx.fillStyle = '#777';
         var sliceCount = slices.length;
-        var offsetScale = w / states.input_rate.get();  // TODO parameter for rate
+        var offsetScale = w / states.input_rate.depend(draw);  // TODO parameter for rate
         for (var i = sliceCount - 1; i >= 0; i--) {
           var slice = slices[mod(i + slicePtr, sliceCount)];
           var offset = slice[1] - viewCenterFreq;
@@ -327,8 +340,9 @@ var sdr = sdr || {};
         }
         ctx.fillRect(0, y+1, w, h);
       }
-    };
+    }
     view.addClickToTune(canvas);
+    draw();
   }
   widgets.WaterfallPlot = WaterfallPlot;
   
@@ -392,8 +406,8 @@ var sdr = sdr || {};
     }(i));
     var lastShownValue = -1;
     
-    this.draw = function () {
-      var value = target.get();
+    function draw() {
+      var value = target.depend(draw);
       if (value === lastShownValue) return;
       lastShownValue = value;
       var valueStr = String(Math.round(value));
@@ -405,7 +419,8 @@ var sdr = sdr || {};
       for (var i = 0; i < marks.length; i++) {
         marks[i].style.visibility = i < numMarks ? "visible" : "hidden";
       }
-    };
+    }
+    draw();
   }
   widgets.Knob = Knob;
   
@@ -424,14 +439,15 @@ var sdr = sdr || {};
     var lastShownValue = NaN;
     var lastViewParam = NaN;
     // TODO: reuse label nodes instead of reallocating...if that's cheaper
-    this.draw = function() {
-      var centerFreq = tunerSource.get();
+    function draw() {
+      var centerFreq = tunerSource.depend(draw);
+      view.n.listen(draw);
       var viewParam = '' + view.freqTo01(0) + view.freqTo01(centerFreq);  // TODO kludge
       if (centerFreq === lastShownValue && viewParam === lastViewParam) return;
       lastShownValue = centerFreq;
       lastViewParam = viewParam;
       
-      var bandwidth = states.input_rate.get();
+      var bandwidth = states.input_rate.depend(draw);
       var lower = view.freqFrom01(0);
       var upper = view.freqFrom01(1);
       
@@ -483,7 +499,8 @@ var sdr = sdr || {};
             break;
         }
       });
-    };
+    }
+    draw();
   }
   widgets.FreqScale = FreqScale;
   
@@ -505,7 +522,8 @@ var sdr = sdr || {};
     list.size = 20;
     
     function getElementForRecord(record) {
-      if (record._view_element) {  // TODO HORRIBLE KLUDGE
+      // TODO caching should be a WeakMap when possible and should understand the possibility of individual records changing
+      if (record._view_element) {
         return record._view_element;
       } else {
         var freq = record.freq;
@@ -541,21 +559,19 @@ var sdr = sdr || {};
         lastFilterText = filterBox.value;
         currentFilter = dataSource.string(lastFilterText).type('channel');
         states.scan_presets.set(currentFilter);
+        draw();
       }
     }
     refilter();
     
-    var lastF, lastG;
-    this.draw = function () {
-      if (currentFilter === lastF && currentFilter.getGeneration() === lastG) return;
-      lastF = currentFilter;
-      lastG = currentFilter.getGeneration();
-      
-      list.textContent = '';
+    function draw() {
+      currentFilter.n.listen(draw);
+      list.textContent = '';  // clear
       currentFilter.forEach(function (record) {
         list.appendChild(getElementForRecord(record));
       });
-    };
+    }
+    draw();
   }
   widgets.FreqList = FreqList;
   
@@ -566,7 +582,7 @@ var sdr = sdr || {};
     var preset = radio.preset;
     var spectrum = radio.spectrum;
     var scan_presets = radio.scan_presets;
-
+    
     var scanInterval;
     
     function isSignalPresent() {
@@ -620,8 +636,6 @@ var sdr = sdr || {};
         scanInterval = undefined;
       }
     }, false);
-
-    this.draw = function () {};
   }
   widgets.Scanner = Scanner;
   
@@ -632,12 +646,17 @@ var sdr = sdr || {};
     slider.addEventListener('change', function(event) {
       target.set(setT(slider.valueAsNumber));
     }, false);
-    this.draw = function () {
-      var value = getT(target.get());
+    function draw() {
+      var value = getT(target.depend(draw));
+      if (!isFinite(value)) {
+        value = 0;
+      }
+      slider.disabled = false;
       var shown = slider.valueAsNumber;
       if (Math.abs(value - shown) < 1e-8) return;  // TODO adaptive
       slider.valueAsNumber = value;
-    };
+    }
+    draw();
   }
   widgets.LinSlider = function(c) { return new Slider(c,
     function (v) { return v; },
@@ -653,11 +672,10 @@ var sdr = sdr || {};
     checkbox.addEventListener('change', function(event) {
       target.set(checkbox.checked);
     }, false);
-    this.draw = function () {
-      var value = target.get();
-      if (value === checkbox.checked) return;
-      checkbox.checked = value;
-    };
+    function draw() {
+      checkbox.checked = target.depend(draw);
+    }
+    draw();
   }
   widgets.Toggle = Toggle;
   
@@ -670,15 +688,13 @@ var sdr = sdr || {};
         target.set(rb.value);
       }, false);
     });
-    var seen = '';
-    this.draw = function () {
-      var value = config.target.get();
-      if (value === seen) return;
-      seen = value;
+    function draw() {
+      var value = config.target.depend(draw);
       Array.prototype.forEach.call(container.querySelectorAll('input[type=radio]'), function (rb) {
-        rb.checked = rb.value === seen;
+        rb.checked = rb.value === value;
       });
-    };
+    }
+    draw();
   }
   widgets.Radio = Radio;
   
