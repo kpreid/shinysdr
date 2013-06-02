@@ -109,9 +109,16 @@ var sdr = sdr || {};
           console.group('Parsing ' + anchor.href);
           var csvLines = csv.split(/[\r\n]+/);
           var columns = csvLines.shift().split(/,/);
-          csvLines.forEach(function (line) {
-            if (/^\s*$/.test(line)) return;
-            var fields = line.split(/,/); // TODO handle quotes
+          csvLines.forEach(function (line, lineNoBase) {
+            var lineNo = lineNoBase + 2;
+            function error(msg) {
+              console.error(anchor.href + ':' + lineNo + ': ' + msg + '\n' + line + '\n', fields, '\n', record);
+            }
+            if (/^\s*$/.test(line)) return; // allow whitespace
+            var fields = parseCSVLine(line);
+            if (fields.length > columns.length) {
+              error('Too many fields');
+            }
             var record = Object.create(null);
             columns.forEach(function (name, index) {
               record[name] = fields[index];
@@ -133,7 +140,7 @@ var sdr = sdr || {};
                 entry.freq = 1e6 * parseFloat(match[1]);
               }
             } else {
-              console.log('Bad freq!', line, record);
+              error('Bad frequency value');
             }
             self._entries.push(entry);
           });
@@ -151,6 +158,53 @@ var sdr = sdr || {};
     });
     this._viewGeneration++;
     this.n.notify();
+  }
+  
+  function parseCSVLine(line) {
+    var fields = [];
+    var start = 0;
+    var sanity = 0;
+    for (;sanity++ < 1000;) {
+      if (line[start] === '"') {
+        //debugger;
+        start++;
+        var text = '';
+        for (;;) {
+          var end = line.indexOf('"', start);
+          if ('end' === -1) {
+            console.warn('CSV unclosed quote', line[start]);
+            break;
+          } else {
+            text += start === end ? '"' : line.slice(start, end);
+            start = end + 1;
+            if (line[start] === '"') {
+              start++;
+              // continue quote parser
+            } else if (start >= line.length || line[start] === ',') {
+              start++;
+              break; // done with quote parsing
+            } else {
+              console.warn('CSV garbage after quote', line[start]);
+              break;
+            }
+          }
+        }
+        fields.push(text);
+        if (start > line.length) {
+          break;
+        }
+      } else {
+        var end = line.indexOf(',', start);
+        if (end === -1) {
+          fields.push(line.slice(start));
+          break;
+        } else {
+          fields.push(line.slice(start, end));
+          start = end + 1;
+        }
+      }
+    }
+    return fields;
   }
   
   sdr.Database = Database;
