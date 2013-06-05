@@ -1,5 +1,7 @@
-Frequency,Mode
-115.2,ignore
-125,ignore
-144,ignore
-172.192,ignore
+Frequency,Mode,Name
+86.396,ignore,
+115.2,ignore,
+125,ignore,
+144,ignore,
+172.192,ignore,
+36.18-51.65,ignore,will-not-lock region

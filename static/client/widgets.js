@@ -480,7 +480,7 @@ var sdr = sdr || {};
             var freq = record.freq;
             var el = labels.appendChild(document.createElement('span'));
             el.className = 'freqscale-channel';
-            el.textContent = record.label;
+            el.textContent = record.label || record.mode;
             el.style.left = view.freqToCSSLeft(freq);
             // TODO: be an <a> or <button>
             el.addEventListener('click', function(event) {
@@ -491,7 +491,7 @@ var sdr = sdr || {};
           case 'band':
             var el = labels.appendChild(document.createElement('span'));
             el.className = 'freqscale-band';
-            el.textContent = record.label;
+            el.textContent = record.label || record.mode;
             el.style.left = view.freqToCSSLeft(record.lowerFreq);
             el.style.width = view.freqToCSSLength(record.upperFreq - record.lowerFreq);
             break;
@@ -508,7 +508,7 @@ var sdr = sdr || {};
     var rec_freq = config.target;
     var states = config.radio;
     var dataSource = config.freqDB
-        .inBand(50e6, 2200e6); // TODO recognize hardware limits somewhere central
+        .inBand(15e6, 2200e6); // TODO recognize hardware limits somewhere central
     
     var container = this.element = document.createElement('div');
     
