@@ -14,6 +14,9 @@ import osmosdr
 import sdr
 import sdr.receiver
 
+def SpectrumTypeStub(x): return x
+def SubBlockStub(x): raise 'Not yet supported'
+
 class Top(gr.top_block, sdr.ExportedState):
 
 	def __init__(self):
@@ -71,15 +74,16 @@ class Top(gr.top_block, sdr.ExportedState):
 
 	def state_keys(self, callback):
 		super(Top, self).state_keys(callback)
-		callback('running')
-		callback('mode')
-		#callback('input_rate')
-		#callback('audio_rate')
-		callback('hw_freq')
-		callback('hw_correction_ppm')
-		#callback('fftsize')
-		#callback('spectrum_fft')
-		callback('receiver_state')
+		callback('running', True, bool)
+		callback('mode', True, str)
+		callback('input_rate', False, int)
+		callback('audio_rate', False, int)
+		callback('hw_freq', True, float)
+		callback('hw_correction_ppm', True, float)
+		#callback('fftsize', True, int)
+		callback('spectrum_fft', False, SpectrumTypeStub)
+		# TODO: receiver_state should be serialized, yes, but not exported -- but also lose this distinction
+		callback('receiver_state', True, SubBlockStub)
 	def get_receiver_state(self):
 		return self.receiver.state_to_json()
 	def set_receiver_state(self, value):

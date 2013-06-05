@@ -3,8 +3,9 @@ class ExportedState(object):
 		pass
 	def state_to_json(self):
 		state = {}
-		def callback(key):
-			state[key] = self.state_get(key)
+		def callback(key, persistent, ctor):
+			if persistent:
+				state[key] = self.state_get(key)
 		self.state_keys(callback)
 		return state
 	def state_from_json(self, state):

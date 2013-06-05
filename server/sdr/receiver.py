@@ -42,12 +42,13 @@ class Receiver(gr.hier_block2, sdr.ExportedState):
 
 	def state_keys(self, callback):
 		super(Receiver, self).state_keys(callback)
-		#callback('input_rate')  # container set
-		#callback('input_center_freq')  # container set
-		#callback('audio_rate')  # container set
-		callback('rec_freq')
-		callback('audio_gain')
-		callback('squelch_threshold')
+		#callback('input_rate', False, int)  # container set
+		#callback('input_center_freq', False, float)  # container set
+		#callback('audio_rate', False, int)  # container set
+		callback('band_filter', False, float)
+		callback('rec_freq', True, float)
+		callback('audio_gain', True, float)
+		callback('squelch_threshold', True, float)
 	
 	def get_rec_freq(self):
 		return self.rec_freq

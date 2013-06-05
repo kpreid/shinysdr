@@ -40,25 +40,13 @@ class GRResource(resource.Resource):
 		noteDirty()
 		return ''
 
-class IntResource(GRResource):
-	defaultContentType = 'text/plain'
+class JSONResource(GRResource):
+	defaultContentType = 'application/json'
+	def __init__(self, targetThunk, field, ctor):
+		GRResource.__init__(self, targetThunk, field)
+		self.parseCtor = ctor
 	def grparse(self, value):
-		return int(value)
-
-class FloatResource(GRResource):
-	defaultContentType = 'text/plain'
-	def grparse(self, value):
-		return float(value)
-
-class StringResource(GRResource):
-	defaultContentType = 'text/plain'
-	def grparse(self, value):
-		return value
-
-class BoolResource(GRResource):
-	defaultContentType = 'text/plain'
-	def grparse(self, value):
-		return bool(json.loads(value))
+		return self.parseCtor(json.loads(value))
 	def grrender(self, value, request):
 		return json.dumps(value)
 
@@ -70,6 +58,19 @@ class SpectrumResource(GRResource):
 		request.setHeader('X-SDR-Center-Frequency', str(freq))
 		return array.array('f', fftdata).tostring()
 
+class BlockResource(resource.Resource):
+	isLeaf = False
+	def __init__(self, blockThunk):
+		# TODO: blockThunk is a kludge; arrange to swap out resources as needed instead
+		resource.Resource.__init__(self)
+		def callback(key, persistent, ctor):
+			print 'Would put: ', key
+			if ctor is sdr.top.SpectrumTypeStub:
+				self.putChild(key, SpectrumResource(blockThunk, key))
+			else:
+				self.putChild(key, JSONResource(blockThunk, key, ctor))
+		blockThunk().state_keys(callback)
+
 # Create SDR component (slow)
 print 'Flow graph...'
 top = sdr.top.Top()
@@ -80,20 +81,9 @@ print 'Web server...'
 port = 8100
 root = static.File('static/')
 root.indexNames = ['index.html']
-def export(blockThunk, field, ctor):
-	root.putChild(field, ctor(blockThunk, field))
-def gtop(): return top
-def grec(): return top.receiver
-export(gtop, 'running', BoolResource)
-export(gtop, 'hw_freq', FloatResource)
-export(gtop, 'hw_correction_ppm', FloatResource)
-export(gtop, 'mode', StringResource)
-export(grec, 'band_filter', FloatResource)
-export(grec, 'rec_freq', FloatResource)
-export(grec, 'audio_gain', FloatResource)
-export(grec, 'squelch_threshold', FloatResource)
-export(gtop, 'input_rate', IntResource)
-export(gtop, 'spectrum_fft', SpectrumResource)
+radio = BlockResource(lambda: top)
+radio.putChild('receiver', BlockResource(lambda: top.receiver))
+root.putChild('radio', radio)
 reactor.listenTCP(port, server.Site(root))
 
 # Actually process requests.

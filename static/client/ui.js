@@ -20,11 +20,11 @@
   };
   Cell.prototype.reload = function() {};
   
-  function RemoteCell(name, assumed, parser) {
+  function RemoteCell(name, assumed) {
     Cell.call(this);
     var value = assumed;
     var getter = makeXhrGetter(name, function(remote) {
-      value = parser(remote);
+      value = JSON.parse(remote);
       this.n.notify();
     }.bind(this), false);
     getter.go();
@@ -33,8 +33,8 @@
     this.set = function(newValue) {
       value = newValue;
       this.n.notify();
-      xhrput(name, String(newValue));
-      if (name === '/mode') {
+      xhrput(name, JSON.stringify(newValue));
+      if (name === '/radio/mode') {
         // TODO KLUDGE: this dependency exists but there's no general way to get it. also there's no guarantee we'll get the new value. This should be replaced by having the server stream state update notifications.
         states.band_filter.reload();
       }
@@ -48,7 +48,7 @@
     var centerFreq = NaN;
     // TODO: Better mechanism than XHR
     var spectrumQueued = false;
-    var spectrumGetter = makeXhrGetter('/spectrum_fft', function(data, xhr) {
+    var spectrumGetter = makeXhrGetter('/radio/spectrum_fft', function(data, xhr) {
       spectrumQueued = false;
       
       // swap first and second halves for drawing convenience so that center frequency is at halfFFTSize rather than 0
@@ -80,16 +80,17 @@
   }
   SpectrumCell.prototype = Object.create(Cell.prototype, {constructor: {value: SpectrumCell}});
   
+  var pr = '/radio';
   var states = {
-    running: new RemoteCell('/running', false, JSON.parse),
-    hw_freq: new RemoteCell('/hw_freq', 0, parseFloat),
-    hw_correction_ppm: new RemoteCell('/hw_correction_ppm', 0, parseFloat),
-    mode: new RemoteCell('/mode', "", String),
-    rec_freq: new RemoteCell('/rec_freq', 0, parseFloat),
-    band_filter: new RemoteCell('/band_filter', 0, parseFloat),
-    audio_gain: new RemoteCell('/audio_gain', 0, parseFloat),
-    squelch_threshold: new RemoteCell('/squelch_threshold', 0, parseFloat),
-    input_rate: new RemoteCell('/input_rate', 1000000, parseInt),
+    running: new RemoteCell(pr + '/running', false),
+    hw_freq: new RemoteCell(pr + '/hw_freq', 0),
+    hw_correction_ppm: new RemoteCell(pr + '/hw_correction_ppm', 0),
+    mode: new RemoteCell(pr + '/mode', ""),
+    rec_freq: new RemoteCell(pr + '/receiver/rec_freq', 0),
+    band_filter: new RemoteCell(pr + '/receiver/band_filter', 0),
+    audio_gain: new RemoteCell(pr + '/receiver/audio_gain', 0),
+    squelch_threshold: new RemoteCell(pr + '/receiver/squelch_threshold', 0),
+    input_rate: new RemoteCell(pr + '/input_rate', 1000000),
     spectrum: new SpectrumCell(),
   };
   
