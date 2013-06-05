@@ -474,7 +474,9 @@ var sdr = sdr || {};
       }
       
       labels.textContent = '';
-      freqDB.inBand(lower, upper).forEach(function (record) {
+      var query = freqDB.inBand(lower, upper);
+      query.n.listen(draw);
+      query.forEach(function (record) {
         switch (record.type) {
           case 'channel':
             var freq = record.freq;
