@@ -340,6 +340,8 @@ var sdr = sdr || {};
         }
         ctx.fillRect(0, y+1, w, h);
       }
+      
+      newData = false;
     }
     view.addClickToTune(canvas);
     draw();
