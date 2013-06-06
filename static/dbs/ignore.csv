@@ -5,3 +5,4 @@ Frequency,Mode,Name
 144,ignore,
 172.192,ignore,
 36.18-51.65,ignore,will-not-lock region
+0.00-14.24,ignore,will-not-lock region
