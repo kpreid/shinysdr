@@ -141,14 +141,40 @@ body {
   display: -webkit-flex;
   -webkit-flex-direction: column;
 }
-.widget-FreqList select {
-  -webkit-flex: 1 1;
-}
-.widget-FreqList input {
-  /*-webkit-flex: 0 0;*/
-}
-.widget-FreqList select, .widget-FreqList input {
+.widget-FreqList .freqlist-box, .widget-FreqList input {
   width: 100%;
   margin: .1em 0;
   box-sizing: border-box;
 }
+.widget-FreqList input {
+  /*-webkit-flex: 0 0;*/
+}
+.widget-FreqList .freqlist-box {
+  -webkit-flex: 1 1;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  
+  font: .7em sans-serif;
+  
+  border: .1em inset;
+  background: white;
+  color: black;
+}
+.widget-FreqList table {
+  border-collapse: collapse;
+  margin: 0;
+  border: none;
+  padding: 0;
+}
+.widget-FreqList tr:hover {
+  background: #EEE;
+}
+.widget-FreqList .freqlist-item-unsupported {
+  color: gray;
+}
+.widget-FreqList .freqlist-box td {
+  vertical-align: baseline;
+}
+.widget-FreqList .freqlist-cell-freq { text-align: right; }
+.widget-FreqList .freqlist-cell-mode { }
+.widget-FreqList .freqlist-cell-label { }

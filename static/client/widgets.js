@@ -523,39 +523,48 @@ var sdr = sdr || {};
     filterBox.placeholder = 'Filter channels...';
     filterBox.addEventListener('input', refilter, false);
     
-    var list = container.appendChild(document.createElement('select'));
-    list.multiple = true;
-    list.size = 20;
+    var listOuter = container.appendChild(document.createElement('div'))
+    listOuter.className = 'freqlist-box';
+    var list = listOuter.appendChild(document.createElement('table'))
+      .appendChild(document.createElement('tbody'));
     
     function getElementForRecord(record) {
       // TODO caching should be a WeakMap when possible and should understand the possibility of individual records changing
       if (record._view_element) {
         return record._view_element;
-      } else {
-        var freq = record.freq;
-        var item = document.createElement('option');
-        record._view_element = item;
-        switch (record.type) {
-          case 'channel':
-            var notes = record.notes || '';
-            var label = notes.indexOf(record.label) === 0 /* TODO KLUDGE for current sloppy data sources */ ? notes : record.label;
-            item.textContent = (record.freq / 1e6).toFixed(2) + ' (' + record.mode + ') ' + label;
-            item.title = notes;
-            break;
-          case 'band':
-          default:
-            break;
-        }
-        // TODO: generalize, get supported modes from server
-        if (!(record.mode === 'WFM' || record.mode === 'NFM' || record.mode === 'AM')) {
-          item.disabled = true;
-        }
-        item.addEventListener('click', function(event) {
-          config.radio.preset.set(record);
-          event.stopPropagation();
-        }, false);
-        return item;
       }
+      
+      var freq = record.freq;
+      var item = document.createElement('tr');
+      function cell(className, text) {
+        var td = item.appendChild(document.createElement('td'));
+        td.className = 'freqlist-cell-' + className;
+        td.textContent = text;
+        return td;
+      }
+      record._view_element = item;
+      switch (record.type) {
+        case 'channel':
+          var notes = record.notes || '';
+          var label = notes.indexOf(record.label) === 0 /* TODO KLUDGE for current sloppy data sources */ ? notes : record.label;
+          cell('freq', (record.freq / 1e6).toFixed(2));
+          cell('mode', record.mode === 'ignore' ? '' : record.mode);
+          cell('label', label);
+          item.title = notes;
+          break;
+        case 'band':
+        default:
+          break;
+      }
+      // TODO: generalize, get supported modes from server
+      if (!(record.mode === 'WFM' || record.mode === 'NFM' || record.mode === 'AM')) {
+        item.classList.add('freqlist-item-unsupported');
+      }
+      item.addEventListener('click', function(event) {
+        config.radio.preset.set(record);
+        event.stopPropagation();
+      }, false);
+      return item;
     }
     
     var currentFilter = dataSource;
