@@ -496,8 +496,10 @@ var sdr = sdr || {};
             var el = labels.appendChild(document.createElement('span'));
             el.className = 'freqscale-band';
             el.textContent = record.label || record.mode;
-            el.style.left = view.freqToCSSLeft(record.lowerFreq);
-            el.style.width = view.freqToCSSLength(record.upperFreq - record.lowerFreq);
+            var labelLower = Math.max(record.lowerFreq, lower);
+            var labelUpper = Math.min(record.upperFreq, upper);
+            el.style.left = view.freqToCSSLeft(labelLower);
+            el.style.width = view.freqToCSSLength(labelUpper - labelLower);
             break;
           default:
             break;
