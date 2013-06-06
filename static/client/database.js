@@ -36,8 +36,8 @@ var sdr = sdr || {};
     }
   };
   DatabaseView.prototype.first = function () {
-    var filter = this._filter;
     if (!this._isUpToDate()) {
+      var filter = this._filter;
       var got;
       this._db.forEach(function(record) {
         if (filter(record)) {
@@ -49,6 +49,12 @@ var sdr = sdr || {};
     } else {
       return this._entries[0];
     }
+  };
+  DatabaseView.prototype.last = function () {
+    if (!this._isUpToDate()) {
+      this.forEach(function () {});
+    }
+    return this._entries[this._entries.length - 1];
   };
   DatabaseView.prototype.inBand = function (lower, upper) {
     return new DatabaseView(this, function inBandFilter(record) {
