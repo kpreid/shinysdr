@@ -80,6 +80,7 @@ restore(top)
 print 'Web server...'
 port = 8100
 root = static.File('static/')
+root.contentTypes['.csv'] = 'text/csv'
 root.indexNames = ['index.html']
 radio = BlockResource(lambda: top)
 radio.putChild('receiver', BlockResource(lambda: top.receiver))
