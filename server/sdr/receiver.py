@@ -28,8 +28,13 @@ class Receiver(gr.hier_block2, sdr.ExportedState):
 		self.rec_freq = rec_freq
 		self.audio_gain = audio_gain
 		
+		self.audio_gain_block = gr.multiply_const_vff((self.audio_gain,))
+		
 		# TODO: squelch alpha needs to depend on intermediate sample rate
 		self.squelch_block = gr.simple_squelch_cc(squelch_threshold, 0.0002)
+
+	def get_is_valid(self):
+		return abs(self.rec_freq - self.input_center_freq) < self.input_rate
 
 	def get_squelch_threshold(self):
 		return self.squelch_block.threshold()
@@ -37,8 +42,12 @@ class Receiver(gr.hier_block2, sdr.ExportedState):
 	def set_squelch_threshold(self, level):
 		self.squelch_block.set_threshold(level)
 
-	def set_audio_gain(self, k):
-		self.audio_gain_block.set_k((k,))
+	def get_audio_gain(self):
+		return self.audio_gain
+	
+	def set_audio_gain(self, gain):
+		self.audio_gain = gain
+		self.audio_gain_block.set_k((gain,))
 
 	def state_keys(self, callback):
 		super(Receiver, self).state_keys(callback)
@@ -86,7 +95,6 @@ class AMReceiver(Receiver):
 			resample_ratio,
 			firdes.low_pass(pfbsize, pfbsize, 0.4*resample_ratio, 0.2*resample_ratio),
 			pfbsize)
-		self.audio_gain_block = gr.multiply_const_vff((self.audio_gain,))
 		
 		self.connect(
 			self,
@@ -108,11 +116,6 @@ class AMReceiver(Receiver):
 	def get_band_filter(self):
 		return self.band_filter
 
-	def get_audio_gain(self):
-		return self.audio_gain_block.k()[0]
-
-	def set_audio_gain(self, k):
-		self.audio_gain_block.set_k((k,))
 
 
 class FMReceiver(Receiver):
@@ -149,9 +152,6 @@ class FMReceiver(Receiver):
 			tau=75e-6,
 		)
 		
-		# note: fm_demod has a gain parameter, but it is part of the filter, and cannot be adjusted
-		self.audio_gain_block = gr.multiply_const_vff((self.audio_gain,))
-		
 		##################################################
 		# Connections
 		##################################################
@@ -172,12 +172,6 @@ class FMReceiver(Receiver):
 
 	def get_band_filter(self):
 		return self.band_filter
-
-	def get_audio_gain(self):
-		return self.audio_gain_block.k()[0]
-
-	def set_audio_gain(self, k):
-		self.audio_gain_block.set_k((k,))
 
 class NFMReceiver(FMReceiver):
 	def __init__(self, **kwargs):
