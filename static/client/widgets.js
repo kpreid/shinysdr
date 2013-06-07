@@ -189,14 +189,22 @@ var sdr = sdr || {};
       ctx.strokeStyle = 'white';
       drawHair(rec_freq_now); // receiver
       
-      //ctx.strokeStyle = 'currentColor';  // in spec, doesn't work
-      ctx.strokeStyle = cssColor;
-      ctx.beginPath();
-      ctx.moveTo(xZero, yZero + averageBuffer[0] * yScale);
-      for (var i = 1; i < len; i++) {
-        ctx.lineTo(xZero + i * xScale, yZero + averageBuffer[i] * yScale);
+      function path() {
+        ctx.beginPath();
+        ctx.moveTo(-w*3, h*2);
+        for (var i = 0; i < len; i++) {
+          ctx.lineTo(xZero + i * xScale, yZero + averageBuffer[i] * yScale);
+        }
+        ctx.lineTo(w*4, h*2);
       }
+      
+      // Fill is deliberately over stroke. This acts to deemphasize downward stroking of spikes, which tend to occur in noise.
+      ctx.fillStyle = 'rgba(64, 100, 100, 0.75)';
+      ctx.strokeStyle = cssColor;
+      path();
       ctx.stroke();
+      path();
+      ctx.fill();
     }
     view.addClickToTune(canvas);
     
