@@ -17,14 +17,20 @@ html, body {
 .controlpanel > .sidebar {
   width: 17em;
   /*padding: 0.5em;*/
+  -webkit-flex: 0 1 auto;
+}
+.controlpanel > .sidebar, .panel.frame {
   display: -webkit-flex;
   -webkit-flex-direction: column;
-  -webkit-flex: 0 1 auto;
 }
 .panel {
   border: .1em outset;
   padding: .2em;
   -webkit-flex-shrink: 0; /* default value to be overridden */
+}
+.panel.frame {
+  border: .19em ridge;
+  padding: 0 0 0 .4em;
 }
 
 /* main visualizations */
@@ -41,8 +47,11 @@ html, body {
 }
 
 /* coloring */
-body {
+body, .panel {
   background-color: #BBB;
+}
+.panel.frame {
+  background: linear-gradient(to right, #555 0,#BBB 1em);
 }
 .sidebar {
   /*box-shadow: inset 1em 0 .5em -1em white;*/

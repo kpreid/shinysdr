@@ -10,30 +10,32 @@
   <canvas id="waterfall" class="hscale" height="400"></canvas>
 </div>
 
-<div class="sidebar">
+<div class="sidebar frame">
   <div class="panel">
     <label><input type=checkbox data-widget="Toggle" data-target="running">Run</label>
   </div>
-  <form class="panel" data-widget="Radio" data-target="mode">
-    <label><input type=radio name=mode value='AM'>AM</label>
-    <label><input type=radio name=mode value='NFM'>Narrow FM</label>
-    <label><input type=radio name=mode value='WFM'>Wide FM</label>
-  </form>
   <div class="panel">
     Hardware center frequency
     <span data-widget="Knob" data-target="hw_freq"></span>
   </div>
-  <div class="panel">
-    Demodulator frequency
-    <span data-widget="Knob" data-target="rec_freq"></span>
-  </div>
-  <div class="panel">
-    <label>Volume
-    <input type="range" step="any" min="-2" max="2" value="-0.3" data-widget="LogSlider" data-target="audio_gain"></label>
-  </div>
-  <div class="panel">
-    <label>Squelch
-    <input type="range" step="any" min="-100" max="0" value="-100" data-widget="LinSlider" data-target="squelch_threshold"></label>
+  <div class="panel frame">
+    <div class="panel">
+      Demodulator frequency
+      <span data-widget="Knob" data-target="rec_freq"></span>
+    </div>
+    <form class="panel" data-widget="Radio" data-target="mode">
+      <label><input type=radio name=mode value='AM'>AM</label>
+      <label><input type=radio name=mode value='NFM'>Narrow FM</label>
+      <label><input type=radio name=mode value='WFM'>Wide FM</label>
+    </form>
+    <div class="panel">
+      <label>Volume
+      <input type="range" step="any" min="-2" max="2" value="-0.3" data-widget="LogSlider" data-target="audio_gain"></label>
+    </div>
+    <div class="panel">
+      <label>Squelch
+      <input type="range" step="any" min="-100" max="0" value="-100" data-widget="LinSlider" data-target="squelch_threshold"></label>
+    </div>
   </div>
   <div class="panel">
     <span data-widget="Scanner"></span>
