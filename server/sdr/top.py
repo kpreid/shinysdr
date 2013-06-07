@@ -36,6 +36,8 @@ class Top(gr.top_block, sdr.ExportedState):
 		# Blocks
 		##################################################
 		self.receiver = None
+		self.last_receiver_is_valid = False
+		
 		self.audio_sink_0 = None
 		
 		self.osmosdr_source_block = osmosdr.source_c( args="nchan=" + str(1) + " " + "rtl=0" )
@@ -64,13 +66,23 @@ class Top(gr.top_block, sdr.ExportedState):
 		self.set_mode('WFM') # triggers connect
 
 	def _do_connect(self):
+		self.lock()
 		self.disconnect_all()
+
+		self.connect(self.osmosdr_source_block, self.spectrum_fft, self.spectrum_probe)
 
 		# workaround problem with restarting audio sinks on Mac OS X
 		self.audio_sink_0 = audio.sink(self.audio_rate, "", False)
 
-		self.connect(self.osmosdr_source_block, self.receiver, self.audio_sink_0)
-		self.connect(self.osmosdr_source_block, self.spectrum_fft, self.spectrum_probe)
+		self.last_receiver_is_valid = self.receiver.get_is_valid()
+		if self.receiver is not None and self.last_receiver_is_valid and self.audio_sink_0 is not None:
+			self.connect(self.osmosdr_source_block, self.receiver, self.audio_sink_0)
+		
+		self.unlock()
+
+	def _update_receiver_validity(self):
+		if self.receiver.get_is_valid() != self.last_receiver_is_valid:
+			self._do_connect()
 
 	def state_keys(self, callback):
 		super(Top, self).state_keys(callback)
@@ -121,7 +133,6 @@ class Top(gr.top_block, sdr.ExportedState):
 		self._mode = kind
 		self.lock()
 		if self.receiver is not None:
-			self.disconnect(self.receiver)
 			options = {
 				'audio_gain': self.receiver.get_audio_gain(),
 				'rec_freq': self.receiver.get_rec_freq(),
@@ -137,6 +148,7 @@ class Top(gr.top_block, sdr.ExportedState):
 			input_rate=self.input_rate,
 			input_center_freq=self.hw_freq,
 			audio_rate=self.audio_rate,
+			revalidate_hook=lambda: self._update_receiver_validity(),
 			**options
 		)
 		self._do_connect()
@@ -160,6 +172,7 @@ class Top(gr.top_block, sdr.ExportedState):
 	def set_hw_freq(self, hw_freq):
 		self.hw_freq = hw_freq
 		self._update_frequency()
+		self._update_receiver_validity()
 
 	def get_hw_correction_ppm(self):
 		return self.hw_correction_ppm

@@ -14,7 +14,7 @@ import osmosdr
 import sdr
 
 class Receiver(gr.hier_block2, sdr.ExportedState):
-	def __init__(self, name, input_rate=0, input_center_freq=0, audio_rate=0, rec_freq=0, audio_gain=1, squelch_threshold=-100):
+	def __init__(self, name, input_rate=0, input_center_freq=0, audio_rate=0, rec_freq=0, audio_gain=1, squelch_threshold=-100, revalidate_hook=lambda: None):
 		assert input_rate > 0
 		assert audio_rate > 0
 		gr.hier_block2.__init__(
@@ -27,6 +27,7 @@ class Receiver(gr.hier_block2, sdr.ExportedState):
 		self.audio_rate = audio_rate
 		self.rec_freq = rec_freq
 		self.audio_gain = audio_gain
+		self.revalidate_hook = revalidate_hook
 		
 		self.audio_gain_block = gr.multiply_const_vff((self.audio_gain,))
 		
@@ -34,7 +35,7 @@ class Receiver(gr.hier_block2, sdr.ExportedState):
 		self.squelch_block = gr.simple_squelch_cc(squelch_threshold, 0.0002)
 
 	def get_is_valid(self):
-		return abs(self.rec_freq - self.input_center_freq) < self.input_rate
+		return abs(self.rec_freq - self.input_center_freq) < self.input_rate / 2
 
 	def get_squelch_threshold(self):
 		return self.squelch_block.threshold()
@@ -58,6 +59,7 @@ class Receiver(gr.hier_block2, sdr.ExportedState):
 		callback('rec_freq', True, float)
 		callback('audio_gain', True, float)
 		callback('squelch_threshold', True, float)
+		callback('is_valid', False, bool)
 	
 	def get_rec_freq(self):
 		return self.rec_freq
@@ -65,6 +67,7 @@ class Receiver(gr.hier_block2, sdr.ExportedState):
 	def set_rec_freq(self, rec_freq):
 		self.rec_freq = rec_freq
 		self._update_band_center()
+		self.revalidate_hook()
 
 class AMReceiver(Receiver):
 	def __init__(self, name='AM', **kwargs):
