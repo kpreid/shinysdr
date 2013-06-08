@@ -33,7 +33,12 @@
     this.set = function(newValue) {
       value = newValue;
       this.n.notify();
-      xhrput(name, JSON.stringify(newValue));
+      xhrput(name, JSON.stringify(newValue), function(r) {
+        if (Math.floor(r.status / 100) !== 2) {
+          // some error or something other than success; obtain new value
+          this.reload();
+        }
+      }.bind(this));
       if (name === '/radio/mode') {
         // TODO KLUDGE: this dependency exists but there's no general way to get it. also there's no guarantee we'll get the new value. This should be replaced by having the server stream state update notifications.
         states.band_filter.reload();

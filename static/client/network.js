@@ -32,7 +32,11 @@ var sdr = sdr || {};
     resyncHooks.push(f);
   }
   
-  function makeXhrStateCallback(r, retry, whenReady) {
+  function statusCategory(httpStatus) {
+    return Math.floor(httpStatus / 100);
+  }
+  
+  function makeXhrStateCallback(r, retry, whenReady, whenOther) {
     return function() {
       if (r.readyState === 4) {
         if (r.status === 0) {
@@ -46,16 +50,12 @@ var sdr = sdr || {};
           return;
         }
         isDown = false;
-        if (Math.floor(r.status / 100) == 2) {
-          whenReady();
-        } else {
-          console.log('XHR was not OK: ' + r.status);
-        }
+        whenReady(r);
       }
     };
   }
   
-  function xhrput(url, data) {
+  function xhrput(url, data, opt_callback) {
     if (isDown) {
       queuedToRetry['PUT ' + url] = function() { xhrput(url, data); };
       return;
@@ -67,7 +67,9 @@ var sdr = sdr || {};
       function putRetry() {
         xhrput(url, data); // causes enqueueing
       },
-      function () {});
+      function putDone(r) {
+        if (opt_callback) opt_callback(r);
+      });
     r.send(data);
     console.log(url, data);
   }
@@ -90,6 +92,11 @@ var sdr = sdr || {};
       self.go,
       function () {
         callback(binary ? r.response : r.responseText, r);
+      },
+      function (r) {
+        if (statusCategory(r.status) !== 2) {
+          console.warn(url + ' not OK (' + r.status + ')');
+        }
       });
     return self;
   }
