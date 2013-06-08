@@ -184,7 +184,12 @@ class Top(gr.top_block, sdr.ExportedState):
 		self._update_frequency()
 		
 	def _update_frequency(self):
-		adj_freq = self.hw_freq * (1 + 1e-6 * self.hw_correction_ppm)
+		if self.hw_freq == 0.0:
+			# Quirk: Tuning to 3686.6-3730 MHz (on some tuner HW) causes operation effectively at 0Hz.
+			# Original report: <http://www.reddit.com/r/RTLSDR/comments/12d2wc/a_very_surprising_discovery/>
+			adj_freq = 3700e6
+		else:
+			adj_freq = self.hw_freq * (1 + 1e-6 * self.hw_correction_ppm)
 		self.osmosdr_source_block.set_center_freq(adj_freq, 0)
 		self.receiver.set_input_center_freq(self.hw_freq)
 

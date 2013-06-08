@@ -521,8 +521,10 @@ var sdr = sdr || {};
   function FreqList(config) {
     var rec_freq = config.target;
     var states = config.radio;
-    var dataSource = config.freqDB
-        .inBand(15e6, 2200e6); // TODO recognize hardware limits somewhere central
+    
+    // TODO recognize hardware limits somewhere central
+    // TODO should be union of 0-samplerate and 15e6-...
+    var dataSource = config.freqDB.inBand(0, 2200e6); 
     
     var container = this.element = document.createElement('div');
     

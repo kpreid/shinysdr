@@ -103,6 +103,10 @@
   // Takes center freq as parameter so it can be used on hypotheticals and so on.
   function frequencyInRange(candidate, centerFreq) {
     var halfBandwidth = states.input_rate.get() / 2;
+    if (candidate < halfBandwidth && centerFreq === 0) {
+      // recognize tuning for 0Hz gimmick
+      return true;
+    }
     var fromCenter = Math.abs(candidate - centerFreq) / halfBandwidth;
     return fromCenter > 0.1 && // DC peak
            fromCenter < 0.75;  // loss at edges
@@ -115,9 +119,14 @@
       var freq = freqRecord.freq;
       states.mode.set(freqRecord.mode);
       if (!frequencyInRange(freq, states.hw_freq.get())) {
-        //states.hw_freq.set(freq - 0.2e6);
-        // left side, just inside of frequencyInRange's test
-        states.hw_freq.set(freq + states.input_rate.get() * 0.374);
+        if (freq < states.input_rate.get() / 2) {
+          // recognize tuning for 0Hz gimmick
+          states.hw_freq.set(0);
+        } else {
+          //states.hw_freq.set(freq - 0.2e6);
+          // left side, just inside of frequencyInRange's test
+          states.hw_freq.set(freq + states.input_rate.get() * 0.374);
+        }
       }
       states.rec_freq.set(freq);
     }
