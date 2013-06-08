@@ -117,6 +117,8 @@ var sdr = sdr || {};
     ctx.canvas.width = parseInt(getComputedStyle(canvas).width); // TODO on resize
     ctx.canvas.height = parseInt(getComputedStyle(canvas).height);
     ctx.lineWidth = 1;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     var cssColor = getComputedStyle(canvas).color;
     var w, h, averageBuffer; // updated in draw
     var lastDrawnCenterFreq = NaN;
