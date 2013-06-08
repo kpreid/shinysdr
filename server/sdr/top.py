@@ -170,6 +170,11 @@ class Top(gr.top_block, sdr.ExportedState):
 		return self.hw_freq
 
 	def set_hw_freq(self, hw_freq):
+		actual_freq = self._compute_frequency(hw_freq)
+		# TODO: This limitation is in librtlsdr. If we support other gr-osmosdr devices, change it.
+		maxint32 = 2**32 - 1
+		if actual_freq < 0 or actual_freq > maxint32:
+			raise ValueError, 'Frequency must be between 0 and ' + str(maxint32) + ' Hz'
 		self.hw_freq = hw_freq
 		self._update_frequency()
 		self._update_receiver_validity()
@@ -182,15 +187,17 @@ class Top(gr.top_block, sdr.ExportedState):
 		# Not using the hardware feature because I only get garbled output from it
 		#self.osmosdr_source_block.set_freq_corr(value, 0)
 		self._update_frequency()
-		
-	def _update_frequency(self):
-		if self.hw_freq == 0.0:
+	
+	def _compute_frequency(self, effective_freq):
+		if effective_freq == 0.0:
 			# Quirk: Tuning to 3686.6-3730 MHz (on some tuner HW) causes operation effectively at 0Hz.
 			# Original report: <http://www.reddit.com/r/RTLSDR/comments/12d2wc/a_very_surprising_discovery/>
-			adj_freq = 3700e6
+			return 3700e6
 		else:
-			adj_freq = self.hw_freq * (1 + 1e-6 * self.hw_correction_ppm)
-		self.osmosdr_source_block.set_center_freq(adj_freq, 0)
+			return effective_freq * (1 + 1e-6 * self.hw_correction_ppm)
+	
+	def _update_frequency(self):
+		self.osmosdr_source_block.set_center_freq(self._compute_frequency(self.hw_freq), 0)
 		self.receiver.set_input_center_freq(self.hw_freq)
 
 	def get_fftsize(self):
