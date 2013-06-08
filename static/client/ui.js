@@ -8,7 +8,7 @@
   var scheduler = new sdr.events.Scheduler();
   
   var freqDB = new sdr.Database(scheduler);
-  freqDB.addFM();
+  freqDB.addAllSystematic();
   freqDB.addFromCatalog('/dbs/');
   
   function Cell() {

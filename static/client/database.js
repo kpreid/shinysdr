@@ -101,6 +101,33 @@ var sdr = sdr || {};
     }
     finishModification.call(this);
   };
+  // Aircraft band channels
+  Database.prototype.addAir = function () {
+    // http://en.wikipedia.org/wiki/Airband
+    for (var freq = 108e6; freq <= 117.96e6; freq += 50e3) {
+      this._entries.push({
+        type: 'channel',
+        freq: freq,
+        mode: '-',
+        label: 'Air nav ' + (freq / 1e6).toFixed(2)
+      });
+    }
+    for (var freq = 118e6; freq < 137e6; freq += 25e3) {
+      this._entries.push({
+        type: 'channel',
+        freq: freq,
+        mode: 'AM',
+        label: 'Air voice ' + (freq / 1e6).toFixed(2)
+      });
+    }
+    finishModification.call(this);
+  };
+  Database.prototype.addAllSystematic = function () {
+    this.addFM();
+    
+    // TODO: This is currently too much clutter. Re-add this sort of info once we have ways to deemphasize repetitive information.
+    //this.addAir();
+  };
   // Read the given resource as an index containing links to CSV files in Chirp <http://chirp.danplanet.com/> generic format. No particular reason for choosing Chirp other than it was a the first source and format of machine-readable channel data I found to experiment with.
   Database.prototype.addFromCatalog = function (url) {
     // TODO: refactor this code
