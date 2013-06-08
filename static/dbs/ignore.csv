@@ -1,8 +1,22 @@
 Frequency,Mode,Name
+0.00-14.24,ignore,will-not-lock region
+36.18-51.65,ignore,will-not-lock region
 86.396,ignore,
 115.2,ignore,
 125,ignore,
 144,ignore,
 172.192,ignore,
-36.18-51.65,ignore,will-not-lock region
-0.00-14.24,ignore,will-not-lock region
+182.400,ignore,
+201.600,ignore,
+203.200,ignore,
+211.200,ignore,
+364.800,ignore,
+374.400,ignore,
+379.200,ignore,
+384.000,ignore,
+388.800,ignore,
+393.600,ignore,
+403.200,ignore,
+412.800,ignore,
+422.400,ignore,
+432.000,ignore,
