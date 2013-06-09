@@ -142,7 +142,7 @@ class FMReceiver(SimpleAudioReceiver):
 		input_rate = self.input_rate
 		audio_rate = self.audio_rate
 
-		self.blks2_fm_demod_cf_0 = blks2.fm_demod_cf(
+		self.demod_block = blks2.fm_demod_cf(
 			channel_rate=demod_rate,
 			audio_decim=int(demod_rate/audio_rate),
 			deviation=deviation,
@@ -155,7 +155,7 @@ class FMReceiver(SimpleAudioReceiver):
 			self,
 			self.band_filter_block,
 			self.squelch_block,
-			self.blks2_fm_demod_cf_0,
+			self.demod_block,
 			self.audio_gain_block,
 			self)
 

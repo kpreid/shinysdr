@@ -35,7 +35,7 @@ class Top(gr.top_block, sdr.ExportedState):
 		self.receiver = None
 		self.last_receiver_is_valid = False
 		
-		self.audio_sink_0 = None
+		self.audio_sink = None
 		
 		self.osmosdr_source_block = osmosdr.source_c( args="nchan=" + str(1) + " " + "rtl=0" )
 		self.osmosdr_source_block.set_sample_rate(input_rate)
@@ -69,11 +69,11 @@ class Top(gr.top_block, sdr.ExportedState):
 		self.connect(self.osmosdr_source_block, self.spectrum_fft, self.spectrum_probe)
 
 		# workaround problem with restarting audio sinks on Mac OS X
-		self.audio_sink_0 = audio.sink(self.audio_rate, "", False)
+		self.audio_sink = audio.sink(self.audio_rate, "", False)
 
 		self.last_receiver_is_valid = self.receiver.get_is_valid()
-		if self.receiver is not None and self.last_receiver_is_valid and self.audio_sink_0 is not None:
-			self.connect(self.osmosdr_source_block, self.receiver, self.audio_sink_0)
+		if self.receiver is not None and self.last_receiver_is_valid and self.audio_sink is not None:
+			self.connect(self.osmosdr_source_block, self.receiver, self.audio_sink)
 		
 		self.unlock()
 
