@@ -62,22 +62,47 @@ class Receiver(gr.hier_block2, sdr.ExportedState):
 		self._update_band_center()
 		self.revalidate_hook()
 
-class AMReceiver(Receiver):
-	def __init__(self, name='AM', **kwargs):
+
+class SimpleAudioReceiver(Receiver):
+	def __init__(self, name='Audio Receiver', demod_rate=None, band_filter=None, **kwargs):
 		Receiver.__init__(self, name=name, **kwargs)
-	
+		
+		self.band_filter = band_filter
+		
 		input_rate = self.input_rate
 		audio_rate = self.audio_rate
-		demod_rate = 64000
-		self.band_filter = band_filter = 5000
 		
 		if input_rate % demod_rate != 0:
 			raise ValueError, 'Input rate %s is not a multiple of demodulator rate %s' % (self.input_rate, demod_rate)
 		if demod_rate % audio_rate != 0:
 			raise ValueError, 'Demodulator rate %s is not a multiple of audio rate %s' % (demod_rate, audio_rate)
 
-		self.band_filter_block = filter.freq_xlating_fir_filter_ccc(int(input_rate/demod_rate), (gr.firdes.low_pass(1.0, input_rate, band_filter, band_filter, gr.firdes.WIN_HAMMING)), 0, input_rate)
+		self.band_filter_block = filter.freq_xlating_fir_filter_ccc(
+			int(input_rate/demod_rate),
+			gr.firdes.low_pass(1.0, input_rate, band_filter, band_filter, gr.firdes.WIN_HAMMING),
+			0,
+			input_rate)
 		self._update_band_center()
+
+	def get_band_filter(self):
+		return self.band_filter
+
+	def _update_band_center(self):
+		self.band_filter_block.set_center_freq(self.rec_freq - self.input_center_freq)
+
+	def set_input_center_freq(self, value):
+		self.input_center_freq = value
+		self._update_band_center()
+
+
+class AMReceiver(SimpleAudioReceiver):
+	def __init__(self, name='AM', **kwargs):
+		demod_rate = 64000
+		
+		SimpleAudioReceiver.__init__(self, name=name, demod_rate=demod_rate, band_filter=5000, **kwargs)
+	
+		input_rate = self.input_rate
+		audio_rate = self.audio_rate
 		
 		# TODO: 0.1 is needed to avoid clipping; is there a better place to tweak our level vs. other receivers?
 		self.agc_block = gr.feedforward_agc_cc(1024, 0.1)
@@ -102,43 +127,21 @@ class AMReceiver(Receiver):
 			self.audio_gain_block,
 			self)
 
-	def _update_band_center(self):
-		self.band_filter_block.set_center_freq(self.rec_freq - self.input_center_freq)
 
-	def set_input_center_freq(self, value):
-		self.input_center_freq = value
-		self._update_band_center()
-
-	def get_band_filter(self):
-		return self.band_filter
-
-
-
-class FMReceiver(Receiver):
+class FMReceiver(SimpleAudioReceiver):
 	def __init__(self, name='FM', deviation=75000, **kwargs):
-		Receiver.__init__(self, name=name, **kwargs)
-
-		input_rate = self.input_rate
-		audio_rate = self.audio_rate
-		band_filter = self.band_filter = 1.2 * deviation
-
+		band_filter = 1.2 * deviation
 		# TODO: Choose demod rate principledly based on matching input and audio rates and the band_filter
-		if self.band_filter < 10000:
+		if band_filter < 10000:
 			demod_rate = 64000
 		else:
 			demod_rate = 128000
 		
-		if input_rate % demod_rate != 0:
-			raise ValueError, 'Input rate %s is not a multiple of demodulator rate %s' % (self.input_rate, demod_rate)
-		if demod_rate % audio_rate != 0:
-			raise ValueError, 'Demodulator rate %s is not a multiple of audio rate %s' % (demod_rate, audio_rate)
-
-		##################################################
-		# Blocks
-		##################################################
-		self.band_filter_block = filter.freq_xlating_fir_filter_ccc(int(input_rate/demod_rate), (gr.firdes.low_pass(1.0, input_rate, band_filter, band_filter, gr.firdes.WIN_HAMMING)), 0, input_rate)
-		self._update_band_center()
+		SimpleAudioReceiver.__init__(self, name=name, demod_rate=demod_rate, band_filter=band_filter, **kwargs)
 		
+		input_rate = self.input_rate
+		audio_rate = self.audio_rate
+
 		self.blks2_fm_demod_cf_0 = blks2.fm_demod_cf(
 			channel_rate=demod_rate,
 			audio_decim=int(demod_rate/audio_rate),
@@ -148,9 +151,6 @@ class FMReceiver(Receiver):
 			tau=75e-6,
 		)
 		
-		##################################################
-		# Connections
-		##################################################
 		self.connect(
 			self,
 			self.band_filter_block,
@@ -158,16 +158,6 @@ class FMReceiver(Receiver):
 			self.blks2_fm_demod_cf_0,
 			self.audio_gain_block,
 			self)
-
-	def _update_band_center(self):
-		self.band_filter_block.set_center_freq(self.rec_freq - self.input_center_freq)
-
-	def set_input_center_freq(self, value):
-		self.input_center_freq = value
-		self._update_band_center()
-
-	def get_band_filter(self):
-		return self.band_filter
 
 class NFMReceiver(FMReceiver):
 	def __init__(self, **kwargs):
