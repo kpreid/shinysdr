@@ -370,7 +370,7 @@ var sdr = sdr || {};
         var mark = container.appendChild(document.createElement("span"));
         mark.className = "knob-mark";
         mark.textContent = ",";
-        mark.style.visibility = "hidden";
+        //mark.style.visibility = "hidden";
         marks.unshift(mark);
         // TODO: make marks responsive to scroll events (doesn't matter which neighbor, or split in the middle, as long as they do something).
       }
@@ -425,11 +425,13 @@ var sdr = sdr || {};
       var valueStr = String(Math.round(value));
       var last = valueStr.length - 1;
       for (var i = 0; i < places.length; i++) {
-        places[i].text.data = valueStr[last - i] || '\u00A0';
+        var digit = valueStr[last - i];
+        places[i].text.data = digit || '0';
+        places[i].element.classList[digit ? 'remove' : 'add']('knob-dim');
       }
       var numMarks = Math.floor((valueStr.replace("-", "").length - 1) / 3);
       for (var i = 0; i < marks.length; i++) {
-        marks[i].style.visibility = i < numMarks ? "visible" : "hidden";
+        marks[i].classList[i < numMarks ? 'remove' : 'add']('knob-dim');
       }
     }
     draw();

@@ -91,6 +91,9 @@ body, .panel {
   font-family: 'Arial', sans-serif;
   font-size: 0.8em;
 }
+.knob-dim {
+  color: #333;
+}
 
 /* widgets: frequency scale */
 .freqscale {
