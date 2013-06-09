@@ -186,9 +186,9 @@ class SSBReceiver(SimpleAudioReceiver):
 		
 		half_bandwidth = 2800 / 2
 		if lsb:
-			band_mid = 200 + half_bandwidth
-		else:
 			band_mid = -200 - half_bandwidth
+		else:
+			band_mid = 200 + half_bandwidth
 		self.band_filter_low = band_mid - half_bandwidth
 		self.band_filter_high = band_mid + half_bandwidth
 		self.band_filter_width = half_bandwidth / 5
