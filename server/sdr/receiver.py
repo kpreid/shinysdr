@@ -49,7 +49,7 @@ class Receiver(gr.hier_block2, sdr.ExportedState):
 		#callback('input_rate', False, int)  # container set
 		#callback('input_center_freq', False, float)  # container set
 		#callback('audio_rate', False, int)  # container set
-		callback('band_filter', False, float)
+		callback('band_filter_shape', False, lambda x: x)
 		callback('rec_freq', True, float)
 		callback('audio_gain', True, float)
 		callback('squelch_threshold', True, float)
@@ -85,8 +85,12 @@ class SimpleAudioReceiver(Receiver):
 			input_rate)
 		self._update_band_center()
 
-	def get_band_filter(self):
-		return self.band_filter
+	def get_band_filter_shape(self):
+		return {
+			'low': -self.band_filter,
+			'high': self.band_filter,
+			'width': self.band_filter
+		}
 
 	def _update_band_center(self):
 		self.band_filter_block.set_center_freq(self.rec_freq - self.input_center_freq)
@@ -185,12 +189,15 @@ class SSBReceiver(SimpleAudioReceiver):
 			band_mid = 200 + half_bandwidth
 		else:
 			band_mid = -200 - half_bandwidth
+		self.band_filter_low = band_mid - half_bandwidth
+		self.band_filter_high = band_mid + half_bandwidth
+		self.band_filter_width = half_bandwidth / 5
 		self.sharp_filter_block = filter.fir_filter_ccc(
 			1,
 			gr.firdes.complex_band_pass(1.0, demod_rate,
-				band_mid - half_bandwidth,
-				band_mid + half_bandwidth,
-				half_bandwidth / 5,
+				self.band_filter_low,
+				self.band_filter_high,
+				self.band_filter_width,
 				gr.firdes.WIN_HAMMING))
 		
 		self.ssb_demod_block = blocks.complex_to_real(1)
@@ -203,3 +210,11 @@ class SSBReceiver(SimpleAudioReceiver):
 			self.ssb_demod_block,
 			self.audio_gain_block,
 			self)
+
+	# override
+	def get_band_filter_shape(self):
+		return {
+			'low': self.band_filter_low,
+			'high': self.band_filter_high,
+			'width': self.band_filter_width
+		}

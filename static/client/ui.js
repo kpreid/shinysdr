@@ -41,7 +41,7 @@
       }.bind(this));
       if (name === '/radio/mode') {
         // TODO KLUDGE: this dependency exists but there's no general way to get it. also there's no guarantee we'll get the new value. This should be replaced by having the server stream state update notifications.
-        states.band_filter.reload();
+        states.band_filter_shape.reload();
       }
     };
   }
@@ -92,7 +92,7 @@
     hw_correction_ppm: new RemoteCell(pr + '/hw_correction_ppm', 0),
     mode: new RemoteCell(pr + '/mode', ""),
     rec_freq: new RemoteCell(pr + '/receiver/rec_freq', 0),
-    band_filter: new RemoteCell(pr + '/receiver/band_filter', 0),
+    band_filter_shape: new RemoteCell(pr + '/receiver/band_filter_shape', {low: 0, high: 0, width: 0}),
     audio_gain: new RemoteCell(pr + '/receiver/audio_gain', 0),
     squelch_threshold: new RemoteCell(pr + '/receiver/squelch_threshold', 0),
     input_rate: new RemoteCell(pr + '/input_rate', 1000000),

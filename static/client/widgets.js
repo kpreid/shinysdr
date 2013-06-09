@@ -181,9 +181,14 @@ var sdr = sdr || {};
       ctx.stroke();
       
       var rec_freq_now = states.rec_freq.depend(draw);
-      ctx.fillStyle = '#444';
-      var bandFilter = states.band_filter.depend(draw);
-      drawBand(rec_freq_now - bandFilter, rec_freq_now + bandFilter);
+      var bandFilter = states.band_filter_shape.depend(draw);
+      var fl = bandFilter.low;
+      var fh = bandFilter.high;
+      var fhw = bandFilter.width / 2;
+      ctx.fillStyle = '#3A3A3A';
+      drawBand(rec_freq_now + fl - fhw, rec_freq_now + fh + fhw);
+      ctx.fillStyle = '#444444';
+      drawBand(rec_freq_now + fl + fhw, rec_freq_now + fh - fhw);
       
       ctx.strokeStyle = 'gray';
       drawHair(viewCenterFreq); // center frequency
