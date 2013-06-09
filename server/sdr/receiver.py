@@ -1,16 +1,9 @@
 #!/usr/bin/env python
 
-from gnuradio import audio
-from gnuradio import blks2
-from gnuradio import blocks
-from gnuradio import eng_notation
-from gnuradio import filter
 from gnuradio import gr
-from gnuradio.eng_option import eng_option
-from gnuradio.filter import firdes
+from gnuradio import blks2
+from gnuradio import filter
 from gnuradio.gr import firdes
-from optparse import OptionParser
-import osmosdr
 import sdr
 
 class Receiver(gr.hier_block2, sdr.ExportedState):
