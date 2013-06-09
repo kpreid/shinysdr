@@ -125,6 +125,8 @@ class Top(gr.top_block, sdr.ExportedState):
 			clas = sdr.receiver.WFMReceiver
 		elif kind == 'AM':
 			clas = sdr.receiver.AMReceiver
+		elif kind == 'USB' or kind == 'LSB':
+			clas = sdr.receiver.SSBReceiver
 		else:
 			raise ValueError, 'Unknown mode: ' + kind
 		self._mode = kind
@@ -141,6 +143,8 @@ class Top(gr.top_block, sdr.ExportedState):
 				'rec_freq': 97.7e6,
 				'squelch_threshold': -100
 			}
+		if kind == 'LSB':
+			options['lsb'] = True
 		self.receiver = clas(
 			input_rate=self.input_rate,
 			input_center_freq=self.hw_freq,

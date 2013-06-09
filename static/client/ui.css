@@ -67,13 +67,15 @@ body, .panel {
 
 /* widgets: radio button group */
 .widget-Radio {
-  display: -webkit-flex;
-  -webkit-flex-direction: row;
+  xdisplay: -webkit-flex;
+  x-webkit-flex-direction: row;
 }
 .widget-Radio label {
   display: inline-block;
-  -webkit-flex: 1 1 auto;
-  text-align: center;
+  x-webkit-flex: 1 1 auto;
+  box-sizing: border-box;
+  width: 49%;
+  text-align: left;
   white-space: nowrap;
 }
 

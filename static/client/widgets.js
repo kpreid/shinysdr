@@ -571,7 +571,8 @@ var sdr = sdr || {};
           break;
       }
       // TODO: generalize, get supported modes from server
-      if (!(record.mode === 'WFM' || record.mode === 'NFM' || record.mode === 'AM')) {
+      var supportedModes = ['WFM', 'NFM', 'AM', 'LSB', 'USB'];
+      if (supportedModes.indexOf(record.mode) === -1) {
         item.classList.add('freqlist-item-unsupported');
       }
       item.addEventListener('click', function(event) {
