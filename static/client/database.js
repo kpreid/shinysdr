@@ -2,119 +2,141 @@ var sdr = sdr || {};
 (function () {
   'use strict';
   
-  function DatabaseBase() {
+  var database = {};
+  
+  function Source() {
     
   }
-  DatabaseBase.prototype.getAll = function () {
+  Source.prototype.getAll = function () {
     throw new Error('getAll not overridden!');
   };
-  DatabaseBase.prototype.getGeneration = function () {
+  Source.prototype.getGeneration = function () {
     throw new Error('getGeneration not overridden!');
   };
-  DatabaseView.prototype.first = function () {
+  Source.prototype._isUpToDate = function () {
+    throw new Error('_isUpToDate not overridden!');
+  };
+  Source.prototype.first = function () {
     return this.getAll()[0];
   };
-  DatabaseView.prototype.last = function () {
+  Source.prototype.last = function () {
     var entries = this.getAll();
     return entries[entries.length - 1];
   };
-  DatabaseBase.prototype.inBand = function (lower, upper) {
-    return new DatabaseView(this, function inBandFilter(record) {
+  Source.prototype.inBand = function (lower, upper) {
+    return new View(this, function inBandFilter(record) {
       return (record.freq || record.upperFreq) >= lower &&
              (record.freq || record.lowerFreq) <= upper;
     });
   };
-  DatabaseBase.prototype.type = function (type) {
-    return new DatabaseView(this, function typeFilter(record) {
+  Source.prototype.type = function (type) {
+    return new View(this, function typeFilter(record) {
       return record.type === type;
     });
   };
-  DatabaseBase.prototype.string = function (str) {
+  Source.prototype.string = function (str) {
     var re = new RegExp(str, 'i');
-    return new DatabaseView(this, function stringFilter(record) {
+    return new View(this, function stringFilter(record) {
       return re.test(record.label) || re.test(record.notes);
     });
   };
-  DatabaseBase.prototype.forEach = function (f) {
+  Source.prototype.forEach = function (f) {
     this.getAll().forEach(f);
   };
   
-  function DatabaseView(db, filter) {
+  function View(db, filter) {
     this._viewGeneration = NaN;
     this._entries = [];
     this._db = db;
     this._filter = filter;
     this.n = this._db.n;
   }
-  DatabaseView.prototype = Object.create(DatabaseBase.prototype, {constructor: {value: DatabaseView}});
-  DatabaseView.prototype._isUpToDate = function () {
+  View.prototype = Object.create(Source.prototype, {constructor: {value: View}});
+  View.prototype._isUpToDate = function () {
     return this._viewGeneration === this._db._viewGeneration && this._db._isUpToDate();
   };
-  DatabaseView.prototype.getAll = function (callback) {
+  View.prototype.getAll = function (callback) {
     var entries;
     if (!this._isUpToDate()) {
       this._entries = Object.freeze(this._db.getAll().filter(this._filter));
-      this._viewGeneration = this._db._viewGeneration;
+      this._viewGeneration = this._db.getGeneration();
     }
     return this._entries;
   };
-  DatabaseView.prototype.getGeneration = function () {
+  View.prototype.getGeneration = function () {
     return this._viewGeneration;
   };
   
-  function Database() {
+  function Union() {
+    this._unionSources = [];
+    this._sourceGenerations = [];
+    this._entries = [];
+    this._viewGeneration = NaN;
+    this._listeners = [];
+    
+    var notifier = new sdr.events.Notifier();
+    var listening = false;
+    function forward() {
+      listening = false;
+      notifier.notify();
+    }
+    this.n = {
+      notify: notifier.notify.bind(notifier),
+      listen: function (l) {
+        if (!listening) {
+          listening = true;
+          forward.scheduler = l.scheduler; // TODO technically wrong
+          this._unionSources.forEach(function (source) {
+            source.n.listen(forward);
+          });
+        }
+        notifier.listen(l);
+      }.bind(this)
+    };
+  }
+  Union.prototype = Object.create(Source.prototype, {constructor: {value: Union}});
+  Union.prototype.add = function (source) {
+    this._unionSources.push(source);
+    this.n.notify();
+  };
+  Union.prototype.getAll = function () {
+    if (!this._isUpToDate()) {
+      var entries = [];
+      this._unionSources.forEach(function (source) {
+        entries.push.apply(entries, source.getAll());
+      });
+      entries.sort(compareRecord);
+      this._entries = Object.freeze(entries);
+      this._viewGeneration++;
+    }
+    return this._entries;
+  };
+  Union.prototype.getGeneration = function () {
+    return this._viewGeneration;
+  };
+  Union.prototype._isUpToDate = function () {
+    return this._unionSources.every(function (source, i) {
+      return source.getGeneration() === this._sourceGenerations[i];
+    }.bind(this));
+  };
+  database.Union = Union;
+  
+  function Table() {
     this.n = new sdr.events.Notifier();
-    DatabaseView.call(this, this);
+    View.call(this, this);
     this._viewGeneration = 0;
   }
-  Database.prototype = Object.create(DatabaseView.prototype, {constructor: {value: Database}});
-  Database.prototype._isUpToDate = function () {
+  Table.prototype = Object.create(View.prototype, {constructor: {value: Table}});
+  Table.prototype._isUpToDate = function () {
     return true;
   };
-  // Generic FM channels
-  Database.prototype.addFM = function () {
-    // Wikipedia currently says FM channels are numbered like so, but no one uses the numbers. Well, I'll use the numbers, just to start from integers. http://en.wikipedia.org/wiki/FM_broadcasting_in_the_USA
-    for (var channel = 200; channel <= 300; channel++) {
-      // not computing in MHz because that leads to roundoff error
-      var freq = (channel - 200) * 2e5 + 879e5;
-      this._entries.push({
-        type: 'channel',
-        freq: freq,
-        mode: 'WFM',
-        label: 'FM ' /*+ channel*/ + (freq / 1e6).toFixed(1)
-      });
-    }
-    finishModification.call(this);
-  };
-  // Aircraft band channels
-  Database.prototype.addAir = function () {
-    // http://en.wikipedia.org/wiki/Airband
-    for (var freq = 108e6; freq <= 117.96e6; freq += 50e3) {
-      this._entries.push({
-        type: 'channel',
-        freq: freq,
-        mode: '-',
-        label: 'Air nav ' + (freq / 1e6).toFixed(2)
-      });
-    }
-    for (var freq = 118e6; freq < 137e6; freq += 25e3) {
-      this._entries.push({
-        type: 'channel',
-        freq: freq,
-        mode: 'AM',
-        label: 'Air voice ' + (freq / 1e6).toFixed(2)
-      });
-    }
-    finishModification.call(this);
-  };
-  Database.prototype.addAllSystematic = function () {
-    this.addFM();
-    
-    // TODO: This is currently too much clutter. Re-add this sort of info once we have ways to deemphasize repetitive information.
-    //this.addAir();
+  Table.prototype.add = function (entry) {
+    // TODO validate
+    this._entries.push(entry);
+    finishModification.call(this); // TODO lazy after multiple adds
   };
   // Read the given resource as an index containing links to CSV files in Chirp <http://chirp.danplanet.com/> generic format. No particular reason for choosing Chirp other than it was a the first source and format of machine-readable channel data I found to experiment with.
-  Database.prototype.addFromCatalog = function (url) {
+  Table.prototype.addFromCatalog = function (url) {
     // TODO: refactor this code
     var self = this;
     sdr.network.externalGet(url, 'document', function(indexDoc) {
@@ -226,6 +248,52 @@ var sdr = sdr || {};
     }
     return fields;
   }
+  database.Table = Table;
   
-  sdr.Database = Database;
+  // Generic FM broadcast channels
+  database.fm = (function () {
+    // Wikipedia currently says FM channels are numbered like so, but no one uses the numbers. Well, I'll use the numbers, just to start from integers. http://en.wikipedia.org/wiki/FM_broadcasting_in_the_USA
+    var table = new Table();
+    for (var channel = 200; channel <= 300; channel++) {
+      // not computing in MHz because that leads to roundoff error
+      var freq = (channel - 200) * 2e5 + 879e5;
+      table.add({
+        type: 'channel',
+        freq: freq,
+        mode: 'WFM',
+        label: 'FM ' /*+ channel*/ + (freq / 1e6).toFixed(1)
+      });
+    }
+    return table;
+  }());
+  
+  // Aircraft band channels
+  database.air = (function () {
+    // http://en.wikipedia.org/wiki/Airband
+    var table = new Table();
+    for (var freq = 108e6; freq <= 117.96e6; freq += 50e3) {
+      table.add({
+        type: 'channel',
+        freq: freq,
+        mode: '-',
+        label: 'Air nav ' + (freq / 1e6).toFixed(2)
+      });
+    }
+    for (var freq = 118e6; freq < 137e6; freq += 25e3) {
+      table.add({
+        type: 'channel',
+        freq: freq,
+        mode: 'AM',
+        label: 'Air voice ' + (freq / 1e6).toFixed(2)
+      });
+    }
+    return table;
+  }());
+  
+  database.allSystematic = new Union();
+  database.allSystematic.add(database.fm);
+  // TODO: This is currently too much clutter. Re-add this sort of info once we have ways to deemphasize repetitive information.
+  //database.allSystematic.add(database.air);
+  
+  sdr.database = Object.freeze(database);
 }());

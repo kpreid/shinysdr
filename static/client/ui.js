@@ -6,9 +6,11 @@
   
   var scheduler = new sdr.events.Scheduler();
   
-  var freqDB = new sdr.Database();
-  freqDB.addAllSystematic();
-  freqDB.addFromCatalog('/dbs/');
+  var freqDBBase = new sdr.database.Table();
+  freqDBBase.addFromCatalog('/dbs/');
+  var freqDB = new sdr.database.Union();
+  freqDB.add(sdr.database.allSystematic);
+  freqDB.add(freqDBBase);
   
   function Cell() {
     this.n = new sdr.events.Notifier();
