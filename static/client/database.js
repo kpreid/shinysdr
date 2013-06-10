@@ -62,8 +62,8 @@ var sdr = sdr || {};
     return this._viewGeneration;
   };
   
-  function Database(scheduler) {
-    this.n = new sdr.events.Notifier(scheduler);
+  function Database() {
+    this.n = new sdr.events.Notifier();
     DatabaseView.call(this, this);
     this._viewGeneration = 0;
   }

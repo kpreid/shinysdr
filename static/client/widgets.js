@@ -19,7 +19,7 @@ var sdr = sdr || {};
     var container = config.element;
     var self = this;
     
-    var n = this.n = new sdr.events.Notifier(config.scheduler);
+    var n = this.n = new sdr.events.Notifier();
     
     // per-drawing-frame parameters
     var bandwidth, centerFreq;
@@ -31,6 +31,7 @@ var sdr = sdr || {};
       n.notify();
       // Note that this uses hw_freq, not the spectrum data center freq. This is correct because we want to align the coords with what we have selected, not the current data; and the WaterfallPlot is aware of this distinction.
     }
+    prepare.scheduler = config.scheduler;
     prepare();
     
     // state
@@ -213,6 +214,7 @@ var sdr = sdr || {};
       path();
       ctx.fill();
     }
+    draw.scheduler = config.scheduler;
     view.addClickToTune(canvas);
     
     draw();
@@ -245,6 +247,7 @@ var sdr = sdr || {};
       newData = true;
       draw();
     }
+    fftListener.scheduler = config.scheduler;
     
     function draw() {
       var buffer = fftCell.depend(fftListener);
@@ -358,6 +361,7 @@ var sdr = sdr || {};
       
       newData = false;
     }
+    draw.scheduler = config.scheduler;
     view.addClickToTune(canvas);
     draw();
   }
@@ -439,6 +443,7 @@ var sdr = sdr || {};
         marks[i].classList[i < numMarks ? 'remove' : 'add']('knob-dim');
       }
     }
+    draw.scheduler = config.scheduler;
     draw();
   }
   widgets.Knob = Knob;
@@ -523,6 +528,7 @@ var sdr = sdr || {};
         }
       });
     }
+    draw.scheduler = config.scheduler;
     draw();
   }
   widgets.FreqScale = FreqScale;
@@ -597,7 +603,6 @@ var sdr = sdr || {};
         draw();
       }
     }
-    refilter();
     
     function draw() {
       currentFilter.n.listen(draw);
@@ -606,7 +611,9 @@ var sdr = sdr || {};
         list.appendChild(getElementForRecord(record));
       });
     }
-    draw();
+    draw.scheduler = config.scheduler;
+
+    refilter();
   }
   widgets.FreqList = FreqList;
   
@@ -704,6 +711,7 @@ var sdr = sdr || {};
       if (Math.abs(value - shown) < 1e-8) return;  // TODO adaptive
       slider.valueAsNumber = value;
     }
+    draw.scheduler = config.scheduler;
     draw();
   }
   widgets.LinSlider = function(c) { return new Slider(c,
@@ -723,6 +731,7 @@ var sdr = sdr || {};
     function draw() {
       checkbox.checked = target.depend(draw);
     }
+    draw.scheduler = config.scheduler;
     draw();
   }
   widgets.Toggle = Toggle;
@@ -742,6 +751,7 @@ var sdr = sdr || {};
         rb.checked = rb.value === value;
       });
     }
+    draw.scheduler = config.scheduler;
     draw();
   }
   widgets.Radio = Radio;

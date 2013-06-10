@@ -4,15 +4,14 @@
   var xhrput = sdr.network.xhrput;
   var makeXhrGetter = sdr.network.makeXhrGetter;
   
-  // TODO: rework notifier design so that the model-stuff like freqDB doesn't depend on view-stuff like the scheduler
   var scheduler = new sdr.events.Scheduler();
   
-  var freqDB = new sdr.Database(scheduler);
+  var freqDB = new sdr.Database();
   freqDB.addAllSystematic();
   freqDB.addFromCatalog('/dbs/');
   
   function Cell() {
-    this.n = new sdr.events.Notifier(scheduler);
+    this.n = new sdr.events.Notifier();
   }
   Cell.prototype.depend = function(listener) {
     this.n.listen(listener);

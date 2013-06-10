@@ -30,15 +30,14 @@ var sdr = sdr || {};
   }
   events.Scheduler = Scheduler;
   
-  function nSchedule(listener) {
-    this._scheduler.enqueue(listener);
+  function nSchedule(fn) {
+    fn.scheduler.enqueue(fn);
   }
-  function Notifier(scheduler) {
-    if (typeof scheduler !== 'object') {
-      throw new Error('Notifier() without scheduler ' + scheduler);
+  function Notifier() {
+    if (arguments.length !== 0) {
+      throw new Error('Obsolete notifier call');
     }
     var self = this;
-    this._scheduler = scheduler;
     this._listening = [];
   }
   Notifier.prototype.notify = function() {
@@ -48,6 +47,9 @@ var sdr = sdr || {};
   Notifier.prototype.listen = function(fn) {
     if (typeof fn !== 'function') {
       throw new Error('listen called with non-function ' + fn);
+    }
+    if (typeof fn.scheduler === 'undefined') {
+      throw new Error('listen function without scheduler ' + fn);
     }
     this._listening.push(fn);
   };
