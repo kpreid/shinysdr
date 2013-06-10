@@ -2,8 +2,6 @@ var sdr = sdr || {};
 (function () {
   'use strict';
   
-  var STOP = {};
-  
   function DatabaseBase() {
     
   }
@@ -38,12 +36,7 @@ var sdr = sdr || {};
     });
   };
   DatabaseBase.prototype.forEach = function (f) {
-    var entries = this.getAll();
-    var n = entries.length;
-    for (var i = 0; i < n; i++) {
-      var ret = callback(entries[i]);
-      if (ret === STOP) return;
-    }
+    this.getAll().forEach(f);
   };
   
   function DatabaseView(db, filter) {
