@@ -135,63 +135,72 @@ var sdr = sdr || {};
     this._entries.push(entry);
     finishModification.call(this); // TODO lazy after multiple adds
   };
-  // Read the given resource as an index containing links to CSV files in Chirp <http://chirp.danplanet.com/> generic format. No particular reason for choosing Chirp other than it was a the first source and format of machine-readable channel data I found to experiment with.
-  Table.prototype.addFromCatalog = function (url) {
-    // TODO: refactor this code
-    var self = this;
+  database.Table = Table;
+  
+  function fromCatalog(url) {
+    var union = new Union();
     sdr.network.externalGet(url, 'document', function(indexDoc) {
       var anchors = indexDoc.querySelectorAll('a[href]');
       //console.log('Fetched database index with ' + anchors.length + ' links.');
       Array.prototype.forEach.call(anchors, function (anchor) {
         // Conveniently, the browser resolves URLs for us here
-        //console.log(anchor.href);
-        sdr.network.externalGet(anchor.href, 'text', function(csv) {
-          console.group('Parsing ' + anchor.href);
-          var csvLines = csv.split(/[\r\n]+/);
-          var columns = csvLines.shift().split(/,/);
-          csvLines.forEach(function (line, lineNoBase) {
-            var lineNo = lineNoBase + 2;
-            function error(msg) {
-              console.error(anchor.href + ':' + lineNo + ': ' + msg + '\n' + line + '\n', fields, '\n', record);
-            }
-            if (/^\s*$/.test(line)) return; // allow whitespace
-            var fields = parseCSVLine(line);
-            if (fields.length > columns.length) {
-              error('Too many fields');
-            }
-            var record = Object.create(null);
-            columns.forEach(function (name, index) {
-              record[name] = fields[index];
-            });
-            var entry = {
-              // TODO: Not sure what distinction the data is actually making
-              mode: record.Mode === 'FM' ? 'NFM' : record.Mode || '',
-              label: record.Name || '',
-              notes: record.Comment || ''
-            };
-            var match;
-            if ((match = /^(\d+(?:\.\d+)?)(?:\s*-\s*(\d+(?:\.\d+)?))?$/.exec(record.Frequency))) {
-              if (match[2]) {
-                entry.type = 'band';
-                entry.lowerFreq = 1e6 * parseFloat(match[1]);
-                entry.upperFreq = 1e6 * parseFloat(match[2]);
-              } else {
-                entry.type = 'channel';
-                entry.freq = 1e6 * parseFloat(match[1]);
-              }
-            } else {
-              error('Bad frequency value');
-            }
-            self._entries.push(entry);
-          });
-          console.groupEnd();
-
-          finishModification.call(self);
-        });
+        union.add(fromCSV(anchor.href));
       });
     });
+    return union;
   };
+  database.fromCatalog = fromCatalog;
   
+  // Read the given resource as an index containing links to CSV files in Chirp <http://chirp.danplanet.com/> generic format. No particular reason for choosing Chirp other than it was a the first source and format of machine-readable channel data I found to experiment with.
+  function fromCSV(url) {
+    var table = new Table();
+    sdr.network.externalGet(url, 'text', function(csv) {
+      console.group('Parsing ' + url);
+      var csvLines = csv.split(/[\r\n]+/);
+      var columns = csvLines.shift().split(/,/);
+      csvLines.forEach(function (line, lineNoBase) {
+        var lineNo = lineNoBase + 2;
+        function error(msg) {
+          console.error(url + ':' + lineNo + ': ' + msg + '\n' + line + '\n', fields, '\n', record);
+        }
+        if (/^\s*$/.test(line)) return; // allow whitespace
+        var fields = parseCSVLine(line);
+        if (fields.length > columns.length) {
+          error('Too many fields');
+        }
+        var record = Object.create(null);
+        columns.forEach(function (name, index) {
+          record[name] = fields[index];
+        });
+        var entry = {
+          // TODO: Not sure what distinction the data is actually making
+          mode: record.Mode === 'FM' ? 'NFM' : record.Mode || '',
+          label: record.Name || '',
+          notes: record.Comment || ''
+        };
+        var match;
+        if ((match = /^(\d+(?:\.\d+)?)(?:\s*-\s*(\d+(?:\.\d+)?))?$/.exec(record.Frequency))) {
+          if (match[2]) {
+            entry.type = 'band';
+            entry.lowerFreq = 1e6 * parseFloat(match[1]);
+            entry.upperFreq = 1e6 * parseFloat(match[2]);
+          } else {
+            entry.type = 'channel';
+            entry.freq = 1e6 * parseFloat(match[1]);
+          }
+        } else {
+          error('Bad frequency value');
+        }
+        table._entries.push(entry); // TODO better bulk mutation interface
+      });
+      console.groupEnd();
+
+      finishModification.call(table);
+    });
+    return table;
+  }
+  database.fromCSV = fromCSV;
+
   function compareRecord(a, b) {
     return (a.freq || a.lowerFreq) - (b.freq || b.lowerFreq);
   }
@@ -248,7 +257,6 @@ var sdr = sdr || {};
     }
     return fields;
   }
-  database.Table = Table;
   
   // Generic FM broadcast channels
   database.fm = (function () {
