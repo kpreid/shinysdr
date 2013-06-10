@@ -195,7 +195,7 @@ class Top(gr.top_block, sdr.ExportedState):
 			# Original report: <http://www.reddit.com/r/RTLSDR/comments/12d2wc/a_very_surprising_discovery/>
 			return 3700e6
 		else:
-			return effective_freq * (1 + 1e-6 * self.hw_correction_ppm)
+			return effective_freq * (1 - 1e-6 * self.hw_correction_ppm)
 	
 	def _update_frequency(self):
 		self.osmosdr_source_block.set_center_freq(self._compute_frequency(self.hw_freq), 0)
