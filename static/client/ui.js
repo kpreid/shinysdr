@@ -114,8 +114,8 @@
       return true;
     }
     var fromCenter = Math.abs(candidate - centerFreq) / halfBandwidth;
-    return fromCenter > 0.1 && // DC peak
-           fromCenter < 0.75;  // loss at edges
+    return fromCenter > 0.01 && // DC peak
+           fromCenter < 0.85;  // loss at edges
   }
   
   // Kludge to let frequency preset widgets do their thing
