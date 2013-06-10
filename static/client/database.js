@@ -4,6 +4,48 @@ var sdr = sdr || {};
   
   var STOP = {};
   
+  function DatabaseBase() {
+    
+  }
+  DatabaseBase.prototype.getAll = function () {
+    throw new Error('getAll not overridden!');
+  };
+  DatabaseBase.prototype.getGeneration = function () {
+    throw new Error('getGeneration not overridden!');
+  };
+  DatabaseView.prototype.first = function () {
+    return this.getAll()[0];
+  };
+  DatabaseView.prototype.last = function () {
+    var entries = this.getAll();
+    return entries[entries.length - 1];
+  };
+  DatabaseBase.prototype.inBand = function (lower, upper) {
+    return new DatabaseView(this, function inBandFilter(record) {
+      return (record.freq || record.upperFreq) >= lower &&
+             (record.freq || record.lowerFreq) <= upper;
+    });
+  };
+  DatabaseBase.prototype.type = function (type) {
+    return new DatabaseView(this, function typeFilter(record) {
+      return record.type === type;
+    });
+  };
+  DatabaseBase.prototype.string = function (str) {
+    var re = new RegExp(str, 'i');
+    return new DatabaseView(this, function stringFilter(record) {
+      return re.test(record.label) || re.test(record.notes);
+    });
+  };
+  DatabaseBase.prototype.forEach = function (f) {
+    var entries = this.getAll();
+    var n = entries.length;
+    for (var i = 0; i < n; i++) {
+      var ret = callback(entries[i]);
+      if (ret === STOP) return;
+    }
+  };
+  
   function DatabaseView(db, filter) {
     this._viewGeneration = NaN;
     this._entries = [];
@@ -11,67 +53,17 @@ var sdr = sdr || {};
     this._filter = filter;
     this.n = this._db.n;
   }
+  DatabaseView.prototype = Object.create(DatabaseBase.prototype, {constructor: {value: DatabaseView}});
   DatabaseView.prototype._isUpToDate = function () {
     return this._viewGeneration === this._db._viewGeneration && this._db._isUpToDate();
   };
-  DatabaseView.prototype.forEach = function (callback) {
+  DatabaseView.prototype.getAll = function (callback) {
     var entries;
     if (!this._isUpToDate()) {
-      var filter = this._filter;
-      entries = [];
-      this._db.forEach(function(record) {
-        if (filter(record)) {
-          entries.push(record);
-        }
-      });
-      this._entries = entries;
+      this._entries = Object.freeze(this._db.getAll().filter(this._filter));
       this._viewGeneration = this._db._viewGeneration;
-    } else {
-      entries = this._entries;
     }
-    var n = entries.length;
-    for (var i = 0; i < n; i++) {
-      var ret = callback(entries[i]);
-      if (ret === STOP) return;
-    }
-  };
-  DatabaseView.prototype.first = function () {
-    if (!this._isUpToDate()) {
-      var filter = this._filter;
-      var got;
-      this._db.forEach(function(record) {
-        if (filter(record)) {
-          got = record;
-          return STOP;
-        }
-      });
-      return got;
-    } else {
-      return this._entries[0];
-    }
-  };
-  DatabaseView.prototype.last = function () {
-    if (!this._isUpToDate()) {
-      this.forEach(function () {});
-    }
-    return this._entries[this._entries.length - 1];
-  };
-  DatabaseView.prototype.inBand = function (lower, upper) {
-    return new DatabaseView(this, function inBandFilter(record) {
-      return (record.freq || record.upperFreq) >= lower &&
-             (record.freq || record.lowerFreq) <= upper;
-    });
-  };
-  DatabaseView.prototype.type = function (type) {
-    return new DatabaseView(this, function typeFilter(record) {
-      return record.type === type;
-    });
-  };
-  DatabaseView.prototype.string = function (str) {
-    var re = new RegExp(str, 'i');
-    return new DatabaseView(this, function stringFilter(record) {
-      return re.test(record.label) || re.test(record.notes);
-    });
+    return this._entries;
   };
   DatabaseView.prototype.getGeneration = function () {
     return this._viewGeneration;
@@ -185,10 +177,12 @@ var sdr = sdr || {};
     });
   };
   
+  function compareRecord(a, b) {
+    return (a.freq || a.lowerFreq) - (b.freq || b.lowerFreq);
+  }
+  
   function finishModification() {
-    this._entries.sort(function(a, b) {
-      return (a.freq || a.lowerFreq) - (b.freq || b.lowerFreq);
-    });
+    this._entries.sort(compareRecord);
     this._viewGeneration++;
     this.n.notify();
   }
