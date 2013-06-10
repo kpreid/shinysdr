@@ -43,6 +43,26 @@ var sdr = sdr || {};
   Source.prototype.forEach = function (f) {
     this.getAll().forEach(f);
   };
+  function csvStr(s) {
+    if (/^[^,\n"]*$/.test(s)) {
+      return s;
+    } else {
+      return '"' + s.replace('"', '""') + '"';
+    }
+  }
+  function freqStr(f) {
+    return String(f / 1e6);
+  }
+  Source.prototype.toCSV = function () {
+    var out = ['Mode,Frequency,Name,Comment\n'];
+    this.forEach(function (record) {
+      var freq = 'freq' in record ? freqStr(record.freq) :
+                 freqStr(record.lowerFreq) + '-' + freqStr(record.upperFreq);
+      var fields = [freq, record.mode, record.label, record.notes];
+      out.push(fields.map(csvStr).join(',') + '\n');
+    });
+    return out.join('');
+  };
   
   function View(db, filter) {
     this._viewGeneration = NaN;
