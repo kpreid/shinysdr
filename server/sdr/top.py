@@ -10,6 +10,7 @@ from optparse import OptionParser
 import osmosdr
 import sdr
 import sdr.receiver
+import sdr.receivers.vor
 
 def SpectrumTypeStub(x): return x
 def SubBlockStub(x): raise 'Not yet supported'
@@ -127,6 +128,8 @@ class Top(gr.top_block, sdr.ExportedState):
 			clas = sdr.receiver.AMReceiver
 		elif kind == 'USB' or kind == 'LSB':
 			clas = sdr.receiver.SSBReceiver
+		elif kind == 'VOR':
+			clas = sdr.receivers.vor.VOR
 		else:
 			raise ValueError, 'Unknown mode: ' + kind
 		self._mode = kind
