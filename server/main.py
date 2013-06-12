@@ -25,25 +25,25 @@ def restore(root):
 
 class GRResource(resource.Resource):
 	isLeaf = True
-	def __init__(self, targetThunk, field):
+	def __init__(self, block, field):
 		'''Uses GNU Radio style accessors.'''
-		self.targetThunk = targetThunk
+		self._block = block
 		self.field = field
 	def grrender(self, value, request):
 		return str(value)
 	def render_GET(self, request):
-		return self.grrender(getattr(self.targetThunk(), 'get_' + self.field)(), request)
+		return self.grrender(getattr(self._block, 'get_' + self.field)(), request)
 	def render_PUT(self, request):
 		data = request.content.read()
-		getattr(self.targetThunk(), 'set_' + self.field)(self.grparse(data))
+		getattr(self._block, 'set_' + self.field)(self.grparse(data))
 		request.setResponseCode(204)
 		noteDirty()
 		return ''
 
 class JSONResource(GRResource):
 	defaultContentType = 'application/json'
-	def __init__(self, targetThunk, field, ctor):
-		GRResource.__init__(self, targetThunk, field)
+	def __init__(self, block, field, ctor):
+		GRResource.__init__(self, block, field)
 		self.parseCtor = ctor
 	def grparse(self, value):
 		return self.parseCtor(json.loads(value))
@@ -60,16 +60,31 @@ class SpectrumResource(GRResource):
 
 class BlockResource(resource.Resource):
 	isLeaf = False
-	def __init__(self, blockThunk):
-		# TODO: blockThunk is a kludge; arrange to swap out resources as needed instead
+	def __init__(self, block):
 		resource.Resource.__init__(self)
+		self._blockResources = {}
+		self._block = block
 		def callback(key, persistent, ctor):
-			print 'Would put: ', key
+			if key.endswith('_state'): # TODO: kludge
+				self._blockResources[key[:-len('_state')]] = None
 			if ctor is sdr.top.SpectrumTypeStub:
-				self.putChild(key, SpectrumResource(blockThunk, key))
+				self.putChild(key, SpectrumResource(block, key))
 			else:
-				self.putChild(key, JSONResource(blockThunk, key, ctor))
-		blockThunk().state_keys(callback)
+				self.putChild(key, JSONResource(block, key, ctor))
+		block.state_keys(callback)
+	
+	def getChild(self, name, request):
+		if name in self._blockResources:
+			currentResource = self._blockResources[name]
+			currentBlock = getattr(self._block, name)
+			if currentResource is None or not currentResource.isForBlock(currentBlock):
+				self._blockResources[name] = currentResource = BlockResource(currentBlock)
+			return currentResource
+		else:
+			return resource.Resource.getChild(self, name, request)
+	
+	def isForBlock(self, block):
+		return self._block is block
 
 # Create SDR component (slow)
 print 'Flow graph...'
@@ -82,9 +97,7 @@ port = 8100
 root = static.File('static/')
 root.contentTypes['.csv'] = 'text/csv'
 root.indexNames = ['index.html']
-radio = BlockResource(lambda: top)
-radio.putChild('receiver', BlockResource(lambda: top.receiver))
-root.putChild('radio', radio)
+root.putChild('radio', BlockResource(top))
 reactor.listenTCP(port, server.Site(root))
 
 # Actually process requests.
