@@ -18,9 +18,9 @@ def noteDirty():
 	pass
 def restore(root):
 	if os.path.isfile(filename):
-		# make a backup in case this code version misreads the state and loses things on save
-		shutil.copyfile(filename, filename + '~')
 		root.state_from_json(json.load(open(filename, 'r')))
+		# make a backup in case this code version misreads the state and loses things on save (but only if the load succeeded, in case the file but not its backup is bad)
+		shutil.copyfile(filename, filename + '~')
 	
 
 class GRResource(resource.Resource):
