@@ -45,16 +45,39 @@
     };
   }
   RemoteCell.prototype = Object.create(Cell.prototype, {constructor: {value: RemoteCell}});
-  function SpectrumCell() {
+  
+  function PollingCell(name, /* initial */ value, transform, binary, pollRate) {
     Cell.call(this);
-    var VSIZE = Float32Array.BYTES_PER_ELEMENT;
-    var fft = new Float32Array(0);
-    var centerFreq = NaN;
+    
     // TODO: Better mechanism than XHR
-    var spectrumQueued = false;
-    var spectrumGetter = makeXhrGetter('/radio/spectrum_fft', function(data, xhr) {
-      spectrumQueued = false;
-      
+    var queued = false;
+    var getter = makeXhrGetter(name, function(data, xhr) {
+      queued = false;
+      value = transform(data, xhr);
+      this.n.notify();
+    }.bind(this), binary);
+    
+    setInterval(function() {
+      // TODO: Stop setInterval when not running
+      // TODO: Don't depend on states
+      if (states.running.get() && !queued) {
+        getter.go();
+        queued = true;
+      }
+    }, pollRate);
+    
+    this.get = function() {
+      return value;
+    };
+  }
+  PollingCell.prototype = Object.create(Cell.prototype, {constructor: {value: PollingCell}});
+  
+  function SpectrumCell() {
+    var fft = new Float32Array(0);
+    var VSIZE = Float32Array.BYTES_PER_ELEMENT;
+    var centerFreq = NaN;
+    
+    function transform(data, xhr) {
       // swap first and second halves for drawing convenience so that center frequency is at halfFFTSize rather than 0
       if (data.byteLength / VSIZE !== fft.length) {
         fft = new Float32Array(data.byteLength / VSIZE);
@@ -65,24 +88,16 @@
       
       centerFreq = parseFloat(xhr.getResponseHeader('X-SDR-Center-Frequency'));
       
-      this.n.notify();
-    }.bind(this), true);
-    setInterval(function() {
-      // TODO: Stop setInterval when not running
-      if (states.running.get() && !spectrumQueued) {
-        spectrumGetter.go();
-        spectrumQueued = true;
-      }
-    }, 1000/30);
-    
-    this.get = function() {
       return fft;
-    };
+    }
+    
+    PollingCell.call(this, '/radio/spectrum_fft', fft, transform, true, 1000/30);
+    
     this.getCenterFreq = function() {
       return centerFreq;
     };
   }
-  SpectrumCell.prototype = Object.create(Cell.prototype, {constructor: {value: SpectrumCell}});
+  SpectrumCell.prototype = Object.create(PollingCell.prototype, {constructor: {value: SpectrumCell}});
   
   var pr = '/radio';
   var states = {
@@ -95,7 +110,7 @@
     audio_gain: new RemoteCell(pr + '/receiver/audio_gain', 0),
     squelch_threshold: new RemoteCell(pr + '/receiver/squelch_threshold', 0),
     input_rate: new RemoteCell(pr + '/input_rate', 1000000),
-    spectrum: new SpectrumCell(),
+    spectrum: new SpectrumCell()
   };
   
   sdr.network.addResyncHook(function () {
