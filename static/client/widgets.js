@@ -756,5 +756,56 @@ var sdr = sdr || {};
   }
   widgets.Radio = Radio;
   
+  function leastSignificantSetBit(number) {
+      return number & -number;
+  }
+  var TAU = Math.PI * 2;
+  function Angle(config) {
+    var target = config.target;
+    var container = this.element = document.createElement('div');
+    var canvas = container.appendChild(document.createElement('canvas'));
+    var text = container.appendChild(document.createElement('span'))
+        .appendChild(document.createTextNode(''));
+    canvas.width = 100;
+    canvas.height = 100;
+    var ctx = canvas.getContext('2d');
+    
+    var w, h, cx, cy, r;
+    function polar(method, pr, angle) {
+      ctx[method](cx + pr*r * Math.sin(angle), cy - pr*r * Math.cos(angle));
+    }
+    
+    function draw() {
+      var valueAngle = target.depend(draw);
+      
+      text.nodeValue = (valueAngle * (360 / TAU)).toFixed(2) + '\u00B0';
+      
+      w = canvas.width;
+      h = canvas.height;
+      cx = w / 2;
+      cy = h / 2;
+      r = Math.min(w / 2, h / 2) - 1;
+      
+      ctx.clearRect(0, 0, w, h);
+      ctx.beginPath();
+      // circle
+      ctx.arc(cx, cy, r, 0, TAU, false);
+      // ticks
+      for (var i = 0; i < 36; i++) {
+        var t = TAU * i / 36;
+        var d = !(i % 9) ? 3 : !(i % 3) ? 2 : 1;
+        polar('moveTo', 1.0 - 0.1 * d, t);
+        polar('lineTo', 1.0, t);
+      }
+      // pointer
+      ctx.moveTo(cx, cy);
+      polar('lineTo', 1.0, valueAngle);
+      ctx.stroke();
+    }
+    draw.scheduler = config.scheduler;
+    draw();
+  }
+  widgets.Angle = Angle;
+  
   Object.freeze(widgets);
 }());

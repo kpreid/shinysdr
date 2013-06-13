@@ -97,7 +97,9 @@
       rec_freq: new ReadWriteCell(pr + '/receiver/rec_freq', 0),
       band_filter_shape: new ReadWriteCell(pr + '/receiver/band_filter_shape', {low: 0, high: 0, width: 0}),
       audio_gain: new ReadWriteCell(pr + '/receiver/audio_gain', 0),
-      squelch_threshold: new ReadWriteCell(pr + '/receiver/squelch_threshold', 0)
+      squelch_threshold: new ReadWriteCell(pr + '/receiver/squelch_threshold', 0),
+      // TODO: this is only in the VOR receiver
+      angle: new ReadCell(pr + '/receiver/angle', 0, function (x) { return x; })
     },
     input_rate: new ReadWriteCell(pr + '/input_rate', 1000000),
     spectrum_fft: new SpectrumCell()
