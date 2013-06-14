@@ -2,7 +2,6 @@
   'use strict';
   
   var xhrput = sdr.network.xhrput;
-  var makeXhrGetter = sdr.network.makeXhrGetter;
   
   var scheduler = new sdr.events.Scheduler();
   

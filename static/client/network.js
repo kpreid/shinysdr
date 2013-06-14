@@ -70,34 +70,6 @@ var sdr = sdr || {};
   }
   network.xhrput = xhrput;
   
-  function makeXhrGetter(url, callback, binary) {
-    var r = new XMLHttpRequest();
-    if (binary) r.responseType = 'arraybuffer';
-    var self = {
-      go: function() {
-        if (isDown) {
-          queuedToRetry['GET ' + url] = self.go;
-          return;
-        }
-        r.open('GET', url, true);
-        r.send();
-      }
-    };
-    r.onreadystatechange = makeXhrStateCallback(r,
-      self.go,
-      function () {
-        callback(binary ? r.response : r.responseText, r);
-      },
-      function (r) {
-        if (statusCategory(r.status) !== 2) {
-          console.warn(url + ' not OK (' + r.status + ')');
-        }
-      });
-    return self;
-  }
-  network.makeXhrGetter = makeXhrGetter;
-  
-  // unlike makeXhrGetter, doesn't trigger isDown logic, not configured for polling
   function externalGet(url, responseType, callback) {
     var r = new XMLHttpRequest();
     r.responseType = responseType;
