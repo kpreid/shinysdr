@@ -97,6 +97,7 @@ class StateStreamProtocol(protocol.Protocol):
 		self._block = block
 		self._stateLoop = task.LoopingCall(self.sendState)
 		self._stateLoop.start(1.0/30)
+		self._seenValues = {}
 	
 	def dataReceived(self, data):
 		"""twisted Protocol implementation"""
@@ -111,11 +112,15 @@ class StateStreamProtocol(protocol.Protocol):
 		if self.transport is None:
 			# seems to be missing first time
 			return
-		# TODO: Suspend updates when buffers are filling
+		# Simplest thing that works: Obtain all the data, send it if it's different.
 		block = self._block
+		seen = self._seenValues
 		updates = {}
-		for key in ['spectrum_fft']:
-			updates[key] = getattr(block, 'get_' + key)()
+		def keyCallback(key, persistent, ctor):
+			value = getattr(block, 'get_' + key)()
+			if not key in seen or value != seen[key]:
+				updates[key] = seen[key] = value
+		block.state_keys(keyCallback)
 		data = json.dumps(updates)
 		if len(self.transport.transport.dataBuffer) > 100000:
 			# TODO: condition is horrible implementation-diving kludge

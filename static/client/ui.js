@@ -169,9 +169,12 @@
     ws = new WebSocket('ws://' + document.location.hostname + ':' + (parseInt(document.location.port) + 1) + '/');
     ws.onmessage = function(event) {
       var updates = JSON.parse(event.data);
-      //console.log(updates);
-      var fft = updates.spectrum_fft;
-      states.spectrum._update(fft);
+      for (var key in updates) {
+        if (key === 'spectrum_fft') {
+          var fft = updates.spectrum_fft;
+          states.spectrum._update(fft);
+        }
+      }
     };
     ws.onclose = function() {
       console.error('Lost WebSocket connection');
