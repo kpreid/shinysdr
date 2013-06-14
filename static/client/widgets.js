@@ -174,15 +174,15 @@ var sdr = sdr || {};
       ctx.clearRect(0, 0, w, h);
       
       // TODO: marks ought to be part of a distinct widget
-      var squelch = Math.floor(yZero + states.squelch_threshold.depend(draw) * yScale) + 0.5;
+      var squelch = Math.floor(yZero + states.receiver.squelch_threshold.depend(draw) * yScale) + 0.5;
       ctx.strokeStyle = '#700';
       ctx.beginPath();
       ctx.moveTo(0, squelch);
       ctx.lineTo(w, squelch);
       ctx.stroke();
       
-      var rec_freq_now = states.rec_freq.depend(draw);
-      var bandFilter = states.band_filter_shape.depend(draw);
+      var rec_freq_now = states.receiver.rec_freq.depend(draw);
+      var bandFilter = states.receiver.band_filter_shape.depend(draw);
       var fl = bandFilter.low;
       var fh = bandFilter.high;
       var fhw = bandFilter.width / 2;

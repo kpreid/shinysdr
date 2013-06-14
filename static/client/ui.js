@@ -40,7 +40,7 @@
       }.bind(this));
       if (name === '/radio/mode') {
         // TODO KLUDGE: this dependency exists but there's no general way to get it. also there's no guarantee we'll get the new value. This should be replaced by having the server stream state update notifications.
-        states.band_filter_shape.reload();
+        states.receiver.band_filter_shape.reload();
       }
     };
   }
@@ -117,18 +117,27 @@
     hw_freq: new RemoteCell(pr + '/hw_freq', 0),
     hw_correction_ppm: new RemoteCell(pr + '/hw_correction_ppm', 0),
     mode: new RemoteCell(pr + '/mode', ""),
-    rec_freq: new RemoteCell(pr + '/receiver/rec_freq', 0),
-    band_filter_shape: new RemoteCell(pr + '/receiver/band_filter_shape', {low: 0, high: 0, width: 0}),
-    audio_gain: new RemoteCell(pr + '/receiver/audio_gain', 0),
-    squelch_threshold: new RemoteCell(pr + '/receiver/squelch_threshold', 0),
+    receiver: {
+      rec_freq: new RemoteCell(pr + '/receiver/rec_freq', 0),
+      band_filter_shape: new RemoteCell(pr + '/receiver/band_filter_shape', {low: 0, high: 0, width: 0}),
+      audio_gain: new RemoteCell(pr + '/receiver/audio_gain', 0),
+      squelch_threshold: new RemoteCell(pr + '/receiver/squelch_threshold', 0)
+    },
     input_rate: new RemoteCell(pr + '/input_rate', 1000000),
     spectrum: new SpectrumCell()
   };
   
   sdr.network.addResyncHook(function () {
-    for (var key in states) {
-      states[key].reload();
+    function go(block) {
+      for (var key in states) {
+        if (states instanceof Cell) {
+          states[key].reload();
+        } else {
+          go(states[key]);
+        }
+      }
     }
+    go(states);
   });
   
   // Takes center freq as parameter so it can be used on hypotheticals and so on.
@@ -159,7 +168,7 @@
           states.hw_freq.set(freq + states.input_rate.get() * 0.374);
         }
       }
-      states.rec_freq.set(freq);
+      states.receiver.rec_freq.set(freq);
     }
   };
   
@@ -223,8 +232,17 @@
       return;
     }
     var stateObj;
+    function lookupTarget(el) {
+      if (!el || el.nodeType !== Node.ELEMENT_NODE) {
+        return states;
+      } else if (!el.hasAttribute('data-target')) {
+        return lookupTarget(el.parentNode);
+      } else {
+        return lookupTarget(el.parentNode)[el.getAttribute("data-target")];
+      }
+    }
     if (el.hasAttribute('data-target')) {
-      stateObj = states[el.getAttribute("data-target")];
+      stateObj = lookupTarget(el);
       if (!stateObj) {
         console.error('Bad widget target:', el);
         return;
