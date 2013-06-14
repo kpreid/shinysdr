@@ -57,14 +57,19 @@
       this.n.notify();
     }.bind(this), binary);
     
-    setInterval(function() {
-      // TODO: Stop setInterval when not running
-      // TODO: Don't depend on states
-      if (states.running.get() && !queued) {
-        getter.go();
-        queued = true;
-      }
-    }, pollRate);
+    //setInterval(function() {
+    //  // TODO: Stop setInterval when not running
+    //  // TODO: Don't depend on states
+    //  if (states.running.get() && !queued) {
+    //    getter.go();
+    //    queued = true;
+    //  }
+    //}, pollRate);
+    
+    this._update = function(data) {
+      value = transform(data);
+      this.n.notify();
+    };
     
     this.get = function() {
       return value;
@@ -74,19 +79,26 @@
   
   function SpectrumCell() {
     var fft = new Float32Array(0);
+    var swapbuf = new Float32Array(0);
     var VSIZE = Float32Array.BYTES_PER_ELEMENT;
     var centerFreq = NaN;
     
-    function transform(data, xhr) {
-      // swap first and second halves for drawing convenience so that center frequency is at halfFFTSize rather than 0
-      if (data.byteLength / VSIZE !== fft.length) {
-        fft = new Float32Array(data.byteLength / VSIZE);
+    function transform(json) {
+      centerFreq = json[0];
+      var arrayFFT = json[1];
+
+      var halfFFTSize = arrayFFT.length / 2;
+
+      // adjust size if needed
+      if (arrayFFT.length !== fft.length) {
+        fft = new Float32Array(arrayFFT.length);
+        swapbuf = new Float32Array(arrayFFT.length);
       }
-      var halfFFTSize = fft.length / 2;
-      fft.set(new Float32Array(data, 0, halfFFTSize), halfFFTSize);
-      fft.set(new Float32Array(data, halfFFTSize * VSIZE, halfFFTSize), 0);
       
-      centerFreq = parseFloat(xhr.getResponseHeader('X-SDR-Center-Frequency'));
+      // swap first and second halves for drawing convenience so that center frequency is at halfFFTSize rather than 0
+      swapbuf.set(arrayFFT);
+      fft.set(swapbuf.subarray(0, halfFFTSize), halfFFTSize);
+      fft.set(swapbuf.subarray(halfFFTSize, fft.length), 0);
       
       return fft;
     }
@@ -150,6 +162,23 @@
       states.rec_freq.set(freq);
     }
   };
+  
+  // WebSocket state streaming
+  var ws;
+  function openWS() {
+    ws = new WebSocket('ws://' + document.location.hostname + ':' + (parseInt(document.location.port) + 1) + '/');
+    ws.onmessage = function(event) {
+      var updates = JSON.parse(event.data);
+      //console.log(updates);
+      var fft = updates.spectrum_fft;
+      states.spectrum._update(fft);
+    };
+    ws.onclose = function() {
+      console.error('Lost WebSocket connection');
+      setTimeout(openWS, 1000);
+    };
+  }
+  openWS();
   
   // TODO better structure / move to server
   var _scanView = freqDB;

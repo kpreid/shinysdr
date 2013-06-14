@@ -2,6 +2,10 @@
 
 from twisted.web import static, server, resource
 from twisted.internet import reactor
+from twisted.internet import protocol
+from twisted.internet import task
+
+import txws
 
 import array # for binary stuff
 import json
@@ -86,12 +90,61 @@ class BlockResource(resource.Resource):
 	def isForBlock(self, block):
 		return self._block is block
 
-# Create SDR component (slow)
+
+class StateStreamProtocol(protocol.Protocol):
+	def __init__(self, block):
+		#protocol.Protocol.__init__(self)
+		self._block = block
+		self._stateLoop = task.LoopingCall(self.sendState)
+		self._stateLoop.start(1.0/30)
+	
+	def dataReceived(self, data):
+		"""twisted Protocol implementation"""
+		pass
+	
+	def connectionLost(self, reason):
+		"""twisted Protocol implementation"""
+		self._stateLoop.stop()
+	
+	def sendState(self):
+		# Note: txWS currently does not support binary WebSockets messages. Therefore, we send everything as JSON text. This is merely inefficient, not broken, so it will do for now.
+		if self.transport is None:
+			# seems to be missing first time
+			return
+		# TODO: Suspend updates when buffers are filling
+		block = self._block
+		updates = {}
+		for key in ['spectrum_fft']:
+			updates[key] = getattr(block, 'get_' + key)()
+		data = json.dumps(updates)
+		if len(self.transport.transport.dataBuffer) > 100000:
+			# TODO: condition is horrible implementation-diving kludge
+			# Don't send data if we aren't successfully getting it onto the network.
+			return
+		self.transport.write(data)
+
+class StateStreamFactory(protocol.Factory):
+	protocol = StateStreamProtocol
+	
+	def __init__(self, block):
+		#protocol.Factory.__init__(self)
+		self._block = block
+	
+	def buildProtocol(self, addr):
+		"""twisted Factory implementation"""
+		p = StateStreamProtocol(self._block)
+		p.factory = self
+		return p
+
 print 'Flow graph...'
+# Note: This is slow as it triggers the OsmoSDR device initialization
 top = sdr.top.Top()
 restore(top)
 
-# Initialize web server first so we start accepting
+print 'WebSockets server...'
+wsport = 8101
+reactor.listenTCP(wsport, txws.WebSocketFactory(StateStreamFactory(top)))
+
 print 'Web server...'
 port = 8100
 root = static.File('static/')
@@ -100,6 +153,5 @@ root.indexNames = ['index.html']
 root.putChild('radio', BlockResource(top))
 reactor.listenTCP(port, server.Site(root))
 
-# Actually process requests.
 print 'Ready. Visit http://localhost:' + str(port) + '/'
 reactor.run()
