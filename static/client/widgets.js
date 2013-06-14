@@ -62,7 +62,7 @@ var sdr = sdr || {};
     };
     
     this.changeZoom = function changeZoom(delta, cursor01) {
-      var maxZoom = radio.spectrum.get().length / MAX_ZOOM_BINS;
+      var maxZoom = radio.spectrum_fft.get().length / MAX_ZOOM_BINS;
       
       // Find frequency to keep under the cursor
       var cursorFreq = this.freqFrom01(cursor01);
@@ -620,9 +620,9 @@ var sdr = sdr || {};
   function Scanner(config) {
     var radio = config.radio;
     var hw_freq = radio.hw_freq;
-    var rec_freq = radio.rec_freq;
+    var rec_freq = radio.receiver.rec_freq;
     var preset = radio.preset;
-    var spectrum = radio.spectrum;
+    var spectrum = radio.spectrum_fft;
     var scan_presets = radio.scan_presets;
     
     var scanInterval;

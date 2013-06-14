@@ -124,7 +124,7 @@
       squelch_threshold: new RemoteCell(pr + '/receiver/squelch_threshold', 0)
     },
     input_rate: new RemoteCell(pr + '/input_rate', 1000000),
-    spectrum: new SpectrumCell()
+    spectrum_fft: new SpectrumCell()
   };
   
   sdr.network.addResyncHook(function () {
@@ -181,7 +181,7 @@
       for (var key in updates) {
         if (key === 'spectrum_fft') {
           var fft = updates.spectrum_fft;
-          states.spectrum._update(fft);
+          states.spectrum_fft._update(fft);
         }
       }
     };
@@ -211,14 +211,14 @@
   // TODO: make these widgets follow the same protocol as the others
   widgets.push(new sdr.widgets.SpectrumPlot({
     scheduler: scheduler,
-    target: states.spectrum,
+    target: states.spectrum_fft,
     element: document.getElementById("spectrum"),
     view: view,
     radio: states // TODO: remove the need for this
   }));
   widgets.push(new sdr.widgets.WaterfallPlot({
     scheduler: scheduler,
-    target: states.spectrum,
+    target: states.spectrum_fft,
     element: document.getElementById("waterfall"),
     view: view,
     radio: states // TODO: remove the need for this
