@@ -91,11 +91,30 @@ class BlockResource(resource.Resource):
 		return self._block is block
 
 
+def traverseUpdates(seen, block):
+	updates = {}
+	def keyCallback(key, persistent, ctor):
+		if key.endswith('_state'): # TODO: kludge
+			subkey = key[:-len('_state')]
+			subblock = getattr(block, subkey)
+			if subkey not in seen:
+				seen[subkey] = {}
+			subupdates = traverseUpdates(seen[subkey], subblock)
+			if len(subupdates) > 0:
+				updates[subkey] = subupdates
+		else:
+			value = getattr(block, 'get_' + key)()
+			if not key in seen or value != seen[key]:
+				updates[key] = seen[key] = value
+	block.state_keys(keyCallback)
+	return updates
+
 class StateStreamProtocol(protocol.Protocol):
 	def __init__(self, block):
 		#protocol.Protocol.__init__(self)
 		self._block = block
 		self._stateLoop = task.LoopingCall(self.sendState)
+		# TODO: slow/stop when radio not running
 		self._stateLoop.start(1.0/30)
 		self._seenValues = {}
 	
@@ -113,14 +132,10 @@ class StateStreamProtocol(protocol.Protocol):
 			# seems to be missing first time
 			return
 		# Simplest thing that works: Obtain all the data, send it if it's different.
-		block = self._block
-		seen = self._seenValues
-		updates = {}
-		def keyCallback(key, persistent, ctor):
-			value = getattr(block, 'get_' + key)()
-			if not key in seen or value != seen[key]:
-				updates[key] = seen[key] = value
-		block.state_keys(keyCallback)
+		updates = traverseUpdates(self._seenValues, self._block)
+		if len(updates) == 0:
+			# Nothing to say
+			return
 		data = json.dumps(updates)
 		if len(self.transport.transport.dataBuffer) > 100000:
 			# TODO: condition is horrible implementation-diving kludge
