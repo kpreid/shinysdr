@@ -17,7 +17,7 @@
     return this.get();
   };
   
-  function RemoteCell(name, assumed) {
+  function ReadWriteCell(name, assumed) {
     Cell.call(this);
     var value = assumed;
     var remoteValue = assumed;
@@ -37,10 +37,9 @@
       this.n.notify();
     };
   }
-  RemoteCell.prototype = Object.create(Cell.prototype, {constructor: {value: RemoteCell}});
+  ReadWriteCell.prototype = Object.create(Cell.prototype, {constructor: {value: ReadWriteCell}});
   
-  // TODO: rename
-  function PollingCell(name, /* initial */ value, transform) {
+  function ReadCell(name, /* initial */ value, transform) {
     Cell.call(this);
     
     this._update = function(data) {
@@ -52,7 +51,7 @@
       return value;
     };
   }
-  PollingCell.prototype = Object.create(Cell.prototype, {constructor: {value: PollingCell}});
+  ReadCell.prototype = Object.create(Cell.prototype, {constructor: {value: ReadCell}});
   
   function SpectrumCell() {
     var fft = new Float32Array(0);
@@ -80,27 +79,27 @@
       return fft;
     }
     
-    PollingCell.call(this, '/radio/spectrum_fft', fft, transform);
+    ReadCell.call(this, '/radio/spectrum_fft', fft, transform);
     
     this.getCenterFreq = function() {
       return centerFreq;
     };
   }
-  SpectrumCell.prototype = Object.create(PollingCell.prototype, {constructor: {value: SpectrumCell}});
+  SpectrumCell.prototype = Object.create(ReadCell.prototype, {constructor: {value: SpectrumCell}});
   
   var pr = '/radio';
   var states = {
-    running: new RemoteCell(pr + '/running', false),
-    hw_freq: new RemoteCell(pr + '/hw_freq', 0),
-    hw_correction_ppm: new RemoteCell(pr + '/hw_correction_ppm', 0),
-    mode: new RemoteCell(pr + '/mode', ""),
+    running: new ReadWriteCell(pr + '/running', false),
+    hw_freq: new ReadWriteCell(pr + '/hw_freq', 0),
+    hw_correction_ppm: new ReadWriteCell(pr + '/hw_correction_ppm', 0),
+    mode: new ReadWriteCell(pr + '/mode', ""),
     receiver: {
-      rec_freq: new RemoteCell(pr + '/receiver/rec_freq', 0),
-      band_filter_shape: new RemoteCell(pr + '/receiver/band_filter_shape', {low: 0, high: 0, width: 0}),
-      audio_gain: new RemoteCell(pr + '/receiver/audio_gain', 0),
-      squelch_threshold: new RemoteCell(pr + '/receiver/squelch_threshold', 0)
+      rec_freq: new ReadWriteCell(pr + '/receiver/rec_freq', 0),
+      band_filter_shape: new ReadWriteCell(pr + '/receiver/band_filter_shape', {low: 0, high: 0, width: 0}),
+      audio_gain: new ReadWriteCell(pr + '/receiver/audio_gain', 0),
+      squelch_threshold: new ReadWriteCell(pr + '/receiver/squelch_threshold', 0)
     },
-    input_rate: new RemoteCell(pr + '/input_rate', 1000000),
+    input_rate: new ReadWriteCell(pr + '/input_rate', 1000000),
     spectrum_fft: new SpectrumCell()
   };
   
