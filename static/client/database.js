@@ -115,6 +115,9 @@ var sdr = sdr || {};
     };
   }
   Union.prototype = Object.create(Source.prototype, {constructor: {value: Union}});
+  Union.prototype.toString = function () {
+    return '[sdr.database.Union ' + this._unionSources + ']';
+  };
   Union.prototype.add = function (source) {
     this._unionSources.push(source);
     this.n.notify();
@@ -141,12 +144,16 @@ var sdr = sdr || {};
   };
   database.Union = Union;
   
-  function Table() {
+  function Table(label) {
     this.n = new sdr.events.Notifier();
     View.call(this, this);
     this._viewGeneration = 0;
+    this._label = label;
   }
   Table.prototype = Object.create(View.prototype, {constructor: {value: Table}});
+  Table.prototype.toString = function () {
+    return '[sdr.database.Table ' + this._label + ']';
+  };
   Table.prototype._isUpToDate = function () {
     return true;
   };
@@ -173,7 +180,7 @@ var sdr = sdr || {};
   
   // Read the given resource as an index containing links to CSV files in Chirp <http://chirp.danplanet.com/> generic format. No particular reason for choosing Chirp other than it was a the first source and format of machine-readable channel data I found to experiment with.
   function fromCSV(url) {
-    var table = new Table();
+    var table = new Table(decodeURIComponent(url.replace(/^.*\//, '')));
     sdr.network.externalGet(url, 'text', function(csv) {
       console.group('Parsing ' + url);
       var csvLines = csv.split(/[\r\n]+/);
@@ -281,7 +288,7 @@ var sdr = sdr || {};
   // Generic FM broadcast channels
   database.fm = (function () {
     // Wikipedia currently says FM channels are numbered like so, but no one uses the numbers. Well, I'll use the numbers, just to start from integers. http://en.wikipedia.org/wiki/FM_broadcasting_in_the_USA
-    var table = new Table();
+    var table = new Table('builtin FM');
     for (var channel = 200; channel <= 300; channel++) {
       // not computing in MHz because that leads to roundoff error
       var freq = (channel - 200) * 2e5 + 879e5;
@@ -298,7 +305,7 @@ var sdr = sdr || {};
   // Aircraft band channels
   database.air = (function () {
     // http://en.wikipedia.org/wiki/Airband
-    var table = new Table();
+    var table = new Table('builtin air');
     for (var freq = 108e6; freq <= 117.96e6; freq += 50e3) {
       table.add({
         type: 'channel',
