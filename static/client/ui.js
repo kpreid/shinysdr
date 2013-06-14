@@ -17,54 +17,32 @@
     this.n.listen(listener);
     return this.get();
   };
-  Cell.prototype.reload = function() {};
   
   function RemoteCell(name, assumed) {
     Cell.call(this);
     var value = assumed;
-    var getter = makeXhrGetter(name, function(remote) {
-      value = JSON.parse(remote);
-      this.n.notify();
-    }.bind(this), false);
-    getter.go();
-    this.reload = getter.go.bind(getter);
+    var remoteValue = assumed;
     this.get = function() { return value; },
     this.set = function(newValue) {
       value = newValue;
       this.n.notify();
       xhrput(name, JSON.stringify(newValue), function(r) {
         if (Math.floor(r.status / 100) !== 2) {
-          // some error or something other than success; obtain new value
-          this.reload();
+          // some error or something other than success; revert
+          this._update(remoteValue);
         }
       }.bind(this));
-      if (name === '/radio/mode') {
-        // TODO KLUDGE: this dependency exists but there's no general way to get it. also there's no guarantee we'll get the new value. This should be replaced by having the server stream state update notifications.
-        states.receiver.band_filter_shape.reload();
-      }
+    };
+    this._update = function(newValue) {
+      value = remoteValue = newValue;
+      this.n.notify();
     };
   }
   RemoteCell.prototype = Object.create(Cell.prototype, {constructor: {value: RemoteCell}});
   
-  function PollingCell(name, /* initial */ value, transform, binary, pollRate) {
+  // TODO: rename
+  function PollingCell(name, /* initial */ value, transform) {
     Cell.call(this);
-    
-    // TODO: Better mechanism than XHR
-    var queued = false;
-    var getter = makeXhrGetter(name, function(data, xhr) {
-      queued = false;
-      value = transform(data, xhr);
-      this.n.notify();
-    }.bind(this), binary);
-    
-    //setInterval(function() {
-    //  // TODO: Stop setInterval when not running
-    //  // TODO: Don't depend on states
-    //  if (states.running.get() && !queued) {
-    //    getter.go();
-    //    queued = true;
-    //  }
-    //}, pollRate);
     
     this._update = function(data) {
       value = transform(data);
@@ -103,7 +81,7 @@
       return fft;
     }
     
-    PollingCell.call(this, '/radio/spectrum_fft', fft, transform, true, 1000/30);
+    PollingCell.call(this, '/radio/spectrum_fft', fft, transform);
     
     this.getCenterFreq = function() {
       return centerFreq;
@@ -127,19 +105,6 @@
     spectrum_fft: new SpectrumCell()
   };
   
-  sdr.network.addResyncHook(function () {
-    function go(block) {
-      for (var key in states) {
-        if (states instanceof Cell) {
-          states[key].reload();
-        } else {
-          go(states[key]);
-        }
-      }
-    }
-    go(states);
-  });
-  
   // Takes center freq as parameter so it can be used on hypotheticals and so on.
   function frequencyInRange(candidate, centerFreq) {
     var halfBandwidth = states.input_rate.get() / 2;
@@ -154,7 +119,6 @@
   
   // Kludge to let frequency preset widgets do their thing
   states.preset = {
-    reload: function() {},
     set: function(freqRecord) {
       var freq = freqRecord.freq;
       states.mode.set(freqRecord.mode);
@@ -177,13 +141,18 @@
   function openWS() {
     ws = new WebSocket('ws://' + document.location.hostname + ':' + (parseInt(document.location.port) + 1) + '/');
     ws.onmessage = function(event) {
-      var updates = JSON.parse(event.data);
-      for (var key in updates) {
-        if (key === 'spectrum_fft') {
-          var fft = updates.spectrum_fft;
-          states.spectrum_fft._update(fft);
+      function go(local, updates) {
+        for (var key in updates) {
+          if (!local.hasOwnProperty(key)) continue; // TODO warn
+          var lobj = local[key];
+          if (lobj instanceof Cell) {
+            lobj._update(updates[key]); // TODO use parallel write facet structure instead
+          } else {
+            go(lobj, updates[key]);
+          }
         }
       }
+      go(states, JSON.parse(event.data));
     };
     ws.onclose = function() {
       console.error('Lost WebSocket connection');

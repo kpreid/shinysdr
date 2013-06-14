@@ -9,13 +9,11 @@ var sdr = sdr || {};
   var queuedToRetry = Object.create(null);
   var isDownCheckXHR = new XMLHttpRequest();
   var isDownCheckInterval;
-  var resyncHooks = [];
   isDownCheckXHR.onreadystatechange = function() {
     if (isDownCheckXHR.readyState === 4) {
       if (isDownCheckXHR.status > 0 && isDownCheckXHR.status < 500) {
         isDown = false;
         clearInterval(isDownCheckInterval);
-        resyncHooks.forEach(function (f) { f(); });
         for (var key in queuedToRetry) {
           var retrier = queuedToRetry[key];
           delete queuedToRetry[key];
@@ -27,9 +25,6 @@ var sdr = sdr || {};
   function isDownCheck() {
     isDownCheckXHR.open('HEAD', '/', true);
     isDownCheckXHR.send();
-  }
-  network.addResyncHook = function (f) {
-    resyncHooks.push(f);
   }
   
   function statusCategory(httpStatus) {
