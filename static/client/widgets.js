@@ -582,7 +582,7 @@ var sdr = sdr || {};
           break;
       }
       // TODO: generalize, get supported modes from server
-      var supportedModes = ['WFM', 'NFM', 'AM', 'LSB', 'USB'];
+      var supportedModes = ['WFM', 'NFM', 'AM', 'LSB', 'USB', 'VOR'];
       if (supportedModes.indexOf(record.mode) === -1) {
         item.classList.add('freqlist-item-unsupported');
       }
