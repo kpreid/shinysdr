@@ -84,7 +84,7 @@ var sdr = sdr || {};
       function clickTune(event) {
         // TODO: works only because we're at the left edge
         var x = event.clientX / parseInt(getComputedStyle(container).width);
-        radio.rec_freq.set(self.freqFrom01(x));
+        radio.receiver.rec_freq.set(self.freqFrom01(x));
         event.stopPropagation();
         event.preventDefault(); // no selection
       }
