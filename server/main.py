@@ -82,7 +82,7 @@ class BlockResource(resource.Resource):
 			if ctor is sdr.top.SpectrumTypeStub:
 				self.putChild(key, SpectrumResource(cell))
 			else:
-				self.putChild(key, CellResource(cell))
+				self.putChild(key, JSONResource(cell))
 	
 	def getChild(self, name, request):
 		if name in self._blockResources:
