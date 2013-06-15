@@ -242,9 +242,10 @@
         }
         var stateObj;
         if (node.hasAttribute('data-target')) {
-          stateObj = rootTarget[node.getAttribute('data-target')];
+          var targetStr = node.getAttribute('data-target');
+          stateObj = rootTarget[targetStr];
           if (!stateObj) {
-            console.error('Bad widget target:', node);
+            node.parentNode.replaceChild(document.createTextNode('[Missing: ' + targetStr + ']'), node);
             return;
           }
         }
