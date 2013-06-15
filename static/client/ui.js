@@ -110,6 +110,7 @@
       case 'block':
         var sub = {};
         sub._url = url; // TODO kludge
+        sub._deathNotice = new sdr.events.Notifier();
         for (var k in desc.children) {
           // TODO: URL should come from server instead of being constructed here
           sub[k] = buildFromDesc(url + '/' + encodeURIComponent(k), desc.children[k]);
@@ -177,6 +178,7 @@
             } else if ('kind' in updateItem) {
               if (updateItem.kind === 'block') {
                 // TODO: Explicitly inactivate all cells in the old structure
+                lobj._deathNotice.notify();
                 local[key] = buildFromDesc(lobj._url, updateItem);
               } else if (updateItem.kind === 'block_updates') {
                 go(lobj, updateItem.updates);
@@ -257,13 +259,23 @@
         widgets.push(widget);
         node.parentNode.replaceChild(widget.element, node);
         widget.element.className += ' ' + node.className + ' widget-' + typename; // TODO kludge
-      } else if (node.hasAttribute && node.hasAttribute('data-target')) {
-        // TODO defend against JS-significant keys
-        var target = rootTarget[node.getAttribute('data-target')];
-        Array.prototype.forEach.call(node.childNodes, function (child) {
-          createWidgets(target, child);
-        });
-      } else {
+      } else if (node.hasAttribute && node.hasAttribute('data-target')) (function () {
+        var html = document.createDocumentFragment();
+        while (node.firstChild) html.appendChild(node.firstChild);
+        function go() {
+          // TODO defend against JS-significant keys
+          var target = rootTarget[node.getAttribute('data-target')];
+          target._deathNotice.listen(go);
+          
+          node.textContent = ''; // fast clear
+          node.appendChild(html.cloneNode(true));
+          Array.prototype.forEach.call(node.childNodes, function (child) {
+            createWidgets(target, child);
+          });
+        }
+        go.scheduler = scheduler;
+        go();
+      }()); else {
         Array.prototype.forEach.call(node.childNodes, function (child) {
           createWidgets(rootTarget, child);
         });
