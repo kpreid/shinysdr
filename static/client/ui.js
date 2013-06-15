@@ -109,6 +109,7 @@
         }
       case 'block':
         var sub = {};
+        sub._url = url; // TODO kludge
         for (var k in desc.children) {
           // TODO: URL should come from server instead of being constructed here
           sub[k] = buildFromDesc(url + '/' + encodeURIComponent(k), desc.children[k]);
@@ -170,10 +171,20 @@
           for (var key in updates) {
             if (!local.hasOwnProperty(key)) continue; // TODO warn
             var lobj = local[key];
+            var updateItem = updates[key];
             if (lobj instanceof Cell) {
-              lobj._update(updates[key]); // TODO use parallel write facet structure instead
+              lobj._update(updateItem); // TODO use parallel write facet structure instead
+            } else if ('kind' in updateItem) {
+              if (updateItem.kind === 'block') {
+                // TODO: Explicitly inactivate all cells in the old structure
+                local[key] = buildFromDesc(lobj._url, updateItem);
+              } else if (updateItem.kind === 'block_updates') {
+                go(lobj, updateItem.updates);
+              } else {
+                console.error("Don't know what to do with update structure ", updateItem);
+              }
             } else {
-              go(lobj, updates[key]);
+              console.error("Don't know what to do with update structure ", updateItem);
             }
           }
         }

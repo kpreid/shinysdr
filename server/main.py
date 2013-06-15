@@ -104,10 +104,14 @@ def traverseUpdates(seen, block):
 		if cell.isBlock():
 			subblock = cell.getBlock()
 			if key not in seen:
-				seen[key] = {}
-			subupdates = traverseUpdates(seen[key], subblock)
-			if len(subupdates) > 0:
-				updates[key] = subupdates
+				seen[key] = ({}, subblock)
+			if seen[key][1] is not subblock:
+				seen[key] = ({}, subblock) # TODO will give 1 redundant update since seen is empty
+				updates[key] = subblock.state_description()
+			else:
+				subupdates = traverseUpdates(seen[key][0], subblock)
+				if len(subupdates) > 0:
+					updates[key] = {'kind': 'block_updates', 'updates': subupdates}
 		else:
 			value = cell.get()
 			if not key in seen or value != seen[key]:
