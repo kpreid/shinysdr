@@ -96,23 +96,38 @@
   }
   SpectrumCell.prototype = Object.create(ReadCell.prototype, {constructor: {value: SpectrumCell}});
   
-  var pr = '/radio';
-  var states = {
-    running: new ReadWriteCell(pr + '/running', false),
-    hw_freq: new ReadWriteCell(pr + '/hw_freq', 0),
-    hw_correction_ppm: new ReadWriteCell(pr + '/hw_correction_ppm', 0),
-    mode: new ReadWriteCell(pr + '/mode', ""),
-    receiver: {
-      rec_freq: new ReadWriteCell(pr + '/receiver/rec_freq', 0),
-      band_filter_shape: new ReadWriteCell(pr + '/receiver/band_filter_shape', {low: 0, high: 0, width: 0}),
-      audio_gain: new ReadWriteCell(pr + '/receiver/audio_gain', 0),
-      squelch_threshold: new ReadWriteCell(pr + '/receiver/squelch_threshold', 0),
-      // TODO: this is only in the VOR receiver
-      angle: new ReadCell(pr + '/receiver/angle', 0, function (x) { return x; })
-    },
-    input_rate: new ReadWriteCell(pr + '/input_rate', 1000000),
-    spectrum_fft: new SpectrumCell()
-  };
+  function buildFromDesc(url, desc) {
+    switch (desc.kind) {
+      case 'value':
+        if (url === '/radio/spectrum_fft') {
+          // TODO special case
+          return new SpectrumCell();
+        } else if (desc.writable) {
+          return new ReadWriteCell(url, desc.current);
+        } else {
+          return new ReadCell(url, desc.current, function (x) { return x; });
+        }
+      case 'block':
+        var sub = {};
+        for (var k in desc.children) {
+          // TODO: URL should come from server instead of being constructed here
+          sub[k] = buildFromDesc(url + '/' + encodeURIComponent(k), desc.children[k]);
+        }
+        return sub;
+      default:
+        console.error(url + ': Unknown kind ' + desc.kind + ' in', desc);
+        return {};
+    }
+  }
+  
+  var rootURL = '/radio';
+  var states;
+  sdr.network.externalGet(rootURL, 'string', function(text) {
+    var desc = JSON.parse(text);
+    states = buildFromDesc(rootURL, desc);
+    console.log(states);
+    gotDesc();
+  });
   
   // Takes center freq as parameter so it can be used on hypotheticals and so on.
   function frequencyInRange(candidate, centerFreq) {
@@ -126,117 +141,118 @@
            fromCenter < 0.85;  // loss at edges
   }
   
-  // Kludge to let frequency preset widgets do their thing
-  states.preset = {
-    set: function(freqRecord) {
-      var freq = freqRecord.freq;
-      states.mode.set(freqRecord.mode);
-      if (!frequencyInRange(freq, states.hw_freq.get())) {
-        if (freq < states.input_rate.get() / 2) {
-          // recognize tuning for 0Hz gimmick
-          states.hw_freq.set(0);
-        } else {
-          //states.hw_freq.set(freq - 0.2e6);
-          // left side, just inside of frequencyInRange's test
-          states.hw_freq.set(freq + states.input_rate.get() * 0.374);
-        }
-      }
-      states.receiver.rec_freq.set(freq);
-    }
-  };
-  
-  // WebSocket state streaming
-  var ws;
-  function openWS() {
-    ws = new WebSocket('ws://' + document.location.hostname + ':' + (parseInt(document.location.port) + 1) + '/');
-    ws.onmessage = function(event) {
-      function go(local, updates) {
-        for (var key in updates) {
-          if (!local.hasOwnProperty(key)) continue; // TODO warn
-          var lobj = local[key];
-          if (lobj instanceof Cell) {
-            lobj._update(updates[key]); // TODO use parallel write facet structure instead
+  function gotDesc() {
+    // Kludge to let frequency preset widgets do their thing
+    states.preset = {
+      set: function(freqRecord) {
+        var freq = freqRecord.freq;
+        states.mode.set(freqRecord.mode);
+        if (!frequencyInRange(freq, states.hw_freq.get())) {
+          if (freq < states.input_rate.get() / 2) {
+            // recognize tuning for 0Hz gimmick
+            states.hw_freq.set(0);
           } else {
-            go(lobj, updates[key]);
+            //states.hw_freq.set(freq - 0.2e6);
+            // left side, just inside of frequencyInRange's test
+            states.hw_freq.set(freq + states.input_rate.get() * 0.374);
           }
         }
+        states.receiver.rec_freq.set(freq);
       }
-      go(states, JSON.parse(event.data));
     };
-    ws.onclose = function() {
-      console.error('Lost WebSocket connection');
-      setTimeout(openWS, 1000);
+  
+    // WebSocket state streaming
+    var ws;
+    function openWS() {
+      ws = new WebSocket('ws://' + document.location.hostname + ':' + (parseInt(document.location.port) + 1) + '/');
+      ws.onmessage = function(event) {
+        function go(local, updates) {
+          for (var key in updates) {
+            if (!local.hasOwnProperty(key)) continue; // TODO warn
+            var lobj = local[key];
+            if (lobj instanceof Cell) {
+              lobj._update(updates[key]); // TODO use parallel write facet structure instead
+            } else {
+              go(lobj, updates[key]);
+            }
+          }
+        }
+        go(states, JSON.parse(event.data));
+      };
+      ws.onclose = function() {
+        console.error('Lost WebSocket connection');
+        setTimeout(openWS, 1000);
+      };
+    }
+    openWS();
+  
+    // TODO better structure / move to server
+    var _scanView = freqDB;
+    states.scan_presets = new Cell();
+    states.scan_presets.get = function () { return _scanView; };
+    states.scan_presets.set = function (view) {
+      _scanView = view;
+      this.n.notify();
     };
-  }
-  openWS();
   
-  // TODO better structure / move to server
-  var _scanView = freqDB;
-  states.scan_presets = new Cell();
-  states.scan_presets.get = function () { return _scanView; };
-  states.scan_presets.set = function (view) {
-    _scanView = view;
-    this.n.notify();
-  };
+    var view = new sdr.widget.SpectrumView({
+      scheduler: scheduler,
+      radio: states,
+      element: document.querySelector('.hscalegroup') // TODO relic
+    });
   
-  var view = new sdr.widget.SpectrumView({
-    scheduler: scheduler,
-    radio: states,
-    element: document.querySelector('.hscalegroup') // TODO relic
-  });
-  
-  var widgets = [];
-  // TODO: make these widgets follow the same protocol as the others
-  widgets.push(new sdr.widgets.SpectrumPlot({
-    scheduler: scheduler,
-    target: states.spectrum_fft,
-    element: document.getElementById("spectrum"),
-    view: view,
-    radio: states // TODO: remove the need for this
-  }));
-  widgets.push(new sdr.widgets.WaterfallPlot({
-    scheduler: scheduler,
-    target: states.spectrum_fft,
-    element: document.getElementById("waterfall"),
-    view: view,
-    radio: states // TODO: remove the need for this
-  }));
+    var widgets = [];
+    // TODO: make these widgets follow the same protocol as the others
+    widgets.push(new sdr.widgets.SpectrumPlot({
+      scheduler: scheduler,
+      target: states.spectrum_fft,
+      element: document.getElementById("spectrum"),
+      view: view,
+      radio: states // TODO: remove the need for this
+    }));
+    widgets.push(new sdr.widgets.WaterfallPlot({
+      scheduler: scheduler,
+      target: states.spectrum_fft,
+      element: document.getElementById("waterfall"),
+      view: view,
+      radio: states // TODO: remove the need for this
+    }));
 
-  Array.prototype.forEach.call(document.querySelectorAll("[data-widget]"), function (el) {
-    var typename = el.getAttribute('data-widget');
-    var T = sdr.widgets[typename];
-    if (!T) {
-      console.error('Bad widget type:', el);
-      return;
-    }
-    var stateObj;
-    function lookupTarget(el) {
-      if (!el || el.nodeType !== Node.ELEMENT_NODE) {
-        return states;
-      } else if (!el.hasAttribute('data-target')) {
-        return lookupTarget(el.parentNode);
-      } else {
-        return lookupTarget(el.parentNode)[el.getAttribute("data-target")];
-      }
-    }
-    if (el.hasAttribute('data-target')) {
-      stateObj = lookupTarget(el);
-      if (!stateObj) {
-        console.error('Bad widget target:', el);
+    Array.prototype.forEach.call(document.querySelectorAll("[data-widget]"), function (el) {
+      var typename = el.getAttribute('data-widget');
+      var T = sdr.widgets[typename];
+      if (!T) {
+        console.error('Bad widget type:', el);
         return;
       }
-    }
-    var widget = new T({
-      scheduler: scheduler,
-      target: stateObj,
-      element: el,
-      view: view, // TODO should be context-dependent
-      freqDB: freqDB,
-      radio: states // TODO: remove the need for this
+      var stateObj;
+      function lookupTarget(el) {
+        if (!el || el.nodeType !== Node.ELEMENT_NODE) {
+          return states;
+        } else if (!el.hasAttribute('data-target')) {
+          return lookupTarget(el.parentNode);
+        } else {
+          return lookupTarget(el.parentNode)[el.getAttribute("data-target")];
+        }
+      }
+      if (el.hasAttribute('data-target')) {
+        stateObj = lookupTarget(el);
+        if (!stateObj) {
+          console.error('Bad widget target:', el);
+          return;
+        }
+      }
+      var widget = new T({
+        scheduler: scheduler,
+        target: stateObj,
+        element: el,
+        view: view, // TODO should be context-dependent
+        freqDB: freqDB,
+        radio: states // TODO: remove the need for this
+      });
+      widgets.push(widget);
+      el.parentNode.replaceChild(widget.element, el);
+      widget.element.className += ' ' + el.className + ' widget-' + typename; // TODO kludge
     });
-    widgets.push(widget);
-    el.parentNode.replaceChild(widget.element, el);
-    widget.element.className += ' ' + el.className + ' widget-' + typename; // TODO kludge
-  });
-  
+  } // end gotDesc
 }());
