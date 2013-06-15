@@ -34,6 +34,14 @@ class Cell(object):
 	def persists(self):
 		return self._writable
 
+	def description(self):
+		return {
+			'kind': 'value',
+			'writable': self.isWritable(),
+			'current': self.get()
+		}
+
+
 class BlockCell(object):
 	def __init__(self, target, key):
 		super(BlockCell, self).__init__()
@@ -67,6 +75,9 @@ class BlockCell(object):
 	
 	def persists(self):
 		return True
+	
+	def description(self):
+		return self.getBlock().state_description()
 
 class ExportedState(object):
 	def state_def(self, callback):
@@ -90,3 +101,14 @@ class ExportedState(object):
 		for key in state:
 			# TODO: gracefully handle nonexistent or not-writable
 			cells[key].set(state[key])
+	def state_description(self):
+		childDescs = {}
+		description = {
+			'kind': 'block',
+			'children': childDescs
+		}
+		for key, cell in self.state().iteritems():
+			# TODO: include URLs explicitly in desc format
+			childDescs[key] = cell.description()
+		return description
+		

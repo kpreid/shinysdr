@@ -43,12 +43,7 @@ class CellResource(resource.Resource):
 		return ''
 	
 	def resourceDescription(self):
-		cell = self._cell
-		return {
-			'kind': 'value',
-			'writable': cell.isWritable(),
-			'current': cell.get()
-		}
+		return self._cell.description()
 
 class JSONResource(CellResource):
 	defaultContentType = 'application/json'
@@ -97,18 +92,7 @@ class BlockResource(resource.Resource):
 		return json.dumps(self.resourceDescription())
 	
 	def resourceDescription(self):
-		childDescs = {}
-		description = {
-			'kind': 'block',
-			'children': childDescs
-		}
-		for key in self.children:
-			# TODO: include URLs explicitly in desc format
-			childDescs[key] = self.children[key].resourceDescription()
-		for key in self._blockResources:
-			# TODO: duplicate code
-			childDescs[key] = self.getChild(key, None).resourceDescription()
-		return description
+		return self._block.state_description()
 	
 	def isForBlock(self, block):
 		return self._block is block
