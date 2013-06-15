@@ -11,6 +11,9 @@ class Cell(object):
 		else:
 			self._setter = None
 	
+	def isBlock(self):
+		return False
+	
 	def key(self):
 		return self._key
 	
@@ -30,6 +33,40 @@ class Cell(object):
 	
 	def persists(self):
 		return self._writable
+
+class BlockCell(object):
+	def __init__(self, target, key):
+		super(BlockCell, self).__init__()
+		self._target = target
+		self._key = key
+	
+	def isBlock(self):
+		return True
+	
+	def key(self):
+		return self._key
+	
+	def ctor(self):
+		return None
+	
+	def getBlock(self):
+		# TODO method-based access
+		return getattr(self._target, self._key)
+	
+	def getMembers(self):
+		return self.getBlock().state()
+	
+	def get(self):
+		return self.getBlock().state_to_json()
+	
+	def set(self, value):
+		self.getBlock().state_from_json(value)
+	
+	def isWritable(self):
+		return False
+	
+	def persists(self):
+		return True
 
 class ExportedState(object):
 	def state_def(self, callback):

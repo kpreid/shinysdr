@@ -9,7 +9,7 @@ from gnuradio.gr import firdes
 from optparse import OptionParser
 import osmosdr
 import sdr
-from sdr import Cell
+from sdr import Cell, BlockCell
 import sdr.receiver
 import sdr.receivers.vor
 
@@ -93,12 +93,7 @@ class Top(gr.top_block, sdr.ExportedState):
 		callback(Cell(self, 'hw_correction_ppm', writable=True, ctor=float))
 		#callback(Cell(self, 'fftsize', True, ctor=int))
 		callback(Cell(self, 'spectrum_fft', ctor=SpectrumTypeStub))
-		# TODO: receiver_state should be serialized, yes, but not exported -- but also lose this distinction
-		callback(Cell(self, 'receiver_state', writable=True, ctor=SubBlockStub))
-	def get_receiver_state(self):
-		return self.receiver.state_to_json()
-	def set_receiver_state(self, value):
-		self.receiver.state_from_json(value)
+		callback(BlockCell(self, 'receiver'))
 
 	def start(self):
 		self._do_connect() # audio sink workaround

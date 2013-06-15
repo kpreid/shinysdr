@@ -76,10 +76,9 @@ class BlockResource(resource.Resource):
 		self._block = block
 		for key, cell in block.state().iteritems():
 			ctor = cell.ctor()
-			if key.endswith('_state'): # TODO: kludge
-				self._blockResources[key[:-len('_state')]] = None
-				continue
-			if ctor is sdr.top.SpectrumTypeStub:
+			if cell.isBlock():
+				self._blockResources[key] = None
+			elif ctor is sdr.top.SpectrumTypeStub:
 				self.putChild(key, SpectrumResource(cell))
 			else:
 				self.putChild(key, JSONResource(cell))
@@ -87,7 +86,7 @@ class BlockResource(resource.Resource):
 	def getChild(self, name, request):
 		if name in self._blockResources:
 			currentResource = self._blockResources[name]
-			currentBlock = getattr(self._block, name)
+			currentBlock = getattr(self._block, name)  # TODO use cell.getBlock() instead
 			if currentResource is None or not currentResource.isForBlock(currentBlock):
 				self._blockResources[name] = currentResource = BlockResource(currentBlock)
 			return currentResource
@@ -118,16 +117,15 @@ class BlockResource(resource.Resource):
 def traverseUpdates(seen, block):
 	updates = {}
 	for key, cell in block.state().iteritems():
-		if key.endswith('_state'): # TODO: kludge
-			subkey = key[:-len('_state')]
-			subblock = getattr(block, subkey)
-			if subkey not in seen:
-				seen[subkey] = {}
-			subupdates = traverseUpdates(seen[subkey], subblock)
+		if cell.isBlock():
+			subblock = cell.getBlock()
+			if key not in seen:
+				seen[key] = {}
+			subupdates = traverseUpdates(seen[key], subblock)
 			if len(subupdates) > 0:
-				updates[subkey] = subupdates
+				updates[key] = subupdates
 		else:
-			value = getattr(block, 'get_' + key)()
+			value = cell.get()
 			if not key in seen or value != seen[key]:
 				updates[key] = seen[key] = value
 	return updates
