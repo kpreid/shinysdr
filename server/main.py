@@ -43,6 +43,9 @@ class GRResource(resource.Resource):
 		request.setResponseCode(204)
 		noteDirty()
 		return ''
+	
+	def resourceDescription(self):
+		return {'kind': 'value'}
 
 class JSONResource(GRResource):
 	defaultContentType = 'application/json'
@@ -63,6 +66,7 @@ class SpectrumResource(GRResource):
 		return array.array('f', fftdata).tostring()
 
 class BlockResource(resource.Resource):
+	defaultContentType = 'application/json'
 	isLeaf = False
 	def __init__(self, block):
 		resource.Resource.__init__(self)
@@ -86,6 +90,20 @@ class BlockResource(resource.Resource):
 			return currentResource
 		else:
 			return resource.Resource.getChild(self, name, request)
+	
+	def render_GET(self, request):
+		return json.dumps(self.resourceDescription())
+	
+	def resourceDescription(self):
+		childDescs = {}
+		description = {
+			'kind': 'block',
+			'children': childDescs
+		}
+		for key in self.children:
+			# TODO: include URLs
+			childDescs[key] = self.children[key].resourceDescription()
+		return description
 	
 	def isForBlock(self, block):
 		return self._block is block
