@@ -43,7 +43,12 @@ class CellResource(resource.Resource):
 		return ''
 	
 	def resourceDescription(self):
-		return {'kind': 'value'}
+		cell = self._cell
+		return {
+			'kind': 'value',
+			'writable': cell.isWritable(),
+			'current': cell.get()
+		}
 
 class JSONResource(CellResource):
 	defaultContentType = 'application/json'
@@ -73,6 +78,7 @@ class BlockResource(resource.Resource):
 			ctor = cell.ctor()
 			if key.endswith('_state'): # TODO: kludge
 				self._blockResources[key[:-len('_state')]] = None
+				continue
 			if ctor is sdr.top.SpectrumTypeStub:
 				self.putChild(key, SpectrumResource(cell))
 			else:
@@ -98,8 +104,11 @@ class BlockResource(resource.Resource):
 			'children': childDescs
 		}
 		for key in self.children:
-			# TODO: include URLs
+			# TODO: include URLs explicitly in desc format
 			childDescs[key] = self.children[key].resourceDescription()
+		for key in self._blockResources:
+			# TODO: duplicate code
+			childDescs[key] = self.getChild(key, None).resourceDescription()
 		return description
 	
 	def isForBlock(self, block):
