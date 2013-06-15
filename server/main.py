@@ -27,19 +27,17 @@ def restore(root):
 		shutil.copyfile(filename, filename + '~')
 	
 
-class GRResource(resource.Resource):
+class CellResource(resource.Resource):
 	isLeaf = True
-	def __init__(self, block, field):
-		'''Uses GNU Radio style accessors.'''
-		self._block = block
-		self.field = field
+	def __init__(self, cell):
+		self._cell = cell
 	def grrender(self, value, request):
 		return str(value)
 	def render_GET(self, request):
-		return self.grrender(getattr(self._block, 'get_' + self.field)(), request)
+		return self.grrender(self._cell.get(), request)
 	def render_PUT(self, request):
 		data = request.content.read()
-		getattr(self._block, 'set_' + self.field)(self.grparse(data))
+		self._cell.set(self.grparse(data))
 		request.setResponseCode(204)
 		noteDirty()
 		return ''
@@ -47,17 +45,16 @@ class GRResource(resource.Resource):
 	def resourceDescription(self):
 		return {'kind': 'value'}
 
-class JSONResource(GRResource):
+class JSONResource(CellResource):
 	defaultContentType = 'application/json'
-	def __init__(self, block, field, ctor):
-		GRResource.__init__(self, block, field)
-		self.parseCtor = ctor
+	def __init__(self, cell):
+		CellResource.__init__(self, cell)
 	def grparse(self, value):
-		return self.parseCtor(json.loads(value))
+		return self._cell.ctor()(json.loads(value))
 	def grrender(self, value, request):
 		return json.dumps(value)
 
-class SpectrumResource(GRResource):
+class SpectrumResource(CellResource):
 	defaultContentType = 'application/octet-stream'
 	def grrender(self, value, request):
 		(freq, fftdata) = value
@@ -77,9 +74,9 @@ class BlockResource(resource.Resource):
 			if key.endswith('_state'): # TODO: kludge
 				self._blockResources[key[:-len('_state')]] = None
 			if ctor is sdr.top.SpectrumTypeStub:
-				self.putChild(key, SpectrumResource(block, key))
+				self.putChild(key, SpectrumResource(cell))
 			else:
-				self.putChild(key, JSONResource(block, key, ctor))
+				self.putChild(key, CellResource(cell))
 	
 	def getChild(self, name, request):
 		if name in self._blockResources:
