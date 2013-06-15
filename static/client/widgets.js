@@ -99,7 +99,7 @@ var sdr = sdr || {};
       }, false);
       element.addEventListener('mousewheel', function(event) { // Not in FF
         // TODO: works only because we're at the left edge
-        var x = event.clientX / parseInt(getComputedStyle(container).width);
+        var x = event.clientX / parseInt(container.offsetWidth);
         self.changeZoom(event.wheelDelta, x);
         event.preventDefault();
         event.stopPropagation();
@@ -115,8 +115,6 @@ var sdr = sdr || {};
     var states = config.radio;
     
     var ctx = canvas.getContext('2d');
-    ctx.canvas.width = parseInt(getComputedStyle(canvas).width); // TODO on resize
-    ctx.canvas.height = parseInt(getComputedStyle(canvas).height);
     ctx.lineWidth = 1;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -145,8 +143,17 @@ var sdr = sdr || {};
       var buffer = fftCell.depend(draw);
       var bufferCenterFreq = fftCell.getCenterFreq();
       
-      w = ctx.canvas.width;
-      h = ctx.canvas.height;
+      // Fit current layout, clear
+      w = canvas.offsetWidth;
+      h = canvas.offsetHeight;
+      if (canvas.width !== w || canvas.height !== h) {
+        // implicitly clears
+        canvas.width = w;
+        canvas.height = h;
+      } else {
+        ctx.clearRect(0, 0, w, h);
+      }
+      
       var len = buffer.length;
       
       view.n.listen(draw);
@@ -170,8 +177,6 @@ var sdr = sdr || {};
       for (var i = 0; i < len; i++) {
         averageBuffer[i] = averageBuffer[i] * 0.5 + buffer[i] * 0.5;
       }
-      
-      ctx.clearRect(0, 0, w, h);
       
       // TODO: marks ought to be part of a distinct widget
       var squelch = Math.floor(yZero + states.receiver.squelch_threshold.depend(draw) * yScale) + 0.5;
