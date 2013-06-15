@@ -91,24 +91,30 @@ var sdr = sdr || {};
     this._unionSources = [];
     this._sourceGenerations = [];
     this._entries = [];
-    this._viewGeneration = NaN;
+    this._viewGeneration = 0;
     this._listeners = [];
+    this._chainedListening = false;
     
     var notifier = new sdr.events.Notifier();
-    var listening = false;
     function forward() {
-      listening = false;
+      //console.log(this + ' forwarding');
+      this._chainedListening = false;
       notifier.notify();
     }
+    forward = forward.bind(this);
     this.n = {
       notify: notifier.notify.bind(notifier),
       listen: function (l) {
-        if (!listening) {
-          listening = true;
+        if (!this._chainedListening) {
+          //console.group(this + ' registering forwarder');
+          this._chainedListening = true;
           forward.scheduler = l.scheduler; // TODO technically wrong
           this._unionSources.forEach(function (source) {
             source.n.listen(forward);
           });
+          //console.groupEnd();
+        } else {
+          //console.log(this + ' locally registering listener');
         }
         notifier.listen(l);
       }.bind(this)
@@ -120,14 +126,17 @@ var sdr = sdr || {};
   };
   Union.prototype.add = function (source) {
     this._unionSources.push(source);
+    //console.log(this + ' firing notify for adding ' + source);
+    this._chainedListening = false;  // no longer complete list
     this.n.notify();
   };
   Union.prototype.getAll = function () {
     if (!this._isUpToDate()) {
       var entries = [];
-      this._unionSources.forEach(function (source) {
+      this._unionSources.forEach(function (source, i) {
         entries.push.apply(entries, source.getAll());
-      });
+        this._sourceGenerations[i] = NaN;
+      }, this);
       entries.sort(compareRecord);
       this._entries = Object.freeze(entries);
       this._viewGeneration++;
@@ -235,6 +244,7 @@ var sdr = sdr || {};
   function finishModification() {
     this._entries.sort(compareRecord);
     this._viewGeneration++;
+    //console.log(this + ' firing notify for modification');
     this.n.notify();
   }
   

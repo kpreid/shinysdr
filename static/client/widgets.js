@@ -610,7 +610,10 @@ var sdr = sdr || {};
     }
     
     function draw() {
+      //console.group('draw');
+      //console.log(currentFilter.getAll().map(function (r) { return r.label; }));
       currentFilter.n.listen(draw);
+      //console.groupEnd();
       list.textContent = '';  // clear
       currentFilter.forEach(function (record) {
         list.appendChild(getElementForRecord(record));

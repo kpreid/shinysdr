@@ -31,6 +31,7 @@ var sdr = sdr || {};
   events.Scheduler = Scheduler;
   
   function nSchedule(fn) {
+    //console.log('Notifier scheduling ' + fn.toString().split('\n')[0]);
     fn.scheduler.enqueue(fn);
   }
   function Notifier() {
