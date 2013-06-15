@@ -229,41 +229,47 @@
       radio: states // TODO: remove the need for this
     }));
 
-    Array.prototype.forEach.call(document.querySelectorAll("[data-widget]"), function (el) {
-      var typename = el.getAttribute('data-widget');
-      var T = sdr.widgets[typename];
-      if (!T) {
-        console.error('Bad widget type:', el);
-        return;
-      }
-      var stateObj;
-      function lookupTarget(el) {
-        if (!el || el.nodeType !== Node.ELEMENT_NODE) {
-          return states;
-        } else if (!el.hasAttribute('data-target')) {
-          return lookupTarget(el.parentNode);
-        } else {
-          return lookupTarget(el.parentNode)[el.getAttribute("data-target")];
-        }
-      }
-      if (el.hasAttribute('data-target')) {
-        stateObj = lookupTarget(el);
-        if (!stateObj) {
-          console.error('Bad widget target:', el);
+    function createWidgets(rootTarget, node) {
+      if (node.hasAttribute && node.hasAttribute('data-widget')) {
+        var stateObj;
+        var typename = node.getAttribute('data-widget');
+        var T = sdr.widgets[typename];
+        if (!T) {
+          console.error('Bad widget type:', node);
           return;
         }
+        var stateObj;
+        if (node.hasAttribute('data-target')) {
+          stateObj = rootTarget[node.getAttribute('data-target')];
+          if (!stateObj) {
+            console.error('Bad widget target:', node);
+            return;
+          }
+        }
+        var widget = new T({
+          scheduler: scheduler,
+          target: stateObj,
+          element: node,
+          view: view, // TODO should be context-dependent
+          freqDB: freqDB,
+          radio: states // TODO: remove the need for this
+        });
+        widgets.push(widget);
+        node.parentNode.replaceChild(widget.element, node);
+        widget.element.className += ' ' + node.className + ' widget-' + typename; // TODO kludge
+      } else if (node.hasAttribute && node.hasAttribute('data-target')) {
+        // TODO defend against JS-significant keys
+        var target = rootTarget[node.getAttribute('data-target')];
+        Array.prototype.forEach.call(node.childNodes, function (child) {
+          createWidgets(target, child);
+        });
+      } else {
+        Array.prototype.forEach.call(node.childNodes, function (child) {
+          createWidgets(rootTarget, child);
+        });
       }
-      var widget = new T({
-        scheduler: scheduler,
-        target: stateObj,
-        element: el,
-        view: view, // TODO should be context-dependent
-        freqDB: freqDB,
-        radio: states // TODO: remove the need for this
-      });
-      widgets.push(widget);
-      el.parentNode.replaceChild(widget.element, el);
-      widget.element.className += ' ' + el.className + ' widget-' + typename; // TODO kludge
-    });
+    }
+
+    createWidgets(states, document);
   } // end gotDesc
 }());
