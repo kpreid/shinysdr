@@ -774,8 +774,8 @@ var sdr = sdr || {};
     var canvas = container.appendChild(document.createElement('canvas'));
     var text = container.appendChild(document.createElement('span'))
         .appendChild(document.createTextNode(''));
-    canvas.width = 100;
-    canvas.height = 100;
+    canvas.width = 61; // odd size for sharp center
+    canvas.height = 61;
     var ctx = canvas.getContext('2d');
     
     var w, h, cx, cy, r;
@@ -795,6 +795,8 @@ var sdr = sdr || {};
       r = Math.min(w / 2, h / 2) - 1;
       
       ctx.clearRect(0, 0, w, h);
+      
+      ctx.strokeStyle = '#666';
       ctx.beginPath();
       // circle
       ctx.arc(cx, cy, r, 0, TAU, false);
@@ -805,7 +807,11 @@ var sdr = sdr || {};
         polar('moveTo', 1.0 - 0.1 * d, t);
         polar('lineTo', 1.0, t);
       }
+      ctx.stroke();
+
       // pointer
+      ctx.strokeStyle = 'black';
+      ctx.beginPath();
       ctx.moveTo(cx, cy);
       polar('lineTo', 1.0, valueAngle);
       ctx.stroke();
