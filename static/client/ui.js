@@ -21,21 +21,30 @@
     Cell.call(this);
     var value = assumed;
     var remoteValue = assumed;
+    var inhibit = 0;
+    var resetTimeout = undefined;
     this.get = function() { return value; },
     this.set = function(newValue) {
       value = newValue;
       this.n.notify();
+      inhibit = Date.now() + 1000;  // TODO adjust value to observed latency
       xhrput(name, JSON.stringify(newValue), function(r) {
         if (Math.floor(r.status / 100) !== 2) {
           // some error or something other than success; revert
+          inhibit = 0;
           this._update(remoteValue);
         }
       }.bind(this));
     };
     this._update = function(newValue) {
-      value = remoteValue = newValue;
-      this.n.notify();
+      remoteValue = newValue;
+      if (resetTimeout) clearTimeout(resetTimeout);
+      resetTimeout = setTimeout(acceptFromNetwork, inhibit - Date.now());
     };
+    var acceptFromNetwork = function() {
+      value = remoteValue;
+      this.n.notify();
+    }.bind(this);
   }
   ReadWriteCell.prototype = Object.create(Cell.prototype, {constructor: {value: ReadWriteCell}});
   
