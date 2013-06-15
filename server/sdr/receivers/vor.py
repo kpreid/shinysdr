@@ -13,6 +13,7 @@ import math
 
 import sdr.receiver
 from sdr.receiver import Receiver
+from sdr import Cell
 
 fm_subcarrier = 9960
 
@@ -99,10 +100,10 @@ class VOR(sdr.receiver.SimpleAudioReceiver):
 		self.connect(self.zeroer, self.probe)
 		# TODO connect zeroer to display
 
-	def state_keys(self, callback):
-		super(sdr.receiver.SimpleAudioReceiver, self).state_keys(callback)
-		callback('zero_point', True, float)
-		callback('angle', False, float)
+	def state_def(self, callback):
+		super(sdr.receiver.SimpleAudioReceiver, self).state_def(callback)
+		callback(Cell(self, 'zero_point', writable=True))
+		callback(Cell(self, 'angle'))
 
 	def get_zero_point(self):
 		return self.zero_point

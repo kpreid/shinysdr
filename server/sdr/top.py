@@ -9,6 +9,7 @@ from gnuradio.gr import firdes
 from optparse import OptionParser
 import osmosdr
 import sdr
+from sdr import Cell
 import sdr.receiver
 import sdr.receivers.vor
 
@@ -82,18 +83,18 @@ class Top(gr.top_block, sdr.ExportedState):
 		if self.receiver.get_is_valid() != self.last_receiver_is_valid:
 			self._do_connect()
 
-	def state_keys(self, callback):
-		super(Top, self).state_keys(callback)
-		callback('running', True, bool)
-		callback('mode', True, str)
-		callback('input_rate', False, int)
-		callback('audio_rate', False, int)
-		callback('hw_freq', True, float)
-		callback('hw_correction_ppm', True, float)
-		#callback('fftsize', True, int)
-		callback('spectrum_fft', False, SpectrumTypeStub)
+	def state_def(self, callback):
+		super(Top, self).state_def(callback)
+		callback(Cell(self, 'running', writable=True, ctor=bool))
+		callback(Cell(self, 'mode', writable=True, ctor=str))
+		callback(Cell(self, 'input_rate', ctor=int))
+		callback(Cell(self, 'audio_rate', ctor=int))
+		callback(Cell(self, 'hw_freq', writable=True, ctor=float))
+		callback(Cell(self, 'hw_correction_ppm', writable=True, ctor=float))
+		#callback(Cell(self, 'fftsize', True, ctor=int))
+		callback(Cell(self, 'spectrum_fft', ctor=SpectrumTypeStub))
 		# TODO: receiver_state should be serialized, yes, but not exported -- but also lose this distinction
-		callback('receiver_state', True, SubBlockStub)
+		callback(Cell(self, 'receiver_state', writable=True, ctor=SubBlockStub))
 	def get_receiver_state(self):
 		return self.receiver.state_to_json()
 	def set_receiver_state(self, value):

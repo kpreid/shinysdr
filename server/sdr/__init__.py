@@ -1,19 +1,55 @@
+class Cell(object):
+	def __init__(self, target, key, writable=False, ctor=None):
+		super(Cell, self).__init__()
+		self._target = target
+		self._key = key
+		self._writable = writable
+		self._ctor = ctor
+		self._getter = getattr(self._target, 'get_' + key)
+		if writable:
+			self._setter = getattr(self._target, 'set_' + key)
+		else:
+			self._setter = None
+	
+	def key(self):
+		return self._key
+	
+	def ctor(self):
+		return self._ctor
+	
+	def get(self):
+		return self._getter()
+	
+	def set(self, value):
+		if not self.isWritable():
+			raise Exception, 'Not writable.'
+		return self._setter(value)
+	
+	def isWritable(self):
+		return self._writable
+	
+	def persists(self):
+		return self._writable
+
 class ExportedState(object):
-	def state_keys(self, callback):
+	def state_def(self, callback):
 		pass
+	def state(self):
+		if not hasattr(self, '_ExportedState__cache'):
+			cache = {}
+			def callback(cell):
+				cache[cell.key()] = cell
+			self.state_def(callback)
+			self.__cache = cache
+		return self.__cache
 	def state_to_json(self):
 		state = {}
-		def callback(key, persistent, ctor):
-			if persistent:
-				state[key] = self.state_get(key)
-		self.state_keys(callback)
+		for key, cell in self.state().iteritems():
+			if cell.persists():
+				state[key] = cell.get()
 		return state
 	def state_from_json(self, state):
+		cells = self.state()
 		for key in state:
-			self.state_set(key, state[key])
-	def state_get(self, key):
-		# TODO: accept only exported keys
-		return getattr(self, 'get_' + key)()
-	def state_set(self, key, value):
-		# TODO: accept only exported keys
-		return getattr(self, 'set_' + key)(value)
+			# TODO: gracefully handle nonexistent or not-writable
+			cells[key].set(state[key])

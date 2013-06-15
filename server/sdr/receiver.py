@@ -6,6 +6,7 @@ from gnuradio import blks2
 from gnuradio import filter
 from gnuradio.gr import firdes
 import sdr
+from sdr import Cell
 
 class Receiver(gr.hier_block2, sdr.ExportedState):
 	def __init__(self, name, input_rate=0, input_center_freq=0, audio_rate=0, rec_freq=0, audio_gain=1, squelch_threshold=-100, revalidate_hook=lambda: None):
@@ -44,16 +45,13 @@ class Receiver(gr.hier_block2, sdr.ExportedState):
 		self.audio_gain = gain
 		self.audio_gain_block.set_k((gain,))
 
-	def state_keys(self, callback):
-		super(Receiver, self).state_keys(callback)
-		#callback('input_rate', False, int)  # container set
-		#callback('input_center_freq', False, float)  # container set
-		#callback('audio_rate', False, int)  # container set
-		callback('band_filter_shape', False, lambda x: x)
-		callback('rec_freq', True, float)
-		callback('audio_gain', True, float)
-		callback('squelch_threshold', True, float)
-		callback('is_valid', False, bool)
+	def state_def(self, callback):
+		super(Receiver, self).state_def(callback)
+		callback(Cell(self, 'band_filter_shape'))
+		callback(Cell(self, 'rec_freq', writable=True, ctor=float))
+		callback(Cell(self, 'audio_gain', writable=True, ctor=float))
+		callback(Cell(self, 'squelch_threshold', writable=True, ctor=float))
+		callback(Cell(self, 'is_valid'))
 	
 	def get_rec_freq(self):
 		return self.rec_freq

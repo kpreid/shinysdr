@@ -72,14 +72,14 @@ class BlockResource(resource.Resource):
 		resource.Resource.__init__(self)
 		self._blockResources = {}
 		self._block = block
-		def callback(key, persistent, ctor):
+		for key, cell in block.state().iteritems():
+			ctor = cell.ctor()
 			if key.endswith('_state'): # TODO: kludge
 				self._blockResources[key[:-len('_state')]] = None
 			if ctor is sdr.top.SpectrumTypeStub:
 				self.putChild(key, SpectrumResource(block, key))
 			else:
 				self.putChild(key, JSONResource(block, key, ctor))
-		block.state_keys(callback)
 	
 	def getChild(self, name, request):
 		if name in self._blockResources:
@@ -111,7 +111,7 @@ class BlockResource(resource.Resource):
 
 def traverseUpdates(seen, block):
 	updates = {}
-	def keyCallback(key, persistent, ctor):
+	for key, cell in block.state().iteritems():
 		if key.endswith('_state'): # TODO: kludge
 			subkey = key[:-len('_state')]
 			subblock = getattr(block, subkey)
@@ -124,7 +124,6 @@ def traverseUpdates(seen, block):
 			value = getattr(block, 'get_' + key)()
 			if not key in seen or value != seen[key]:
 				updates[key] = seen[key] = value
-	block.state_keys(keyCallback)
 	return updates
 
 class StateStreamProtocol(protocol.Protocol):
