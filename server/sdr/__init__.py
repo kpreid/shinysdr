@@ -104,8 +104,16 @@ class ExportedState(object):
 		return state
 	def state_from_json(self, state):
 		cells = self.state()
+		defer = []
 		for key in state:
 			# TODO: gracefully handle nonexistent or not-writable
+			cell = cells[key]
+			if cell.isBlock():
+				defer.append(key)
+			else:
+				cells[key].set(state[key])
+		# blocks are deferred because the specific blocks may depend on other keys
+		for key in defer:
 			cells[key].set(state[key])
 	def state_description(self):
 		childDescs = {}
