@@ -28,6 +28,7 @@ class VOR(sdr.receiver.SimpleAudioReceiver):
 			name=name,
 			demod_rate=channel_rate,
 			band_filter=channel_halfbandwidth,
+			band_filter_transition=channel_halfbandwidth/2,
 			**kwargs)
 
 		audio_rate = self.audio_rate

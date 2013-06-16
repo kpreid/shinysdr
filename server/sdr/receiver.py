@@ -63,10 +63,11 @@ class Receiver(gr.hier_block2, sdr.ExportedState):
 
 
 class SimpleAudioReceiver(Receiver):
-	def __init__(self, name='Audio Receiver', demod_rate=0, band_filter=None, **kwargs):
+	def __init__(self, name='Audio Receiver', demod_rate=0, band_filter=None, band_filter_transition=None, **kwargs):
 		Receiver.__init__(self, name=name, **kwargs)
 		
 		self.band_filter = band_filter
+		self.band_filter_transition = band_filter_transition
 		
 		input_rate = self.input_rate
 		audio_rate = self.audio_rate
@@ -78,7 +79,7 @@ class SimpleAudioReceiver(Receiver):
 
 		self.band_filter_block = filter.freq_xlating_fir_filter_ccc(
 			int(input_rate/demod_rate),
-			gr.firdes.low_pass(1.0, input_rate, band_filter, band_filter, gr.firdes.WIN_HAMMING),
+			gr.firdes.low_pass(1.0, input_rate, band_filter, band_filter_transition, gr.firdes.WIN_HAMMING),
 			0,
 			input_rate)
 		self._update_band_center()
@@ -87,7 +88,7 @@ class SimpleAudioReceiver(Receiver):
 		return {
 			'low': -self.band_filter,
 			'high': self.band_filter,
-			'width': self.band_filter
+			'width': self.band_filter_transition
 		}
 
 	def _update_band_center(self):
@@ -110,7 +111,7 @@ class AMReceiver(SimpleAudioReceiver):
 	def __init__(self, name='AM', **kwargs):
 		demod_rate = 64000
 		
-		SimpleAudioReceiver.__init__(self, name=name, demod_rate=demod_rate, band_filter=5000, **kwargs)
+		SimpleAudioReceiver.__init__(self, name=name, demod_rate=demod_rate, band_filter=5000, band_filter_transition=5000, **kwargs)
 	
 		input_rate = self.input_rate
 		audio_rate = self.audio_rate
@@ -132,15 +133,14 @@ class AMReceiver(SimpleAudioReceiver):
 
 
 class FMReceiver(SimpleAudioReceiver):
-	def __init__(self, name='FM', deviation=75000, **kwargs):
-		band_filter = 1.2 * deviation
+	def __init__(self, name='FM', deviation=75000, band_filter=None, band_filter_transition=None, **kwargs):
 		# TODO: Choose demod rate principledly based on matching input and audio rates and the band_filter
 		if band_filter < 10000:
 			demod_rate = 64000
 		else:
 			demod_rate = 128000
 		
-		SimpleAudioReceiver.__init__(self, name=name, demod_rate=demod_rate, band_filter=band_filter, **kwargs)
+		SimpleAudioReceiver.__init__(self, name=name, demod_rate=demod_rate, band_filter=band_filter, band_filter_transition=band_filter_transition, **kwargs)
 		
 		input_rate = self.input_rate
 		audio_rate = self.audio_rate
@@ -164,11 +164,11 @@ class FMReceiver(SimpleAudioReceiver):
 
 class NFMReceiver(FMReceiver):
 	def __init__(self, **kwargs):
-		FMReceiver.__init__(self, name='Narrowband FM', deviation=5000, **kwargs)
+		FMReceiver.__init__(self, name='Narrowband FM', deviation=5000, band_filter=5000, band_filter_transition=1000, **kwargs)
 
 class WFMReceiver(FMReceiver):
 	def __init__(self, **kwargs):
-		FMReceiver.__init__(self, name='Wideband FM', deviation=75000, **kwargs)
+		FMReceiver.__init__(self, name='Wideband FM', deviation=75000, band_filter=80000, band_filter_transition=20000, **kwargs)
 
 
 class SSBReceiver(SimpleAudioReceiver):
