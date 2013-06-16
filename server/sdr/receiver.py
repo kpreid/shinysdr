@@ -71,9 +71,6 @@ class SimpleAudioReceiver(Receiver):
 		input_rate = self.input_rate
 		audio_rate = self.audio_rate
 		
-		if input_rate % demod_rate != 0:
-			raise ValueError, 'Input rate %s is not a multiple of demodulator rate %s' % (self.input_rate, demod_rate)
-
 		self.band_filter_block = MultistageChannelFilter(
 			input_rate=input_rate,
 			output_rate=demod_rate,
@@ -125,9 +122,6 @@ class MultistageChannelFilter(gr.hier_block2):
 			gr.io_signature(1, 1, gr.sizeof_gr_complex*1),
 			gr.io_signature(1, 1, gr.sizeof_gr_complex*1),
 		)
-
-		if input_rate % output_rate != 0:
-			raise ValueError, 'Input rate %s is not a multiple of output rate %s, not yet supported' % (input_rate, output_rate)
 		
 		total_decimation = input_rate // output_rate
 		stage_decimations = _factorize(total_decimation)
@@ -179,9 +173,18 @@ class MultistageChannelFilter(gr.hier_block2):
 			prev_block = stage_filter
 			stage_input_rate = next_rate
 		
-		# final wiring / consistency check
-		self.connect(prev_block, self)
-		assert stage_input_rate == output_rate
+		# final connection and resampling
+		if stage_input_rate == output_rate:
+			# exact multiple, no fractional resampling needed
+			#print 'direct connect %s/%s' % (output_rate, stage_input_rate)
+			self.connect(prev_block, self)
+		else:
+			#print 'resampling %s/%s = %s' % (output_rate, stage_input_rate, float(output_rate) / stage_input_rate)
+			# TODO: combine resampler with final filter stage
+			self.connect(
+				prev_block,
+				blks2.pfb_arb_resampler_ccf(float(output_rate) / stage_input_rate),
+				self)
 	
 	def set_center_freq(self, freq):
 		self.freq_filter_block.set_center_freq(freq)
@@ -197,7 +200,7 @@ def make_resampler(in_rate, out_rate):
 
 class AMReceiver(SimpleAudioReceiver):
 	def __init__(self, name='AM', **kwargs):
-		demod_rate = 64000
+		demod_rate = 48000
 		
 		SimpleAudioReceiver.__init__(self, name=name, demod_rate=demod_rate, band_filter=5000, band_filter_transition=5000, **kwargs)
 	
@@ -221,42 +224,40 @@ class AMReceiver(SimpleAudioReceiver):
 
 
 class FMReceiver(SimpleAudioReceiver):
-	def __init__(self, name='FM', deviation=75000, band_filter=None, band_filter_transition=None, **kwargs):
-		# TODO: Choose demod rate principledly based on matching input and audio rates and the band_filter
-		if band_filter < 10000:
-			demod_rate = 64000
-		else:
-			demod_rate = 128000
-		
+	def __init__(self, name='FM', deviation=75000, demod_rate=48000, band_filter=None, band_filter_transition=None, **kwargs):
 		SimpleAudioReceiver.__init__(self, name=name, demod_rate=demod_rate, band_filter=band_filter, band_filter_transition=band_filter_transition, **kwargs)
 		
 		input_rate = self.input_rate
 		audio_rate = self.audio_rate
 
+		decim = int(demod_rate/audio_rate)
+
 		self.demod_block = blks2.fm_demod_cf(
 			channel_rate=demod_rate,
-			audio_decim=int(demod_rate/audio_rate),
+			audio_decim=decim,
 			deviation=deviation,
 			audio_pass=15000,
 			audio_stop=16000,
 			tau=75e-6,
 		)
+		self.resampler_block = make_resampler(demod_rate/decim, audio_rate)
 		
 		self.connect(
 			self,
 			self.band_filter_block,
 			self.squelch_block,
 			self.demod_block,
+			self.resampler_block,
 			self.audio_gain_block,
 			self)
 
 class NFMReceiver(FMReceiver):
 	def __init__(self, **kwargs):
-		FMReceiver.__init__(self, name='Narrowband FM', deviation=5000, band_filter=5000, band_filter_transition=1000, **kwargs)
+		FMReceiver.__init__(self, name='Narrowband FM', demod_rate=48000, deviation=5000, band_filter=5000, band_filter_transition=1000, **kwargs)
 
 class WFMReceiver(FMReceiver):
 	def __init__(self, **kwargs):
-		FMReceiver.__init__(self, name='Wideband FM', deviation=75000, band_filter=80000, band_filter_transition=20000, **kwargs)
+		FMReceiver.__init__(self, name='Wideband FM', demod_rate=240000, deviation=75000, band_filter=80000, band_filter_transition=20000, **kwargs)
 
 
 class SSBReceiver(SimpleAudioReceiver):
