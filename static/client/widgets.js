@@ -655,11 +655,10 @@ var sdr = sdr || {};
         }
       }
       // Arbitrary fudge factor because our algorithm here is lousy and doesn't match the server's squelch
-      return localPower + 10 > radio.squelch_threshold.get();
+      return localPower + 10 > radio.receiver.squelch_threshold.get();
     }
     
     function findNextChannel(direction) {
-      console.log(direction);
       var oldFreq = rec_freq.get();
       var db = scan_presets.get();
       if (direction > 0) {
