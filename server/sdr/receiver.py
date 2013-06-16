@@ -207,10 +207,13 @@ class AMReceiver(SimpleAudioReceiver):
 		input_rate = self.input_rate
 		audio_rate = self.audio_rate
 		
-		# TODO: 0.1 is needed to avoid clipping; is there a better place to tweak our level vs. other receivers?
-		self.agc_block = gr.feedforward_agc_cc(1024, 0.1)
+		inherent_gain = 0.5 # fudge factor so that our output is similar level to narrow FM
+		self.agc_block = gr.feedforward_agc_cc(1024, inherent_gain)
 		self.demod_block = gr.complex_to_mag(1)
 		self.resampler_block = make_resampler(demod_rate, audio_rate)
+		
+		# assuming below 40Hz is not of interest
+		dc_blocker = filter.dc_blocker_ff(audio_rate // 40, False)
 		
 		self.connect(
 			self,
@@ -218,6 +221,7 @@ class AMReceiver(SimpleAudioReceiver):
 			self.squelch_block,
 			self.agc_block,
 			self.demod_block,
+			dc_blocker,
 			self.resampler_block,
 			self.audio_gain_block,
 			self)
