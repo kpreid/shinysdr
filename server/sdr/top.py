@@ -16,6 +16,8 @@ import sdr.receivers.vor
 class SpectrumTypeStub: pass
 def SubBlockStub(x): raise 'Not yet supported'
 
+ch = 0 # osmosdr channel, to avoid magic number
+
 class Top(gr.top_block, sdr.ExportedState):
 
 	def __init__(self):
@@ -43,7 +45,6 @@ class Top(gr.top_block, sdr.ExportedState):
 		self.audio_sink = None
 		
 		osmo_device = "rtl=0"
-		ch = 0 # only channel, 0, for documentation purposes
 		self.osmosdr_source_block = source = osmosdr.source_c("nchan=1 " + osmo_device)
 		# Note: Docs for these setters at gr-osmosdr/lib/source_iface.h
 		source.set_sample_rate(input_rate)
@@ -51,11 +52,13 @@ class Top(gr.top_block, sdr.ExportedState):
 		source.set_freq_corr(0, ch) # We implement correction internally because setting this at runtime breaks things
 		source.set_iq_balance_mode(0, ch) # TODO
 		source.set_gain_mode(True, ch) # automatic gain # TODO
-		source.set_gain(10, ch)    # ignored in automatic mode
-		source.set_if_gain(24, ch) # ignored in automatic mode
-		source.set_bb_gain(20, ch) # ignored in automatic mode
+		#source.set_gain(10, ch)    # ignored in automatic mode
+		#source.set_if_gain(24, ch) # ignored in automatic mode
+		#source.set_bb_gain(20, ch) # ignored in automatic mode
 		source.set_antenna("", ch) # n/a to RTLSDR
 		source.set_bandwidth(0, ch) # TODO is this relevant
+		
+		print 'range ', source.get_gain_range(ch).start(), source.get_gain_range(ch).stop()
 		
 		self.spectrum_probe = blocks.probe_signal_vf(fftsize)
 		self.spectrum_fft = blks2.logpwrfft_c(
@@ -97,6 +100,8 @@ class Top(gr.top_block, sdr.ExportedState):
 		callback(Cell(self, 'audio_rate', ctor=int))
 		callback(Cell(self, 'hw_freq', writable=True, ctor=float))
 		callback(Cell(self, 'hw_correction_ppm', writable=True, ctor=float))
+		callback(Cell(self, 'hw_agc', writable=True, ctor=bool))
+		callback(Cell(self, 'hw_gain', writable=True, ctor=float))
 		#callback(Cell(self, 'fftsize', True, ctor=int))
 		callback(Cell(self, 'spectrum_fft', ctor=SpectrumTypeStub))
 		callback(BlockCell(self, 'receiver'))
@@ -207,7 +212,20 @@ class Top(gr.top_block, sdr.ExportedState):
 	
 	def _update_frequency(self):
 		self.osmosdr_source_block.set_center_freq(self._compute_frequency(self.hw_freq), 0)
+		# TODO: read back actual frequency and store
 		self.receiver.set_input_center_freq(self.hw_freq)
+
+	def get_hw_agc(self):
+		return bool(self.osmosdr_source_block.get_gain_mode(ch))
+
+	def set_hw_agc(self, value):
+		self.osmosdr_source_block.set_gain_mode(bool(value), ch)
+	
+	def get_hw_gain(self):
+		return bool(self.osmosdr_source_block.get_gain(ch))
+	
+	def set_hw_gain(self, value):
+		self.osmosdr_source_block.set_gain(float(value), ch)
 
 	def get_fftsize(self):
 		return self.fftsize

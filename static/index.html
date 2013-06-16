@@ -15,6 +15,12 @@
     <label><input type=checkbox data-widget="Toggle" data-target="running">Run</label>
   </div>
   <div class="panel">
+    RF gain
+    <label><input type=checkbox data-widget="Toggle" data-target="hw_agc">Auto</label>
+    <!-- TODO: get min/max from driver -->
+    <input type="range" step="any" min="-1" max="42" value="0" data-widget="LinSlider" data-target="hw_gain">
+  </div>
+  <div class="panel">
     Hardware center frequency
     <span data-widget="Knob" data-target="hw_freq"></span>
   </div>
