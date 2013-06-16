@@ -61,7 +61,6 @@ class Receiver(gr.hier_block2, sdr.ExportedState):
 		self._update_band_center()
 		self.revalidate_hook()
 
-
 class SimpleAudioReceiver(Receiver):
 	def __init__(self, name='Audio Receiver', demod_rate=0, band_filter=None, band_filter_transition=None, **kwargs):
 		Receiver.__init__(self, name=name, **kwargs)
@@ -77,11 +76,12 @@ class SimpleAudioReceiver(Receiver):
 		if demod_rate % audio_rate != 0:
 			raise ValueError, 'Demodulator rate %s is not a multiple of audio rate %s' % (demod_rate, audio_rate)
 
-		self.band_filter_block = filter.freq_xlating_fir_filter_ccc(
-			int(input_rate/demod_rate),
-			gr.firdes.low_pass(1.0, input_rate, band_filter, band_filter_transition, gr.firdes.WIN_HAMMING),
-			0,
-			input_rate)
+		self.band_filter_block = MultistageChannelFilter(
+			input_rate=input_rate,
+			output_rate=demod_rate,
+			cutoff_freq=band_filter,
+			transition_width=band_filter_transition)
+
 		self._update_band_center()
 
 	def get_band_filter_shape(self):
@@ -97,6 +97,96 @@ class SimpleAudioReceiver(Receiver):
 	def set_input_center_freq(self, value):
 		self.input_center_freq = value
 		self._update_band_center()
+
+def _factorize(n):
+	# I wish there was a nice standard library function for this...
+	# Wrote the simplest thing I could think of
+	if n <= 0:
+		raise ValueError
+	primes = []
+	while n > 1:
+		for i in xrange(2, n//2 + 1):
+			if n % i == 0:
+				primes.append(i)
+				n //= i
+				break
+		else:
+			primes.append(n)
+			break
+	return primes
+		
+class MultistageChannelFilter(gr.hier_block2):
+	def __init__(self,
+			name='Multistage Channel Filter',
+			input_rate=None,
+			output_rate=None,
+			cutoff_freq=None,
+			transition_width=None):
+		gr.hier_block2.__init__(
+			self, name,
+			gr.io_signature(1, 1, gr.sizeof_gr_complex*1),
+			gr.io_signature(1, 1, gr.sizeof_gr_complex*1),
+		)
+
+		if input_rate % output_rate != 0:
+			raise ValueError, 'Input rate %s is not a multiple of output rate %s, not yet supported' % (input_rate, output_rate)
+		
+		total_decimation = input_rate // output_rate
+		stage_decimations = _factorize(total_decimation)
+		stage_decimations.reverse()
+		if len(stage_decimations) == 0:
+			# We need at least one filter to do the frequency shift
+			stage_decimations = [1]
+		
+		prev_block = self
+		stage_input_rate = input_rate
+		for i, stage_decimation in enumerate(stage_decimations):
+			first = i == 0
+			last = i == len(stage_decimations) - 1
+			next_rate = stage_input_rate / stage_decimation
+			
+			# filter taps
+			if last:
+				taps = gr.firdes.low_pass(
+					1.0,
+					stage_input_rate,
+					cutoff_freq,
+					transition_width,
+					gr.firdes.WIN_HAMMING)
+			else:
+				# TODO check for collision with user filter
+				user_inner = cutoff_freq-transition_width/2
+				limit = next_rate/2
+				taps = gr.firdes.low_pass(
+					1.0,
+					stage_input_rate,
+					(user_inner + limit)/2,
+					limit - user_inner,
+					gr.firdes.WIN_HAMMING)
+			
+			#print 'Stage %i decimation %i rate %i taps %i' % (i, stage_decimation, stage_input_rate, len(taps))
+			
+			# filter block
+			if first:
+				stage_filter = filter.freq_xlating_fir_filter_ccc(
+					stage_decimation,
+					taps,
+					0, # not-yet-set frequency
+					stage_input_rate)
+				self.freq_filter_block = stage_filter
+			else:
+				stage_filter = filter.fir_filter_ccc(stage_decimation, taps)
+			
+			self.connect(prev_block, stage_filter)
+			prev_block = stage_filter
+			stage_input_rate = next_rate
+		
+		# final wiring / consistency check
+		self.connect(prev_block, self)
+		assert stage_input_rate == output_rate
+	
+	def set_center_freq(self, freq):
+		self.freq_filter_block.set_center_freq(freq)
 
 def make_resampler(in_rate, out_rate):
 	# magic numbers from gqrx
@@ -178,7 +268,8 @@ class SSBReceiver(SimpleAudioReceiver):
 			name=name,
 			audio_rate=audio_rate,
 			demod_rate=demod_rate,
-			band_filter=audio_rate / 2,
+			band_filter=audio_rate / 2, # unused
+			band_filter_transition = audio_rate / 2, # unused
 			**kwargs)
 		input_rate = self.input_rate
 		
