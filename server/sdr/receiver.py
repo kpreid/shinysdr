@@ -73,8 +73,6 @@ class SimpleAudioReceiver(Receiver):
 		
 		if input_rate % demod_rate != 0:
 			raise ValueError, 'Input rate %s is not a multiple of demodulator rate %s' % (self.input_rate, demod_rate)
-		if demod_rate % audio_rate != 0:
-			raise ValueError, 'Demodulator rate %s is not a multiple of audio rate %s' % (demod_rate, audio_rate)
 
 		self.band_filter_block = MultistageChannelFilter(
 			input_rate=input_rate,

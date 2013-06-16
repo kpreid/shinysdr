@@ -21,10 +21,11 @@ fm_deviation = 480
 class VOR(sdr.receiver.SimpleAudioReceiver):
 
 	def __init__(self, name='VOR receiver', zero_point=-5, **kwargs):
-		self.channel_rate = channel_rate = 64000 # TODO: should be 40000, but we are constrained by decimation for the moment
+		self.channel_rate = channel_rate = 40000
+		internal_audio_rate = 20000 # TODO over spec'd
 		self.zero_point = zero_point
 
-		transition=10000
+		transition=5000
 		sdr.receiver.SimpleAudioReceiver.__init__(self,
 			name=name,
 			demod_rate=channel_rate,
@@ -32,13 +33,12 @@ class VOR(sdr.receiver.SimpleAudioReceiver):
 			band_filter_transition=transition,
 			**kwargs)
 
-		audio_rate = self.audio_rate
 		self.dir_rate = dir_rate = 10
 
-		if audio_rate % dir_rate != 0:
-			raise ValueError, 'Audio rate %s is not a multiple of direction-finding rate %s' % (audio_rate, dir_rate)
-		self.dir_scale = dir_scale = int(audio_rate/dir_rate)
-		self.audio_scale = audio_scale = int(channel_rate/audio_rate)
+		if internal_audio_rate % dir_rate != 0:
+			raise ValueError, 'Audio rate %s is not a multiple of direction-finding rate %s' % (internal_audio_rate, dir_rate)
+		self.dir_scale = dir_scale = int(internal_audio_rate/dir_rate)
+		self.audio_scale = audio_scale = int(channel_rate/internal_audio_rate)
 		
 
 		self.zeroer = blocks.add_const_vff((zero_point*(math.pi/180), ))
@@ -48,7 +48,7 @@ class VOR(sdr.receiver.SimpleAudioReceiver):
 		self.am_channel_filter_block = gr.fir_filter_ccf(1, firdes.low_pass(
 			1, channel_rate, 10000, 4000, firdes.WIN_HAMMING, 6.76))
 		self.goertzel_fm = fft.goertzel_fc(channel_rate, dir_scale*audio_scale, 30)
-		self.goertzel_am = fft.goertzel_fc(audio_rate, dir_scale, 30)
+		self.goertzel_am = fft.goertzel_fc(internal_audio_rate, dir_scale, 30)
 		self.fm_channel_filter_block = filter.freq_xlating_fir_filter_ccc(1, (firdes.low_pass(1.0, channel_rate, 500, 100, firdes.WIN_HAMMING)), fm_subcarrier, channel_rate)
 		self.dc_blocker_block = filter.dc_blocker_ff(128, True)
 		self.multiply_conjugate_block = blocks.multiply_conjugate_cc(1)
@@ -82,6 +82,7 @@ class VOR(sdr.receiver.SimpleAudioReceiver):
 			self.am_demod_block,
 			self.dc_blocker_block,
 			self.audio_gain_block,
+			sdr.receiver.make_resampler(internal_audio_rate, self.audio_rate),
 			self)
 		# AM phase
 		self.connect(
