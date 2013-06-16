@@ -62,7 +62,7 @@
   }
   ReadCell.prototype = Object.create(Cell.prototype, {constructor: {value: ReadCell}});
   
-  function SpectrumCell() {
+  function SpectrumCell(url) {
     var fft = new Float32Array(0);
     var swapbuf = new Float32Array(0);
     var VSIZE = Float32Array.BYTES_PER_ELEMENT;
@@ -88,7 +88,7 @@
       return fft;
     }
     
-    ReadCell.call(this, '/radio/spectrum_fft', fft, transform);
+    ReadCell.call(this, url, fft, transform);
     
     this.getCenterFreq = function() {
       return centerFreq;
@@ -99,9 +99,9 @@
   function buildFromDesc(url, desc) {
     switch (desc.kind) {
       case 'value':
-        if (url === '/radio/spectrum_fft') {
-          // TODO special case
-          return new SpectrumCell();
+        if (desc.type === 'spectrum') {
+          // TODO eliminate special case
+          return new SpectrumCell(url);
         } else if (desc.writable) {
           return new ReadWriteCell(url, desc.current);
         } else {

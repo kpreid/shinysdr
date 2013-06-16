@@ -13,7 +13,7 @@ from sdr import Cell, BlockCell
 import sdr.receiver
 import sdr.receivers.vor
 
-def SpectrumTypeStub(x): return x
+class SpectrumTypeStub: pass
 def SubBlockStub(x): raise 'Not yet supported'
 
 class Top(gr.top_block, sdr.ExportedState):

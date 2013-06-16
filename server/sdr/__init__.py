@@ -35,8 +35,14 @@ class Cell(object):
 		return self._writable
 
 	def description(self):
+		if str(self._ctor) == 'sdr.top.SpectrumTypeStub':
+			# TODO: eliminate special case
+			typename = 'spectrum'
+		else:
+			typename = None
 		return {
 			'kind': 'value',
+			'type': typename,
 			'writable': self.isWritable(),
 			'current': self.get()
 		}
