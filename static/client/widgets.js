@@ -539,7 +539,6 @@ var sdr = sdr || {};
   widgets.FreqScale = FreqScale;
   
   function FreqList(config) {
-    var rec_freq = config.target;
     var states = config.radio;
     
     // TODO recognize hardware limits somewhere central
