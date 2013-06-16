@@ -134,31 +134,34 @@ class Top(gr.top_block, sdr.ExportedState):
 			clas = sdr.receivers.vor.VOR
 		else:
 			raise ValueError, 'Unknown mode: ' + kind
-		self._mode = kind
-		self.lock()
-		if self.receiver is not None:
-			options = {
-				'audio_gain': self.receiver.get_audio_gain(),
-				'rec_freq': self.receiver.get_rec_freq(),
-				'squelch_threshold': self.receiver.get_squelch_threshold(),
-			}
-		else:
-			options = {
-				'audio_gain': 0.25,
-				'rec_freq': 97.7e6,
-				'squelch_threshold': -100
-			}
-		if kind == 'LSB':
-			options['lsb'] = True
-		self.receiver = clas(
-			input_rate=self.input_rate,
-			input_center_freq=self.hw_freq,
-			audio_rate=self.audio_rate,
-			revalidate_hook=lambda: self._update_receiver_validity(),
-			**options
-		)
-		self._do_connect()
-		self.unlock()
+		try:
+			self.lock()
+			if self.receiver is not None:
+				options = {
+					'audio_gain': self.receiver.get_audio_gain(),
+					'rec_freq': self.receiver.get_rec_freq(),
+					'squelch_threshold': self.receiver.get_squelch_threshold(),
+				}
+			else:
+				options = {
+					'audio_gain': 0.25,
+					'rec_freq': 97.7e6,
+					'squelch_threshold': -100
+				}
+			if kind == 'LSB':
+				options['lsb'] = True
+			self.receiver = clas(
+				input_rate=self.input_rate,
+				input_center_freq=self.hw_freq,
+				audio_rate=self.audio_rate,
+				revalidate_hook=lambda: self._update_receiver_validity(),
+				**options
+			)
+			self._do_connect()
+			self._mode = kind
+		finally:
+			self.unlock()
+		
 
 	def get_input_rate(self):
 		return self.input_rate
