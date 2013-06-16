@@ -16,19 +16,20 @@ from sdr.receiver import Receiver
 from sdr import Cell
 
 fm_subcarrier = 9960
+fm_deviation = 480
 
 class VOR(sdr.receiver.SimpleAudioReceiver):
 
 	def __init__(self, name='VOR receiver', zero_point=-5, **kwargs):
-		channel_halfbandwidth = 40000 # TODO: too wide, was fitting for original math
 		self.channel_rate = channel_rate = 64000 # TODO: should be 40000, but we are constrained by decimation for the moment
 		self.zero_point = zero_point
 
+		transition=10000
 		sdr.receiver.SimpleAudioReceiver.__init__(self,
 			name=name,
 			demod_rate=channel_rate,
-			band_filter=channel_halfbandwidth,
-			band_filter_transition=channel_halfbandwidth/2,
+			band_filter=fm_subcarrier + fm_deviation + transition/2,
+			band_filter_transition=transition,
 			**kwargs)
 
 		audio_rate = self.audio_rate
