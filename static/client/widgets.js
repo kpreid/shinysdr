@@ -100,7 +100,7 @@ var sdr = sdr || {};
       element.addEventListener('mousewheel', function(event) { // Not in FF
         // TODO: works only because we're at the left edge
         var x = event.clientX / parseInt(container.offsetWidth);
-        self.changeZoom(event.wheelDelta, x);
+        self.changeZoom(-event.wheelDelta, x);
         event.preventDefault();
         event.stopPropagation();
       }, true);
