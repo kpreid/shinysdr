@@ -179,12 +179,13 @@ class MultistageChannelFilter(gr.hier_block2):
 			#print 'direct connect %s/%s' % (output_rate, stage_input_rate)
 			self.connect(prev_block, self)
 		else:
-			#print 'resampling %s/%s = %s' % (output_rate, stage_input_rate, float(output_rate) / stage_input_rate)
 			# TODO: combine resampler with final filter stage
+			# TODO: cache filter computation as optfir is used and takes a noticeable time
 			self.connect(
 				prev_block,
 				blks2.pfb_arb_resampler_ccf(float(output_rate) / stage_input_rate),
 				self)
+			#print 'resampling %s/%s = %s' % (output_rate, stage_input_rate, float(output_rate) / stage_input_rate)
 	
 	def set_center_freq(self, freq):
 		self.freq_filter_block.set_center_freq(freq)
