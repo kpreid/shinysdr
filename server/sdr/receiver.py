@@ -292,6 +292,8 @@ class SSBReceiver(SimpleAudioReceiver):
 				self.band_filter_width,
 				gr.firdes.WIN_HAMMING))
 		
+		self.agc_block = gr.feedforward_agc_cc(1024, 0.25)
+		
 		self.ssb_demod_block = blocks.complex_to_real(1)
 		
 		self.connect(
@@ -299,6 +301,7 @@ class SSBReceiver(SimpleAudioReceiver):
 			self.band_filter_block,
 			self.sharp_filter_block,
 			self.squelch_block,
+			self.agc_block,
 			self.ssb_demod_block,
 			self.audio_gain_block,
 			self)
