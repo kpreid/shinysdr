@@ -21,7 +21,10 @@ class Top(gr.top_block, sdr.ExportedState):
 	def __init__(self):
 		gr.top_block.__init__(self, "SDR top block")
 		self._running = False
-
+		
+		# TODO present sample rate configuration using source.get_sample_rates().values()
+		# TODO present hw freq range
+		
 		##################################################
 		# Variables
 		##################################################
@@ -39,17 +42,20 @@ class Top(gr.top_block, sdr.ExportedState):
 		
 		self.audio_sink = None
 		
-		self.osmosdr_source_block = osmosdr.source_c( args="nchan=" + str(1) + " " + "rtl=0" )
-		self.osmosdr_source_block.set_sample_rate(input_rate)
-		self.osmosdr_source_block.set_center_freq(hw_freq, 0)
-		self.osmosdr_source_block.set_freq_corr(0, 0)
-		self.osmosdr_source_block.set_iq_balance_mode(0, 0)
-		self.osmosdr_source_block.set_gain_mode(1, 0)
-		self.osmosdr_source_block.set_gain(10, 0)
-		self.osmosdr_source_block.set_if_gain(24, 0)
-		self.osmosdr_source_block.set_bb_gain(20, 0)
-		self.osmosdr_source_block.set_antenna("", 0)
-		self.osmosdr_source_block.set_bandwidth(0, 0)
+		osmo_device = "rtl=0"
+		ch = 0 # only channel, 0, for documentation purposes
+		self.osmosdr_source_block = source = osmosdr.source_c("nchan=1 " + osmo_device)
+		# Note: Docs for these setters at gr-osmosdr/lib/source_iface.h
+		source.set_sample_rate(input_rate)
+		source.set_center_freq(hw_freq, ch)
+		source.set_freq_corr(0, ch) # We implement correction internally because setting this at runtime breaks things
+		source.set_iq_balance_mode(0, ch) # TODO
+		source.set_gain_mode(True, ch) # automatic gain # TODO
+		source.set_gain(10, ch)    # ignored in automatic mode
+		source.set_if_gain(24, ch) # ignored in automatic mode
+		source.set_bb_gain(20, ch) # ignored in automatic mode
+		source.set_antenna("", ch) # n/a to RTLSDR
+		source.set_bandwidth(0, ch) # TODO is this relevant
 		
 		self.spectrum_probe = blocks.probe_signal_vf(fftsize)
 		self.spectrum_fft = blks2.logpwrfft_c(
