@@ -531,7 +531,7 @@ var sdr = sdr || {};
   function FreqScale(config) {
     var tunerSource = config.target;
     var states = config.radio;
-    var freqDB = config.freqDB;
+    var dataSource = config.freqDB.groupSameFreq();
     var view = config.view;
 
     var outer = this.element = document.createElement("div");
@@ -578,21 +578,32 @@ var sdr = sdr || {};
       }
       
       labels.textContent = '';
-      var query = freqDB.inBand(lower, upper);
+      var query = dataSource.inBand(lower, upper);
       query.n.listen(draw);
+      function addChannel(record) {
+        var freq = record.freq;
+        var el = labels.appendChild(document.createElement('span'));
+        el.className = 'freqscale-channel';
+        el.textContent = record.label || record.mode;
+        el.style.left = view.freqToCSSLeft(freq);
+        // TODO: be an <a> or <button>
+        el.addEventListener('click', function(event) {
+          states.preset.set(record);
+          event.stopPropagation();
+        }, false);
+      }
       query.forEach(function (record) {
         switch (record.type) {
+          case 'group':
+            // TODO: assumes groups contain only channels
+            addChannel({
+              freq: record.freq,
+              mode: record.grouped[0].mode,
+              label: '(' + record.grouped.length + ') ' + record.grouped[0].label
+            });
+            break;
           case 'channel':
-            var freq = record.freq;
-            var el = labels.appendChild(document.createElement('span'));
-            el.className = 'freqscale-channel';
-            el.textContent = record.label || record.mode;
-            el.style.left = view.freqToCSSLeft(freq);
-            // TODO: be an <a> or <button>
-            el.addEventListener('click', function(event) {
-              states.preset.set(record);
-              event.stopPropagation();
-            }, false);
+            addChannel(record);
             break;
           case 'band':
             var el = labels.appendChild(document.createElement('span'));

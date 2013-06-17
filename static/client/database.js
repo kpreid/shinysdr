@@ -24,21 +24,25 @@ var sdr = sdr || {};
     return entries[entries.length - 1];
   };
   Source.prototype.inBand = function (lower, upper) {
-    return new View(this, function inBandFilter(record) {
+    return new FilterView(this, function inBandFilter(record) {
       return (record.freq || record.upperFreq) >= lower &&
              (record.freq || record.lowerFreq) <= upper;
     });
   };
   Source.prototype.type = function (type) {
-    return new View(this, function typeFilter(record) {
+    return new FilterView(this, function typeFilter(record) {
       return record.type === type;
     });
   };
   Source.prototype.string = function (str) {
     var re = new RegExp(str, 'i');
-    return new View(this, function stringFilter(record) {
+    return new FilterView(this, function stringFilter(record) {
       return re.test(record.label) || re.test(record.notes);
     });
+  };
+  Source.prototype.groupSameFreq = function (str) {
+    var re = new RegExp(str, 'i');
+    return new GroupView(this);
   };
   Source.prototype.forEach = function (f) {
     this.getAll().forEach(f);
@@ -68,7 +72,6 @@ var sdr = sdr || {};
     this._viewGeneration = NaN;
     this._entries = [];
     this._db = db;
-    this._filter = filter;
     this.n = this._db.n;
   }
   View.prototype = Object.create(Source.prototype, {constructor: {value: View}});
@@ -78,13 +81,60 @@ var sdr = sdr || {};
   View.prototype.getAll = function (callback) {
     var entries;
     if (!this._isUpToDate()) {
-      this._entries = Object.freeze(this._db.getAll().filter(this._filter));
+      this._entries = Object.freeze(this._execute(this._db.getAll()));
       this._viewGeneration = this._db.getGeneration();
     }
     return this._entries;
   };
   View.prototype.getGeneration = function () {
     return this._viewGeneration;
+  };
+  
+  function FilterView(db, filter) {
+    View.call(this, db);
+    this._filter = filter;
+  }
+  FilterView.prototype = Object.create(View.prototype, {constructor: {value: FilterView}});
+  FilterView.prototype._execute = function (baseEntries) {
+    return baseEntries.filter(this._filter);
+  };
+  
+  function GroupView(db) {
+    View.call(this, db);
+  }
+  GroupView.prototype = Object.create(View.prototype, {constructor: {value: GroupView}});
+  GroupView.prototype._execute = function (baseEntries) {
+    var lastFreq = null;
+    var lastGroup = [];
+    var out = [];
+    function flush() {
+      if (lastGroup.length) {
+        if (lastGroup.length > 1) {
+          out.push(Object.freeze({
+            type: 'group',
+            freq: lastFreq,
+            grouped: Object.freeze(lastGroup)
+          }));
+        } else {
+          out.push(lastGroup[0]);
+        }
+        lastGroup = [];
+      }
+    }
+    baseEntries.forEach(function (record) {
+      if ('freq' in record) {
+        if (record.freq !== lastFreq) {
+          flush();
+          lastFreq = record.freq;
+        }
+        lastGroup.push(record);
+      } else {
+        flush();
+        out.push(record);
+      }
+    });
+    flush();
+    return out;
   };
   
   function Union() {
