@@ -615,6 +615,7 @@ var sdr = sdr || {};
   
   function FreqList(config) {
     var states = config.radio;
+    var configKey = 'filterString';
     
     // TODO recognize hardware limits somewhere central
     // TODO should be union of 0-samplerate and 15e6-...
@@ -625,6 +626,7 @@ var sdr = sdr || {};
     var filterBox = container.appendChild(document.createElement('input'));
     filterBox.type = 'search';
     filterBox.placeholder = 'Filter channels...';
+    filterBox.value = config.storage.getItem(configKey) || '';
     filterBox.addEventListener('input', refilter, false);
     
     var listOuter = container.appendChild(document.createElement('div'))
@@ -677,6 +679,7 @@ var sdr = sdr || {};
     function refilter() {
       if (lastFilterText !== filterBox.value) {
         lastFilterText = filterBox.value;
+        config.storage.setItem(configKey, lastFilterText);
         currentFilter = dataSource.string(lastFilterText).type('channel');
         states.scan_presets.set(currentFilter);
         draw();

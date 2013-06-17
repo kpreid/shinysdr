@@ -3,14 +3,37 @@
   
   var xhrput = sdr.network.xhrput;
   
+  function StorageNamespace(base, prefix) {
+    this._base = base;
+    this._prefix = prefix;
+  }
+  StorageNamespace.prototype.getItem = function (key) {
+    return this._base.getItem(this._prefix + key);
+  };
+  StorageNamespace.prototype.setItem = function (key, value) {
+    return this._base.setItem(this._prefix + key, value);
+  };
+  StorageNamespace.prototype.removeItem = function (key) {
+    return this._base.removeItem(this._prefix + key);
+  };
+  
   var scheduler = new sdr.events.Scheduler();
   
   var freqDB = new sdr.database.Union();
   freqDB.add(sdr.database.allSystematic);
   freqDB.add(sdr.database.fromCatalog('/dbs/'));
   
-  var radio;
+  // Persist state of all IDed 'details' elements
+  Array.prototype.forEach.call(document.querySelectorAll('details[id]'), function (details) {
+    var ns = new StorageNamespace(localStorage, 'sdr.elementState.' + details.id + '.');
+    var stored = ns.getItem('detailsOpen');
+    if (stored !== null) details.open = JSON.parse(stored);
+    new MutationObserver(function(mutations) {
+      ns.setItem('detailsOpen', JSON.stringify(details.open));
+    }).observe(details, {attributes: true, attributeFilter: ['open']});
+  });
   
+  var radio;
   sdr.network.connect('/radio', function gotDesc(remote) {
     radio = remote;
 
@@ -106,7 +129,8 @@
           element: node,
           view: view, // TODO should be context-dependent
           freqDB: freqDB,
-          radio: radio // TODO: remove the need for this
+          radio: radio, // TODO: remove the need for this
+          storage: node.hasAttribute('id') ? new StorageNamespace(localStorage, 'sdr.widgetState.' + node.getAttribute('id') + '.') : null
         });
         widgets.push(widget);
         node.parentNode.replaceChild(widget.element, node);
