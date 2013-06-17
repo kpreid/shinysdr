@@ -394,18 +394,55 @@ var sdr = sdr || {};
       var digitText = digit.appendChild(document.createTextNode("\u00A0"));
       places[i] = {element: digit, text: digitText};
       var scale = Math.pow(10, i);
+      function spin(direction) {
+        target.set(direction * scale + target.get());
+      }
       digit.addEventListener("mousewheel", function(event) { // Not in FF
         // TODO: deal with high-res/accelerated scrolling
-        var adjust = event.wheelDelta > 0 ? 1 : -1;
-        target.set(adjust * scale + target.get());
+        spin(event.wheelDelta > 0 ? 1 : -1);
         event.preventDefault();
         event.stopPropagation();
       }, true);
-      digit.addEventListener("keypress", function(event) {
-        // TODO: arrow keys/backspace
+      function focusNext() {
+        if (i > 0) {
+          places[i - 1].element.focus();
+        } else {
+          //digit.blur();
+        }
+      }
+      function focusPrev() {
+        if (i < places.length - 1) {
+          places[i + 1].element.focus();
+        } else {
+          //digit.blur();
+        }
+      }
+      digit.addEventListener('keydown', function(event) {
+        switch (event.keyCode) {  // nominally poorly compatible, but best we can do
+          case 0x08: // backspace
+          case 0x25: // left
+            focusPrev();
+            break;
+          case 0x27: // right
+            focusNext();
+            break;
+          case 0x26: // up
+            spin(1);
+            break;
+          case 0x28: // down
+            spin(-1);
+            break;
+          default:
+            return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+      }, true);
+      digit.addEventListener('keypress', function(event) {
+        // TODO I hear there's a new 'input' event which is better for input-ish keystrokes, use that
         var input = parseInt(String.fromCharCode(event.charCode), 10);
         if (isNaN(input)) return;
-        
+
         var value = target.get();
         var negative = value < 0;
         if (negative) { value = -value; }
@@ -419,17 +456,13 @@ var sdr = sdr || {};
         value += (input - currentDigitValue) * scale;
         if (negative) { value = -value; }
         target.set(value);
-        
-        if (i > 0) {
-          places[i - 1].element.focus();
-        } else {
-          digit.blur();
-        }
-        
+
+        focusNext();
         event.preventDefault();
         event.stopPropagation();
-      }, true);
+      });
     }(i));
+    places[places.length - 1].tabIndex = 0; // allow focusing in natural order
     var lastShownValue = -1;
     
     function draw() {
