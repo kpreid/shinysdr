@@ -23,10 +23,14 @@ html, body {
   display: -webkit-flex;
   -webkit-flex-direction: column;
 }
-.panel {
+.panel, .frame > details > summary {
   border: .1em outset;
-  padding: .2em;
   -webkit-flex-shrink: 0; /* default value to be overridden */
+  padding: .2em;
+}
+.frame > details {
+  border: solid black;
+  border-width: .2em 0;
 }
 .panel.frame {
   border: .19em ridge;
@@ -50,6 +54,9 @@ html, body {
 /* coloring */
 body, .panel {
   background-color: #BBB;
+}
+.frame > details > summary {
+  background-color: #DDD;
 }
 .panel.frame {
   background: linear-gradient(to right, #555 0,#BBB 1em);
