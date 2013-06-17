@@ -77,6 +77,11 @@
       radio: radio // TODO: remove the need for this
     }));
 
+    function createWidgetsList(rootTarget, list) {
+      Array.prototype.forEach.call(list, function (child) {
+        createWidgets(rootTarget, child);
+      });
+    }
     function createWidgets(rootTarget, node) {
       if (node.hasAttribute && node.hasAttribute('data-widget')) {
         var stateObj;
@@ -106,6 +111,9 @@
         widgets.push(widget);
         node.parentNode.replaceChild(widget.element, node);
         widget.element.className += ' ' + node.className + ' widget-' + typename; // TODO kludge
+        
+        // allow widgets to embed widgets
+        createWidgetsList(stateObj || rootTarget, widget.element.childNodes);
       } else if (node.hasAttribute && node.hasAttribute('data-target')) (function () {
         var html = document.createDocumentFragment();
         while (node.firstChild) html.appendChild(node.firstChild);
@@ -116,16 +124,12 @@
           
           node.textContent = ''; // fast clear
           node.appendChild(html.cloneNode(true));
-          Array.prototype.forEach.call(node.childNodes, function (child) {
-            createWidgets(target, child);
-          });
+          createWidgetsList(target, node.childNodes);
         }
         go.scheduler = scheduler;
         go();
       }()); else {
-        Array.prototype.forEach.call(node.childNodes, function (child) {
-          createWidgets(rootTarget, child);
-        });
+        createWidgetsList(rootTarget, node.childNodes);
       }
     }
 
