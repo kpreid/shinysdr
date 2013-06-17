@@ -108,17 +108,23 @@ body, .panel {
 }
 .knob-spin-button-shim {
   position: absolute;
-  left: 50%;
+  right: 50%;
   display: none;
 }
 .knob-digit:focus .knob-spin-button-shim {
-  display: block;
+  outline: none;
+  display: inline-block;
+}
+.knob-digit:focus {
+  /* the outline goes wacky due to the button centering trick */
+  outline: none;
+  background: #555;
 }
 .knob-spin-button-shim.knob-spin-up { bottom: 100%; }
 .knob-spin-button-shim.knob-spin-down { top: 100%; }
 .knob-spin-button {
   position: relative;
-  left: -50%;
+  right: -50%;
   font-size: .5em;
   box-sizing: border-box;
   width: 1.5em;
