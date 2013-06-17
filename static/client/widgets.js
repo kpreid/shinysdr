@@ -477,9 +477,17 @@ var sdr = sdr || {};
         event.stopPropagation();
       });
       
+      // remember last place for tabbing
+      digit.addEventListener('focus', function (event) {
+        places.forEach(function (other) {
+          other.element.tabIndex = -1;
+        });
+        digit.tabIndex = 0;
+      }, false);
+      
       // spin buttons
       digit.style.position = 'relative';
-      var buttons = [-1, 1].forEach(function (direction) {
+      [-1, 1].forEach(function (direction) {
         var up = direction > 0;
         var layoutShim = digit.appendChild(document.createElement('span'));
         layoutShim.className = 'knob-spin-button-shim knob-spin-' + (up ? 'up' : 'down');
@@ -491,11 +499,14 @@ var sdr = sdr || {};
           event.preventDefault();
           event.stopPropagation();
         }, false);
+        // If in the normal tab order, its appearing/disappearing causes trouble
+        button.tabIndex = -1;
       });
     }(i));
-    places[places.length - 1].tabIndex = 0; // allow focusing in natural order
-    var lastShownValue = -1;
     
+    places[places.length - 1].element.tabIndex = 0; // initial tabbable digit
+    
+    var lastShownValue = -1;
     function draw() {
       var value = target.depend(draw);
       if (value === lastShownValue) return;
