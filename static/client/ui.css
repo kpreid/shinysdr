@@ -96,6 +96,8 @@ body, .panel {
   font-size: 2.8em;
 }
 .knob-digit {
+  display: inline-block;
+  position: relative; /* for buttons */
 }
 .knob-mark {
   font-family: 'Arial', sans-serif;
@@ -103,6 +105,27 @@ body, .panel {
 }
 .knob-dim {
   color: #333;
+}
+.knob-spin-button-shim {
+  position: absolute;
+  left: 50%;
+  display: none;
+}
+.knob-digit:focus .knob-spin-button-shim {
+  display: block;
+}
+.knob-spin-button-shim.knob-spin-up { bottom: 100%; }
+.knob-spin-button-shim.knob-spin-down { top: 100%; }
+.knob-spin-button {
+  position: relative;
+  left: -50%;
+  font-size: .5em;
+  box-sizing: border-box;
+  width: 1.5em;
+  height: 1.5em;
+  padding: 0;
+  margin: 0;
+  display: block;
 }
 
 /* widgets: frequency scale */

@@ -391,7 +391,7 @@ var sdr = sdr || {};
       var digit = container.appendChild(document.createElement("span"));
       digit.className = "knob-digit";
       digit.tabIndex = -1;
-      var digitText = digit.appendChild(document.createTextNode("\u00A0"));
+      var digitText = digit.appendChild(document.createTextNode('0'));
       places[i] = {element: digit, text: digitText};
       var scale = Math.pow(10, i);
       function spin(direction) {
@@ -475,6 +475,22 @@ var sdr = sdr || {};
         focusNext();
         event.preventDefault();
         event.stopPropagation();
+      });
+      
+      // spin buttons
+      digit.style.position = 'relative';
+      var buttons = [-1, 1].forEach(function (direction) {
+        var up = direction > 0;
+        var layoutShim = digit.appendChild(document.createElement('span'));
+        layoutShim.className = 'knob-spin-button-shim knob-spin-' + (up ? 'up' : 'down');
+        var button = layoutShim.appendChild(document.createElement('button'));
+        button.className = 'knob-spin-button knob-spin-' + (up ? 'up' : 'down');
+        button.textContent = up ? '+' : '-';
+        button.addEventListener('click', function (event) {
+          spin(direction);
+          event.preventDefault();
+          event.stopPropagation();
+        }, false);
       });
     }(i));
     places[places.length - 1].tabIndex = 0; // allow focusing in natural order
