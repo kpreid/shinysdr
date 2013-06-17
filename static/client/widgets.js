@@ -439,11 +439,26 @@ var sdr = sdr || {};
         event.stopPropagation();
       }, true);
       digit.addEventListener('keypress', function(event) {
+        var ch = String.fromCharCode(event.charCode);
+        var value = target.get();
+        
+        switch (ch) {
+          case '-':
+          case '_':
+            target.set(-Math.abs(value));
+            return;
+          case '+':
+          case '=':
+            target.set(Math.abs(value));
+            return;
+          default:
+            break;
+        }
+        
         // TODO I hear there's a new 'input' event which is better for input-ish keystrokes, use that
-        var input = parseInt(String.fromCharCode(event.charCode), 10);
+        var input = parseInt(ch, 10);
         if (isNaN(input)) return;
 
-        var value = target.get();
         var negative = value < 0;
         if (negative) { value = -value; }
         var currentDigitValue;
