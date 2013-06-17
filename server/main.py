@@ -165,6 +165,14 @@ class StateStreamFactory(protocol.Factory):
 		p.factory = self
 		return p
 
+print 'Building web UI content...'
+jasmineOut = 'static/test/jasmine/'
+if os.path.exists(jasmineOut):
+	shutil.rmtree(jasmineOut)
+os.mkdir(jasmineOut)
+for name in ['jasmine.css', 'jasmine.js', 'jasmine-html.js']:
+	shutil.copyfile('deps/jasmine/lib/jasmine-core/' + name, jasmineOut + name);
+
 print 'Flow graph...'
 # Note: This is slow as it triggers the OsmoSDR device initialization
 top = sdr.top.Top()

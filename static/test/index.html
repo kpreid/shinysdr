@@ -1,0 +1,44 @@
+<!doctype html>
+<html><head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+  <title>Untitled Web SDR — Tests</title>
+  <link rel="stylesheet" href="jasmine/jasmine.css">
+  <script src="jasmine/jasmine.js"></script>
+  <script src="jasmine/jasmine-html.js"></script>
+  
+  <script src="../client/events.js"></script>
+  <script src="../client/database.js"></script>
+  <script src="../client/network.js"></script>
+</head><body>
+  <script>
+    (function() {
+      // recipe from Jasmine docs
+      var jasmineEnv = jasmine.getEnv();
+      jasmineEnv.updateInterval = 250;
+      var htmlReporter = new jasmine.HtmlReporter();
+      jasmineEnv.addReporter(htmlReporter);
+      jasmineEnv.specFilter = htmlReporter.specFilter.bind(htmlReporter);
+      
+      sdr.network.externalGet('t/', 'document', function(indexDoc) {
+        var anchors = indexDoc.querySelectorAll('a[href]');
+        var pending = 0;
+        Array.prototype.forEach.call(anchors, function (anchor) {
+          var url = anchor.href;
+          if (/\/t-.*\.js$/.test(url)) {
+            console.log('Loading tests ' + url);
+            var loader = document.createElement('script');
+            loader.src = url;
+            pending++;
+            loader.onload = function() {
+              if (--pending == 0) {
+                console.log('All loaded, executing.');
+                jasmineEnv.execute();
+              }
+            };
+            document.body.appendChild(loader);
+          }
+        });
+      });
+    }());
+  </script>
+</body></html>
