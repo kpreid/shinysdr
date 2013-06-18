@@ -33,7 +33,7 @@ class Top(gr.top_block, sdr.ExportedState):
 		self.input_rate = input_rate = 3200000
 		self.audio_rate = audio_rate =   32000
 		self.hw_freq = hw_freq = 98e6
-		self.fftsize = fftsize = 4096
+		self.spectrum_resolution = 4096
 		self.hw_correction_ppm = 0
 
 		##################################################
@@ -60,15 +60,7 @@ class Top(gr.top_block, sdr.ExportedState):
 		
 		print 'range ', source.get_gain_range(ch).start(), source.get_gain_range(ch).stop()
 		
-		self.spectrum_probe = blocks.probe_signal_vf(fftsize)
-		self.spectrum_fft = blks2.logpwrfft_c(
-			sample_rate=input_rate,
-			fft_size=fftsize,
-			ref_scale=2,
-			frame_rate=30,
-			avg_alpha=1.0,
-			average=False,
-		)
+		self._make_spectrum()
 		
 		self._mode = None
 		self.set_mode('WFM') # triggers connect
@@ -102,7 +94,7 @@ class Top(gr.top_block, sdr.ExportedState):
 		callback(Cell(self, 'hw_correction_ppm', writable=True, ctor=float))
 		callback(Cell(self, 'hw_agc', writable=True, ctor=bool))
 		callback(Cell(self, 'hw_gain', writable=True, ctor=float))
-		#callback(Cell(self, 'fftsize', True, ctor=int))
+		callback(Cell(self, 'spectrum_resolution', True, ctor=int))
 		callback(Cell(self, 'spectrum_fft', ctor=SpectrumTypeStub))
 		callback(BlockCell(self, 'receiver'))
 
@@ -226,13 +218,25 @@ class Top(gr.top_block, sdr.ExportedState):
 	
 	def set_hw_gain(self, value):
 		self.osmosdr_source_block.set_gain(float(value), ch)
+	
+	def _make_spectrum(self):
+		self.spectrum_probe = blocks.probe_signal_vf(self.spectrum_resolution)
+		self.spectrum_fft = blks2.logpwrfft_c(
+			sample_rate=self.input_rate,
+			fft_size=self.spectrum_resolution,
+			ref_scale=2,
+			frame_rate=30,
+			avg_alpha=1.0,
+			average=False,
+		)
+	
+	def get_spectrum_resolution(self):
+		return self.spectrum_resolution
 
-	def get_fftsize(self):
-		return self.fftsize
-
-	def set_fftsize(self, fftsize):
-		self.fftsize = fftsize
-		# TODO er, missing some updaters? GRC didn't generate any
+	def set_spectrum_resolution(self, spectrum_resolution):
+		self.spectrum_resolution = spectrum_resolution
+		self._make_spectrum()
+		self._do_connect()
 
 	def get_spectrum_fft(self):
 		return (self.hw_freq, self.spectrum_probe.level())
