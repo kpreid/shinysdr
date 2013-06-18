@@ -299,27 +299,34 @@ var sdr = sdr || {};
   }
   
   function parseCSVLine(line) {
+    //function debug(i, note) { console.log(line.slice(0, i) + '|' + line.slice(i) + ' ' + note); }
     var fields = [];
     var start = 0;
-    var sanity = 0;
-    for (;sanity++ < 1000;) {
+    //debug(start, 'begin');
+    for (var sanity = -1;start > sanity;sanity++) { // prevent a bug from being an infinite loop; TODO warn
+      //debug(start, 'outer');
       if (line[start] === '"') {
-        //debugger;
         start++;
+        //debug(start, 'found quoted');
         var text = '';
         for (;;) {
           var end = line.indexOf('"', start);
-          if ('end' === -1) {
+          if (end === -1) {
             console.warn('CSV unclosed quote', line[start]);
             break;
           } else {
-            text += start === end ? '"' : line.slice(start, end);
+            //console.log(start, end);
+            text += line.slice(start, end);
             start = end + 1;
+            //debug(start, 'found close');
             if (line[start] === '"') {
+              text += '"';
               start++;
+              //debug(start, 'double quote');
               // continue quote parser
             } else if (start >= line.length || line[start] === ',') {
               start++;
+              //debug(start, 'next field');
               break; // done with quote parsing
             } else {
               console.warn('CSV garbage after quote', line[start]);
@@ -339,11 +346,13 @@ var sdr = sdr || {};
         } else {
           fields.push(line.slice(start, end));
           start = end + 1;
+          //debug(start, 'looping back');
         }
       }
     }
     return fields;
   }
+  database._parseCSVLine = parseCSVLine; // exported for testing only
   
   // Generic FM broadcast channels
   database.fm = (function () {
