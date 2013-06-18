@@ -34,6 +34,7 @@ class Top(gr.top_block, sdr.ExportedState):
 		self.audio_rate = audio_rate =   32000
 		self.hw_freq = hw_freq = 98e6
 		self.spectrum_resolution = 4096
+		self.spectrum_rate = 30
 		self.hw_correction_ppm = 0
 
 		##################################################
@@ -95,6 +96,7 @@ class Top(gr.top_block, sdr.ExportedState):
 		callback(Cell(self, 'hw_agc', writable=True, ctor=bool))
 		callback(Cell(self, 'hw_gain', writable=True, ctor=float))
 		callback(Cell(self, 'spectrum_resolution', True, ctor=int))
+		callback(Cell(self, 'spectrum_rate', True, ctor=float))
 		callback(Cell(self, 'spectrum_fft', ctor=SpectrumTypeStub))
 		callback(BlockCell(self, 'receiver'))
 
@@ -225,7 +227,7 @@ class Top(gr.top_block, sdr.ExportedState):
 			sample_rate=self.input_rate,
 			fft_size=self.spectrum_resolution,
 			ref_scale=2,
-			frame_rate=30,
+			frame_rate=self.spectrum_rate,
 			avg_alpha=1.0,
 			average=False,
 		)
@@ -237,6 +239,12 @@ class Top(gr.top_block, sdr.ExportedState):
 		self.spectrum_resolution = spectrum_resolution
 		self._make_spectrum()
 		self._do_connect()
+
+	def get_spectrum_rate(self):
+		return self.spectrum_rate
+
+	def set_spectrum_rate(self, value):
+		self.spectrum_fft.set_vec_rate(value)
 
 	def get_spectrum_fft(self):
 		return (self.hw_freq, self.spectrum_probe.level())
