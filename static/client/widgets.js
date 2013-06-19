@@ -506,11 +506,8 @@ var sdr = sdr || {};
     
     places[places.length - 1].element.tabIndex = 0; // initial tabbable digit
     
-    var lastShownValue = -1;
     function draw() {
       var value = target.depend(draw);
-      if (value === lastShownValue) return;
-      lastShownValue = value;
       var valueStr = String(Math.round(value));
       var last = valueStr.length - 1;
       for (var i = 0; i < places.length; i++) {
@@ -540,16 +537,11 @@ var sdr = sdr || {};
     numbers.className = 'freqscale-numbers';
     var labels = outer.appendChild(document.createElement('div'));
     labels.className = 'freqscale-labels';
-    var lastShownValue = NaN;
-    var lastViewParam = NaN;
     // TODO: reuse label nodes instead of reallocating...if that's cheaper
     function draw() {
       var centerFreq = tunerSource.depend(draw);
       view.n.listen(draw);
       var viewParam = '' + view.freqTo01(0) + view.freqTo01(centerFreq);  // TODO kludge
-      if (centerFreq === lastShownValue && viewParam === lastViewParam) return;
-      lastShownValue = centerFreq;
-      lastViewParam = viewParam;
       
       var bandwidth = states.input_rate.depend(draw);
       var lower = view.freqFrom01(0);
@@ -802,8 +794,6 @@ var sdr = sdr || {};
         value = 0;
       }
       slider.disabled = false;
-      var shown = slider.valueAsNumber;
-      if (Math.abs(value - shown) < 1e-8) return;  // TODO adaptive
       slider.valueAsNumber = value;
     }
     draw.scheduler = config.scheduler;
