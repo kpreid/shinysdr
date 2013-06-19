@@ -216,7 +216,7 @@ class Top(gr.top_block, sdr.ExportedState):
 		self.osmosdr_source_block.set_gain_mode(bool(value), ch)
 	
 	def get_hw_gain(self):
-		return bool(self.osmosdr_source_block.get_gain(ch))
+		return self.osmosdr_source_block.get_gain(ch)
 	
 	def set_hw_gain(self, value):
 		self.osmosdr_source_block.set_gain(float(value), ch)
