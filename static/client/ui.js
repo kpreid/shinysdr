@@ -83,8 +83,6 @@
       element: document.querySelector('.hscalegroup') // TODO relic
     });
   
-    var widgets = [];
-    
     function createWidgetsList(rootTarget, list) {
       Array.prototype.forEach.call(list, function (child) {
         createWidgets(rootTarget, child);
@@ -117,7 +115,6 @@
           radio: radio, // TODO: remove the need for this
           storage: node.hasAttribute('id') ? new StorageNamespace(localStorage, 'sdr.widgetState.' + node.getAttribute('id') + '.') : null
         });
-        widgets.push(widget);
         node.parentNode.replaceChild(widget.element, node);
         widget.element.className += ' ' + node.className + ' widget-' + typename; // TODO kludge
         
