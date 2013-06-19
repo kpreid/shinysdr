@@ -84,22 +84,7 @@
     });
   
     var widgets = [];
-    // TODO: make these widgets follow the same protocol as the others
-    widgets.push(new sdr.widgets.SpectrumPlot({
-      scheduler: scheduler,
-      target: radio.spectrum_fft,
-      element: document.getElementById("spectrum"),
-      view: view,
-      radio: radio // TODO: remove the need for this
-    }));
-    widgets.push(new sdr.widgets.WaterfallPlot({
-      scheduler: scheduler,
-      target: radio.spectrum_fft,
-      element: document.getElementById("waterfall"),
-      view: view,
-      radio: radio // TODO: remove the need for this
-    }));
-
+    
     function createWidgetsList(rootTarget, list) {
       Array.prototype.forEach.call(list, function (child) {
         createWidgets(rootTarget, child);

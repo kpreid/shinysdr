@@ -68,10 +68,6 @@ body, .panel {
   background-color: #333;
   color: #00FFAA;
 }
-#waterfall {
-  background-color: #777;
-  color: #00FFAA;
-}
 
 /* widgets: radio button group */
 .widget-Radio {

@@ -110,7 +110,7 @@ var sdr = sdr || {};
   
   function SpectrumPlot(config) {
     var fftCell = config.target;
-    var canvas = config.element;
+    var canvas = this.element = config.element;
     var view = config.view;
     var states = config.radio;
     
@@ -228,7 +228,7 @@ var sdr = sdr || {};
   
   function WaterfallPlot(config) {
     var fftCell = config.target;
-    var canvas = config.element;
+    var canvas = this.element = config.element;
     var view = config.view;
     var states = config.radio;
 
