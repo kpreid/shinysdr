@@ -1,24 +1,48 @@
 describe('database', function () {
+  beforeEach(function () {
+    s = new sdr.events.Scheduler(window);
+  });
+  function createListenerSpy() {
+    var l = jasmine.createSpy();
+    l.scheduler = s;
+    return l;
+  }
+  function expectNotification(l) {
+    // TODO: we could make a timeless test by mocking the scheduler
+    waitsFor(function() {
+      return l.calls.length;
+    }, 'notification received', 100);
+    runs(function() {
+      expect(l).toHaveBeenCalledWith();
+    });
+  }
+  var dummyRecord = Object.freeze({
+    type: 'channel',
+    freq: 100e6
+  });
+  
   describe('Table', function () {
     it('should notify on change', function () {
-      var s = new sdr.events.Scheduler(window);
       var t = new sdr.database.Table();
-      var l = jasmine.createSpy();
-      l.scheduler = s;
+      var l = createListenerSpy();
       t.n.listen(l);
-      t.add({
-        type: 'channel',
-        freq: 100e6
-      });
-      waitsFor(function() {
-        return l.calls.length;
-      }, 'notification received', 100);
-      runs(function() {
-        expect(l).toHaveBeenCalledWith();
-      });
+      t.add(dummyRecord);
+      expectNotification(l);
     });
   });
 
+  describe('Union', function () {
+    it('should notify on member change', function () {
+      var t = new sdr.database.Table();
+      var u = new sdr.database.Union();
+      u.add(t);
+      var l = createListenerSpy();
+      u.n.listen(l);
+      t.add(dummyRecord);
+      expectNotification(l);
+    });
+  });
+  
   describe('CSV parser', function () {
     // I generally hold to the 'test only the public interface', but this is sufficiently hairy but doesn't otherwise have a reasonable exported interface (entire CSV files would make the test cases needlessly large).
     var parseCSVLine = sdr.database._parseCSVLine;
