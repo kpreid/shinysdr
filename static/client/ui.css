@@ -43,7 +43,8 @@ html, body {
   display: -webkit-flex;
   -webkit-flex-direction: column;
   height: 100%;
-  overflow: hidden; /* for the benefit of positioned labels */
+  overflow-x: scroll;
+  overflow-y: hidden;
 }
 .hscale {
   width: 100%;

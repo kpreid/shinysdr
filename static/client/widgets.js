@@ -17,25 +17,38 @@ var sdr = sdr || {};
   function SpectrumView(config) {
     var radio = config.radio;
     var container = config.element;
+    var scheduler = config.scheduler;
     var self = this;
+
+    // used to force the container's scroll range to widen immediately
+    var scrollStub = container.appendChild(document.createElement('div'));
+    scrollStub.style.height = '1px';
+    scrollStub.style.marginTop = '-1px';
+    scrollStub.style.visibility = 'hidden';
     
     var n = this.n = new sdr.events.Notifier();
     
     // per-drawing-frame parameters
-    var bandwidth, centerFreq;
+    var bandwidth, centerFreq, leftFreq, pixelWidth, pixelsPerHertz;
     
     function prepare() {
       // TODO: unbreakable notify loop here; need to be lazy
       bandwidth = radio.input_rate.depend(prepare);
       centerFreq = radio.hw_freq.depend(prepare);
+      leftFreq = centerFreq - bandwidth / 2;
+      pixelWidth = container.offsetWidth;
+      pixelsPerHertz = pixelWidth / bandwidth * zoom;
       n.notify();
       // Note that this uses hw_freq, not the spectrum data center freq. This is correct because we want to align the coords with what we have selected, not the current data; and the WaterfallPlot is aware of this distinction.
     }
     prepare.scheduler = config.scheduler;
     prepare();
     
+    container.addEventListener('scroll', function (event) {
+      scheduler.enqueue(prepare);
+    }, false);
+    
     // state
-    var pan = 0;
     var zoom = 1;
     
     // TODO legacy stubs
@@ -43,48 +56,63 @@ var sdr = sdr || {};
     this.maxLevel = 0;
     
     // Map a frequency to [0, 1] horizontal coordinate
-    this.freqTo01 = function freqTo01(freq) {
-      return pan + (1/2 + (freq - centerFreq) / bandwidth) * zoom;
-    };
     this.freqToCSSLeft = function freqToCSSLeft(freq) {
-      return this.freqTo01(freq) * 100 + '%';
+      return ((freq - leftFreq) * pixelsPerHertz) + 'px';
     };
     this.freqToCSSRight = function freqToCSSRight(freq) {
-      return (1 - this.freqTo01(freq)) * 100 + '%';
+      return (pixelWidth - (freq - leftFreq) * pixelsPerHertz) + 'px';
     };
     this.freqToCSSLength = function freqToCSSLength(freq) {
-      return (freq / bandwidth * 100 * zoom) + '%';
+      return (freq * pixelsPerHertz) + 'px';
     };
-    // Map [0, 1] coordinate to frequency
-    this.freqFrom01 = function freqFrom01(x) {
-      var unzoomedX = (x - pan) / zoom;
-      return centerFreq + (unzoomedX * 2 - 1) / 2 * bandwidth;
+    this.leftVisibleFreq = function leftVisibleFreq() {
+      return leftFreq + container.scrollLeft / pixelsPerHertz;
+    };
+    this.rightVisibleFreq = function rightVisibleFreq() {
+      return leftFreq + (container.scrollLeft + pixelWidth) / pixelsPerHertz;
     };
     
-    this.changeZoom = function changeZoom(delta, cursor01) {
+    // We want the zoom point to stay fixed, but scrollLeft quantizes; this stores a virtual fractional part.
+    var fractionalScroll = 0;
+    
+    this.changeZoom = function changeZoom(delta, cursorX) {
       var maxZoom = radio.spectrum_fft.get().length / MAX_ZOOM_BINS;
       
+      cursorX += fractionalScroll;
+      var cursor01 = cursorX / pixelWidth;
+      
       // Find frequency to keep under the cursor
-      var cursorFreq = this.freqFrom01(cursor01);
+      var cursorFreq = this.leftVisibleFreq() * (1-cursor01) + this.rightVisibleFreq() * cursor01;
       
       // Adjust and clamp zoom
       var oldZoom = zoom;
       zoom *= Math.exp(-delta * 0.0005);
       zoom = Math.min(maxZoom, Math.max(1.0, zoom));
       
-      // Adjust and clamp pan
-      pan = 0; // reset for following freqTo01 calculation
-      pan = cursor01 - this.freqTo01(cursorFreq);
-      pan = Math.max(1 - zoom, Math.min(0, pan));
+      // Recompute parameters now so we can adjust pan (scroll)
+      prepare();
       
-      n.notify();
+      var unadjustedCursorFreq = this.leftVisibleFreq() * (1-cursor01) + this.rightVisibleFreq() * cursor01;
+      
+      // Force scrollable range to update
+      var w = pixelWidth * zoom;
+      scrollStub.style.width = w + 'px';
+      // Current virtual scroll
+      var scroll = container.scrollLeft + fractionalScroll;
+      // Adjust
+      scroll = Math.max(0, Math.min(w - pixelWidth, scroll + (cursorFreq - unadjustedCursorFreq) * pixelsPerHertz));
+      // Write back
+      container.scrollLeft = scroll;
+      fractionalScroll = scroll - container.scrollLeft;
+      
+      scheduler.enqueue(prepare);
     };
     
     this.addClickToTune = function addClickToTune(element) {
       function clickTune(event) {
         // TODO: works only because we're at the left edge
-        var x = event.clientX / parseInt(getComputedStyle(container).width);
-        radio.receiver.rec_freq.set(self.freqFrom01(x));
+        radio.receiver.rec_freq.set(
+          (event.clientX + container.scrollLeft) / pixelsPerHertz + leftFreq);
         event.stopPropagation();
         event.preventDefault(); // no selection
       }
@@ -99,7 +127,7 @@ var sdr = sdr || {};
       }, false);
       element.addEventListener('mousewheel', function(event) { // Not in FF
         // TODO: works only because we're at the left edge
-        var x = event.clientX / parseInt(container.offsetWidth);
+        var x = event.clientX;
         self.changeZoom(-event.wheelDelta, x);
         event.preventDefault();
         event.stopPropagation();
@@ -119,14 +147,14 @@ var sdr = sdr || {};
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     var cssColor = getComputedStyle(canvas).color;
-    var w, h, averageBuffer; // updated in draw
+    var w, h, lvf, rvf, averageBuffer; // updated in draw
     var lastDrawnCenterFreq = NaN;
     
-    function relFreqToX(freq) {
-      return w * (1/2 + freq);
+    function freqToCoord(freq) {
+      return (freq - lvf) / (rvf-lvf) * w;
     }
     function drawHair(freq) {
-      var x = w * view.freqTo01(freq);
+      var x = freqToCoord(freq);
       x = Math.floor(x) + 0.5;
       ctx.beginPath();
       ctx.moveTo(x, 0);
@@ -134,8 +162,8 @@ var sdr = sdr || {};
       ctx.stroke();
     }
     function drawBand(freq1, freq2) {
-      var x1 = w * view.freqTo01(freq1);
-      var x2 = w * view.freqTo01(freq2);
+      var x1 = freqToCoord(freq1);
+      var x2 = freqToCoord(freq2);
       ctx.fillRect(x1, 0, x2 - x1, ctx.canvas.height);
     }
     
@@ -143,7 +171,12 @@ var sdr = sdr || {};
       var buffer = fftCell.depend(draw);
       var bufferCenterFreq = fftCell.getCenterFreq();
       
+      view.n.listen(draw);
+      lvf = view.leftVisibleFreq();
+      rvf = view.rightVisibleFreq();
+      
       // Fit current layout, clear
+      canvas.style.marginLeft = view.freqToCSSLeft(lvf);
       w = canvas.offsetWidth;
       h = canvas.offsetHeight;
       if (canvas.width !== w || canvas.height !== h) {
@@ -156,11 +189,10 @@ var sdr = sdr || {};
       
       var len = buffer.length;
       
-      view.n.listen(draw);
       var viewCenterFreq = states.hw_freq.depend(draw);
       var bandwidth = states.input_rate.depend(draw);
-      var xZero = view.freqTo01(viewCenterFreq - bandwidth/2) * ctx.canvas.width;
-      var xFullScale = view.freqTo01(viewCenterFreq + bandwidth/2) * ctx.canvas.width;
+      var xZero = freqToCoord(viewCenterFreq - bandwidth/2);
+      var xFullScale = freqToCoord(viewCenterFreq + bandwidth/2);
       var xScale = (xFullScale - xZero) / len;
       var yScale = -h / (view.maxLevel - view.minLevel);
       var yZero = -view.maxLevel * yScale;
@@ -531,6 +563,8 @@ var sdr = sdr || {};
     var dataSource = config.freqDB.groupSameFreq();
     var view = config.view;
 
+    var labelWidth = 60; // TODO actually measure styled text
+
     var outer = this.element = document.createElement("div");
     outer.className = "freqscale";
     var numbers = outer.appendChild(document.createElement('div'));
@@ -543,18 +577,24 @@ var sdr = sdr || {};
       view.n.listen(draw);
       
       var bandwidth = states.input_rate.depend(draw);
-      var lower = view.freqFrom01(0);
-      var upper = view.freqFrom01(1);
+      var lower = centerFreq - bandwidth / 2;
+      var upper = centerFreq + bandwidth / 2;
+      
+      // TODO: identical to waterfall's use, refactor
+      outer.style.marginLeft = view.freqToCSSLeft(centerFreq - bandwidth/2);
+      outer.style.width = view.freqToCSSLength(bandwidth);
+      
+      var maxLabels = outer.offsetWidth / labelWidth;
       
       // We could try to calculate the step using logarithms, but floating-point error would be tiresome.
-      // TODO: Make these thresholds less magic-numbery, and take the font size/screen size into consideration.
+      // TODO: Make these thresholds less magic-numbery.
       var step = 1;
-      while (isFinite(step) && (upper - lower) / step > 10) {
+      while (isFinite(step) && (upper - lower) / step > maxLabels) {
         step *= 10;
       }
-      if ((upper - lower) / step < 2) {
+      if ((upper - lower) / step < maxLabels * 0.25) {
         step /= 4;
-      } else if ((upper - lower) / step < 4) {
+      } else if ((upper - lower) / step < maxLabels * 0.5) {
         step /= 2;
       }
       
