@@ -541,7 +541,6 @@ var sdr = sdr || {};
     function draw() {
       var centerFreq = tunerSource.depend(draw);
       view.n.listen(draw);
-      var viewParam = '' + view.freqTo01(0) + view.freqTo01(centerFreq);  // TODO kludge
       
       var bandwidth = states.input_rate.depend(draw);
       var lower = view.freqFrom01(0);
