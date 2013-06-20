@@ -126,11 +126,14 @@ var sdr = sdr || {};
         clickTune(event);
       }, false);
       element.addEventListener('mousewheel', function(event) { // Not in FF
-        // TODO: works only because we're at the left edge
-        var x = event.clientX;
-        self.changeZoom(-event.wheelDelta, x);
-        event.preventDefault();
-        event.stopPropagation();
+        if (Math.abs(event.wheelDeltaY) > Math.abs(event.wheelDeltaX)) {
+          // TODO: works only because we're at the left edge
+          self.changeZoom(-event.wheelDeltaY, event.clientX);
+          event.preventDefault();
+          event.stopPropagation();
+        } else {
+          // allow normal horizontal scrolling
+        }
       }, true);
     }
   }
