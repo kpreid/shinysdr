@@ -14,7 +14,6 @@ import sdr.receiver
 import sdr.receivers.vor
 
 class SpectrumTypeStub: pass
-def SubBlockStub(x): raise 'Not yet supported'
 
 ch = 0 # osmosdr channel, to avoid magic number
 
