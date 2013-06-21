@@ -564,6 +564,20 @@ var sdr = sdr || {};
   }
   widgets.Knob = Knob;
   
+  // "exact" as in doesn't drop digits
+  function formatFreqExact(freq) {
+    var a = Math.abs(freq);
+    if (a < 1e3) {
+      return String(freq);
+    } else if (a < 1e6) {
+      return freq / 1e3 + 'k';
+    } else if (a < 1e9) {
+      return freq / 1e6 + 'M';
+    } else {
+      return freq / 1e9 + 'G';
+    }
+  }
+  
   function FreqScale(config) {
     var tunerSource = config.target;
     var states = config.radio;
@@ -611,7 +625,7 @@ var sdr = sdr || {};
            sanity--, i += step) {
         var label = numbers.appendChild(document.createElement('span'));
         label.className = 'freqscale-number';
-        label.textContent = (i / 1e6) + 'M';  // Hz is obvious
+        label.textContent = formatFreqExact(i);
         label.style.left = view.freqToCSSLeft(i);
       }
       
