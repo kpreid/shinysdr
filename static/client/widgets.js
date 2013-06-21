@@ -44,6 +44,10 @@ var sdr = sdr || {};
     prepare.scheduler = config.scheduler;
     prepare();
     
+    window.addEventListener('resize', function (event) {
+      scheduler.enqueue(prepare);
+    });
+    
     container.addEventListener('scroll', function (event) {
       scheduler.enqueue(prepare);
     }, false);
