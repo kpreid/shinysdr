@@ -49,14 +49,12 @@ class Top(gr.top_block, sdr.ExportedState):
 		# Note: Docs for these setters at gr-osmosdr/lib/source_iface.h
 		source.set_sample_rate(input_rate)
 		source.set_center_freq(hw_freq, ch)
-		source.set_freq_corr(0, ch) # We implement correction internally because setting this at runtime breaks things
+		# freq_corr: We implement correction internally because setting this at runtime breaks things
 		source.set_iq_balance_mode(0, ch) # TODO
-		source.set_gain_mode(True, ch) # automatic gain # TODO
-		#source.set_gain(10, ch)    # ignored in automatic mode
-		#source.set_if_gain(24, ch) # ignored in automatic mode
-		#source.set_bb_gain(20, ch) # ignored in automatic mode
+		# gain_mode and gain: handled by accessors
 		source.set_antenna("", ch) # n/a to RTLSDR
 		source.set_bandwidth(0, ch) # TODO is this relevant
+		# Note: There is a DC cancel facility but it is not implemented for RTLSDR
 		
 		print 'range ', source.get_gain_range(ch).start(), source.get_gain_range(ch).stop()
 		
