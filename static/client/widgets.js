@@ -765,6 +765,37 @@ var sdr = sdr || {};
   }
   widgets.FreqList = FreqList;
   
+  function RecordDetails(config) {
+    var recordCell = config.target;
+    var container = this.element = config.element;
+    
+    function input() {
+      var el = document.createElement('input');
+      container.appendChild(el);
+      el.readOnly = true;
+      return el;
+    }
+    var typeField = input();
+    var freqField = input();
+    var modeField = input();
+    var labelField = input();
+    var notesField = input();
+    
+    function draw() {
+      var record = recordCell.depend(draw);
+      if (!record) record = {};
+      typeField.value = record.type;
+      freqField.value = record.freq || record.lowerFreq + '-' + record.upperFreq;
+      modeField.value = record.mode;
+      labelField.value = record.label;
+      notesField.value = record.notes;
+    }
+    draw.scheduler = config.scheduler;
+    
+    draw();
+  }
+  widgets.RecordDetails = RecordDetails;
+  
   function Scanner(config) {
     var radio = config.radio;
     var hw_freq = radio.hw_freq;

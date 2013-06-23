@@ -96,6 +96,20 @@ var sdr = sdr || {};
   };
   network.Cell = Cell;
   
+  function LocalCell() {
+    Cell.call(this);
+    this._value = undefined;
+  }
+  LocalCell.prototype = Object.create(Cell.prototype, {constructor: {value: LocalCell}});
+  LocalCell.prototype.get = function() {
+    return this._value;
+  };
+  LocalCell.prototype.set = function(v) {
+    this._value = v;
+    this.n.notify();
+  };
+  network.LocalCell = LocalCell;
+  
   function ReadWriteCell(name, assumed) {
     Cell.call(this);
     var value = assumed;
