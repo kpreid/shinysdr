@@ -768,7 +768,8 @@ var sdr = sdr || {};
   function Scanner(config) {
     var radio = config.radio;
     var hw_freq = radio.hw_freq;
-    var rec_freq = radio.receiver.rec_freq;
+    // TODO: Receiver object gets swapped out so this stops working - find a better design
+    //var rec_freq = radio.receiver.rec_freq;
     var preset = radio.preset;
     var spectrum = radio.spectrum_fft;
     var scan_presets = radio.scan_presets;
@@ -776,7 +777,7 @@ var sdr = sdr || {};
     var scanInterval;
     
     function isSignalPresent() {
-      var targetFreq = rec_freq.get();
+      var targetFreq = radio.receiver.rec_freq.get();
       var band = 10e3;
       
       var curSpectrum = spectrum.get();
@@ -800,7 +801,7 @@ var sdr = sdr || {};
     }
     
     function findNextChannel(direction) {
-      var oldFreq = rec_freq.get();
+      var oldFreq = radio.receiver.rec_freq.get();
       var db = scan_presets.get();
       if (direction > 0) {
         return db.inBand(oldFreq + 0.5, Infinity).first() || db.first();
