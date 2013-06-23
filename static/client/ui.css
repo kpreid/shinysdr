@@ -221,3 +221,14 @@ body, .panel {
 .widget-FreqList .freqlist-cell-freq { text-align: right; }
 .widget-FreqList .freqlist-cell-mode { }
 .widget-FreqList .freqlist-cell-label { }
+
+/* widgets: RecordDetails */
+.widget-RecordDetails .RecordDetails-fields {
+  display: table;
+}
+.widget-RecordDetails label {
+  display: table-row;
+}
+.widget-RecordDetails .RecordDetails-labeltext, .widget-RecordDetails input {
+  display: table-cell;
+}

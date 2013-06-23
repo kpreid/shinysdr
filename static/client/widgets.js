@@ -769,17 +769,25 @@ var sdr = sdr || {};
     var recordCell = config.target;
     var container = this.element = config.element;
     
-    function input() {
-      var el = document.createElement('input');
-      container.appendChild(el);
-      el.readOnly = true;
-      return el;
+    var inner = container.appendChild(document.createElement('div'));
+    inner.className = 'RecordDetails-fields';
+    
+    function input(name) {
+      var label = inner.appendChild(document.createElement('label'));
+      
+      var text = label.appendChild(document.createElement('span'));
+      text.className = 'RecordDetails-labeltext';
+      text.textContent = name;
+      
+      var field = label.appendChild(document.createElement('input'));
+      field.readOnly = true;
+      return field;
     }
-    var typeField = input();
-    var freqField = input();
-    var modeField = input();
-    var labelField = input();
-    var notesField = input();
+    var typeField = input('Type');
+    var freqField = input('Freq');
+    var modeField = input('Mode');
+    var labelField = input('Label');
+    var notesField = input('Notes');
     
     function draw() {
       var record = recordCell.depend(draw);
