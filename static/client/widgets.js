@@ -12,6 +12,15 @@ var sdr = sdr || {};
     return (value % modulus + modulus) % modulus;
   }
   
+  // TODO get this from server
+  var allModes = Object.create(null);
+  allModes.WFM = 'Wide FM';
+  allModes.NFM = 'Narrow FM';
+  allModes.AM = 'AM';
+  allModes.LSB = 'Lower SSB';
+  allModes.USB = 'Upper SSB';
+  allModes.VOR = 'VOR';
+  
   // Defines the display parameters and coordinate calculations of the spectrum widgets
   var MAX_ZOOM_BINS = 60; // Maximum zoom shows this many FFT bins
   function SpectrumView(config) {
@@ -725,9 +734,7 @@ var sdr = sdr || {};
         default:
           break;
       }
-      // TODO: generalize, get supported modes from server
-      var supportedModes = ['WFM', 'NFM', 'AM', 'LSB', 'USB', 'VOR'];
-      if (supportedModes.indexOf(record.mode) === -1) {
+      if (!(record.mode in allModes)) {
         item.classList.add('freqlist-item-unsupported');
       }
       item.addEventListener('click', function(event) {
@@ -772,20 +779,34 @@ var sdr = sdr || {};
     var inner = container.appendChild(document.createElement('div'));
     inner.className = 'RecordDetails-fields';
     
-    function input(name) {
+    function labeled(name, field) {
       var label = inner.appendChild(document.createElement('label'));
       
       var text = label.appendChild(document.createElement('span'));
       text.className = 'RecordDetails-labeltext';
       text.textContent = name;
       
-      var field = label.appendChild(document.createElement('input'));
-      field.readOnly = true;
+      label.appendChild(field);
       return field;
     }
-    var typeField = input('Type');
+    function input(name) {
+      var field = document.createElement('input');
+      field.readOnly = true;
+      return labeled(name, field);
+    }
+    function menu(name, values) {
+      var field = document.createElement('select');
+      field.readOnly = true;
+      for (var key in values) {
+        var option = field.appendChild(document.createElement('option'));
+        option.value = key;
+        option.textContent = values[key];
+      }
+      return labeled(name, field);
+    }
+    var typeField = menu('Type', {'channel': 'Channel', 'band': 'Band'});
     var freqField = input('Freq');
-    var modeField = input('Mode');
+    var modeField = menu('Mode', allModes);
     var labelField = input('Label');
     var notesField = input('Notes');
     
