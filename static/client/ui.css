@@ -225,10 +225,16 @@ body, .panel {
 /* widgets: RecordDetails */
 .widget-RecordDetails .RecordDetails-fields {
   display: table;
+  border-collapse: collapse;
+  width: 100%;
 }
 .widget-RecordDetails label {
   display: table-row;
 }
 .widget-RecordDetails .RecordDetails-labeltext, .widget-RecordDetails input {
   display: table-cell;
+}
+.widget-RecordDetails input {
+  box-sizing: border-box;
+  width: 100%;
 }
