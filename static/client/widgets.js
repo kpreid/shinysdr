@@ -796,7 +796,7 @@ var sdr = sdr || {};
     }
     function menu(name, values) {
       var field = document.createElement('select');
-      field.readOnly = true;
+      field.disabled = true; // readOnly not applicable
       for (var key in values) {
         var option = field.appendChild(document.createElement('option'));
         option.value = key;
@@ -804,11 +804,16 @@ var sdr = sdr || {};
       }
       return labeled(name, field);
     }
+    function textarea() {
+      var field = container.appendChild(document.createElement('textarea'));
+      field.readOnly = true;
+      return field;
+    }
     var typeField = menu('Type', {'channel': 'Channel', 'band': 'Band'});
     var freqField = input('Freq');
     var modeField = menu('Mode', allModes);
     var labelField = input('Label');
-    var notesField = input('Notes');
+    var notesField = textarea();
     
     function draw() {
       var record = recordCell.depend(draw);

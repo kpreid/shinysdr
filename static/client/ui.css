@@ -238,3 +238,9 @@ body, .panel {
   box-sizing: border-box;
   width: 100%;
 }
+.widget-RecordDetails textarea {
+  box-sizing: border-box;
+  margin: 0;
+  width: 100%;
+  height: 6em;
+}
