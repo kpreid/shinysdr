@@ -66,6 +66,15 @@ class Top(gr.top_block, ExportedState):
 		self.sources = CollectionState(self._sources)
 		self.receivers = ReceiverCollection(self._receivers, self)
 		
+		# Audio stream bits
+		num_audio_channels = 2
+		self.audio_stream_join = blocks.streams_to_vector(gr.sizeof_float, num_audio_channels)
+		self.audio_stream_queue = gr.msg_queue(limit=100)
+		self.audio_stream_sink = blocks.message_sink(
+			gr.sizeof_float * num_audio_channels,
+			self.audio_stream_queue,
+			True)
+		
 		# Flags, other state
 		self.__needs_audio_restart = True
 		self.__needs_spectrum = True
@@ -219,6 +228,9 @@ class Top(gr.top_block, ExportedState):
 				# connect audio output only if there is at least one input
 				# sink is recreated each time to workaround problem with restarting audio sinks on Mac OS X. TODO: do only on OS X, or report/fix gnuradio bug
 				audio_sink = audio.sink(self.audio_rate, "", False)
+				self.connect(audio_sum_l, (self.audio_stream_join, 0))
+				self.connect(audio_sum_r, (self.audio_stream_join, 1))
+				self.connect(self.audio_stream_join, self.audio_stream_sink)
 				self.connect(audio_sum_l, (audio_sink, 0))
 				self.connect(audio_sum_r, (audio_sink, 1))
 		
