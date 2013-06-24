@@ -76,6 +76,11 @@
       _scanView = view;
       this.n.notify();
     };
+    
+    // kludge till we have proper editing
+    var writableDB = new sdr.database.Table();
+    freqDB.add(writableDB);
+    radio.targetDB = writableDB; // kludge reference
   
     var view = new sdr.widget.SpectrumView({
       scheduler: scheduler,

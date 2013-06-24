@@ -830,6 +830,27 @@ var sdr = sdr || {};
   }
   widgets.RecordDetails = RecordDetails;
   
+  // Silly single-purpose widget 'till we figure out more where the UI is going
+  function SaveButton(config) {
+    var radio = config.radio; // use mode, receiver
+    this.element = config.element;
+
+    var button = config.element.querySelector('button');
+    button.disabled = false;
+    button.onclick = function (event) {
+      var record = {
+        type: 'channel',
+        freq: radio.receiver.rec_freq.get(),
+        mode: radio.mode.get(), // TODO should be able to take from receiver
+        label: 'untitled',
+        notes: ''
+      };
+      radio.targetDB.add(record);
+      radio.preset.set(record);
+    };
+  }
+  widgets.SaveButton = SaveButton;
+  
   function Scanner(config) {
     var radio = config.radio;
     var hw_freq = radio.hw_freq;
