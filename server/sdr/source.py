@@ -31,7 +31,7 @@ class Source(gr.hier_block2, sdr.ExportedState):
 		return False
 
 class AudioSource(Source):
-	def __init__(self, name='Audio Device Source', **kwargs):
+	def __init__(self, name='Audio Device Source', quadrature_as_stereo=False, **kwargs):
 		Source.__init__(self, name=name, **kwargs)
 		self.__sample_rate = 44100
 		self.__complex = gnuradio.blocks.float_to_complex(1)
@@ -40,6 +40,9 @@ class AudioSource(Source):
 			device_name='', # TODO configurability
 			ok_to_block=True)
 		self.connect(self.__source, self.__complex, self)
+		if quadrature_as_stereo:
+			# if we don't do this, the imaginary component is 0 and the spectrum is symmetric
+			self.connect((self.__source, 1), (self.__complex, 1))
 	
 	def state_def(self, callback):
 		super(AudioSource, self).state_def(callback)

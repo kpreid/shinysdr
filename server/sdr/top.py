@@ -157,7 +157,7 @@ class Top(gr.top_block, sdr.ExportedState):
 			self._update_receiver_validity()
 			self.receiver.set_input_center_freq(self.source.get_freq())
 		self.source = sdr.source.OsmoSDRSource(tune_hook=tune_hook)
-		#self.source = sdr.source.AudioSource(tune_hook=tune_hook)
+		#self.source = sdr.source.AudioSource(tune_hook=tune_hook, quadrature_as_stereo=True)
 
 	def _make_spectrum(self):
 		self.spectrum_probe = blocks.probe_signal_vf(self.spectrum_resolution)
