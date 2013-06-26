@@ -43,12 +43,12 @@ var sdr = sdr || {};
     function prepare() {
       // TODO: unbreakable notify loop here; need to be lazy
       bandwidth = radio.input_rate.depend(prepare);
-      centerFreq = radio.hw_freq.depend(prepare);
+      centerFreq = radio.source.freq.depend(prepare);
       leftFreq = centerFreq - bandwidth / 2;
       pixelWidth = container.offsetWidth;
       pixelsPerHertz = pixelWidth / bandwidth * zoom;
       n.notify();
-      // Note that this uses hw_freq, not the spectrum data center freq. This is correct because we want to align the coords with what we have selected, not the current data; and the WaterfallPlot is aware of this distinction.
+      // Note that this uses source.freq, not the spectrum data center freq. This is correct because we want to align the coords with what we have selected, not the current data; and the WaterfallPlot is aware of this distinction.
     }
     prepare.scheduler = config.scheduler;
     prepare();
@@ -205,7 +205,7 @@ var sdr = sdr || {};
       
       var len = buffer.length;
       
-      var viewCenterFreq = states.hw_freq.depend(draw);
+      var viewCenterFreq = states.source.freq.depend(draw);
       var bandwidth = states.input_rate.depend(draw);
       var xZero = freqToCoord(viewCenterFreq - bandwidth/2);
       var xFullScale = freqToCoord(viewCenterFreq + bandwidth/2);
@@ -308,7 +308,7 @@ var sdr = sdr || {};
 
       var h = canvas.height;
       var bandwidth = states.input_rate.depend(draw);
-      var viewCenterFreq = states.hw_freq.depend(draw);
+      var viewCenterFreq = states.source.freq.depend(draw);
       
       // adjust canvas's display width to zoom
       // TODO this can be independent of other drawing
@@ -853,7 +853,7 @@ var sdr = sdr || {};
   
   function Scanner(config) {
     var radio = config.radio;
-    var hw_freq = radio.hw_freq;
+    var hw_freq = radio.source.freq;
     // TODO: Receiver object gets swapped out so this stops working - find a better design
     //var rec_freq = radio.receiver.rec_freq;
     var preset = radio.preset;
@@ -897,7 +897,7 @@ var sdr = sdr || {};
     }
 
     function runScan() {
-      if (spectrum.getCenterFreq() !== radio.hw_freq.get()) {
+      if (spectrum.getCenterFreq() !== radio.source.freq.get()) {
         console.log('Not caught up...');
       } else if (isSignalPresent()) {
         console.log('Holding...');

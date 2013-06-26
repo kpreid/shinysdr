@@ -55,14 +55,14 @@
       sdr.network.LocalCell.prototype.set.call(this, freqRecord);
       var freq = freqRecord.freq;
       radio.mode.set(freqRecord.mode);
-      if (!frequencyInRange(freq, radio.hw_freq.get())) {
+      if (!frequencyInRange(freq, radio.source.freq.get())) {
         if (freq < radio.input_rate.get() / 2) {
           // recognize tuning for 0Hz gimmick
-          radio.hw_freq.set(0);
+          radio.source.freq.set(0);
         } else {
-          //radio.hw_freq.set(freq - 0.2e6);
+          //radio.source.freq.set(freq - 0.2e6);
           // left side, just inside of frequencyInRange's test
-          radio.hw_freq.set(freq + radio.input_rate.get() * 0.374);
+          radio.source.freq.set(freq + radio.input_rate.get() * 0.374);
         }
       }
       radio.receiver.rec_freq.set(freq);

@@ -123,7 +123,7 @@ class MultistageChannelFilter(gr.hier_block2):
 			gr.io_signature(1, 1, gr.sizeof_gr_complex*1),
 		)
 		
-		total_decimation = input_rate // output_rate
+		total_decimation = max(1, input_rate // output_rate)
 		stage_decimations = _factorize(total_decimation)
 		stage_decimations.reverse()
 		if len(stage_decimations) == 0:

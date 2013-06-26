@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import gnuradio
 from gnuradio import audio
 from gnuradio import blks2
 from gnuradio import blocks
@@ -7,15 +8,13 @@ from gnuradio import gr
 from gnuradio.eng_option import eng_option
 from gnuradio.gr import firdes
 from optparse import OptionParser
-import osmosdr
 import sdr
 from sdr import Cell, BlockCell
+import sdr.source
 import sdr.receiver
 import sdr.receivers.vor
 
 class SpectrumTypeStub: pass
-
-ch = 0 # osmosdr channel, to avoid magic number
 
 class Top(gr.top_block, sdr.ExportedState):
 
@@ -23,18 +22,15 @@ class Top(gr.top_block, sdr.ExportedState):
 		gr.top_block.__init__(self, "SDR top block")
 		self._running = False
 		
-		# TODO present sample rate configuration using source.get_sample_rates().values()
-		# TODO present hw freq range
+		self._make_source()
+		self.input_rate = input_rate = self.source.get_sample_rate()
 		
 		##################################################
 		# Variables
 		##################################################
-		self.input_rate = input_rate = 3200000
 		self.audio_rate = audio_rate =   32000
-		self.hw_freq = hw_freq = 98e6
 		self.spectrum_resolution = 4096
 		self.spectrum_rate = 30
-		self.hw_correction_ppm = 0
 
 		##################################################
 		# Blocks
@@ -44,37 +40,25 @@ class Top(gr.top_block, sdr.ExportedState):
 		
 		self.audio_sink = None
 		
-		osmo_device = "rtl=0"
-		self.osmosdr_source_block = source = osmosdr.source_c("nchan=1 " + osmo_device)
-		# Note: Docs for these setters at gr-osmosdr/lib/source_iface.h
-		source.set_sample_rate(input_rate)
-		source.set_center_freq(hw_freq, ch)
-		# freq_corr: We implement correction internally because setting this at runtime breaks things
-		source.set_iq_balance_mode(0, ch) # TODO
-		# gain_mode and gain: handled by accessors
-		source.set_antenna("", ch) # n/a to RTLSDR
-		source.set_bandwidth(0, ch) # TODO is this relevant
-		# Note: There is a DC cancel facility but it is not implemented for RTLSDR
-		
-		print 'range ', source.get_gain_range(ch).start(), source.get_gain_range(ch).stop()
-		
 		self._make_spectrum()
 		
 		self._mode = None
-		self.set_mode('WFM') # triggers connect
+		self.set_mode('AM') # triggers connect
 
 	def _do_connect(self):
 		self.lock()
 		self.disconnect_all()
 
-		self.connect(self.osmosdr_source_block, self.spectrum_fft, self.spectrum_probe)
-
 		# workaround problem with restarting audio sinks on Mac OS X
+		if self.source.needs_restart():
+			self._make_source()
 		self.audio_sink = audio.sink(self.audio_rate, "", False)
+
+		self.connect(self.source, self.spectrum_fft, self.spectrum_probe)
 
 		self.last_receiver_is_valid = self.receiver.get_is_valid()
 		if self.receiver is not None and self.last_receiver_is_valid and self.audio_sink is not None:
-			self.connect(self.osmosdr_source_block, self.receiver, self.audio_sink)
+			self.connect(self.source, self.receiver, self.audio_sink)
 		
 		self.unlock()
 
@@ -88,13 +72,10 @@ class Top(gr.top_block, sdr.ExportedState):
 		callback(Cell(self, 'mode', writable=True, ctor=str))
 		callback(Cell(self, 'input_rate', ctor=int))
 		callback(Cell(self, 'audio_rate', ctor=int))
-		callback(Cell(self, 'hw_freq', writable=True, ctor=float))
-		callback(Cell(self, 'hw_correction_ppm', writable=True, ctor=float))
-		callback(Cell(self, 'hw_agc', writable=True, ctor=bool))
-		callback(Cell(self, 'hw_gain', writable=True, ctor=float))
 		callback(Cell(self, 'spectrum_resolution', True, ctor=int))
 		callback(Cell(self, 'spectrum_rate', True, ctor=float))
 		callback(Cell(self, 'spectrum_fft', ctor=SpectrumTypeStub))
+		callback(BlockCell(self, 'source'))
 		callback(BlockCell(self, 'receiver'))
 
 	def start(self):
@@ -148,7 +129,7 @@ class Top(gr.top_block, sdr.ExportedState):
 				options['lsb'] = True
 			self.receiver = clas(
 				input_rate=self.input_rate,
-				input_center_freq=self.hw_freq,
+				input_center_freq=self.source.get_freq(),
 				audio_rate=self.audio_rate,
 				revalidate_hook=lambda: self._update_receiver_validity(),
 				**options
@@ -171,53 +152,13 @@ class Top(gr.top_block, sdr.ExportedState):
 	def get_audio_rate(self):
 		return self.audio_rate
 
-	def get_hw_freq(self):
-		return self.hw_freq
+	def _make_source(self):
+		def tune_hook():
+			self._update_receiver_validity()
+			self.receiver.set_input_center_freq(self.source.get_freq())
+		self.source = sdr.source.OsmoSDRSource(tune_hook=tune_hook)
+		#self.source = sdr.source.AudioSource(tune_hook=tune_hook)
 
-	def set_hw_freq(self, hw_freq):
-		actual_freq = self._compute_frequency(hw_freq)
-		# TODO: This limitation is in librtlsdr. If we support other gr-osmosdr devices, change it.
-		maxint32 = 2**32 - 1
-		if actual_freq < 0 or actual_freq > maxint32:
-			raise ValueError, 'Frequency must be between 0 and ' + str(maxint32) + ' Hz'
-		self.hw_freq = hw_freq
-		self._update_frequency()
-		self._update_receiver_validity()
-
-	def get_hw_correction_ppm(self):
-		return self.hw_correction_ppm
-	
-	def set_hw_correction_ppm(self, value):
-		self.hw_correction_ppm = value
-		# Not using the hardware feature because I only get garbled output from it
-		#self.osmosdr_source_block.set_freq_corr(value, 0)
-		self._update_frequency()
-	
-	def _compute_frequency(self, effective_freq):
-		if effective_freq == 0.0:
-			# Quirk: Tuning to 3686.6-3730 MHz (on some tuner HW) causes operation effectively at 0Hz.
-			# Original report: <http://www.reddit.com/r/RTLSDR/comments/12d2wc/a_very_surprising_discovery/>
-			return 3700e6
-		else:
-			return effective_freq * (1 - 1e-6 * self.hw_correction_ppm)
-	
-	def _update_frequency(self):
-		self.osmosdr_source_block.set_center_freq(self._compute_frequency(self.hw_freq), 0)
-		# TODO: read back actual frequency and store
-		self.receiver.set_input_center_freq(self.hw_freq)
-
-	def get_hw_agc(self):
-		return bool(self.osmosdr_source_block.get_gain_mode(ch))
-
-	def set_hw_agc(self, value):
-		self.osmosdr_source_block.set_gain_mode(bool(value), ch)
-	
-	def get_hw_gain(self):
-		return self.osmosdr_source_block.get_gain(ch)
-	
-	def set_hw_gain(self, value):
-		self.osmosdr_source_block.set_gain(float(value), ch)
-	
 	def _make_spectrum(self):
 		self.spectrum_probe = blocks.probe_signal_vf(self.spectrum_resolution)
 		self.spectrum_fft = blks2.logpwrfft_c(
@@ -244,7 +185,7 @@ class Top(gr.top_block, sdr.ExportedState):
 		self.spectrum_fft.set_vec_rate(value)
 
 	def get_spectrum_fft(self):
-		return (self.hw_freq, self.spectrum_probe.level())
+		return (self.source.get_freq(), self.spectrum_probe.level())
 
 
 if __name__ == '__main__':
