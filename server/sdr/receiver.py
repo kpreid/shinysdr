@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import gnuradio
 from gnuradio import gr
 from gnuradio import blocks
 from gnuradio import blks2
@@ -293,7 +294,7 @@ class SSBReceiver(SimpleAudioReceiver):
 				self.band_filter_width,
 				gr.firdes.WIN_HAMMING))
 		
-		self.agc_block = gr.feedforward_agc_cc(1024, 0.25)
+		self.agc_block = gnuradio.analog.agc2_cc(reference=0.25)
 		
 		self.ssb_demod_block = blocks.complex_to_real(1)
 		
