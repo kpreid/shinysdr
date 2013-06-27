@@ -10,7 +10,6 @@ from gnuradio.gr import firdes
 from optparse import OptionParser
 import sdr
 from sdr import Cell, BlockCell
-import sdr.source
 import sdr.receiver
 import sdr.receivers.vor
 
@@ -18,12 +17,15 @@ class SpectrumTypeStub: pass
 
 class Top(gr.top_block, sdr.ExportedState):
 
-	def __init__(self):
+	def __init__(self, source_factories=None):
 		gr.top_block.__init__(self, "SDR top block")
 		self._running = False
 		
+		if source_factories is None:
+			raise ValueError, 'source_factories not specified'
+		self._source_factories = source_factories
+		self.source_name = 'audio' # placeholder - TODO be nothing instead
 		self._make_source()
-		self.input_rate = input_rate = self.source.get_sample_rate()
 		
 		##################################################
 		# Variables
@@ -50,6 +52,7 @@ class Top(gr.top_block, sdr.ExportedState):
 		self.disconnect_all()
 
 		# workaround problem with restarting audio sinks on Mac OS X
+		# TODO: this will also needlessly re-restart on initialization
 		if self.source.needs_restart():
 			self._make_source()
 		self.audio_sink = audio.sink(self.audio_rate, "", False)
@@ -69,6 +72,7 @@ class Top(gr.top_block, sdr.ExportedState):
 	def state_def(self, callback):
 		super(Top, self).state_def(callback)
 		callback(Cell(self, 'running', writable=True, ctor=bool))
+		callback(Cell(self, 'source_name', writable=True, ctor=str))
 		callback(Cell(self, 'mode', writable=True, ctor=str))
 		callback(Cell(self, 'input_rate', ctor=int))
 		callback(Cell(self, 'audio_rate', ctor=int))
@@ -92,6 +96,26 @@ class Top(gr.top_block, sdr.ExportedState):
 			else:
 				self.stop()
 				self.wait()
+
+	def get_source_name(self):
+		return self.source_name
+	
+	def set_source_name(self, value):
+		if value == self.source_name:
+			return
+		raise Exception, 'Switching sources doesn\'t yet work correctly'
+		#self._source_factories[value] # raise error if not present
+		#self.source_name = value
+		#old_rate = self.input_rate
+		#self._make_source()
+		#if old_rate != self.input_rate:
+		#	# rebuild everything rate-dependent
+		#	mode = self._mode
+		#	self._mode = None # force receiver rebuild
+		#	self.set_mode(mode)
+		#	self._make_spectrum()
+		#else:
+		#	self._do_connect()
 
 	def get_mode(self):
 		return self._mode
@@ -138,16 +162,9 @@ class Top(gr.top_block, sdr.ExportedState):
 			self._mode = kind
 		finally:
 			self.unlock()
-		
 
 	def get_input_rate(self):
 		return self.input_rate
-
-	# TODO: this looks unsafe (doesn't adjust decimation), fix or toss
-	#def set_input_rate(self, input_rate):
-	#	self.input_rate = input_rate
-	#	self.osmosdr_source_block.set_sample_rate(self.input_rate)
-	#	self.freq_xlating_fir_filter_xxx_0.set_taps((gr.firdes.low_pass(1.0, self.input_rate, self.band_filter, 8*100e3, gr.firdes.WIN_HAMMING)))
 
 	def get_audio_rate(self):
 		return self.audio_rate
@@ -156,8 +173,8 @@ class Top(gr.top_block, sdr.ExportedState):
 		def tune_hook():
 			self._update_receiver_validity()
 			self.receiver.set_input_center_freq(self.source.get_freq())
-		self.source = sdr.source.OsmoSDRSource(tune_hook=tune_hook)
-		#self.source = sdr.source.AudioSource(tune_hook=tune_hook, quadrature_as_stereo=True)
+		self.source = self._source_factories[self.source_name](tune_hook=tune_hook)
+		self.input_rate = self.source.get_sample_rate()
 
 	def _make_spectrum(self):
 		self.spectrum_probe = blocks.probe_signal_vf(self.spectrum_resolution)

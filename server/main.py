@@ -13,7 +13,7 @@ import os
 import shutil
 
 import sdr.top
-import sdr.wfm
+import sdr.source
 
 filename = 'state.json'
 def noteDirty():
@@ -174,8 +174,12 @@ for name in ['jasmine.css', 'jasmine.js', 'jasmine-html.js']:
 	shutil.copyfile('deps/jasmine/lib/jasmine-core/' + name, jasmineOut + name);
 
 print 'Flow graph...'
+source_factories = {
+	'audio': sdr.source.AudioSource,
+	'rtl': sdr.source.OsmoSDRSource,
+}
 # Note: This is slow as it triggers the OsmoSDR device initialization
-top = sdr.top.Top()
+top = sdr.top.Top(source_factories=source_factories)
 restore(top)
 
 print 'WebSockets server...'
