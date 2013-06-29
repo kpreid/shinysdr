@@ -170,7 +170,9 @@ class Top(gr.top_block, sdr.ExportedState):
 	
 	def _make_receiver(self, kind):
 		'''Returns the receiver.'''
-		if kind == 'NFM':
+		if kind == 'IQ':
+			clas = sdr.receiver.IQReceiver
+		elif kind == 'NFM':
 			clas = sdr.receiver.NFMReceiver
 		elif kind == 'WFM':
 			clas = sdr.receiver.WFMReceiver

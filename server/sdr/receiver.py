@@ -206,6 +206,27 @@ def make_resampler(in_rate, out_rate):
 		firdes.low_pass(pfbsize, pfbsize, 0.4*resample_ratio, 0.2*resample_ratio),
 		pfbsize)
 
+
+class IQReceiver(SimpleAudioReceiver):
+	def __init__(self, name='I/Q', audio_rate=None, **kwargs):
+		SimpleAudioReceiver.__init__(self,
+			name=name,
+			audio_rate=audio_rate,
+			demod_rate=audio_rate,
+			band_filter=audio_rate*0.5,
+			band_filter_transition=audio_rate*0.2,
+			**kwargs)
+		
+		self.split_block = gr.complex_to_float(1)
+		
+		self.connect(
+			self,
+			self.band_filter_block,
+			self.squelch_block,
+			self.split_block)
+		self.connect_audio_output((self.split_block, 0), (self.split_block, 1))
+
+
 class AMReceiver(SimpleAudioReceiver):
 	def __init__(self, name='AM', **kwargs):
 		demod_rate = 48000
