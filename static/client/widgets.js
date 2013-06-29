@@ -183,10 +183,32 @@ var sdr = sdr || {};
       ctx.fillRect(x1, 0, x2 - x1, ctx.canvas.height);
     }
     
-    function draw() {
-      var buffer = fftCell.depend(draw);
+    // used as listener by draw() for fftCell
+    function newFFTFrame() {
+      var buffer = fftCell.get();
       var bufferCenterFreq = fftCell.getCenterFreq();
+      var len = buffer.length;
       
+      // averaging
+      // TODO: Get separate averaged and unaveraged FFTs from server so that averaging behavior is not dependent on frame rate over the network
+      if (!averageBuffer
+          || averageBuffer.length !== len
+          || (lastDrawnCenterFreq !== bufferCenterFreq
+              && !isNaN(bufferCenterFreq))) {
+        lastDrawnCenterFreq = bufferCenterFreq;
+        averageBuffer = new Float32Array(buffer);
+      }
+      
+      for (var i = 0; i < len; i++) {
+        averageBuffer[i] = averageBuffer[i] * 0.5 + buffer[i] * 0.5;
+      }
+      
+      draw.scheduler.enqueue(draw);
+    }
+    newFFTFrame.scheduler = config.scheduler;
+    
+    function draw() {
+      fftCell.n.listen(newFFTFrame);
       view.n.listen(draw);
       lvf = view.leftVisibleFreq();
       rvf = view.rightVisibleFreq();
@@ -203,7 +225,7 @@ var sdr = sdr || {};
         ctx.clearRect(0, 0, w, h);
       }
       
-      var len = buffer.length;
+      var len = averageBuffer.length;
       
       var viewCenterFreq = states.source.freq.depend(draw);
       var bandwidth = states.input_rate.depend(draw);
@@ -212,19 +234,6 @@ var sdr = sdr || {};
       var xScale = (xFullScale - xZero) / len;
       var yScale = -h / (view.maxLevel - view.minLevel);
       var yZero = -view.maxLevel * yScale;
-      
-      // averaging
-      // TODO: Get separate averaged and unaveraged FFTs from server so that averaging behavior is not dependent on frame rate over the network
-      if (!averageBuffer
-          || averageBuffer.length !== len
-          || (lastDrawnCenterFreq !== bufferCenterFreq
-              && !isNaN(bufferCenterFreq))) {
-        lastDrawnCenterFreq = bufferCenterFreq;
-        averageBuffer = new Float32Array(buffer);
-      }
-      for (var i = 0; i < len; i++) {
-        averageBuffer[i] = averageBuffer[i] * 0.5 + buffer[i] * 0.5;
-      }
       
       // TODO: marks ought to be part of a distinct widget
       var squelch = Math.floor(yZero + states.receiver.squelch_threshold.depend(draw) * yScale) + 0.5;
@@ -270,6 +279,7 @@ var sdr = sdr || {};
     draw.scheduler = config.scheduler;
     view.addClickToTune(canvas);
     
+    newFFTFrame();
     draw();
   }
   widgets.SpectrumPlot = SpectrumPlot;
