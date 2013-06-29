@@ -17,56 +17,103 @@ class SpectrumTypeStub: pass
 
 class Top(gr.top_block, sdr.ExportedState):
 
-	def __init__(self, source_factories=None):
+	def __init__(self, sources={}):
 		gr.top_block.__init__(self, "SDR top block")
 		self._running = False
-		
-		if source_factories is None:
-			raise ValueError, 'source_factories not specified'
-		self._source_factories = source_factories
+
+		# Configuration
+		self._sources = dict(sources)
 		self.source_name = 'audio' # placeholder - TODO be nothing instead
-		self._make_source()
-		
-		##################################################
-		# Variables
-		##################################################
 		self.audio_rate = audio_rate =   32000
 		self.spectrum_resolution = 4096
 		self.spectrum_rate = 30
+		self._mode = 'AM'
 
-		##################################################
 		# Blocks
-		##################################################
+		self.source = None
 		self.receiver = None
-		self.last_receiver_is_valid = False
-		
 		self.audio_sink = None
 		
-		self._make_spectrum()
+		# State flags
+		self.last_receiver_is_valid = False
+		self.__needs_audio_restart = True
+		self.__needs_spectrum = True
+		self.__needs_reconnect = True
+		self.input_rate = None
 		
-		self._mode = None
-		self.set_mode('AM') # triggers connect
+		self._do_connect()
 
 	def _do_connect(self):
-		self.lock()
-		self.disconnect_all()
+		"""Do all reconfiguration operations in the proper order."""
+		if self.__needs_audio_restart:
+			print 'Rebuilding audio blocks'
+			self.__needs_reconnect = True
 
-		# workaround problem with restarting audio sinks on Mac OS X
-		# TODO: this will also needlessly re-restart on initialization
-		if self.source.needs_restart():
-			self._make_source()
-		self.audio_sink = audio.sink(self.audio_rate, "", False)
-
-		self.connect(self.source, self.spectrum_fft, self.spectrum_probe)
-
-		self.last_receiver_is_valid = self.receiver.get_is_valid()
-		if self.receiver is not None and self.last_receiver_is_valid and self.audio_sink is not None:
-			self.connect(self.source, self.receiver, self.audio_sink)
+		rate_changed = False
+		if self.source is not self._sources[self.source_name] or self.__needs_audio_restart:
+			print 'Switching source'
+			self.__needs_reconnect = True
+			
+			this_source = self._sources[self.source_name]
+			def tune_hook():
+				if self.source is this_source:
+					self._update_receiver_validity()
+					self.receiver.set_input_center_freq(self.source.get_freq())
+			this_source.set_tune_hook(tune_hook)
+			self.source = this_source
+			this_rate = this_source.get_sample_rate()
+			rate_changed = self.input_rate != this_rate
+			self.input_rate = this_rate
 		
-		self.unlock()
+		# clear separately because used twice above
+		self.__needs_audio_restart = False
+		
+		if self.__needs_spectrum or rate_changed:
+			print 'Rebuilding spectrum FFT'
+			self.__needs_spectrum = False
+			self.__needs_reconnect = True
+			
+			self.spectrum_probe = blocks.probe_signal_vf(self.spectrum_resolution)
+			self.spectrum_fft = blks2.logpwrfft_c(
+				sample_rate=self.input_rate,
+				fft_size=self.spectrum_resolution,
+				ref_scale=2,
+				frame_rate=self.spectrum_rate,
+				avg_alpha=1.0,
+				average=False,
+			)
+
+		if rate_changed:
+			print 'Rebuilding receiver'
+			self.receiver = self._make_receiver(self.get_mode())
+			self.__needs_reconnect = True
+
+		if self.__needs_reconnect and self.source.needs_renew():
+			print 'Renewing source'
+			self.source = self.source.renew()
+			self._sources[self.source_name] = self.source
+
+		if self.__needs_reconnect:
+			print 'Reconnecting'
+			self.__needs_reconnect = False
+			
+			self.lock()
+			self.disconnect_all()
+
+			# workaround problem with restarting audio sinks on Mac OS X
+			self.audio_sink = audio.sink(self.audio_rate, "", False)
+
+			self.connect(self.source, self.spectrum_fft, self.spectrum_probe)
+
+			self.last_receiver_is_valid = self.receiver.get_is_valid()
+			if self.receiver is not None and self.last_receiver_is_valid and self.audio_sink is not None:
+				self.connect(self.source, self.receiver, self.audio_sink)
+		
+			self.unlock()
 
 	def _update_receiver_validity(self):
 		if self.receiver.get_is_valid() != self.last_receiver_is_valid:
+			self.__needs_reconnect = True
 			self._do_connect()
 
 	def state_def(self, callback):
@@ -83,6 +130,7 @@ class Top(gr.top_block, sdr.ExportedState):
 		callback(BlockCell(self, 'receiver'))
 
 	def start(self):
+		self.__needs_audio_restart = True
 		self._do_connect() # audio sink workaround
 		super(Top, self).start()
 
@@ -103,19 +151,9 @@ class Top(gr.top_block, sdr.ExportedState):
 	def set_source_name(self, value):
 		if value == self.source_name:
 			return
-		raise Exception, 'Switching sources doesn\'t yet work correctly'
-		#self._source_factories[value] # raise error if not present
-		#self.source_name = value
-		#old_rate = self.input_rate
-		#self._make_source()
-		#if old_rate != self.input_rate:
-		#	# rebuild everything rate-dependent
-		#	mode = self._mode
-		#	self._mode = None # force receiver rebuild
-		#	self.set_mode(mode)
-		#	self._make_spectrum()
-		#else:
-		#	self._do_connect()
+		self._sources[value] # raise if not found
+		self.source_name = value
+		self._do_connect()
 
 	def get_mode(self):
 		return self._mode
@@ -123,6 +161,13 @@ class Top(gr.top_block, sdr.ExportedState):
 	def set_mode(self, kind):
 		if kind == self._mode:
 			return
+		self.receiver = self._make_receiver(kind) # may raise on invalid arg
+		self.__needs_reconnect = True
+		self._do_connect()
+		self._mode = kind # only if succeeded
+	
+	def _make_receiver(self, kind):
+		'''Returns the receiver.'''
 		if kind == 'NFM':
 			clas = sdr.receiver.NFMReceiver
 		elif kind == 'WFM':
@@ -135,64 +180,40 @@ class Top(gr.top_block, sdr.ExportedState):
 			clas = sdr.receivers.vor.VOR
 		else:
 			raise ValueError, 'Unknown mode: ' + kind
-		try:
-			self.lock()
-			if self.receiver is not None:
-				options = {
-					'audio_gain': self.receiver.get_audio_gain(),
-					'rec_freq': self.receiver.get_rec_freq(),
-					'squelch_threshold': self.receiver.get_squelch_threshold(),
-				}
-			else:
-				options = {
-					'audio_gain': 0.25,
-					'rec_freq': 97.7e6,
-					'squelch_threshold': -100
-				}
-			if kind == 'LSB':
-				options['lsb'] = True
-			self.receiver = clas(
-				input_rate=self.input_rate,
-				input_center_freq=self.source.get_freq(),
-				audio_rate=self.audio_rate,
-				revalidate_hook=lambda: self._update_receiver_validity(),
-				**options
-			)
-			self._do_connect()
-			self._mode = kind
-		finally:
-			self.unlock()
+		if self.receiver is not None:
+			options = {
+				'audio_gain': self.receiver.get_audio_gain(),
+				'rec_freq': self.receiver.get_rec_freq(),
+				'squelch_threshold': self.receiver.get_squelch_threshold(),
+			}
+		else:
+			options = {
+				'audio_gain': 0.25,
+				'rec_freq': 97.7e6,
+				'squelch_threshold': -100
+			}
+		if kind == 'LSB':
+			options['lsb'] = True
+		return clas(
+			input_rate=self.input_rate,
+			input_center_freq=self.source.get_freq(),
+			audio_rate=self.audio_rate,
+			revalidate_hook=lambda: self._update_receiver_validity(),
+			**options
+		)
 
 	def get_input_rate(self):
 		return self.input_rate
 
 	def get_audio_rate(self):
 		return self.audio_rate
-
-	def _make_source(self):
-		def tune_hook():
-			self._update_receiver_validity()
-			self.receiver.set_input_center_freq(self.source.get_freq())
-		self.source = self._source_factories[self.source_name](tune_hook=tune_hook)
-		self.input_rate = self.source.get_sample_rate()
-
-	def _make_spectrum(self):
-		self.spectrum_probe = blocks.probe_signal_vf(self.spectrum_resolution)
-		self.spectrum_fft = blks2.logpwrfft_c(
-			sample_rate=self.input_rate,
-			fft_size=self.spectrum_resolution,
-			ref_scale=2,
-			frame_rate=self.spectrum_rate,
-			avg_alpha=1.0,
-			average=False,
-		)
 	
 	def get_spectrum_resolution(self):
 		return self.spectrum_resolution
 
 	def set_spectrum_resolution(self, spectrum_resolution):
 		self.spectrum_resolution = spectrum_resolution
-		self._make_spectrum()
+		self.__needs_spectrum = True;
 		self._do_connect()
 
 	def get_spectrum_rate(self):

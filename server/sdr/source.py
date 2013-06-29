@@ -11,13 +11,16 @@ from sdr import Cell
 
 class Source(gr.hier_block2, sdr.ExportedState):
 	'''Generic wrapper for multiple source types, yielding complex samples.'''
-	def __init__(self, name, tune_hook=lambda: None):
+	def __init__(self, name):
 		gr.hier_block2.__init__(
 			self, name,
 			gr.io_signature(0, 0, 0),
 			gr.io_signature(1, 1, gr.sizeof_gr_complex*1),
 		)
-		self.tune_hook = tune_hook  # TODO kludge
+		self.tune_hook = lambda: None
+
+	def set_tune_hook(self, value):
+		self.tune_hook = value
 
 	def state_def(self, callback):
 		super(Source, self).state_def(callback)
@@ -27,17 +30,26 @@ class Source(gr.hier_block2, sdr.ExportedState):
 	def get_sample_rate(self):
 		raise NotImplementedError
 
-	def needs_restart(self):
+	def needs_renew(self):
 		return False
+	def renew(self):
+		return self
 
 class AudioSource(Source):
-	def __init__(self, name='Audio Device Source', quadrature_as_stereo=False, **kwargs):
+	def __init__(self,
+			name='Audio Device Source',
+			device_name='',
+			quadrature_as_stereo=False,
+			**kwargs):
 		Source.__init__(self, name=name, **kwargs)
+		self.__name = name # for reinit only
+		self.__device_name = device_name
 		self.__sample_rate = 44100
+		self.__quadrature_as_stereo = quadrature_as_stereo
 		self.__complex = gnuradio.blocks.float_to_complex(1)
 		self.__source = gnuradio.audio.source(
 			self.__sample_rate,
-			device_name='', # TODO configurability
+			device_name=device_name, # TODO configurability
 			ok_to_block=True)
 		self.connect(self.__source, self.__complex, self)
 		if quadrature_as_stereo:
@@ -51,8 +63,13 @@ class AudioSource(Source):
 	def get_sample_rate(self):
 		return self.__sample_rate
 
-	def needs_restart(self):
+	def needs_renew(self):
 		return True
+	def renew(self):
+		return AudioSource(
+			name=self.__name,
+			device_name=self.__device_name,
+			quadrature_as_stereo=self.__quadrature_as_stereo)
 
 	def get_freq(self):
 		return 0
