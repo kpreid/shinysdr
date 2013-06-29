@@ -23,16 +23,6 @@
   freqDB.add(sdr.database.allSystematic);
   freqDB.add(sdr.database.fromCatalog('/dbs/'));
   
-  // Persist state of all IDed 'details' elements
-  Array.prototype.forEach.call(document.querySelectorAll('details[id]'), function (details) {
-    var ns = new StorageNamespace(localStorage, 'sdr.elementState.' + details.id + '.');
-    var stored = ns.getItem('detailsOpen');
-    if (stored !== null) details.open = JSON.parse(stored);
-    new MutationObserver(function(mutations) {
-      ns.setItem('detailsOpen', JSON.stringify(details.open));
-    }).observe(details, {attributes: true, attributeFilter: ['open']});
-  });
-  
   var radio;
   sdr.network.connect('/radio', function gotDesc(remote) {
     radio = remote;
@@ -139,7 +129,18 @@
         }
         go.scheduler = scheduler;
         go();
-      }()); else {
+
+      }()); else if (node.nodeName === 'DETAILS' && node.hasAttribute('id')) {
+        // Make any ID'd <details> element persistent
+        var ns = new StorageNamespace(localStorage, 'sdr.elementState.' + node.id + '.');
+        var stored = ns.getItem('detailsOpen');
+        if (stored !== null) node.open = JSON.parse(stored);
+        new MutationObserver(function(mutations) {
+          ns.setItem('detailsOpen', JSON.stringify(node.open));
+        }).observe(node, {attributes: true, attributeFilter: ['open']});
+        createWidgetsList(rootTarget, node.childNodes);
+
+      } else {
         createWidgetsList(rootTarget, node.childNodes);
       }
     }
