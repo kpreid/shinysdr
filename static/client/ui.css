@@ -45,6 +45,7 @@ html, body {
   height: 100%;
   overflow-x: scroll;
   overflow-y: hidden;
+  min-width: 0px; /* cause Chrome 27.0.1453.116 to be willing to scroll the flex element rather than stretch; don't know whether this is a bug or what */
 }
 .hscale {
   width: 100%;
@@ -196,6 +197,7 @@ body, .panel {
   -webkit-flex: 1 1;
   overflow-x: hidden;
   overflow-y: scroll;
+  min-height: 0px; /* cause Chrome 27.0.1453.116 to be willing to scroll the flex element rather than stretch; don't know whether this is a bug or what */
   
   font: .7em sans-serif;
   
