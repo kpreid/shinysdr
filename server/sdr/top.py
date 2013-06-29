@@ -107,7 +107,9 @@ class Top(gr.top_block, sdr.ExportedState):
 
 			self.last_receiver_is_valid = self.receiver.get_is_valid()
 			if self.receiver is not None and self.last_receiver_is_valid and self.audio_sink is not None:
-				self.connect(self.source, self.receiver, self.audio_sink)
+				self.connect(self.source, self.receiver)
+				self.connect((self.receiver, 0), (self.audio_sink, 0))
+				self.connect((self.receiver, 1), (self.audio_sink, 1))
 		
 			self.unlock()
 

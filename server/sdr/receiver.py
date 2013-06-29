@@ -16,7 +16,7 @@ class Receiver(gr.hier_block2, sdr.ExportedState):
 		gr.hier_block2.__init__(
 			self, name,
 			gr.io_signature(1, 1, gr.sizeof_gr_complex*1),
-			gr.io_signature(1, 1, gr.sizeof_float*1),
+			gr.io_signature(2, 2, gr.sizeof_float*1),
 		)
 		self.input_rate = input_rate
 		self.input_center_freq = input_center_freq
@@ -25,7 +25,8 @@ class Receiver(gr.hier_block2, sdr.ExportedState):
 		self.audio_gain = audio_gain
 		self.revalidate_hook = revalidate_hook
 		
-		self.audio_gain_block = gr.multiply_const_vff((self.audio_gain,))
+		self.audio_gain_l_block = gr.multiply_const_ff(self.audio_gain)
+		self.audio_gain_r_block = gr.multiply_const_ff(self.audio_gain)
 		
 		# TODO: squelch alpha needs to depend on intermediate sample rate
 		self.squelch_block = gr.simple_squelch_cc(squelch_threshold, 0.0002)
@@ -44,7 +45,12 @@ class Receiver(gr.hier_block2, sdr.ExportedState):
 	
 	def set_audio_gain(self, gain):
 		self.audio_gain = gain
-		self.audio_gain_block.set_k((gain,))
+		self.audio_gain_l_block.set_k(gain)
+		self.audio_gain_r_block.set_k(gain)
+	
+	def connect_audio_output(self, l_port, r_port):
+		self.connect(l_port, self.audio_gain_l_block, (self, 0))
+		self.connect(r_port, self.audio_gain_r_block, (self, 1))
 
 	def state_def(self, callback):
 		super(Receiver, self).state_def(callback)
@@ -224,9 +230,8 @@ class AMReceiver(SimpleAudioReceiver):
 			self.agc_block,
 			self.demod_block,
 			dc_blocker,
-			self.resampler_block,
-			self.audio_gain_block,
-			self)
+			self.resampler_block)
+		self.connect_audio_output(self.resampler_block, self.resampler_block)
 
 
 class FMReceiver(SimpleAudioReceiver):
@@ -253,9 +258,8 @@ class FMReceiver(SimpleAudioReceiver):
 			self.band_filter_block,
 			self.squelch_block,
 			self.demod_block,
-			self.resampler_block,
-			self.audio_gain_block,
-			self)
+			self.resampler_block)
+		self.connect_audio_output(self.resampler_block, self.resampler_block)
 
 class NFMReceiver(FMReceiver):
 	def __init__(self, **kwargs):
@@ -304,9 +308,8 @@ class SSBReceiver(SimpleAudioReceiver):
 			self.sharp_filter_block,
 			self.squelch_block,
 			self.agc_block,
-			self.ssb_demod_block,
-			self.audio_gain_block,
-			self)
+			self.ssb_demod_block)
+		self.connect_audio_output(self.ssb_demod_block, self.ssb_demod_block)
 
 	# override
 	def get_band_filter_shape(self):
