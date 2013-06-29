@@ -1,11 +1,15 @@
 #!/usr/bin/env python
 
 import gnuradio
+import gnuradio.analog
 from gnuradio import gr
 from gnuradio import blocks
 from gnuradio import blks2
 from gnuradio import filter
 from gnuradio.gr import firdes
+
+import math
+
 import sdr
 from sdr import Cell
 
@@ -74,7 +78,8 @@ class SimpleAudioReceiver(Receiver):
 		
 		self.band_filter = band_filter
 		self.band_filter_transition = band_filter_transition
-		
+		self.demod_rate = demod_rate
+
 		input_rate = self.input_rate
 		audio_rate = self.audio_rate
 		
@@ -262,34 +267,139 @@ class FMReceiver(SimpleAudioReceiver):
 		input_rate = self.input_rate
 		audio_rate = self.audio_rate
 
-		decim = int(demod_rate/audio_rate)
+		self.audio_decim = audio_decim = int(demod_rate/audio_rate)
 
 		self.demod_block = blks2.fm_demod_cf(
 			channel_rate=demod_rate,
-			audio_decim=decim,
+			audio_decim=audio_decim,
 			deviation=deviation,
 			audio_pass=15000,
 			audio_stop=16000,
 			tau=75e-6,
 		)
-		self.resampler_block = make_resampler(demod_rate/decim, audio_rate)
-		
+		self.do_connect()
+	
+	def do_connect(self):
 		self.connect(
 			self,
 			self.band_filter_block,
 			self.squelch_block,
-			self.demod_block,
-			self.resampler_block)
-		self.connect_audio_output(self.resampler_block, self.resampler_block)
+			self.demod_block)
+		self.connect_audio_stage()
+		
+	def _make_resampler(self):
+		return make_resampler(self.demod_rate/self.audio_decim, self.audio_rate)
+
+	def connect_audio_stage(self):
+		'''Override point for stereo'''
+		resampler = self._make_resampler()
+		self.connect(self.demod_block, resampler)
+		self.connect_audio_output(resampler, resampler)
 
 class NFMReceiver(FMReceiver):
 	def __init__(self, **kwargs):
 		FMReceiver.__init__(self, name='Narrowband FM', demod_rate=48000, deviation=5000, band_filter=5000, band_filter_transition=1000, **kwargs)
 
 class WFMReceiver(FMReceiver):
-	def __init__(self, **kwargs):
+	def __init__(self, stereo=True, audio_filter=True, **kwargs):
+		self.stereo = stereo
+		self.audio_filter = audio_filter
 		FMReceiver.__init__(self, name='Wideband FM', demod_rate=240000, deviation=75000, band_filter=80000, band_filter_transition=20000, **kwargs)
 
+	# TODO reconnecting breaks stuff (I may be missing something) so not writable
+	def state_def(self, callback):
+		super(WFMReceiver, self).state_def(callback)
+		callback(Cell(self, 'stereo', writable=False, ctor=bool))
+		callback(Cell(self, 'audio_filter', writable=False, ctor=bool))
+	
+	def get_stereo(self): return self.stereo
+	#def set_stereo(self, value):
+	#	self.stereo = bool(value)
+	#	self.lock()
+	#	self.disconnect_all()
+	#	self.do_connect()
+	#	self.unlock()
+    
+	def get_audio_filter(self): return self.stereo
+	#def set_audio_filter(self, value):
+	#	self.audio_filter = bool(value)
+	#	self.lock()
+	#	self.disconnect_all()
+	#	self.do_connect()
+	#	self.unlock()
+
+	def connect_audio_stage(self):
+		demod_rate = self.demod_rate
+		normalizer = 2 * math.pi / demod_rate
+		pilot_tone = 19000
+		pilot_low = pilot_tone * 0.9
+		pilot_high = pilot_tone * 1.1
+
+		def make_audio_filter():
+			return filter.fir_filter_fff(
+				1, # decimation
+				gr.firdes.low_pass(
+					1.0,
+					demod_rate,
+					30000, # TODO: should be only to 15 kHz, but results in obviously muffled sound for some reason
+					 5000,
+					gr.firdes.WIN_HAMMING))
+
+		stereo_pilot_filter = filter.fir_filter_fcc(
+			1, # decimation
+			gr.firdes.complex_band_pass(
+				1.0,
+				demod_rate,
+				pilot_low,
+				pilot_high,
+				300)) # TODO magic number from gqrx
+		stereo_pilot_pll = gnuradio.analog.pll_refout_cc(
+			0.001, # TODO magic number from gqrx
+			normalizer * pilot_high,
+			normalizer * pilot_low)
+		stereo_pilot_doubler = blocks.multiply_cc()
+		stereo_pilot_out = blocks.complex_to_imag()
+		difference_channel_mixer = blocks.multiply_ff()
+		difference_channel_filter = make_audio_filter()
+		difference_real = blocks.complex_to_real(1)
+		mono_channel_filter = make_audio_filter()
+		resamplerL = self._make_resampler()
+		resamplerR = self._make_resampler()
+		mixL = blocks.add_ff(1)
+		mixR = blocks.sub_ff(1)
+		
+		# connections
+		if self.audio_filter:
+			self.connect(self.demod_block, mono_channel_filter)
+			mono = mono_channel_filter
+		else:
+			mono = self.demod_block
+
+		if self.stereo:
+			# stereo pilot tone tracker
+			self.connect(
+				self.demod_block,
+				stereo_pilot_filter,
+				stereo_pilot_pll)
+			self.connect(stereo_pilot_pll, (stereo_pilot_doubler, 0))
+			self.connect(stereo_pilot_pll, (stereo_pilot_doubler, 1))
+			self.connect(stereo_pilot_doubler, stereo_pilot_out)
+		
+			# pick out stereo left-right difference channel
+			self.connect(self.demod_block, (difference_channel_mixer, 0))
+			self.connect(stereo_pilot_out, (difference_channel_mixer, 1))
+			self.connect(difference_channel_mixer, difference_channel_filter)
+		
+			# recover left/right channels
+			self.connect(difference_channel_filter, (mixL, 1))
+			self.connect(difference_channel_filter, (mixR, 1))
+			self.connect(mono, (mixL, 0), resamplerL)
+			self.connect(mono, (mixR, 0), resamplerR)
+			self.connect_audio_output(resamplerL, resamplerR)
+		else:
+			self.connect(mono, resamplerL)
+			self.connect_audio_output(resamplerL, resamplerL)
+		
 
 class SSBReceiver(SimpleAudioReceiver):
 	def __init__(self, name='SSB', lsb=False, audio_rate=0, **kwargs):
