@@ -25,7 +25,7 @@ class Cell(object):
 	
 	def set(self, value):
 		if not self.isWritable():
-			raise Exception, 'Not writable.'
+			raise Exception('Not writable.')
 		return self._setter(value)
 	
 	def isWritable(self):
@@ -85,23 +85,28 @@ class BlockCell(object):
 	def description(self):
 		return self.getBlock().state_description()
 
+
 class ExportedState(object):
 	def state_def(self, callback):
 		pass
+	
 	def state(self):
 		if not hasattr(self, '_ExportedState__cache'):
 			cache = {}
+			self.__cache = cache
+
 			def callback(cell):
 				cache[cell.key()] = cell
 			self.state_def(callback)
-			self.__cache = cache
 		return self.__cache
+	
 	def state_to_json(self):
 		state = {}
 		for key, cell in self.state().iteritems():
 			if cell.persists():
 				state[key] = cell.get()
 		return state
+	
 	def state_from_json(self, state):
 		cells = self.state()
 		defer = []
@@ -119,6 +124,7 @@ class ExportedState(object):
 		# blocks are deferred because the specific blocks may depend on other keys
 		for key in defer:
 			cells[key].set(state[key])
+
 	def state_description(self):
 		childDescs = {}
 		description = {
@@ -129,4 +135,3 @@ class ExportedState(object):
 			# TODO: include URLs explicitly in desc format
 			childDescs[key] = cell.description()
 		return description
-		

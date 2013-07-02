@@ -18,36 +18,36 @@ from sdr import Cell
 fm_subcarrier = 9960
 fm_deviation = 480
 
+
 class VOR(sdr.receiver.SimpleAudioReceiver):
 
 	def __init__(self, name='VOR receiver', zero_point=-5, **kwargs):
 		self.channel_rate = channel_rate = 40000
-		internal_audio_rate = 20000 # TODO over spec'd
+		internal_audio_rate = 20000  # TODO over spec'd
 		self.zero_point = zero_point
 
-		transition=5000
+		transition = 5000
 		sdr.receiver.SimpleAudioReceiver.__init__(self,
 			name=name,
 			demod_rate=channel_rate,
-			band_filter=fm_subcarrier + fm_deviation + transition/2,
+			band_filter=fm_subcarrier + fm_deviation + transition / 2,
 			band_filter_transition=transition,
 			**kwargs)
 
 		self.dir_rate = dir_rate = 10
 
 		if internal_audio_rate % dir_rate != 0:
-			raise ValueError, 'Audio rate %s is not a multiple of direction-finding rate %s' % (internal_audio_rate, dir_rate)
-		self.dir_scale = dir_scale = int(internal_audio_rate/dir_rate)
-		self.audio_scale = audio_scale = int(channel_rate/internal_audio_rate)
-		
+			raise ValueError('Audio rate %s is not a multiple of direction-finding rate %s' % (internal_audio_rate, dir_rate))
+		self.dir_scale = dir_scale = int(internal_audio_rate / dir_rate)
+		self.audio_scale = audio_scale = int(channel_rate / internal_audio_rate)
 
-		self.zeroer = blocks.add_const_vff((zero_point*(math.pi/180), ))
-		  
+		self.zeroer = blocks.add_const_vff((zero_point * (math.pi / 180), ))
+		
 		self.dir_vector_filter = gr.fir_filter_ccf(1, firdes.low_pass(
 			1, dir_rate, 1, 2, firdes.WIN_HAMMING, 6.76))
 		self.am_channel_filter_block = gr.fir_filter_ccf(1, firdes.low_pass(
 			1, channel_rate, 10000, 4000, firdes.WIN_HAMMING, 6.76))
-		self.goertzel_fm = fft.goertzel_fc(channel_rate, dir_scale*audio_scale, 30)
+		self.goertzel_fm = fft.goertzel_fc(channel_rate, dir_scale * audio_scale, 30)
 		self.goertzel_am = fft.goertzel_fc(internal_audio_rate, dir_scale, 30)
 		self.fm_channel_filter_block = filter.freq_xlating_fir_filter_ccc(1, (firdes.low_pass(1.0, channel_rate, 500, 100, firdes.WIN_HAMMING)), fm_subcarrier, channel_rate)
 		self.dc_blocker_block = filter.dc_blocker_ff(128, True)
@@ -116,7 +116,7 @@ class VOR(sdr.receiver.SimpleAudioReceiver):
 
 	def set_zero_point(self, zero_point):
 		self.zero_point = zero_point
-		self.zeroer.set_k((self.zero_point*(math.pi/180), ))
+		self.zeroer.set_k((self.zero_point * (math.pi / 180), ))
 
 	def get_angle(self):
 		return self.probe.level()

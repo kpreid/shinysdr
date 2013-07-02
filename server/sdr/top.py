@@ -13,7 +13,10 @@ from sdr import Cell, BlockCell
 import sdr.receiver
 import sdr.receivers.vor
 
-class SpectrumTypeStub: pass
+
+class SpectrumTypeStub:
+	pass
+
 
 class Top(gr.top_block, sdr.ExportedState):
 
@@ -23,8 +26,8 @@ class Top(gr.top_block, sdr.ExportedState):
 
 		# Configuration
 		self._sources = dict(sources)
-		self.source_name = 'audio' # placeholder - TODO be nothing instead
-		self.audio_rate = audio_rate =   32000
+		self.source_name = 'audio'  # placeholder - TODO be nothing instead
+		self.audio_rate = audio_rate = 32000
 		self.spectrum_resolution = 4096
 		self.spectrum_rate = 30
 		self._mode = 'AM'
@@ -54,11 +57,12 @@ class Top(gr.top_block, sdr.ExportedState):
 			print 'Switching source'
 			self.__needs_reconnect = True
 			
-			this_source = self._sources[self.source_name]
 			def tune_hook():
 				if self.source is this_source:
 					self._update_receiver_validity()
 					self.receiver.set_input_center_freq(self.source.get_freq())
+
+			this_source = self._sources[self.source_name]
 			this_source.set_tune_hook(tune_hook)
 			self.source = this_source
 			this_rate = this_source.get_sample_rate()
@@ -133,11 +137,12 @@ class Top(gr.top_block, sdr.ExportedState):
 
 	def start(self):
 		self.__needs_audio_restart = True
-		self._do_connect() # audio sink workaround
+		self._do_connect()  # audio sink workaround
 		super(Top, self).start()
 
 	def get_running(self):
 		return self._running
+	
 	def set_running(self, value):
 		if value != self._running:
 			self._running = value
@@ -153,7 +158,7 @@ class Top(gr.top_block, sdr.ExportedState):
 	def set_source_name(self, value):
 		if value == self.source_name:
 			return
-		self._sources[value] # raise if not found
+		self._sources[value]  # raise if not found
 		self.source_name = value
 		self._do_connect()
 
@@ -163,10 +168,10 @@ class Top(gr.top_block, sdr.ExportedState):
 	def set_mode(self, kind):
 		if kind == self._mode:
 			return
-		self.receiver = self._make_receiver(kind) # may raise on invalid arg
+		self.receiver = self._make_receiver(kind)  # may raise on invalid arg
 		self.__needs_reconnect = True
 		self._do_connect()
-		self._mode = kind # only if succeeded
+		self._mode = kind  # only if succeeded
 	
 	def _make_receiver(self, kind):
 		'''Returns the receiver.'''
@@ -183,7 +188,7 @@ class Top(gr.top_block, sdr.ExportedState):
 		elif kind == 'VOR':
 			clas = sdr.receivers.vor.VOR
 		else:
-			raise ValueError, 'Unknown mode: ' + kind
+			raise ValueError('Unknown mode: ' + kind)
 		if self.receiver is not None:
 			options = {
 				'audio_gain': self.receiver.get_audio_gain(),
@@ -217,7 +222,7 @@ class Top(gr.top_block, sdr.ExportedState):
 
 	def set_spectrum_resolution(self, spectrum_resolution):
 		self.spectrum_resolution = spectrum_resolution
-		self.__needs_spectrum = True;
+		self.__needs_spectrum = True
 		self._do_connect()
 
 	def get_spectrum_rate(self):
@@ -228,13 +233,3 @@ class Top(gr.top_block, sdr.ExportedState):
 
 	def get_spectrum_fft(self):
 		return (self.source.get_freq(), self.spectrum_probe.level())
-
-
-if __name__ == '__main__':
-	parser = OptionParser(option_class=eng_option, usage="%prog: [options]")
-	(options, args) = parser.parse_args()
-	tb = top()
-	tb.start()
-	raw_input('Press Enter to quit: ')
-	tb.stop()
-

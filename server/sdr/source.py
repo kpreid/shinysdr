@@ -9,13 +9,14 @@ import osmosdr
 import sdr
 from sdr import Cell
 
+
 class Source(gr.hier_block2, sdr.ExportedState):
 	'''Generic wrapper for multiple source types, yielding complex samples.'''
 	def __init__(self, name):
 		gr.hier_block2.__init__(
 			self, name,
 			gr.io_signature(0, 0, 0),
-			gr.io_signature(1, 1, gr.sizeof_gr_complex*1),
+			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
 		)
 		self.tune_hook = lambda: None
 
@@ -28,12 +29,14 @@ class Source(gr.hier_block2, sdr.ExportedState):
 		# all sources should also have 'freq' but writability is not guaranteed so not specified here
 
 	def get_sample_rate(self):
-		raise NotImplementedError
+		raise NotImplementedError()
 
 	def needs_renew(self):
 		return False
+	
 	def renew(self):
 		return self
+
 
 class AudioSource(Source):
 	def __init__(self,
@@ -42,14 +45,14 @@ class AudioSource(Source):
 			quadrature_as_stereo=False,
 			**kwargs):
 		Source.__init__(self, name=name, **kwargs)
-		self.__name = name # for reinit only
+		self.__name = name  # for reinit only
 		self.__device_name = device_name
 		self.__sample_rate = 44100
 		self.__quadrature_as_stereo = quadrature_as_stereo
 		self.__complex = gnuradio.blocks.float_to_complex(1)
 		self.__source = gnuradio.audio.source(
 			self.__sample_rate,
-			device_name=device_name, # TODO configurability
+			device_name=device_name,  # TODO configurability
 			ok_to_block=True)
 		self.connect(self.__source, self.__complex, self)
 		if quadrature_as_stereo:
@@ -65,6 +68,7 @@ class AudioSource(Source):
 
 	def needs_renew(self):
 		return True
+	
 	def renew(self):
 		return AudioSource(
 			name=self.__name,
@@ -74,7 +78,10 @@ class AudioSource(Source):
 	def get_freq(self):
 		return 0
 
-ch = 0 # osmosdr channel, to avoid magic number
+
+ch = 0  # osmosdr channel, to avoid magic number
+
+
 class OsmoSDRSource(Source):
 	def __init__(self, name='OsmoSDR Source', **kwargs):
 		Source.__init__(self, name=name, **kwargs)
@@ -91,10 +98,10 @@ class OsmoSDRSource(Source):
 		source.set_sample_rate(3200000)
 		source.set_center_freq(freq, ch)
 		# freq_corr: We implement correction internally because setting this at runtime breaks things
-		source.set_iq_balance_mode(0, ch) # TODO
+		source.set_iq_balance_mode(0, ch)  # TODO
 		# gain_mode and gain: handled by accessors
-		source.set_antenna("", ch) # n/a to RTLSDR
-		source.set_bandwidth(0, ch) # TODO is this relevant
+		source.set_antenna("", ch)  # n/a to RTLSDR
+		source.set_bandwidth(0, ch)  # TODO is this relevant
 		# Note: There is a DC cancel facility but it is not implemented for RTLSDR
 	
 		self.connect(self.osmosdr_source_block, self)
@@ -115,10 +122,10 @@ class OsmoSDRSource(Source):
 
 	def set_freq(self, freq):
 		actual_freq = self._compute_frequency(freq)
-		# TODO: This limitation is in librtlsdr. If we support other gr-osmosdr devices, change it.
-		maxint32 = 2**32 - 1
+		# TODO: This limitation is in librtlsdr's interface. If we support other gr-osmosdr devices, change it.
+		maxint32 = 2 ** 32 - 1
 		if actual_freq < 0 or actual_freq > maxint32:
-			raise ValueError, 'Frequency must be between 0 and ' + str(maxint32) + ' Hz'
+			raise ValueError('Frequency must be between 0 and ' + str(maxint32) + ' Hz')
 		self.freq = freq
 		self._update_frequency()
 

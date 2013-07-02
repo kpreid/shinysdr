@@ -13,14 +13,15 @@ import math
 import sdr
 from sdr import Cell
 
+
 class Receiver(gr.hier_block2, sdr.ExportedState):
 	def __init__(self, name, input_rate=0, input_center_freq=0, audio_rate=0, rec_freq=0, audio_gain=1, squelch_threshold=-100, revalidate_hook=lambda: None):
 		assert input_rate > 0
 		assert audio_rate > 0
 		gr.hier_block2.__init__(
 			self, name,
-			gr.io_signature(1, 1, gr.sizeof_gr_complex*1),
-			gr.io_signature(2, 2, gr.sizeof_float*1),
+			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
+			gr.io_signature(2, 2, gr.sizeof_float * 1),
 		)
 		self.input_rate = input_rate
 		self.input_center_freq = input_center_freq
@@ -72,6 +73,7 @@ class Receiver(gr.hier_block2, sdr.ExportedState):
 		self._update_band_center()
 		self.revalidate_hook()
 
+
 class SimpleAudioReceiver(Receiver):
 	def __init__(self, name='Audio Receiver', demod_rate=0, band_filter=None, band_filter_transition=None, **kwargs):
 		Receiver.__init__(self, name=name, **kwargs)
@@ -105,14 +107,15 @@ class SimpleAudioReceiver(Receiver):
 		self.input_center_freq = value
 		self._update_band_center()
 
+
 def _factorize(n):
 	# I wish there was a nice standard library function for this...
 	# Wrote the simplest thing I could think of
 	if n <= 0:
-		raise ValueError
+		raise ValueError()
 	primes = []
 	while n > 1:
-		for i in xrange(2, n//2 + 1):
+		for i in xrange(2, n // 2 + 1):
 			if n % i == 0:
 				primes.append(i)
 				n //= i
@@ -121,7 +124,8 @@ def _factorize(n):
 			primes.append(n)
 			break
 	return primes
-		
+
+
 class MultistageChannelFilter(gr.hier_block2):
 	def __init__(self,
 			name='Multistage Channel Filter',
@@ -131,8 +135,8 @@ class MultistageChannelFilter(gr.hier_block2):
 			transition_width=None):
 		gr.hier_block2.__init__(
 			self, name,
-			gr.io_signature(1, 1, gr.sizeof_gr_complex*1),
-			gr.io_signature(1, 1, gr.sizeof_gr_complex*1),
+			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
+			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
 		)
 		
 		total_decimation = max(1, input_rate // output_rate)
@@ -159,12 +163,12 @@ class MultistageChannelFilter(gr.hier_block2):
 					gr.firdes.WIN_HAMMING)
 			else:
 				# TODO check for collision with user filter
-				user_inner = cutoff_freq-transition_width/2
-				limit = next_rate/2
+				user_inner = cutoff_freq - transition_width / 2
+				limit = next_rate / 2
 				taps = gr.firdes.low_pass(
 					1.0,
 					stage_input_rate,
-					(user_inner + limit)/2,
+					(user_inner + limit) / 2,
 					limit - user_inner,
 					gr.firdes.WIN_HAMMING)
 			
@@ -175,7 +179,7 @@ class MultistageChannelFilter(gr.hier_block2):
 				stage_filter = filter.freq_xlating_fir_filter_ccc(
 					stage_decimation,
 					taps,
-					0, # not-yet-set frequency
+					0,  # not-yet-set frequency
 					stage_input_rate)
 				self.freq_filter_block = stage_filter
 			else:
@@ -202,13 +206,14 @@ class MultistageChannelFilter(gr.hier_block2):
 	def set_center_freq(self, freq):
 		self.freq_filter_block.set_center_freq(freq)
 
+
 def make_resampler(in_rate, out_rate):
 	# magic numbers from gqrx
-	resample_ratio = float(out_rate)/in_rate
+	resample_ratio = float(out_rate) / in_rate
 	pfbsize = 32
 	return gr.pfb_arb_resampler_fff(
 		resample_ratio,
-		firdes.low_pass(pfbsize, pfbsize, 0.4*resample_ratio, 0.2*resample_ratio),
+		firdes.low_pass(pfbsize, pfbsize, 0.4 * resample_ratio, 0.2 * resample_ratio),
 		pfbsize)
 
 
@@ -218,8 +223,8 @@ class IQReceiver(SimpleAudioReceiver):
 			name=name,
 			audio_rate=audio_rate,
 			demod_rate=audio_rate,
-			band_filter=audio_rate*0.5,
-			band_filter_transition=audio_rate*0.2,
+			band_filter=audio_rate * 0.5,
+			band_filter_transition=audio_rate * 0.2,
 			**kwargs)
 		
 		self.split_block = gr.complex_to_float(1)
@@ -241,7 +246,7 @@ class AMReceiver(SimpleAudioReceiver):
 		input_rate = self.input_rate
 		audio_rate = self.audio_rate
 		
-		inherent_gain = 0.5 # fudge factor so that our output is similar level to narrow FM
+		inherent_gain = 0.5  # fudge factor so that our output is similar level to narrow FM
 		self.agc_block = gr.feedforward_agc_cc(1024, inherent_gain)
 		self.demod_block = gr.complex_to_mag(1)
 		self.resampler_block = make_resampler(demod_rate, audio_rate)
@@ -267,7 +272,7 @@ class FMReceiver(SimpleAudioReceiver):
 		input_rate = self.input_rate
 		audio_rate = self.audio_rate
 
-		self.audio_decim = audio_decim = int(demod_rate/audio_rate)
+		self.audio_decim = audio_decim = int(demod_rate / audio_rate)
 
 		self.demod_block = blks2.fm_demod_cf(
 			channel_rate=demod_rate,
@@ -288,7 +293,7 @@ class FMReceiver(SimpleAudioReceiver):
 		self.connect_audio_stage()
 		
 	def _make_resampler(self):
-		return make_resampler(self.demod_rate/self.audio_decim, self.audio_rate)
+		return make_resampler(self.demod_rate / self.audio_decim, self.audio_rate)
 
 	def connect_audio_stage(self):
 		'''Override point for stereo'''
@@ -296,9 +301,11 @@ class FMReceiver(SimpleAudioReceiver):
 		self.connect(self.demod_block, resampler)
 		self.connect_audio_output(resampler, resampler)
 
+
 class NFMReceiver(FMReceiver):
 	def __init__(self, **kwargs):
 		FMReceiver.__init__(self, name='Narrowband FM', demod_rate=48000, deviation=5000, band_filter=5000, band_filter_transition=1000, **kwargs)
+
 
 class WFMReceiver(FMReceiver):
 	def __init__(self, stereo=True, audio_filter=True, **kwargs):
@@ -306,21 +313,23 @@ class WFMReceiver(FMReceiver):
 		self.audio_filter = audio_filter
 		FMReceiver.__init__(self, name='Wideband FM', demod_rate=240000, deviation=75000, band_filter=80000, band_filter_transition=20000, **kwargs)
 
-	# TODO reconnecting breaks stuff (I may be missing something) so not writable
 	def state_def(self, callback):
 		super(WFMReceiver, self).state_def(callback)
 		callback(Cell(self, 'stereo', writable=False, ctor=bool))
 		callback(Cell(self, 'audio_filter', writable=False, ctor=bool))
 	
-	def get_stereo(self): return self.stereo
+	# TODO reconnecting breaks stuff (I may be missing something) so not writable
+	def get_stereo(self):
+		return self.stereo
 	#def set_stereo(self, value):
 	#	self.stereo = bool(value)
 	#	self.lock()
 	#	self.disconnect_all()
 	#	self.do_connect()
 	#	self.unlock()
-    
-	def get_audio_filter(self): return self.stereo
+	
+	def get_audio_filter(self):
+		return self.stereo
 	#def set_audio_filter(self, value):
 	#	self.audio_filter = bool(value)
 	#	self.lock()
@@ -337,24 +346,24 @@ class WFMReceiver(FMReceiver):
 
 		def make_audio_filter():
 			return filter.fir_filter_fff(
-				1, # decimation
+				1,  # decimation
 				gr.firdes.low_pass(
 					1.0,
 					demod_rate,
-					30000, # TODO: should be only to 15 kHz, but results in obviously muffled sound for some reason
-					 5000,
+					30000,  # TODO: should be only to 15 kHz, but results in obviously muffled sound for some reason
+					5000,
 					gr.firdes.WIN_HAMMING))
 
 		stereo_pilot_filter = filter.fir_filter_fcc(
-			1, # decimation
+			1,  # decimation
 			gr.firdes.complex_band_pass(
 				1.0,
 				demod_rate,
 				pilot_low,
 				pilot_high,
-				300)) # TODO magic number from gqrx
+				300))  # TODO magic number from gqrx
 		stereo_pilot_pll = gnuradio.analog.pll_refout_cc(
-			0.001, # TODO magic number from gqrx
+			0.001,  # TODO magic number from gqrx
 			normalizer * pilot_high,
 			normalizer * pilot_low)
 		stereo_pilot_doubler = blocks.multiply_cc()
@@ -408,8 +417,8 @@ class SSBReceiver(SimpleAudioReceiver):
 			name=name,
 			audio_rate=audio_rate,
 			demod_rate=demod_rate,
-			band_filter=audio_rate / 2, # unused
-			band_filter_transition = audio_rate / 2, # unused
+			band_filter=audio_rate / 2,  # unused
+			band_filter_transition=audio_rate / 2,  # unused
 			**kwargs)
 		input_rate = self.input_rate
 		
