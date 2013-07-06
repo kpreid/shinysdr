@@ -877,8 +877,23 @@ var sdr = sdr || {};
   }
   widgets.FreqList = FreqList;
   
+  var NO_RECORD = {};
+  function RecordCellPropCell(recordCell, prop) {
+    this.get = function () {
+      var record = recordCell.get();
+      return record ? record[prop] : NO_RECORD;
+    };
+    this.set = function (value) {
+      recordCell.get()[prop] = value;
+    };
+    // TODO be able to notify on record's own mutation
+    this.n = recordCell.n;
+  }
+  RecordCellPropCell.prototype = Object.create(sdr.network.Cell.prototype, {constructor: {value: RecordCellPropCell}});
+  
   function RecordDetails(config) {
     var recordCell = config.target;
+    var scheduler = config.scheduler;
     var container = this.element = config.element;
     
     var inner = container.appendChild(document.createElement('div'));
@@ -894,51 +909,52 @@ var sdr = sdr || {};
       label.appendChild(field);
       return field;
     }
-    function input(name) {
+    function formFieldHooks(field, cell) {
+      function draw() {
+        var now = cell.depend(draw);
+        if (now === NO_RECORD) {
+          field.disabled = true;
+        } else {
+          field.disabled = false;
+          if (field.value !== now) field.value = now;
+        }
+      }
+      draw.scheduler = config.scheduler;
+      field.addEventListener('change', function(event) {
+        if (field.value !== cell.get()) {
+          cell.set(field.value);
+        }
+      });
+      draw();
+    }
+    function input(cell, name) {
       var field = document.createElement('input');
-      field.readOnly = true;
+      formFieldHooks(field, cell);
       return labeled(name, field);
     }
-    function menu(name, values) {
+    function menu(cell, name, values) {
       var field = document.createElement('select');
-      field.disabled = true; // readOnly not applicable
       for (var key in values) {
         var option = field.appendChild(document.createElement('option'));
         option.value = key;
         option.textContent = values[key];
       }
+      formFieldHooks(field, cell);
       return labeled(name, field);
     }
-    function textarea() {
+    function textarea(cell) {
       var field = container.appendChild(document.createElement('textarea'));
-      field.readOnly = true;
+      formFieldHooks(field, cell);
       return field;
     }
-    var typeField = menu('Type', {'channel': 'Channel', 'band': 'Band'});
-    var freqField = input('Freq');
-    var modeField = menu('Mode', allModes);
-    var labelField = input('Label');
-    var notesField = textarea();
-    
-    function draw() {
-      var record = recordCell.depend(draw);
-      if (record) {
-        typeField.value = record.type;
-        freqField.value = record.freq || record.lowerFreq + '-' + record.upperFreq;
-        modeField.value = record.mode;
-        labelField.value = record.label;
-        notesField.value = record.notes;
-      } else {
-        typeField.value = '';
-        freqField.value = '';
-        modeField.value = '';
-        labelField.value = '';
-        notesField.value = '';
-      }
+    function cell(prop) {
+      return new RecordCellPropCell(recordCell, prop);
     }
-    draw.scheduler = config.scheduler;
-    
-    draw();
+    menu(cell('type'), 'Type', {'channel': 'Channel', 'band': 'Band'});
+    input(cell('freq'), 'Freq');  // TODO add lowerFreq/upperFreq display
+    menu(cell('mode'), 'Mode', allModes);
+    input(cell('label'), 'Label');
+    textarea(cell('notes'));
   }
   widgets.RecordDetails = RecordDetails;
   
