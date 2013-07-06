@@ -213,6 +213,13 @@ var sdr = sdr || {};
   Table.prototype.toString = function () {
     return '[sdr.database.Table ' + this._label + ']';
   };
+  Table.prototype.getAll = function () {
+    var entries;
+    if (!this._needsSort) {
+      this._entries.sort(compareRecord);
+    }
+    return this._entries; // TODO return frozen
+  };
   Table.prototype._isUpToDate = function () {
     return true;
   };
@@ -220,7 +227,7 @@ var sdr = sdr || {};
     var trigger = finishModification.bind(this);
     var record = new Record(suppliedRecord, trigger);
     this._entries.push(record);
-    trigger(); // TODO lazy after multiple adds...?
+    trigger();
     return record;
   };
   database.Table = Table;
@@ -294,7 +301,7 @@ var sdr = sdr || {};
   }
   
   function finishModification() {
-    this._entries.sort(compareRecord);
+    this._needsSort = true;
     this._viewGeneration++;
     //console.log(this + ' firing notify for modification');
     this.n.notify();
