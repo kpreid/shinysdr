@@ -287,11 +287,9 @@ var sdr = sdr || {};
         } else {
           error('Bad frequency value');
         }
-        table._entries.push(entry); // TODO better bulk mutation interface
+        table.add(entry);
       });
       console.groupEnd();
-
-      finishModification.call(table);
     });
     return table;
   }
