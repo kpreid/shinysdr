@@ -922,12 +922,19 @@ var sdr = sdr || {};
     
     function draw() {
       var record = recordCell.depend(draw);
-      if (!record) record = {};
-      typeField.value = record.type;
-      freqField.value = record.freq || record.lowerFreq + '-' + record.upperFreq;
-      modeField.value = record.mode;
-      labelField.value = record.label;
-      notesField.value = record.notes;
+      if (record) {
+        typeField.value = record.type;
+        freqField.value = record.freq || record.lowerFreq + '-' + record.upperFreq;
+        modeField.value = record.mode;
+        labelField.value = record.label;
+        notesField.value = record.notes;
+      } else {
+        typeField.value = '';
+        freqField.value = '';
+        modeField.value = '';
+        labelField.value = '';
+        notesField.value = '';
+      }
     }
     draw.scheduler = config.scheduler;
     
