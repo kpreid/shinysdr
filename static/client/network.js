@@ -221,7 +221,7 @@ var sdr = sdr || {};
   function connect(rootURL, callback) {
     var cellTree;
     
-    externalGet(rootURL, 'string', function(text) {
+    externalGet(rootURL, 'text', function(text) {
       var desc = JSON.parse(text);
       cellTree = buildFromDesc(rootURL, desc);
       console.log(cellTree);
