@@ -792,6 +792,7 @@ var sdr = sdr || {};
   
   function FreqList(config) {
     var states = config.radio;
+    var scheduler = config.scheduler;
     var configKey = 'filterString';
     
     // TODO recognize hardware limits somewhere central
@@ -812,28 +813,33 @@ var sdr = sdr || {};
       .appendChild(document.createElement('tbody'));
     
     function getElementForRecord(record) {
-      // TODO caching should be a WeakMap when possible and should understand the possibility of individual records changing
+      // TODO caching should be a WeakMap when possible
       if (record._view_element) {
+        record._view_element._sdr_drawHook();
         return record._view_element;
       }
       
-      var freq = record.freq;
       var item = document.createElement('tr');
-      function cell(className, text) {
+      var drawFns = [];
+      function cell(className, textFn) {
         var td = item.appendChild(document.createElement('td'));
         td.className = 'freqlist-cell-' + className;
-        td.textContent = text;
-        return td;
+        drawFns.push(function() {
+          td.textContent = textFn();
+        });
       }
       record._view_element = item;
       switch (record.type) {
         case 'channel':
-          var notes = record.notes || '';
-          var label = notes.indexOf(record.label) === 0 /* TODO KLUDGE for current sloppy data sources */ ? notes : record.label;
-          cell('freq', (record.freq / 1e6).toFixed(2));
-          cell('mode', record.mode === 'ignore' ? '' : record.mode);
-          cell('label', label);
-          item.title = notes;
+          cell('freq', function () { return (record.freq / 1e6).toFixed(2); });
+          cell('mode', function () { return record.mode === 'ignore' ? '' : record.mode;  });
+          cell('label', function () { 
+            var notes = record.notes || ''; // TODO should be unnecessary
+            return notes.indexOf(record.label) === 0 /* TODO KLUDGE for current sloppy data sources */ ? notes : record.label;
+          });
+          drawFns.push(function () {
+            item.title = record.notes;
+          });
           break;
         case 'band':
         default:
@@ -846,6 +852,17 @@ var sdr = sdr || {};
         config.radio.preset.set(record);
         event.stopPropagation();
       }, false);
+      
+      function draw() {
+        drawFns.forEach(function (f) { f(); });
+        if (record.offsetWidth > 0) { // rough 'is in DOM tree' test
+          record.n.listen(draw);
+        }
+      }
+      draw.scheduler = scheduler;
+      item._sdr_drawHook = draw;
+      draw();
+      
       return item;
     }
     
@@ -871,7 +888,7 @@ var sdr = sdr || {};
         list.appendChild(getElementForRecord(record));
       });
     }
-    draw.scheduler = config.scheduler;
+    draw.scheduler = scheduler;
 
     refilter();
   }
