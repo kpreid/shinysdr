@@ -886,8 +886,13 @@ var sdr = sdr || {};
     this.set = function (value) {
       recordCell.get()[prop] = value;
     };
-    // TODO be able to notify on record's own mutation
-    this.n = recordCell.n;
+    this.n = {
+      listen: function (l) {
+        var now = recordCell.get();
+        if (now) now.n.listen(l);
+        recordCell.n.listen(l);
+      }
+    };
   }
   RecordCellPropCell.prototype = Object.create(sdr.network.Cell.prototype, {constructor: {value: RecordCellPropCell}});
   

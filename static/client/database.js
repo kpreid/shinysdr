@@ -316,6 +316,7 @@ var sdr = sdr || {};
       set: function (value) {
         this[internalName] = value;
         (0, this._hook)();
+        this.n.notify();
       }
     };
   }
@@ -331,6 +332,7 @@ var sdr = sdr || {};
   };
   function Record(initial, changeHook) {
     this._hook = changeHook;
+    this.n = new sdr.events.Notifier();
     for (var name in recordProps) {
       this[name] = initial[name];
     }

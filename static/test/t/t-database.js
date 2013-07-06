@@ -33,7 +33,7 @@ describe('database', function () {
       expectNotification(l);
     });
     
-    it('should notify on record modification', function () {
+    it('should notify from table on record modification', function () {
       var t = new sdr.database.Table();
       var l = createListenerSpy();
       var r = t.add({
@@ -41,6 +41,18 @@ describe('database', function () {
         freq: 100e6
       });
       t.n.listen(l);
+      r.freq = 120e6;
+      expectNotification(l);
+    });
+
+    it('should notify from record on record modification', function () {
+      var t = new sdr.database.Table();
+      var l = createListenerSpy();
+      var r = t.add({
+        type: 'channel',
+        freq: 100e6
+      });
+      r.n.listen(l);
       r.freq = 120e6;
       expectNotification(l);
     });
