@@ -1,4 +1,7 @@
+'use strict';
+
 describe('database', function () {
+  var s;
   beforeEach(function () {
     s = new sdr.events.Scheduler(window);
   });
@@ -22,11 +25,23 @@ describe('database', function () {
   });
   
   describe('Table', function () {
-    it('should notify on change', function () {
+    it('should notify on record addition', function () {
       var t = new sdr.database.Table();
       var l = createListenerSpy();
       t.n.listen(l);
       t.add(dummyRecord);
+      expectNotification(l);
+    });
+    
+    it('should notify on record modification', function () {
+      var t = new sdr.database.Table();
+      var l = createListenerSpy();
+      var r = t.add({
+        type: 'channel',
+        freq: 100e6
+      });
+      t.n.listen(l);
+      r.freq = 120e6;
       expectNotification(l);
     });
   });

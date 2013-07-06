@@ -216,10 +216,12 @@ var sdr = sdr || {};
   Table.prototype._isUpToDate = function () {
     return true;
   };
-  Table.prototype.add = function (entry) {
-    // TODO validate
-    this._entries.push(entry);
-    finishModification.call(this); // TODO lazy after multiple adds
+  Table.prototype.add = function (suppliedRecord) {
+    var trigger = finishModification.bind(this);
+    var record = new Record(suppliedRecord, trigger);
+    this._entries.push(record);
+    trigger(); // TODO lazy after multiple adds...?
+    return record;
   };
   database.Table = Table;
   
@@ -297,6 +299,38 @@ var sdr = sdr || {};
     //console.log(this + ' firing notify for modification');
     this.n.notify();
   }
+  
+  function makeRecordProp(name) {
+    var internalName = '_stored_' + name;
+    return {
+      enumerable: true,
+      get: function () {
+        return this[internalName];
+      },
+      set: function (value) {
+        this[internalName] = value;
+        (0, this._hook)();
+      }
+    };
+  }
+  var recordProps = {
+    // TODO add value validation
+    type: makeRecordProp('type'),
+    mode: makeRecordProp('mode'),
+    freq: makeRecordProp('freq'),
+    lowerFreq: makeRecordProp('lowerFreq'),
+    upperFreq: makeRecordProp('upperFreq'),
+    label: makeRecordProp('label'),
+    notes: makeRecordProp('notes')
+  };
+  function Record(initial, changeHook) {
+    this._hook = changeHook;
+    for (var name in recordProps) {
+      this[name] = initial[name];
+    }
+    //Object.preventExtensions(this);  // TODO enable this after the _view_element kludge is gone
+  }
+  Object.defineProperties(Record.prototype, recordProps);
   
   function parseCSVLine(line) {
     //function debug(i, note) { console.log(line.slice(0, i) + '|' + line.slice(i) + ' ' + note); }
