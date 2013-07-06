@@ -834,7 +834,7 @@ var sdr = sdr || {};
           cell('freq', function () { return (record.freq / 1e6).toFixed(2); });
           cell('mode', function () { return record.mode === 'ignore' ? '' : record.mode;  });
           cell('label', function () { 
-            var notes = record.notes || ''; // TODO should be unnecessary
+            var notes = record.notes;
             return notes.indexOf(record.label) === 0 /* TODO KLUDGE for current sloppy data sources */ ? notes : record.label;
           });
           drawFns.push(function () {
@@ -992,8 +992,7 @@ var sdr = sdr || {};
         type: 'channel',
         freq: radio.receiver.rec_freq.get(),
         mode: radio.mode.get(), // TODO should be able to take from receiver
-        label: 'untitled',
-        notes: ''
+        label: 'untitled'
       };
       radio.targetDB.add(record);
       radio.preset.set(record);

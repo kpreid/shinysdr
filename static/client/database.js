@@ -306,7 +306,7 @@ var sdr = sdr || {};
     this.n.notify();
   }
   
-  function makeRecordProp(name) {
+  function makeRecordProp(name, coerce, defaultValue) {
     var internalName = '_stored_' + name;
     return {
       enumerable: true,
@@ -317,24 +317,25 @@ var sdr = sdr || {};
         this[internalName] = value;
         (0, this._hook)();
         this.n.notify();
-      }
+      },
+      _my_default: defaultValue
     };
   }
   var recordProps = {
     // TODO add value validation
-    type: makeRecordProp('type'),
-    mode: makeRecordProp('mode'),
-    freq: makeRecordProp('freq'),
-    lowerFreq: makeRecordProp('lowerFreq'),
-    upperFreq: makeRecordProp('upperFreq'),
-    label: makeRecordProp('label'),
-    notes: makeRecordProp('notes')
+    type: makeRecordProp('type', String, 'channel'), // TODO enum constraint
+    mode: makeRecordProp('mode', String, '?'),
+    freq: makeRecordProp('freq', Number, NaN), // TODO only for channel
+    lowerFreq: makeRecordProp('lowerFreq', Number, NaN),  // TODO only for band
+    upperFreq: makeRecordProp('upperFreq', Number, NaN),  // TODO only for band
+    label: makeRecordProp('label', String, ''),
+    notes: makeRecordProp('notes', String, '')
   };
   function Record(initial, changeHook) {
     this._hook = changeHook;
     this.n = new sdr.events.Notifier();
     for (var name in recordProps) {
-      this[name] = initial[name];
+      this[name] = initial.propertyIsEnumerable(name) ? initial[name] : recordProps[name]._my_default;
     }
     //Object.preventExtensions(this);  // TODO enable this after the _view_element kludge is gone
   }

@@ -56,6 +56,17 @@ describe('database', function () {
       r.freq = 120e6;
       expectNotification(l);
     });
+
+    it('record should have default values', function () {
+      var r = (new sdr.database.Table()).add({});
+      expect(r.type).toEqual('channel');
+      expect(r.mode).toEqual('?');
+      expect(r.freq).toBeNaN();
+      expect(r.lowerFreq).toBeNaN();
+      expect(r.upperFreq).toBeNaN();
+      expect(r.label).toEqual('');
+      expect(r.notes).toEqual('');
+    });
   });
 
   describe('Union', function () {
