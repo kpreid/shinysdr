@@ -78,7 +78,7 @@ var sdr = sdr || {};
   View.prototype._isUpToDate = function () {
     return this._viewGeneration === this._db._viewGeneration && this._db._isUpToDate();
   };
-  View.prototype.getAll = function (callback) {
+  View.prototype.getAll = function () {
     var entries;
     if (!this._isUpToDate()) {
       this._entries = Object.freeze(this._execute(this._db.getAll()));
@@ -209,6 +209,7 @@ var sdr = sdr || {};
     this._viewGeneration = 0;
     this._label = label;
   }
+  // TODO: Make Table inherit only Source, not View, as it's not obvious what the resulting requirements for how View works are
   Table.prototype = Object.create(View.prototype, {constructor: {value: Table}});
   Table.prototype.toString = function () {
     return '[sdr.database.Table ' + this._label + ']';
