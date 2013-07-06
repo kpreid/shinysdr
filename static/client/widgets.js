@@ -21,6 +21,99 @@ var sdr = sdr || {};
   allModes.USB = 'Upper SSB';
   allModes.VOR = 'VOR';
   
+  // TODO this belongs somewhere else
+  function StorageNamespace(base, prefix) {
+    this._base = base;
+    this._prefix = prefix;
+  }
+  StorageNamespace.prototype.getItem = function (key) {
+    return this._base.getItem(this._prefix + key);
+  };
+  StorageNamespace.prototype.setItem = function (key, value) {
+    return this._base.setItem(this._prefix + key, value);
+  };
+  StorageNamespace.prototype.removeItem = function (key) {
+    return this._base.removeItem(this._prefix + key);
+  };
+  
+  // TODO figure out what this does and give it a better name
+  function Context(config) {
+    this.radio = config.radio;
+    this.scheduler = config.scheduler;
+    this.freqDB = config.freqDB;
+    this.spectrumView = config.spectrumView;
+  }
+  sdr.widget.Context = Context;
+  
+  function createWidgetsList(rootTarget, context, list) {
+    Array.prototype.forEach.call(list, function (child) {
+      createWidgets(rootTarget, context, child);
+    });
+  }
+  function createWidgets(rootTarget, context, node) {
+    var scheduler = context.scheduler;
+    if (node.hasAttribute && node.hasAttribute('data-widget')) {
+      var stateObj;
+      var typename = node.getAttribute('data-widget');
+      var T = sdr.widgets[typename];
+      if (!T) {
+        console.error('Bad widget type:', node);
+        return;
+      }
+      var stateObj;
+      if (node.hasAttribute('data-target')) {
+        var targetStr = node.getAttribute('data-target');
+        stateObj = rootTarget[targetStr];
+        if (!stateObj) {
+          node.parentNode.replaceChild(document.createTextNode('[Missing: ' + targetStr + ']'), node);
+          return;
+        }
+      }
+      var widget = new T({
+        scheduler: scheduler,
+        target: stateObj,
+        element: node,
+        view: context.spectrumView, // TODO should be context-dependent
+        freqDB: context.freqDB, // TODO: remove the need for this
+        radio: context.radio, // TODO: remove the need for this
+        storage: node.hasAttribute('id') ? new StorageNamespace(localStorage, 'sdr.widgetState.' + node.getAttribute('id') + '.') : null
+      });
+      node.parentNode.replaceChild(widget.element, node);
+      widget.element.className += ' ' + node.className + ' widget-' + typename; // TODO kludge
+      
+      // allow widgets to embed widgets
+      createWidgetsList(stateObj || rootTarget, context, widget.element.childNodes);
+    } else if (node.hasAttribute && node.hasAttribute('data-target')) (function () {
+      var html = document.createDocumentFragment();
+      while (node.firstChild) html.appendChild(node.firstChild);
+      function go() {
+        // TODO defend against JS-significant keys
+        var target = rootTarget[node.getAttribute('data-target')];
+        target._deathNotice.listen(go);
+        
+        node.textContent = ''; // fast clear
+        node.appendChild(html.cloneNode(true));
+        createWidgetsList(target, context, node.childNodes);
+      }
+      go.scheduler = scheduler;
+      go();
+
+    }()); else if (node.nodeName === 'DETAILS' && node.hasAttribute('id')) {
+      // Make any ID'd <details> element persistent
+      var ns = new StorageNamespace(localStorage, 'sdr.elementState.' + node.id + '.');
+      var stored = ns.getItem('detailsOpen');
+      if (stored !== null) node.open = JSON.parse(stored);
+      new MutationObserver(function(mutations) {
+        ns.setItem('detailsOpen', JSON.stringify(node.open));
+      }).observe(node, {attributes: true, attributeFilter: ['open']});
+      createWidgetsList(rootTarget, context, node.childNodes);
+
+    } else {
+      createWidgetsList(rootTarget, context, node.childNodes);
+    }
+  }
+  sdr.widget.createWidgets = createWidgets;
+  
   // Defines the display parameters and coordinate calculations of the spectrum widgets
   var MAX_ZOOM_BINS = 60; // Maximum zoom shows this many FFT bins
   function SpectrumView(config) {
@@ -64,11 +157,13 @@ var sdr = sdr || {};
     // state
     var zoom = 1;
     
+    // exported for the sake of createWidgets -- TODO proper factoring?
+    this.scheduler = scheduler;
+    
     // TODO legacy stubs
     this.minLevel = -100;
     this.maxLevel = 0;
     
-    // Map a frequency to [0, 1] horizontal coordinate
     this.freqToCSSLeft = function freqToCSSLeft(freq) {
       return ((freq - leftFreq) * pixelsPerHertz) + 'px';
     };

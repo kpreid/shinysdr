@@ -3,20 +3,6 @@
   
   var xhrput = sdr.network.xhrput;
   
-  function StorageNamespace(base, prefix) {
-    this._base = base;
-    this._prefix = prefix;
-  }
-  StorageNamespace.prototype.getItem = function (key) {
-    return this._base.getItem(this._prefix + key);
-  };
-  StorageNamespace.prototype.setItem = function (key, value) {
-    return this._base.setItem(this._prefix + key, value);
-  };
-  StorageNamespace.prototype.removeItem = function (key) {
-    return this._base.removeItem(this._prefix + key);
-  };
-  
   var scheduler = new sdr.events.Scheduler();
   
   var freqDB = new sdr.database.Union();
@@ -77,74 +63,14 @@
       radio: radio,
       element: document.querySelector('.hscalegroup') // TODO relic
     });
-  
-    function createWidgetsList(rootTarget, list) {
-      Array.prototype.forEach.call(list, function (child) {
-        createWidgets(rootTarget, child);
-      });
-    }
-    function createWidgets(rootTarget, node) {
-      if (node.hasAttribute && node.hasAttribute('data-widget')) {
-        var stateObj;
-        var typename = node.getAttribute('data-widget');
-        var T = sdr.widgets[typename];
-        if (!T) {
-          console.error('Bad widget type:', node);
-          return;
-        }
-        var stateObj;
-        if (node.hasAttribute('data-target')) {
-          var targetStr = node.getAttribute('data-target');
-          stateObj = rootTarget[targetStr];
-          if (!stateObj) {
-            node.parentNode.replaceChild(document.createTextNode('[Missing: ' + targetStr + ']'), node);
-            return;
-          }
-        }
-        var widget = new T({
-          scheduler: scheduler,
-          target: stateObj,
-          element: node,
-          view: view, // TODO should be context-dependent
-          freqDB: freqDB,
-          radio: radio, // TODO: remove the need for this
-          storage: node.hasAttribute('id') ? new StorageNamespace(localStorage, 'sdr.widgetState.' + node.getAttribute('id') + '.') : null
-        });
-        node.parentNode.replaceChild(widget.element, node);
-        widget.element.className += ' ' + node.className + ' widget-' + typename; // TODO kludge
-        
-        // allow widgets to embed widgets
-        createWidgetsList(stateObj || rootTarget, widget.element.childNodes);
-      } else if (node.hasAttribute && node.hasAttribute('data-target')) (function () {
-        var html = document.createDocumentFragment();
-        while (node.firstChild) html.appendChild(node.firstChild);
-        function go() {
-          // TODO defend against JS-significant keys
-          var target = rootTarget[node.getAttribute('data-target')];
-          target._deathNotice.listen(go);
-          
-          node.textContent = ''; // fast clear
-          node.appendChild(html.cloneNode(true));
-          createWidgetsList(target, node.childNodes);
-        }
-        go.scheduler = scheduler;
-        go();
-
-      }()); else if (node.nodeName === 'DETAILS' && node.hasAttribute('id')) {
-        // Make any ID'd <details> element persistent
-        var ns = new StorageNamespace(localStorage, 'sdr.elementState.' + node.id + '.');
-        var stored = ns.getItem('detailsOpen');
-        if (stored !== null) node.open = JSON.parse(stored);
-        new MutationObserver(function(mutations) {
-          ns.setItem('detailsOpen', JSON.stringify(node.open));
-        }).observe(node, {attributes: true, attributeFilter: ['open']});
-        createWidgetsList(rootTarget, node.childNodes);
-
-      } else {
-        createWidgetsList(rootTarget, node.childNodes);
-      }
-    }
-
-    createWidgets(radio, document);
+    
+    var context = new sdr.widget.Context({
+      radio: radio,
+      spectrumView: view,
+      freqDB: freqDB,
+      scheduler: scheduler
+    });
+    
+    sdr.widget.createWidgets(radio, context, document);
   }); // end gotDesc
 }());
