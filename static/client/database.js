@@ -40,8 +40,7 @@ var sdr = sdr || {};
       return re.test(record.label) || re.test(record.notes);
     });
   };
-  Source.prototype.groupSameFreq = function (str) {
-    var re = new RegExp(str, 'i');
+  Source.prototype.groupSameFreq = function () {
     return new GroupView(this);
   };
   Source.prototype.forEach = function (f) {
@@ -113,7 +112,10 @@ var sdr = sdr || {};
           out.push(Object.freeze({
             type: 'group',
             freq: lastFreq,
-            grouped: Object.freeze(lastGroup)
+            grouped: Object.freeze(lastGroup),
+            n: Object.freeze({
+              listen: function () {}
+            })
           }));
         } else {
           out.push(lastGroup[0]);

@@ -69,6 +69,42 @@ describe('database', function () {
     });
   });
 
+  describe('GroupView', function () {
+    var t, r1, r2, view;
+    beforeEach(function () {
+      t = new sdr.database.Table();
+      r1 = t.add({type: 'channel', freq: 100e6, label: 'a'});
+      r2 = t.add({type: 'channel', freq: 100e6, label: 'b'});
+      view = t.groupSameFreq();
+    });
+    
+    it('should return a grouped record', function () {
+      expect(view.getAll().length).toBe(1);
+      var r = view.getAll()[0];
+      expect(typeof r).toBe('object');
+      expect(r.type).toBe('group');
+      expect(r.freq).toBe(100e6);
+      expect(r.grouped.length).toEqual(2);
+      expect(r.grouped).toContain(r1);
+      expect(r.grouped).toContain(r2);
+    });
+    
+    it('record should not change and have an inert notifier', function () {
+      // We don't actually specifically _want_ to have an immutable group record, but we're testing the current implementation is consistent.
+      var r = view.getAll()[0];
+      expect(r.n).toBeTruthy();
+      var l = createListenerSpy();
+      r.n.listen(l);
+      r1.freq = 120e6;
+      waits(10);
+      waits(10);  // cycle event loop a bit
+      runs(function() {
+        expect(l).not.toHaveBeenCalled();
+        expect(r.grouped).toContain(r1);
+      });
+    });
+  });
+
   describe('Union', function () {
     it('should notify on member change', function () {
       var t = new sdr.database.Table();
