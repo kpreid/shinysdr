@@ -1122,6 +1122,9 @@ var sdr = sdr || {};
     var container = this.element = config.element;
 
     Array.prototype.forEach.call(container.querySelectorAll('input[type=radio]'), function (rb) {
+      if (target.type) {
+        rb.disabled = target.type.values.indexOf(rb.value) === -1;
+      }
       rb.addEventListener('change', function(event) {
         target.set(rb.value);
       }, false);

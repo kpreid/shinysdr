@@ -38,6 +38,8 @@ class Cell(object):
 		if str(self._ctor) == 'sdr.top.SpectrumTypeStub':
 			# TODO: eliminate special case
 			typename = 'spectrum'
+		elif isinstance(self._ctor, ValueType):
+			typename = self._ctor.type_to_json()
 		else:
 			typename = None
 		return {
@@ -135,3 +137,24 @@ class ExportedState(object):
 			# TODO: include URLs explicitly in desc format
 			childDescs[key] = cell.description()
 		return description
+
+
+class ValueType(object):
+	def type_to_json():
+		raise NotImplementedError()
+	
+	def __call__(self, specimen):
+		raise NotImplementedError()
+
+
+class Enum(ValueType):
+	def __init__(self, values):
+		self.__values = set(values)
+	
+	def type_to_json(self):
+		return {'type': 'enum', 'values': list(self.__values)}
+	
+	def __call__(self, specimen):
+		if specimen not in self.__values:
+			raise ValueError('Not a permitted value: ' + repr(specimen))
+		return specimen

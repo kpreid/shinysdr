@@ -87,7 +87,30 @@ var sdr = sdr || {};
   }
   network.externalGet = externalGet;
   
-  function Cell() {
+  // TODO: Type and Cell should be separated from network stuff
+  
+  function Enum(values) {
+    this.values = Object.freeze(values.slice());
+  }
+  sdr.network.Enum = Enum;
+  var any = Object.freeze({});
+  sdr.network.any = any;
+  function typeFromDesc(desc) {
+    if (!desc) {
+      return any;
+    }
+    if (Object(desc) !== desc) throw new TypeError('desc not object');
+    switch (desc.type) {
+      case 'enum':
+        return new Enum(desc.values);
+      default:
+        throw new TypeError('unknown type desc: ' + desc.type);
+    }
+  }
+  
+  function Cell(type) {
+    if (type === undefined) { throw new Error('oops type: ' + this.constructor.name); }
+    this.type = type;
     this.n = new sdr.events.Notifier();
   }
   Cell.prototype.depend = function(listener) {
@@ -96,8 +119,8 @@ var sdr = sdr || {};
   };
   network.Cell = Cell;
   
-  function LocalCell() {
-    Cell.call(this);
+  function LocalCell(type) {
+    Cell.call(this, type);
     this._value = undefined;
   }
   LocalCell.prototype = Object.create(Cell.prototype, {constructor: {value: LocalCell}});
@@ -110,8 +133,8 @@ var sdr = sdr || {};
   };
   network.LocalCell = LocalCell;
   
-  function ReadWriteCell(name, assumed) {
-    Cell.call(this);
+  function ReadWriteCell(name, assumed, type) {
+    Cell.call(this, type);
     var value = assumed;
     var remoteValue = assumed;
     var inhibit = 0;
@@ -142,8 +165,8 @@ var sdr = sdr || {};
   ReadWriteCell.prototype = Object.create(Cell.prototype, {constructor: {value: ReadWriteCell}});
   network.ReadWriteCell = ReadWriteCell;
   
-  function ReadCell(name, /* initial */ value, transform) {
-    Cell.call(this);
+  function ReadCell(name, /* initial */ value, type, transform) {
+    Cell.call(this, type);
     
     this._update = function(data) {
       value = transform(data);
@@ -183,7 +206,7 @@ var sdr = sdr || {};
       return fft;
     }
     
-    ReadCell.call(this, url, fft, transform);
+    ReadCell.call(this, url, fft, any, transform);
     
     this.getCenterFreq = function() {
       return centerFreq;
@@ -199,9 +222,9 @@ var sdr = sdr || {};
           // TODO eliminate special case
           return new SpectrumCell(url);
         } else if (desc.writable) {
-          return new ReadWriteCell(url, desc.current);
+          return new ReadWriteCell(url, desc.current, typeFromDesc(desc.type));
         } else {
-          return new ReadCell(url, desc.current, function (x) { return x; });
+          return new ReadCell(url, desc.current, typeFromDesc(desc.type), function (x) { return x; });
         }
       case 'block':
         var sub = {};
