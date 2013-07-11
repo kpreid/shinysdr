@@ -7,10 +7,23 @@ from twisted.internet import task
 
 import txws
 
+import gnuradio.eng_option
+
 import array  # for binary stuff
 import json
 import os
 import shutil
+import optparse
+
+# Option parsing is done before importing the main modules so as to avoid the cost of initializing gnuradio.
+optionParser = optparse.OptionParser(
+	option_class=gnuradio.eng_option.eng_option)
+optionParser.add_option('--sources', dest='sources', metavar='FILE',
+	help='load Python code from FILE defining RF sources, e.g. ' +
+	     '"sources = {\'example\': sdr.source.WhateverSource()}"')
+(options, args) = optionParser.parse_args()
+if len(args) > 0:
+	optionParser.error('non-option parameters are not used: ' + ' '.join(map(repr, args)) + '')
 
 import sdr.top
 import sdr.source
@@ -193,11 +206,17 @@ for name in ['jasmine.css', 'jasmine.js', 'jasmine-html.js']:
 	shutil.copyfile('deps/jasmine/lib/jasmine-core/' + name, jasmineOut + name)
 
 print 'Flow graph...'
-# Note: This is slow as it triggers the OsmoSDR device initialization
-sources = {
-	'audio': sdr.source.AudioSource(),
-	'rtl': sdr.source.OsmoSDRSource(),
-}
+if options.sources is not None:
+	# TODO: better ways to manage the namespaces?
+	env = {'sdr': sdr}
+	execfile(options.sources, __builtins__.__dict__, env)
+	sources = env['sources']
+else:
+	# Note: This is slow as it triggers the OsmoSDR device initialization
+	sources = {
+		'audio': sdr.source.AudioSource(),
+		'rtl': sdr.source.OsmoSDRSource(),
+	}
 top = sdr.top.Top(sources=sources)
 restore(top)
 
