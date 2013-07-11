@@ -59,6 +59,9 @@ class AudioSource(Source):
 			# if we don't do this, the imaginary component is 0 and the spectrum is symmetric
 			self.connect((self.__source, 1), (self.__complex, 1))
 	
+	def __str__(self):
+		return 'Audio ' + self.__device_name
+	
 	def state_def(self, callback):
 		super(AudioSource, self).state_def(callback)
 		callback(Cell(self, 'freq', ctor=float))
@@ -83,16 +86,16 @@ ch = 0  # osmosdr channel, to avoid magic number
 
 
 class OsmoSDRSource(Source):
-	def __init__(self, name='OsmoSDR Source', **kwargs):
+	def __init__(self, osmo_device, name='OsmoSDR Source', **kwargs):
 		Source.__init__(self, name=name, **kwargs)
 
 		# TODO present sample rate configuration using source.get_sample_rates().values()
 		# TODO present hw freq range
 		
+		self.__osmo_device = osmo_device
 		self.freq = freq = 98e6
 		self.correction_ppm = 0
 		
-		osmo_device = "rtl=0"
 		self.osmosdr_source_block = source = osmosdr.source_c("nchan=1 " + osmo_device)
 		# Note: Docs for these setters at gr-osmosdr/lib/source_iface.h
 		source.set_sample_rate(3200000)
@@ -106,6 +109,9 @@ class OsmoSDRSource(Source):
 	
 		self.connect(self.osmosdr_source_block, self)
 	
+	def __str__(self):
+		return 'OsmoSDR ' + self.__osmo_device
+
 	def state_def(self, callback):
 		super(OsmoSDRSource, self).state_def(callback)
 		callback(Cell(self, 'freq', writable=True, ctor=float))

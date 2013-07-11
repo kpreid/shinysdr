@@ -57,8 +57,8 @@ if options.sources is not None:
 else:
 	# Note: This is slow as it triggers the OsmoSDR device initialization
 	sources = {
-		'audio': sdr.source.AudioSource(),
-		'rtl': sdr.source.OsmoSDRSource(),
+		'audio': sdr.source.AudioSource(''),
+		'rtl': sdr.source.OsmoSDRSource('rtl=0'),
 	}
 top = sdr.top.Top(sources=sources)
 

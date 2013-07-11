@@ -1121,10 +1121,27 @@ var sdr = sdr || {};
     var target = config.target;
     var container = this.element = config.element;
 
+    var seen = Object.create(null);
     Array.prototype.forEach.call(container.querySelectorAll('input[type=radio]'), function (rb) {
+      var value = rb.value;
+      seen[value] = true;
       if (target.type) {
-        rb.disabled = target.type.values.indexOf(rb.value) === -1;
+        rb.disabled = !(rb.value in target.type.values);
       }
+    });
+
+    if (target.type) {
+      Object.keys(target.type.values).forEach(function (value) {
+        if (seen[value]) return;
+        var label = container.appendChild(document.createElement('label'));
+        var rb = label.appendChild(document.createElement('input'));
+        label.appendChild(document.createTextNode(' ' + target.type.values[value]));
+        rb.type = 'radio';
+        rb.value = value;
+      });
+    }
+
+    Array.prototype.forEach.call(container.querySelectorAll('input[type=radio]'), function (rb) {
       rb.addEventListener('change', function(event) {
         target.set(rb.value);
       }, false);

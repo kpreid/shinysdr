@@ -89,8 +89,12 @@ var sdr = sdr || {};
   
   // TODO: Type and Cell should be separated from network stuff
   
-  function Enum(values) {
-    this.values = Object.freeze(values.slice());
+  function Enum(valuesIn) {
+    var values = Object.create(null);
+    for (var k in valuesIn) {
+      values[k] = String(valuesIn[k]);
+    }
+    this.values = Object.freeze(values);
   }
   sdr.network.Enum = Enum;
   var any = Object.freeze({});

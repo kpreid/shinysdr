@@ -149,10 +149,11 @@ class ValueType(object):
 
 class Enum(ValueType):
 	def __init__(self, values):
-		self.__values = set(values)
+		"""values: dict of {value: description}"""
+		self.__values = dict(values)  # paranoid copy
 	
 	def type_to_json(self):
-		return {'type': 'enum', 'values': list(self.__values)}
+		return {'type': 'enum', 'values': self.__values}
 	
 	def __call__(self, specimen):
 		if specimen not in self.__values:

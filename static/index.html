@@ -17,8 +17,6 @@
     <label><input type=checkbox data-widget="Toggle" data-target="running">Run</label>
   </div>
   <form class="panel" data-widget="Radio" data-target="source_name">
-    <label><input type=radio value='audio'>Audio input</label>
-    <label><input type=radio value='rtl'>RTLSDR</label>
   </form>
   <div class="panel frame" data-target="source">
     <details id="rf-options">
@@ -40,6 +38,7 @@
     </div>
   </div>
   <form class="panel" data-widget="Radio" data-target="mode">
+    <!-- Hardcoding these is not _necessary_ but specifies an ordering -->
     <label><input type=radio name=mode value='AM'>AM</label>
     <label><input type=radio name=mode value='NFM'>Narrow FM</label>
     <label><input type=radio name=mode value='WFM'>Wide FM</label>

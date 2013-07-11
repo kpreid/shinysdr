@@ -125,8 +125,17 @@ class Top(gr.top_block, sdr.ExportedState):
 	def state_def(self, callback):
 		super(Top, self).state_def(callback)
 		callback(Cell(self, 'running', writable=True, ctor=bool))
-		callback(Cell(self, 'source_name', writable=True, ctor=Enum(self._sources.keys())))
-		callback(Cell(self, 'mode', writable=True, ctor=Enum(['IQ', 'NFM', 'WFM', 'AM', 'USB', 'LSB', 'VOR'])))
+		callback(Cell(self, 'source_name', writable=True,
+			ctor=Enum(dict([(k, str(v)) for (k, v) in self._sources.iteritems()]))))
+		callback(Cell(self, 'mode', writable=True, ctor=Enum({
+			'AM': 'AM',
+			'NFM': 'Narrow FM',
+			'WFM': 'Wide FM',
+			'USB': 'SSB (U)',
+			'LSB': 'SSB (L)',
+			'IQ': 'Raw IQ',
+			'VOR': 'VOR'
+		})))
 		callback(Cell(self, 'input_rate', ctor=int))
 		callback(Cell(self, 'audio_rate', ctor=int))
 		callback(Cell(self, 'spectrum_resolution', True, ctor=int))
