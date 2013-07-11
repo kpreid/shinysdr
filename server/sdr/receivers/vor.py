@@ -64,6 +64,8 @@ class VOR(sdr.receiver.SimpleAudioReceiver):
 		self.agc_am = analog.agc2_cc(1e-1, 1e-2, 1.0, 1.0, 100)
 		
 		self.probe = blocks.probe_signal_f()
+		
+		self.resampler_block = sdr.receiver.make_resampler(internal_audio_rate, self.audio_rate)
 
 		##################################################
 		# Connections
@@ -81,9 +83,9 @@ class VOR(sdr.receiver.SimpleAudioReceiver):
 		self.connect(
 			self.am_demod_block,
 			self.dc_blocker_block,
-			self.audio_gain_block,
-			sdr.receiver.make_resampler(internal_audio_rate, self.audio_rate),
-			self)
+			self.resampler_block)
+		self.connect_audio_output(self.resampler_block, self.resampler_block)
+		
 		# AM phase
 		self.connect(
 			self.am_demod_block,
