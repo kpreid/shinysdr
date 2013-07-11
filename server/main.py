@@ -59,6 +59,7 @@ else:
 	sources = {
 		'audio': sdr.source.AudioSource(''),
 		'rtl': sdr.source.OsmoSDRSource('rtl=0'),
+		'sim': sdr.source.SimulatedSource(),
 	}
 top = sdr.top.Top(sources=sources)
 

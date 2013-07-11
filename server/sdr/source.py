@@ -3,6 +3,8 @@
 import gnuradio
 import gnuradio.blocks
 from gnuradio import gr
+from gnuradio import blocks
+from gnuradio import analog
 
 import osmosdr
 
@@ -168,3 +170,30 @@ class OsmoSDRSource(Source):
 	
 	def set_gain(self, value):
 		self.osmosdr_source_block.set_gain(float(value), ch)
+
+
+class SimulatedSource(Source):
+	def __init__(self, name='Simulated Source', **kwargs):
+		Source.__init__(self, name=name, **kwargs)
+		
+		self.__sample_rate = 1e6
+		
+		self.connect(
+			analog.noise_source_c(analog.GR_GAUSSIAN, 0.01, 0),
+			blocks.throttle(gr.sizeof_gr_complex, self.__sample_rate),
+			self)
+	
+	def __str__(self):
+		return 'Simulated RF'
+
+	def state_def(self, callback):
+		super(SimulatedSource, self).state_def(callback)
+		callback(Cell(self, 'freq', writable=False, ctor=float))
+		#callback(Cell(self, 'gain', writable=True, ctor=float))
+		
+	def get_sample_rate(self):
+		# TODO review why cast
+		return int(self.__sample_rate)
+		
+	def get_freq(self):
+		return 0
