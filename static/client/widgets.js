@@ -218,9 +218,11 @@ var sdr = sdr || {};
     
     this.addClickToTune = function addClickToTune(element) {
       function clickTune(event) {
-        // TODO: works only because we're at the left edge
-        radio.receiver.rec_freq.set(
-          (event.clientX + container.scrollLeft) / pixelsPerHertz + leftFreq);
+        if (radio.receiver.rec_freq) {
+          // TODO: X calc works only because we're at the left edge
+          radio.receiver.rec_freq.set(
+            (event.clientX + container.scrollLeft) / pixelsPerHertz + leftFreq);
+        }
         event.stopPropagation();
         event.preventDefault(); // no selection
       }
@@ -331,28 +333,39 @@ var sdr = sdr || {};
       var yZero = -view.maxLevel * yScale;
       
       // TODO: marks ought to be part of a distinct widget
-      var squelch = Math.floor(yZero + states.receiver.squelch_threshold.depend(draw) * yScale) + 0.5;
-      ctx.strokeStyle = '#700';
-      ctx.beginPath();
-      ctx.moveTo(0, squelch);
-      ctx.lineTo(w, squelch);
-      ctx.stroke();
+      var squelch_threshold_cell = states.receiver.squelch_threshold;
+      if (squelch_threshold_cell) {
+        var squelch = Math.floor(yZero + squelch_threshold_cell.depend(draw) * yScale) + 0.5;
+        ctx.strokeStyle = '#700';
+        ctx.beginPath();
+        ctx.moveTo(0, squelch);
+        ctx.lineTo(w, squelch);
+        ctx.stroke();
+      }
       
-      var rec_freq_now = states.receiver.rec_freq.depend(draw);
-      var bandFilter = states.receiver.band_filter_shape.depend(draw);
-      var fl = bandFilter.low;
-      var fh = bandFilter.high;
-      var fhw = bandFilter.width / 2;
-      ctx.fillStyle = '#3A3A3A';
-      drawBand(rec_freq_now + fl - fhw, rec_freq_now + fh + fhw);
-      ctx.fillStyle = '#444444';
-      drawBand(rec_freq_now + fl + fhw, rec_freq_now + fh - fhw);
+      var rec_freq_cell = states.receiver.rec_freq;
+      var band_filter_cell = states.receiver.band_filter_shape;
+      if (rec_freq_cell) {
+        var rec_freq_now = rec_freq_cell.depend(draw);
+        if (band_filter_cell) {
+          var bandFilter = band_filter_cell.depend(draw);
+          var fl = bandFilter.low;
+          var fh = bandFilter.high;
+          var fhw = bandFilter.width / 2;
+          ctx.fillStyle = '#3A3A3A';
+          drawBand(rec_freq_now + fl - fhw, rec_freq_now + fh + fhw);
+          ctx.fillStyle = '#444444';
+          drawBand(rec_freq_now + fl + fhw, rec_freq_now + fh - fhw);
+        }
+      }
       
       ctx.strokeStyle = 'gray';
       drawHair(viewCenterFreq); // center frequency
       
-      ctx.strokeStyle = 'white';
-      drawHair(rec_freq_now); // receiver
+      if (rec_freq_cell) {
+        ctx.strokeStyle = 'white';
+        drawHair(rec_freq_now); // receiver
+      }
       
       function path() {
         ctx.beginPath();
