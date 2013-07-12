@@ -139,6 +139,15 @@ class ExportedState(object):
 		return description
 
 
+class NoneESType(ExportedState):
+	'''Used like None but implementing ExportedState.'''
+	def state_def(self, callback):
+		super(NoneESType, self).state_def(callback)
+
+
+NoneES = NoneESType()
+
+
 class ValueType(object):
 	def type_to_json():
 		raise NotImplementedError()

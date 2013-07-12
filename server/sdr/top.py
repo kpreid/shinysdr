@@ -9,7 +9,7 @@ from gnuradio.eng_option import eng_option
 from gnuradio.gr import firdes
 from optparse import OptionParser
 import sdr
-from sdr import Cell, BlockCell, Enum
+from sdr import Cell, BlockCell, Enum, NoneES
 import sdr.receiver
 import sdr.receivers.vor
 
@@ -30,11 +30,11 @@ class Top(gr.top_block, sdr.ExportedState):
 		self.audio_rate = audio_rate = 32000
 		self.spectrum_resolution = 4096
 		self.spectrum_rate = 30
-		self._mode = 'AM'
+		self._mode = ''  # designates no receiver
 
 		# Blocks
 		self.source = None
-		self.receiver = None
+		self.receiver = NoneES
 		self.audio_sink = None
 		
 		# State flags
@@ -60,7 +60,8 @@ class Top(gr.top_block, sdr.ExportedState):
 			def tune_hook():
 				if self.source is this_source:
 					self._update_receiver_validity()
-					self.receiver.set_input_center_freq(self.source.get_freq())
+					if self.receiver is not NoneES:
+						self.receiver.set_input_center_freq(self.source.get_freq())
 
 			this_source = self._sources[self.source_name]
 			this_source.set_tune_hook(tune_hook)
@@ -109,11 +110,14 @@ class Top(gr.top_block, sdr.ExportedState):
 
 			self.connect(self.source, self.spectrum_fft, self.spectrum_probe)
 
-			self.last_receiver_is_valid = self.receiver.get_is_valid()
-			if self.receiver is not None and self.last_receiver_is_valid and self.audio_sink is not None:
-				self.connect(self.source, self.receiver)
-				self.connect((self.receiver, 0), (self.audio_sink, 0))
-				self.connect((self.receiver, 1), (self.audio_sink, 1))
+			if self.receiver is not NoneES:
+				self.last_receiver_is_valid = self.receiver.get_is_valid()
+				if self.last_receiver_is_valid and self.audio_sink is not None:
+					self.connect(self.source, self.receiver)
+					self.connect((self.receiver, 0), (self.audio_sink, 0))
+					self.connect((self.receiver, 1), (self.audio_sink, 1))
+			else:
+				self.last_receiver_is_valid = False
 		
 			self.unlock()
 
@@ -128,6 +132,7 @@ class Top(gr.top_block, sdr.ExportedState):
 		callback(Cell(self, 'source_name', writable=True,
 			ctor=Enum(dict([(k, str(v)) for (k, v) in self._sources.iteritems()]))))
 		callback(Cell(self, 'mode', writable=True, ctor=Enum({
+			'': 'None',
 			'AM': 'AM',
 			'NFM': 'Narrow FM',
 			'WFM': 'Wide FM',
@@ -184,6 +189,8 @@ class Top(gr.top_block, sdr.ExportedState):
 	
 	def _make_receiver(self, kind):
 		'''Returns the receiver.'''
+		if kind == '':
+			return NoneES
 		if kind == 'IQ':
 			clas = sdr.receiver.IQReceiver
 		elif kind == 'NFM':
@@ -198,7 +205,7 @@ class Top(gr.top_block, sdr.ExportedState):
 			clas = sdr.receivers.vor.VOR
 		else:
 			raise ValueError('Unknown mode: ' + kind)
-		if self.receiver is not None:
+		if self.receiver is not NoneES:
 			options = {
 				'audio_gain': self.receiver.get_audio_gain(),
 				'rec_freq': self.receiver.get_rec_freq(),
