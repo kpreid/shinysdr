@@ -1148,7 +1148,7 @@ var sdr = sdr || {};
         if (seen[value]) return;
         var label = container.appendChild(document.createElement('label'));
         var rb = label.appendChild(document.createElement('input'));
-        label.appendChild(document.createTextNode(' ' + target.type.values[value]));
+        label.appendChild(document.createTextNode(target.type.values[value]));
         rb.type = 'radio';
         rb.value = value;
       });
