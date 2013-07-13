@@ -18,25 +18,7 @@
   </div>
   <form class="panel" data-widget="Radio" data-target="source_name">
   </form>
-  <div class="panel frame" data-target="source">
-    <details id="rf-options">
-      <summary>RF options</summary>
-      <div class="panel">
-        RF gain
-        <label><input type=checkbox data-widget="Toggle" data-target="agc">Auto</label>
-        <!-- TODO: get min/max from driver -->
-        <input type="range" step="any" min="-1" max="42" value="0" data-widget="LinSlider" data-target="gain">
-      </div>
-      <div class="panel">
-        Frequency correction (PPM)
-        <span data-widget="Knob" data-target="correction_ppm"></span>
-      </div>
-    </details>
-    <div class="panel">
-      Hardware center frequency
-      <span data-widget="Knob" data-target="freq"></span>
-    </div>
-  </div>
+  <div data-widget="Source" data-target="source">...</div>
   <form class="panel" data-widget="Radio" data-target="mode">
     <!-- Hardcoding these is not _necessary_ but specifies an ordering -->
     <label><input type=radio name=mode value='AM'>AM</label>

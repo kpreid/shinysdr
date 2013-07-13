@@ -297,7 +297,11 @@ var sdr = sdr || {};
       claimed[name] = true;
     }
     
-    special(block, addWidget, ignore);
+    function setInsertion(el) {
+      container = el;
+    }
+    
+    special.call(this, block, addWidget, ignore, setInsertion);
     
     for (var name in block) {
       if (claimed[name]) continue;
@@ -317,9 +321,50 @@ var sdr = sdr || {};
     }
   }
   
+  // Widget for a source block
+  function Source(config) {
+    Block.call(this, config, function (block, addWidget, ignore, setInsertion) {
+      var details = this.element.appendChild(document.createElement('details'));
+      details.id = 'rf-options'; // TODO make unique based on path or something
+      details.appendChild(document.createElement('summary')).textContent = 'RF options';
+
+      if ('freq' in block) {
+        addWidget('freq', 'Knob', 'Center frequency');
+      }
+      
+      // TODO: arrange so details disappears if empty
+      setInsertion(details);
+      
+      if ('gain' in block && 'agc' in block) {
+        var gainPanel = details.appendChild(document.createElement('div'));
+        gainPanel.className = 'panel';
+        gainPanel.appendChild(document.createTextNode('Gain '));
+        var agcl = gainPanel.appendChild(document.createElement('label'));
+        var agcc = agcl.appendChild(document.createElement('input'));
+        agcc.type = 'checkbox';
+        agcc.setAttribute('data-widget', 'Toggle');
+        agcc.setAttribute('data-target', 'agc');
+        agcl.appendChild(document.createTextNode('Auto '));
+        var gain = gainPanel.appendChild(document.createElement('input'));
+        gain.type = 'range';
+        gain.setAttribute('data-widget', 'LinSlider');
+        gain.setAttribute('data-target', 'gain');
+        ignore('agc');
+        ignore('gain');
+      }
+      
+      if ('correction_ppm' in block) {
+        addWidget('correction_ppm', 'Knob', 'Frequency correction (PPM)');
+      }
+      
+      ignore('sample_rate');
+    });
+  }
+  widgets.Source = Source;
+  
   // Widget for a receiver block
   function Receiver(config) {
-    Block.call(this, config, function (block, addWidget, ignore) {
+    Block.call(this, config, function (block, addWidget, ignore, setInsertion) {
       ignore('is_valid');
       ignore('band_filter_shape');
       if ('rec_freq' in block) {
