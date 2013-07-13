@@ -253,7 +253,7 @@ var sdr = sdr || {};
   function fromCSV(url) {
     var table = new Table(decodeURIComponent(url.replace(/^.*\//, '')));
     sdr.network.externalGet(url, 'text', function(csv) {
-      console.group('Parsing ' + url);
+      //console.group('Parsing ' + url);
       var csvLines = csv.split(/[\r\n]+/);
       var columns = csvLines.shift().split(/,/);
       csvLines.forEach(function (line, lineNoBase) {
@@ -291,7 +291,7 @@ var sdr = sdr || {};
         }
         table.add(entry);
       });
-      console.groupEnd();
+      //console.groupEnd();
     });
     return table;
   }
