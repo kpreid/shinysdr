@@ -1291,9 +1291,6 @@ var sdr = sdr || {};
   }
   widgets.Radio = Radio;
   
-  function leastSignificantSetBit(number) {
-      return number & -number;
-  }
   var TAU = Math.PI * 2;
   function Angle(config) {
     var target = config.target;
