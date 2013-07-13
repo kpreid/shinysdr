@@ -11,7 +11,7 @@ from gnuradio.gr import firdes
 import math
 
 import sdr
-from sdr import Cell
+from sdr import Cell, Range
 
 
 class Receiver(gr.hier_block2, sdr.ExportedState):
@@ -61,8 +61,10 @@ class Receiver(gr.hier_block2, sdr.ExportedState):
 		super(Receiver, self).state_def(callback)
 		callback(Cell(self, 'band_filter_shape'))
 		callback(Cell(self, 'rec_freq', writable=True, ctor=float))
-		callback(Cell(self, 'audio_gain', writable=True, ctor=float))
-		callback(Cell(self, 'squelch_threshold', writable=True, ctor=float))
+		callback(Cell(self, 'audio_gain', writable=True, ctor=
+			Range(0.01, 100, strict=False, logarithmic=True)))
+		callback(Cell(self, 'squelch_threshold', writable=True, ctor=
+			Range(-100, 100, strict=False, logarithmic=False)))
 		callback(Cell(self, 'is_valid'))
 	
 	def get_rec_freq(self):

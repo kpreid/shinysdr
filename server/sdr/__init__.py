@@ -168,3 +168,28 @@ class Enum(ValueType):
 		if specimen not in self.__values:
 			raise ValueError('Not a permitted value: ' + repr(specimen))
 		return specimen
+
+
+class Range(ValueType):
+	def __init__(self, min, max, strict=True, logarithmic=False):
+		self.__min = min
+		self.__max = max
+		self.__strict = strict
+		self.__logarithmic = logarithmic
+	
+	def type_to_json(self):
+		return {
+			'type': 'range',
+			'min': self.__min,
+			'max': self.__max,
+			'logarithmic': self.__logarithmic,
+		}
+	
+	def __call__(self, specimen):
+		specimen = float(specimen)
+		if self.__strict:
+			if specimen < self.__min:
+				specimen = self.__min
+			if specimen < self.__max:
+				specimen = self.__max
+		return specimen

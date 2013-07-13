@@ -1208,7 +1208,11 @@ var sdr = sdr || {};
       slider.type = 'range';
       slider.step = 'any';
     }
-    
+    if (target.type instanceof sdr.network.Range) {
+      slider.min = getT(target.type.min);
+      slider.max = getT(target.type.max);
+    }
+
     this.element = slider;
 
     slider.addEventListener('change', function(event) {

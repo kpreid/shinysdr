@@ -97,8 +97,17 @@ var sdr = sdr || {};
     this.values = Object.freeze(values);
   }
   sdr.network.Enum = Enum;
+
+  function Range(min, max, logarithmic) {
+    this.min = min;
+    this.max = max;
+    this.logarithmic = logarithmic;
+  }
+  sdr.network.Range = Range;
+
   var any = Object.freeze({});
   sdr.network.any = any;
+
   function typeFromDesc(desc) {
     if (!desc) {
       return any;
@@ -107,6 +116,8 @@ var sdr = sdr || {};
     switch (desc.type) {
       case 'enum':
         return new Enum(desc.values);
+      case 'range':
+        return new Range(desc.min, desc.max, desc.logarithmic);
       default:
         throw new TypeError('unknown type desc: ' + desc.type);
     }
