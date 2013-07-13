@@ -334,6 +334,12 @@ var sdr = sdr || {};
       if ('rec_freq' in block) {
         addWidget(null, 'SaveButton', '');
       }
+      
+      // VOR receiver
+      if ('angle' in block) {
+        addWidget('angle', 'Angle', '');
+      }
+      ignore('zero_point');
     });
   }
   widgets.Receiver = Receiver;
