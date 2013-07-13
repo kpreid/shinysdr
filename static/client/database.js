@@ -75,7 +75,7 @@ var sdr = sdr || {};
   }
   View.prototype = Object.create(Source.prototype, {constructor: {value: View}});
   View.prototype._isUpToDate = function () {
-    return this._viewGeneration === this._db._viewGeneration && this._db._isUpToDate();
+    return this._viewGeneration === this._db.getGeneration() && this._db._isUpToDate();
   };
   View.prototype.getAll = function () {
     var entries;
