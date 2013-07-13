@@ -219,6 +219,13 @@ var sdr = sdr || {};
   SpectrumCell.prototype = Object.create(ReadCell.prototype, {constructor: {value: SpectrumCell}});
   network.SpectrumCell = SpectrumCell;
   
+  function setNonEnum(o, p, v) {
+    Object.defineProperty(o, p, {
+      value: v,
+      configurable: true
+    })
+  }
+  
   function buildFromDesc(url, desc) {
     switch (desc.kind) {
       case 'value':
@@ -232,8 +239,8 @@ var sdr = sdr || {};
         }
       case 'block':
         var sub = {};
-        sub._url = url; // TODO kludge
-        sub._deathNotice = new sdr.events.Notifier();
+        setNonEnum(sub, '_url', url); // TODO kludge
+        setNonEnum(sub, '_deathNotice', new sdr.events.Notifier());
         for (var k in desc.children) {
           // TODO: URL should come from server instead of being constructed here
           sub[k] = buildFromDesc(url + '/' + encodeURIComponent(k), desc.children[k]);
