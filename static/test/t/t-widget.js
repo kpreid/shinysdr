@@ -29,7 +29,7 @@ describe('widget', function () {
   
   describe('Knob', function () {
     it('should hold a negative zero', function () {
-      var cell = new sdr.network.LocalCell(sdr.network.any);
+      var cell = new sdr.values.LocalCell(sdr.values.any);
       cell.set(0);
       widget = new sdr.widgets.Knob({
         target: cell,

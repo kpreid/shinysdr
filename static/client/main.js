@@ -1,7 +1,8 @@
 (function () {
   'use strict';
   
-  var any = sdr.network.any;
+  var any = sdr.values.any;
+  var LocalCell = sdr.values.LocalCell;
   var xhrput = sdr.network.xhrput;
   
   var scheduler = new sdr.events.Scheduler();
@@ -27,9 +28,9 @@
     }
 
     // Kludge to let frequency preset widgets do their thing
-    radio.preset = new sdr.network.LocalCell(sdr.network.any);
+    radio.preset = new LocalCell(any);
     radio.preset.set = function(freqRecord) {
-      sdr.network.LocalCell.prototype.set.call(this, freqRecord);
+      LocalCell.prototype.set.call(this, freqRecord);
       var freq = freqRecord.freq;
       radio.mode.set(freqRecord.mode);
       if (!frequencyInRange(freq, radio.source.freq.get())) {
@@ -47,7 +48,7 @@
   
     // TODO better structure / move to server
     var _scanView = freqDB;
-    radio.scan_presets = new sdr.network.Cell(any);
+    radio.scan_presets = new sdr.values.Cell(any);
     radio.scan_presets.get = function () { return _scanView; };
     radio.scan_presets.set = function (view) {
       _scanView = view;

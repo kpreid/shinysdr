@@ -315,7 +315,7 @@ var sdr = sdr || {};
         continue;
       }
       
-      if (cell.type instanceof sdr.network.Enum) {
+      if (cell.type instanceof sdr.values.Enum) {
         addWidget(name, 'Radio', name);
       } else {
         addWidget(name, 'Generic', name);
@@ -1108,7 +1108,7 @@ var sdr = sdr || {};
       }
     };
   }
-  RecordCellPropCell.prototype = Object.create(sdr.network.Cell.prototype, {constructor: {value: RecordCellPropCell}});
+  RecordCellPropCell.prototype = Object.create(sdr.values.Cell.prototype, {constructor: {value: RecordCellPropCell}});
   
   function RecordDetails(config) {
     var recordCell = config.target;
@@ -1303,7 +1303,7 @@ var sdr = sdr || {};
       slider.type = 'range';
       slider.step = 'any';
     }
-    if (target.type instanceof sdr.network.Range) {
+    if (target.type instanceof sdr.values.Range) {
       slider.min = getT(target.type.min);
       slider.max = getT(target.type.max);
     }

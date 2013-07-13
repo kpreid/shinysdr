@@ -2,6 +2,9 @@ var sdr = sdr || {};
 (function () {
   'use strict';
   
+  var Cell = sdr.values.Cell;
+  var typeFromDesc = sdr.values.typeFromDesc;
+  
   var network = sdr.network = {};
   
   // Connectivity management
@@ -87,67 +90,6 @@ var sdr = sdr || {};
   }
   network.externalGet = externalGet;
   
-  // TODO: Type and Cell should be separated from network stuff
-  
-  function Enum(valuesIn) {
-    var values = Object.create(null);
-    for (var k in valuesIn) {
-      values[k] = String(valuesIn[k]);
-    }
-    this.values = Object.freeze(values);
-  }
-  sdr.network.Enum = Enum;
-
-  function Range(min, max, logarithmic) {
-    this.min = min;
-    this.max = max;
-    this.logarithmic = logarithmic;
-  }
-  sdr.network.Range = Range;
-
-  var any = Object.freeze({});
-  sdr.network.any = any;
-
-  function typeFromDesc(desc) {
-    if (!desc) {
-      return any;
-    }
-    if (Object(desc) !== desc) throw new TypeError('desc not object');
-    switch (desc.type) {
-      case 'enum':
-        return new Enum(desc.values);
-      case 'range':
-        return new Range(desc.min, desc.max, desc.logarithmic);
-      default:
-        throw new TypeError('unknown type desc: ' + desc.type);
-    }
-  }
-  
-  function Cell(type) {
-    if (type === undefined) { throw new Error('oops type: ' + this.constructor.name); }
-    this.type = type;
-    this.n = new sdr.events.Notifier();
-  }
-  Cell.prototype.depend = function(listener) {
-    this.n.listen(listener);
-    return this.get();
-  };
-  network.Cell = Cell;
-  
-  function LocalCell(type) {
-    Cell.call(this, type);
-    this._value = undefined;
-  }
-  LocalCell.prototype = Object.create(Cell.prototype, {constructor: {value: LocalCell}});
-  LocalCell.prototype.get = function() {
-    return this._value;
-  };
-  LocalCell.prototype.set = function(v) {
-    this._value = v;
-    this.n.notify();
-  };
-  network.LocalCell = LocalCell;
-  
   function ReadWriteCell(name, assumed, type) {
     Cell.call(this, type);
     var value = assumed;
@@ -221,7 +163,7 @@ var sdr = sdr || {};
       return fft;
     }
     
-    ReadCell.call(this, url, fft, any, transform);
+    ReadCell.call(this, url, fft, sdr.values.any, transform);
     
     this.getCenterFreq = function() {
       return centerFreq;
