@@ -60,33 +60,47 @@ var sdr = sdr || {};
         console.error('Bad widget type:', node);
         return;
       }
-      var stateObj;
-      if (node.hasAttribute('data-target')) {
-        var targetStr = node.getAttribute('data-target');
-        stateObj = rootTarget[targetStr];
-        if (!stateObj) {
-          node.parentNode.replaceChild(document.createTextNode('[Missing: ' + targetStr + ']'), node);
-          return;
-        }
-      }
-      var widget = new T({
-        scheduler: scheduler,
-        target: stateObj,
-        element: node,
-        view: context.spectrumView, // TODO should be context-dependent
-        freqDB: context.freqDB, // TODO: remove the need for this
-        radio: context.radio, // TODO: remove the need for this
-        storage: node.hasAttribute('id') ? new StorageNamespace(localStorage, 'sdr.widgetState.' + node.getAttribute('id') + '.') : null
-      });
-      node.parentNode.replaceChild(widget.element, node);
-      widget.element.className += ' ' + node.className + ' widget-' + typename; // TODO kludge
       
-      // allow widgets to embed widgets
-      createWidgetsList(stateObj || rootTarget, context, widget.element.childNodes);
+      var container = node.parentNode;
+      var currentWidgetEl = node;
+      var go = function go() {
+        var stateObj;
+        if (node.hasAttribute('data-target')) {
+          var targetStr = node.getAttribute('data-target');
+          stateObj = rootTarget[targetStr];
+          if (!stateObj) {
+            node.parentNode.replaceChild(document.createTextNode('[Missing: ' + targetStr + ']'), node);
+            return;
+          }
+        }
+
+        var widget = new T({
+          scheduler: scheduler,
+          target: stateObj,
+          element: node,
+          view: context.spectrumView, // TODO should be context-dependent
+          freqDB: context.freqDB, // TODO: remove the need for this
+          radio: context.radio, // TODO: remove the need for this
+          storage: node.hasAttribute('id') ? new StorageNamespace(localStorage, 'sdr.widgetState.' + node.getAttribute('id') + '.') : null
+        });
+        container.replaceChild(widget.element, currentWidgetEl);
+        currentWidgetEl = widget.element;
+        widget.element.className += ' ' + node.className + ' widget-' + typename; // TODO kludge
+        
+        // handle widget-is-a-block
+        if (stateObj && '_deathNotice' in stateObj) { // TODO bad interface
+          stateObj._deathNotice.listen(go);
+        }
+        
+        // allow widgets to embed widgets
+        createWidgetsList(stateObj || rootTarget, context, widget.element.childNodes);
+      }
+      go.scheduler = scheduler;
+      go();
     } else if (node.hasAttribute && node.hasAttribute('data-target')) (function () {
       var html = document.createDocumentFragment();
       while (node.firstChild) html.appendChild(node.firstChild);
-      function go() {
+      var go = function go() {
         // TODO defend against JS-significant keys
         var target = rootTarget[node.getAttribute('data-target')];
         target._deathNotice.listen(go);
@@ -248,6 +262,79 @@ var sdr = sdr || {};
     }
   }
   sdr.widget.SpectrumView = SpectrumView;
+  
+  // Superclass for a sub-block widget
+  function Block(config, special) {
+    var block = config.target;
+    var container = this.element = config.element;
+    var claimed = Object.create(null);
+    
+    container.textContent = '';
+    container.classList.add('panel');
+    container.classList.add('frame');
+    
+    function addWidget(name, widgetType, optBoxLabel) {
+      var wEl = document.createElement('div');
+      // TODO non-string-based interface for this.
+      wEl.setAttribute('data-widget', widgetType);
+      if (typeof name === 'string') {
+        claimed[name] = true;
+        wEl.setAttribute('data-target', name);
+      }
+      // createWidgets will instantiate the widget from this
+      
+      if (optBoxLabel !== undefined) {
+        var widgetPanel = container.appendChild(document.createElement('div'));
+        widgetPanel.className = 'panel';
+        widgetPanel.appendChild(document.createTextNode(optBoxLabel + ' '));
+        widgetPanel.appendChild(wEl);
+      } else {
+        container.appendChild(wEl);
+      }
+    }
+    
+    function ignore(name) {
+      claimed[name] = true;
+    }
+    
+    special(block, addWidget, ignore);
+    
+    for (var name in block) {
+      if (claimed[name]) continue;
+      
+      var cell = block[name];
+      if (!cell.get) {
+        console.warn('Block scan got non-cell:', cell);
+        continue;
+      }
+      
+      switch (cell.type.type) {
+        case 'enum':
+          addWidget(name, 'Radio', name);
+        default:
+          addWidget(name, 'Generic', name);
+      }
+    }
+  }
+  
+  // Widget for a receiver block
+  function Receiver(config) {
+    Block.call(this, config, function (block, addWidget, ignore) {
+      ignore('is_valid');
+      ignore('band_filter_shape');
+      if ('rec_freq' in block) {
+        addWidget('rec_freq', 'Knob', 'Channel frequency');
+      }
+      if ('audio_gain' in block) {
+        addWidget('audio_gain', 'LogSlider', 'Volume');
+      }
+      if ('squelch_threshold' in block) {
+        addWidget('squelch_threshold', 'LinSlider', 'Squelch');
+      }
+      addWidget(null, 'SaveButton');
+    });
+  }
+  widgets.Receiver = Receiver;
   
   function SpectrumPlot(config) {
     var fftCell = config.target;
@@ -998,9 +1085,13 @@ var sdr = sdr || {};
   // Silly single-purpose widget 'till we figure out more where the UI is going
   function SaveButton(config) {
     var radio = config.radio; // use mode, receiver
-    this.element = config.element;
+    var panel = this.element = config.element;
 
-    var button = config.element.querySelector('button');
+    var button = panel.querySelector('button');
+    if (!button) {
+      button = panel.appendChild(document.createElement('button'));
+      button.textContent = '+ Save to database';
+    }
     button.disabled = false;
     button.onclick = function (event) {
       var record = {
@@ -1091,9 +1182,34 @@ var sdr = sdr || {};
   }
   widgets.Scanner = Scanner;
   
+  function Generic(config) {
+    var target = config.target;
+    var container = this.element = config.element;
+    
+    // TODO pipe in a name
+    container.appendChild(document.createTextNode('Value: '));
+
+    var valueNode = container.appendChild(document.createTextNode(''));
+
+    function draw() {
+      valueNode.textContent = String(target.depend(draw));
+    }
+    draw.scheduler = config.scheduler;
+    draw();
+  }
+  widgets.Generic = Generic;
+  
   function Slider(config, getT, setT) {
     var target = config.target;
-    var slider = this.element = config.element;
+
+    var slider = config.element;
+    if (slider.nodeName !== 'INPUT') {
+      slider = document.createElement('input');
+      slider.type = 'range';
+      slider.step = 'any';
+    }
+    
+    this.element = slider;
 
     slider.addEventListener('change', function(event) {
       target.set(setT(slider.valueAsNumber));
