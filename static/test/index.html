@@ -9,6 +9,7 @@
   <script src="../client/events.js"></script>
   <script src="../client/database.js"></script>
   <script src="../client/network.js"></script>
+  <script src="../client/widgets.js"></script>
 </head><body>
   <script>
     (function() {
@@ -29,6 +30,7 @@
             var loader = document.createElement('script');
             loader.src = url;
             pending++;
+            // TODO: Syntax errors in tests are not noted
             loader.onload = function() {
               if (--pending == 0) {
                 console.log('All loaded, executing.');

@@ -625,7 +625,7 @@ var sdr = sdr || {};
         var input = parseInt(ch, 10);
         if (isNaN(input)) return;
 
-        var negative = value < 0;
+        var negative = value < 0 || (value === 0 && 1/value === -Infinity);
         if (negative) { value = -value; }
         var currentDigitValue;
         if (scale === 1) {
@@ -675,6 +675,10 @@ var sdr = sdr || {};
     function draw() {
       var value = target.depend(draw);
       var valueStr = String(Math.round(value));
+      if (valueStr === '0' && value === 0 && 1/value === -Infinity) {
+        // allow user to see progress in entering negative values
+        valueStr = '-0';
+      }
       var last = valueStr.length - 1;
       for (var i = 0; i < places.length; i++) {
         var digit = valueStr[last - i];
