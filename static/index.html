@@ -12,25 +12,7 @@
   <canvas class="hscale" data-widget="WaterfallPlot" data-target="spectrum_fft" height="400"></canvas>
 </div>
 
-<div class="sidebar frame">
-  <div class="panel">
-    <label><input type=checkbox data-widget="Toggle" data-target="running">Run</label>
-  </div>
-  <form class="panel" data-widget="Radio" data-target="source_name">
-  </form>
-  <div data-widget="Source" data-target="source">...</div>
-  <form class="panel" data-widget="Radio" data-target="mode">
-    <!-- Hardcoding these is not _necessary_ but specifies an ordering -->
-    <label><input type=radio name=mode value='AM'>AM</label>
-    <label><input type=radio name=mode value='NFM'>Narrow FM</label>
-    <label><input type=radio name=mode value='WFM'>Wide FM</label>
-    <label><input type=radio name=mode value='LSB'>Lower SSB</label>
-    <label><input type=radio name=mode value='USB'>Upper SSB</label>
-    <label><input type=radio name=mode value='VOR'>VOR</label>
-    <label><input type=radio name=mode value='IQ'>Raw IQ</label>
-  </form>
-  <div data-widget="Receiver" data-target="receiver">...</div>
-</div>
+<div class="sidebar frame" data-widget="Top"></div>
 
 <div class="sidebar frame">
   <div class="panel" data-widget="RecordDetails" data-target="preset"></div>

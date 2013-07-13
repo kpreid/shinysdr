@@ -53,7 +53,6 @@ var sdr = sdr || {};
   function createWidgets(rootTarget, context, node) {
     var scheduler = context.scheduler;
     if (node.hasAttribute && node.hasAttribute('data-widget')) {
-      var stateObj;
       var typename = node.getAttribute('data-widget');
       var T = sdr.widgets[typename];
       if (!T) {
@@ -72,6 +71,8 @@ var sdr = sdr || {};
             node.parentNode.replaceChild(document.createTextNode('[Missing: ' + targetStr + ']'), node);
             return;
           }
+        } else {
+          stateObj = rootTarget;
         }
 
         var widget = new T({
@@ -270,8 +271,10 @@ var sdr = sdr || {};
     var claimed = Object.create(null);
     
     container.textContent = '';
-    container.classList.add('panel');
     container.classList.add('frame');
+    if (container.parentNode && container.parentNode.classList.contains('frame')) {
+      container.classList.add('panel');
+    }
     
     function addWidget(name, widgetType, optBoxLabel) {
       var wEl = document.createElement('div');
@@ -312,14 +315,53 @@ var sdr = sdr || {};
         continue;
       }
       
-      switch (cell.type.type) {
-        case 'enum':
-          addWidget(name, 'Radio', name);
-        default:
-          addWidget(name, 'Generic', name);
+      if (cell.type instanceof sdr.network.Enum) {
+        addWidget(name, 'Radio', name);
+      } else {
+        addWidget(name, 'Generic', name);
       }
     }
   }
+  
+  // Widget for the top block
+  function Top(config) {
+    Block.call(this, config, function (block, addWidget, ignore, setInsertion) {
+      ignore('input_rate');
+      ignore('audio_rate');
+      ignore('spectrum_fft');
+      ignore('spectrum_resolution');
+      ignore('spectrum_rate');
+      ignore('preset');
+      ignore('scan_presets');
+      ignore('targetDB');
+      
+      if ('running' in block) {
+        // TODO support checkboxes generically
+        var runPanel = this.element.appendChild(document.createElement('div'));
+        runPanel.className = 'panel';
+        var runLabel = runPanel.appendChild(document.createElement('label'));
+        var runCheck = runLabel.appendChild(document.createElement('input'));
+        runCheck.type = 'checkbox';
+        runCheck.setAttribute('data-widget', 'Toggle');
+        runCheck.setAttribute('data-target', 'running');
+        runLabel.appendChild(document.createTextNode('Run'));
+        ignore('running');
+      }
+      if ('source_name' in block) {
+        addWidget('source_name', 'Radio', '');
+      }
+      if ('source' in block) {
+        addWidget('source', 'Source');
+      }
+      if ('mode' in block) {
+        addWidget('mode', 'Radio', '');
+      }
+      if ('receiver' in block) {
+        addWidget('receiver', 'Receiver');
+      }
+    });
+  }
+  widgets.Top = Top;
   
   // Widget for a source block
   function Source(config) {
