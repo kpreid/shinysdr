@@ -88,7 +88,11 @@ ch = 0  # osmosdr channel, to avoid magic number
 
 
 class OsmoSDRSource(Source):
-	def __init__(self, osmo_device, name='OsmoSDR Source', **kwargs):
+	def __init__(self,
+			osmo_device,
+			name='OsmoSDR Source',
+			sample_rate=2400000,
+			**kwargs):
 		Source.__init__(self, name=name, **kwargs)
 
 		# TODO present sample rate configuration using source.get_sample_rates().values()
@@ -100,7 +104,7 @@ class OsmoSDRSource(Source):
 		
 		self.osmosdr_source_block = source = osmosdr.source_c("nchan=1 " + osmo_device)
 		# Note: Docs for these setters at gr-osmosdr/lib/source_iface.h
-		source.set_sample_rate(3200000)
+		source.set_sample_rate(sample_rate)
 		source.set_center_freq(freq, ch)
 		# freq_corr: We implement correction internally because setting this at runtime breaks things
 		source.set_iq_balance_mode(0, ch)  # TODO
