@@ -760,27 +760,25 @@ var sdr = sdr || {};
       var query = dataSource.inBand(lower, upper);
       query.n.listen(draw);
       function addChannel(record) {
+        var group = record.type === 'group';
+        var channel = group ? record.grouped[0] : record;
         var freq = record.freq;
+        var mode = channel.mode;
         var el = labels.appendChild(document.createElement('span'));
         el.className = 'freqscale-channel';
-        el.textContent = record.label || record.mode;
+        el.textContent =
+          (group ? '(' + record.grouped.length + ') ' : '')
+          + (channel.label || channel.mode);
         el.style.left = view.freqToCSSLeft(freq);
         // TODO: be an <a> or <button>
         el.addEventListener('click', function(event) {
-          states.preset.set(record);
+          states.preset.set(channel);
           event.stopPropagation();
         }, false);
       }
       query.forEach(function (record) {
         switch (record.type) {
           case 'group':
-            // TODO: assumes groups contain only channels
-            addChannel({
-              freq: record.freq,
-              mode: record.grouped[0].mode,
-              label: '(' + record.grouped.length + ') ' + record.grouped[0].label
-            });
-            break;
           case 'channel':
             addChannel(record);
             break;
