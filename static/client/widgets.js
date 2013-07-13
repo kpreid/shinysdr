@@ -331,7 +331,7 @@ var sdr = sdr || {};
       if ('squelch_threshold' in block) {
         addWidget('squelch_threshold', 'LinSlider', 'Squelch');
       }
-      addWidget(null, 'SaveButton');
+      addWidget(null, 'SaveButton', '');
     });
   }
   widgets.Receiver = Receiver;
