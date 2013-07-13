@@ -1009,8 +1009,7 @@ var sdr = sdr || {};
         mode: radio.mode.get(), // TODO should be able to take from receiver
         label: 'untitled'
       };
-      radio.targetDB.add(record);
-      radio.preset.set(record);
+      radio.preset.set(radio.targetDB.add(record));
     };
   }
   widgets.SaveButton = SaveButton;
