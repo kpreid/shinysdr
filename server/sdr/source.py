@@ -9,7 +9,7 @@ from gnuradio import analog
 import osmosdr
 
 import sdr
-from sdr import Cell
+from sdr import Cell, Range
 
 
 class Source(gr.hier_block2, sdr.ExportedState):
@@ -119,7 +119,11 @@ class OsmoSDRSource(Source):
 		callback(Cell(self, 'freq', writable=True, ctor=float))
 		callback(Cell(self, 'correction_ppm', writable=True, ctor=float))
 		callback(Cell(self, 'agc', writable=True, ctor=bool))
-		callback(Cell(self, 'gain', writable=True, ctor=float))
+		
+		gain_range = self.osmosdr_source_block.get_gain_range(ch)
+		# Note: range may have gaps and we don't represent that
+		callback(Cell(self, 'gain', writable=True, ctor=
+			Range(gain_range.start(), gain_range.stop(), strict=False)))
 		
 	def get_sample_rate(self):
 		# TODO review why cast
