@@ -11,6 +11,8 @@ from gnuradio.gr import firdes
 
 import osmosdr
 
+import math
+
 import sdr
 from sdr import Cell, Range
 
@@ -193,15 +195,14 @@ class SimulatedSource(Source):
 		
 		self.noise_level = -2
 		
+		interp_taps = firdes.low_pass(
+			1, # gain
+			rf_rate,
+			audio_rate / 2,
+			audio_rate * 0.2,
+			firdes.WIN_HAMMING)
 		def make_interpolator():
-			return filter.interp_fir_filter_ccf(
-				interp,
-				firdes.low_pass(
-					1, # gain
-					rf_rate,
-					audio_rate / 2,
-					audio_rate * 0.2,
-					firdes.WIN_HAMMING))
+			return filter.interp_fir_filter_ccf(interp, interp_taps)
 		
 		def make_channel(freq):
 			osc = analog.sig_source_c(rf_rate, analog.GR_COS_WAVE, freq, 1, 0)
@@ -255,6 +256,50 @@ class SimulatedSource(Source):
 				max_dev=5e3),
 			nfm_channel)
 		signals.append(nfm_channel)
+		
+		# VOR channels
+		def add_vor(freq, angle):
+			compensation = math.pi / 180 * 154  # empirical, calibrated against VOR receiver (and therefore probably wrong)
+			angle = angle + compensation
+			angle = angle % (2 * math.pi)
+			vor_sig_freq = 30
+			phase_shift = int(rf_rate / vor_sig_freq * (angle / (2 * math.pi)))
+			vor_dev = 480
+			vor_channel = make_channel(freq)
+			vor_30 = analog.sig_source_f(audio_rate, analog.GR_COS_WAVE, vor_sig_freq, 1, 0)
+			vor_add = blocks.add_cc(1)
+			vor_audio = blocks.add_ff(1)
+			# Audio component
+			self.connect(vor_30, (vor_audio, 0))
+			self.connect(audio_signal,
+				blocks.multiply_const_ff(0.07),
+				(vor_audio, 1))
+			# AM component
+			self.connect(
+				vor_audio,
+				blocks.add_const_ff(1),
+				blocks.multiply_const_ff(0.3), # M_n
+				blocks.float_to_complex(1),
+				make_interpolator(),
+				blocks.delay(gr.sizeof_gr_complex, phase_shift),
+				(vor_add, 0))
+			# FM component
+			vor_fm_mult = blocks.multiply_cc(1)
+			vor_fm_carrier = analog.sig_source_f(rf_rate, analog.GR_COS_WAVE, 9960, 1, 0)
+			self.connect(vor_fm_carrier, blocks.float_to_complex(1), (vor_fm_mult, 1))
+			self.connect(
+				vor_30,
+				filter.interp_fir_filter_fff(interp, interp_taps), # float not complex
+				analog.frequency_modulator_fc(2 * math.pi * vor_dev / rf_rate),
+				blocks.multiply_const_cc(0.3), # M_d
+				vor_fm_mult,
+				(vor_add, 1))
+			self.connect(
+				vor_add,
+				vor_channel)
+			signals.append(vor_channel)
+		add_vor(-30e3, 0)
+		add_vor(-60e3, math.pi)
 		
 		bus_input = 0
 		for signal in signals:
