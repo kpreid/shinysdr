@@ -315,7 +315,9 @@ var sdr = sdr || {};
         continue;
       }
       
-      if (cell.type instanceof sdr.values.Enum) {
+      if (cell.type instanceof sdr.values.Range) {
+        addWidget(name, cell.type.logarithmic ? 'LogSlider' : 'LinSlider', name);
+      } else if (cell.type instanceof sdr.values.Enum) {
         addWidget(name, 'Radio', name);
       } else {
         addWidget(name, 'Generic', name);
