@@ -924,6 +924,9 @@ var sdr = sdr || {};
     var dataSource = config.freqDB.groupSameFreq();
     var view = config.view;
 
+    // cache query
+    var query, qLower = NaN, qUpper = NaN;
+
     var labelWidth = 60; // TODO actually measure styled text
 
     var outer = this.element = document.createElement("div");
@@ -970,7 +973,11 @@ var sdr = sdr || {};
       }
       
       labels.textContent = '';
-      var query = dataSource.inBand(lower, upper);
+      if (!(lower === qLower && upper === qUpper)) {
+        query = dataSource.inBand(lower, upper);
+        qLower = lower;
+        qUpper = upper;
+      }
       query.n.listen(draw);
       function addChannel(record) {
         var group = record.type === 'group';
