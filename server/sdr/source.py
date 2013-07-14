@@ -208,10 +208,11 @@ class SimulatedSource(Source):
 			return mult
 		
 		self.bus = blocks.add_vcc(1)
+		self.throttle = blocks.throttle(gr.sizeof_gr_complex, rf_rate)
 		bus_input = 0
 		self.connect(
 			self.bus,
-			blocks.throttle(gr.sizeof_gr_complex, rf_rate),
+			self.throttle,
 			self)
 		
 		# Audio input signal
@@ -269,3 +270,12 @@ class SimulatedSource(Source):
 		
 	def get_freq(self):
 		return 0
+
+	def needs_renew(self):
+		return True
+
+	def renew(self):
+		# throttle block runs on a clock which does not stop when the flowgraph stops; resetting the sample rate restarts the clock
+		# TODO: This doesn't need to be a 'renew', just a hook on graph start (but there's no such hook generically for python hier blocks)
+		self.throttle.set_sample_rate(self.throttle.sample_rate())
+		return self
