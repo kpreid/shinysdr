@@ -21,7 +21,7 @@ fm_deviation = 480
 
 class VOR(sdr.receiver.SimpleAudioReceiver):
 
-	def __init__(self, name='VOR receiver', zero_point=-5, **kwargs):
+	def __init__(self, name='VOR receiver', zero_point=-20, **kwargs):
 		self.channel_rate = channel_rate = 40000
 		internal_audio_rate = 20000  # TODO over spec'd
 		self.zero_point = zero_point
@@ -30,7 +30,7 @@ class VOR(sdr.receiver.SimpleAudioReceiver):
 		sdr.receiver.SimpleAudioReceiver.__init__(self,
 			name=name,
 			demod_rate=channel_rate,
-			band_filter=fm_subcarrier + fm_deviation + transition / 2,
+			band_filter=fm_subcarrier * 1.25 + fm_deviation + transition / 2,
 			band_filter_transition=transition,
 			**kwargs)
 
@@ -46,10 +46,10 @@ class VOR(sdr.receiver.SimpleAudioReceiver):
 		self.dir_vector_filter = gr.fir_filter_ccf(1, firdes.low_pass(
 			1, dir_rate, 1, 2, firdes.WIN_HAMMING, 6.76))
 		self.am_channel_filter_block = gr.fir_filter_ccf(1, firdes.low_pass(
-			1, channel_rate, 10000, 4000, firdes.WIN_HAMMING, 6.76))
+			1, channel_rate, fm_subcarrier / 2, fm_subcarrier / 2, firdes.WIN_HAMMING, 6.76))
 		self.goertzel_fm = fft.goertzel_fc(channel_rate, dir_scale * audio_scale, 30)
 		self.goertzel_am = fft.goertzel_fc(internal_audio_rate, dir_scale, 30)
-		self.fm_channel_filter_block = filter.freq_xlating_fir_filter_ccc(1, (firdes.low_pass(1.0, channel_rate, 500, 100, firdes.WIN_HAMMING)), fm_subcarrier, channel_rate)
+		self.fm_channel_filter_block = filter.freq_xlating_fir_filter_ccc(1, (firdes.low_pass(1.0, channel_rate, fm_subcarrier / 2, fm_subcarrier / 2, firdes.WIN_HAMMING)), fm_subcarrier, channel_rate)
 		self.dc_blocker_block = filter.dc_blocker_ff(128, True)
 		self.multiply_conjugate_block = blocks.multiply_conjugate_cc(1)
 		self.complex_to_arg_block = blocks.complex_to_arg(1)
@@ -105,12 +105,13 @@ class VOR(sdr.receiver.SimpleAudioReceiver):
 			self.multiply_conjugate_block,
 			self.dir_vector_filter,
 			self.complex_to_arg_block,
+			blocks.multiply_const_ff(-1),  # opposite angle conventions
 			self.zeroer,
 			self.probe)
 
 	def state_def(self, callback):
 		super(sdr.receiver.SimpleAudioReceiver, self).state_def(callback)
-		callback(Cell(self, 'zero_point', writable=True))
+		callback(Cell(self, 'zero_point', writable=True, ctor=float))
 		callback(Cell(self, 'angle'))
 
 	def get_zero_point(self):
