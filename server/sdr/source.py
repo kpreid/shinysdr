@@ -5,6 +5,8 @@ import gnuradio.blocks
 from gnuradio import gr
 from gnuradio import blocks
 from gnuradio import analog
+from gnuradio import filter
+from gnuradio.gr import firdes
 
 import osmosdr
 
@@ -184,12 +186,53 @@ class SimulatedSource(Source):
 	def __init__(self, name='Simulated Source', **kwargs):
 		Source.__init__(self, name=name, **kwargs)
 		
-		self.__sample_rate = 1e6
+		audio_rate = 1e4
+		rf_rate = self.__sample_rate = 200e3
+		interp = int(rf_rate / audio_rate)
 		
+		def make_interpolator():
+			return filter.interp_fir_filter_ccf(
+				interp,
+				firdes.low_pass(
+					1, # gain
+					rf_rate,
+					audio_rate / 2,
+					audio_rate * 0.2,
+					firdes.WIN_HAMMING))
+		
+		def make_channel(freq):
+			osc = analog.sig_source_c(rf_rate, analog.GR_COS_WAVE, freq, 1, 0)
+			mult = blocks.multiply_cc(1)
+			self.connect(osc, (mult, 1))
+			return mult
+		
+		self.bus = blocks.add_vcc(1)
+		bus_input = 0
+		self.connect(
+			self.bus,
+			blocks.throttle(gr.sizeof_gr_complex, rf_rate),
+			self)
+		
+		# Audio input signal
+		pitch = analog.sig_source_f(audio_rate, analog.GR_SAW_WAVE, -1, 2000, 1000)
+		audio_signal = vco = blocks.vco_f(audio_rate, 1, 1)
+		self.connect(pitch, vco)
+		
+		# Noise source
 		self.connect(
 			analog.noise_source_c(analog.GR_GAUSSIAN, 0.01, 0),
-			blocks.throttle(gr.sizeof_gr_complex, self.__sample_rate),
-			self)
+			(self.bus, bus_input))
+		bus_input = bus_input + 1
+		
+		# AM channel
+		self.connect(
+			audio_signal,
+			blocks.float_to_complex(1),
+			blocks.add_const_cc(1),
+			make_interpolator(),
+			make_channel(10e3),
+			(self.bus, bus_input))
+		bus_input = bus_input + 1
 	
 	def __str__(self):
 		return 'Simulated RF'
