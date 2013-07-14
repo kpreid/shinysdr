@@ -187,7 +187,7 @@ var sdr = sdr || {};
       var entries = [];
       this._unionSources.forEach(function (source, i) {
         entries.push.apply(entries, source.getAll());
-        this._sourceGenerations[i] = NaN;
+        this._sourceGenerations[i] = source.getGeneration();
       }, this);
       entries.sort(compareRecord);
       this._entries = Object.freeze(entries);
@@ -200,7 +200,7 @@ var sdr = sdr || {};
   };
   Union.prototype._isUpToDate = function () {
     return this._unionSources.every(function (source, i) {
-      return source.getGeneration() === this._sourceGenerations[i];
+      return source.getGeneration() === this._sourceGenerations[i] && source._isUpToDate();
     }.bind(this));
   };
   database.Union = Union;
