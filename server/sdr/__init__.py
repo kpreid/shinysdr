@@ -190,6 +190,6 @@ class Range(ValueType):
 		if self.__strict:
 			if specimen < self.__min:
 				specimen = self.__min
-			if specimen < self.__max:
+			if specimen > self.__max:
 				specimen = self.__max
 		return specimen
