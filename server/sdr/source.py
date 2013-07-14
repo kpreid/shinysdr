@@ -258,8 +258,9 @@ class SimulatedSource(Source):
 		signals.append(nfm_channel)
 		
 		# VOR channels
+		# TODO: My signal level parameters are probably wrong because this signal doesn't look like a real VOR signal
 		def add_vor(freq, angle):
-			compensation = math.pi / 180 * 154  # empirical, calibrated against VOR receiver (and therefore probably wrong)
+			compensation = math.pi / 180 * -6.5  # empirical, calibrated against VOR receiver (and therefore probably wrong)
 			angle = angle + compensation
 			angle = angle % (2 * math.pi)
 			vor_sig_freq = 30
@@ -269,31 +270,38 @@ class SimulatedSource(Source):
 			vor_30 = analog.sig_source_f(audio_rate, analog.GR_COS_WAVE, vor_sig_freq, 1, 0)
 			vor_add = blocks.add_cc(1)
 			vor_audio = blocks.add_ff(1)
-			# Audio component
-			self.connect(vor_30, (vor_audio, 0))
+			# Audio/AM signal
+			self.connect(
+				vor_30,
+				blocks.multiply_const_ff(0.3), # M_n
+				(vor_audio, 0))
 			self.connect(audio_signal,
-				blocks.multiply_const_ff(0.07),
+				blocks.multiply_const_ff(0.07), # M_i
 				(vor_audio, 1))
+			# Carrier component
+			self.connect(
+				analog.sig_source_c(0, analog.GR_CONST_WAVE, 0, 0, 1),
+				(vor_add, 0))
 			# AM component
 			self.connect(
 				vor_audio,
-				blocks.add_const_ff(1),
-				blocks.multiply_const_ff(0.3), # M_n
 				blocks.float_to_complex(1),
 				make_interpolator(),
 				blocks.delay(gr.sizeof_gr_complex, phase_shift),
-				(vor_add, 0))
+				(vor_add, 1))
 			# FM component
 			vor_fm_mult = blocks.multiply_cc(1)
-			vor_fm_carrier = analog.sig_source_f(rf_rate, analog.GR_COS_WAVE, 9960, 1, 0)
-			self.connect(vor_fm_carrier, blocks.float_to_complex(1), (vor_fm_mult, 1))
-			self.connect(
+			self.connect(  # carrier generation
+				analog.sig_source_f(rf_rate, analog.GR_COS_WAVE, 9960, 1, 0), 
+				blocks.float_to_complex(1),
+				(vor_fm_mult, 1))
+			self.connect(  # modulation
 				vor_30,
 				filter.interp_fir_filter_fff(interp, interp_taps), # float not complex
 				analog.frequency_modulator_fc(2 * math.pi * vor_dev / rf_rate),
 				blocks.multiply_const_cc(0.3), # M_d
 				vor_fm_mult,
-				(vor_add, 1))
+				(vor_add, 2))
 			self.connect(
 				vor_add,
 				vor_channel)
