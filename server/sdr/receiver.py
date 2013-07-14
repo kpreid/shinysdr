@@ -306,7 +306,7 @@ class FMReceiver(SimpleAudioReceiver):
 
 class NFMReceiver(FMReceiver):
 	def __init__(self, **kwargs):
-		FMReceiver.__init__(self, name='Narrowband FM', demod_rate=48000, deviation=5000, band_filter=5000, band_filter_transition=1000, **kwargs)
+		FMReceiver.__init__(self, name='Narrowband FM', demod_rate=48000, deviation=5000, band_filter=6500, band_filter_transition=1000, **kwargs)
 
 
 class WFMReceiver(FMReceiver):
