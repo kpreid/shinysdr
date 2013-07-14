@@ -1389,6 +1389,7 @@ var sdr = sdr || {};
   widgets.Radio = Radio;
   
   var TAU = Math.PI * 2;
+  var RAD_TO_DEG = 360 / TAU;
   function Angle(config) {
     var target = config.target;
     var container = this.element = document.createElement('div');
@@ -1407,7 +1408,7 @@ var sdr = sdr || {};
     function draw() {
       var valueAngle = target.depend(draw);
       
-      text.nodeValue = (valueAngle * (360 / TAU)).toFixed(2) + '\u00B0';
+      text.nodeValue = mod(valueAngle * RAD_TO_DEG, 360).toFixed(2) + '\u00B0';
       
       w = canvas.width;
       h = canvas.height;
