@@ -4,6 +4,7 @@ import gnuradio
 import gnuradio.blocks
 from gnuradio import gr
 from gnuradio import blocks
+from gnuradio import blks2
 from gnuradio import analog
 from gnuradio import filter
 from gnuradio.gr import firdes
@@ -224,6 +225,14 @@ class SimulatedSource(Source):
 			(self.bus, bus_input))
 		bus_input = bus_input + 1
 		
+		# Baseband / DSB channel
+		self.connect(
+			audio_signal,
+			blocks.float_to_complex(1),
+			make_interpolator(),
+			(self.bus, bus_input))
+		bus_input = bus_input + 1
+		
 		# AM channel
 		self.connect(
 			audio_signal,
@@ -231,6 +240,18 @@ class SimulatedSource(Source):
 			blocks.add_const_cc(1),
 			make_interpolator(),
 			make_channel(10e3),
+			(self.bus, bus_input))
+		bus_input = bus_input + 1
+		
+		# NFM channel
+		self.connect(
+			audio_signal,
+			blks2.nbfm_tx(
+				audio_rate=audio_rate,
+				quad_rate=rf_rate,
+				tau=75e-6,
+				max_dev=5e3),
+			make_channel(30e3),
 			(self.bus, bus_input))
 		bus_input = bus_input + 1
 	
