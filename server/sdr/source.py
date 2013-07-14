@@ -211,11 +211,11 @@ class SimulatedSource(Source):
 		
 		self.bus = blocks.add_vcc(1)
 		self.throttle = blocks.throttle(gr.sizeof_gr_complex, rf_rate)
-		bus_input = 0
 		self.connect(
 			self.bus,
 			self.throttle,
 			self)
+		signals = []
 		
 		# Audio input signal
 		pitch = analog.sig_source_f(audio_rate, analog.GR_SAW_WAVE, -1, 2000, 1000)
@@ -224,30 +224,28 @@ class SimulatedSource(Source):
 		
 		# Noise source
 		self.noise_source = analog.noise_source_c(analog.GR_GAUSSIAN, 10 ** self.noise_level, 0)
-		self.connect(
-			self.noise_source,
-			(self.bus, bus_input))
-		bus_input = bus_input + 1
+		signals.append(self.noise_source)
 		
 		# Baseband / DSB channel
+		baseband_interp = make_interpolator()
 		self.connect(
 			audio_signal,
 			blocks.float_to_complex(1),
-			make_interpolator(),
-			(self.bus, bus_input))
-		bus_input = bus_input + 1
+			baseband_interp)
+		signals.append(baseband_interp)
 		
 		# AM channel
+		am_channel = make_channel(10e3)
 		self.connect(
 			audio_signal,
 			blocks.float_to_complex(1),
 			blocks.add_const_cc(1),
 			make_interpolator(),
-			make_channel(10e3),
-			(self.bus, bus_input))
-		bus_input = bus_input + 1
+			am_channel)
+		signals.append(am_channel)
 		
 		# NFM channel
+		nfm_channel = make_channel(30e3)
 		self.connect(
 			audio_signal,
 			blks2.nbfm_tx(
@@ -255,9 +253,13 @@ class SimulatedSource(Source):
 				quad_rate=rf_rate,
 				tau=75e-6,
 				max_dev=5e3),
-			make_channel(30e3),
-			(self.bus, bus_input))
-		bus_input = bus_input + 1
+			nfm_channel)
+		signals.append(nfm_channel)
+		
+		bus_input = 0
+		for signal in signals:
+			self.connect(signal, (self.bus, bus_input))
+			bus_input = bus_input + 1
 	
 	def __str__(self):
 		return 'Simulated RF'
