@@ -245,6 +245,7 @@ class Top(gr.top_block, sdr.ExportedState):
 		return self.spectrum_rate
 
 	def set_spectrum_rate(self, value):
+		self.spectrum_rate = value
 		self.spectrum_fft.set_vec_rate(value)
 
 	def get_spectrum_fft(self):
