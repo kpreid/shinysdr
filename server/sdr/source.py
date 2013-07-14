@@ -191,6 +191,8 @@ class SimulatedSource(Source):
 		rf_rate = self.__sample_rate = 200e3
 		interp = int(rf_rate / audio_rate)
 		
+		self.noise_level = -2
+		
 		def make_interpolator():
 			return filter.interp_fir_filter_ccf(
 				interp,
@@ -221,8 +223,9 @@ class SimulatedSource(Source):
 		self.connect(pitch, vco)
 		
 		# Noise source
+		self.noise_source = analog.noise_source_c(analog.GR_GAUSSIAN, 10 ** self.noise_level, 0)
 		self.connect(
-			analog.noise_source_c(analog.GR_GAUSSIAN, 0.01, 0),
+			self.noise_source,
 			(self.bus, bus_input))
 		bus_input = bus_input + 1
 		
@@ -262,7 +265,7 @@ class SimulatedSource(Source):
 	def state_def(self, callback):
 		super(SimulatedSource, self).state_def(callback)
 		callback(Cell(self, 'freq', writable=False, ctor=float))
-		#callback(Cell(self, 'gain', writable=True, ctor=float))
+		callback(Cell(self, 'noise_level', writable=True, ctor=Range(-5, 1)))
 		
 	def get_sample_rate(self):
 		# TODO review why cast
@@ -270,6 +273,13 @@ class SimulatedSource(Source):
 		
 	def get_freq(self):
 		return 0
+	
+	def get_noise_level(self):
+		return self.noise_level
+	
+	def set_noise_level(self, value):
+		self.noise_source.set_amplitude(10 ** value)
+		self.noise_level = value
 
 	def needs_renew(self):
 		return True
