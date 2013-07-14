@@ -2,6 +2,8 @@ var sdr = sdr || {};
 (function () {
   'use strict';
   
+  var Cell = sdr.values.Cell;
+  
   // support components module
   var widget = sdr.widget = {};
   
@@ -265,7 +267,7 @@ var sdr = sdr || {};
   sdr.widget.SpectrumView = SpectrumView;
   
   // Superclass for a sub-block widget
-  function Block(config, special) {
+  function Block(config, optSpecial) {
     var block = config.target;
     var container = this.element = config.element;
     var claimed = Object.create(null);
@@ -304,26 +306,32 @@ var sdr = sdr || {};
       container = el;
     }
     
-    special.call(this, block, addWidget, ignore, setInsertion);
+    if (optSpecial) {
+      optSpecial.call(this, block, addWidget, ignore, setInsertion);
+    }
     
     for (var name in block) {
       if (claimed[name]) continue;
       
-      var cell = block[name];
-      if (!cell.get) {
+      var member = block[name];
+      if (member instanceof Cell) {
+        if (member.type instanceof sdr.values.Range) {
+          addWidget(name, member.type.logarithmic ? 'LogSlider' : 'LinSlider', name);
+        } else if (member.type instanceof sdr.values.Enum) {
+          addWidget(name, 'Radio', name);
+        } else {
+          addWidget(name, 'Generic', name);
+        }
+      } else if (member._deathNotice) { // TODO better recognition of subblocks
+        addWidget(name, 'Block');
+      } else {
         console.warn('Block scan got non-cell:', cell);
         continue;
       }
       
-      if (cell.type instanceof sdr.values.Range) {
-        addWidget(name, cell.type.logarithmic ? 'LogSlider' : 'LinSlider', name);
-      } else if (cell.type instanceof sdr.values.Enum) {
-        addWidget(name, 'Radio', name);
-      } else {
-        addWidget(name, 'Generic', name);
-      }
     }
   }
+  widgets.Block = Block;
   
   // Widget for the top block
   function Top(config) {
@@ -352,8 +360,16 @@ var sdr = sdr || {};
       if ('source_name' in block) {
         addWidget('source_name', 'Radio', '');
       }
-      if ('source' in block) {
-        addWidget('source', 'Source');
+      if (false) { // TODO: Figure out a good way to display options for all sources
+        ignore('source');
+        if ('sources' in block) {
+          addWidget('sources', 'SourceSet');
+        }
+      } else {
+        ignore('sources');
+        if ('source' in block) {
+          addWidget('source', 'Source');
+        }
       }
       if ('mode' in block) {
         addWidget('mode', 'Radio', '');
@@ -364,6 +380,15 @@ var sdr = sdr || {};
     });
   }
   widgets.Top = Top;
+  
+  function SourceSet(config) {
+    Block.call(this, config, function (block, addWidget, ignore, setInsertion) {
+      for (var name in block) {
+        addWidget(name, 'Source');
+      }
+    });
+  }
+  widgets.SourceSet = SourceSet;
   
   // Widget for a source block
   function Source(config) {
@@ -1110,7 +1135,7 @@ var sdr = sdr || {};
       }
     };
   }
-  RecordCellPropCell.prototype = Object.create(sdr.values.Cell.prototype, {constructor: {value: RecordCellPropCell}});
+  RecordCellPropCell.prototype = Object.create(Cell.prototype, {constructor: {value: RecordCellPropCell}});
   
   function RecordDetails(config) {
     var recordCell = config.target;

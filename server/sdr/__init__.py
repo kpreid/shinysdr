@@ -1,9 +1,40 @@
-class Cell(object):
-	def __init__(self, target, key, writable=False, ctor=None):
-		super(Cell, self).__init__()
+# TODO: Introduce a common superclass to share cell implementation
+class BaseCell(object):
+	def __init__(self, target, key, persists=True, writable=False):
+		# The exact relationship of target and key depends on the subtype
 		self._target = target
 		self._key = key
+		self._persists = persists
 		self._writable = writable
+	
+	def isBlock(self):
+		raise NotImplementedError()
+	
+	def key(self):
+		return self._key
+
+	def ctor(self):
+		# TODO where should this actually apply
+		return None
+
+	def get(self):
+		raise NotImplementedError()
+	
+	def set(self, value):
+		raise NotImplementedError()
+	
+	def isWritable(self):
+		return self._writable
+	
+	def persists(self):
+		return self._persists
+		
+	def description(self):
+		raise NotImplementedError()
+
+class Cell(BaseCell):
+	def __init__(self, target, key, writable=False, ctor=None):
+		BaseCell.__init__(self, target, key, writable=writable, persists=writable)
 		self._ctor = ctor
 		self._getter = getattr(self._target, 'get_' + key)
 		if writable:
@@ -13,9 +44,6 @@ class Cell(object):
 	
 	def isBlock(self):
 		return False
-	
-	def key(self):
-		return self._key
 	
 	def ctor(self):
 		return self._ctor
@@ -28,12 +56,6 @@ class Cell(object):
 			raise Exception('Not writable.')
 		return self._setter(value)
 	
-	def isWritable(self):
-		return self._writable
-	
-	def persists(self):
-		return self._writable
-
 	def description(self):
 		if str(self._ctor) == 'sdr.top.SpectrumTypeStub':
 			# TODO: eliminate special case
@@ -50,24 +72,12 @@ class Cell(object):
 		}
 
 
-class BlockCell(object):
-	def __init__(self, target, key):
-		super(BlockCell, self).__init__()
-		self._target = target
-		self._key = key
+class BaseBlockCell(BaseCell):
+	def __init__(self, target, key, persists=True):
+		BaseCell.__init__(self, target, key, writable=False, persists=persists)
 	
 	def isBlock(self):
 		return True
-	
-	def key(self):
-		return self._key
-	
-	def ctor(self):
-		return None
-	
-	def getBlock(self):
-		# TODO method-based access
-		return getattr(self._target, self._key)
 	
 	def getMembers(self):
 		return self.getBlock().state()
@@ -78,14 +88,24 @@ class BlockCell(object):
 	def set(self, value):
 		self.getBlock().state_from_json(value)
 	
-	def isWritable(self):
-		return False
-	
-	def persists(self):
-		return True
-	
 	def description(self):
 		return self.getBlock().state_description()
+
+class BlockCell(BaseBlockCell):
+	def __init__(self, target, key, persists=True):
+		BaseBlockCell.__init__(self, target, key, persists=persists)
+	
+	def getBlock(self):
+		# TODO method-based access
+		return getattr(self._target, self._key)
+
+# TODO: It's unclear whether or not the Cell design makes sense in light of this. We seem to have conflated the index in the container and the type of the contained into one object.
+class CollectionMemberCell(BaseBlockCell):
+	def __init__(self, target, key, persists=True):
+		BaseBlockCell.__init__(self, target, key, persists=persists)
+	
+	def getBlock(self):
+		return self._target[self._key]
 
 
 class ExportedState(object):
@@ -138,6 +158,18 @@ class ExportedState(object):
 			childDescs[key] = cell.description()
 		return description
 
+
+class CollectionState(ExportedState):
+	'''Wrapper around a plain Python collection.'''
+	def __init__(self, collection):
+		self.__collection = collection
+	
+	# TODO: We will eventually want to allow for changes in the collection, which means disabling ExportedState's internal cache
+	def state_def(self, callback):
+		super(CollectionState, self).state_def(callback)
+		for key in self.__collection:
+			callback(CollectionMemberCell(self.__collection, key))
+	
 
 class NoneESType(ExportedState):
 	'''Used like None but implementing ExportedState.'''

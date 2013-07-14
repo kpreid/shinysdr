@@ -9,7 +9,7 @@ from gnuradio.eng_option import eng_option
 from gnuradio.gr import firdes
 from optparse import OptionParser
 import sdr
-from sdr import Cell, BlockCell, Enum, NoneES
+from sdr import Cell, CollectionState, BlockCell, Enum, NoneES
 import sdr.receiver
 import sdr.receivers.vor
 
@@ -31,6 +31,9 @@ class Top(gr.top_block, sdr.ExportedState):
 		self.spectrum_resolution = 4096
 		self.spectrum_rate = 30
 		self._mode = ''  # designates no receiver
+
+		# kludge for using collection like block - TODO: better architecture
+		self.sources = CollectionState(self._sources)
 
 		# Blocks
 		self.source = None
@@ -146,7 +149,8 @@ class Top(gr.top_block, sdr.ExportedState):
 		callback(Cell(self, 'spectrum_resolution', True, ctor=int))
 		callback(Cell(self, 'spectrum_rate', True, ctor=float))
 		callback(Cell(self, 'spectrum_fft', ctor=SpectrumTypeStub))
-		callback(BlockCell(self, 'source'))
+		callback(BlockCell(self, 'sources'))
+		callback(BlockCell(self, 'source', persists=False))
 		callback(BlockCell(self, 'receiver'))
 
 	def start(self):

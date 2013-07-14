@@ -65,12 +65,14 @@ class BlockResource(resource.Resource):
 	def __init__(self, block, noteDirty):
 		resource.Resource.__init__(self)
 		self._blockResources = {}
+		self._blockCells = {}
 		self._block = block
 		self._noteDirty = noteDirty
 		for key, cell in block.state().iteritems():
 			ctor = cell.ctor()
 			if cell.isBlock():
 				self._blockResources[key] = None
+				self._blockCells[key] = cell
 			elif ctor is sdr.top.SpectrumTypeStub:
 				self.putChild(key, SpectrumResource(cell, self._noteDirty))
 			else:
@@ -79,7 +81,7 @@ class BlockResource(resource.Resource):
 	def getChild(self, name, request):
 		if name in self._blockResources:
 			currentResource = self._blockResources[name]
-			currentBlock = getattr(self._block, name)  # TODO use cell.getBlock() instead
+			currentBlock = self._blockCells[name].getBlock()
 			if currentResource is None or not currentResource.isForBlock(currentBlock):
 				self._blockResources[name] = currentResource = BlockResource(currentBlock, self._noteDirty)
 			return currentResource
