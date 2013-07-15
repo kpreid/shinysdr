@@ -334,8 +334,11 @@ var sdr = sdr || {};
       optSpecial.call(this, block, addWidget, ignore, setInsertion);
     }
     
-    for (var name in block) {
-      if (claimed[name]) continue;
+    var names = [];
+    for (var name in block) names.push(name);
+    names.sort();
+    names.forEach(function (name) {
+      if (claimed[name]) return;
       
       var member = block[name];
       if (member instanceof Cell) {
@@ -350,10 +353,8 @@ var sdr = sdr || {};
         addWidget(name, 'Block');
       } else {
         console.warn('Block scan got non-cell:', cell);
-        continue;
       }
-      
-    }
+    });
   }
   widgets.Block = Block;
   
