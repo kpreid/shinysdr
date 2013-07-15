@@ -228,7 +228,11 @@ var sdr = sdr || {};
     var fractionalScroll = 0;
     
     this.changeZoom = function changeZoom(delta, cursorX) {
-      var maxZoom = radio.spectrum_fft.get().length / MAX_ZOOM_BINS;
+      var maxZoom = Math.max(
+        1,  // at least min zoom,
+        Math.max(
+          bandwidth / 100e3, // at least 100KHz
+          radio.spectrum_fft.get().length / MAX_ZOOM_BINS));
       
       cursorX += fractionalScroll;
       var cursor01 = cursorX / pixelWidth;
