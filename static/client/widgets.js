@@ -336,14 +336,10 @@ var sdr = sdr || {};
   // Widget for the top block
   function Top(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion) {
-      ignore('input_rate');
-      ignore('audio_rate');
-      ignore('spectrum_fft');
-      ignore('spectrum_resolution');
-      ignore('spectrum_rate');
-      ignore('preset');
-      ignore('scan_presets');
-      ignore('targetDB');
+      ignore('spectrum_fft');  // displayed separately
+      ignore('preset');  // displayed separately, not real state
+      ignore('scan_presets');  // not real state
+      ignore('targetDB');  // not real state
       
       if ('running' in block) {
         // TODO support checkboxes generically
@@ -377,6 +373,12 @@ var sdr = sdr || {};
       if ('receiver' in block) {
         addWidget('receiver', 'Receiver');
       }
+      
+      var details = this.element.appendChild(document.createElement('details'));
+      details.id = 'top-options'; // TODO make unique based on path or something
+      details.appendChild(document.createElement('summary')).textContent = 'Other options';
+      
+      setInsertion(details);
     });
   }
   widgets.Top = Top;
