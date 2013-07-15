@@ -66,6 +66,8 @@ var sdr = sdr || {};
       
       var container = node.parentNode;
       var currentWidgetEl = node;
+      var shouldBePanel = container.classList.contains('frame') || container.nodeName === 'DETAILS';  // TODO: less DWIM, more precise
+      
       var go = function go() {
         var stateObj;
         if (node.hasAttribute('data-target')) {
@@ -88,13 +90,14 @@ var sdr = sdr || {};
           view: context.spectrumView, // TODO should be context-dependent
           freqDB: context.freqDB, // TODO: remove the need for this
           radio: context.radio, // TODO: remove the need for this
-          storage: node.hasAttribute('id') ? new StorageNamespace(localStorage, 'sdr.widgetState.' + node.getAttribute('id') + '.') : null
+          storage: node.hasAttribute('id') ? new StorageNamespace(localStorage, 'sdr.widgetState.' + node.getAttribute('id') + '.') : null,
+          shouldBePanel: shouldBePanel
         });
         widget.element.classList.add('widget-' + typename);
         
         var newEl = widget.element;
         var placeMark = newSourceEl.nextSibling;
-        if ((container.classList.contains('frame') || container.nodeName === 'DETAILS') && !newEl.classList.contains('panel')) {
+        if (shouldBePanel && !newEl.classList.contains('panel')) {
           var widgetPanel = document.createElement('div');
           widgetPanel.classList.add('panel');
           if (newSourceEl.hasAttribute('title')) {
@@ -298,7 +301,7 @@ var sdr = sdr || {};
     
     container.textContent = '';
     container.classList.add('frame');
-    if (container.parentNode && container.parentNode.classList.contains('frame')) {
+    if (config.shouldBePanel) {
       container.classList.add('panel');
     }
     
