@@ -1334,28 +1334,43 @@ var sdr = sdr || {};
     var target = config.target;
 
     var slider = config.element;
+    var text;
     if (slider.nodeName !== 'INPUT') {
-      slider = document.createElement('input');
+      var container = this.element = document.createElement('span');
+      slider = container.appendChild(document.createElement('input'));
       slider.type = 'range';
       slider.step = 'any';
+      text = container.appendChild(document.createElement('span')).appendChild(document.createTextNode());
+    } else {
+      this.element = slider;
     }
-    if (target.type instanceof sdr.values.Range) {
-      slider.min = getT(target.type.min);
-      slider.max = getT(target.type.max);
+    
+    var format = function(n) { return n.toFixed(2); };
+    
+    var type = target.type;
+    if (type instanceof sdr.values.Range) {
+      slider.min = getT(type.min);
+      slider.max = getT(type.max);
+      slider.step = type.integer ? 1 : 'any';
+      if (type.integer) {
+        format = function(n) { return '' + n; };
+      }
     }
-
-    this.element = slider;
 
     slider.addEventListener('change', function(event) {
       target.set(setT(slider.valueAsNumber));
     }, false);
     function draw() {
-      var value = getT(target.depend(draw));
-      if (!isFinite(value)) {
-        value = 0;
+      var value = +target.depend(draw);
+      var sValue = getT(value);
+      if (!isFinite(sValue)) {
+        sValue = 0;
       }
       slider.disabled = false;
-      slider.valueAsNumber = value;
+      slider.valueAsNumber = sValue;
+      if (text) {
+        text.data = format(value);
+      }
     }
     draw.scheduler = config.scheduler;
     draw();
