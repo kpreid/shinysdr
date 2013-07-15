@@ -537,9 +537,10 @@ var sdr = sdr || {};
       
       var viewCenterFreq = states.source.freq.depend(draw);
       var bandwidth = states.input_rate.depend(draw);
-      var xZero = freqToCoord(viewCenterFreq - bandwidth/2);
-      var xFullScale = freqToCoord(viewCenterFreq + bandwidth/2);
-      var xScale = (xFullScale - xZero) / len;
+      var halfBinWidth = bandwidth / len / 2;
+      var xZero = freqToCoord(viewCenterFreq - bandwidth/2 + halfBinWidth);
+      var xAfterLast = freqToCoord(viewCenterFreq + bandwidth/2 + halfBinWidth);
+      var xScale = (xAfterLast - xZero) / len;
       var yScale = -h / (view.maxLevel - view.minLevel);
       var yZero = -view.maxLevel * yScale;
       
@@ -580,11 +581,13 @@ var sdr = sdr || {};
       
       function path() {
         ctx.beginPath();
-        ctx.moveTo(-w*3, h*2);
+        ctx.moveTo(xZero - xScale, h + 2);
+        ctx.lineTo(xZero - xScale, yZero + averageBuffer[0] * yScale);
         for (var i = 0; i < len; i++) {
           ctx.lineTo(xZero + i * xScale, yZero + averageBuffer[i] * yScale);
         }
-        ctx.lineTo(w*4, h*2);
+        ctx.lineTo(xAfterLast, yZero + averageBuffer[len - 1] * yScale);
+        ctx.lineTo(xAfterLast, h + 2);
       }
       
       // Fill is deliberately over stroke. This acts to deemphasize downward stroking of spikes, which tend to occur in noise.
