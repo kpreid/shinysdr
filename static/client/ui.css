@@ -155,8 +155,6 @@ body, .panel {
   position: absolute;
 }
 .freqscale-channel, .freqscale-band {
-  background: #555;
-  color: white;
   opacity: 0.7;
 
   white-space: nowrap;
@@ -164,16 +162,18 @@ body, .panel {
   text-overflow: ellipsis;
 }
 .freqscale-channel {
-  border-radius: .3em;
-  
   position: absolute;
   -webkit-transform-origin: center left;
   -webkit-transform: rotate(-90deg) translate(1.9em, 0);
+
+  color: #CCC;
 }
 .freqscale-band {
   position: absolute;
   bottom: 1.15em;
   
+  background: #555;
+  color: white;
   background: linear-gradient(to right, #666 0%,#444 100%);
   
   text-align: center;
