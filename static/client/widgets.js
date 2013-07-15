@@ -1354,7 +1354,7 @@ var sdr = sdr || {};
     if (type instanceof sdr.values.Range) {
       slider.min = getT(type.min);
       slider.max = getT(type.max);
-      slider.step = type.integer ? 1 : 'any';
+      slider.step = (type.integer && !type.logarithmic) ? 1 : 'any';
       if (type.integer) {
         format = function(n) { return '' + n; };
       }
