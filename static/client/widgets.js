@@ -260,6 +260,18 @@ var sdr = sdr || {};
       scheduler.enqueue(prepare);
     };
     
+    this.addEventsBesidesClick = function addEventsBesidesClick(element) {
+      element.addEventListener('mousewheel', function(event) { // Not in FF
+        if (Math.abs(event.wheelDeltaY) > Math.abs(event.wheelDeltaX)) {
+          // TODO: works only because we're at the left edge
+          self.changeZoom(-event.wheelDeltaY, event.clientX);
+          event.preventDefault();
+          event.stopPropagation();
+        } else {
+          // allow normal horizontal scrolling
+        }
+      }, true);
+    }
     this.addClickToTune = function addClickToTune(element) {
       function clickTune(event) {
         if (radio.receiver.rec_freq) {
@@ -279,17 +291,8 @@ var sdr = sdr || {};
         }, true);
         clickTune(event);
       }, false);
-      element.addEventListener('mousewheel', function(event) { // Not in FF
-        if (Math.abs(event.wheelDeltaY) > Math.abs(event.wheelDeltaX)) {
-          // TODO: works only because we're at the left edge
-          self.changeZoom(-event.wheelDeltaY, event.clientX);
-          event.preventDefault();
-          event.stopPropagation();
-        } else {
-          // allow normal horizontal scrolling
-        }
-      }, true);
-    }
+      this.addEventsBesidesClick(element);
+    }.bind(this);
   }
   sdr.widget.SpectrumView = SpectrumView;
   
@@ -956,6 +959,9 @@ var sdr = sdr || {};
     numbers.className = 'freqscale-numbers';
     var labels = outer.appendChild(document.createElement('div'));
     labels.className = 'freqscale-labels';
+    
+    view.addEventsBesidesClick(outer);
+    
     // TODO: reuse label nodes instead of reallocating...if that's cheaper
     function draw() {
       var centerFreq = tunerSource.depend(draw);
