@@ -9,7 +9,7 @@ from gnuradio.eng_option import eng_option
 from gnuradio.gr import firdes
 from optparse import OptionParser
 import sdr
-from sdr import Cell, CollectionState, BlockCell, Enum, NoneES
+from sdr import Cell, CollectionState, BlockCell, Enum, Range, NoneES
 import sdr.receiver
 import sdr.receivers.vor
 
@@ -147,8 +147,10 @@ class Top(gr.top_block, sdr.ExportedState):
 		})))
 		callback(Cell(self, 'input_rate', ctor=int))
 		callback(Cell(self, 'audio_rate', ctor=int))
-		callback(Cell(self, 'spectrum_resolution', True, ctor=int))
-		callback(Cell(self, 'spectrum_rate', True, ctor=float))
+		callback(Cell(self, 'spectrum_resolution', writable=True, ctor=
+			Range(2, 4096, logarithmic=True, integer=True)))
+		callback(Cell(self, 'spectrum_rate', writable=True, ctor=
+			Range(1, 60, logarithmic=True, integer=False)))
 		callback(Cell(self, 'spectrum_fft', ctor=SpectrumTypeStub))
 		callback(BlockCell(self, 'sources'))
 		callback(BlockCell(self, 'source', persists=False))

@@ -203,11 +203,12 @@ class Enum(ValueType):
 
 
 class Range(ValueType):
-	def __init__(self, min, max, strict=True, logarithmic=False):
+	def __init__(self, min, max, strict=True, logarithmic=False, integer=False):
 		self.__min = min
 		self.__max = max
 		self.__strict = strict
 		self.__logarithmic = logarithmic
+		self.__integer = integer
 	
 	def type_to_json(self):
 		return {
@@ -215,10 +216,13 @@ class Range(ValueType):
 			'min': self.__min,
 			'max': self.__max,
 			'logarithmic': self.__logarithmic,
+			'integer': self.__integer
 		}
 	
 	def __call__(self, specimen):
 		specimen = float(specimen)
+		if self.__integer:
+			specimen = int(round(specimen))
 		if self.__strict:
 			if specimen < self.__min:
 				specimen = self.__min
