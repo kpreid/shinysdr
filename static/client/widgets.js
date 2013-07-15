@@ -366,16 +366,7 @@ var sdr = sdr || {};
       ignore('targetDB');  // not real state
       
       if ('running' in block) {
-        // TODO support checkboxes generically
-        var runPanel = this.element.appendChild(document.createElement('div'));
-        runPanel.className = 'panel';
-        var runLabel = runPanel.appendChild(document.createElement('label'));
-        var runCheck = runLabel.appendChild(document.createElement('input'));
-        runCheck.type = 'checkbox';
-        runCheck.setAttribute('data-widget', 'Toggle');
-        runCheck.setAttribute('data-target', 'running');
-        runLabel.appendChild(document.createTextNode('Run'));
-        ignore('running');
+        addWidget('running', 'Toggle', 'Run');
       }
       if ('source_name' in block) {
         addWidget('source_name', 'Radio');
@@ -1424,7 +1415,19 @@ var sdr = sdr || {};
   
   function Toggle(config) {
     var target = config.target;
-    var checkbox = this.element = config.element;
+
+    var checkbox;
+    if (config.element.nodeName === 'INPUT') {
+      this.element = checkbox = config.element;
+    } else {
+      var label = config.element.appendChild(document.createElement('label'));
+      if (config.shouldBePanel) { label.classList.add('panel'); }
+      checkbox = label.appendChild(document.createElement('input'));
+      checkbox.type = 'checkbox';
+      label.appendChild(document.createTextNode(config.element.getAttribute('title')));
+      this.element = label;
+      config.element.removeAttribute('title');
+    }
 
     checkbox.addEventListener('change', function(event) {
       target.set(checkbox.checked);
