@@ -246,3 +246,28 @@ body, .panel {
   width: 100%;
   height: 6em;
 }
+
+.widget-Slider-panel {
+  display: -webkit-flex;
+  -webkit-flex-direction: row;
+}
+.widget-Slider-label, .widget-Slider-text {
+  display: inline-block;
+  -webkit-align-self: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.widget-Slider-label {
+  -webkit-flex: 0 0 auto;
+  max-width: 8em;
+}
+.widget-Slider-panel input {
+  -webkit-flex: 1 1 auto;
+
+  vertical-align: middle;
+}
+.widget-Slider-text {
+  -webkit-flex: 0 0 8ex;
+  text-align: right;
+  font-family: monospace;
+}

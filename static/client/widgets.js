@@ -62,6 +62,8 @@ var sdr = sdr || {};
         return;
       }
       
+      var originalStash = node;
+      
       var container = node.parentNode;
       var currentWidgetEl = node;
       var go = function go() {
@@ -77,18 +79,40 @@ var sdr = sdr || {};
           stateObj = rootTarget;
         }
 
+        var newSourceEl = originalStash.cloneNode(true);
+        container.replaceChild(newSourceEl, currentWidgetEl);
         var widget = new T({
           scheduler: scheduler,
           target: stateObj,
-          element: node,
+          element: newSourceEl,
           view: context.spectrumView, // TODO should be context-dependent
           freqDB: context.freqDB, // TODO: remove the need for this
           radio: context.radio, // TODO: remove the need for this
           storage: node.hasAttribute('id') ? new StorageNamespace(localStorage, 'sdr.widgetState.' + node.getAttribute('id') + '.') : null
         });
-        container.replaceChild(widget.element, currentWidgetEl);
-        currentWidgetEl = widget.element;
-        widget.element.className += ' ' + node.className + ' widget-' + typename; // TODO kludge
+        widget.element.classList.add('widget-' + typename);
+        
+        var newEl = widget.element;
+        var placeMark = newSourceEl.nextSibling;
+        if ((container.classList.contains('frame') || container.nodeName === 'DETAILS') && !newEl.classList.contains('panel')) {
+          var widgetPanel = document.createElement('div');
+          widgetPanel.classList.add('panel');
+          if (newSourceEl.hasAttribute('title')) {
+            widgetPanel.appendChild(document.createTextNode(
+              newSourceEl.getAttribute('title') + ' '));
+          }
+          widgetPanel.appendChild(newEl);
+          newEl = widgetPanel;
+        } else if (newSourceEl.hasAttribute('title')) {
+          console.warn('Widget ' + typename + ' did not handle title attribute');
+        }
+        
+        if (newSourceEl.parentNode === container) {
+          container.replaceChild(newEl, newSourceEl);
+        } else {
+          container.insertBefore(newEl, placeMark);
+        }
+        currentWidgetEl = newEl;
         
         // handle widget-is-a-block
         if (stateObj && '_deathNotice' in stateObj) { // TODO bad interface
@@ -280,22 +304,19 @@ var sdr = sdr || {};
     
     function addWidget(name, widgetType, optBoxLabel) {
       var wEl = document.createElement('div');
+      if (optBoxLabel !== undefined) { wEl.classList.add('panel'); }
       // TODO non-string-based interface for this.
       wEl.setAttribute('data-widget', widgetType);
       if (typeof name === 'string') {
         claimed[name] = true;
         wEl.setAttribute('data-target', name);
       }
+      if (optBoxLabel !== undefined) {
+        wEl.setAttribute('title', optBoxLabel);
+      }
       // createWidgets will instantiate the widget from this
       
-      if (optBoxLabel !== undefined) {
-        var widgetPanel = container.appendChild(document.createElement('div'));
-        widgetPanel.className = 'panel';
-        widgetPanel.appendChild(document.createTextNode(optBoxLabel + ' '));
-        widgetPanel.appendChild(wEl);
-      } else {
-        container.appendChild(wEl);
-      }
+      container.appendChild(wEl);
     }
     
     function ignore(name) {
@@ -354,7 +375,7 @@ var sdr = sdr || {};
         ignore('running');
       }
       if ('source_name' in block) {
-        addWidget('source_name', 'Radio', '');
+        addWidget('source_name', 'Radio');
       }
       if (false) { // TODO: Figure out a good way to display options for all sources
         ignore('source');
@@ -368,7 +389,7 @@ var sdr = sdr || {};
         }
       }
       if ('mode' in block) {
-        addWidget('mode', 'Radio', '');
+        addWidget('mode', 'Radio');
       }
       if ('receiver' in block) {
         addWidget('receiver', 'Receiver');
@@ -448,7 +469,7 @@ var sdr = sdr || {};
         addWidget('squelch_threshold', 'LinSlider', 'Squelch');
       }
       if ('rec_freq' in block) {
-        addWidget(null, 'SaveButton', '');
+        addWidget(null, 'SaveButton');
       }
       
       // VOR receiver
@@ -1036,6 +1057,7 @@ var sdr = sdr || {};
     var dataSource = config.freqDB.inBand(0, 2200e6); 
     
     var container = this.element = document.createElement('div');
+    container.classList.add('panel');
     
     var filterBox = container.appendChild(document.createElement('input'));
     filterBox.type = 'search';
@@ -1320,8 +1342,8 @@ var sdr = sdr || {};
     var target = config.target;
     var container = this.element = config.element;
     
-    // TODO pipe in a name
-    container.appendChild(document.createTextNode('Value: '));
+    container.appendChild(document.createTextNode(container.getAttribute('title') + ': '));
+    container.removeAttribute('title');
 
     var valueNode = container.appendChild(document.createTextNode(''));
 
@@ -1336,16 +1358,28 @@ var sdr = sdr || {};
   function Slider(config, getT, setT) {
     var target = config.target;
 
-    var slider = config.element;
+    var slider;
     var text;
-    if (slider.nodeName !== 'INPUT') {
-      var container = this.element = document.createElement('span');
+    if (config.element.nodeName !== 'INPUT') {
+      var container = this.element = config.element;
+      container.classList.add('widget-Slider-panel');
+
+      if (container.hasAttribute('title')) {
+        var labelEl = container.appendChild(document.createElement('span'));
+        labelEl.classList.add('widget-Slider-label');
+        labelEl.appendChild(document.createTextNode(container.getAttribute('title')));
+        container.removeAttribute('title');
+      }
+
       slider = container.appendChild(document.createElement('input'));
       slider.type = 'range';
       slider.step = 'any';
-      text = container.appendChild(document.createElement('span')).appendChild(document.createTextNode());
+
+      var textEl = container.appendChild(document.createElement('span'));
+      textEl.classList.add('widget-Slider-text');
+      text = textEl.appendChild(document.createTextNode(''));
     } else {
-      this.element = slider;
+      this.element = slider = config.element;
     }
     
     var format = function(n) { return n.toFixed(2); };
