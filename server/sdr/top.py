@@ -62,9 +62,9 @@ class Top(gr.top_block, sdr.ExportedState):
 			
 			def tune_hook():
 				if self.source is this_source:
-					self._update_receiver_validity()
 					if self.receiver is not NoneES:
 						self.receiver.set_input_center_freq(self.source.get_freq())
+					self._update_receiver_validity()
 
 			this_source = self._sources[self.source_name]
 			this_source.set_tune_hook(tune_hook)
@@ -125,9 +125,10 @@ class Top(gr.top_block, sdr.ExportedState):
 			self.unlock()
 
 	def _update_receiver_validity(self):
-		if self.receiver.get_is_valid() != self.last_receiver_is_valid:
-			self.__needs_reconnect = True
-			self._do_connect()
+		if self.receiver is not NoneES:
+			if self.receiver.get_is_valid() != self.last_receiver_is_valid:
+				self.__needs_reconnect = True
+				self._do_connect()
 
 	def state_def(self, callback):
 		super(Top, self).state_def(callback)
