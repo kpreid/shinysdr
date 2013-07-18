@@ -179,7 +179,8 @@ class Top(gr.top_block, sdr.ExportedState):
 	def set_source_name(self, value):
 		if value == self.source_name:
 			return
-		self._sources[value]  # raise if not found
+		if value not in self._sources:
+			raise ValueError('Source %r does not exist' % (value,))
 		self.source_name = value
 		self._do_connect()
 

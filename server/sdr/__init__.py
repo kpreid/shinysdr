@@ -133,16 +133,22 @@ class ExportedState(object):
 		cells = self.state()
 		defer = []
 		for key in state:
+			def err(adjective, suffix):
+				# TODO better printing/logging, ship to client
+				print 'Warning: Discarding ' + adjective + ' state', str(self) + '.' + key, '=', state[key], suffix
 			cell = cells.get(key, None)
 			if cell is None:
-				# TODO better printing/logging
-				print 'Warning: Discarding nonexistent state', str(self) + '.' + key, '=', state[key]
+				err('nonexistent', '')
 			elif cell.isBlock():
 				defer.append(key)
 			elif not cell.isWritable():
-				print 'Warning: Discarding non-writable state', str(self) + '.' + key, '=', state[key]
+				err('non-writable', '')
 			else:
-				cells[key].set(state[key])
+				try:
+					cells[key].set(state[key])
+				except (LookupError, TypeError, ValueError) as e:
+					# a plausible set of exceptions, so we don't catch implausible ones
+					err('erroneous', '(' + str(e) + ')')
 		# blocks are deferred because the specific blocks may depend on other keys
 		for key in defer:
 			cells[key].set(state[key])
