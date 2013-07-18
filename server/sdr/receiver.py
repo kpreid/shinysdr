@@ -15,7 +15,7 @@ from sdr import Cell, Range
 
 
 class Receiver(gr.hier_block2, sdr.ExportedState):
-	def __init__(self, name, input_rate=0, input_center_freq=0, audio_rate=0, rec_freq=0, audio_gain=1, squelch_threshold=-100, revalidate_hook=lambda: None):
+	def __init__(self, name, input_rate=0, input_center_freq=0, audio_rate=0, rec_freq=0, audio_gain=1, squelch_threshold=-100, control_hook=None):
 		assert input_rate > 0
 		assert audio_rate > 0
 		gr.hier_block2.__init__(
@@ -28,7 +28,7 @@ class Receiver(gr.hier_block2, sdr.ExportedState):
 		self.audio_rate = audio_rate
 		self.rec_freq = rec_freq
 		self.audio_gain = audio_gain
-		self.revalidate_hook = revalidate_hook
+		self.control_hook = control_hook
 		
 		self.audio_gain_l_block = gr.multiply_const_ff(self.audio_gain)
 		self.audio_gain_r_block = gr.multiply_const_ff(self.audio_gain)
@@ -73,7 +73,7 @@ class Receiver(gr.hier_block2, sdr.ExportedState):
 	def set_rec_freq(self, rec_freq):
 		self.rec_freq = rec_freq
 		self._update_band_center()
-		self.revalidate_hook()
+		self.control_hook.revalidate()
 
 
 class SimpleAudioReceiver(Receiver):
@@ -317,27 +317,27 @@ class WFMReceiver(FMReceiver):
 
 	def state_def(self, callback):
 		super(WFMReceiver, self).state_def(callback)
-		callback(Cell(self, 'stereo', writable=False, ctor=bool))
-		callback(Cell(self, 'audio_filter', writable=False, ctor=bool))
+		callback(Cell(self, 'stereo', writable=True, ctor=bool))
+		callback(Cell(self, 'audio_filter', writable=True, ctor=bool))
 	
-	# TODO reconnecting breaks stuff (I may be missing something) so not writable
 	def get_stereo(self):
 		return self.stereo
-	#def set_stereo(self, value):
-	#	self.stereo = bool(value)
-	#	self.lock()
-	#	self.disconnect_all()
-	#	self.do_connect()
-	#	self.unlock()
+	def set_stereo(self, value):
+		if value == self.stereo: return
+		self.stereo = bool(value)
+		# TODO: Doing it this way causes 'input port 0 out of range for Multistage Channel Filter' which may be a gnuradio bug wrt disconnect_all and hier blocks (previously discussed Feb 2013).
+		#self.lock()
+		#self.disconnect_all()
+		#self.do_connect()
+		#self.unlock()
+		self.control_hook.rebuild_me()
 	
 	def get_audio_filter(self):
-		return self.stereo
-	#def set_audio_filter(self, value):
-	#	self.audio_filter = bool(value)
-	#	self.lock()
-	#	self.disconnect_all()
-	#	self.do_connect()
-	#	self.unlock()
+		return self.audio_filter
+	def set_audio_filter(self, value):
+		if value == self.audio_filter: return
+		self.audio_filter = bool(value)
+		self.control_hook.rebuild_me()
 
 	def connect_audio_stage(self):
 		demod_rate = self.demod_rate

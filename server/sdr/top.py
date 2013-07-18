@@ -195,6 +195,11 @@ class Top(gr.top_block, sdr.ExportedState):
 		self._do_connect()
 		self._mode = kind  # only if succeeded
 	
+	def _rebuild_receiver(self):
+		self.receiver = self._make_receiver(self._mode)
+		self.__needs_reconnect = True
+		self._do_connect()
+
 	def _make_receiver(self, kind):
 		'''Returns the receiver.'''
 		if kind == '':
@@ -213,27 +218,33 @@ class Top(gr.top_block, sdr.ExportedState):
 			clas = sdr.receivers.vor.VOR
 		else:
 			raise ValueError('Unknown mode: ' + kind)
+		# TODO: extend state_from_json so we can decide to load things with keyword args and lose the init dict/state dict distinction
+		init = {}
 		if self.receiver is not NoneES:
-			options = {
-				'audio_gain': self.receiver.get_audio_gain(),
-				'rec_freq': self.receiver.get_rec_freq(),
-				'squelch_threshold': self.receiver.get_squelch_threshold(),
-			}
+			state = self.receiver.state_to_json()
 		else:
-			options = {
+			state = {
 				'audio_gain': 0.25,
 				'rec_freq': 97.7e6,
 				'squelch_threshold': -100
 			}
 		if kind == 'LSB':
-			options['lsb'] = True
-		return clas(
+			init['lsb'] = True
+		# TODO remove this special case for WFM receiver
+		if kind == 'WFM':
+			if 'stereo' in state:
+				init['stereo'] = state['stereo']
+			if 'audio_filter' in state:
+				init['audio_filter'] = state['audio_filter']
+		receiver = clas(
 			input_rate=self.input_rate,
 			input_center_freq=self.source.get_freq(),
 			audio_rate=self.audio_rate,
-			revalidate_hook=lambda: self._update_receiver_validity(),
-			**options
+			control_hook=TopFacetForReceiver(self),
+			**init
 		)
+		receiver.state_from_json(state)
+		return receiver
 
 	def get_input_rate(self):
 		return self.input_rate
@@ -258,3 +269,14 @@ class Top(gr.top_block, sdr.ExportedState):
 
 	def get_spectrum_fft(self):
 		return (self.source.get_freq(), self.spectrum_probe.level())
+
+
+class TopFacetForReceiver(object):
+	def __init__(self, top):
+		self._top = top
+	
+	def revalidate(self):
+		self._top._update_receiver_validity()
+	
+	def rebuild_me(self):
+		self._top._rebuild_receiver()
