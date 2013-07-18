@@ -268,13 +268,14 @@ class AMReceiver(SimpleAudioReceiver):
 
 
 class FMReceiver(SimpleAudioReceiver):
-	def __init__(self, name='FM', deviation=75000, demod_rate=48000, band_filter=None, band_filter_transition=None, **kwargs):
+	def __init__(self, name='FM', deviation=75000, demod_rate=48000, post_demod_rate=None, band_filter=None, band_filter_transition=None, **kwargs):
 		SimpleAudioReceiver.__init__(self, name=name, demod_rate=demod_rate, band_filter=band_filter, band_filter_transition=band_filter_transition, **kwargs)
 		
 		input_rate = self.input_rate
 		audio_rate = self.audio_rate
 
-		self.audio_decim = audio_decim = int(demod_rate / audio_rate)
+		audio_decim = int(demod_rate / post_demod_rate)
+		self.post_demod_rate = demod_rate / audio_decim
 
 		self.demod_block = blks2.fm_demod_cf(
 			channel_rate=demod_rate,
@@ -295,7 +296,7 @@ class FMReceiver(SimpleAudioReceiver):
 		self.connect_audio_stage()
 		
 	def _make_resampler(self):
-		return make_resampler(self.demod_rate / self.audio_decim, self.audio_rate)
+		return make_resampler(self.post_demod_rate, self.audio_rate)
 
 	def connect_audio_stage(self):
 		'''Override point for stereo'''
@@ -305,15 +306,14 @@ class FMReceiver(SimpleAudioReceiver):
 
 
 class NFMReceiver(FMReceiver):
-	def __init__(self, **kwargs):
-		FMReceiver.__init__(self, name='Narrowband FM', demod_rate=48000, deviation=5000, band_filter=6500, band_filter_transition=1000, **kwargs)
-
+	def __init__(self, audio_rate, **kwargs):
+		FMReceiver.__init__(self, name='Narrowband FM', demod_rate=48000, audio_rate=audio_rate, post_demod_rate=audio_rate, deviation=5000, band_filter=6500, band_filter_transition=1000, **kwargs)
 
 class WFMReceiver(FMReceiver):
 	def __init__(self, stereo=True, audio_filter=True, **kwargs):
 		self.stereo = stereo
 		self.audio_filter = audio_filter
-		FMReceiver.__init__(self, name='Wideband FM', demod_rate=240000, deviation=75000, band_filter=80000, band_filter_transition=20000, **kwargs)
+		FMReceiver.__init__(self, name='Wideband FM', demod_rate=240000, post_demod_rate=120000, deviation=75000, band_filter=80000, band_filter_transition=20000, **kwargs)
 
 	def state_def(self, callback):
 		super(WFMReceiver, self).state_def(callback)
@@ -341,7 +341,9 @@ class WFMReceiver(FMReceiver):
 
 	def connect_audio_stage(self):
 		demod_rate = self.demod_rate
-		normalizer = 2 * math.pi / demod_rate
+		stereo_rate = self.post_demod_rate
+		audio_rate = self.audio_rate
+		normalizer = 2 * math.pi / stereo_rate
 		pilot_tone = 19000
 		pilot_low = pilot_tone * 0.9
 		pilot_high = pilot_tone * 1.1
@@ -351,8 +353,8 @@ class WFMReceiver(FMReceiver):
 				1,  # decimation
 				gr.firdes.low_pass(
 					1.0,
-					demod_rate,
-					30000,  # TODO: should be only to 15 kHz, but results in obviously muffled sound for some reason
+					stereo_rate,
+					15000,
 					5000,
 					gr.firdes.WIN_HAMMING))
 
@@ -360,7 +362,7 @@ class WFMReceiver(FMReceiver):
 			1,  # decimation
 			gr.firdes.complex_band_pass(
 				1.0,
-				demod_rate,
+				stereo_rate,
 				pilot_low,
 				pilot_high,
 				300))  # TODO magic number from gqrx
