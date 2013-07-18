@@ -533,7 +533,7 @@ var sdr = sdr || {};
       }
       
       for (var i = 0; i < len; i++) {
-        averageBuffer[i] = averageBuffer[i] * 0.5 + buffer[i] * 0.5;
+        averageBuffer[i] = averageBuffer[i] * 0.75 + buffer[i] * 0.25;
       }
       
       draw.scheduler.enqueue(draw);
