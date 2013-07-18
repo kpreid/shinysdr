@@ -57,16 +57,9 @@ class Cell(BaseCell):
 		return self._setter(value)
 	
 	def description(self):
-		if str(self._ctor) == 'sdr.top.SpectrumTypeStub':
-			# TODO: eliminate special case
-			typename = 'spectrum'
-		elif isinstance(self._ctor, ValueType):
-			typename = self._ctor.type_to_json()
-		else:
-			typename = None
 		return {
 			'kind': 'value',
-			'type': typename,
+			'type': type_to_json(self._ctor),
 			'writable': self.isWritable(),
 			'current': self.get()
 		}
@@ -184,6 +177,18 @@ class NoneESType(ExportedState):
 
 
 NoneES = NoneESType()
+
+
+def type_to_json(t):
+	if str(t) == 'sdr.top.SpectrumTypeStub':
+		# TODO: make this into a ValueType?
+		return u'spectrum'
+	elif isinstance(t, ValueType):
+		return t.type_to_json()
+	elif t is bool: # TODO can we generalize this?
+		return u'boolean'
+	else:
+		return None
 
 
 class ValueType(object):

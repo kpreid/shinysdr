@@ -353,6 +353,8 @@ var sdr = sdr || {};
           addWidget(name, member.type.logarithmic ? 'LogSlider' : 'LinSlider', name);
         } else if (member.type instanceof sdr.values.Enum) {
           addWidget(name, 'Radio', name);
+        } else if (member.type === Boolean) {
+          addWidget(name, 'Toggle', name);
         } else {
           addWidget(name, 'Generic', name);
         }
