@@ -13,11 +13,10 @@ import osmosdr
 
 import math
 
-import sdr
-from sdr import Cell, Range
+from sdr.values import Cell, Range, ExportedState
 
 
-class Source(gr.hier_block2, sdr.ExportedState):
+class Source(gr.hier_block2, ExportedState):
 	'''Generic wrapper for multiple source types, yielding complex samples.'''
 	def __init__(self, name):
 		gr.hier_block2.__init__(

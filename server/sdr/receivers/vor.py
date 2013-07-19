@@ -13,7 +13,7 @@ import math
 
 import sdr.receiver
 from sdr.receiver import Receiver
-from sdr import Cell
+from sdr.values import Cell
 
 fm_subcarrier = 9960
 fm_deviation = 480

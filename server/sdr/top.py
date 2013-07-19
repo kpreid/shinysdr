@@ -8,8 +8,7 @@ from gnuradio import gr
 from gnuradio.eng_option import eng_option
 from gnuradio.gr import firdes
 from optparse import OptionParser
-import sdr
-from sdr import Cell, CollectionState, BlockCell, Enum, Range, NoneES
+from sdr.values import ExportedState, Cell, CollectionState, BlockCell, Enum, Range, NoneES
 import sdr.receiver
 import sdr.receivers.vor
 
@@ -18,7 +17,7 @@ class SpectrumTypeStub:
 	pass
 
 
-class Top(gr.top_block, sdr.ExportedState):
+class Top(gr.top_block, ExportedState):
 
 	def __init__(self, sources={}):
 		gr.top_block.__init__(self, "SDR top block")

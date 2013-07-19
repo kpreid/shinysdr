@@ -10,11 +10,10 @@ from gnuradio.gr import firdes
 
 import math
 
-import sdr
-from sdr import Cell, Range
+from sdr.values import Cell, Range, ExportedState
 
 
-class Receiver(gr.hier_block2, sdr.ExportedState):
+class Receiver(gr.hier_block2, ExportedState):
 	def __init__(self, name, input_rate=0, input_center_freq=0, audio_rate=0, rec_freq=0, audio_gain=1, squelch_threshold=-100, control_hook=None):
 		assert input_rate > 0
 		assert audio_rate > 0

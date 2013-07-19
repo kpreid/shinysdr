@@ -8,7 +8,7 @@ import txws
 import array
 import json
 
-import sdr
+import sdr.top
 
 class CellResource(resource.Resource):
 	isLeaf = True
