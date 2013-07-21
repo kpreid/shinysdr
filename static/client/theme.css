@@ -1,0 +1,59 @@
+body {
+  background: #BBB;
+  color: black;
+}
+
+.panel, .frame > details > summary {
+  border-color: #DDD;
+  background: #BBB;
+  color: black;
+}
+.frame > details > summary {
+  border-color: #DDD;
+  background: #DDD;
+  color: black;
+}
+.panel.frame {
+  border-color: #DDD;
+  background: linear-gradient(to right, #555 0,#BBB 1em);
+}
+
+[data-widget=SpectrumPlot] { /* TODO: should be .widget-SpectrumPlot but doesn't work because read too early */
+  background-color: #333;
+  color: #00FFAA;
+}
+
+.widget-Knob {
+  background: black;
+  color: white;
+}
+.widget-Knob .knob-digit:focus {
+  background: #555;
+  color: white;
+}
+
+.freqscale-channel, .freqscale-band {
+  opacity: 0.7;
+}
+.freqscale-channel {
+  color: #CCC;
+}
+.freqscale-band {
+  background: #555;
+  background: linear-gradient(to right, #666 0%,#444 100%);
+  color: white;
+}
+
+.widget-FreqList .freqlist-box {
+  /* style like a system list box -- TODO look into better techniques */
+  background: white;
+  color: black;
+}
+.widget-FreqList .freqlist-item-unsupported {
+  /* should go with .freqlist-box background colors */
+  background: white;
+  color: gray;
+}
+.widget-FreqList tr:hover {
+  background: #EEE;
+}
