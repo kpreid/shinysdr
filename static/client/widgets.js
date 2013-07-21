@@ -495,7 +495,8 @@ var sdr = sdr || {};
     ctx.lineWidth = 1;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    var cssColor = getComputedStyle(canvas).color;
+    var fillStyle = getComputedStyle(canvas).fill;
+    var strokeStyle = getComputedStyle(canvas).stroke;
     var w, h, lvf, rvf, averageBuffer; // updated in draw
     var lastDrawnCenterFreq = NaN;
     
@@ -616,8 +617,8 @@ var sdr = sdr || {};
       }
       
       // Fill is deliberately over stroke. This acts to deemphasize downward stroking of spikes, which tend to occur in noise.
-      ctx.fillStyle = 'rgba(64, 100, 100, 0.75)';
-      ctx.strokeStyle = cssColor;
+      ctx.fillStyle = fillStyle;
+      ctx.strokeStyle = strokeStyle;
       path();
       ctx.stroke();
       path();
