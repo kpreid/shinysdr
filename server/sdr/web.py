@@ -124,8 +124,8 @@ class StateStreamProtocol(protocol.Protocol):
 		#protocol.Protocol.__init__(self)
 		self._block = block
 		self._stateLoop = task.LoopingCall(self.sendState)
-		# TODO: slow/stop when radio not running
-		self._stateLoop.start(1.0 / 30)
+		# TODO: slow/stop when radio not running, and determine suitable update rate based on querying objects
+		self._stateLoop.start(1.0 / 61)
 		self._seenValues = {}
 	
 	def dataReceived(self, data):
