@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
 import gnuradio
-import gnuradio.analog
+from gnuradio import analog
 from gnuradio import gr
 from gnuradio import blocks
-from gnuradio import blks2
 from gnuradio import filter
-from gnuradio.gr import firdes
+from gnuradio.filter import firdes
+from gnuradio.filter import pfb
 
 import math
 
@@ -29,11 +29,11 @@ class Receiver(gr.hier_block2, ExportedState):
 		self.audio_gain = audio_gain
 		self.control_hook = control_hook
 		
-		self.audio_gain_l_block = gr.multiply_const_ff(self.audio_gain)
-		self.audio_gain_r_block = gr.multiply_const_ff(self.audio_gain)
+		self.audio_gain_l_block = blocks.multiply_const_ff(self.audio_gain)
+		self.audio_gain_r_block = blocks.multiply_const_ff(self.audio_gain)
 		
 		# TODO: squelch alpha needs to depend on intermediate sample rate
-		self.squelch_block = gr.simple_squelch_cc(squelch_threshold, 0.0002)
+		self.squelch_block = analog.simple_squelch_cc(squelch_threshold, 0.0002)
 
 	def get_is_valid(self):
 		return abs(self.rec_freq - self.input_center_freq) < self.input_rate / 2
@@ -156,22 +156,22 @@ class MultistageChannelFilter(gr.hier_block2):
 			
 			# filter taps
 			if last:
-				taps = gr.firdes.low_pass(
+				taps = firdes.low_pass(
 					1.0,
 					stage_input_rate,
 					cutoff_freq,
 					transition_width,
-					gr.firdes.WIN_HAMMING)
+					firdes.WIN_HAMMING)
 			else:
 				# TODO check for collision with user filter
 				user_inner = cutoff_freq - transition_width / 2
 				limit = next_rate / 2
-				taps = gr.firdes.low_pass(
+				taps = firdes.low_pass(
 					1.0,
 					stage_input_rate,
 					(user_inner + limit) / 2,
 					limit - user_inner,
-					gr.firdes.WIN_HAMMING)
+					firdes.WIN_HAMMING)
 			
 			#print 'Stage %i decimation %i rate %i taps %i' % (i, stage_decimation, stage_input_rate, len(taps))
 			
@@ -200,7 +200,7 @@ class MultistageChannelFilter(gr.hier_block2):
 			# TODO: cache filter computation as optfir is used and takes a noticeable time
 			self.connect(
 				prev_block,
-				blks2.pfb_arb_resampler_ccf(float(output_rate) / stage_input_rate),
+				pfb.arb_resampler_ccf(float(output_rate) / stage_input_rate),
 				self)
 			#print 'resampling %s/%s = %s' % (output_rate, stage_input_rate, float(output_rate) / stage_input_rate)
 	
@@ -212,7 +212,7 @@ def make_resampler(in_rate, out_rate):
 	# magic numbers from gqrx
 	resample_ratio = float(out_rate) / in_rate
 	pfbsize = 32
-	return gr.pfb_arb_resampler_fff(
+	return pfb.arb_resampler_fff(
 		resample_ratio,
 		firdes.low_pass(pfbsize, pfbsize, 0.4 * resample_ratio, 0.2 * resample_ratio),
 		pfbsize)
@@ -228,7 +228,7 @@ class IQReceiver(SimpleAudioReceiver):
 			band_filter_transition=audio_rate * 0.2,
 			**kwargs)
 		
-		self.split_block = gr.complex_to_float(1)
+		self.split_block = blocks.complex_to_float(1)
 		
 		self.connect(
 			self,
@@ -248,8 +248,8 @@ class AMReceiver(SimpleAudioReceiver):
 		audio_rate = self.audio_rate
 		
 		inherent_gain = 0.5  # fudge factor so that our output is similar level to narrow FM
-		self.agc_block = gr.feedforward_agc_cc(1024, inherent_gain)
-		self.demod_block = gr.complex_to_mag(1)
+		self.agc_block = analog.feedforward_agc_cc(1024, inherent_gain)
+		self.demod_block = blocks.complex_to_mag(1)
 		self.resampler_block = make_resampler(demod_rate, audio_rate)
 		
 		# assuming below 40Hz is not of interest
@@ -276,7 +276,7 @@ class FMReceiver(SimpleAudioReceiver):
 		audio_decim = int(demod_rate / post_demod_rate)
 		self.post_demod_rate = demod_rate / audio_decim
 
-		self.demod_block = blks2.fm_demod_cf(
+		self.demod_block = analog.fm_demod_cf(
 			channel_rate=demod_rate,
 			audio_decim=audio_decim,
 			deviation=deviation,
@@ -350,22 +350,22 @@ class WFMReceiver(FMReceiver):
 		def make_audio_filter():
 			return filter.fir_filter_fff(
 				1,  # decimation
-				gr.firdes.low_pass(
+				firdes.low_pass(
 					1.0,
 					stereo_rate,
 					15000,
 					5000,
-					gr.firdes.WIN_HAMMING))
+					firdes.WIN_HAMMING))
 
 		stereo_pilot_filter = filter.fir_filter_fcc(
 			1,  # decimation
-			gr.firdes.complex_band_pass(
+			firdes.complex_band_pass(
 				1.0,
 				stereo_rate,
 				pilot_low,
 				pilot_high,
 				300))  # TODO magic number from gqrx
-		stereo_pilot_pll = gnuradio.analog.pll_refout_cc(
+		stereo_pilot_pll = analog.pll_refout_cc(
 			0.001,  # TODO magic number from gqrx
 			normalizer * pilot_high,
 			normalizer * pilot_low)
@@ -435,13 +435,13 @@ class SSBReceiver(SimpleAudioReceiver):
 		self.band_filter_width = half_bandwidth / 5
 		self.sharp_filter_block = filter.fir_filter_ccc(
 			1,
-			gr.firdes.complex_band_pass(1.0, demod_rate,
+			firdes.complex_band_pass(1.0, demod_rate,
 				self.band_filter_low,
 				self.band_filter_high,
 				self.band_filter_width,
-				gr.firdes.WIN_HAMMING))
+				firdes.WIN_HAMMING))
 		
-		self.agc_block = gnuradio.analog.agc2_cc(reference=0.25)
+		self.agc_block = analog.agc2_cc(reference=0.25)
 		
 		self.ssb_demod_block = blocks.complex_to_real(1)
 		

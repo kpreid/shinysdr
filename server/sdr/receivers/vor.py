@@ -2,13 +2,13 @@
 
 # TODO: fully clean up this GRC-generated file
 
-from gnuradio import analog
-from gnuradio import blks2
+from gnuradio import gr
 from gnuradio import blocks
+from gnuradio import analog
 from gnuradio import fft
 from gnuradio import filter
-from gnuradio import gr
-from gnuradio.gr import firdes
+from gnuradio.filter import firdes
+
 import math
 
 import sdr.receiver
@@ -43,9 +43,9 @@ class VOR(sdr.receiver.SimpleAudioReceiver):
 
 		self.zeroer = blocks.add_const_vff((zero_point * (math.pi / 180), ))
 		
-		self.dir_vector_filter = gr.fir_filter_ccf(1, firdes.low_pass(
+		self.dir_vector_filter = filter.fir_filter_ccf(1, firdes.low_pass(
 			1, dir_rate, 1, 2, firdes.WIN_HAMMING, 6.76))
-		self.am_channel_filter_block = gr.fir_filter_ccf(1, firdes.low_pass(
+		self.am_channel_filter_block = filter.fir_filter_ccf(1, firdes.low_pass(
 			1, channel_rate, fm_subcarrier / 2, fm_subcarrier / 2, firdes.WIN_HAMMING, 6.76))
 		self.goertzel_fm = fft.goertzel_fc(channel_rate, dir_scale * audio_scale, 30)
 		self.goertzel_am = fft.goertzel_fc(internal_audio_rate, dir_scale, 30)
@@ -53,15 +53,15 @@ class VOR(sdr.receiver.SimpleAudioReceiver):
 		self.dc_blocker_block = filter.dc_blocker_ff(128, True)
 		self.multiply_conjugate_block = blocks.multiply_conjugate_cc(1)
 		self.complex_to_arg_block = blocks.complex_to_arg(1)
-		self.am_demod_block = blks2.am_demod_cf(
+		self.am_demod_block = analog.am_demod_cf(
 			channel_rate=channel_rate,
 			audio_decim=audio_scale,
 			audio_pass=5000,
 			audio_stop=5500,
 		)
 		self.fm_demod_block = analog.quadrature_demod_cf(1)
-		self.agc_fm = analog.agc2_cc(1e-1, 1e-2, 1.0, 1.0, 100)
-		self.agc_am = analog.agc2_cc(1e-1, 1e-2, 1.0, 1.0, 100)
+		self.agc_fm = analog.agc2_cc(1e-1, 1e-2, 1.0, 1.0)
+		self.agc_am = analog.agc2_cc(1e-1, 1e-2, 1.0, 1.0)
 		
 		self.probe = blocks.probe_signal_f()
 		

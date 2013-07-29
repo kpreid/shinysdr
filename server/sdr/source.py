@@ -4,10 +4,9 @@ import gnuradio
 import gnuradio.blocks
 from gnuradio import gr
 from gnuradio import blocks
-from gnuradio import blks2
 from gnuradio import analog
 from gnuradio import filter
-from gnuradio.gr import firdes
+from gnuradio.filter import firdes
 
 import osmosdr
 
@@ -106,7 +105,7 @@ class OsmoSDRSource(Source):
 		self.freq = freq = 98e6
 		self.correction_ppm = 0
 		
-		self.osmosdr_source_block = source = osmosdr.source_c("nchan=1 " + osmo_device)
+		self.osmosdr_source_block = source = osmosdr.source("nchan=1 " + osmo_device)
 		# Note: Docs for these setters at gr-osmosdr/lib/source_iface.h
 		source.set_sample_rate(sample_rate)
 		source.set_center_freq(freq, ch)
@@ -248,7 +247,7 @@ class SimulatedSource(Source):
 		nfm_channel = make_channel(30e3)
 		self.connect(
 			audio_signal,
-			blks2.nbfm_tx(
+			analog.nbfm_tx(
 				audio_rate=audio_rate,
 				quad_rate=rf_rate,
 				tau=75e-6,

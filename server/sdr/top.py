@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
 import gnuradio
+import gnuradio.fft.logpwrfft
 from gnuradio import audio
-from gnuradio import blks2
 from gnuradio import blocks
 from gnuradio import gr
 from gnuradio.eng_option import eng_option
-from gnuradio.gr import firdes
+from gnuradio.filter import firdes
 from optparse import OptionParser
 from sdr.values import ExportedState, Cell, CollectionState, BlockCell, Enum, Range, NoneES
 import sdr.receiver
@@ -81,7 +81,7 @@ class Top(gr.top_block, ExportedState):
 			self.__needs_reconnect = True
 			
 			self.spectrum_probe = blocks.probe_signal_vf(self.spectrum_resolution)
-			self.spectrum_fft = blks2.logpwrfft_c(
+			self.spectrum_fft = gnuradio.fft.logpwrfft.logpwrfft_c(
 				sample_rate=self.input_rate,
 				fft_size=self.spectrum_resolution,
 				ref_scale=2,
