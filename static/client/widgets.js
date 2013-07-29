@@ -497,9 +497,15 @@ var sdr = sdr || {};
     ctx.lineJoin = 'round';
     var fillStyle = getComputedStyle(canvas).fill;
     var strokeStyle = getComputedStyle(canvas).stroke;
-    var w, h, lvf, rvf, averageBuffer; // updated in draw
+
     var lastDrawnCenterFreq = NaN;
-    
+
+    // Drawing parameters and functions
+    // Each variable is updated in draw()
+    // This is done so that the functions need not be re-created
+    // each frame.
+    var w, h, lvf, rvf, averageBuffer
+    var xZero, xScale, xAfterLast, yZero, yScale, firstPoint, afterLastPoint;
     function freqToCoord(freq) {
       return (freq - lvf) / (rvf-lvf) * w;
     }
@@ -515,6 +521,16 @@ var sdr = sdr || {};
       var x1 = freqToCoord(freq1);
       var x2 = freqToCoord(freq2);
       ctx.fillRect(x1, 0, x2 - x1, ctx.canvas.height);
+    }
+    function path() {
+      ctx.beginPath();
+      ctx.moveTo(xZero - xScale, h + 2);
+      ctx.lineTo(xZero - xScale, yZero + averageBuffer[0] * yScale);
+      for (var i = firstPoint; i < afterLastPoint; i++) {
+        ctx.lineTo(xZero + i * xScale, yZero + averageBuffer[i] * yScale);
+      }
+      ctx.lineTo(xAfterLast, yZero + averageBuffer[afterLastPoint - 1] * yScale);
+      ctx.lineTo(xAfterLast, h + 2);
     }
     
     // used as listener by draw() for fftCell
@@ -564,15 +580,15 @@ var sdr = sdr || {};
       var viewCenterFreq = states.source.freq.depend(draw);
       var bandwidth = states.input_rate.depend(draw);
       var halfBinWidth = bandwidth / len / 2;
-      var xZero = freqToCoord(viewCenterFreq - bandwidth/2 + halfBinWidth);
-      var xAfterLast = freqToCoord(viewCenterFreq + bandwidth/2 + halfBinWidth);
-      var xScale = (xAfterLast - xZero) / len;
-      var yScale = -h / (view.maxLevel - view.minLevel);
-      var yZero = -view.maxLevel * yScale;
+      xZero = freqToCoord(viewCenterFreq - bandwidth/2 + halfBinWidth);
+      xAfterLast = freqToCoord(viewCenterFreq + bandwidth/2 + halfBinWidth);
+      xScale = (xAfterLast - xZero) / len;
+      yScale = -h / (view.maxLevel - view.minLevel);
+      yZero = -view.maxLevel * yScale;
       
       // choose points to draw
-      var firstPoint = Math.max(0, Math.floor(-xZero / xScale) - 1);
-      var afterLastPoint = Math.min(len, Math.ceil((w - xZero) / xScale) + 1);
+      firstPoint = Math.max(0, Math.floor(-xZero / xScale) - 1);
+      afterLastPoint = Math.min(len, Math.ceil((w - xZero) / xScale) + 1);
       
       // TODO: marks ought to be part of a distinct widget
       var squelch_threshold_cell = states.receiver.squelch_threshold;
@@ -607,17 +623,6 @@ var sdr = sdr || {};
       if (rec_freq_cell) {
         ctx.strokeStyle = 'white';
         drawHair(rec_freq_now); // receiver
-      }
-      
-      function path() {
-        ctx.beginPath();
-        ctx.moveTo(xZero - xScale, h + 2);
-        ctx.lineTo(xZero - xScale, yZero + averageBuffer[0] * yScale);
-        for (var i = firstPoint; i < afterLastPoint; i++) {
-          ctx.lineTo(xZero + i * xScale, yZero + averageBuffer[i] * yScale);
-        }
-        ctx.lineTo(xAfterLast, yZero + averageBuffer[len - 1] * yScale);
-        ctx.lineTo(xAfterLast, h + 2);
       }
       
       // Fill is deliberately over stroke. This acts to deemphasize downward stroking of spikes, which tend to occur in noise.
