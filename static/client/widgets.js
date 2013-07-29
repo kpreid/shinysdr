@@ -570,6 +570,10 @@ var sdr = sdr || {};
       var yScale = -h / (view.maxLevel - view.minLevel);
       var yZero = -view.maxLevel * yScale;
       
+      // choose points to draw
+      var firstPoint = Math.max(0, Math.floor(-xZero / xScale) - 1);
+      var afterLastPoint = Math.min(len, Math.ceil((w - xZero) / xScale) + 1);
+      
       // TODO: marks ought to be part of a distinct widget
       var squelch_threshold_cell = states.receiver.squelch_threshold;
       if (squelch_threshold_cell) {
@@ -609,7 +613,7 @@ var sdr = sdr || {};
         ctx.beginPath();
         ctx.moveTo(xZero - xScale, h + 2);
         ctx.lineTo(xZero - xScale, yZero + averageBuffer[0] * yScale);
-        for (var i = 0; i < len; i++) {
+        for (var i = firstPoint; i < afterLastPoint; i++) {
           ctx.lineTo(xZero + i * xScale, yZero + averageBuffer[i] * yScale);
         }
         ctx.lineTo(xAfterLast, yZero + averageBuffer[len - 1] * yScale);
