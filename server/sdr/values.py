@@ -1,3 +1,5 @@
+import struct
+
 class BaseCell(object):
 	def __init__(self, target, key, persists=True, writable=False):
 		# The exact relationship of target and key depends on the subtype
@@ -31,10 +33,27 @@ class BaseCell(object):
 	def description(self):
 		raise NotImplementedError()
 
-class Cell(BaseCell):
-	def __init__(self, target, key, writable=False, ctor=None):
-		BaseCell.__init__(self, target, key, writable=writable, persists=writable)
+
+class ValueCell(BaseCell):
+	def __init__(self, target, key, ctor=None, **kwargs):
+		BaseCell.__init__(self, target, key, **kwargs)
 		self._ctor = ctor
+	
+	def ctor(self):
+		return self._ctor
+	
+	def description(self):
+		return {
+			'kind': 'value',
+			'type': type_to_json(self._ctor),
+			'writable': self.isWritable(),
+			'current': self.get()
+		}
+
+
+class Cell(ValueCell):
+	def __init__(self, target, key, writable=False, ctor=None):
+		ValueCell.__init__(self, target, key, writable=writable, persists=writable, ctor=ctor)
 		self._getter = getattr(self._target, 'get_' + key)
 		if writable:
 			self._setter = getattr(self._target, 'set_' + key)
@@ -54,14 +73,66 @@ class Cell(BaseCell):
 		if not self.isWritable():
 			raise Exception('Not writable.')
 		return self._setter(value)
+
+
+sizeof_float = 4
+
+
+class MsgQueueCell(ValueCell):
+	def __init__(self, target, key, fill=True, ctor=None):
+		ValueCell.__init__(self, target, key, writable=False, persists=False, ctor=ctor)
+		self._qgetter = getattr(self._target, 'get_' + key + '_queue')
+		self._igetter = getattr(self._target, 'get_' + key + '_info')
+		self._splitting = None
+		self._fill = fill
+		if fill:
+			self._prev = None
 	
-	def description(self):
-		return {
-			'kind': 'value',
-			'type': type_to_json(self._ctor),
-			'writable': self.isWritable(),
-			'current': self.get()
-		}
+	def isBlock(self):
+		return False
+	
+	def get(self):
+		if self._splitting is not None:
+			(string, itemsize, count, index) = self._splitting
+		else:
+			queue = self._qgetter()
+			# we would use .delete_head_nowait() but it returns a crashy wrapper instead of a sensible value like None. So implement a test (which is safe as long as we're the only reader)
+			if queue.empty_p():
+				return self._doFill()
+			else:
+				message = queue.delete_head()
+			if message.length() > 0:
+				string = message.to_string() # only interface available
+			else:
+				string = '' # avoid crash bug
+			itemsize = int(message.arg1())
+			count = int(message.arg2())
+			index = 0
+		assert index < count
+		
+		# update state
+		if index == count - 1:
+			self._splitting = None
+		else:
+			self._splitting = (string, itemsize, count, index + 1)
+		
+		# extract value
+		valueStr = string[itemsize * index : itemsize * (index + 1)]
+		# TODO: allow caller to provide format info (nontrivial in case of runtime variable length)
+		data = list(struct.unpack('%df' % (itemsize / sizeof_float), valueStr))
+		value = (self._igetter(), data)
+		if self._fill:
+			self._prev = value
+		return value
+	
+	def _doFill(self):
+		if self._fill:
+			return self._prev
+		else:
+			return None
+	
+	def set(self, value):
+		raise Exception('MsgQueueCell is not writable.')
 
 
 class BaseBlockCell(BaseCell):

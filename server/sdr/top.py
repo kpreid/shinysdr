@@ -8,7 +8,7 @@ from gnuradio import gr
 from gnuradio.eng_option import eng_option
 from gnuradio.filter import firdes
 from optparse import OptionParser
-from sdr.values import ExportedState, Cell, CollectionState, BlockCell, Enum, Range, NoneES
+from sdr.values import ExportedState, Cell, CollectionState, BlockCell, MsgQueueCell, Enum, Range, NoneES
 import sdr.receiver
 import sdr.receivers.vor
 
@@ -80,8 +80,12 @@ class Top(gr.top_block, ExportedState):
 			self.__needs_spectrum = False
 			self.__needs_reconnect = True
 			
-			self.spectrum_probe = blocks.probe_signal_vf(self.spectrum_resolution)
-			self.spectrum_fft = gnuradio.fft.logpwrfft.logpwrfft_c(
+			self.spectrum_queue = gr.msg_queue(limit=10)
+			self.spectrum_sink = blocks.message_sink(
+				self.spectrum_resolution * gr.sizeof_float,
+				self.spectrum_queue,
+				True) # dont_block
+			self.spectrum_fft_block = gnuradio.fft.logpwrfft.logpwrfft_c(
 				sample_rate=self.input_rate,
 				fft_size=self.spectrum_resolution,
 				ref_scale=2,
@@ -110,7 +114,7 @@ class Top(gr.top_block, ExportedState):
 			# workaround problem with restarting audio sinks on Mac OS X
 			self.audio_sink = audio.sink(self.audio_rate, "", False)
 
-			self.connect(self.source, self.spectrum_fft, self.spectrum_probe)
+			self.connect(self.source, self.spectrum_fft_block, self.spectrum_sink)
 
 			if self.receiver is not NoneES:
 				self.last_receiver_is_valid = self.receiver.get_is_valid()
@@ -150,7 +154,7 @@ class Top(gr.top_block, ExportedState):
 			Range(2, 4096, logarithmic=True, integer=True)))
 		callback(Cell(self, 'spectrum_rate', writable=True, ctor=
 			Range(1, 60, logarithmic=True, integer=False)))
-		callback(Cell(self, 'spectrum_fft', ctor=SpectrumTypeStub))
+		callback(MsgQueueCell(self, 'spectrum_fft', fill=True, ctor=SpectrumTypeStub))
 		callback(BlockCell(self, 'sources'))
 		callback(BlockCell(self, 'source', persists=False))
 		callback(BlockCell(self, 'receiver'))
@@ -264,10 +268,13 @@ class Top(gr.top_block, ExportedState):
 
 	def set_spectrum_rate(self, value):
 		self.spectrum_rate = value
-		self.spectrum_fft.set_vec_rate(value)
-
-	def get_spectrum_fft(self):
-		return (self.source.get_freq(), self.spectrum_probe.level())
+		self.spectrum_fft_block.set_vec_rate(value)
+	
+	def get_spectrum_fft_info(self):
+		return self.source.get_freq()
+	
+	def get_spectrum_fft_queue(self):
+		return self.spectrum_queue
 
 
 class TopFacetForReceiver(object):
