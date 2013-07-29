@@ -71,9 +71,6 @@ class BaseBlockCell(BaseCell):
 	def isBlock(self):
 		return True
 	
-	def getMembers(self):
-		return self.getBlock().state()
-	
 	def get(self):
 		return self.getBlock().state_to_json()
 	
@@ -82,6 +79,7 @@ class BaseBlockCell(BaseCell):
 	
 	def description(self):
 		return self.getBlock().state_description()
+
 
 class BlockCell(BaseBlockCell):
 	def __init__(self, target, key, persists=True):
