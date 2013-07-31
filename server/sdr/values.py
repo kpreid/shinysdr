@@ -1,4 +1,4 @@
-import struct
+import array
 
 class BaseCell(object):
 	def __init__(self, target, key, persists=True, writable=False):
@@ -119,8 +119,9 @@ class MsgQueueCell(ValueCell):
 		# extract value
 		valueStr = string[itemsize * index : itemsize * (index + 1)]
 		# TODO: allow caller to provide format info (nontrivial in case of runtime variable length)
-		data = list(struct.unpack('%df' % (itemsize / sizeof_float), valueStr))
-		value = (self._igetter(), data)
+		unpacker = array.array('f')
+		unpacker.fromstring(valueStr)
+		value = (self._igetter(), unpacker.tolist())
 		if self._fill:
 			self._prev = value
 		return value
