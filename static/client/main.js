@@ -33,7 +33,12 @@
     radio.preset.set = function(freqRecord) {
       LocalCell.prototype.set.call(this, freqRecord);
       var freq = freqRecord.freq;
-      radio.mode.set(freqRecord.mode);
+
+      // TODO: should create a new receiver
+      var receiver = radio.receivers.a;
+      radio.receivers.a.rec_freq.set(freq);
+      radio.receivers.a.mode.set(freqRecord.mode);
+
       if (!frequencyInRange(freq, radio.source.freq.get())) {
         if (freq < radio.input_rate.get() / 2) {
           // recognize tuning for 0Hz gimmick
@@ -44,7 +49,6 @@
           radio.source.freq.set(freq + radio.input_rate.get() * 0.374);
         }
       }
-      radio.receiver.rec_freq.set(freq);
     };
   
     // TODO better structure / move to server

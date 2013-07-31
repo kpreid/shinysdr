@@ -18,6 +18,16 @@ class SpectrumTypeStub:
 	pass
 
 
+class ReceiverCollection(CollectionState):
+	def __init__(self, table, top):
+		CollectionState.__init__(self, table, dynamic=True)
+		self.__top = top
+	
+	def state_insert(self, key, desc):
+		(key, receiver) = self.__top.add_receiver(desc['mode'], key=key)
+		receiver.state_from_json(desc)
+
+
 class Top(gr.top_block, ExportedState):
 
 	def __init__(self, sources={}):
@@ -30,28 +40,49 @@ class Top(gr.top_block, ExportedState):
 		self.audio_rate = audio_rate = 32000
 		self.spectrum_resolution = 4096
 		self.spectrum_rate = 30
-		self._mode = ''  # designates no receiver
-
-		# kludge for using collection like block - TODO: better architecture
-		self.sources = CollectionState(self._sources)
 
 		# Blocks etc.
 		self.source = None
-		self.receiver = NoneES
-		self.audio_sink = None
 		self.spectrum_queue = None
 		self.spectrum_sink = None
 		self.spectrum_fft_block = None
 		
+		# Receiver blocks (multiple, eventually)
+		self._receivers = {}
+		self._receiver_valid = {}
+
+		# kludge for using collection like block - TODO: better architecture
+		self.sources = CollectionState(self._sources)
+		self.receivers = ReceiverCollection(self._receivers, self)
+		
 		# Flags, other state
-		self.last_receiver_is_valid = False
 		self.__needs_audio_restart = True
 		self.__needs_spectrum = True
 		self.__needs_reconnect = True
 		self.input_rate = None
 		self.input_freq = None
+		self.receiver_key_counter = 0
 		
 		self._do_connect()
+
+	def add_receiver(self, mode, key=None):
+		if key is not None:
+			assert key not in self._receivers
+		else:
+			while True:
+				self.receiver_key_counter += 1
+				key = base26(self.receiver_key_counter)
+				if key not in self._receivers:
+					break
+		receiver = self._make_receiver(mode, NoneES, key)
+		
+		self._receivers[key] = receiver
+		self._receiver_valid[key] = False
+		
+		self.__needs_reconnect = True
+		self._do_connect()
+		
+		return (key, receiver)
 
 	def _do_connect(self):
 		"""Do all reconfiguration operations in the proper order."""
@@ -71,9 +102,9 @@ class Top(gr.top_block, ExportedState):
 					return
 				freq = this_source.get_freq()
 				self.input_freq = freq
-				if self.receiver is not NoneES:
-					self.receiver.set_input_center_freq(freq)
-				self._update_receiver_validity()
+				for key, receiver in self._receivers.iteritems():
+					receiver.set_input_center_freq(freq)
+					self._update_receiver_validity(key)
 
 			this_source = self._sources[self.source_name]
 			this_source.set_tune_hook(tune_hook)
@@ -106,8 +137,9 @@ class Top(gr.top_block, ExportedState):
 			)
 
 		if rate_changed:
-			print 'Rebuilding receiver'
-			self.receiver = self._make_receiver(self.get_mode())
+			print 'Rebuilding receivers'
+			for key, receiver in self._receivers.iteritems():
+				self._receivers[key] = self._make_receiver(receiver.get_mode(), receiver, key)
 			self.__needs_reconnect = True
 
 		if self.__needs_reconnect and self.source.needs_renew():
@@ -122,43 +154,43 @@ class Top(gr.top_block, ExportedState):
 			self.lock()
 			self.disconnect_all()
 
-			# workaround problem with restarting audio sinks on Mac OS X
-			self.audio_sink = audio.sink(self.audio_rate, "", False)
+
+			# recreated each time because reusing an add_ff w/ different
+			# input counts fails; TODO: report/fix bug
+			audio_sum_l = blocks.add_ff()
+			audio_sum_r = blocks.add_ff()
 
 			self.connect(self.source, self.spectrum_fft_block, self.spectrum_sink)
 
-			if self.receiver is not NoneES:
-				self.last_receiver_is_valid = self.receiver.get_is_valid()
-				if self.last_receiver_is_valid and self.audio_sink is not None:
-					self.connect(self.source, self.receiver)
-					self.connect((self.receiver, 0), (self.audio_sink, 0))
-					self.connect((self.receiver, 1), (self.audio_sink, 1))
-			else:
-				self.last_receiver_is_valid = False
+			audio_sum_index = 0
+			for key, receiver in self._receivers.iteritems():
+				self._receiver_valid[key] = receiver.get_is_valid()
+				if self._receiver_valid[key]:
+					self.connect(self.source, receiver)
+					self.connect((receiver, 0), (audio_sum_l, audio_sum_index))
+					self.connect((receiver, 1), (audio_sum_r, audio_sum_index))
+					audio_sum_index += 1
+		
+			if audio_sum_index > 0:
+				# connect audio output only if there is at least one input
+				# sink is recreated each time to workaround problem with restarting audio sinks on Mac OS X. TODO: do only on OS X, or report/fix gnuradio bug
+				audio_sink = audio.sink(self.audio_rate, "", False)
+				self.connect(audio_sum_l, (audio_sink, 0))
+				self.connect(audio_sum_r, (audio_sink, 1))
 		
 			self.unlock()
 
-	def _update_receiver_validity(self):
-		if self.receiver is not NoneES:
-			if self.receiver.get_is_valid() != self.last_receiver_is_valid:
-				self.__needs_reconnect = True
-				self._do_connect()
+	def _update_receiver_validity(self, key):
+		receiver = self._receivers[key]
+		if receiver.get_is_valid() != self._receiver_valid[key]:
+			self.__needs_reconnect = True
+			self._do_connect()
 
 	def state_def(self, callback):
 		super(Top, self).state_def(callback)
 		callback(Cell(self, 'running', writable=True, ctor=bool))
 		callback(Cell(self, 'source_name', writable=True,
 			ctor=Enum(dict([(k, str(v)) for (k, v) in self._sources.iteritems()]))))
-		callback(Cell(self, 'mode', writable=True, ctor=Enum({
-			'': 'None',
-			'AM': 'AM',
-			'NFM': 'Narrow FM',
-			'WFM': 'Wide FM',
-			'USB': 'SSB (U)',
-			'LSB': 'SSB (L)',
-			'IQ': 'Raw IQ',
-			'VOR': 'VOR'
-		})))
 		callback(Cell(self, 'input_rate', ctor=int))
 		callback(Cell(self, 'audio_rate', ctor=int))
 		callback(Cell(self, 'spectrum_resolution', writable=True, ctor=
@@ -168,7 +200,7 @@ class Top(gr.top_block, ExportedState):
 		callback(MsgQueueCell(self, 'spectrum_fft', fill=True, ctor=SpectrumTypeStub))
 		callback(BlockCell(self, 'sources'))
 		callback(BlockCell(self, 'source', persists=False))
-		callback(BlockCell(self, 'receiver'))
+		callback(BlockCell(self, 'receivers'))
 
 	def start(self):
 		self.__needs_audio_restart = True
@@ -198,26 +230,16 @@ class Top(gr.top_block, ExportedState):
 		self.source_name = value
 		self._do_connect()
 
-	def get_mode(self):
-		return self._mode
-
-	def set_mode(self, kind):
-		if kind == self._mode:
-			return
-		self.receiver = self._make_receiver(kind)  # may raise on invalid arg
-		self.__needs_reconnect = True
-		self._do_connect()
-		self._mode = kind  # only if succeeded
-	
-	def _rebuild_receiver(self):
-		self.receiver = self._make_receiver(self._mode)
+	def _rebuild_receiver(self, key, mode=None):
+		receiver = self._receivers[key]
+		if mode is None:
+			mode = receiver.get_mode()
+		self._receivers[key] = self._make_receiver(mode, receiver, key)
 		self.__needs_reconnect = True
 		self._do_connect()
 
-	def _make_receiver(self, kind):
+	def _make_receiver(self, kind, copyFrom, key):
 		'''Returns the receiver.'''
-		if kind == '':
-			return NoneES
 		if kind == 'IQ':
 			clas = sdr.receiver.IQReceiver
 		elif kind == 'NFM':
@@ -234,24 +256,24 @@ class Top(gr.top_block, ExportedState):
 			raise ValueError('Unknown mode: ' + kind)
 		# TODO: extend state_from_json so we can decide to load things with keyword args and lose the init dict/state dict distinction
 		init = {}
-		if self.receiver is not NoneES:
-			state = self.receiver.state_to_json()
+		if copyFrom is not NoneES:
+			state = copyFrom.state_to_json()
+			del state['mode']
 		else:
 			state = {
 				'audio_gain': 0.25,
 				'rec_freq': 97.7e6,
 				'squelch_threshold': -100
 			}
-		if kind == 'LSB':
-			init['lsb'] = True
 		# TODO remove this special case for WFM receiver
 		if kind == 'WFM':
 			if 'stereo' in state:
 				init['stereo'] = state['stereo']
 			if 'audio_filter' in state:
 				init['audio_filter'] = state['audio_filter']
-		facet = TopFacetForReceiver(self)
+		facet = TopFacetForReceiver(self, key)
 		receiver = clas(
+			mode=kind,
 			input_rate=self.input_rate,
 			input_center_freq=self.input_freq,
 			audio_rate=self.audio_rate,
@@ -292,14 +314,27 @@ class Top(gr.top_block, ExportedState):
 
 
 class TopFacetForReceiver(object):
-	def __init__(self, top):
+	def __init__(self, top, key):
 		self._top = top
+		self._key = key
 		self._enabled = False # assigned outside
 	
 	def revalidate(self):
 		if self._enabled:
-			self._top._update_receiver_validity()
+			self._top._update_receiver_validity(self._key)
 	
 	def rebuild_me(self):
 		assert self._enabled
-		self._top._rebuild_receiver()
+		self._top._rebuild_receiver(self._key)
+	
+	def replace_me(self, mode):
+		assert self._enabled
+		self._top._rebuild_receiver(self._key, mode=mode)
+
+
+def base26(x):
+	'''not quite base 26, actually, because it has no true zero digit'''
+	if x < 26:
+		return 'abcdefghijklmnopqrstuvwxyz'[x]
+	else:
+		return base26(x // 26 - 1) + base26(x % 26)
