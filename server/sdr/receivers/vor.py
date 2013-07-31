@@ -15,13 +15,14 @@ import sdr.receiver
 from sdr.receiver import Receiver
 from sdr.values import Cell
 
+audio_modulation_index = 0.07
 fm_subcarrier = 9960
 fm_deviation = 480
 
 
 class VOR(sdr.receiver.SimpleAudioReceiver):
 
-	def __init__(self, name='VOR receiver', zero_point=-20, **kwargs):
+	def __init__(self, name='VOR receiver', zero_point=59, **kwargs):
 		self.channel_rate = channel_rate = 40000
 		internal_audio_rate = 20000  # TODO over spec'd
 		self.zero_point = zero_point
@@ -46,13 +47,13 @@ class VOR(sdr.receiver.SimpleAudioReceiver):
 		self.dir_vector_filter = filter.fir_filter_ccf(1, firdes.low_pass(
 			1, dir_rate, 1, 2, firdes.WIN_HAMMING, 6.76))
 		self.am_channel_filter_block = filter.fir_filter_ccf(1, firdes.low_pass(
-			1, channel_rate, fm_subcarrier / 2, fm_subcarrier / 2, firdes.WIN_HAMMING, 6.76))
+			1, channel_rate, 5000, 5000, firdes.WIN_HAMMING, 6.76))
 		self.goertzel_fm = fft.goertzel_fc(channel_rate, dir_scale * audio_scale, 30)
 		self.goertzel_am = fft.goertzel_fc(internal_audio_rate, dir_scale, 30)
 		self.fm_channel_filter_block = filter.freq_xlating_fir_filter_ccc(1, (firdes.low_pass(1.0, channel_rate, fm_subcarrier / 2, fm_subcarrier / 2, firdes.WIN_HAMMING)), fm_subcarrier, channel_rate)
-		self.dc_blocker_block = filter.dc_blocker_ff(128, True)
 		self.multiply_conjugate_block = blocks.multiply_conjugate_cc(1)
 		self.complex_to_arg_block = blocks.complex_to_arg(1)
+		self.am_agc_block = analog.feedforward_agc_cc(1024, 1.0)
 		self.am_demod_block = analog.am_demod_cf(
 			channel_rate=channel_rate,
 			audio_decim=audio_scale,
@@ -60,8 +61,8 @@ class VOR(sdr.receiver.SimpleAudioReceiver):
 			audio_stop=5500,
 		)
 		self.fm_demod_block = analog.quadrature_demod_cf(1)
-		self.agc_fm = analog.agc2_cc(1e-1, 1e-2, 1.0, 1.0)
-		self.agc_am = analog.agc2_cc(1e-1, 1e-2, 1.0, 1.0)
+		self.phase_agc_fm = analog.agc2_cc(1e-1, 1e-2, 1.0, 1.0)
+		self.phase_agc_am = analog.agc2_cc(1e-1, 1e-2, 1.0, 1.0)
 		
 		self.probe = blocks.probe_signal_f()
 		
@@ -78,11 +79,12 @@ class VOR(sdr.receiver.SimpleAudioReceiver):
 		self.connect(
 			self.band_filter_block,
 			self.am_channel_filter_block,
+			self.am_agc_block,
 			self.am_demod_block)
 		# AM audio
 		self.connect(
 			self.am_demod_block,
-			self.dc_blocker_block,
+			blocks.multiply_const_ff(1.0 / audio_modulation_index * 0.5),
 			self.resampler_block)
 		self.connect_audio_output(self.resampler_block, self.resampler_block)
 		
@@ -90,7 +92,7 @@ class VOR(sdr.receiver.SimpleAudioReceiver):
 		self.connect(
 			self.am_demod_block,
 			self.goertzel_am,
-			self.agc_am,
+			self.phase_agc_am,
 			(self.multiply_conjugate_block, 0))
 		# FM phase
 		self.connect(
@@ -98,7 +100,7 @@ class VOR(sdr.receiver.SimpleAudioReceiver):
 			self.fm_channel_filter_block,
 			self.fm_demod_block,
 			self.goertzel_fm,
-			self.agc_fm,
+			self.phase_agc_fm,
 			(self.multiply_conjugate_block, 1))
 		# Phase comparison and output
 		self.connect(

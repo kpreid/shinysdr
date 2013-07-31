@@ -305,7 +305,7 @@ class SimulatedSource(Source):
 				vor_channel)
 			signals.append(vor_channel)
 		add_vor(-30e3, 0)
-		add_vor(-60e3, math.pi)
+		add_vor(-60e3, math.pi / 2)
 		
 		bus_input = 0
 		for signal in signals:
