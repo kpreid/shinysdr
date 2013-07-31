@@ -74,5 +74,21 @@ var sdr = sdr || {};
   };
   exports.LocalCell = LocalCell;
   
+  // Adds a prefix to localStorage keys
+  function StorageNamespace(base, prefix) {
+    this._base = base;
+    this._prefix = prefix;
+  }
+  StorageNamespace.prototype.getItem = function (key) {
+    return this._base.getItem(this._prefix + key);
+  };
+  StorageNamespace.prototype.setItem = function (key, value) {
+    return this._base.setItem(this._prefix + key, value);
+  };
+  StorageNamespace.prototype.removeItem = function (key) {
+    return this._base.removeItem(this._prefix + key);
+  };
+  exports.StorageNamespace = StorageNamespace;
+  
   Object.freeze(exports);
 }());

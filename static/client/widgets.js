@@ -3,6 +3,7 @@ var sdr = sdr || {};
   'use strict';
   
   var Cell = sdr.values.Cell;
+  var StorageNamespace = sdr.values.StorageNamespace;
   
   // support components module
   var widget = sdr.widget = {};
@@ -22,21 +23,6 @@ var sdr = sdr || {};
   allModes.LSB = 'Lower SSB';
   allModes.USB = 'Upper SSB';
   allModes.VOR = 'VOR';
-  
-  // TODO this belongs somewhere else
-  function StorageNamespace(base, prefix) {
-    this._base = base;
-    this._prefix = prefix;
-  }
-  StorageNamespace.prototype.getItem = function (key) {
-    return this._base.getItem(this._prefix + key);
-  };
-  StorageNamespace.prototype.setItem = function (key, value) {
-    return this._base.setItem(this._prefix + key, value);
-  };
-  StorageNamespace.prototype.removeItem = function (key) {
-    return this._base.removeItem(this._prefix + key);
-  };
   
   // TODO figure out what this does and give it a better name
   function Context(config) {
