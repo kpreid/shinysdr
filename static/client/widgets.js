@@ -150,6 +150,7 @@ var sdr = sdr || {};
     var radio = config.radio;
     var container = config.element;
     var scheduler = config.scheduler;
+    var storage = config.storage;
     var self = this;
 
     // used to force the container's scroll range to widen immediately
@@ -176,16 +177,25 @@ var sdr = sdr || {};
     prepare.scheduler = config.scheduler;
     prepare();
     
+    // Zoom state variables
+    // We want the cursor point to stay fixed, but scrollLeft quantizes to integer; fractionalScroll stores a virtual fractional part.
+    var zoom, fractionalScroll;
+    // Zoom initial state:
+    // TODO: clamp zoom here in the same way changeZoom does
+    var zoom = parseFloat(storage.getItem('zoom')) || 1;
+    var initScroll = parseFloat(storage.getItem('scroll')) || 0;
+    scrollStub.style.width = (container.offsetWidth * zoom) + 'px';
+    container.scrollLeft = Math.floor(initScroll);
+    var fractionalScroll = mod(initScroll, 1);
+    
     window.addEventListener('resize', function (event) {
       scheduler.enqueue(prepare);
     });
     
     container.addEventListener('scroll', function (event) {
       scheduler.enqueue(prepare);
+      storage.setItem('scroll', String(container.scrollLeft + fractionalScroll));
     }, false);
-    
-    // state
-    var zoom = 1;
     
     // exported for the sake of createWidgets -- TODO proper factoring?
     this.scheduler = scheduler;
@@ -209,9 +219,6 @@ var sdr = sdr || {};
     this.rightVisibleFreq = function rightVisibleFreq() {
       return leftFreq + (container.scrollLeft + pixelWidth) / pixelsPerHertz;
     };
-    
-    // We want the zoom point to stay fixed, but scrollLeft quantizes; this stores a virtual fractional part.
-    var fractionalScroll = 0;
     
     this.changeZoom = function changeZoom(delta, cursorX) {
       var maxZoom = Math.max(
@@ -246,6 +253,9 @@ var sdr = sdr || {};
       // Write back
       container.scrollLeft = scroll;
       fractionalScroll = scroll - container.scrollLeft;
+      
+      storage.setItem('zoom', String(zoom));
+      storage.setItem('scroll', String(scroll));
       
       scheduler.enqueue(prepare);
     };

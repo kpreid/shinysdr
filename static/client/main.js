@@ -4,6 +4,7 @@
   var any = sdr.values.any;
   var LocalCell = sdr.values.LocalCell;
   var xhrput = sdr.network.xhrput;
+  var StorageNamespace = sdr.values.StorageNamespace;
   
   var scheduler = new sdr.events.Scheduler();
   
@@ -63,7 +64,8 @@
     var view = new sdr.widget.SpectrumView({
       scheduler: scheduler,
       radio: radio,
-      element: document.querySelector('.hscalegroup') // TODO relic
+      element: document.querySelector('.hscalegroup'), // TODO relic
+      storage: new StorageNamespace(localStorage, 'sdr.viewState.spectrum.')
     });
     
     var context = new sdr.widget.Context({
