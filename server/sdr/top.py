@@ -23,6 +23,11 @@ class ReceiverCollection(CollectionState):
 		CollectionState.__init__(self, table, dynamic=True)
 		self.__top = top
 	
+	def create_child(self, desc):
+		(key, receiver) = self.__top.add_receiver(desc['mode'])
+		receiver.state_from_json(desc)
+		return key
+	
 	def state_insert(self, key, desc):
 		(key, receiver) = self.__top.add_receiver(desc['mode'], key=key)
 		receiver.state_from_json(desc)

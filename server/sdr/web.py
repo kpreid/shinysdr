@@ -8,6 +8,7 @@ import txws
 
 import array
 import json
+import urllib
 
 import sdr.top
 
@@ -100,6 +101,18 @@ class BlockResource(resource.Resource):
 	
 	def render_GET(self, request):
 		return json.dumps(self.resourceDescription())
+	
+	def render_POST(self, request):
+		'''currently only meaningful to create children of CollectionResources'''
+		block = self._block
+		assert request.getHeader('Content-Type') == 'application/json'
+		reqjson = json.load(request.content)
+		key = block.create_child(reqjson)  # note may fail
+		url = request.prePathURL() + '/receivers/' + urllib.quote(key, safe='')
+		request.setResponseCode(201) # Created
+		request.setHeader('Location', url)
+		# TODO consider a more useful response
+		return json.dumps(url)
 	
 	def resourceDescription(self):
 		return self._block.state_description()
