@@ -14,12 +14,12 @@ html, body {
   -webkit-flex: 1 2;
   width: auto;
 }
-.controlpanel > .sidebar {
+.sidebar {
   width: 17em;
-  /*padding: 0.5em;*/
   -webkit-flex: 0 1 auto;
+  overflow-y: auto;
 }
-.controlpanel > .sidebar, .panel.frame {
+.frame {
   display: -webkit-flex;
   -webkit-flex-direction: column;
 }
@@ -39,7 +39,6 @@ html, body {
   border-style: ridge;
   border-width: .19em;
   padding: 0 0 0 .4em;
-  -webkit-flex-shrink: 1;
 }
 
 /* main visualizations */
@@ -162,7 +161,9 @@ html, body {
 
 /* widgets: frequency database list */
 .widget-FreqList {
+  min-height: 10em;
   -webkit-flex: 2 2;
+  
   display: -webkit-flex;
   -webkit-flex-direction: column;
 }
