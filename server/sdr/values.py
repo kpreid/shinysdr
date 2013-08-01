@@ -210,7 +210,7 @@ class ExportedState(object):
 					cells[key].set(state[key])
 				except (LookupError, TypeError, ValueError) as e:
 					# a plausible set of exceptions, so we don't catch implausible ones
-					err('erroneous', '(' + str(e) + ')')
+					err('erroneous', '(' + type(e).__name__ + ': ' + str(e) + ')')
 		# blocks are deferred because the specific blocks may depend on other keys
 		for key in defer:
 			cells[key].set(state[key])
