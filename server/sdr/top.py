@@ -250,14 +250,17 @@ class Top(gr.top_block, ExportedState):
 				init['stereo'] = state['stereo']
 			if 'audio_filter' in state:
 				init['audio_filter'] = state['audio_filter']
+		facet = TopFacetForReceiver(self)
 		receiver = clas(
 			input_rate=self.input_rate,
 			input_center_freq=self.input_freq,
 			audio_rate=self.audio_rate,
-			control_hook=TopFacetForReceiver(self),
+			control_hook=facet,
 			**init
 		)
 		receiver.state_from_json(state)
+		# until _enabled, ignore any callbacks resulting from the state_from_json initialization
+		facet._enabled = True
 		return receiver
 
 	def get_input_rate(self):
@@ -291,9 +294,12 @@ class Top(gr.top_block, ExportedState):
 class TopFacetForReceiver(object):
 	def __init__(self, top):
 		self._top = top
+		self._enabled = False # assigned outside
 	
 	def revalidate(self):
-		self._top._update_receiver_validity()
+		if self._enabled:
+			self._top._update_receiver_validity()
 	
 	def rebuild_me(self):
+		assert self._enabled
 		self._top._rebuild_receiver()
