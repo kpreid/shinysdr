@@ -604,32 +604,43 @@ var sdr = sdr || {};
       // TODO: recognize multiple
       for (var recKey in states.receivers) {
         var receiver = states.receivers[recKey];
+        var rec_freq_cell = receiver.rec_freq;
+        if (rec_freq_cell) {
+          var rec_freq_now = rec_freq_cell.depend(draw);
+        }
+        var band_filter_cell = receiver.band_filter_shape;
+        if (band_filter_cell) {
+          var band_filter_now = band_filter_cell.depend(draw);
+        }
+        
+        if (band_filter_now) {
+          var fl = band_filter_now.low;
+          var fh = band_filter_now.high;
+          var fhw = band_filter_now.width / 2;
+          ctx.fillStyle = '#3A3A3A';
+          drawBand(rec_freq_now + fl - fhw, rec_freq_now + fh + fhw);
+          ctx.fillStyle = '#444444';
+          drawBand(rec_freq_now + fl + fhw, rec_freq_now + fh - fhw);
+        }
         
         // TODO: marks ought to be part of a distinct widget
         var squelch_threshold_cell = receiver.squelch_threshold;
         if (squelch_threshold_cell) {
+          // TODO: this y calculation may be nonsense
           var squelch = Math.floor(yZero + squelch_threshold_cell.depend(draw) * yScale) + 0.5;
+          var squelchL, squelchR;
+          if (band_filter_now) {
+            squelchL = freqToCoord(rec_freq_now + band_filter_now.low);
+            squelchR = freqToCoord(rec_freq_now + band_filter_now.high);
+          } else {
+            squelchL = 0;
+            squelchR = w;
+          }
           ctx.strokeStyle = '#700';
           ctx.beginPath();
-          ctx.moveTo(0, squelch);
-          ctx.lineTo(w, squelch);
+          ctx.moveTo(squelchL, squelch);
+          ctx.lineTo(squelchR, squelch);
           ctx.stroke();
-        }
-        
-        var rec_freq_cell = receiver.rec_freq;
-        var band_filter_cell = receiver.band_filter_shape;
-        if (rec_freq_cell) {
-          var rec_freq_now = rec_freq_cell.depend(draw);
-          if (band_filter_cell) {
-            var bandFilter = band_filter_cell.depend(draw);
-            var fl = bandFilter.low;
-            var fh = bandFilter.high;
-            var fhw = bandFilter.width / 2;
-            ctx.fillStyle = '#3A3A3A';
-            drawBand(rec_freq_now + fl - fhw, rec_freq_now + fh + fhw);
-            ctx.fillStyle = '#444444';
-            drawBand(rec_freq_now + fl + fhw, rec_freq_now + fh - fhw);
-          }
         }
         
         if (rec_freq_cell) {
