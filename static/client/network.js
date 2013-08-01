@@ -144,6 +144,10 @@ var sdr = sdr || {};
     var centerFreq = NaN;
     
     function transform(json) {
+      if (json === null) {
+        // occurs when server is paused on load — TODO fix server so it always returns an array
+        return fft;
+      }
       centerFreq = json[0];
       var arrayFFT = json[1];
 
