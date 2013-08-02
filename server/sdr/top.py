@@ -34,12 +34,15 @@ class Top(gr.top_block, ExportedState):
 		# kludge for using collection like block - TODO: better architecture
 		self.sources = CollectionState(self._sources)
 
-		# Blocks
+		# Blocks etc.
 		self.source = None
 		self.receiver = NoneES
 		self.audio_sink = None
+		self.spectrum_queue = None
+		self.spectrum_sink = None
+		self.spectrum_fft_block = None
 		
-		# State flags
+		# Flags, other state
 		self.last_receiver_is_valid = False
 		self.__needs_audio_restart = True
 		self.__needs_spectrum = True
