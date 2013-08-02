@@ -740,17 +740,18 @@ var sdr = sdr || {};
         }
       }
       
+      var offsetScale = w / states.input_rate.depend(draw);  // TODO parameter for rate
       if (newData && lastDrawnCenterFreq === viewCenterFreq) {
         // Scroll
         ctx.drawImage(ctx.canvas, 0, 0, w, h-1, 0, 1, w, h-1);
         // Paint newest slice
-        ctx.putImageData(ibuf, 0, 0);
+        var offset = bufferCenterFreq - viewCenterFreq;
+        ctx.putImageData(ibuf, Math.round(offset * offsetScale), 0);
       } else if (lastDrawnCenterFreq !== viewCenterFreq) {
         lastDrawnCenterFreq = viewCenterFreq;
         // Paint all slices onto canvas
         ctx.fillStyle = '#777';
         var sliceCount = slices.length;
-        var offsetScale = w / states.input_rate.depend(draw);  // TODO parameter for rate
         for (var i = sliceCount - 1; i >= 0; i--) {
           var slice = slices[mod(i + slicePtr, sliceCount)];
           var offset = slice[1] - viewCenterFreq;
