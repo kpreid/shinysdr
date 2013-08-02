@@ -12,6 +12,7 @@ from sdr.values import ExportedState, Cell, CollectionState, BlockCell, MsgQueue
 import sdr.receiver
 import sdr.receivers.vor
 
+from twisted.internet import reactor
 
 class SpectrumTypeStub:
 	pass
@@ -48,6 +49,7 @@ class Top(gr.top_block, ExportedState):
 		self.__needs_spectrum = True
 		self.__needs_reconnect = True
 		self.input_rate = None
+		self.input_freq = None
 		
 		self._do_connect()
 
@@ -63,10 +65,15 @@ class Top(gr.top_block, ExportedState):
 			self.__needs_reconnect = True
 			
 			def tune_hook():
-				if self.source is this_source:
-					if self.receiver is not NoneES:
-						self.receiver.set_input_center_freq(self.source.get_freq())
-					self._update_receiver_validity()
+				reactor.callLater(self.source.get_tune_delay(), tune_hook_actual)
+			def tune_hook_actual():
+				if self.source is not this_source:
+					return
+				freq = this_source.get_freq()
+				self.input_freq = freq
+				if self.receiver is not NoneES:
+					self.receiver.set_input_center_freq(freq)
+				self._update_receiver_validity()
 
 			this_source = self._sources[self.source_name]
 			this_source.set_tune_hook(tune_hook)
@@ -74,6 +81,7 @@ class Top(gr.top_block, ExportedState):
 			this_rate = this_source.get_sample_rate()
 			rate_changed = self.input_rate != this_rate
 			self.input_rate = this_rate
+			self.input_freq = this_source.get_freq()
 		
 		# clear separately because used twice above
 		self.__needs_audio_restart = False
@@ -244,7 +252,7 @@ class Top(gr.top_block, ExportedState):
 				init['audio_filter'] = state['audio_filter']
 		receiver = clas(
 			input_rate=self.input_rate,
-			input_center_freq=self.source.get_freq(),
+			input_center_freq=self.input_freq,
 			audio_rate=self.audio_rate,
 			control_hook=TopFacetForReceiver(self),
 			**init
@@ -274,7 +282,7 @@ class Top(gr.top_block, ExportedState):
 		self.spectrum_fft_block.set_vec_rate(value)
 	
 	def get_spectrum_fft_info(self):
-		return self.source.get_freq()
+		return self.input_freq
 	
 	def get_spectrum_fft_queue(self):
 		return self.spectrum_queue

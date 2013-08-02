@@ -11,6 +11,7 @@ from gnuradio.filter import firdes
 import osmosdr
 
 import math
+import time
 
 from sdr.values import Cell, Range, ExportedState
 
@@ -86,6 +87,9 @@ class AudioSource(Source):
 	def get_freq(self):
 		return 0
 
+	def get_tune_delay(self):
+		return 0.0
+
 
 ch = 0  # osmosdr channel, to avoid magic number
 
@@ -102,6 +106,7 @@ class OsmoSDRSource(Source):
 		# TODO present hw freq range
 		
 		self.__osmo_device = osmo_device
+		
 		self.freq = freq = 98e6
 		self.correction_ppm = 0
 		
@@ -145,8 +150,12 @@ class OsmoSDRSource(Source):
 		maxint32 = 2 ** 32 - 1
 		if actual_freq < 0 or actual_freq > maxint32:
 			raise ValueError('Frequency must be between 0 and ' + str(maxint32) + ' Hz')
+
 		self.freq = freq
 		self._update_frequency()
+
+	def get_tune_delay(slf):
+		return 0.25  # TODO: make configurable and/or account for as many factors as we can
 
 	def get_correction_ppm(self):
 		return self.correction_ppm
@@ -168,6 +177,7 @@ class OsmoSDRSource(Source):
 	def _update_frequency(self):
 		self.osmosdr_source_block.set_center_freq(self._compute_frequency(self.freq), 0)
 		# TODO: read back actual frequency and store
+		
 		self.tune_hook()
 
 	def get_agc(self):
@@ -326,6 +336,9 @@ class SimulatedSource(Source):
 		
 	def get_freq(self):
 		return 0
+	
+	def get_tune_delay(self):
+		return 0.0
 	
 	def get_noise_level(self):
 		return self.noise_level
