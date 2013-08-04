@@ -69,6 +69,7 @@ class BlockResource(resource.Resource):
 		self._blockCells = {}
 		self._block = block
 		self._noteDirty = noteDirty
+		self._dynamic = block.state_is_dynamic()
 		for key, cell in block.state().iteritems():
 			ctor = cell.ctor()
 			if cell.isBlock():
@@ -86,8 +87,16 @@ class BlockResource(resource.Resource):
 			if currentResource is None or not currentResource.isForBlock(currentBlock):
 				self._blockResources[name] = currentResource = BlockResource(currentBlock, self._noteDirty)
 			return currentResource
-		else:
-			return resource.Resource.getChild(self, name, request)
+		elif self._dynamic:
+			curstate = self._block.state()
+			if name in curstate:
+				cell = curstate[name]
+				if cell.isBlock():
+					currentResource = BlockResource(cell.getBlock(), self._noteDirty)
+					self._blockCells[name] = cell
+					self._blockResources[name] = currentResource
+					return currentResource
+		return resource.Resource.getChild(self, name, request)
 	
 	def render_GET(self, request):
 		return json.dumps(self.resourceDescription())
