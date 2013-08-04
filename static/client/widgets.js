@@ -273,26 +273,41 @@ var sdr = sdr || {};
       }, true);
     }
     this.addClickToTune = function addClickToTune(element) {
+      var dragReceiver = undefined;
+      
       function clickTune(event) {
         // compute frequency
+        // TODO: X calc works only because we're at the left edge
         var freq = (event.clientX + container.scrollLeft) / pixelsPerHertz + leftFreq;
         
-        // pick a receiver
-        var receivers = radio.receivers;
-        var recKey;
-        for (recKey in receivers) break;
-        if (recKey) {
-          var rec_freq = receivers[recKey].rec_freq;
-          if (rec_freq) {
-            // TODO: X calc works only because we're at the left edge
-            rec_freq.set(freq);
+        // Choose or create a receiver
+        if (!dragReceiver) {
+          var receivers = radio.receivers;
+          var fit = Infinity;
+          // Search for nearest tunable receiver, unless shift key is held down
+          // TODO: discoverable and tablet-compatible creation UI
+          if (!event.shiftKey) {
+            for (var recKey in receivers) {
+              var candidate = receivers[recKey];
+              if (!candidate.rec_freq) continue;  // sanity check
+              var thisFit = Math.abs(candidate.rec_freq.get() - freq);
+              if (thisFit < fit) {
+                fit = thisFit;
+                dragReceiver = candidate;
+              }
+            }
           }
+        }
+        if (dragReceiver) {
+          dragReceiver.rec_freq.set(freq);
         } else {
-          // TODO less ambiguous-naming api
-          receivers.create({
-            mode: 'AM', // TODO more principled selection
-            rec_freq: freq
-          });
+          if (event.type === 'mousedown') { // don't spam
+            // TODO less ambiguous-naming api
+            receivers.create({
+              mode: 'AM', // TODO more principled selection
+              rec_freq: freq
+            });
+          }
         }
         
         // handled event
@@ -304,6 +319,7 @@ var sdr = sdr || {};
         event.preventDefault();
         document.addEventListener('mousemove', clickTune, true);
         document.addEventListener('mouseup', function(event) {
+          dragReceiver = undefined;
           document.removeEventListener('mousemove', clickTune, true);
         }, true);
         clickTune(event);
