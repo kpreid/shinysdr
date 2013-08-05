@@ -23,14 +23,17 @@ class ReceiverCollection(CollectionState):
 		CollectionState.__init__(self, table, dynamic=True)
 		self.__top = top
 	
+	def state_insert(self, key, desc):
+		(key, receiver) = self.__top.add_receiver(desc['mode'], key=key)
+		receiver.state_from_json(desc)
+	
 	def create_child(self, desc):
 		(key, receiver) = self.__top.add_receiver(desc['mode'])
 		receiver.state_from_json(desc)
 		return key
-	
-	def state_insert(self, key, desc):
-		(key, receiver) = self.__top.add_receiver(desc['mode'], key=key)
-		receiver.state_from_json(desc)
+		
+	def delete_child(self, key):
+		self.__top.delete_receiver(key)
 
 
 class Top(gr.top_block, ExportedState):
@@ -88,6 +91,13 @@ class Top(gr.top_block, ExportedState):
 		self._do_connect()
 		
 		return (key, receiver)
+
+	def delete_receiver(self, key):
+		assert key in self._receivers
+		del self._receivers[key]
+		del self._receiver_valid[key]
+		self.__needs_reconnect = True
+		self._do_connect()
 
 	def _do_connect(self):
 		"""Do all reconfiguration operations in the proper order."""
