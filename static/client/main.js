@@ -64,7 +64,6 @@
         if (mode && receiver.mode.get() !== mode) {
           receiver.mode.set(mode);
         }
-        return receiver;
       } else {
         // TODO less ambiguous-naming api
         receivers.create({
@@ -83,6 +82,8 @@
           radio.source.freq.set(freq + radio.input_rate.get() * 0.374);
         }
       }
+      
+      return receiver;
     }
     Object.defineProperty(radio, 'tune', {
       value: tune,
