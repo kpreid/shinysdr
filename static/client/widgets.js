@@ -60,7 +60,9 @@ var sdr = sdr || {};
           var targetStr = node.getAttribute('data-target');
           stateObj = rootTarget[targetStr];
           if (!stateObj) {
-            node.parentNode.replaceChild(document.createTextNode('[Missing: ' + targetStr + ']'), node);
+            if (node.parentNode) { // TODO: This condition shouldn't be necessary?
+              node.parentNode.replaceChild(document.createTextNode('[Missing: ' + targetStr + ']'), node);
+            }
             return;
           }
         } else {
@@ -106,6 +108,10 @@ var sdr = sdr || {};
         // handle widget-is-a-block
         if (stateObj && '_deathNotice' in stateObj) { // TODO bad interface
           stateObj._deathNotice.listen(go);
+        }
+        // handle dynamic block-containing widgets
+        if (stateObj && '_reshapeNotice' in stateObj) { // TODO bad interface
+          stateObj._reshapeNotice.listen(go);
         }
         
         // allow widgets to embed widgets

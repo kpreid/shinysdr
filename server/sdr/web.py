@@ -140,12 +140,11 @@ class BlockResource(resource.Resource):
 
 def traverseUpdates(seen, block):
 	updates = {}
-	for key, cell in block.state().iteritems():
+	cells = block.state()
+	for key, cell in cells.iteritems():
 		if cell.isBlock():
 			subblock = cell.getBlock()
-			if key not in seen:
-				seen[key] = ({}, subblock)
-			if seen[key][1] is not subblock:
+			if key not in seen or seen[key][1] is not subblock:
 				seen[key] = ({}, subblock)  # TODO will give 1 redundant update since seen is empty
 				updates[key] = subblock.state_description()
 			else:
@@ -156,6 +155,13 @@ def traverseUpdates(seen, block):
 			value = cell.get()
 			if not key in seen or value != seen[key]:
 				updates[key] = seen[key] = value
+	dels = []
+	for key in seen:
+		if key not in cells:
+			updates[key] = {'kind': 'block_delete'}
+			dels.append(key)
+	for key in dels:
+		del seen[key]
 	return updates
 
 
