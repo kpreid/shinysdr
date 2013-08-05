@@ -2,6 +2,7 @@ from twisted.web import static, server, resource
 from twisted.internet import reactor
 from twisted.internet import protocol
 from twisted.internet import task
+from twisted.application import strports
 
 import txws
 
@@ -167,15 +168,21 @@ class StateStreamFactory(protocol.Factory):
 		p.factory = self
 		return p
 
-def listen(top, noteDirty):
-	wsport = 8101
-	reactor.listenTCP(wsport, txws.WebSocketFactory(StateStreamFactory(top)))
+def listen(config, top, noteDirty):
+	strports.listen(config['wsPort'], txws.WebSocketFactory(StateStreamFactory(top)))
 	
-	port = 8100
 	root = static.File('static/')
 	root.contentTypes['.csv'] = 'text/csv'
 	root.indexNames = ['index.html']
 	root.putChild('radio', BlockResource(top, noteDirty))
-	reactor.listenTCP(port, server.Site(root))
-	
-	return 'http://localhost:' + str(port) + '/'
+	strports.listen(config['httpPort'], server.Site(root))
+
+	# kludge to construct URL from strports string
+	(hmethod, hargs, hkwargs) = strports.parse(config['httpPort'], None)
+	print hmethod
+	if hmethod == 'TCP':
+		return 'http://localhost:' + str(hargs[0]) + '/'
+	elif hmethod == 'SSL':
+		return 'https://localhost:' + str(hargs[0]) + '/'
+	else:
+		return '???'

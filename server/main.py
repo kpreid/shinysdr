@@ -4,6 +4,7 @@ import gnuradio.eng_option
 
 import json
 import os
+import os.path
 import shutil
 import argparse
 import sys
@@ -38,6 +39,13 @@ sources = {
 	# Locally generated RF signals for test purposes.
 	'sim': sdr.source.SimulatedSource(),
 }
+
+# These are in Twisted endpoint description syntax:
+# <http://twistedmatrix.com/documents/current/api/twisted.internet.endpoints.html#serverFromString>
+# Note: wsPort must currently be 1 greater than httpPort; if one is SSL
+# then both must be. These restrictions will be relaxed later.
+httpPort = 'tcp:8100'
+wsPort = 'tcp:8101'
 ''')
 		sys.exit(0)
 else:
@@ -45,7 +53,9 @@ else:
 	configEnv = {'sdr': sdr}
 	execfile(args.configFile, __builtins__.__dict__, configEnv)
 	sources = configEnv['sources']
-
+	webConfig = {}
+	for k in ['httpPort', 'wsPort']:
+		webConfig[k] = str(configEnv[k])
 
 filename = 'state.json'
 
@@ -79,7 +89,7 @@ print 'Restoring state...'
 restore(top)
 
 print 'Web server...'
-url = sdr.web.listen(top, noteDirty)
+url = sdr.web.listen(webConfig, top, noteDirty)
 
 print 'Ready. Visit ' + url
 reactor.run()

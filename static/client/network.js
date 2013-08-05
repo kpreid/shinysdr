@@ -220,7 +220,9 @@ var sdr = sdr || {};
       // WebSocket state streaming
       var ws;
       function openWS() {
-        ws = new WebSocket('ws://' + document.location.hostname + ':' + (parseInt(document.location.port) + 1) + '/');
+        var secure = document.location.scheme === 'http' ? '' : 's';
+        // TODO: Have server deliver websocket URL, remove port number requirement
+        ws = new WebSocket('ws' + secure + '://' + document.location.hostname + ':' + (parseInt(document.location.port) + 1) + '/');
         ws.onmessage = function(event) {
           function go(local, updates) {
             for (var key in updates) {
