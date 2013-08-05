@@ -5,23 +5,47 @@ import gnuradio.eng_option
 import json
 import os
 import shutil
-import optparse
+import argparse
+import sys
 
 from twisted.internet import reactor
 
 # Option parsing is done before importing the main modules so as to avoid the cost of initializing gnuradio.
-optionParser = optparse.OptionParser(
-	option_class=gnuradio.eng_option.eng_option)
-optionParser.add_option('--sources', dest='sources', metavar='FILE',
-	help='load Python code from FILE defining RF sources, e.g. ' +
-	     '"sources = {\'example\': sdr.source.WhateverSource()}"')
-(options, args) = optionParser.parse_args()
-if len(args) > 0:
-	optionParser.error('non-option parameters are not used: ' + ' '.join(map(repr, args)) + '')
+argParser = argparse.ArgumentParser()
+argParser.add_argument('configFile', metavar='CONFIG',
+	help='path of configuration file')
+argParser.add_argument('--create', dest='createConfig', action='store_true',
+	help='write template configuration file to CONFIG and exit')
+args = argParser.parse_args()
 
 import sdr.top
 import sdr.web
 import sdr.source
+
+# Load config file
+if args.createConfig:
+	with open(args.configFile, 'w') as f:
+		f.write('''\
+sources = {
+	# OsmoSDR generic device source; handles USRP, RTL-SDR, FunCube
+	# Dongle, HackRF, etc.
+	'osmo': sdr.source.OsmoSDRSource(''),
+
+	# For hardware which uses a sound-card as its ADC or appears as an
+	# audio device.
+	'audio': sdr.source.AudioSource(''),
+	
+	# Locally generated RF signals for test purposes.
+	'sim': sdr.source.SimulatedSource(),
+}
+''')
+		sys.exit(0)
+else:
+	# TODO: better ways to manage the namespaces?
+	configEnv = {'sdr': sdr}
+	execfile(args.configFile, __builtins__.__dict__, configEnv)
+	sources = configEnv['sources']
+
 
 filename = 'state.json'
 
@@ -49,18 +73,6 @@ for name in ['jasmine.css', 'jasmine.js', 'jasmine-html.js']:
 	shutil.copyfile('deps/jasmine/lib/jasmine-core/' + name, jasmineOut + name)
 
 print 'Flow graph...'
-if options.sources is not None:
-	# TODO: better ways to manage the namespaces?
-	env = {'sdr': sdr}
-	execfile(options.sources, __builtins__.__dict__, env)
-	sources = env['sources']
-else:
-	# Note: This is slow as it triggers the OsmoSDR device initialization
-	sources = {
-		'audio': sdr.source.AudioSource(''),
-		'rtl': sdr.source.OsmoSDRSource('rtl=0'),
-		'sim': sdr.source.SimulatedSource(),
-	}
 top = sdr.top.Top(sources=sources)
 
 print 'Restoring state...'
