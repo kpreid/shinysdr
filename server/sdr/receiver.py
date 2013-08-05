@@ -80,7 +80,7 @@ class Receiver(gr.hier_block2, ExportedState):
 		callback(Cell(self, 'audio_pan', writable=True, ctor=
 			Range(-1, 1, strict=True)))
 		callback(Cell(self, 'squelch_threshold', writable=True, ctor=
-			Range(-100, 100, strict=False, logarithmic=False)))
+			Range(-100, 0, strict=False, logarithmic=False)))
 		callback(Cell(self, 'is_valid'))
 	
 	def get_rec_freq(self):
