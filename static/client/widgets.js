@@ -528,6 +528,10 @@ var sdr = sdr || {};
     ctx.lineWidth = 1;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+    var textOffsetFromTop =
+        //ctx.measureText('j').fontBoundingBoxAscent; -- not yet supported
+        10 + 2; // default font size is "10px", ignoring effect of baseline
+    
     var fillStyle = getComputedStyle(canvas).fill;
     var strokeStyle = getComputedStyle(canvas).stroke;
 
@@ -623,7 +627,6 @@ var sdr = sdr || {};
       firstPoint = Math.max(0, Math.floor(-xZero / xScale) - 1);
       afterLastPoint = Math.min(len, Math.ceil((w - xZero) / xScale) + 1);
       
-      // TODO: recognize multiple
       for (var recKey in states.receivers) {
         var receiver = states.receivers[recKey];
         var rec_freq_cell = receiver.rec_freq;
@@ -668,6 +671,8 @@ var sdr = sdr || {};
         if (rec_freq_cell) {
           ctx.strokeStyle = 'white';
           drawHair(rec_freq_now); // receiver
+          ctx.fillStyle = 'white';
+          ctx.fillText(recKey, freqToCoord(rec_freq_now) + 2, textOffsetFromTop);
         }
       }
       ctx.strokeStyle = 'gray';
