@@ -465,6 +465,9 @@ var sdr = sdr || {};
       if ('audio_gain' in block) {
         addWidget('audio_gain', 'LogSlider', 'Volume');
       }
+      if ('audio_pan' in block) {
+        addWidget('audio_pan', 'LinSlider', 'Pan');
+      }
       if ('squelch_threshold' in block) {
         addWidget('squelch_threshold', 'LinSlider', 'Squelch');
       }

@@ -14,7 +14,7 @@ from sdr.values import Cell, Range, ExportedState
 
 
 class Receiver(gr.hier_block2, ExportedState):
-	def __init__(self, name, input_rate=0, input_center_freq=0, audio_rate=0, rec_freq=0, audio_gain=1, squelch_threshold=-100, control_hook=None):
+	def __init__(self, name, input_rate=0, input_center_freq=0, audio_rate=0, rec_freq=0, audio_gain=1, audio_pan=0, squelch_threshold=-100, control_hook=None):
 		assert input_rate > 0
 		assert audio_rate > 0
 		gr.hier_block2.__init__(
@@ -27,6 +27,7 @@ class Receiver(gr.hier_block2, ExportedState):
 		self.audio_rate = audio_rate
 		self.rec_freq = rec_freq
 		self.audio_gain = audio_gain
+		self.audio_pan = min(1, max(-1, audio_pan))
 		self.control_hook = control_hook
 		
 		self.audio_gain_l_block = blocks.multiply_const_ff(self.audio_gain)
@@ -44,13 +45,27 @@ class Receiver(gr.hier_block2, ExportedState):
 	def set_squelch_threshold(self, level):
 		self.squelch_block.set_threshold(level)
 
+	def _update_audio_gain(self):
+		gain = self.audio_gain
+		pan = self.audio_pan
+		# TODO: Determine correct computation for panning. http://en.wikipedia.org/wiki/Pan_law seems relevant but was short on actual formulas. May depend on headphones vs speakers? This may be correct already for headphones -- it sounds nearly-flat to me.
+		self.audio_gain_l_block.set_k(gain * (1 - pan))
+		self.audio_gain_r_block.set_k(gain * (1 + pan))
+
 	def get_audio_gain(self):
 		return self.audio_gain
 	
-	def set_audio_gain(self, gain):
-		self.audio_gain = gain
-		self.audio_gain_l_block.set_k(gain)
-		self.audio_gain_r_block.set_k(gain)
+	def set_audio_gain(self, value):
+		self.audio_gain = value
+		self._update_audio_gain()
+
+	def get_audio_pan(self):
+		return self.audio_pan
+	
+	def set_audio_pan(self, value):
+		self.audio_pan = value
+		self._update_audio_gain()
+
 	
 	def connect_audio_output(self, l_port, r_port):
 		self.connect(l_port, self.audio_gain_l_block, (self, 0))
@@ -62,6 +77,8 @@ class Receiver(gr.hier_block2, ExportedState):
 		callback(Cell(self, 'rec_freq', writable=True, ctor=float))
 		callback(Cell(self, 'audio_gain', writable=True, ctor=
 			Range(0.01, 100, strict=False, logarithmic=True)))
+		callback(Cell(self, 'audio_pan', writable=True, ctor=
+			Range(-1, 1, strict=True)))
 		callback(Cell(self, 'squelch_threshold', writable=True, ctor=
 			Range(-100, 100, strict=False, logarithmic=False)))
 		callback(Cell(self, 'is_valid'))
