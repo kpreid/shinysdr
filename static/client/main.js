@@ -3,7 +3,6 @@
   
   var any = sdr.values.any;
   var LocalCell = sdr.values.LocalCell;
-  var xhrput = sdr.network.xhrput;
   var StorageNamespace = sdr.values.StorageNamespace;
   
   var scheduler = new sdr.events.Scheduler();

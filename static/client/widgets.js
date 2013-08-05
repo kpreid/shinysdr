@@ -274,17 +274,25 @@ var sdr = sdr || {};
     }
     this.addClickToTune = function addClickToTune(element) {
       function clickTune(event) {
-        // pick a receiver
-        var recKey;
-        for (recKey in radio.receivers) break;
-        if (!recKey) return;
-        var rec_freq = radio.receivers[recKey].rec_freq;
+        // compute frequency
+        var freq = (event.clientX + container.scrollLeft) / pixelsPerHertz + leftFreq;
         
-        // set tuning
-        if (rec_freq) {
-          // TODO: X calc works only because we're at the left edge
-          rec_freq.set(
-            (event.clientX + container.scrollLeft) / pixelsPerHertz + leftFreq);
+        // pick a receiver
+        var receivers = radio.receivers;
+        var recKey;
+        for (recKey in receivers) break;
+        if (recKey) {
+          var rec_freq = receivers[recKey].rec_freq;
+          if (rec_freq) {
+            // TODO: X calc works only because we're at the left edge
+            rec_freq.set(freq);
+          }
+        } else {
+          // TODO less ambiguous-naming api
+          receivers.create({
+            mode: 'AM', // TODO more principled selection
+            rec_freq: freq
+          });
         }
         
         // handled event
@@ -366,7 +374,7 @@ var sdr = sdr || {};
       } else if (member._deathNotice) { // TODO better recognition of subblocks
         addWidget(name, 'Block');
       } else {
-        console.warn('Block scan got non-cell:', cell);
+        console.warn('Block scan got unexpected object:', member);
       }
     });
   }

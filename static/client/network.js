@@ -60,7 +60,7 @@ var sdr = sdr || {};
     }
     var r = new XMLHttpRequest();
     r.open('PUT', url, true);
-    r.setRequestHeader('Content-Type', 'text/plain');
+    r.setRequestHeader('Content-Type', 'application/json');
     r.onreadystatechange = makeXhrStateCallback(r,
       function putRetry() {
         xhrput(url, data); // causes enqueueing
@@ -72,6 +72,21 @@ var sdr = sdr || {};
     console.log(url, data);
   }
   network.xhrput = xhrput;
+  
+  function xhrpost(url, data, opt_callback) {
+    // TODO add retry behavior (once we know our idempotence story)
+    var r = new XMLHttpRequest();
+    r.open('POST', url, true);
+    r.setRequestHeader('Content-Type', 'application/json');
+    r.onreadystatechange = makeXhrStateCallback(r,
+      function postRetry() { /* TODO */ },
+      function postDone(r) {
+        if (opt_callback) opt_callback(r);
+      });
+    r.send(data);
+    console.log(url, data);
+  }
+  network.xhrpost = xhrpost;
   
   function externalGet(url, responseType, callback) {
     var r = new XMLHttpRequest();
@@ -202,6 +217,10 @@ var sdr = sdr || {};
           // TODO: URL should come from server instead of being constructed here
           sub[k] = buildFromDesc(url + '/' + encodeURIComponent(k), desc.children[k]);
         }
+        setNonEnum(sub, 'create', function(desc) {
+          // TODO arrange a callback with the resulting _object_
+          xhrpost(url, JSON.stringify(desc));
+        });
         return sub;
       default:
         console.error(url + ': Unknown kind ' + desc.kind + ' in', desc);
