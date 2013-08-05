@@ -282,43 +282,25 @@ var sdr = sdr || {};
       var dragReceiver = undefined;
       
       function clickTune(event) {
+        var firstEvent = event.type === 'mousedown';
         // compute frequency
         // TODO: X calc works only because we're at the left edge
         var freq = (event.clientX + container.scrollLeft) / pixelsPerHertz + leftFreq;
         
-        // Choose or create a receiver
-        if (!dragReceiver) {
-          var receivers = radio.receivers;
-          var fit = Infinity;
-          // Search for nearest tunable receiver, unless shift key is held down
-          // TODO: discoverable and tablet-compatible creation UI
-          if (!event.shiftKey) {
-            for (var recKey in receivers) {
-              var candidate = receivers[recKey];
-              if (!candidate.rec_freq) continue;  // sanity check
-              var thisFit = Math.abs(candidate.rec_freq.get() - freq);
-              if (thisFit < fit) {
-                fit = thisFit;
-                dragReceiver = candidate;
-              }
-            }
-          }
-        }
-        if (dragReceiver) {
-          dragReceiver.rec_freq.set(freq);
+        if (!firstEvent && !dragReceiver) {
+          // We sent the request to create a receiver, but it doesn't exist on the client yet. Do nothing.
+          // TODO: Check for the appearance of the receiver and start dragging it.
         } else {
-          if (event.type === 'mousedown') { // don't spam
-            // TODO less ambiguous-naming api
-            receivers.create({
-              mode: 'AM', // TODO more principled selection
-              rec_freq: freq
-            });
-          }
+          dragReceiver = radio.tune({
+            receiver: dragReceiver,
+            freq: freq,
+            alwaysCreate: firstEvent && event.shiftKey
+          });
+          
+          // handled event
+          event.stopPropagation();
+          event.preventDefault(); // no drag selection
         }
-        
-        // handled event
-        event.stopPropagation();
-        event.preventDefault(); // no drag selection
       }
       element.addEventListener('mousedown', function(event) {
         if (event.button !== 0) return;  // don't react to right-clicks etc.
