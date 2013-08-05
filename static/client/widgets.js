@@ -440,17 +440,27 @@ var sdr = sdr || {};
   }
   widgets.Top = Top;
   
-  function BlockSet(widgetName) {
+  function BlockSet(widgetName, deletes) {
     return function TypeSetInst(config) {
       Block.call(this, config, function (block, addWidget, ignore, setInsertion) {
-        for (var name in block) {
+        Object.keys(block).forEach(function (name) {
+          if (deletes) {
+            var del = document.createElement('button');
+            del.textContent = 'X';
+            del.className = 'panel-delete-button';
+            this.element.appendChild(del);
+            del.addEventListener('click', function(event) {
+              block.delete(name);
+            });
+          }
+          
           addWidget(name, widgetName);
-        }
+        }, this);
       });
     };
   }
-  widgets.SourceSet = BlockSet('Source');
-  widgets.ReceiverSet = BlockSet('Receiver');
+  widgets.SourceSet = BlockSet('Source', false);
+  widgets.ReceiverSet = BlockSet('Receiver', true);
   
   // Widget for a source block
   function Source(config) {

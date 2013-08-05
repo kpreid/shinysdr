@@ -88,6 +88,25 @@ var sdr = sdr || {};
   }
   network.xhrpost = xhrpost;
   
+  function xhrdelete(url, opt_callback) {
+    if (isDown) {
+      queuedToRetry['DELETE ' + url] = function() { xhrdelete(url); };
+      return;
+    }
+    var r = new XMLHttpRequest();
+    r.open('DELETE', url, true);
+    r.onreadystatechange = makeXhrStateCallback(r,
+      function delRetry() {
+        xhrdelete(url); // causes enqueueing
+      },
+      function delDone(r) {
+        if (opt_callback) opt_callback(r);
+      });
+    r.send();
+    console.log('DELETE', url);
+  }
+  network.xhrdelete = xhrdelete;
+  
   function externalGet(url, responseType, callback) {
     var r = new XMLHttpRequest();
     r.responseType = responseType;
@@ -221,6 +240,9 @@ var sdr = sdr || {};
         setNonEnum(sub, 'create', function(desc) {
           // TODO arrange a callback with the resulting _object_
           xhrpost(url, JSON.stringify(desc));
+        });
+        setNonEnum(sub, 'delete', function(key) {
+          xhrdelete(url + '/' + encodeURIComponent(key));
         });
         return sub;
       default:

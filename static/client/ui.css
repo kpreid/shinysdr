@@ -40,6 +40,21 @@ html, body {
   border-width: .19em;
   padding: 0 0 0 .4em;
 }
+.panel-delete-button {
+  /* no vertical space occupied */
+  display: block;
+  box-sizing: border-box;
+  font-size: 1em;
+  margin: 0 0 -2em 0;
+  height: 2em;
+
+  /* alignment */
+  position: relative;
+  left: -.4em;
+  width: .8em;
+  
+  padding: 0;
+}
 
 /* main visualizations */
 .hscalegroup {
