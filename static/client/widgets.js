@@ -1331,8 +1331,6 @@ var sdr = sdr || {};
   function Scanner(config) {
     var radio = config.radio;
     var hw_freq = radio.source.freq;
-    // TODO: Receiver object gets swapped out so this stops working - find a better design
-    //var rec_freq = radio.receivers.a.rec_freq;
     var preset = radio.preset;
     var spectrum = radio.spectrum_fft;
     var scan_presets = radio.scan_presets;
@@ -1386,7 +1384,8 @@ var sdr = sdr || {};
     var container = this.element = document.createElement('form');
     container.innerHTML = '<label><input type="checkbox">Scan</label>' +
       '<button type="button">&larr;</button>' +
-      '<button type="button">&rarr;</button>';
+      '<button type="button">&rarr;</button>' +
+      '<button type="button">All</button>';
     var toggle = container.querySelector('input');
     toggle.addEventListener('change', function () {
       if (toggle.checked && !scanInterval) {
@@ -1401,6 +1400,18 @@ var sdr = sdr || {};
     }, false);
     container.querySelectorAll('button')[1].addEventListener('click', function () {
       preset.set(findNextChannel(1));
+    }, false);
+    container.querySelectorAll('button')[2].addEventListener('click', function () {
+      for (var key in radio.receivers) {
+        radio.receivers.delete(key);
+      }
+      scan_presets.get().forEach(function(p) {
+        radio.tune({
+          freq: p.freq,
+          mode: p.mode,
+          alwaysCreate: true
+        });
+      })
     }, false);
   }
   widgets.Scanner = Scanner;
