@@ -75,6 +75,10 @@ class Top(gr.top_block, ExportedState):
 		self._do_connect()
 
 	def add_receiver(self, mode, key=None):
+		if len(self._receivers) >= 100:
+			# Prevent storage-usage DoS attack
+			raise Error('Refusing to create more than 100 receivers')
+		
 		if key is not None:
 			assert key not in self._receivers
 		else:
@@ -195,6 +199,11 @@ class Top(gr.top_block, ExportedState):
 			for key, receiver in self._receivers.iteritems():
 				self._receiver_valid[key] = receiver.get_is_valid()
 				if self._receiver_valid[key]:
+					if audio_sum_index >= 6:
+						# Sanity-check to avoid burning arbitrary resources
+						# TODO: less arbitrary constant; communicate this restriction to client
+						print 'Refusing to connect more than 6 receivers'
+						break
 					self.connect(self.source, receiver)
 					self.connect((receiver, 0), (audio_sum_l, audio_sum_index))
 					self.connect((receiver, 1), (audio_sum_r, audio_sum_index))
