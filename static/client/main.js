@@ -103,15 +103,6 @@
       });
     };
     
-    // TODO better structure / move to server
-    var _scanView = freqDB;
-    radio.scan_presets = new sdr.values.Cell(any);
-    radio.scan_presets.get = function () { return _scanView; };
-    radio.scan_presets.set = function (view) {
-      _scanView = view;
-      this.n.notify();
-    };
-    
     // kludge till we have proper editing
     var writableDB = new sdr.database.Table();
     freqDB.add(writableDB);

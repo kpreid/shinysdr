@@ -389,7 +389,6 @@ var sdr = sdr || {};
     Block.call(this, config, function (block, addWidget, ignore, setInsertion) {
       ignore('spectrum_fft');  // displayed separately
       ignore('preset');  // displayed separately, not real state
-      ignore('scan_presets');  // not real state
       ignore('targetDB');  // not real state
       
       if ('running' in block) {
@@ -1119,7 +1118,7 @@ var sdr = sdr || {};
   widgets.FreqScale = FreqScale;
   
   function FreqList(config) {
-    var states = config.radio;
+    var radio = config.radio;
     var scheduler = config.scheduler;
     var configKey = 'filterString';
     
@@ -1140,6 +1139,21 @@ var sdr = sdr || {};
     listOuter.className = 'freqlist-box';
     var list = listOuter.appendChild(document.createElement('table'))
       .appendChild(document.createElement('tbody'));
+    
+    var receiveAllButton = container.appendChild(document.createElement('button'));
+    receiveAllButton.textContent = 'Receive all in search';
+    receiveAllButton.addEventListener('click', function (event) {
+      for (var key in radio.receivers) {
+        radio.receivers.delete(key);
+      }
+      currentFilter.forEach(function(p) {
+        radio.tune({
+          freq: p.freq,
+          mode: p.mode,
+          alwaysCreate: true
+        });
+      });
+    }, false);
     
     function getElementForRecord(record) {
       // TODO caching should be a WeakMap when possible
@@ -1202,7 +1216,6 @@ var sdr = sdr || {};
         lastFilterText = filterBox.value;
         config.storage.setItem(configKey, lastFilterText);
         currentFilter = dataSource.string(lastFilterText).type('channel');
-        states.scan_presets.set(currentFilter);
         draw();
       }
     }
@@ -1216,6 +1229,9 @@ var sdr = sdr || {};
       currentFilter.forEach(function (record) {
         list.appendChild(getElementForRecord(record));
       });
+      // sanity check
+      var count = currentFilter.getAll().length;
+      receiveAllButton.disabled = !(count > 0 && count <= 10);
     }
     draw.scheduler = scheduler;
 
@@ -1332,94 +1348,6 @@ var sdr = sdr || {};
     };
   }
   widgets.SaveButton = SaveButton;
-  
-  function Scanner(config) {
-    var radio = config.radio;
-    var hw_freq = radio.source.freq;
-    var preset = radio.preset;
-    var spectrum = radio.spectrum_fft;
-    var scan_presets = radio.scan_presets;
-    
-    var scanInterval;
-    
-    function isSignalPresent() {
-      var targetFreq = radio.receivers.a.rec_freq.get();
-      var band = 10e3;
-      
-      var curSpectrum = spectrum.get();
-      var bandwidth = radio.input_rate.get();
-      var scale = curSpectrum.length / bandwidth;
-      var centerFreq = spectrum.getCenterFreq();
-      function index(freq) {
-        return Math.floor((freq - centerFreq) * scale + curSpectrum.length / 2);
-      }
-      // TODO needs some averaging to avoid skipping at weak moments
-      var low = index(targetFreq - band);
-      var high = index(targetFreq + band);
-      var localPower = -Infinity;
-      for (var i = low; i < high; i++) {
-        if (i >= 0 && i < curSpectrum.length) {
-          localPower = Math.max(localPower, curSpectrum[i]);
-        }
-      }
-      // Arbitrary fudge factor because our algorithm here is lousy and doesn't match the server's squelch
-      return localPower + 10 > radio.receivers.a.squelch_threshold.get();
-    }
-    
-    function findNextChannel(direction) {
-      var oldFreq = radio.receivers.a.rec_freq.get();
-      var db = scan_presets.get();
-      if (direction > 0) {
-        return db.inBand(oldFreq + 0.5, Infinity).first() || db.first();
-      } else if (direction < 0) {
-        return db.inBand(-Infinity, oldFreq - 0.5).last() || db.last();
-      }
-    }
-
-    function runScan() {
-      if (spectrum.getCenterFreq() !== radio.source.freq.get()) {
-        console.log('Not caught up...');
-      } else if (isSignalPresent()) {
-        console.log('Holding...');
-      } else {
-        preset.set(findNextChannel(1));
-      }
-    }
-
-    var container = this.element = document.createElement('form');
-    container.innerHTML = '<label><input type="checkbox">Scan</label>' +
-      '<button type="button">&larr;</button>' +
-      '<button type="button">&rarr;</button>' +
-      '<button type="button">All</button>';
-    var toggle = container.querySelector('input');
-    toggle.addEventListener('change', function () {
-      if (toggle.checked && !scanInterval) {
-        scanInterval = setInterval(runScan, 50);
-      } else {
-        clearInterval(scanInterval);
-        scanInterval = undefined;
-      }
-    }, false);
-    container.querySelectorAll('button')[0].addEventListener('click', function () {
-      preset.set(findNextChannel(-1));
-    }, false);
-    container.querySelectorAll('button')[1].addEventListener('click', function () {
-      preset.set(findNextChannel(1));
-    }, false);
-    container.querySelectorAll('button')[2].addEventListener('click', function () {
-      for (var key in radio.receivers) {
-        radio.receivers.delete(key);
-      }
-      scan_presets.get().forEach(function(p) {
-        radio.tune({
-          freq: p.freq,
-          mode: p.mode,
-          alwaysCreate: true
-        });
-      })
-    }, false);
-  }
-  widgets.Scanner = Scanner;
   
   function Generic(config) {
     var target = config.target;
