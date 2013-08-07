@@ -8,7 +8,7 @@ body {
   background: #BBB;
   color: black;
 }
-.frame > details > summary {
+.frame > details > summary, .frame-controls {
   border-color: #DDD;
   background: #DDD;
   color: black;
@@ -16,6 +16,10 @@ body {
 .panel.frame {
   border-color: #DDD;
   background: linear-gradient(to right, #555 0,#BBB 1em);
+}
+.frame-delete-button {
+  background: black;
+  color: white;
 }
 
 [data-widget=SpectrumPlot] { /* TODO: should be .widget-SpectrumPlot but doesn't work because read too early */

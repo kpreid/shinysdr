@@ -421,18 +421,29 @@ var sdr = sdr || {};
   }
   widgets.Top = Top;
   
-  function BlockSet(widgetName, deletes) {
+  function BlockSet(widgetName, userName, dynamic) {
     return function TypeSetInst(config) {
       Block.call(this, config, function (block, addWidget, ignore, setInsertion) {
         Object.keys(block).forEach(function (name) {
-          if (deletes) {
+          if (dynamic) {
+            var toolbar = document.createElement('summary');
+            toolbar.className = 'panel frame-controls';
+            
             var del = document.createElement('button');
-            del.textContent = 'X';
-            del.className = 'panel-delete-button';
-            this.element.appendChild(del);
+            del.textContent = '\u2573';
+            del.className = 'frame-delete-button';
+            toolbar.appendChild(del);
             del.addEventListener('click', function(event) {
               block.delete(name);
             });
+            
+            toolbar.appendChild(document.createTextNode(' ' + userName + ' '));
+            
+            var label = document.createElement('span');
+            label.textContent = name;
+            toolbar.appendChild(label);
+            
+            this.element.appendChild(toolbar);
           }
           
           addWidget(name, widgetName);
@@ -440,8 +451,8 @@ var sdr = sdr || {};
       });
     };
   }
-  widgets.SourceSet = BlockSet('Source', false);
-  widgets.ReceiverSet = BlockSet('Receiver', true);
+  widgets.SourceSet = BlockSet('Source', 'Source', false);
+  widgets.ReceiverSet = BlockSet('Receiver', 'Receiver', true);
   
   // Widget for a source block
   function Source(config) {
