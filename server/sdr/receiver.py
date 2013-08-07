@@ -14,7 +14,7 @@ from sdr.values import ExportedState, Cell, Range, Enum
 
 
 class Receiver(gr.hier_block2, ExportedState):
-	def __init__(self, mode, input_rate=0, input_center_freq=0, audio_rate=0, rec_freq=0, audio_gain=1, audio_pan=0, squelch_threshold=-100, control_hook=None):
+	def __init__(self, mode, input_rate=0, input_center_freq=0, audio_rate=0, rec_freq=100.0, audio_gain=0.25, audio_pan=0, squelch_threshold=-100, control_hook=None):
 		assert input_rate > 0
 		assert audio_rate > 0
 		gr.hier_block2.__init__(

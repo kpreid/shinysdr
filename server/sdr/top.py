@@ -70,6 +70,7 @@ class Top(gr.top_block, ExportedState):
 		self.input_rate = None
 		self.input_freq = None
 		self.receiver_key_counter = 0
+		self.receiver_default_state = {}
 		
 		self._do_connect()
 
@@ -82,7 +83,14 @@ class Top(gr.top_block, ExportedState):
 				self.receiver_key_counter += 1
 				if key not in self._receivers:
 					break
-		receiver = self._make_receiver(mode, NoneES, key)
+		
+		if len(self._receivers) > 0:
+			arbitrary = self._receivers.itervalues().next()
+			defaults = arbitrary.state_to_json()
+		else:
+			defaults = self.receiver_default_state
+		
+		receiver = self._make_receiver(mode, defaults, key)
 		
 		self._receivers[key] = receiver
 		self._receiver_valid[key] = False
@@ -94,6 +102,12 @@ class Top(gr.top_block, ExportedState):
 
 	def delete_receiver(self, key):
 		assert key in self._receivers
+		receiver = self._receivers[key]
+		
+		# save defaults for use if about to become empty
+		if len(self._receivers) == 1:
+			self.receiver_default_state = receiver.state_to_json()
+		
 		del self._receivers[key]
 		del self._receiver_valid[key]
 		self.__needs_reconnect = True
@@ -153,8 +167,8 @@ class Top(gr.top_block, ExportedState):
 
 		if rate_changed:
 			print 'Rebuilding receivers'
-			for key, receiver in self._receivers.iteritems():
-				self._receivers[key] = self._make_receiver(receiver.get_mode(), receiver, key)
+			for key in self._receivers:
+				self._rebuild_receiver_nodirty(key)
 			self.__needs_reconnect = True
 
 		if self.__needs_reconnect and self.source.needs_renew():
@@ -246,15 +260,19 @@ class Top(gr.top_block, ExportedState):
 		self._do_connect()
 
 	def _rebuild_receiver(self, key, mode=None):
-		receiver = self._receivers[key]
-		if mode is None:
-			mode = receiver.get_mode()
-		self._receivers[key] = self._make_receiver(mode, receiver, key)
+		self._rebuild_receiver_nodirty(key, mode)
 		self.__needs_reconnect = True
 		self._do_connect()
 
-	def _make_receiver(self, kind, copyFrom, key):
+	def _rebuild_receiver_nodirty(self, key, mode=None):
+		receiver = self._receivers[key]
+		if mode is None:
+			mode = receiver.get_mode()
+		self._receivers[key] = self._make_receiver(mode, receiver.state_to_json(), key)
+
+	def _make_receiver(self, kind, state, key):
 		'''Returns the receiver.'''
+
 		if kind == 'IQ':
 			clas = sdr.receiver.IQReceiver
 		elif kind == 'NFM':
@@ -269,23 +287,19 @@ class Top(gr.top_block, ExportedState):
 			clas = sdr.receivers.vor.VOR
 		else:
 			raise ValueError('Unknown mode: ' + kind)
+
 		# TODO: extend state_from_json so we can decide to load things with keyword args and lose the init dict/state dict distinction
 		init = {}
-		if copyFrom is not NoneES:
-			state = copyFrom.state_to_json()
-			del state['mode']
-		else:
-			state = {
-				'audio_gain': 0.25,
-				'rec_freq': 97.7e6,
-				'squelch_threshold': -100
-			}
+		state = state.copy()  # don't modify arg
+		if 'mode' in state: del state['mode']
+
 		# TODO remove this special case for WFM receiver
 		if kind == 'WFM':
 			if 'stereo' in state:
 				init['stereo'] = state['stereo']
 			if 'audio_filter' in state:
 				init['audio_filter'] = state['audio_filter']
+
 		facet = TopFacetForReceiver(self, key)
 		receiver = clas(
 			mode=kind,
