@@ -78,8 +78,8 @@ class Top(gr.top_block, ExportedState):
 			assert key not in self._receivers
 		else:
 			while True:
-				self.receiver_key_counter += 1
 				key = base26(self.receiver_key_counter)
+				self.receiver_key_counter += 1
 				if key not in self._receivers:
 					break
 		receiver = self._make_receiver(mode, NoneES, key)
