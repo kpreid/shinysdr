@@ -671,7 +671,13 @@ var sdr = sdr || {};
             squelchL = 0;
             squelchR = w;
           }
-          ctx.strokeStyle = '#700';
+          var minSquelchHairWidth = 30;
+          if (squelchR - squelchL < minSquelchHairWidth) {
+            var squelchMid = (squelchR + squelchL) / 2;
+            squelchL = squelchMid - minSquelchHairWidth/2;
+            squelchR = squelchMid + minSquelchHairWidth/2;
+          }
+          ctx.strokeStyle = '#F00';
           ctx.beginPath();
           ctx.moveTo(squelchL, squelch);
           ctx.lineTo(squelchR, squelch);
