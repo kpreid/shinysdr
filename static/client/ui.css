@@ -35,10 +35,28 @@ html, body {
 .frame > details > summary {
   margin-left: -.4em;
 }
+.frame-controls {
+  margin-bottom: -.1em; /* collapse border with following frame */
+}
 .panel.frame {
   border-style: ridge;
   border-width: .19em;
   padding: 0 0 0 .4em;
+}
+.frame-delete-button {
+  /* TODO: better styling; look up good ways to make "X" buttons */
+  vertical-align: middle;
+  display: inline-block;
+  text-align: center;
+
+  width: 1.8em;
+  height: 1.8em;
+
+  margin: 0;
+  border: none;
+  padding: 0.2em;
+  
+  border-radius: 99em;
 }
 
 /* main visualizations */

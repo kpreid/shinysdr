@@ -8,6 +8,7 @@ import txws
 
 import array
 import json
+import urllib
 
 import sdr.top
 
@@ -59,16 +60,22 @@ class SpectrumResource(CellResource):
 		return array.array('f', fftdata).tostring()
 
 
+def notDeletable():
+	raise "Attempt to delete top block"
+
+
 class BlockResource(resource.Resource):
 	defaultContentType = 'application/json'
 	isLeaf = False
 
-	def __init__(self, block, noteDirty):
+	def __init__(self, block, noteDirty, deleteSelf):
 		resource.Resource.__init__(self)
 		self._blockResources = {}
 		self._blockCells = {}
 		self._block = block
 		self._noteDirty = noteDirty
+		self._deleteSelf = deleteSelf
+		self._dynamic = block.state_is_dynamic()
 		for key, cell in block.state().iteritems():
 			ctor = cell.ctor()
 			if cell.isBlock():
@@ -84,13 +91,45 @@ class BlockResource(resource.Resource):
 			currentResource = self._blockResources[name]
 			currentBlock = self._blockCells[name].getBlock()
 			if currentResource is None or not currentResource.isForBlock(currentBlock):
-				self._blockResources[name] = currentResource = BlockResource(currentBlock, self._noteDirty)
+				self._blockResources[name] = currentResource = self.makeChildBlockResource(name, currentBlock)
 			return currentResource
-		else:
-			return resource.Resource.getChild(self, name, request)
+		elif self._dynamic:
+			curstate = self._block.state()
+			if name in curstate:
+				cell = curstate[name]
+				if cell.isBlock():
+					currentResource = self.makeChildBlockResource(name, cell.getBlock())
+					self._blockCells[name] = cell
+					self._blockResources[name] = currentResource
+					return currentResource
+		return resource.Resource.getChild(self, name, request)
+	
+	def makeChildBlockResource(self, name, block):
+		def deleter():
+			self._block.delete_child(name)
+		return BlockResource(block, self._noteDirty, deleter)
 	
 	def render_GET(self, request):
 		return json.dumps(self.resourceDescription())
+	
+	def render_POST(self, request):
+		'''currently only meaningful to create children of CollectionResources'''
+		block = self._block
+		assert request.getHeader('Content-Type') == 'application/json'
+		reqjson = json.load(request.content)
+		key = block.create_child(reqjson)  # note may fail
+		self._noteDirty()
+		url = request.prePathURL() + '/receivers/' + urllib.quote(key, safe='')
+		request.setResponseCode(201) # Created
+		request.setHeader('Location', url)
+		# TODO consider a more useful response
+		return json.dumps(url)
+	
+	def render_DELETE(self, request):
+		self._deleteSelf()
+		self._noteDirty()
+		request.setResponseCode(204) # No Content
+		return ''
 	
 	def resourceDescription(self):
 		return self._block.state_description()
@@ -101,12 +140,11 @@ class BlockResource(resource.Resource):
 
 def traverseUpdates(seen, block):
 	updates = {}
-	for key, cell in block.state().iteritems():
+	cells = block.state()
+	for key, cell in cells.iteritems():
 		if cell.isBlock():
 			subblock = cell.getBlock()
-			if key not in seen:
-				seen[key] = ({}, subblock)
-			if seen[key][1] is not subblock:
+			if key not in seen or seen[key][1] is not subblock:
 				seen[key] = ({}, subblock)  # TODO will give 1 redundant update since seen is empty
 				updates[key] = subblock.state_description()
 			else:
@@ -117,6 +155,13 @@ def traverseUpdates(seen, block):
 			value = cell.get()
 			if not key in seen or value != seen[key]:
 				updates[key] = seen[key] = value
+	dels = []
+	for key in seen:
+		if key not in cells:
+			updates[key] = {'kind': 'block_delete'}
+			dels.append(key)
+	for key in dels:
+		del seen[key]
 	return updates
 
 
@@ -174,7 +219,7 @@ def listen(config, top, noteDirty):
 	root = static.File('static/')
 	root.contentTypes['.csv'] = 'text/csv'
 	root.indexNames = ['index.html']
-	root.putChild('radio', BlockResource(top, noteDirty))
+	root.putChild('radio', BlockResource(top, noteDirty, notDeletable))
 	strports.listen(config['httpPort'], server.Site(root))
 
 	# kludge to construct URL from strports string

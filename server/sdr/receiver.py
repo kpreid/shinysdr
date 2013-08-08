@@ -10,18 +10,20 @@ from gnuradio.filter import pfb
 
 import math
 
-from sdr.values import Cell, Range, ExportedState
+from sdr.values import ExportedState, Cell, Range, Enum
 
 
 class Receiver(gr.hier_block2, ExportedState):
-	def __init__(self, name, input_rate=0, input_center_freq=0, audio_rate=0, rec_freq=0, audio_gain=1, audio_pan=0, squelch_threshold=-100, control_hook=None):
+	def __init__(self, mode, input_rate=0, input_center_freq=0, audio_rate=0, rec_freq=100.0, audio_gain=0.25, audio_pan=0, squelch_threshold=-100, control_hook=None):
 		assert input_rate > 0
 		assert audio_rate > 0
 		gr.hier_block2.__init__(
-			self, name,
+			# str() because insists on non-unicode
+			self, str('%s receiver' % (mode,)),
 			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
 			gr.io_signature(2, 2, gr.sizeof_float * 1),
 		)
+		self.mode = mode
 		self.input_rate = input_rate
 		self.input_center_freq = input_center_freq
 		self.audio_rate = audio_rate
@@ -73,6 +75,15 @@ class Receiver(gr.hier_block2, ExportedState):
 
 	def state_def(self, callback):
 		super(Receiver, self).state_def(callback)
+		callback(Cell(self, 'mode', writable=True, ctor=Enum({
+			'AM': 'AM',
+			'NFM': 'Narrow FM',
+			'WFM': 'Wide FM',
+			'USB': 'SSB (U)',
+			'LSB': 'SSB (L)',
+			'IQ': 'Raw IQ',
+			'VOR': 'VOR'
+		})))
 		callback(Cell(self, 'band_filter_shape'))
 		callback(Cell(self, 'rec_freq', writable=True, ctor=float))
 		callback(Cell(self, 'audio_gain', writable=True, ctor=
@@ -90,11 +101,21 @@ class Receiver(gr.hier_block2, ExportedState):
 		self.rec_freq = rec_freq
 		self._update_band_center()
 		self.control_hook.revalidate()
-
+	
+	def get_mode(self):
+		return self.mode
+	
+	def set_mode(self, mode):
+		if mode != self.mode:
+			self.control_hook.replace_me(mode)
+	
+	def _set_mode(self, mode):
+		'''To be called by a subclass which is capable of changing modes from its override of set_mode.'''
+		self.mode = mode
 
 class SimpleAudioReceiver(Receiver):
-	def __init__(self, name='Audio Receiver', demod_rate=0, band_filter=None, band_filter_transition=None, **kwargs):
-		Receiver.__init__(self, name=name, **kwargs)
+	def __init__(self, demod_rate=0, band_filter=None, band_filter_transition=None, **kwargs):
+		Receiver.__init__(self, **kwargs)
 		
 		self.band_filter = band_filter
 		self.band_filter_transition = band_filter_transition
@@ -236,9 +257,9 @@ def make_resampler(in_rate, out_rate):
 
 
 class IQReceiver(SimpleAudioReceiver):
-	def __init__(self, name='I/Q', audio_rate=None, **kwargs):
+	def __init__(self, mode='IQ', audio_rate=None, **kwargs):
 		SimpleAudioReceiver.__init__(self,
-			name=name,
+			mode=mode,
 			audio_rate=audio_rate,
 			demod_rate=audio_rate,
 			band_filter=audio_rate * 0.5,
@@ -256,10 +277,10 @@ class IQReceiver(SimpleAudioReceiver):
 
 
 class AMReceiver(SimpleAudioReceiver):
-	def __init__(self, name='AM', **kwargs):
+	def __init__(self, **kwargs):
 		demod_rate = 48000
 		
-		SimpleAudioReceiver.__init__(self, name=name, demod_rate=demod_rate, band_filter=5000, band_filter_transition=5000, **kwargs)
+		SimpleAudioReceiver.__init__(self, demod_rate=demod_rate, band_filter=5000, band_filter_transition=5000, **kwargs)
 	
 		input_rate = self.input_rate
 		audio_rate = self.audio_rate
@@ -284,8 +305,13 @@ class AMReceiver(SimpleAudioReceiver):
 
 
 class FMReceiver(SimpleAudioReceiver):
-	def __init__(self, name='FM', deviation=75000, demod_rate=48000, post_demod_rate=None, band_filter=None, band_filter_transition=None, **kwargs):
-		SimpleAudioReceiver.__init__(self, name=name, demod_rate=demod_rate, band_filter=band_filter, band_filter_transition=band_filter_transition, **kwargs)
+	def __init__(self, mode, deviation=75000, demod_rate=48000, post_demod_rate=None, band_filter=None, band_filter_transition=None, **kwargs):
+		SimpleAudioReceiver.__init__(self,
+			mode=mode,
+			demod_rate=demod_rate,
+			band_filter=band_filter,
+			band_filter_transition=band_filter_transition,
+			**kwargs)
 		
 		input_rate = self.input_rate
 		audio_rate = self.audio_rate
@@ -323,13 +349,13 @@ class FMReceiver(SimpleAudioReceiver):
 
 class NFMReceiver(FMReceiver):
 	def __init__(self, audio_rate, **kwargs):
-		FMReceiver.__init__(self, name='Narrowband FM', demod_rate=48000, audio_rate=audio_rate, post_demod_rate=audio_rate, deviation=5000, band_filter=6500, band_filter_transition=1000, **kwargs)
+		FMReceiver.__init__(self, demod_rate=48000, audio_rate=audio_rate, post_demod_rate=audio_rate, deviation=5000, band_filter=6500, band_filter_transition=1000, **kwargs)
 
 class WFMReceiver(FMReceiver):
 	def __init__(self, stereo=True, audio_filter=True, **kwargs):
 		self.stereo = stereo
 		self.audio_filter = audio_filter
-		FMReceiver.__init__(self, name='Wideband FM', demod_rate=240000, post_demod_rate=120000, deviation=75000, band_filter=80000, band_filter_transition=20000, **kwargs)
+		FMReceiver.__init__(self, demod_rate=240000, post_demod_rate=120000, deviation=75000, band_filter=80000, band_filter_transition=20000, **kwargs)
 
 	def state_def(self, callback):
 		super(WFMReceiver, self).state_def(callback)
@@ -431,10 +457,17 @@ class WFMReceiver(FMReceiver):
 		
 
 class SSBReceiver(SimpleAudioReceiver):
-	def __init__(self, name='SSB', lsb=False, audio_rate=0, **kwargs):
+	def __init__(self, mode, audio_rate=0, **kwargs):
+		if mode == 'LSB':
+			lsb = True
+		elif mode == 'USB':
+			lsb = False
+		else:
+			raise ValueError('Not an SSB mode: %r' % (mode,))
 		demod_rate = audio_rate
+		
 		SimpleAudioReceiver.__init__(self,
-			name=name,
+			mode=mode,
 			audio_rate=audio_rate,
 			demod_rate=demod_rate,
 			band_filter=audio_rate / 2,  # unused

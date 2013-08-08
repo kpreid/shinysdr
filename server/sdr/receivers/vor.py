@@ -22,14 +22,14 @@ fm_deviation = 480
 
 class VOR(sdr.receiver.SimpleAudioReceiver):
 
-	def __init__(self, name='VOR receiver', zero_point=59, **kwargs):
+	def __init__(self, mode='VOR', zero_point=59, **kwargs):
 		self.channel_rate = channel_rate = 40000
 		internal_audio_rate = 20000  # TODO over spec'd
 		self.zero_point = zero_point
 
 		transition = 5000
 		sdr.receiver.SimpleAudioReceiver.__init__(self,
-			name=name,
+			mode=mode,
 			demod_rate=channel_rate,
 			band_filter=fm_subcarrier * 1.25 + fm_deviation + transition / 2,
 			band_filter_transition=transition,

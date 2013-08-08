@@ -174,8 +174,11 @@ class ExportedState(object):
 	def state_def(self, callback):
 		pass
 	
+	def state_is_dynamic(self):
+		return False
+	
 	def state(self):
-		if not hasattr(self, '_ExportedState__cache'):
+		if self.state_is_dynamic() or not hasattr(self, '_ExportedState__cache'):
 			cache = {}
 			self.__cache = cache
 
@@ -193,6 +196,7 @@ class ExportedState(object):
 	
 	def state_from_json(self, state):
 		cells = self.state()
+		dynamic = self.state_is_dynamic()
 		defer = []
 		for key in state:
 			def err(adjective, suffix):
@@ -200,7 +204,10 @@ class ExportedState(object):
 				print 'Warning: Discarding ' + adjective + ' state', str(self) + '.' + key, '=', state[key], suffix
 			cell = cells.get(key, None)
 			if cell is None:
-				err('nonexistent', '')
+				if dynamic:
+					self.state_insert(key, state[key])
+				else:
+					err('nonexistent', '')
 			elif cell.isBlock():
 				defer.append(key)
 			elif not cell.isWritable():
@@ -229,15 +236,21 @@ class ExportedState(object):
 
 class CollectionState(ExportedState):
 	'''Wrapper around a plain Python collection.'''
-	def __init__(self, collection):
+	def __init__(self, collection, dynamic=False):
 		self.__collection = collection
+		self.__keys = collection.keys()
+		self.__cells = {}
+		self.__dynamic = dynamic
 	
-	# TODO: We will eventually want to allow for changes in the collection, which means disabling ExportedState's internal cache
+	def state_is_dynamic(self):
+		return self.__dynamic
+	
 	def state_def(self, callback):
 		super(CollectionState, self).state_def(callback)
 		for key in self.__collection:
-			callback(CollectionMemberCell(self.__collection, key))
-	
+			if key not in self.__cells:
+				self.__cells[key] = CollectionMemberCell(self.__collection, key)
+			callback(self.__cells[key])
 
 class NoneESType(ExportedState):
 	'''Used like None but implementing ExportedState.'''

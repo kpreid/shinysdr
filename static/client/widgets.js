@@ -60,7 +60,9 @@ var sdr = sdr || {};
           var targetStr = node.getAttribute('data-target');
           stateObj = rootTarget[targetStr];
           if (!stateObj) {
-            node.parentNode.replaceChild(document.createTextNode('[Missing: ' + targetStr + ']'), node);
+            if (node.parentNode) { // TODO: This condition shouldn't be necessary?
+              node.parentNode.replaceChild(document.createTextNode('[Missing: ' + targetStr + ']'), node);
+            }
             return;
           }
         } else {
@@ -106,6 +108,10 @@ var sdr = sdr || {};
         // handle widget-is-a-block
         if (stateObj && '_deathNotice' in stateObj) { // TODO bad interface
           stateObj._deathNotice.listen(go);
+        }
+        // handle dynamic block-containing widgets
+        if (stateObj && '_reshapeNotice' in stateObj) { // TODO bad interface
+          stateObj._reshapeNotice.listen(go);
         }
         
         // allow widgets to embed widgets
@@ -273,20 +279,35 @@ var sdr = sdr || {};
       }, true);
     }
     this.addClickToTune = function addClickToTune(element) {
+      var dragReceiver = undefined;
+      
       function clickTune(event) {
-        if (radio.receiver.rec_freq) {
-          // TODO: X calc works only because we're at the left edge
-          radio.receiver.rec_freq.set(
-            (event.clientX + container.scrollLeft) / pixelsPerHertz + leftFreq);
+        var firstEvent = event.type === 'mousedown';
+        // compute frequency
+        // TODO: X calc works only because we're at the left edge
+        var freq = (event.clientX + container.scrollLeft) / pixelsPerHertz + leftFreq;
+        
+        if (!firstEvent && !dragReceiver) {
+          // We sent the request to create a receiver, but it doesn't exist on the client yet. Do nothing.
+          // TODO: Check for the appearance of the receiver and start dragging it.
+        } else {
+          dragReceiver = radio.tune({
+            receiver: dragReceiver,
+            freq: freq,
+            alwaysCreate: firstEvent && event.shiftKey
+          });
+          
+          // handled event
+          event.stopPropagation();
+          event.preventDefault(); // no drag selection
         }
-        event.stopPropagation();
-        event.preventDefault(); // no selection
       }
       element.addEventListener('mousedown', function(event) {
         if (event.button !== 0) return;  // don't react to right-clicks etc.
         event.preventDefault();
         document.addEventListener('mousemove', clickTune, true);
         document.addEventListener('mouseup', function(event) {
+          dragReceiver = undefined;
           document.removeEventListener('mousemove', clickTune, true);
         }, true);
         clickTune(event);
@@ -357,7 +378,7 @@ var sdr = sdr || {};
       } else if (member._deathNotice) { // TODO better recognition of subblocks
         addWidget(name, 'Block');
       } else {
-        console.warn('Block scan got non-cell:', cell);
+        console.warn('Block scan got unexpected object:', member);
       }
     });
   }
@@ -368,7 +389,6 @@ var sdr = sdr || {};
     Block.call(this, config, function (block, addWidget, ignore, setInsertion) {
       ignore('spectrum_fft');  // displayed separately
       ignore('preset');  // displayed separately, not real state
-      ignore('scan_presets');  // not real state
       ignore('targetDB');  // not real state
       
       if ('running' in block) {
@@ -388,11 +408,8 @@ var sdr = sdr || {};
           addWidget('source', 'Source');
         }
       }
-      if ('mode' in block) {
-        addWidget('mode', 'Radio');
-      }
-      if ('receiver' in block) {
-        addWidget('receiver', 'Receiver');
+      if ('receivers' in block) {
+        addWidget('receivers', 'ReceiverSet');
       }
       
       var details = this.element.appendChild(document.createElement('details'));
@@ -404,14 +421,38 @@ var sdr = sdr || {};
   }
   widgets.Top = Top;
   
-  function SourceSet(config) {
-    Block.call(this, config, function (block, addWidget, ignore, setInsertion) {
-      for (var name in block) {
-        addWidget(name, 'Source');
-      }
-    });
+  function BlockSet(widgetName, userName, dynamic) {
+    return function TypeSetInst(config) {
+      Block.call(this, config, function (block, addWidget, ignore, setInsertion) {
+        Object.keys(block).forEach(function (name) {
+          if (dynamic) {
+            var toolbar = document.createElement('summary');
+            toolbar.className = 'panel frame-controls';
+            
+            var del = document.createElement('button');
+            del.textContent = '\u2573';
+            del.className = 'frame-delete-button';
+            toolbar.appendChild(del);
+            del.addEventListener('click', function(event) {
+              block.delete(name);
+            });
+            
+            toolbar.appendChild(document.createTextNode(' ' + userName + ' '));
+            
+            var label = document.createElement('span');
+            label.textContent = name;
+            toolbar.appendChild(label);
+            
+            this.element.appendChild(toolbar);
+          }
+          
+          addWidget(name, widgetName);
+        }, this);
+      });
+    };
   }
-  widgets.SourceSet = SourceSet;
+  widgets.SourceSet = BlockSet('Source', 'Source', false);
+  widgets.ReceiverSet = BlockSet('Receiver', 'Receiver', true);
   
   // Widget for a source block
   function Source(config) {
@@ -459,6 +500,9 @@ var sdr = sdr || {};
     Block.call(this, config, function (block, addWidget, ignore, setInsertion) {
       ignore('is_valid');
       ignore('band_filter_shape');
+      if ('mode' in block) {
+        addWidget('mode', 'Radio');
+      }
       if ('rec_freq' in block) {
         addWidget('rec_freq', 'Knob', 'Channel frequency');
       }
@@ -494,6 +538,10 @@ var sdr = sdr || {};
     ctx.lineWidth = 1;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+    var textOffsetFromTop =
+        //ctx.measureText('j').fontBoundingBoxAscent; -- not yet supported
+        10 + 2; // default font size is "10px", ignoring effect of baseline
+    
     var fillStyle = getComputedStyle(canvas).fill;
     var strokeStyle = getComputedStyle(canvas).stroke;
 
@@ -589,40 +637,62 @@ var sdr = sdr || {};
       firstPoint = Math.max(0, Math.floor(-xZero / xScale) - 1);
       afterLastPoint = Math.min(len, Math.ceil((w - xZero) / xScale) + 1);
       
-      // TODO: marks ought to be part of a distinct widget
-      var squelch_threshold_cell = states.receiver.squelch_threshold;
-      if (squelch_threshold_cell) {
-        var squelch = Math.floor(yZero + squelch_threshold_cell.depend(draw) * yScale) + 0.5;
-        ctx.strokeStyle = '#700';
-        ctx.beginPath();
-        ctx.moveTo(0, squelch);
-        ctx.lineTo(w, squelch);
-        ctx.stroke();
-      }
-      
-      var rec_freq_cell = states.receiver.rec_freq;
-      var band_filter_cell = states.receiver.band_filter_shape;
-      if (rec_freq_cell) {
-        var rec_freq_now = rec_freq_cell.depend(draw);
+      for (var recKey in states.receivers) {
+        var receiver = states.receivers[recKey];
+        var rec_freq_cell = receiver.rec_freq;
+        if (rec_freq_cell) {
+          var rec_freq_now = rec_freq_cell.depend(draw);
+        }
+        var band_filter_cell = receiver.band_filter_shape;
         if (band_filter_cell) {
-          var bandFilter = band_filter_cell.depend(draw);
-          var fl = bandFilter.low;
-          var fh = bandFilter.high;
-          var fhw = bandFilter.width / 2;
+          var band_filter_now = band_filter_cell.depend(draw);
+        }
+        
+        if (band_filter_now) {
+          var fl = band_filter_now.low;
+          var fh = band_filter_now.high;
+          var fhw = band_filter_now.width / 2;
           ctx.fillStyle = '#3A3A3A';
           drawBand(rec_freq_now + fl - fhw, rec_freq_now + fh + fhw);
           ctx.fillStyle = '#444444';
           drawBand(rec_freq_now + fl + fhw, rec_freq_now + fh - fhw);
         }
+        
+        // TODO: marks ought to be part of a distinct widget
+        var squelch_threshold_cell = receiver.squelch_threshold;
+        if (squelch_threshold_cell) {
+          // TODO: this y calculation may be nonsense
+          var squelch = Math.floor(yZero + squelch_threshold_cell.depend(draw) * yScale) + 0.5;
+          var squelchL, squelchR;
+          if (band_filter_now) {
+            squelchL = freqToCoord(rec_freq_now + band_filter_now.low);
+            squelchR = freqToCoord(rec_freq_now + band_filter_now.high);
+          } else {
+            squelchL = 0;
+            squelchR = w;
+          }
+          var minSquelchHairWidth = 30;
+          if (squelchR - squelchL < minSquelchHairWidth) {
+            var squelchMid = (squelchR + squelchL) / 2;
+            squelchL = squelchMid - minSquelchHairWidth/2;
+            squelchR = squelchMid + minSquelchHairWidth/2;
+          }
+          ctx.strokeStyle = '#F00';
+          ctx.beginPath();
+          ctx.moveTo(squelchL, squelch);
+          ctx.lineTo(squelchR, squelch);
+          ctx.stroke();
+        }
+        
+        if (rec_freq_cell) {
+          ctx.strokeStyle = 'white';
+          drawHair(rec_freq_now); // receiver
+          ctx.fillStyle = 'white';
+          ctx.fillText(recKey, freqToCoord(rec_freq_now) + 2, textOffsetFromTop);
+        }
       }
-      
       ctx.strokeStyle = 'gray';
       drawHair(viewCenterFreq); // center frequency
-      
-      if (rec_freq_cell) {
-        ctx.strokeStyle = 'white';
-        drawHair(rec_freq_now); // receiver
-      }
       
       // Fill is deliberately over stroke. This acts to deemphasize downward stroking of spikes, which tend to occur in noise.
       ctx.fillStyle = fillStyle;
@@ -1065,7 +1135,7 @@ var sdr = sdr || {};
   widgets.FreqScale = FreqScale;
   
   function FreqList(config) {
-    var states = config.radio;
+    var radio = config.radio;
     var scheduler = config.scheduler;
     var configKey = 'filterString';
     
@@ -1086,6 +1156,21 @@ var sdr = sdr || {};
     listOuter.className = 'freqlist-box';
     var list = listOuter.appendChild(document.createElement('table'))
       .appendChild(document.createElement('tbody'));
+    
+    var receiveAllButton = container.appendChild(document.createElement('button'));
+    receiveAllButton.textContent = 'Receive all in search';
+    receiveAllButton.addEventListener('click', function (event) {
+      for (var key in radio.receivers) {
+        radio.receivers.delete(key);
+      }
+      currentFilter.forEach(function(p) {
+        radio.tune({
+          freq: p.freq,
+          mode: p.mode,
+          alwaysCreate: true
+        });
+      });
+    }, false);
     
     function getElementForRecord(record) {
       // TODO caching should be a WeakMap when possible
@@ -1148,7 +1233,6 @@ var sdr = sdr || {};
         lastFilterText = filterBox.value;
         config.storage.setItem(configKey, lastFilterText);
         currentFilter = dataSource.string(lastFilterText).type('channel');
-        states.scan_presets.set(currentFilter);
         draw();
       }
     }
@@ -1162,6 +1246,9 @@ var sdr = sdr || {};
       currentFilter.forEach(function (record) {
         list.appendChild(getElementForRecord(record));
       });
+      // sanity check
+      var count = currentFilter.getAll().length;
+      receiveAllButton.disabled = !(count > 0 && count <= 10);
     }
     draw.scheduler = scheduler;
 
@@ -1258,8 +1345,9 @@ var sdr = sdr || {};
   // Silly single-purpose widget 'till we figure out more where the UI is going
   function SaveButton(config) {
     var radio = config.radio; // use mode, receiver
+    var receiver = config.target;
     var panel = this.element = config.element;
-
+    
     var button = panel.querySelector('button');
     if (!button) {
       button = panel.appendChild(document.createElement('button'));
@@ -1269,91 +1357,14 @@ var sdr = sdr || {};
     button.onclick = function (event) {
       var record = {
         type: 'channel',
-        freq: radio.receiver.rec_freq.get(),
-        mode: radio.mode.get(), // TODO should be able to take from receiver
+        freq: receiver.rec_freq.get(),
+        mode: receiver.mode.get(),
         label: 'untitled'
       };
       radio.preset.set(radio.targetDB.add(record));
     };
   }
   widgets.SaveButton = SaveButton;
-  
-  function Scanner(config) {
-    var radio = config.radio;
-    var hw_freq = radio.source.freq;
-    // TODO: Receiver object gets swapped out so this stops working - find a better design
-    //var rec_freq = radio.receiver.rec_freq;
-    var preset = radio.preset;
-    var spectrum = radio.spectrum_fft;
-    var scan_presets = radio.scan_presets;
-    
-    var scanInterval;
-    
-    function isSignalPresent() {
-      var targetFreq = radio.receiver.rec_freq.get();
-      var band = 10e3;
-      
-      var curSpectrum = spectrum.get();
-      var bandwidth = radio.input_rate.get();
-      var scale = curSpectrum.length / bandwidth;
-      var centerFreq = spectrum.getCenterFreq();
-      function index(freq) {
-        return Math.floor((freq - centerFreq) * scale + curSpectrum.length / 2);
-      }
-      // TODO needs some averaging to avoid skipping at weak moments
-      var low = index(targetFreq - band);
-      var high = index(targetFreq + band);
-      var localPower = -Infinity;
-      for (var i = low; i < high; i++) {
-        if (i >= 0 && i < curSpectrum.length) {
-          localPower = Math.max(localPower, curSpectrum[i]);
-        }
-      }
-      // Arbitrary fudge factor because our algorithm here is lousy and doesn't match the server's squelch
-      return localPower + 10 > radio.receiver.squelch_threshold.get();
-    }
-    
-    function findNextChannel(direction) {
-      var oldFreq = radio.receiver.rec_freq.get();
-      var db = scan_presets.get();
-      if (direction > 0) {
-        return db.inBand(oldFreq + 0.5, Infinity).first() || db.first();
-      } else if (direction < 0) {
-        return db.inBand(-Infinity, oldFreq - 0.5).last() || db.last();
-      }
-    }
-
-    function runScan() {
-      if (spectrum.getCenterFreq() !== radio.source.freq.get()) {
-        console.log('Not caught up...');
-      } else if (isSignalPresent()) {
-        console.log('Holding...');
-      } else {
-        preset.set(findNextChannel(1));
-      }
-    }
-
-    var container = this.element = document.createElement('form');
-    container.innerHTML = '<label><input type="checkbox">Scan</label>' +
-      '<button type="button">&larr;</button>' +
-      '<button type="button">&rarr;</button>';
-    var toggle = container.querySelector('input');
-    toggle.addEventListener('change', function () {
-      if (toggle.checked && !scanInterval) {
-        scanInterval = setInterval(runScan, 50);
-      } else {
-        clearInterval(scanInterval);
-        scanInterval = undefined;
-      }
-    }, false);
-    container.querySelectorAll('button')[0].addEventListener('click', function () {
-      preset.set(findNextChannel(-1));
-    }, false);
-    container.querySelectorAll('button')[1].addEventListener('click', function () {
-      preset.set(findNextChannel(1));
-    }, false);
-  }
-  widgets.Scanner = Scanner;
   
   function Generic(config) {
     var target = config.target;

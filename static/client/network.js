@@ -60,7 +60,7 @@ var sdr = sdr || {};
     }
     var r = new XMLHttpRequest();
     r.open('PUT', url, true);
-    r.setRequestHeader('Content-Type', 'text/plain');
+    r.setRequestHeader('Content-Type', 'application/json');
     r.onreadystatechange = makeXhrStateCallback(r,
       function putRetry() {
         xhrput(url, data); // causes enqueueing
@@ -72,6 +72,40 @@ var sdr = sdr || {};
     console.log(url, data);
   }
   network.xhrput = xhrput;
+  
+  function xhrpost(url, data, opt_callback) {
+    // TODO add retry behavior (once we know our idempotence story)
+    var r = new XMLHttpRequest();
+    r.open('POST', url, true);
+    r.setRequestHeader('Content-Type', 'application/json');
+    r.onreadystatechange = makeXhrStateCallback(r,
+      function postRetry() { /* TODO */ },
+      function postDone(r) {
+        if (opt_callback) opt_callback(r);
+      });
+    r.send(data);
+    console.log(url, data);
+  }
+  network.xhrpost = xhrpost;
+  
+  function xhrdelete(url, opt_callback) {
+    if (isDown) {
+      queuedToRetry['DELETE ' + url] = function() { xhrdelete(url); };
+      return;
+    }
+    var r = new XMLHttpRequest();
+    r.open('DELETE', url, true);
+    r.onreadystatechange = makeXhrStateCallback(r,
+      function delRetry() {
+        xhrdelete(url); // causes enqueueing
+      },
+      function delDone(r) {
+        if (opt_callback) opt_callback(r);
+      });
+    r.send();
+    console.log('DELETE', url);
+  }
+  network.xhrdelete = xhrdelete;
   
   function externalGet(url, responseType, callback) {
     var r = new XMLHttpRequest();
@@ -198,10 +232,18 @@ var sdr = sdr || {};
         var sub = {};
         setNonEnum(sub, '_url', url); // TODO kludge
         setNonEnum(sub, '_deathNotice', new sdr.events.Notifier());
+        setNonEnum(sub, '_reshapeNotice', new sdr.events.Notifier());
         for (var k in desc.children) {
           // TODO: URL should come from server instead of being constructed here
           sub[k] = buildFromDesc(url + '/' + encodeURIComponent(k), desc.children[k]);
         }
+        setNonEnum(sub, 'create', function(desc) {
+          // TODO arrange a callback with the resulting _object_
+          xhrpost(url, JSON.stringify(desc));
+        });
+        setNonEnum(sub, 'delete', function(key) {
+          xhrdelete(url + '/' + encodeURIComponent(key));
+        });
         return sub;
       default:
         console.error(url + ': Unknown kind ' + desc.kind + ' in', desc);
@@ -226,7 +268,6 @@ var sdr = sdr || {};
         ws.onmessage = function(event) {
           function go(local, updates) {
             for (var key in updates) {
-              if (!local.hasOwnProperty(key)) continue; // TODO warn
               var lobj = local[key];
               var updateItem = updates[key];
               if (lobj instanceof Cell) {
@@ -234,10 +275,26 @@ var sdr = sdr || {};
               } else if ('kind' in updateItem) {
                 if (updateItem.kind === 'block') {
                   // TODO: Explicitly inactivate all cells in the old structure
-                  lobj._deathNotice.notify();
-                  local[key] = buildFromDesc(lobj._url, updateItem);
+                  if (lobj) {  // absent if this is a new block
+                    lobj._deathNotice.notify();
+                  } else {
+                    // reshape notification is only when the key set changes
+                    local._reshapeNotice.notify();
+                  }
+                  // TODO: avoid url construction
+                  local[key] = buildFromDesc(local._url + '/' + encodeURIComponent(key), updateItem);
                 } else if (updateItem.kind === 'block_updates') {
-                  go(lobj, updateItem.updates);
+                  if (lobj) {
+                    go(lobj, updateItem.updates);
+                  } else {
+                    console.error("Got updates for block we don't have: " + key);
+                  }
+                } else if (updateItem.kind === 'block_delete') {
+                  if (lobj) {
+                    lobj._deathNotice.notify();
+                  }
+                  delete local[key];
+                  local._reshapeNotice.notify();
                 } else {
                   console.error("Don't know what to do with update structure ", updateItem);
                 }
