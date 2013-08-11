@@ -84,6 +84,10 @@ html, body {
 }
 
 /* widgets: knob */
+.panel > .knob {
+  display: block;
+  text-align: center;
+}
 .knob {
   white-space: nowrap;
   font-family: monospace;
