@@ -14,6 +14,9 @@ import sdr.receivers.vor
 
 from twisted.internet import reactor
 
+import time
+
+
 class SpectrumTypeStub:
 	pass
 
@@ -71,6 +74,9 @@ class Top(gr.top_block, ExportedState):
 		self.input_freq = None
 		self.receiver_key_counter = 0
 		self.receiver_default_state = {}
+		self.last_wall_time = time.time()
+		self.last_cpu_time = time.clock()
+		self.last_cpu_use = 0
 		
 		self._do_connect()
 
@@ -239,6 +245,7 @@ class Top(gr.top_block, ExportedState):
 		callback(BlockCell(self, 'sources'))
 		callback(BlockCell(self, 'source', persists=False))
 		callback(BlockCell(self, 'receivers'))
+		callback(Cell(self, 'cpu_use', ctor=float))
 
 	def start(self):
 		self.__needs_audio_restart = True
@@ -349,6 +356,17 @@ class Top(gr.top_block, ExportedState):
 	
 	def get_spectrum_fft_queue(self):
 		return self.spectrum_queue
+	
+	def get_cpu_use(self):
+		cur_wall_time = time.time()
+		elapsed_wall = cur_wall_time - self.last_wall_time
+		if elapsed_wall > 0.5:
+			cur_cpu_time = time.clock()
+			elapsed_cpu = cur_cpu_time - self.last_cpu_time
+			self.last_wall_time = cur_wall_time
+			self.last_cpu_time = cur_cpu_time
+			self.last_cpu_use = round(elapsed_cpu / elapsed_wall, 2)
+		return self.last_cpu_use
 
 
 class TopFacetForReceiver(object):
