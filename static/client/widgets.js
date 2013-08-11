@@ -487,7 +487,7 @@ var sdr = sdr || {};
       }
       
       if ('correction_ppm' in block) {
-        addWidget('correction_ppm', 'Knob', 'Frequency correction (PPM)');
+        addWidget('correction_ppm', 'SmallKnob', 'Freq.corr. (PPM)');
       }
       
       ignore('sample_rate');
@@ -1382,6 +1382,53 @@ var sdr = sdr || {};
     draw();
   }
   widgets.Generic = Generic;
+  
+  // TODO: duplicate code w/ Slider; generalize bits
+  function SmallKnob(config) {
+    var target = config.target;
+
+    var input;
+    if (config.element.nodeName !== 'INPUT') {
+      var container = this.element = config.element;
+      container.classList.add('widget-SmallKnob-panel');
+
+      if (container.hasAttribute('title')) {
+        var labelEl = container.appendChild(document.createElement('span'));
+        labelEl.classList.add('widget-SmallKnob-label');
+        labelEl.appendChild(document.createTextNode(container.getAttribute('title')));
+        container.removeAttribute('title');
+      }
+
+      input = container.appendChild(document.createElement('input'));
+      input.type = 'number';
+      input.step = 'any';
+    } else {
+      this.element = input = config.element;
+    }
+    
+    var type = target.type;
+    if (type instanceof sdr.values.Range) {
+      input.min = getT(type.min);
+      input.max = getT(type.max);
+      input.step = (type.integer && !type.logarithmic) ? 1 : 'any';
+    }
+
+    input.addEventListener('change', function(event) {
+      target.set(input.valueAsNumber);
+    }, false);
+    function draw() {
+      var value = +target.depend(draw);
+      var sValue = +value;
+      if (!isFinite(sValue)) {
+        sValue = 0;
+      }
+      input.disabled = false;
+      input.valueAsNumber = sValue;
+    }
+    draw.scheduler = config.scheduler;
+    draw();
+  }
+  widgets.SmallKnob = SmallKnob;
   
   function Slider(config, getT, setT) {
     var target = config.target;

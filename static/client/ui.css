@@ -239,6 +239,27 @@ html, body {
   height: 6em;
 }
 
+/* TODO(kpreid): SmallKnob/Slider duplication */
+.widget-SmallKnob-panel {
+  display: -webkit-flex;
+  -webkit-flex-direction: row;
+}
+.widget-SmallKnob-label, {
+  display: inline-block;
+  -webkit-align-self: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.widget-SmallKnob-label {
+  -webkit-flex: 0 0 auto;
+  max-width: 8em;
+}
+.widget-SmallKnob-panel input {
+  -webkit-flex: 1 1 auto;
+
+  vertical-align: middle;
+}
+
 .widget-Slider-panel {
   display: -webkit-flex;
   -webkit-flex-direction: row;
