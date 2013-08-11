@@ -74,8 +74,9 @@ def restore(root):
 		shutil.copyfile(filename, filename + '~')
 	
 
+# TODO: This should not be a file copy operation; we should do an overlay somehow inside the web server.
 print 'Building web UI content...'
-jasmineOut = 'static/test/jasmine/'
+jasmineOut = os.path.join(sdr.web.staticResourcePath, 'test/jasmine/')
 if os.path.exists(jasmineOut):
 	shutil.rmtree(jasmineOut)
 os.mkdir(jasmineOut)

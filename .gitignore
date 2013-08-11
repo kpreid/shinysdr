@@ -1,4 +1,4 @@
 *.pyc
 /state.json
 /state.json~
-/static/test/jasmine/
+/server/sdr/webstatic/test/jasmine/

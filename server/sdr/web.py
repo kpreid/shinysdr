@@ -9,6 +9,7 @@ import txws
 import array
 import json
 import urllib
+import os.path
 
 import sdr.top
 
@@ -213,10 +214,15 @@ class StateStreamFactory(protocol.Factory):
 		p.factory = self
 		return p
 
+
+# used externally
+staticResourcePath = os.path.join(os.path.dirname(__file__), 'webstatic')
+
+
 def listen(config, top, noteDirty):
 	strports.listen(config['wsPort'], txws.WebSocketFactory(StateStreamFactory(top)))
 	
-	root = static.File('static/')
+	root = static.File(staticResourcePath)
 	root.contentTypes['.csv'] = 'text/csv'
 	root.indexNames = ['index.html']
 	root.putChild('radio', BlockResource(top, noteDirty, notDeletable))
