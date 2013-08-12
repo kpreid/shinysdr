@@ -251,6 +251,18 @@ var sdr = sdr || {};
     }
   }
   
+  function openWebSocket(path) {
+    // TODO: Have server deliver websocket URL, remove port number requirement
+    if (!/^\//.test(path)) throw new Error('bad path');
+    var secure = document.location.scheme === 'http' ? '' : 's';
+    var ws = new WebSocket('ws' + secure + '://' + document.location.hostname + ':' + (parseInt(document.location.port) + 1) + path);
+    ws.addEventListener('open', function (event) {
+      ws.send(''); // dummy required due to server limitation
+    }, true);
+    return ws;
+  }
+  network.openWebSocket = openWebSocket;
+  
   function connect(rootURL, callback) {
     var cellTree;
     
@@ -262,9 +274,7 @@ var sdr = sdr || {};
       // WebSocket state streaming
       var ws;
       function openWS() {
-        var secure = document.location.scheme === 'http' ? '' : 's';
-        // TODO: Have server deliver websocket URL, remove port number requirement
-        ws = new WebSocket('ws' + secure + '://' + document.location.hostname + ':' + (parseInt(document.location.port) + 1) + '/');
+        ws = openWebSocket('/state');
         ws.onmessage = function(event) {
           function go(local, updates) {
             for (var key in updates) {

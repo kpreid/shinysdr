@@ -123,5 +123,78 @@
     });
     
     sdr.widget.createWidgets(radio, context, document);
+    
+    // audio processing - TODO move to appropriate location
+    (function() {
+      var queue = [];
+      function openWS() {
+        // TODO: refactor reconnecting logic
+        var ws = sdr.network.openWebSocket('/audio');
+        ws.onmessage = function(event) {
+          if (queue.length > 100) {
+            console.log('Audio overrun');
+            return;
+          }
+          queue.push(JSON.parse(event.data));
+        };
+        ws.onclose = function() {
+          console.error('Lost WebSocket connection');
+          setTimeout(openWS, 1000);
+        };
+      }
+      openWS();
+      
+      // TODO portability
+      var audio = new webkitAudioContext();
+      console.log('Sample rate: ' + audio.sampleRate);
+      var bufferSize = 2048;
+      var ascr = audio.createScriptProcessor(bufferSize, 0, 2);
+      var empty = [];
+      var audioStreamChunk = empty;
+      var chunkIndex = 0;
+      var prevUnderrun = 0;
+      ascr.onaudioprocess = function audioCallback(event) {
+        var abuf = event.outputBuffer;
+        var l = abuf.getChannelData(0);
+        var r = abuf.getChannelData(1);
+        var j;
+        for (j = 0;
+             chunkIndex < audioStreamChunk.length && j < abuf.length;
+             chunkIndex += 2, j++) {
+          l[j] = audioStreamChunk[chunkIndex];
+          r[j] = audioStreamChunk[chunkIndex + 1];
+        }
+        while (j < abuf.length) {
+          // Get next chunk
+          // TODO: shift() is expensive
+          audioStreamChunk = queue.shift() || empty;
+          if (audioStreamChunk.length == 0) {
+            break;
+          }
+          chunkIndex = 0;
+          for (;
+               chunkIndex < audioStreamChunk.length && j < abuf.length;
+               chunkIndex += 2, j++) {
+            l[j] = audioStreamChunk[chunkIndex];
+            r[j] = audioStreamChunk[chunkIndex + 1];
+          }
+        }
+        for (; j < abuf.length; j++) {
+          // Fill any underrun
+          l[j] = 0;
+          r[j] = 0;
+        }
+        var underrun = abuf.length - j;
+        if (prevUnderrun != 0 && underrun != bufferSize) {
+          // Report underrun, but only if it's not just due to the stream stopping
+          console.log('Audio underrun', prevUnderrun);
+        }
+        prevUnderrun = underrun;
+      };
+      ascr.connect(audio.destination);
+      // Workaround for Chromium bug https://code.google.com/p/chromium/issues/detail?id=82795 -- ScriptProcessor nodes are not kept live
+      window.__dummy_audio_node_reference = ascr;
+      console.log('audio init done');
+    }());
   }); // end gotDesc
 }());
