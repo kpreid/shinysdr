@@ -369,6 +369,9 @@ class Top(gr.top_block, ExportedState):
 	def get_spectrum_fft_queue(self):
 		return self.spectrum_queue
 	
+	def get_audio_stream_queue(self):
+		return self.audio_stream_queue
+
 	def get_cpu_use(self):
 		cur_wall_time = time.time()
 		elapsed_wall = cur_wall_time - self.last_wall_time

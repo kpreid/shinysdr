@@ -140,6 +140,7 @@ class BlockResource(resource.Resource):
 
 
 def traverseUpdates(seen, block):
+	"""Recursive algorithm for StateStreamInner"""
 	updates = {}
 	cells = block.state()
 	for key, cell in cells.iteritems():
@@ -166,43 +167,86 @@ def traverseUpdates(seen, block):
 	return updates
 
 
-class StateStreamProtocol(protocol.Protocol):
+# TODO: Better name for this category of object
+class StateStreamInner(object):
+	def __init__(self, block):
+		self._block = block
+		self._seenValues = {}
+	
+	def takeMessage(self):
+		updates = traverseUpdates(self._seenValues, self._block)
+		if len(updates) == 0:
+			# Nothing to say
+			return None
+		return updates
+
+class AudioStreamInner(object):
+	def __init__(self, block):
+		self._block = block
+	
+	def takeMessage(self):
+		queue = self._block.get_audio_stream_queue()
+		unpacker = array.array('f')
+		while not queue.empty_p():
+			message = queue.delete_head()
+			if message.length() > 0: # avoid crash bug
+				unpacker.fromstring(message.to_string())
+		l = unpacker.tolist()
+		if len(l) == 0:
+			return None
+		return l
+
+
+
+class OurStreamProtocol(protocol.Protocol):
 	def __init__(self, block):
 		#protocol.Protocol.__init__(self)
 		self._block = block
-		self._stateLoop = task.LoopingCall(self.sendState)
-		# TODO: slow/stop when radio not running, and determine suitable update rate based on querying objects
-		self._stateLoop.start(1.0 / 61)
+		self._sendLoop = task.LoopingCall(self.doSend)
 		self._seenValues = {}
+		self.inner = None
 	
 	def dataReceived(self, data):
 		"""twisted Protocol implementation"""
+		if self.inner is not None:
+			return
+		print self.transport.location
+		if self.transport.location == '/audio':
+			self.inner = AudioStreamInner(self._block)
+		elif self.transport.location == '/state':
+			self.inner = StateStreamInner(self._block)
+		else:
+			raise Exception('Unrecognized path: ' + self.transport.location)
+		# TODO: slow/stop when radio not running, and determine suitable update rate based on querying objects
+		self._sendLoop.start(1.0 / 61)
+	
+	def connectionMade(self):
+		"""twisted Protocol implementation"""
+		# Unfortunately, txWS calls this too soon for transport.location to be available
 		pass
 	
 	def connectionLost(self, reason):
 		"""twisted Protocol implementation"""
-		self._stateLoop.stop()
+		if self._sendLoop.running:
+			self._sendLoop.stop()
 	
-	def sendState(self):
+	def doSend(self):
+		if self.inner is None:
+			return
+		m = self.inner.takeMessage()
+		if m is None:
+			return
 		# Note: txWS currently does not support binary WebSockets messages. Therefore, we send everything as JSON text. This is merely inefficient, not broken, so it will do for now.
-		if self.transport is None:
-			# seems to be missing first time
-			return
-		# Simplest thing that works: Obtain all the data, send it if it's different.
-		updates = traverseUpdates(self._seenValues, self._block)
-		if len(updates) == 0:
-			# Nothing to say
-			return
-		data = json.dumps(updates)
-		if len(self.transport.transport.dataBuffer) > 100000:
+		if len(self.transport.transport.dataBuffer) > 1000000:
 			# TODO: condition is horrible implementation-diving kludge
 			# Don't send data if we aren't successfully getting it onto the network.
+			print 'Dropping data ' + self.transport.location
 			return
-		self.transport.write(data)
+		self.transport.write(json.dumps(m))
 
 
-class StateStreamFactory(protocol.Factory):
-	protocol = StateStreamProtocol
+class OurStreamFactory(protocol.Factory):
+	protocol = OurStreamProtocol
 	
 	def __init__(self, block):
 		#protocol.Factory.__init__(self)
@@ -210,7 +254,7 @@ class StateStreamFactory(protocol.Factory):
 	
 	def buildProtocol(self, addr):
 		"""twisted Factory implementation"""
-		p = StateStreamProtocol(self._block)
+		p = self.protocol(self._block)
 		p.factory = self
 		return p
 
@@ -220,7 +264,7 @@ staticResourcePath = os.path.join(os.path.dirname(__file__), 'webstatic')
 
 
 def listen(config, top, noteDirty):
-	strports.listen(config['wsPort'], txws.WebSocketFactory(StateStreamFactory(top)))
+	strports.listen(config['wsPort'], txws.WebSocketFactory(OurStreamFactory(top)))
 	
 	root = static.File(staticResourcePath)
 	root.contentTypes['.csv'] = 'text/csv'
