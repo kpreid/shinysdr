@@ -21,6 +21,9 @@ class SpectrumTypeStub:
 	pass
 
 
+num_audio_channels = 2
+
+
 class ReceiverCollection(CollectionState):
 	def __init__(self, table, top):
 		CollectionState.__init__(self, table, dynamic=True)
@@ -67,13 +70,8 @@ class Top(gr.top_block, ExportedState):
 		self.receivers = ReceiverCollection(self._receivers, self)
 		
 		# Audio stream bits
-		num_audio_channels = 2
 		self.audio_stream_join = blocks.streams_to_vector(gr.sizeof_float, num_audio_channels)
-		self.audio_stream_queue = gr.msg_queue(limit=100)
-		self.audio_stream_sink = blocks.message_sink(
-			gr.sizeof_float * num_audio_channels,
-			self.audio_stream_queue,
-			True)
+		self.audio_queue_sinks = {}
 		
 		# Flags, other state
 		self.__needs_audio_restart = True
@@ -129,6 +127,20 @@ class Top(gr.top_block, ExportedState):
 		
 		del self._receivers[key]
 		del self._receiver_valid[key]
+		self.__needs_reconnect = True
+		self._do_connect()
+
+	def add_audio_queue(self, queue):
+		sink = blocks.message_sink(
+			gr.sizeof_float * num_audio_channels,
+			queue,
+			True)
+		self.audio_queue_sinks[queue] = sink
+		self.__needs_reconnect = True
+		self._do_connect()
+	
+	def remove_audio_queue(self, queue):
+		del self.audio_queue_sinks[queue]
 		self.__needs_reconnect = True
 		self._do_connect()
 
@@ -230,7 +242,11 @@ class Top(gr.top_block, ExportedState):
 				audio_sink = audio.sink(self.audio_rate, "", False)
 				self.connect(audio_sum_l, (self.audio_stream_join, 0))
 				self.connect(audio_sum_r, (self.audio_stream_join, 1))
-				self.connect(self.audio_stream_join, self.audio_stream_sink)
+				if len(self.audio_queue_sinks) > 0:
+					for sink in self.audio_queue_sinks.itervalues():
+						self.connect(self.audio_stream_join, sink)
+				else:
+					self.connect(self.audio_stream_join, blocks.null_sink(gr.sizeof_float*2))
 				self.connect(audio_sum_l, (audio_sink, 0))
 				self.connect(audio_sum_r, (audio_sink, 1))
 		
@@ -369,9 +385,6 @@ class Top(gr.top_block, ExportedState):
 	def get_spectrum_fft_queue(self):
 		return self.spectrum_queue
 	
-	def get_audio_stream_queue(self):
-		return self.audio_stream_queue
-
 	def get_cpu_use(self):
 		cur_wall_time = time.time()
 		elapsed_wall = cur_wall_time - self.last_wall_time

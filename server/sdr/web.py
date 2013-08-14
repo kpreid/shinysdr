@@ -4,6 +4,8 @@ from twisted.internet import protocol
 from twisted.internet import task
 from twisted.application import strports
 
+from gnuradio import gr
+
 import txws
 
 import array
@@ -173,6 +175,9 @@ class StateStreamInner(object):
 		self._block = block
 		self._seenValues = {}
 	
+	def connectionLost(self, reason):
+		pass
+	
 	def takeMessage(self):
 		updates = traverseUpdates(self._seenValues, self._block)
 		if len(updates) == 0:
@@ -180,12 +185,18 @@ class StateStreamInner(object):
 			return None
 		return updates
 
+
 class AudioStreamInner(object):
 	def __init__(self, block):
+		self._queue = gr.msg_queue(limit=100)
 		self._block = block
+		self._block.add_audio_queue(self._queue)
+	
+	def connectionLost(self, reason):
+		self._block.remove_audio_queue(self._queue)
 	
 	def takeMessage(self):
-		queue = self._block.get_audio_stream_queue()
+		queue = self._queue
 		unpacker = array.array('f')
 		while not queue.empty_p():
 			message = queue.delete_head()
@@ -229,6 +240,8 @@ class OurStreamProtocol(protocol.Protocol):
 		"""twisted Protocol implementation"""
 		if self._sendLoop.running:
 			self._sendLoop.stop()
+		if self.inner is not None:
+			self.inner.connectionLost(reason)
 	
 	def doSend(self):
 		if self.inner is None:
