@@ -238,8 +238,6 @@ class Top(gr.top_block, ExportedState):
 		
 			if audio_sum_index > 0:
 				# connect audio output only if there is at least one input
-				# sink is recreated each time to workaround problem with restarting audio sinks on Mac OS X. TODO: do only on OS X, or report/fix gnuradio bug
-				audio_sink = audio.sink(self.audio_rate, "", False)
 				self.connect(audio_sum_l, (self.audio_stream_join, 0))
 				self.connect(audio_sum_r, (self.audio_stream_join, 1))
 				if len(self.audio_queue_sinks) > 0:
@@ -247,8 +245,6 @@ class Top(gr.top_block, ExportedState):
 						self.connect(self.audio_stream_join, sink)
 				else:
 					self.connect(self.audio_stream_join, blocks.null_sink(gr.sizeof_float*2))
-				self.connect(audio_sum_l, (audio_sink, 0))
-				self.connect(audio_sum_r, (audio_sink, 1))
 		
 			self.unlock()
 
@@ -277,7 +273,7 @@ class Top(gr.top_block, ExportedState):
 
 	def start(self):
 		self.__needs_audio_restart = True
-		self._do_connect()  # audio sink workaround
+		self._do_connect()  # audio source/sink workaround -- TODO fix gnuradio bug
 		super(Top, self).start()
 
 	def get_running(self):
