@@ -130,13 +130,15 @@
       var audio = new webkitAudioContext();
       console.log('Sample rate: ' + audio.sampleRate);
 
+      var targetQueueSize = 2;
       var queue = [];
       function openWS() {
         // TODO: refactor reconnecting logic
         var ws = sdr.network.openWebSocket('/audio?rate=' + encodeURIComponent(JSON.stringify(audio.sampleRate)));
         ws.onmessage = function(event) {
           if (queue.length > 100) {
-            console.log('Audio overrun');
+            console.log('Extreme audio overrun.');
+            queue.length = 0;
             return;
           }
           queue.push(JSON.parse(event.data));
@@ -179,6 +181,11 @@
             l[j] = audioStreamChunk[chunkIndex];
             r[j] = audioStreamChunk[chunkIndex + 1];
           }
+          if (queue.length > targetQueueSize) {
+            var drop = (queue.length - targetQueueSize) * 3;
+            console.log('Audio overrun; dropping', drop, 'samples.');
+            j = Math.max(0, j - drop);
+          }
         }
         for (; j < abuf.length; j++) {
           // Fill any underrun
@@ -188,7 +195,7 @@
         var underrun = abuf.length - j;
         if (prevUnderrun != 0 && underrun != bufferSize) {
           // Report underrun, but only if it's not just due to the stream stopping
-          console.log('Audio underrun', prevUnderrun);
+          console.log('Audio underrun by', prevUnderrun, 'samples.');
         }
         prevUnderrun = underrun;
       };
