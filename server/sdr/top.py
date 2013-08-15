@@ -51,7 +51,7 @@ class Top(gr.top_block, ExportedState):
 		# Configuration
 		self._sources = dict(sources)
 		self.source_name = 'audio'  # placeholder - TODO be nothing instead
-		self.audio_rate = audio_rate = 44100
+		self.audio_rate = audio_rate = 32000
 		self.spectrum_resolution = 4096
 		self.spectrum_rate = 30
 
@@ -70,7 +70,7 @@ class Top(gr.top_block, ExportedState):
 		self.receivers = ReceiverCollection(self._receivers, self)
 		
 		# Audio stream bits
-		self.audio_stream_join = blocks.streams_to_vector(gr.sizeof_float, num_audio_channels)
+		self.audio_resampler_cache = {}
 		self.audio_queue_sinks = {}
 		
 		# Flags, other state
@@ -130,12 +130,15 @@ class Top(gr.top_block, ExportedState):
 		self.__needs_reconnect = True
 		self._do_connect()
 
-	def add_audio_queue(self, queue):
+	def add_audio_queue(self, queue, queue_rate):
+		# TODO: place limit on maximum requested sample rate
 		sink = blocks.message_sink(
 			gr.sizeof_float * num_audio_channels,
 			queue,
 			True)
-		self.audio_queue_sinks[queue] = sink
+		interleaver = blocks.streams_to_vector(gr.sizeof_float, num_audio_channels)
+		# TODO: bundle the interleaver and sink in a hier block so it doesn't have to be reconnected
+		self.audio_queue_sinks[queue] = (queue_rate, interleaver, sink)
 		self.__needs_reconnect = True
 		self._do_connect()
 	
@@ -235,16 +238,34 @@ class Top(gr.top_block, ExportedState):
 					self.connect((receiver, 0), (audio_sum_l, audio_sum_index))
 					self.connect((receiver, 1), (audio_sum_r, audio_sum_index))
 					audio_sum_index += 1
-		
+			
 			if audio_sum_index > 0:
 				# connect audio output only if there is at least one input
-				self.connect(audio_sum_l, (self.audio_stream_join, 0))
-				self.connect(audio_sum_r, (self.audio_stream_join, 1))
 				if len(self.audio_queue_sinks) > 0:
-					for sink in self.audio_queue_sinks.itervalues():
-						self.connect(self.audio_stream_join, sink)
+					used_resamplers = set()
+					for (queue_rate, interleaver, sink) in self.audio_queue_sinks.itervalues():
+						if queue_rate == self.audio_rate:
+							self.connect(self.audio_stream_join, sink)
+						else:
+							if queue_rate not in self.audio_resampler_cache:
+								# Moderately expensive due to the internals using optfir
+								print 'Constructing resampler for audio rate', queue_rate
+								self.audio_resampler_cache[queue_rate] = (
+									sdr.receiver.make_resampler(self.audio_rate, queue_rate),
+									sdr.receiver.make_resampler(self.audio_rate, queue_rate)
+								)
+							resamplers = self.audio_resampler_cache[queue_rate]
+							used_resamplers.add(resamplers)
+							self.connect(resamplers[0], (interleaver, 0))
+							self.connect(resamplers[1], (interleaver, 1))
+							self.connect(interleaver, sink)
+					for resamplers in used_resamplers:
+						self.connect(audio_sum_l, resamplers[0])
+						self.connect(audio_sum_r, resamplers[1])
 				else:
-					self.connect(self.audio_stream_join, blocks.null_sink(gr.sizeof_float*2))
+					# no stream sinks, gnuradio requires a dummy sink
+					self.connect(audio_sum_l, blocks.null_sink(gr.sizeof_float))
+					self.connect(audio_sum_r, blocks.null_sink(gr.sizeof_float))
 		
 			self.unlock()
 

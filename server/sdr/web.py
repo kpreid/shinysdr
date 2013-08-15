@@ -187,10 +187,10 @@ class StateStreamInner(object):
 
 
 class AudioStreamInner(object):
-	def __init__(self, block):
+	def __init__(self, block, audio_rate):
 		self._queue = gr.msg_queue(limit=100)
 		self._block = block
-		self._block.add_audio_queue(self._queue)
+		self._block.add_audio_queue(self._queue, audio_rate)
 	
 	def connectionLost(self, reason):
 		self._block.remove_audio_queue(self._queue)
@@ -221,13 +221,16 @@ class OurStreamProtocol(protocol.Protocol):
 		"""twisted Protocol implementation"""
 		if self.inner is not None:
 			return
-		print self.transport.location
-		if self.transport.location == '/audio':
-			self.inner = AudioStreamInner(self._block)
-		elif self.transport.location == '/state':
+		loc = self.transport.location
+		print 'WebSocket connection to', loc
+		if loc.startswith('/audio?rate='):
+			rate = int(json.loads(urllib.unquote(loc[len('/audio?rate='):])))
+			self.inner = AudioStreamInner(self._block, rate)
+		elif loc == '/state':
 			self.inner = StateStreamInner(self._block)
 		else:
-			raise Exception('Unrecognized path: ' + self.transport.location)
+			# TODO: does this close connection?
+			raise Exception('Unrecognized path: ' + loc)
 		# TODO: slow/stop when radio not running, and determine suitable update rate based on querying objects
 		self._sendLoop.start(1.0 / 61)
 	

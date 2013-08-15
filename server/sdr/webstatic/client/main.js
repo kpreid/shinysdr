@@ -126,10 +126,14 @@
     
     // audio processing - TODO move to appropriate location
     (function() {
+      // TODO portability
+      var audio = new webkitAudioContext();
+      console.log('Sample rate: ' + audio.sampleRate);
+
       var queue = [];
       function openWS() {
         // TODO: refactor reconnecting logic
-        var ws = sdr.network.openWebSocket('/audio');
+        var ws = sdr.network.openWebSocket('/audio?rate=' + encodeURIComponent(JSON.stringify(audio.sampleRate)));
         ws.onmessage = function(event) {
           if (queue.length > 100) {
             console.log('Audio overrun');
@@ -144,9 +148,6 @@
       }
       openWS();
       
-      // TODO portability
-      var audio = new webkitAudioContext();
-      console.log('Sample rate: ' + audio.sampleRate);
       var bufferSize = 2048;
       var ascr = audio.createScriptProcessor(bufferSize, 0, 2);
       var empty = [];
