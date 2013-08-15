@@ -210,11 +210,12 @@ class AudioStreamInner(object):
 
 
 class OurStreamProtocol(protocol.Protocol):
-	def __init__(self, block):
+	def __init__(self, block, rootCap):
 		#protocol.Protocol.__init__(self)
 		self._block = block
 		self._sendLoop = task.LoopingCall(self.doSend)
 		self._seenValues = {}
+		self._rootCap = rootCap
 		self.inner = None
 	
 	def dataReceived(self, data):
@@ -223,14 +224,22 @@ class OurStreamProtocol(protocol.Protocol):
 			return
 		loc = self.transport.location
 		print 'WebSocket connection to', loc
-		if loc.startswith('/audio?rate='):
-			rate = int(json.loads(urllib.unquote(loc[len('/audio?rate='):])))
+		path = [urllib.unquote(x) for x in loc.split('/')]
+		assert path[0] == ''
+		path[0:1] = []
+		if self._rootCap is not None:
+			if path[0] != self._rootCap:
+				raise Exception('Unknown cap')
+			else:
+				path[0:1] = []
+		if len(path) == 1 and path[0].startswith('audio?rate='):
+			rate = int(json.loads(urllib.unquote(path[0][len('audio?rate='):])))
 			self.inner = AudioStreamInner(self._block, rate)
-		elif loc == '/state':
+		elif len(path) == 1 and path[0] == 'state':
 			self.inner = StateStreamInner(self._block)
 		else:
 			# TODO: does this close connection?
-			raise Exception('Unrecognized path: ' + loc)
+			raise Exception('Unrecognized path: ' + repr(path))
 		# TODO: slow/stop when radio not running, and determine suitable update rate based on querying objects
 		self._sendLoop.start(1.0 / 61)
 	
@@ -267,10 +276,11 @@ class OurStreamFactory(protocol.Factory):
 	def __init__(self, block, rootCap):
 		#protocol.Factory.__init__(self)
 		self._block = block
+		self._rootCap = rootCap
 	
 	def buildProtocol(self, addr):
 		"""twisted Factory implementation"""
-		p = self.protocol(self._block)
+		p = self.protocol(self._block, self._rootCap)
 		p.factory = self
 		return p
 

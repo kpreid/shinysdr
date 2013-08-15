@@ -255,7 +255,7 @@ var sdr = sdr || {};
     // TODO: Have server deliver websocket URL, remove port number requirement
     if (!/^\//.test(path)) throw new Error('bad path');
     var secure = document.location.scheme === 'http' ? '' : 's';
-    var ws = new WebSocket('ws' + secure + '://' + document.location.hostname + ':' + (parseInt(document.location.port) + 1) + path);
+    var ws = new WebSocket('ws' + secure + '://' + document.location.hostname + ':' + (parseInt(document.location.port) + 1) + document.location.pathname.replace(/\/$/, '') + path);
     ws.addEventListener('open', function (event) {
       ws.send(''); // dummy required due to server limitation
     }, true);
