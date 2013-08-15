@@ -40,6 +40,8 @@ sources = {
 	'sim': sdr.source.SimulatedSource(),
 }
 
+stateFile = 'state.json'
+
 # These are in Twisted endpoint description syntax:
 # <http://twistedmatrix.com/documents/current/api/twisted.internet.endpoints.html#serverFromString>
 # Note: wsPort must currently be 1 greater than httpPort; if one is SSL
@@ -53,25 +55,24 @@ else:
 	configEnv = {'sdr': sdr}
 	execfile(args.configFile, __builtins__.__dict__, configEnv)
 	sources = configEnv['sources']
+	stateFile = str(configEnv['stateFile'])
 	webConfig = {}
 	for k in ['httpPort', 'wsPort']:
 		webConfig[k] = str(configEnv[k])
 
-filename = 'state.json'
-
 
 def noteDirty():
 	# just immediately write (revisit this when more performance is needed)
-	with open(filename, 'w') as f:
+	with open(stateFile, 'w') as f:
 		json.dump(top.state_to_json(), f)
 	pass
 
 
 def restore(root):
-	if os.path.isfile(filename):
-		root.state_from_json(json.load(open(filename, 'r')))
+	if os.path.isfile(stateFile):
+		root.state_from_json(json.load(open(stateFile, 'r')))
 		# make a backup in case this code version misreads the state and loses things on save (but only if the load succeeded, in case the file but not its backup is bad)
-		shutil.copyfile(filename, filename + '~')
+		shutil.copyfile(stateFile, stateFile + '~')
 	
 
 # TODO: This should not be a file copy operation; we should do an overlay somehow inside the web server.
