@@ -57,7 +57,7 @@ else:
 	sources = configEnv['sources']
 	stateFile = str(configEnv['stateFile'])
 	webConfig = {}
-	for k in ['httpPort', 'wsPort']:
+	for k in ['httpPort', 'wsPort', 'rootCap']:
 		webConfig[k] = str(configEnv[k])
 
 

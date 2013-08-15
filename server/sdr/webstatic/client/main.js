@@ -9,10 +9,10 @@
   
   var freqDB = new sdr.database.Union();
   freqDB.add(sdr.database.allSystematic);
-  freqDB.add(sdr.database.fromCatalog('/dbs/'));
+  freqDB.add(sdr.database.fromCatalog('dbs/'));
   
   var radio;
-  sdr.network.connect('/radio', function gotDesc(remote) {
+  sdr.network.connect('radio', function gotDesc(remote) {
     radio = remote;
 
     // Takes center freq as parameter so it can be used on hypotheticals and so on.

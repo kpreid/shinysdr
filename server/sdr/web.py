@@ -264,7 +264,7 @@ class OurStreamProtocol(protocol.Protocol):
 class OurStreamFactory(protocol.Factory):
 	protocol = OurStreamProtocol
 	
-	def __init__(self, block):
+	def __init__(self, block, rootCap):
 		#protocol.Factory.__init__(self)
 		self._block = block
 	
@@ -280,12 +280,21 @@ staticResourcePath = os.path.join(os.path.dirname(__file__), 'webstatic')
 
 
 def listen(config, top, noteDirty):
-	strports.listen(config['wsPort'], txws.WebSocketFactory(OurStreamFactory(top)))
+	rootCap = config['rootCap']
 	
-	root = static.File(staticResourcePath)
-	root.contentTypes['.csv'] = 'text/csv'
-	root.indexNames = ['index.html']
-	root.putChild('radio', BlockResource(top, noteDirty, notDeletable))
+	strports.listen(config['wsPort'], txws.WebSocketFactory(OurStreamFactory(top, rootCap)))
+	
+	appRoot = static.File(staticResourcePath)
+	appRoot.contentTypes['.csv'] = 'text/csv'
+	appRoot.indexNames = ['index.html']
+	appRoot.putChild('radio', BlockResource(top, noteDirty, notDeletable))
+	
+	if rootCap is None:
+		root = appRoot
+	else:
+		root = resource.Resource()
+		root.putChild(rootCap, appRoot)
+	
 	strports.listen(config['httpPort'], server.Site(root))
 
 	# kludge to construct URL from strports string
