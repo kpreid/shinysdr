@@ -82,7 +82,8 @@ class Receiver(gr.hier_block2, ExportedState):
 			'USB': 'SSB (U)',
 			'LSB': 'SSB (L)',
 			'IQ': 'Raw IQ',
-			'VOR': 'VOR'
+			'VOR': 'VOR',
+			'MODE-S': 'Mode S'
 		})))
 		callback(Cell(self, 'band_filter_shape'))
 		callback(Cell(self, 'rec_freq', writable=True, ctor=float))

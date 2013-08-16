@@ -11,6 +11,7 @@ from optparse import OptionParser
 from sdr.values import ExportedState, Cell, CollectionState, BlockCell, MsgQueueCell, Enum, Range, NoneES
 import sdr.receiver
 import sdr.receivers.vor
+import sdr.receivers.mode_s
 
 from twisted.internet import reactor
 
@@ -346,6 +347,8 @@ class Top(gr.top_block, ExportedState):
 			clas = sdr.receiver.SSBReceiver
 		elif kind == 'VOR':
 			clas = sdr.receivers.vor.VOR
+		elif kind == 'MODE-S':
+			clas = sdr.receivers.mode_s.ModeSReceiver
 		else:
 			raise ValueError('Unknown mode: ' + kind)
 
