@@ -168,7 +168,7 @@ var sdr = sdr || {};
     var n = this.n = new sdr.events.Notifier();
     
     // per-drawing-frame parameters
-    var bandwidth, centerFreq, leftFreq, pixelWidth, pixelsPerHertz;
+    var bandwidth, centerFreq, leftFreq, pixelWidth, pixelsPerHertz, cacheScrollLeft;
     
     function prepare() {
       // TODO: unbreakable notify loop here; need to be lazy
@@ -177,6 +177,8 @@ var sdr = sdr || {};
       leftFreq = centerFreq - bandwidth / 2;
       pixelWidth = container.offsetWidth;
       pixelsPerHertz = pixelWidth / bandwidth * zoom;
+      // accessing scrollLeft triggers relayout
+      cacheScrollLeft = container.scrollLeft;
       n.notify();
       // Note that this uses source.freq, not the spectrum data center freq. This is correct because we want to align the coords with what we have selected, not the current data; and the WaterfallPlot is aware of this distinction.
     }
@@ -220,10 +222,10 @@ var sdr = sdr || {};
       return (freq * pixelsPerHertz) + 'px';
     };
     this.leftVisibleFreq = function leftVisibleFreq() {
-      return leftFreq + container.scrollLeft / pixelsPerHertz;
+      return leftFreq + cacheScrollLeft / pixelsPerHertz;
     };
     this.rightVisibleFreq = function rightVisibleFreq() {
-      return leftFreq + (container.scrollLeft + pixelWidth) / pixelsPerHertz;
+      return leftFreq + (cacheScrollLeft + pixelWidth) / pixelsPerHertz;
     };
     
     this.changeZoom = function changeZoom(delta, cursorX) {
