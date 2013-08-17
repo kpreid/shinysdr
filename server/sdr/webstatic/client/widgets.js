@@ -1035,6 +1035,92 @@ var sdr = sdr || {};
     }
   }
   
+  // minimal ES-Harmony shim for use by VisibleItemCache
+  // O(n) but fast
+  var Map = window.Map || (function() {
+    function Map() {
+      this._keys = [];
+      this._values = [];
+    }
+    Map.prototype.delete = function (key) {
+      var i = this._keys.indexOf(key);
+      if (i >= 0) {
+        var last = this._keys.length - 1;
+        if (i < last) {
+          this._keys[i] = this._keys[last];
+          this._values[i] = this._values[last];
+        }
+        this._keys.length = last;
+        this._values.length = last;
+        return true;
+      } else {
+        return false;
+      }
+    };
+    Map.prototype.get = function (key) {
+      var i = this._keys.indexOf(key);
+      if (i >= 0) {
+        return this._values[i];
+      } else {
+        return undefined;
+      }
+    };
+    Map.prototype.set = function (key, value) {
+      var i = this._keys.indexOf(key);
+      if (i >= 0) {
+        this._values[i] = value;
+      } else {
+        this._keys.push(key);
+        this._values.push(value);
+      }
+    };
+    Object.defineProperty(Map.prototype, 'size', {
+      get: function () {
+        return this._keys.length;
+      }
+    });
+    return Map;
+  }());
+  
+  // Keep track of elements corresponding to keys and insert/remove as needed
+  // maker() returns an element or falsy
+  function VisibleItemCache(parent, maker) {
+    var cache = new Map();
+    var count = 0;
+    
+    this.add = function(key) {
+      count++;
+      var element = cache.get(key);
+      if (!element) {
+        element = maker(key);
+        if (!element) {
+          return;
+        }
+        parent.appendChild(element);
+        element.my_cacheKey = key;
+        cache.set(key, element);
+      }
+      if (!element.parentNode) throw new Error('oops');
+      element.my_inUse = true;
+      return element;
+    };
+    this.flush = function() {
+      var active = parent.childNodes;
+      for (var i = active.length - 1; i >= 0; i--) {
+        var element = active[i];
+        if (element.my_inUse) {
+          element.my_inUse = false;
+        } else {
+          parent.removeChild(element);
+          if (!element.my_cacheKey) throw new Error('oops2');
+          cache.delete(element.my_cacheKey);
+        }
+      }
+      if (active.length !== count || active.length !== cache.size) throw new Error('oops3');
+      count = 0;
+    };
+  }
+  
   function FreqScale(config) {
     var tunerSource = config.target;
     var states = config.radio;
@@ -1045,6 +1131,9 @@ var sdr = sdr || {};
     var query, qLower = NaN, qUpper = NaN;
 
     var labelWidth = 60; // TODO actually measure styled text
+    
+    // view parameters closed over
+    var lower, upper;
 
     var outer = this.element = document.createElement("div");
     outer.className = "freqscale";
@@ -1055,14 +1144,66 @@ var sdr = sdr || {};
     
     view.addEventsBesidesClick(outer);
     
-    // TODO: reuse label nodes instead of reallocating...if that's cheaper
+    // label maker fns
+    function addChannel(record) {
+      var group = record.type === 'group';
+      var channel = group ? record.grouped[0] : record;
+      var freq = record.freq;
+      var mode = channel.mode;
+      var el = document.createElement('span');
+      el.className = 'freqscale-channel';
+      el.textContent =
+        (group ? '(' + record.grouped.length + ') ' : '')
+        + (channel.label || channel.mode);
+      // TODO: be an <a> or <button>
+      el.addEventListener('click', function(event) {
+        states.preset.set(channel);
+        event.stopPropagation();
+      }, false);
+      el.my_update = function() {
+        el.style.left = view.freqToCSSLeft(freq);
+      };
+      return el;
+    }
+    function addBand(record) {
+      var el = document.createElement('span');
+      el.className = 'freqscale-band';
+      el.textContent = record.label || record.mode;
+      el.my_update = function() {
+        var labelLower = Math.max(record.lowerFreq, lower);
+        var labelUpper = Math.min(record.upperFreq, upper);
+        el.style.left = view.freqToCSSLeft(labelLower);
+        el.style.width = view.freqToCSSLength(labelUpper - labelLower);
+      }
+      return el;
+    }
+
+    var numberCache = new VisibleItemCache(numbers, function (freq) {
+      var label = document.createElement('span');
+      label.className = 'freqscale-number';
+      label.textContent = formatFreqExact(freq);
+      label.my_update = function() {
+        label.style.left = view.freqToCSSLeft(freq);
+      }
+      return label;
+    });
+    var labelCache = new VisibleItemCache(labels, function makeLabel(record) {
+      switch (record.type) {
+        case 'group':
+        case 'channel':
+          return addChannel(record);
+        case 'band':
+          return addBand(record);
+      }
+    });
+    
     function draw() {
       var centerFreq = tunerSource.depend(draw);
       view.n.listen(draw);
       
       var bandwidth = states.input_rate.depend(draw);
-      var lower = centerFreq - bandwidth / 2;
-      var upper = centerFreq + bandwidth / 2;
+      lower = centerFreq - bandwidth / 2;
+      upper = centerFreq + bandwidth / 2;
       
       // TODO: identical to waterfall's use, refactor
       outer.style.marginLeft = view.freqToCSSLeft(centerFreq - bandwidth/2);
@@ -1082,59 +1223,24 @@ var sdr = sdr || {};
         step /= 2;
       }
       
-      numbers.textContent = '';
       for (var i = lower - mod(lower, step), sanity = 1000;
            sanity > 0 && i <= upper;
            sanity--, i += step) {
-        var label = numbers.appendChild(document.createElement('span'));
-        label.className = 'freqscale-number';
-        label.textContent = formatFreqExact(i);
-        label.style.left = view.freqToCSSLeft(i);
+        numberCache.add(i).my_update();
       }
+      numberCache.flush();
       
-      labels.textContent = '';
       if (!(lower === qLower && upper === qUpper)) {
         query = dataSource.inBand(lower, upper);
         qLower = lower;
         qUpper = upper;
       }
       query.n.listen(draw);
-      function addChannel(record) {
-        var group = record.type === 'group';
-        var channel = group ? record.grouped[0] : record;
-        var freq = record.freq;
-        var mode = channel.mode;
-        var el = labels.appendChild(document.createElement('span'));
-        el.className = 'freqscale-channel';
-        el.textContent =
-          (group ? '(' + record.grouped.length + ') ' : '')
-          + (channel.label || channel.mode);
-        el.style.left = view.freqToCSSLeft(freq);
-        // TODO: be an <a> or <button>
-        el.addEventListener('click', function(event) {
-          states.preset.set(channel);
-          event.stopPropagation();
-        }, false);
-      }
       query.forEach(function (record) {
-        switch (record.type) {
-          case 'group':
-          case 'channel':
-            addChannel(record);
-            break;
-          case 'band':
-            var el = labels.appendChild(document.createElement('span'));
-            el.className = 'freqscale-band';
-            el.textContent = record.label || record.mode;
-            var labelLower = Math.max(record.lowerFreq, lower);
-            var labelUpper = Math.min(record.upperFreq, upper);
-            el.style.left = view.freqToCSSLeft(labelLower);
-            el.style.width = view.freqToCSSLength(labelUpper - labelLower);
-            break;
-          default:
-            break;
-        }
+        var label = labelCache.add(record);
+        if (label) label.my_update();
       });
+      labelCache.flush();
     }
     draw.scheduler = config.scheduler;
     draw();
