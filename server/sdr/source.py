@@ -4,6 +4,7 @@ import gnuradio
 import gnuradio.blocks
 from gnuradio import gr
 from gnuradio import blocks
+from gnuradio import audio
 from gnuradio import analog
 from gnuradio import filter
 from gnuradio.filter import firdes
@@ -37,11 +38,8 @@ class Source(gr.hier_block2, ExportedState):
 	def get_sample_rate(self):
 		raise NotImplementedError()
 
-	def needs_renew(self):
-		return False
-	
-	def renew(self):
-		return self
+	def notify_reconnecting_or_restarting(self):
+		pass
 
 
 class AudioSource(Source):
@@ -56,14 +54,11 @@ class AudioSource(Source):
 		self.__sample_rate = 44100
 		self.__quadrature_as_stereo = quadrature_as_stereo
 		self.__complex = gnuradio.blocks.float_to_complex(1)
-		self.__source = gnuradio.audio.source(
-			self.__sample_rate,
-			device_name=device_name,  # TODO configurability
-			ok_to_block=True)
-		self.connect(self.__source, self.__complex, self)
-		if quadrature_as_stereo:
-			# if we don't do this, the imaginary component is 0 and the spectrum is symmetric
-			self.connect((self.__source, 1), (self.__complex, 1))
+		self.__source = None
+		
+		self.connect(self.__complex, self)
+		
+		self.__do_connect()
 	
 	def __str__(self):
 		return 'Audio ' + self.__device_name
@@ -75,14 +70,9 @@ class AudioSource(Source):
 	def get_sample_rate(self):
 		return self.__sample_rate
 
-	def needs_renew(self):
-		return True
-	
-	def renew(self):
-		return AudioSource(
-			name=self.__name,
-			device_name=self.__device_name,
-			quadrature_as_stereo=self.__quadrature_as_stereo)
+	def notify_reconnecting_or_restarting(self):
+		# work around OSX audio source bug; does not work across flowgraph restarts
+		self.__do_connect()
 
 	def get_freq(self):
 		return 0
@@ -90,6 +80,23 @@ class AudioSource(Source):
 	def get_tune_delay(self):
 		return 0.0
 
+	def __do_connect(self):
+		if self.__source is not None:
+			# detailed disconnect because disconnect_all on hier blocks is broken
+			self.disconnect(self.__source, self.__complex)
+			if self.__quadrature_as_stereo:
+				self.disconnect((self.__source, 1), (self.__complex, 1))
+		
+		# work around OSX audio source bug; does not work across flowgraph restarts
+		self.__source = audio.source(
+			self.__sample_rate,
+			device_name=self.__device_name,
+			ok_to_block=True)
+		
+		self.connect(self.__source, self.__complex)
+		if self.__quadrature_as_stereo:
+			# if we don't do this, the imaginary component is 0 and the spectrum is symmetric
+			self.connect((self.__source, 1), (self.__complex, 1))
 
 ch = 0  # osmosdr channel, to avoid magic number
 
@@ -347,11 +354,6 @@ class SimulatedSource(Source):
 		self.noise_source.set_amplitude(10 ** value)
 		self.noise_level = value
 
-	def needs_renew(self):
-		return True
-
-	def renew(self):
+	def notify_reconnecting_or_restarting(self):
 		# throttle block runs on a clock which does not stop when the flowgraph stops; resetting the sample rate restarts the clock
-		# TODO: This doesn't need to be a 'renew', just a hook on graph start (but there's no such hook generically for python hier blocks)
 		self.throttle.set_sample_rate(self.throttle.sample_rate())
-		return self

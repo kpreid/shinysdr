@@ -499,34 +499,45 @@ var sdr = sdr || {};
   function Receiver(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion) {
       ignore('is_valid');
-      ignore('band_filter_shape');
-      if ('mode' in block) {
-        addWidget('mode', 'Radio');
-      }
       if ('rec_freq' in block) {
         addWidget('rec_freq', 'Knob', 'Channel frequency');
       }
+      if ('mode' in block) {
+        addWidget('mode', 'Radio');
+      }
+      addWidget('demodulator', 'Demodulator');
       if ('audio_gain' in block) {
         addWidget('audio_gain', 'LogSlider', 'Volume');
       }
       if ('audio_pan' in block) {
         addWidget('audio_pan', 'LinSlider', 'Pan');
       }
-      if ('squelch_threshold' in block) {
-        addWidget('squelch_threshold', 'LinSlider', 'Squelch');
-      }
       if ('rec_freq' in block) {
         addWidget(null, 'SaveButton');
       }
+      if ('squelch_threshold' in block) {
+        addWidget('squelch_threshold', 'LinSlider', 'Squelch');
+      }
+    });
+  }
+  widgets.Receiver = Receiver;
+  
+  // Widget for a receiver block
+  function Demodulator(config) {
+    Block.call(this, config, function (block, addWidget, ignore, setInsertion) {
+      ignore('band_filter_shape');
+      if ('squelch_threshold' in block) {
+        addWidget('squelch_threshold', 'LinSlider', 'Squelch');
+      }
       
-      // VOR receiver
+      // VOR receiver -- TODO fewer hardcoded special cases
       if ('angle' in block) {
         addWidget('angle', 'Angle', '');
       }
       ignore('zero_point');
     });
   }
-  widgets.Receiver = Receiver;
+  widgets.Demodulator = Demodulator;
   
   function SpectrumPlot(config) {
     var fftCell = config.target;
@@ -640,10 +651,8 @@ var sdr = sdr || {};
       for (var recKey in states.receivers) {
         var receiver = states.receivers[recKey];
         var rec_freq_cell = receiver.rec_freq;
-        if (rec_freq_cell) {
-          var rec_freq_now = rec_freq_cell.depend(draw);
-        }
-        var band_filter_cell = receiver.band_filter_shape;
+        var rec_freq_now = rec_freq_cell.depend(draw);
+        var band_filter_cell = receiver.demodulator.band_filter_shape;
         if (band_filter_cell) {
           var band_filter_now = band_filter_cell.depend(draw);
         }
@@ -659,7 +668,7 @@ var sdr = sdr || {};
         }
         
         // TODO: marks ought to be part of a distinct widget
-        var squelch_threshold_cell = receiver.squelch_threshold;
+        var squelch_threshold_cell = receiver.demodulator.squelch_threshold;
         if (squelch_threshold_cell) {
           // TODO: this y calculation may be nonsense
           var squelch = Math.floor(yZero + squelch_threshold_cell.depend(draw) * yScale) + 0.5;
@@ -684,12 +693,10 @@ var sdr = sdr || {};
           ctx.stroke();
         }
         
-        if (rec_freq_cell) {
-          ctx.strokeStyle = 'white';
-          drawHair(rec_freq_now); // receiver
-          ctx.fillStyle = 'white';
-          ctx.fillText(recKey, freqToCoord(rec_freq_now) + 2, textOffsetFromTop);
-        }
+        ctx.strokeStyle = 'white';
+        drawHair(rec_freq_now); // receiver
+        ctx.fillStyle = 'white';
+        ctx.fillText(recKey, freqToCoord(rec_freq_now) + 2, textOffsetFromTop);
       }
       ctx.strokeStyle = 'gray';
       drawHair(viewCenterFreq); // center frequency

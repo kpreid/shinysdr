@@ -3,29 +3,27 @@ from gnuradio import blocks
 from gnuradio import analog
 
 from sdr.values import Cell, ExportedState
-from sdr.receiver import MultistageChannelFilter
+from sdr.filters import MultistageChannelFilter
 
 import subprocess
 import os
 
+
 pipe_rate = 2000000
 transition_width = 500000
 
-# Does not inherit sdr.receiver.Receiver because that defines a variable receive frequency.
-class ModeSReceiver(gr.hier_block2, ExportedState):
-	rec_freq = 1090000000
-	
-	def __init__(self, mode='MODE-S', input_rate=0, input_center_freq=0, audio_rate=0, control_hook=None):
+
+class ModeSDemodulator(gr.hier_block2, ExportedState):
+	def __init__(self, mode='MODE-S', input_rate=0, input_center_freq=0, audio_rate=0, context=None):
 		assert input_rate > 0
 		gr.hier_block2.__init__(
-			self, 'Mode S/ADS-B/1090 receiver',
+			self, 'Mode S/ADS-B/1090 demodulator',
 			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
-			# TODO: Add generic support for receivers with no audio output
+			# TODO: Add generic support for demodulators with no audio output
 			gr.io_signature(2, 2, gr.sizeof_float * 1),
 		)
 		self.mode = mode
 		self.input_rate = input_rate
-		self.input_center_freq = input_center_freq
 		
 		# Subprocess
 		self.dump1090 = subprocess.Popen(
@@ -68,25 +66,14 @@ class ModeSReceiver(gr.hier_block2, ExportedState):
 		self.connect(self.throttle, (self, 1))
 
 	def state_def(self, callback):
-		super(ModeSReceiver, self).state_def(callback)
-		callback(Cell(self, 'mode', writable=True))
+		super(ModeSDemodulator, self).state_def(callback)
 		callback(Cell(self, 'band_filter_shape'))
-		callback(Cell(self, 'rec_freq', writable=False, ctor=float))
-		callback(Cell(self, 'is_valid'))
 
-	def get_is_valid(self):
-		return abs(self.rec_freq - self.input_center_freq) < (self.input_rate - pipe_rate) / 2
+	def can_set_mode(self, mode):
+		return False
 
-	def get_rec_freq(self):
-		return self.rec_freq
-
-	def get_mode(self):
-		return self.mode
-
-	# TODO: duplicated code with main Receiver, which is further evidence for refactoring to separate management-by-top-block from receiver implementation
-	def set_mode(self, mode):
-		if mode != self.mode:
-			self.control_hook.replace_me(mode)
+	def get_half_bandwidth(self):
+		return pipe_rate / 2
 
 	def get_band_filter_shape(self):
 		return {
@@ -94,10 +81,3 @@ class ModeSReceiver(gr.hier_block2, ExportedState):
 			'high': pipe_rate/2,
 			'width': transition_width
 		}
-	
-	def _update_band_center(self):
-		self.band_filter_block.set_center_freq(self.rec_freq - self.input_center_freq)
-	
-	def set_input_center_freq(self, value):
-		self.input_center_freq = value
-		self._update_band_center()

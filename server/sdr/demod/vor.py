@@ -1,18 +1,16 @@
-#!/usr/bin/env python
-
 # TODO: fully clean up this GRC-generated file
 
 from gnuradio import gr
 from gnuradio import blocks
 from gnuradio import analog
 from gnuradio import fft
-from gnuradio import filter
+from gnuradio import filter as grfilter  # don't shadow builtin
 from gnuradio.filter import firdes
 
 import math
 
-import sdr.receiver
-from sdr.receiver import Receiver
+from sdr import filters
+from sdr.demod.basic import SimpleAudioDemodulator
 from sdr.values import Cell
 
 audio_modulation_index = 0.07
@@ -20,7 +18,7 @@ fm_subcarrier = 9960
 fm_deviation = 480
 
 
-class VOR(sdr.receiver.SimpleAudioReceiver):
+class VOR(SimpleAudioDemodulator):
 
 	def __init__(self, mode='VOR', zero_point=59, **kwargs):
 		self.channel_rate = channel_rate = 40000
@@ -28,7 +26,7 @@ class VOR(sdr.receiver.SimpleAudioReceiver):
 		self.zero_point = zero_point
 
 		transition = 5000
-		sdr.receiver.SimpleAudioReceiver.__init__(self,
+		SimpleAudioDemodulator.__init__(self,
 			mode=mode,
 			demod_rate=channel_rate,
 			band_filter=fm_subcarrier * 1.25 + fm_deviation + transition / 2,
@@ -44,13 +42,13 @@ class VOR(sdr.receiver.SimpleAudioReceiver):
 
 		self.zeroer = blocks.add_const_vff((zero_point * (math.pi / 180), ))
 		
-		self.dir_vector_filter = filter.fir_filter_ccf(1, firdes.low_pass(
+		self.dir_vector_filter = grfilter.fir_filter_ccf(1, firdes.low_pass(
 			1, dir_rate, 1, 2, firdes.WIN_HAMMING, 6.76))
-		self.am_channel_filter_block = filter.fir_filter_ccf(1, firdes.low_pass(
+		self.am_channel_filter_block = grfilter.fir_filter_ccf(1, firdes.low_pass(
 			1, channel_rate, 5000, 5000, firdes.WIN_HAMMING, 6.76))
 		self.goertzel_fm = fft.goertzel_fc(channel_rate, dir_scale * audio_scale, 30)
 		self.goertzel_am = fft.goertzel_fc(internal_audio_rate, dir_scale, 30)
-		self.fm_channel_filter_block = filter.freq_xlating_fir_filter_ccc(1, (firdes.low_pass(1.0, channel_rate, fm_subcarrier / 2, fm_subcarrier / 2, firdes.WIN_HAMMING)), fm_subcarrier, channel_rate)
+		self.fm_channel_filter_block = grfilter.freq_xlating_fir_filter_ccc(1, (firdes.low_pass(1.0, channel_rate, fm_subcarrier / 2, fm_subcarrier / 2, firdes.WIN_HAMMING)), fm_subcarrier, channel_rate)
 		self.multiply_conjugate_block = blocks.multiply_conjugate_cc(1)
 		self.complex_to_arg_block = blocks.complex_to_arg(1)
 		self.am_agc_block = analog.feedforward_agc_cc(1024, 1.0)
@@ -66,7 +64,7 @@ class VOR(sdr.receiver.SimpleAudioReceiver):
 		
 		self.probe = blocks.probe_signal_f()
 		
-		self.resampler_block = sdr.receiver.make_resampler(internal_audio_rate, self.audio_rate)
+		self.resampler_block = filters.make_resampler(internal_audio_rate, self.audio_rate)
 
 		##################################################
 		# Connections
@@ -112,7 +110,7 @@ class VOR(sdr.receiver.SimpleAudioReceiver):
 			self.probe)
 
 	def state_def(self, callback):
-		super(sdr.receiver.SimpleAudioReceiver, self).state_def(callback)
+		super(SimpleAudioDemodulator, self).state_def(callback)
 		callback(Cell(self, 'zero_point', writable=True, ctor=float))
 		callback(Cell(self, 'angle'))
 

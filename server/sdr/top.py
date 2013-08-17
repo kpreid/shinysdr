@@ -2,16 +2,14 @@
 
 import gnuradio
 import gnuradio.fft.logpwrfft
-from gnuradio import audio
 from gnuradio import blocks
 from gnuradio import gr
 from gnuradio.eng_option import eng_option
 from gnuradio.filter import firdes
 from optparse import OptionParser
 from sdr.values import ExportedState, Cell, CollectionState, BlockCell, MsgQueueCell, Enum, Range, NoneES
-import sdr.receiver
-import sdr.receivers.vor
-import sdr.receivers.mode_s
+from sdr.filters import make_resampler
+from sdr.receiver import Receiver
 
 from twisted.internet import reactor
 
@@ -48,6 +46,7 @@ class Top(gr.top_block, ExportedState):
 	def __init__(self, sources={}):
 		gr.top_block.__init__(self, "SDR top block")
 		self._running = False
+		self.__lock_count = 0
 
 		# Configuration
 		self._sources = dict(sources)
@@ -75,7 +74,6 @@ class Top(gr.top_block, ExportedState):
 		self.audio_queue_sinks = {}
 		
 		# Flags, other state
-		self.__needs_audio_restart = True
 		self.__needs_spectrum = True
 		self.__needs_reconnect = True
 		self.input_rate = None
@@ -150,12 +148,8 @@ class Top(gr.top_block, ExportedState):
 
 	def _do_connect(self):
 		"""Do all reconfiguration operations in the proper order."""
-		if self.__needs_audio_restart:
-			print 'Rebuilding audio blocks'
-			self.__needs_reconnect = True
-
 		rate_changed = False
-		if self.source is not self._sources[self.source_name] or self.__needs_audio_restart:
+		if self.source is not self._sources[self.source_name]:
 			print 'Switching source'
 			self.__needs_reconnect = True
 			
@@ -178,9 +172,6 @@ class Top(gr.top_block, ExportedState):
 			self.input_rate = this_rate
 			self.input_freq = this_source.get_freq()
 		
-		# clear separately because used twice above
-		self.__needs_audio_restart = False
-		
 		if self.__needs_spectrum or rate_changed:
 			print 'Rebuilding spectrum FFT'
 			self.__needs_spectrum = False
@@ -201,21 +192,15 @@ class Top(gr.top_block, ExportedState):
 			)
 
 		if rate_changed:
-			print 'Rebuilding receivers'
-			for key in self._receivers:
-				self._rebuild_receiver_nodirty(key)
-			self.__needs_reconnect = True
-
-		if self.__needs_reconnect and self.source.needs_renew():
-			print 'Renewing source'
-			self.source = self.source.renew()
-			self._sources[self.source_name] = self.source
+			print 'Changing sample rate'
+			for receiver in self._receivers.itervalues():
+				receiver.set_input_rate(self.input_rate)
 
 		if self.__needs_reconnect:
 			print 'Reconnecting'
 			self.__needs_reconnect = False
 			
-			self.lock()
+			self._recursive_lock()
 			self.disconnect_all()
 
 
@@ -252,8 +237,8 @@ class Top(gr.top_block, ExportedState):
 								# Moderately expensive due to the internals using optfir
 								print 'Constructing resampler for audio rate', queue_rate
 								self.audio_resampler_cache[queue_rate] = (
-									sdr.receiver.make_resampler(self.audio_rate, queue_rate),
-									sdr.receiver.make_resampler(self.audio_rate, queue_rate)
+									make_resampler(self.audio_rate, queue_rate),
+									make_resampler(self.audio_rate, queue_rate)
 								)
 							resamplers = self.audio_resampler_cache[queue_rate]
 							used_resamplers.add(resamplers)
@@ -268,7 +253,8 @@ class Top(gr.top_block, ExportedState):
 					self.connect(audio_sum_l, blocks.null_sink(gr.sizeof_float))
 					self.connect(audio_sum_r, blocks.null_sink(gr.sizeof_float))
 		
-			self.unlock()
+			self._recursive_unlock()
+			print 'Done reconnecting'
 
 	def _update_receiver_validity(self, key):
 		receiver = self._receivers[key]
@@ -294,8 +280,10 @@ class Top(gr.top_block, ExportedState):
 		callback(Cell(self, 'cpu_use', ctor=float))
 
 	def start(self):
-		self.__needs_audio_restart = True
-		self._do_connect()  # audio source/sink workaround -- TODO fix gnuradio bug
+		# trigger reconnect/restart notification
+		self._recursive_lock()
+		self._recursive_unlock()
+		
 		super(Top, self).start()
 
 	def get_running(self):
@@ -321,57 +309,14 @@ class Top(gr.top_block, ExportedState):
 		self.source_name = value
 		self._do_connect()
 
-	def _rebuild_receiver(self, key, mode=None):
-		self._rebuild_receiver_nodirty(key, mode)
-		self.__needs_reconnect = True
-		self._do_connect()
-
-	def _rebuild_receiver_nodirty(self, key, mode=None):
-		receiver = self._receivers[key]
-		if mode is None:
-			mode = receiver.get_mode()
-		self._receivers[key] = self._make_receiver(mode, receiver.state_to_json(), key)
-
-	def _make_receiver(self, kind, state, key):
-		'''Returns the receiver.'''
-
-		if kind == 'IQ':
-			clas = sdr.receiver.IQReceiver
-		elif kind == 'NFM':
-			clas = sdr.receiver.NFMReceiver
-		elif kind == 'WFM':
-			clas = sdr.receiver.WFMReceiver
-		elif kind == 'AM':
-			clas = sdr.receiver.AMReceiver
-		elif kind == 'USB' or kind == 'LSB':
-			clas = sdr.receiver.SSBReceiver
-		elif kind == 'VOR':
-			clas = sdr.receivers.vor.VOR
-		elif kind == 'MODE-S':
-			clas = sdr.receivers.mode_s.ModeSReceiver
-		else:
-			raise ValueError('Unknown mode: ' + kind)
-
-		# TODO: extend state_from_json so we can decide to load things with keyword args and lose the init dict/state dict distinction
-		init = {}
-		state = state.copy()  # don't modify arg
-		if 'mode' in state: del state['mode']
-
-		# TODO remove this special case for WFM receiver
-		if kind == 'WFM':
-			if 'stereo' in state:
-				init['stereo'] = state['stereo']
-			if 'audio_filter' in state:
-				init['audio_filter'] = state['audio_filter']
-
-		facet = TopFacetForReceiver(self, key)
-		receiver = clas(
-			mode=kind,
+	def _make_receiver(self, mode, state, key):
+		facet = ContextForReceiver(self, key)
+		receiver = Receiver(
+			mode=mode,
 			input_rate=self.input_rate,
 			input_center_freq=self.input_freq,
 			audio_rate=self.audio_rate,
-			control_hook=facet,
-			**init
+			context=facet,
 		)
 		receiver.state_from_json(state)
 		# until _enabled, ignore any callbacks resulting from the state_from_json initialization
@@ -416,24 +361,35 @@ class Top(gr.top_block, ExportedState):
 			self.last_cpu_use = round(elapsed_cpu / elapsed_wall, 2)
 		return self.last_cpu_use
 
+	def _recursive_lock(self):
+		# gnuradio uses a non-recursive lock, which is not adequate for our purposes because we want to make changes locally or globally without worrying about having a single lock entry point
+		if self.__lock_count == 0:
+			self.lock()
+			for source in self._sources.itervalues():
+				source.notify_reconnecting_or_restarting()
+		self.__lock_count += 1
 
-class TopFacetForReceiver(object):
+	def _recursive_unlock(self):
+		self.__lock_count -= 1
+		if self.__lock_count == 0:
+			self.unlock()
+
+
+class ContextForReceiver(object):
 	def __init__(self, top, key):
 		self._top = top
 		self._key = key
 		self._enabled = False # assigned outside
-	
+
 	def revalidate(self):
 		if self._enabled:
 			self._top._update_receiver_validity(self._key)
 	
-	def rebuild_me(self):
-		assert self._enabled
-		self._top._rebuild_receiver(self._key)
+	def lock(self):
+		self._top._recursive_lock()
 	
-	def replace_me(self, mode):
-		assert self._enabled
-		self._top._rebuild_receiver(self._key, mode=mode)
+	def unlock(self):
+		self._top._recursive_unlock()
 
 
 def base26(x):
