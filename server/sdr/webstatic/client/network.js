@@ -146,7 +146,7 @@ var sdr = sdr || {};
     this._update = function(newValue) {
       remoteValue = newValue;
       if (resetTimeout) clearTimeout(resetTimeout);
-      resetTimeout = setTimeout(acceptFromNetwork, inhibit - Date.now());
+      resetTimeout = setTimeout(acceptFromNetwork, Math.max(0, inhibit - Date.now()));
     };
     var acceptFromNetwork = function() {
       value = remoteValue;
