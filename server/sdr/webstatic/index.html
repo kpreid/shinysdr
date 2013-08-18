@@ -6,7 +6,10 @@
 </head><body class="controlpanel">
 
 <div class="hscalegroup">
-  <canvas class="hscale" id="spectrum" data-widget="SpectrumPlot" data-target="spectrum_fft"></canvas>
+  <div class="hscale">
+    <div data-widget="ReceiverMarks" class="overlay"></div>
+    <canvas class="overlay" id="spectrum" data-widget="SpectrumPlot" data-target="spectrum_fft"></canvas>
+  </div>
   <div data-target="source">
   <span data-widget="FreqScale" data-target="freq"></span>
   </div>

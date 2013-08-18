@@ -69,9 +69,20 @@ html, body {
   min-width: 0px; /* cause Chrome 27.0.1453.116 to be willing to scroll the flex element rather than stretch; don't know whether this is a bug or what */
 }
 .hscale {
+  display: -webkit-flex; /* don't expect this to be _used_ but causes "height 100%" of its contents to use the computed shrunk size rather than the written one */
+  -webkit-flex-direction: column;
+  position: relative; /* allow contents to absolute position */
   width: 100%;
   -webkit-flex: 100 100;
   height: 50%;
+}
+.overlay {
+  display: block;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
 }
 
 /* widgets: radio button group */
@@ -287,4 +298,8 @@ html, body {
   -webkit-flex: 0 0 8ex;
   text-align: right;
   font-family: monospace;
+}
+
+.widget-ReceiverMarks {
+  pointer-events: none;
 }

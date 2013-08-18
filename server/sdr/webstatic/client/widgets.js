@@ -557,7 +557,7 @@ var sdr = sdr || {};
     view.addClickToTune(canvas);
     
     var glOptions = {
-      alpha: false,
+      alpha: true,
       depth: false,
       stencil: false,
       antialias: false,
@@ -720,15 +720,15 @@ var sdr = sdr || {};
         + 'uniform mediump float xScale, xRes, yRes;\n'
         + 'varying highp vec2 v_position;\n'
         // TODO: these colors should come from the theme css
-        + 'const lowp vec3 background = vec3(0.0, 0.0, 0.0);\n'
-        + 'const lowp vec3 stroke = vec3(0.0, 1.0, 0.68);\n'
-        //+ 'const lowp vec3 weakStroke = vec3(0.0, 0.5, 0.50);\n'
-        + 'const lowp vec3 fill = vec3(0.25, 0.39, 0.39) * 0.75;\n'
+        + 'const lowp vec4 background = vec4(0.0, 0.0, 0.0, 0.0);\n'
+        + 'const lowp vec4 stroke = vec4(0.0, 1.0, 0.68, 1.0);\n'
+        //+ 'const lowp vec4 weakStroke = vec4(0.0, 0.5, 0.50, 1.0);\n'
+        + 'const lowp vec4 fill = vec4(0.25, 0.39, 0.39, 1.0) * 0.75;\n'
         + 'const int stepRange = 8;\n'
-        + 'mediump vec3 cmix(mediump vec3 before, mediump vec3 after, mediump float a) {\n'
+        + 'mediump vec4 cmix(mediump vec4 before, mediump vec4 after, mediump float a) {\n'
         + '  return mix(before, after, clamp(a, 0.0, 1.0));\n'
         + '}\n'
-        + 'mediump vec3 cut(mediump float boundary, mediump float offset, mediump vec3 before, mediump vec3 after) {\n'
+        + 'mediump vec4 cut(mediump float boundary, mediump float offset, mediump vec4 before, mediump vec4 after) {\n'
         + '  mediump float case = (boundary - v_position.y) * yRes + offset;\n'
         + '  return cmix(before, after, case);\n'
         + '}\n'
@@ -745,8 +745,8 @@ var sdr = sdr || {};
         + '    valley = min(valley, value);\n'
         + '  }\n'
         + '  accum *= 1.0/(float(stepRange) * 2.0 + 1.0);\n'
-        + '  mediump vec3 color = cut(peak, 1.0, background, cut(accum, 0.0, stroke, fill));\n'
-        + '  gl_FragColor = vec4(color, 0.0);\n'
+        + '  mediump vec4 color = cut(peak, 1.0, background, cut(accum, 0.0, stroke, fill));\n'
+        + '  gl_FragColor = color;\n'
         + '}\n';
       var program = buildProgram(vertexShaderSource, fragmentShaderSource);
 
@@ -851,9 +851,6 @@ var sdr = sdr || {};
       ctx.lineWidth = 1;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      var textOffsetFromTop =
-          //ctx.measureText('j').fontBoundingBoxAscent; -- not yet supported
-          10 + 2; // default font size is "10px", ignoring effect of baseline
       
       var fillStyle = getComputedStyle(canvas).fill;
       var strokeStyle = getComputedStyle(canvas).stroke;
@@ -865,19 +862,6 @@ var sdr = sdr || {};
       var xZero, xScale, xAfterLast, yZero, yScale, firstPoint, afterLastPoint;
       function freqToCoord(freq) {
         return (freq - lvf) / (rvf-lvf) * w;
-      }
-      function drawHair(freq) {
-        var x = freqToCoord(freq);
-        x = Math.floor(x) + 0.5;
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, ctx.canvas.height);
-        ctx.stroke();
-      }
-      function drawBand(freq1, freq2) {
-        var x1 = freqToCoord(freq1);
-        var x2 = freqToCoord(freq2);
-        ctx.fillRect(x1, 0, x2 - x1, ctx.canvas.height);
       }
       function path() {
         ctx.beginPath();
@@ -914,59 +898,6 @@ var sdr = sdr || {};
           // choose points to draw
           firstPoint = Math.max(0, Math.floor(-xZero / xScale) - 1);
           afterLastPoint = Math.min(len, Math.ceil((w - xZero) / xScale) + 1);
-
-          for (var recKey in radio.receivers) {
-            var receiver = radio.receivers[recKey];
-            var rec_freq_cell = receiver.rec_freq;
-            var rec_freq_now = rec_freq_cell.depend(draw);
-            var band_filter_cell = receiver.demodulator.band_filter_shape;
-            if (band_filter_cell) {
-              var band_filter_now = band_filter_cell.depend(draw);
-            }
-
-            if (band_filter_now) {
-              var fl = band_filter_now.low;
-              var fh = band_filter_now.high;
-              var fhw = band_filter_now.width / 2;
-              ctx.fillStyle = '#3A3A3A';
-              drawBand(rec_freq_now + fl - fhw, rec_freq_now + fh + fhw);
-              ctx.fillStyle = '#444444';
-              drawBand(rec_freq_now + fl + fhw, rec_freq_now + fh - fhw);
-            }
-
-            // TODO: marks ought to be part of a distinct widget
-            var squelch_threshold_cell = receiver.demodulator.squelch_threshold;
-            if (squelch_threshold_cell) {
-              // TODO: this y calculation may be nonsense
-              var squelch = Math.floor(yZero + squelch_threshold_cell.depend(draw) * yScale) + 0.5;
-              var squelchL, squelchR;
-              if (band_filter_now) {
-                squelchL = freqToCoord(rec_freq_now + band_filter_now.low);
-                squelchR = freqToCoord(rec_freq_now + band_filter_now.high);
-              } else {
-                squelchL = 0;
-                squelchR = w;
-              }
-              var minSquelchHairWidth = 30;
-              if (squelchR - squelchL < minSquelchHairWidth) {
-                var squelchMid = (squelchR + squelchL) / 2;
-                squelchL = squelchMid - minSquelchHairWidth/2;
-                squelchR = squelchMid + minSquelchHairWidth/2;
-              }
-              ctx.strokeStyle = '#F00';
-              ctx.beginPath();
-              ctx.moveTo(squelchL, squelch);
-              ctx.lineTo(squelchR, squelch);
-              ctx.stroke();
-            }
-
-            ctx.strokeStyle = 'white';
-            drawHair(rec_freq_now); // receiver
-            ctx.fillStyle = 'white';
-            ctx.fillText(recKey, freqToCoord(rec_freq_now) + 2, textOffsetFromTop);
-          }
-          ctx.strokeStyle = 'gray';
-          drawHair(viewCenterFreq); // center frequency
 
           // Fill is deliberately over stroke. This acts to deemphasize downward stroking of spikes, which tend to occur in noise.
           ctx.fillStyle = fillStyle;
@@ -1426,6 +1357,123 @@ var sdr = sdr || {};
     }
   }
   widgets.WaterfallPlot = WaterfallPlot;
+
+  function ReceiverMarks(config) {
+    var tunerSource = config.target;
+    var view = config.view;
+    var radio = config.radio;
+    
+    var canvas = config.element;
+    if (canvas.tagName !== 'CANVAS') {
+      canvas = document.createElement('canvas');
+      canvas.classList.add('overlay');
+    }
+    this.element = canvas;
+    
+    var ctx = canvas.getContext('2d');
+    var textOffsetFromTop =
+        //ctx.measureText('j').fontBoundingBoxAscent; -- not yet supported
+        10 + 2; // default font size is "10px", ignoring effect of baseline
+    
+    // Drawing parameters and functions
+    // Each variable is updated in draw()
+    // This is done so that the functions need not be re-created
+    // each frame.
+    var w, h, lvf, rvf;
+    function freqToCoord(freq) {
+      return (freq - lvf) / (rvf-lvf) * w;
+    }
+    function drawHair(freq) {
+      var x = freqToCoord(freq);
+      x = Math.floor(x) + 0.5;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, ctx.canvas.height);
+      ctx.stroke();
+    }
+    function drawBand(freq1, freq2) {
+      var x1 = freqToCoord(freq1);
+      var x2 = freqToCoord(freq2);
+      ctx.fillRect(x1, 0, x2 - x1, ctx.canvas.height);
+    }
+    
+    function draw() {
+      view.n.listen(draw); // TODO this is an unbreakable notify loop; we should have a 'if widget is removed stop depending' scheme
+      lvf = view.leftVisibleFreq();
+      rvf = view.rightVisibleFreq();
+      var yScale = -h / (view.maxLevel - view.minLevel);
+      var yZero = -view.maxLevel * yScale;
+      
+      canvas.style.marginLeft = view.freqToCSSLeft(lvf);
+      w = canvas.offsetWidth;
+      h = canvas.offsetHeight;
+      if (canvas.width !== w || canvas.height !== h) {
+        // implicitly clears
+        canvas.width = w;
+        canvas.height = h;
+      } else {
+        ctx.clearRect(0, 0, w, h);
+      }
+      
+      ctx.strokeStyle = 'gray';
+      drawHair(radio.source.freq.depend(draw)); // center frequency
+      
+      radio.receivers._reshapeNotice.listen(draw);
+      for (var recKey in radio.receivers) {
+        var receiver = radio.receivers[recKey];
+        var rec_freq_cell = receiver.rec_freq;
+        var rec_freq_now = rec_freq_cell.depend(draw);
+        var band_filter_cell = receiver.demodulator.band_filter_shape;
+        if (band_filter_cell) {
+          var band_filter_now = band_filter_cell.depend(draw);
+        }
+
+        if (band_filter_now) {
+          var fl = band_filter_now.low;
+          var fh = band_filter_now.high;
+          var fhw = band_filter_now.width / 2;
+          ctx.fillStyle = '#3A3A3A';
+          drawBand(rec_freq_now + fl - fhw, rec_freq_now + fh + fhw);
+          ctx.fillStyle = '#444444';
+          drawBand(rec_freq_now + fl + fhw, rec_freq_now + fh - fhw);
+        }
+
+        // TODO: marks ought to be part of a distinct widget
+        var squelch_threshold_cell = receiver.demodulator.squelch_threshold;
+        if (squelch_threshold_cell) {
+          // TODO: this y calculation may be nonsense
+          var squelch = Math.floor(yZero + squelch_threshold_cell.depend(draw) * yScale) + 0.5;
+          var squelchL, squelchR;
+          if (band_filter_now) {
+            squelchL = freqToCoord(rec_freq_now + band_filter_now.low);
+            squelchR = freqToCoord(rec_freq_now + band_filter_now.high);
+          } else {
+            squelchL = 0;
+            squelchR = w;
+          }
+          var minSquelchHairWidth = 30;
+          if (squelchR - squelchL < minSquelchHairWidth) {
+            var squelchMid = (squelchR + squelchL) / 2;
+            squelchL = squelchMid - minSquelchHairWidth/2;
+            squelchR = squelchMid + minSquelchHairWidth/2;
+          }
+          ctx.strokeStyle = '#F00';
+          ctx.beginPath();
+          ctx.moveTo(squelchL, squelch);
+          ctx.lineTo(squelchR, squelch);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = 'white';
+        drawHair(rec_freq_now); // receiver
+        ctx.fillStyle = 'white';
+        ctx.fillText(recKey, freqToCoord(rec_freq_now) + 2, textOffsetFromTop);
+      }
+    }
+    draw.scheduler = config.scheduler;
+    draw();
+  }
+  widgets.ReceiverMarks = ReceiverMarks;
   
   function Knob(config) {
     var target = config.target;
