@@ -1114,7 +1114,7 @@ var sdr = sdr || {};
           element.my_inUse = false;
         } else {
           parent.removeChild(element);
-          if (!element.my_cacheKey) throw new Error('oops2');
+          if (!'my_cacheKey' in element) throw new Error('oops2');
           cache.delete(element.my_cacheKey);
         }
       }
