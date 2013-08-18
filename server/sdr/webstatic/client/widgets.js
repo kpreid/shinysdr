@@ -541,64 +541,131 @@ var sdr = sdr || {};
   }
   widgets.Demodulator = Demodulator;
   
-  function SpectrumPlot(config) {
+  // Abstract
+  function CanvasSpectrumWidget(config, buildGL, build2D) {
+    var self = this;
     var fftCell = config.target;
-    var canvas = this.element = config.element;
     var view = config.view;
-    var states = config.radio;
     
-    var ctx = canvas.getContext('2d');
-    ctx.lineWidth = 1;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    var textOffsetFromTop =
-        //ctx.measureText('j').fontBoundingBoxAscent; -- not yet supported
-        10 + 2; // default font size is "10px", ignoring effect of baseline
+    var useWebGL = true;
     
-    var fillStyle = getComputedStyle(canvas).fill;
-    var strokeStyle = getComputedStyle(canvas).stroke;
-
-    var lastDrawnCenterFreq = NaN;
-
-    // Drawing parameters and functions
-    // Each variable is updated in draw()
-    // This is done so that the functions need not be re-created
-    // each frame.
-    var w, h, lvf, rvf, averageBuffer
-    var xZero, xScale, xAfterLast, yZero, yScale, firstPoint, afterLastPoint;
-    function freqToCoord(freq) {
-      return (freq - lvf) / (rvf-lvf) * w;
+    var canvas = config.element;
+    if (canvas.tagName !== 'CANVAS') {
+      canvas = document.createElement('canvas');
     }
-    function drawHair(freq) {
-      var x = freqToCoord(freq);
-      x = Math.floor(x) + 0.5;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, ctx.canvas.height);
-      ctx.stroke();
+    this.element = canvas;
+    view.addClickToTune(canvas);
+    
+    var glOptions = {
+      alpha: false,
+      depth: false,
+      stencil: false,
+      antialias: false,
+      preserveDrawingBuffer: false
+    };
+    var gl = !useWebGL ? null : canvas.getContext('webgl', glOptions) || canvas.getContext('experimental-webgl', glOptions);
+    var ctx2d = canvas.getContext('2d');
+    
+    var dataHook = function () {}, drawOuter = function () {};
+    
+    function draw() {
+      fftCell.n.listen(newFFTFrame);
+      drawOuter();
     }
-    function drawBand(freq1, freq2) {
-      var x1 = freqToCoord(freq1);
-      var x2 = freqToCoord(freq2);
-      ctx.fillRect(x1, 0, x2 - x1, ctx.canvas.height);
-    }
-    function path() {
-      ctx.beginPath();
-      ctx.moveTo(xZero - xScale, h + 2);
-      ctx.lineTo(xZero - xScale, yZero + averageBuffer[0] * yScale);
-      for (var i = firstPoint; i < afterLastPoint; i++) {
-        ctx.lineTo(xZero + i * xScale, yZero + averageBuffer[i] * yScale);
+    draw.scheduler = config.scheduler;
+    
+    if (gl) (function() {
+      function initContext() {
+        var att_position;
+        function buildProgram(vertexShaderSource, fragmentShaderSource) {
+          function compileShader(type, source) {
+            var shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+              throw new Error(gl.getShaderInfoLog(shader));
+            }
+            return shader;
+          }
+          var vertexShader = compileShader(gl.VERTEX_SHADER, vertexShaderSource);
+          var fragmentShader = compileShader(gl.FRAGMENT_SHADER, fragmentShaderSource);
+          var program = gl.createProgram();
+          gl.attachShader(program, vertexShader);
+          gl.attachShader(program, fragmentShader);
+          gl.linkProgram(program);
+          if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            throw new Error(gl.getProgramInfoLog(program));
+          }
+          gl.useProgram(program);
+          att_position = gl.getAttribLocation(program, 'position');
+          gl.enableVertexAttribArray(att_position);
+          return program;
+        }
+        
+        var quadBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
+        var f;
+        gl.bufferData(gl.ARRAY_BUFFER, f = new Float32Array([
+          // full screen triangle strip
+          -1, -1, 0, 1,
+          1, -1, 0, 1,
+          -1, 1, 0, 1,
+          1, 1, 0, 1
+        ]), gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        
+        var drawImpl = buildGL(gl, buildProgram, draw);
+        dataHook = drawImpl.newData.bind(drawImpl);
+        
+        drawOuter = function () {
+          gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
+          gl.vertexAttribPointer(
+            att_position,
+            4, // components
+            gl.FLOAT,
+            false,
+            0,
+            0);
+          gl.bindBuffer(gl.ARRAY_BUFFER, null);
+          drawImpl.beforeDraw();
+          gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);  // 4 vertices
+        };
       }
-      ctx.lineTo(xAfterLast, yZero + averageBuffer[afterLastPoint - 1] * yScale);
-      ctx.lineTo(xAfterLast, h + 2);
-    }
-    
-    // used as listener by draw() for fftCell
-    function newFFTFrame() {
-      var buffer = fftCell.get();
-      var bufferCenterFreq = fftCell.getCenterFreq();
-      var len = buffer.length;
       
+      initContext();
+      // TODO: call initContext again on context loss/restore
+    }.call(this)); else if (ctx2d) (function () {
+      var drawImpl = build2D(ctx2d, draw);
+      dataHook = drawImpl.newData.bind(drawImpl);
+      drawOuter = drawImpl.performDraw.bind(drawImpl);
+    }.call(this));
+    
+    function newFFTFrame() {
+      var buffer = fftCell.get();  // draw() will do the listening
+      var freq = fftCell.getCenterFreq();
+      dataHook(buffer, freq);
+      draw.scheduler.enqueue(draw);
+    }
+    newFFTFrame.scheduler = config.scheduler;
+
+    newFFTFrame();
+    draw();
+  }
+  
+  function SpectrumPlot(config) {
+    var self = this;
+    var radio = config.radio;
+    var fftCell = config.target;
+    var view = config.view;
+    
+    var canvas; // set later
+    
+    // common logic
+    var averageBuffer = null;
+    var lastDrawnCenterFreq = NaN;
+    function commonNewData(buffer, bufferCenterFreq) {
+      var len = buffer.length;
+
       // averaging
       // TODO: Get separate averaged and unaveraged FFTs from server so that averaging behavior is not dependent on frame rate over the network
       if (!averageBuffer
@@ -608,22 +675,19 @@ var sdr = sdr || {};
         lastDrawnCenterFreq = bufferCenterFreq;
         averageBuffer = new Float32Array(buffer);
       }
-      
+
       for (var i = 0; i < len; i++) {
         averageBuffer[i] = averageBuffer[i] * 0.75 + buffer[i] * 0.25;
       }
-      
-      draw.scheduler.enqueue(draw);
     }
-    newFFTFrame.scheduler = config.scheduler;
-    
-    function draw() {
-      fftCell.n.listen(newFFTFrame);
-      view.n.listen(draw);
+
+    var lvf, rvf, w, h;
+    function commonBeforeDraw(scheduledDraw) {
+      view.n.listen(scheduledDraw);
       lvf = view.leftVisibleFreq();
       rvf = view.rightVisibleFreq();
-      
-      // Fit current layout, clear
+
+      // Fit current layout
       canvas.style.marginLeft = view.freqToCSSLeft(lvf);
       w = canvas.offsetWidth;
       h = canvas.offsetHeight;
@@ -631,100 +695,295 @@ var sdr = sdr || {};
         // implicitly clears
         canvas.width = w;
         canvas.height = h;
-      } else {
-        ctx.clearRect(0, 0, w, h);
+        return true;
       }
-      
-      var len = averageBuffer.length;
-      
-      var viewCenterFreq = states.source.freq.depend(draw);
-      var bandwidth = states.input_rate.depend(draw);
-      var halfBinWidth = bandwidth / len / 2;
-      xZero = freqToCoord(viewCenterFreq - bandwidth/2 + halfBinWidth);
-      xAfterLast = freqToCoord(viewCenterFreq + bandwidth/2 + halfBinWidth);
-      xScale = (xAfterLast - xZero) / len;
-      yScale = -h / (view.maxLevel - view.minLevel);
-      yZero = -view.maxLevel * yScale;
-      
-      // choose points to draw
-      firstPoint = Math.max(0, Math.floor(-xZero / xScale) - 1);
-      afterLastPoint = Math.min(len, Math.ceil((w - xZero) / xScale) + 1);
-      
-      for (var recKey in states.receivers) {
-        var receiver = states.receivers[recKey];
-        var rec_freq_cell = receiver.rec_freq;
-        var rec_freq_now = rec_freq_cell.depend(draw);
-        var band_filter_cell = receiver.demodulator.band_filter_shape;
-        if (band_filter_cell) {
-          var band_filter_now = band_filter_cell.depend(draw);
-        }
-        
-        if (band_filter_now) {
-          var fl = band_filter_now.low;
-          var fh = band_filter_now.high;
-          var fhw = band_filter_now.width / 2;
-          ctx.fillStyle = '#3A3A3A';
-          drawBand(rec_freq_now + fl - fhw, rec_freq_now + fh + fhw);
-          ctx.fillStyle = '#444444';
-          drawBand(rec_freq_now + fl + fhw, rec_freq_now + fh - fhw);
-        }
-        
-        // TODO: marks ought to be part of a distinct widget
-        var squelch_threshold_cell = receiver.demodulator.squelch_threshold;
-        if (squelch_threshold_cell) {
-          // TODO: this y calculation may be nonsense
-          var squelch = Math.floor(yZero + squelch_threshold_cell.depend(draw) * yScale) + 0.5;
-          var squelchL, squelchR;
-          if (band_filter_now) {
-            squelchL = freqToCoord(rec_freq_now + band_filter_now.low);
-            squelchR = freqToCoord(rec_freq_now + band_filter_now.high);
-          } else {
-            squelchL = 0;
-            squelchR = w;
-          }
-          var minSquelchHairWidth = 30;
-          if (squelchR - squelchL < minSquelchHairWidth) {
-            var squelchMid = (squelchR + squelchL) / 2;
-            squelchL = squelchMid - minSquelchHairWidth/2;
-            squelchR = squelchMid + minSquelchHairWidth/2;
-          }
-          ctx.strokeStyle = '#F00';
-          ctx.beginPath();
-          ctx.moveTo(squelchL, squelch);
-          ctx.lineTo(squelchR, squelch);
-          ctx.stroke();
-        }
-        
-        ctx.strokeStyle = 'white';
-        drawHair(rec_freq_now); // receiver
-        ctx.fillStyle = 'white';
-        ctx.fillText(recKey, freqToCoord(rec_freq_now) + 2, textOffsetFromTop);
-      }
-      ctx.strokeStyle = 'gray';
-      drawHair(viewCenterFreq); // center frequency
-      
-      // Fill is deliberately over stroke. This acts to deemphasize downward stroking of spikes, which tend to occur in noise.
-      ctx.fillStyle = fillStyle;
-      ctx.strokeStyle = strokeStyle;
-      path();
-      ctx.stroke();
-      path();
-      ctx.fill();
     }
-    draw.scheduler = config.scheduler;
-    view.addClickToTune(canvas);
     
-    newFFTFrame();
-    draw();
+    CanvasSpectrumWidget.call(this, config, buildGL, build2D);
+    
+    function buildGL(gl, buildProgram, draw) {
+      canvas = self.element;
+      var vertexShaderSource = ''
+        + 'attribute vec4 position;\n'
+        + 'uniform mediump float xZero, xScale;\n'
+        + 'varying highp vec2 v_position;\n'
+        + 'void main(void) {\n'
+        + '  gl_Position = position;\n'
+        + '  mediump vec2 basePos = (position.xy + vec2(1.0)) / 2.0;\n'
+        + '  v_position = vec2(xScale * basePos.x + xZero, basePos.y);\n'
+        + '}\n';
+      var fragmentShaderSource = ''
+        + 'uniform sampler2D data;\n'
+        + 'uniform mediump float xScale, xRes, yRes;\n'
+        + 'varying highp vec2 v_position;\n'
+        // TODO: these colors should come from the theme css
+        + 'const lowp vec3 background = vec3(0.0, 0.0, 0.0);\n'
+        + 'const lowp vec3 stroke = vec3(0.0, 1.0, 0.68);\n'
+        //+ 'const lowp vec3 weakStroke = vec3(0.0, 0.5, 0.50);\n'
+        + 'const lowp vec3 fill = vec3(0.25, 0.39, 0.39) * 0.75;\n'
+        + 'const int stepRange = 8;\n'
+        + 'mediump vec3 cmix(mediump vec3 before, mediump vec3 after, mediump float a) {\n'
+        + '  return mix(before, after, clamp(a, 0.0, 1.0));\n'
+        + '}\n'
+        + 'mediump vec3 cut(mediump float boundary, mediump float offset, mediump vec3 before, mediump vec3 after) {\n'
+        + '  mediump float case = (boundary - v_position.y) * yRes + offset;\n'
+        + '  return cmix(before, after, case);\n'
+        + '}\n'
+        + 'void main(void) {\n'
+        + '  highp vec2 texLookup = mod(v_position, 1.0);\n'
+        + '  highp float dTex = xScale / xRes * (1.3 / float(stepRange));\n'
+        + '  mediump float accum = 0.0;\n'
+        + '  mediump float peak = -1.0;\n'
+        + '  mediump float valley = 2.0;\n'
+        + '  for (int i = -stepRange; i <= stepRange; i++) {\n'
+        + '    mediump float value = texture2D(data, texLookup + dTex * float(i)).r;\n'
+        + '    accum += value;\n'
+        + '    peak = max(peak, value);\n'
+        + '    valley = min(valley, value);\n'
+        + '  }\n'
+        + '  accum *= 1.0/(float(stepRange) * 2.0 + 1.0);\n'
+        + '  mediump vec3 color = cut(peak, 1.0, background, cut(accum, 0.0, stroke, fill));\n'
+        + '  gl_FragColor = vec4(color, 0.0);\n'
+        + '}\n';
+      var program = buildProgram(vertexShaderSource, fragmentShaderSource);
+
+      var fftSize = Math.max(1, config.target.get().length), history = Math.max(1, canvas.height);
+
+      function setScale() {
+        gl.uniform1f(gl.getUniformLocation(program, 'xRes'), canvas.width);
+        gl.uniform1f(gl.getUniformLocation(program, 'yRes'), canvas.height);
+      }
+      setScale();
+
+      var bufferTexture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+
+      function configureTexture() {
+        var init = new Uint8Array(fftSize*4);
+        gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
+        gl.texImage2D(
+          gl.TEXTURE_2D,
+          0, // level
+          gl.LUMINANCE, // internalformat
+          fftSize, // width (= fft size)
+          1, // height (= history size)
+          0, // border
+          gl.LUMINANCE, // format
+          gl.UNSIGNED_BYTE, // type
+          init);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+      }
+      configureTexture();
+
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
+      gl.uniform1i(gl.getUniformLocation(program, 'data'), 1);
+      gl.activeTexture(gl.TEXTURE0);
+
+      var intConversionBuffer, intConversionOut;
+      
+      return {
+        newData: function (buffer, bufferCenterFreq) {
+          if (buffer.length === 0) {
+            return;
+          }
+          if (buffer.length !== fftSize || !intConversionBuffer) {
+            fftSize = buffer.length;
+            configureTexture();
+            intConversionBuffer = new Uint8ClampedArray(fftSize);
+            intConversionOut = new Uint8Array(intConversionBuffer.buffer);
+          }
+
+          commonNewData(buffer, bufferCenterFreq);
+
+          gl.viewport(0, 0, canvas.width, canvas.height);
+
+          gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
+          var minLevel = view.minLevel;
+          var maxLevel = view.maxLevel;
+          var cscale = 255 / (maxLevel - minLevel);
+          for (var i = 0; i < fftSize; i++) {
+            intConversionBuffer[i] = (averageBuffer[i] - minLevel) * cscale;
+          }
+          gl.texSubImage2D(
+              gl.TEXTURE_2D,
+              0, // level
+              0, // xoffset
+              0, // yoffset
+              fftSize,
+              1,
+              gl.LUMINANCE,
+              gl.UNSIGNED_BYTE,
+              intConversionOut);
+          gl.bindTexture(gl.TEXTURE_2D, null);
+        },
+        beforeDraw: function () {
+          var didResize = commonBeforeDraw(draw);
+          if (didResize) {
+            setScale();
+          }
+
+          // Adjust drawing region
+          var len = fftCell.get().length;
+          var viewCenterFreq = radio.source.freq.depend(draw);
+          var bandwidth = radio.input_rate.depend(draw);
+          var lsf = viewCenterFreq - bandwidth/2;
+          var rsf = viewCenterFreq + bandwidth/2;
+          var xScale = (rvf-lvf)/(rsf-lsf);
+          var xZero = (lvf-lsf)/(rsf-lsf);
+          gl.uniform1f(gl.getUniformLocation(program, 'xZero'), xZero);
+          gl.uniform1f(gl.getUniformLocation(program, 'xScale'), xScale);
+
+        }
+      };
+    }
+
+    function build2D(ctx, draw) {
+      canvas = self.element;      
+      ctx.lineWidth = 1;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      var textOffsetFromTop =
+          //ctx.measureText('j').fontBoundingBoxAscent; -- not yet supported
+          10 + 2; // default font size is "10px", ignoring effect of baseline
+      
+      var fillStyle = getComputedStyle(canvas).fill;
+      var strokeStyle = getComputedStyle(canvas).stroke;
+      
+      // Drawing parameters and functions
+      // Each variable is updated in draw()
+      // This is done so that the functions need not be re-created
+      // each frame.
+      var xZero, xScale, xAfterLast, yZero, yScale, firstPoint, afterLastPoint;
+      function freqToCoord(freq) {
+        return (freq - lvf) / (rvf-lvf) * w;
+      }
+      function drawHair(freq) {
+        var x = freqToCoord(freq);
+        x = Math.floor(x) + 0.5;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, ctx.canvas.height);
+        ctx.stroke();
+      }
+      function drawBand(freq1, freq2) {
+        var x1 = freqToCoord(freq1);
+        var x2 = freqToCoord(freq2);
+        ctx.fillRect(x1, 0, x2 - x1, ctx.canvas.height);
+      }
+      function path() {
+        ctx.beginPath();
+        ctx.moveTo(xZero - xScale, h + 2);
+        ctx.lineTo(xZero - xScale, yZero + averageBuffer[0] * yScale);
+        for (var i = firstPoint; i < afterLastPoint; i++) {
+          ctx.lineTo(xZero + i * xScale, yZero + averageBuffer[i] * yScale);
+        }
+        ctx.lineTo(xAfterLast, yZero + averageBuffer[afterLastPoint - 1] * yScale);
+        ctx.lineTo(xAfterLast, h + 2);
+      }
+      
+      return {
+        newData: function (buffer, bufferCenterFreq) {
+          commonNewData(buffer, bufferCenterFreq);
+        },
+        performDraw: function () {
+          var didClear = commonBeforeDraw(draw);
+          if (!didClear) {
+            ctx.clearRect(0, 0, w, h);
+          }
+
+          var len = averageBuffer.length;
+
+          var viewCenterFreq = radio.source.freq.depend(draw);
+          var bandwidth = radio.input_rate.depend(draw);
+          var halfBinWidth = bandwidth / len / 2;
+          xZero = freqToCoord(viewCenterFreq - bandwidth/2 + halfBinWidth);
+          xAfterLast = freqToCoord(viewCenterFreq + bandwidth/2 + halfBinWidth);
+          xScale = (xAfterLast - xZero) / len;
+          yScale = -h / (view.maxLevel - view.minLevel);
+          yZero = -view.maxLevel * yScale;
+
+          // choose points to draw
+          firstPoint = Math.max(0, Math.floor(-xZero / xScale) - 1);
+          afterLastPoint = Math.min(len, Math.ceil((w - xZero) / xScale) + 1);
+
+          for (var recKey in radio.receivers) {
+            var receiver = radio.receivers[recKey];
+            var rec_freq_cell = receiver.rec_freq;
+            var rec_freq_now = rec_freq_cell.depend(draw);
+            var band_filter_cell = receiver.demodulator.band_filter_shape;
+            if (band_filter_cell) {
+              var band_filter_now = band_filter_cell.depend(draw);
+            }
+
+            if (band_filter_now) {
+              var fl = band_filter_now.low;
+              var fh = band_filter_now.high;
+              var fhw = band_filter_now.width / 2;
+              ctx.fillStyle = '#3A3A3A';
+              drawBand(rec_freq_now + fl - fhw, rec_freq_now + fh + fhw);
+              ctx.fillStyle = '#444444';
+              drawBand(rec_freq_now + fl + fhw, rec_freq_now + fh - fhw);
+            }
+
+            // TODO: marks ought to be part of a distinct widget
+            var squelch_threshold_cell = receiver.demodulator.squelch_threshold;
+            if (squelch_threshold_cell) {
+              // TODO: this y calculation may be nonsense
+              var squelch = Math.floor(yZero + squelch_threshold_cell.depend(draw) * yScale) + 0.5;
+              var squelchL, squelchR;
+              if (band_filter_now) {
+                squelchL = freqToCoord(rec_freq_now + band_filter_now.low);
+                squelchR = freqToCoord(rec_freq_now + band_filter_now.high);
+              } else {
+                squelchL = 0;
+                squelchR = w;
+              }
+              var minSquelchHairWidth = 30;
+              if (squelchR - squelchL < minSquelchHairWidth) {
+                var squelchMid = (squelchR + squelchL) / 2;
+                squelchL = squelchMid - minSquelchHairWidth/2;
+                squelchR = squelchMid + minSquelchHairWidth/2;
+              }
+              ctx.strokeStyle = '#F00';
+              ctx.beginPath();
+              ctx.moveTo(squelchL, squelch);
+              ctx.lineTo(squelchR, squelch);
+              ctx.stroke();
+            }
+
+            ctx.strokeStyle = 'white';
+            drawHair(rec_freq_now); // receiver
+            ctx.fillStyle = 'white';
+            ctx.fillText(recKey, freqToCoord(rec_freq_now) + 2, textOffsetFromTop);
+          }
+          ctx.strokeStyle = 'gray';
+          drawHair(viewCenterFreq); // center frequency
+
+          // Fill is deliberately over stroke. This acts to deemphasize downward stroking of spikes, which tend to occur in noise.
+          ctx.fillStyle = fillStyle;
+          ctx.strokeStyle = strokeStyle;
+          path();
+          ctx.stroke();
+          path();
+          ctx.fill();
+        }
+      };
+    }
   }
   widgets.SpectrumPlot = SpectrumPlot;
   
   function WaterfallPlot(config) {
+    var self = this;
+    var radio = config.radio;
     var fftCell = config.target;
-    var canvas = this.element = config.element;
     var view = config.view;
-    var states = config.radio;
-
+    
     // I have read recommendations that color gradient scales should not involve more than two colors, as certain transitions between colors read as overly significant. However, in this case (1) we are not intending the waterfall chart to be read quantitatively, and (2) we want to have distinguishable small variations across a large dynamic range.
     var colors = [
       [0, 0, 0],
@@ -733,136 +992,435 @@ var sdr = sdr || {};
       [255, 255, 0],
       [255, 0, 0]
     ];
-
-    var ctx = canvas.getContext("2d");
-    // circular buffer of ImageData objects
-    var slices = [];
-    var slicePtr = 0;
-    var lastDrawnCenterFreq = NaN;
-
-    var newData = false;
-    function fftListener() {
-      newData = true;
-      draw();
+    var colorCountForScale = colors.length - 1;
+    var colorCountForIndex = colors.length - 2;
+    // value from 0 to 1, writes 0..255 into 4 elements of outArray
+    function interpolateColor(value, outArray, base) {
+      value *= colorCountForScale;
+      var colorIndex = Math.max(0, Math.min(colorCountForIndex, Math.floor(value)));
+      var colorInterp1 = value - colorIndex;
+      var colorInterp0 = 1 - colorInterp1;
+      var color0 = colors[colorIndex];
+      var color1 = colors[colorIndex + 1];
+      outArray[base    ] = color0[0] * colorInterp0 + color1[0] * colorInterp1;
+      outArray[base + 1] = color0[1] * colorInterp0 + color1[1] * colorInterp1;
+      outArray[base + 2] = color0[2] * colorInterp0 + color1[2] * colorInterp1;
+      outArray[base + 3] = 255;
     }
-    fftListener.scheduler = config.scheduler;
     
-    function draw() {
-      var buffer = fftCell.depend(fftListener);
-      var bufferCenterFreq = fftCell.getCenterFreq();
-
-      var h = canvas.height;
-      var bandwidth = states.input_rate.depend(draw);
-      var viewCenterFreq = states.source.freq.depend(draw);
-      
-      // adjust canvas's display width to zoom
-      // TODO this can be independent of other drawing
+    var canvas;
+    function commonBeforeDraw(viewCenterFreq, draw) {
       view.n.listen(draw);
+      var bandwidth = config.radio.input_rate.depend(draw);
       canvas.style.marginLeft = view.freqToCSSLeft(viewCenterFreq - bandwidth/2);
       canvas.style.width = view.freqToCSSLength(bandwidth);
+    }
+    
+    CanvasSpectrumWidget.call(this, config, buildGL, build2D);
+    
+    function buildGL(gl, buildProgram, draw) {
+      canvas = self.element;
+
+      var useFloatTexture = !!gl.getExtension('OES_texture_float');
+
+      var vertexShaderSource = ''
+        + 'attribute vec4 position;\n'
+        + 'varying highp vec2 v_position;\n'
+        + 'uniform highp float scroll;\n'
+        + 'void main(void) {\n'
+        + '  gl_Position = position;\n'
+        + '  highp vec2 basePos = (position.xy + vec2(1.0)) / 2.0;\n'
+        + '  v_position = basePos + vec2(0.0, scroll);\n'
+        + '}\n';
+      var fragmentShaderSource = ''
+        + 'uniform sampler2D data;\n'
+        + 'uniform sampler2D centerFreqHistory;\n'
+        + 'uniform sampler2D gradient;\n'
+        + 'uniform mediump float gradientZero;\n'
+        + 'uniform mediump float gradientScale;\n'
+        + 'varying mediump vec2 v_position;\n'
+        + 'uniform highp float currentFreq;\n'
+        + 'uniform mediump float freqScale;\n'
+        + 'void main(void) {\n'
+        + '  highp vec2 texLookup = mod(v_position, 1.0);\n'
+        + (useFloatTexture
+              ? 'highp float historyFreq = texture2D(centerFreqHistory, texLookup).r;\n'
+              : 'highp vec4 hFreqVec = texture2D(centerFreqHistory, texLookup);\n'
+              + '  highp float historyFreq = ((hFreqVec.a * 255.0 * 256.0 + hFreqVec.b * 255.0) * 256.0 + hFreqVec.g * 255.0) * 256.0 + hFreqVec.r * 255.0;\n')
+        + '  highp float freqOffset = (currentFreq - historyFreq) * freqScale;\n'
+        + '  mediump vec2 shift = texLookup + vec2(freqOffset, 0.0);\n'
+        + '  if (shift.x < 0.0 || shift.x > 1.0) {\n'
+        + '    gl_FragColor = vec4(0.0, 0.0, 0.5, 1.0);\n'
+        + '  } else {\n'
+        + '    mediump float data = texture2D(data, shift).r;\n'
+        + '    gl_FragColor = texture2D(gradient, vec2(0.5, gradientZero + gradientScale * data));\n'
+        //+ '    gl_FragColor = texture2D(gradient, vec2(0.5, v_position.x));\n'
+        //+ '    gl_FragColor = vec4(gradientZero + gradientScale * data * 4.0 - 0.5);\n'
+        + '  }\n'
+        + '}\n';
+      var program = buildProgram(vertexShaderSource, fragmentShaderSource);
       
-      // rescale to discovered fft size
-      var w = buffer.length;
-      if (canvas.width !== w) {
-        // assignment clears canvas
-        canvas.width = w;
-        // reallocate
-        slices = [];
-        slicePtr = 0;
-      }
+      var u_scroll = gl.getUniformLocation(program, 'scroll');
+      var u_currentFreq = gl.getUniformLocation(program, 'currentFreq');
+      var u_freqScale = gl.getUniformLocation(program, 'freqScale');
+      var u_gradientZero = gl.getUniformLocation(program, 'gradientZero');
+      var u_gradientScale = gl.getUniformLocation(program, 'gradientScale');
       
-      // can't draw with w=0
-      if (w === 0) {
-        return;
-      }
-      
-      if (newData) {
-        // Find slice to write into
-        var ibuf;
-        if (slices.length < h) {
-          slices.push([ibuf = ctx.createImageData(w, 1), bufferCenterFreq]);
-        } else {
-          var record = slices[slicePtr];
-          slicePtr = mod(slicePtr + 1, h);
-          ibuf = record[0];
-          record[1] = bufferCenterFreq;
+      var fftSize = Math.max(1, config.target.get().length), history = Math.max(1, canvas.height);
+
+      var bufferTexture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+      var historyFreqTexture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, historyFreqTexture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+      var gradientTexture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, gradientTexture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      (function() {
+        var components = 4;
+        // stretch = number of texels to generate per color. If we generate only the minimum and fully rely on hardware gl.LINEAR interpolation then certain pixels in the display tends to flicker as it scrolls, on some GPUs.
+        var stretch = 10;
+        var limit = (colors.length - 1) * stretch + 1;
+        var gradientInit = new Uint8Array(limit * components);
+        for (var i = 0; i < limit; i++) {
+          interpolateColor(i / (limit - 1), gradientInit, i * 4);
         }
+
+        gl.bindTexture(gl.TEXTURE_2D, gradientTexture);
+        gl.texImage2D(
+          gl.TEXTURE_2D,
+          0, // level
+          gl.RGBA, // internalformat
+          1, // width
+          gradientInit.length / components, // height
+          0, // border
+          gl.RGBA, // format
+          gl.UNSIGNED_BYTE, // type
+          gradientInit);
+
+        // gradientZero and gradientScale set the scaling from data texture values to gradient texture coordinates
+        // gradientInset is the amount to compensate for half-texel edges
+        var gradientInset = 0.5 / (gradientInit.length / components);
+        var insetZero = gradientInset;
+        var insetScale = 1 - gradientInset * 2;
+        var valueZero, valueScale;
+        if (useFloatTexture) {
+          var minLevel = config.view.minLevel;
+          var maxLevel = config.view.maxLevel;
+          valueScale = 1 / (maxLevel - minLevel);
+          valueZero = valueScale * -minLevel;
+        } else {
+          valueZero = 0;
+          valueScale = 1;
+        }
+        gl.uniform1f(u_gradientZero, insetZero + insetScale * valueZero);
+        gl.uniform1f(u_gradientScale, insetScale * valueScale);
+      }());
+
+      gl.bindTexture(gl.TEXTURE_2D, null);
+
+      function configureTexture() {
+        if (useFloatTexture) {
+          var init = new Float32Array(fftSize*history);
+          for (var i = 0; i < fftSize*history; i++) {
+            init[i] = -100;
+          }
+          gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
+          gl.texImage2D(
+            gl.TEXTURE_2D,
+            0, // level
+            gl.LUMINANCE, // internalformat
+            fftSize, // width (= fft size)
+            history, // height (= history size)
+            0, // border
+            gl.LUMINANCE, // format
+            gl.FLOAT, // type -- TODO use non-float textures if needed
+            init);
+
+          var init = new Float32Array(history);
+          for (var i = 0; i < history; i++) {
+            init[i] = -1000000;
+          }
+          gl.bindTexture(gl.TEXTURE_2D, historyFreqTexture);
+          gl.texImage2D(
+            gl.TEXTURE_2D,
+            0, // level
+            gl.LUMINANCE, // internalformat
+            1, // width
+            history, // height (= history size)
+            0, // border
+            gl.LUMINANCE, // format
+            gl.FLOAT, // type
+            init);
+        } else {
+          var init = new Uint8Array(fftSize*history*4);
+          gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
+          gl.texImage2D(
+            gl.TEXTURE_2D,
+            0, // level
+            gl.LUMINANCE, // internalformat
+            fftSize, // width (= fft size)
+            history, // height (= history size)
+            0, // border
+            gl.LUMINANCE, // format
+            gl.UNSIGNED_BYTE, // type
+            init);
+
+          var init = new Uint8Array(history*4);
+          gl.bindTexture(gl.TEXTURE_2D, historyFreqTexture);
+          gl.texImage2D(
+            gl.TEXTURE_2D,
+            0, // level
+            gl.RGBA, // internalformat
+            1, // width
+            history, // height (= history size)
+            0, // border
+            gl.RGBA, // format
+            gl.UNSIGNED_BYTE,
+            init);
+        }
+
+        gl.bindTexture(gl.TEXTURE_2D, null);
+      }
+      configureTexture();
+
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
+      gl.uniform1i(gl.getUniformLocation(program, 'data'), 1);
+      gl.activeTexture(gl.TEXTURE2);
+      gl.bindTexture(gl.TEXTURE_2D, historyFreqTexture);
+      gl.uniform1i(gl.getUniformLocation(program, 'centerFreqHistory'), 2);
+      gl.activeTexture(gl.TEXTURE3);
+      gl.bindTexture(gl.TEXTURE_2D, gradientTexture);
+      gl.uniform1i(gl.getUniformLocation(program, 'gradient'), 3);
+      gl.activeTexture(gl.TEXTURE0);
+
+      var slicePtr = 0;
+
+      var freqWriteBuffer = useFloatTexture ? new Float32Array(1) : new Uint8Array(4);
+      var intConversionBuffer, intConversionOut;
       
-        // low-pass filter to remove the edge-to-center variation from the spectrum (disabled because I'm not sure fiddling with the data like this is a good idea until such time as I make it an option, and so on)
-        if (false) {
-          var filterspan = 160;
-          var filtersum = 0;
-          var count = 0;
-          var hpf = new Float32Array(w);
-          for (var i = -filterspan; i < w + filterspan; i++) {
-            if (i + filterspan < w) {
-              filtersum += buffer[i + filterspan];
-              count++;
+      return {
+        newData: function (buffer, bufferCenterFreq) {
+          if (buffer.length === 0) {
+            return;
+          }
+          
+          if (buffer.length !== fftSize || !useFloatTexture && !intConversionBuffer) {
+            fftSize = buffer.length;
+            configureTexture();
+            intConversionBuffer = useFloatTexture ? null : new Uint8ClampedArray(fftSize);
+            intConversionOut = useFloatTexture ? null : new Uint8Array(intConversionBuffer.buffer);
+          }
+          if (canvas.width !== fftSize) {
+            canvas.width = fftSize;
+          }
+          if (canvas.height !== history) {
+            canvas.height = history;
+          }
+          gl.viewport(0, 0, canvas.width, canvas.height);
+
+          if (useFloatTexture) {
+            gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
+            gl.texSubImage2D(
+                gl.TEXTURE_2D,
+                0, // level
+                0, // xoffset
+                slicePtr, // yoffset
+                fftSize,
+                1,
+                gl.LUMINANCE,
+                gl.FLOAT,
+                buffer);
+
+            freqWriteBuffer[0] = bufferCenterFreq;
+            gl.bindTexture(gl.TEXTURE_2D, historyFreqTexture);
+            gl.texSubImage2D(
+                gl.TEXTURE_2D,
+                0, // level
+                0, // xoffset
+                slicePtr, // yoffset
+                1,
+                1,
+                gl.LUMINANCE,
+                gl.FLOAT,
+                freqWriteBuffer);
+          } else {
+            gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
+            var minLevel = config.view.minLevel;
+            var maxLevel = config.view.maxLevel;
+            var cscale = 255 / (maxLevel - minLevel);
+            for (var i = 0; i < fftSize; i++) {
+              intConversionBuffer[i] = (buffer[i] - minLevel) * cscale;
             }
-            if (i - filterspan >= 0) {
-              filtersum -= buffer[i - filterspan];
-              count--;
+            gl.texSubImage2D(
+                gl.TEXTURE_2D,
+                0, // level
+                0, // xoffset
+                slicePtr, // yoffset
+                fftSize,
+                1,
+                gl.LUMINANCE,
+                gl.UNSIGNED_BYTE,
+                intConversionOut);
+
+            freqWriteBuffer[0] = (bufferCenterFreq >> 0) & 0xFF;
+            freqWriteBuffer[1] = (bufferCenterFreq >> 8) & 0xFF;
+            freqWriteBuffer[2] = (bufferCenterFreq >> 16) & 0xFF;
+            freqWriteBuffer[3] = (bufferCenterFreq >> 24) & 0xFF;
+            gl.bindTexture(gl.TEXTURE_2D, historyFreqTexture);
+            gl.texSubImage2D(
+                gl.TEXTURE_2D,
+                0, // level
+                0, // xoffset
+                slicePtr, // yoffset
+                1,
+                1,
+                gl.RGBA,
+                gl.UNSIGNED_BYTE,
+                freqWriteBuffer);
+          }
+
+          gl.bindTexture(gl.TEXTURE_2D, null);
+          slicePtr = mod(slicePtr + 1, history);
+        },
+        beforeDraw: function () {
+          var viewCenterFreq = config.radio.source.freq.depend(draw);
+          commonBeforeDraw(viewCenterFreq, draw);
+
+          gl.uniform1f(u_scroll, slicePtr / history);
+          var fs = 1.0 / radio.input_rate.depend(draw);
+          //console.log(fs);
+          gl.uniform1f(u_freqScale, fs);
+          gl.uniform1f(u_currentFreq, radio.source.freq.depend(draw));
+        }
+      };
+    }
+    
+    function build2D(ctx, draw) {
+      canvas = self.element;
+
+      // circular buffer of ImageData objects
+      var slices = [];
+      var slicePtr = 0;
+      var lastDrawnCenterFreq = NaN;
+
+      var hasNewData = false;
+      return {
+        newData: function (buffer, bufferCenterFreq) {
+          hasNewData = true;
+          this.performDraw();
+        },
+        performDraw: function () {
+          var buffer = fftCell.get();  // CanvasSpectrumWidget takes care of listening
+          var bufferCenterFreq = fftCell.getCenterFreq();
+          var h = canvas.height;
+          var viewCenterFreq = radio.source.freq.depend(draw);
+          commonBeforeDraw(viewCenterFreq, draw);
+
+          // rescale to discovered fft size
+          var w = buffer.length;
+          if (canvas.width !== w) {
+            // assignment clears canvas
+            canvas.width = w;
+            // reallocate
+            slices = [];
+            slicePtr = 0;
+          }
+
+          // can't draw with w=0
+          if (w === 0) {
+            return;
+          }
+
+          if (hasNewData) {
+            // Find slice to write into
+            var ibuf;
+            if (slices.length < h) {
+              slices.push([ibuf = ctx.createImageData(w, 1), bufferCenterFreq]);
+            } else {
+              var record = slices[slicePtr];
+              slicePtr = mod(slicePtr + 1, h);
+              ibuf = record[0];
+              record[1] = bufferCenterFreq;
             }
-            if (i >= 0 && i < w) {
-              hpf[i] = filtersum / count;
+
+            // low-pass filter to remove the edge-to-center variation from the spectrum (disabled because I'm not sure fiddling with the data like this is a good idea until such time as I make it an option, and so on)
+            if (false) {
+              var filterspan = 160;
+              var filtersum = 0;
+              var count = 0;
+              var hpf = new Float32Array(w);
+              for (var i = -filterspan; i < w + filterspan; i++) {
+                if (i + filterspan < w) {
+                  filtersum += buffer[i + filterspan];
+                  count++;
+                }
+                if (i - filterspan >= 0) {
+                  filtersum -= buffer[i - filterspan];
+                  count--;
+                }
+                if (i >= 0 && i < w) {
+                  hpf[i] = filtersum / count;
+                }
+              }
+            }
+
+            // Generate image slice from latest FFT data.
+            var xScale = buffer.length / w;
+            var cScale = 1 / (view.maxLevel - view.minLevel);
+            var cZero = 1 - view.maxLevel * cScale;
+            var data = ibuf.data;
+            for (var x = 0; x < w; x++) {
+              var base = x * 4;
+              var i = Math.round(x * xScale);
+              var colorVal = (buffer[i] /* - hpf[i]*/) * cScale + cZero;
+              interpolateColor(colorVal, data, base);
             }
           }
+
+          var offsetScale = w / radio.input_rate.depend(draw);  // TODO parameter for rate
+          if (hasNewData && lastDrawnCenterFreq === viewCenterFreq) {
+            // Scroll
+            ctx.drawImage(ctx.canvas, 0, 0, w, h-1, 0, 1, w, h-1);
+            // Paint newest slice
+            var offset = bufferCenterFreq - viewCenterFreq;
+            ctx.putImageData(ibuf, Math.round(offset * offsetScale), 0);
+          } else if (lastDrawnCenterFreq !== viewCenterFreq) {
+            lastDrawnCenterFreq = viewCenterFreq;
+            // Paint all slices onto canvas
+            ctx.fillStyle = '#777';
+            var sliceCount = slices.length;
+            for (var i = sliceCount - 1; i >= 0; i--) {
+              var slice = slices[mod(i + slicePtr, sliceCount)];
+              var offset = slice[1] - viewCenterFreq;
+              var y = sliceCount - i;
+
+              // fill background so scrolling is of an opaque image
+              ctx.fillRect(0, y, w, 1);
+
+              // paint slice
+              ctx.putImageData(slice[0], Math.round(offset * offsetScale), y);
+            }
+            ctx.fillRect(0, y+1, w, h);
+          }
+
+          hasNewData = false;
         }
-      
-        // Generate image slice from latest FFT data.
-        var xScale = buffer.length / w;
-        var minInterpColor = 0;
-        var maxInterpColor = colors.length - 2;
-        var cScale = (colors.length - 1) / (view.maxLevel - view.minLevel);
-        var cZero = (colors.length - 1) - view.maxLevel * cScale;
-        var data = ibuf.data;
-        for (var x = 0; x < w; x++) {
-          var base = x * 4;
-          var i = Math.round(x * xScale);
-          var colorVal = (buffer[i] /* - hpf[i]*/) * cScale + cZero;
-          var colorIndex = Math.max(minInterpColor, Math.min(maxInterpColor, Math.floor(colorVal)));
-          var colorInterp1 = colorVal - colorIndex;
-          var colorInterp0 = 1 - colorInterp1;
-          var color0 = colors[colorIndex];
-          var color1 = colors[colorIndex + 1];
-          data[base    ] = color0[0] * colorInterp0 + color1[0] * colorInterp1;
-          data[base + 1] = color0[1] * colorInterp0 + color1[1] * colorInterp1;
-          data[base + 2] = color0[2] * colorInterp0 + color1[2] * colorInterp1;
-          data[base + 3] = 255;
-        }
-      }
-      
-      var offsetScale = w / states.input_rate.depend(draw);  // TODO parameter for rate
-      if (newData && lastDrawnCenterFreq === viewCenterFreq) {
-        // Scroll
-        ctx.drawImage(ctx.canvas, 0, 0, w, h-1, 0, 1, w, h-1);
-        // Paint newest slice
-        var offset = bufferCenterFreq - viewCenterFreq;
-        ctx.putImageData(ibuf, Math.round(offset * offsetScale), 0);
-      } else if (lastDrawnCenterFreq !== viewCenterFreq) {
-        lastDrawnCenterFreq = viewCenterFreq;
-        // Paint all slices onto canvas
-        ctx.fillStyle = '#777';
-        var sliceCount = slices.length;
-        for (var i = sliceCount - 1; i >= 0; i--) {
-          var slice = slices[mod(i + slicePtr, sliceCount)];
-          var offset = slice[1] - viewCenterFreq;
-          var y = sliceCount - i;
-          
-          // fill background so scrolling is of an opaque image
-          ctx.fillRect(0, y, w, 1);
-          
-          // paint slice
-          ctx.putImageData(slice[0], Math.round(offset * offsetScale), y);
-        }
-        ctx.fillRect(0, y+1, w, h);
-      }
-      
-      newData = false;
+      };
     }
-    draw.scheduler = config.scheduler;
-    view.addClickToTune(canvas);
-    draw();
   }
   widgets.WaterfallPlot = WaterfallPlot;
   
