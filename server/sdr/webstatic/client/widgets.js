@@ -633,7 +633,10 @@ var sdr = sdr || {};
       }
       
       initContext();
-      // TODO: call initContext again on context loss/restore
+      canvas.addEventListener('webglcontextlost', function (event) {
+        event.preventDefault();
+      }, false);
+      canvas.addEventListener('webglcontextrestored', initContext, false);
     }.call(this)); else if (ctx2d) (function () {
       var drawImpl = build2D(ctx2d, draw);
       dataHook = drawImpl.newData.bind(drawImpl);
