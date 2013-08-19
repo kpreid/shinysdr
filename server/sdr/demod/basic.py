@@ -178,13 +178,29 @@ class FMDemodulator(SimpleAudioDemodulator):
 
 class NFMDemodulator(FMDemodulator):
 	def __init__(self, audio_rate, **kwargs):
-		FMDemodulator.__init__(self, demod_rate=48000, audio_rate=audio_rate, post_demod_rate=audio_rate, deviation=5000, band_filter=6500, band_filter_transition=1000, **kwargs)
+		# TODO support 2.5kHz deviation
+		deviation = 5000
+		transition = 3000
+		FMDemodulator.__init__(self,
+			demod_rate=48000,  # TODO justify this number
+			audio_rate=audio_rate,
+			post_demod_rate=audio_rate,
+			deviation=deviation,
+			band_filter=deviation + transition * 0.3,
+			band_filter_transition=transition,
+			**kwargs)
 
 class WFMDemodulator(FMDemodulator):
 	def __init__(self, stereo=True, audio_filter=True, **kwargs):
 		self.stereo = stereo
 		self.audio_filter = audio_filter
-		FMDemodulator.__init__(self, demod_rate=240000, post_demod_rate=120000, deviation=75000, band_filter=80000, band_filter_transition=20000, **kwargs)
+		FMDemodulator.__init__(self,
+			demod_rate=240000,  # TODO justify these numbers
+			post_demod_rate=120000,
+			deviation=75000,
+			band_filter=80000,
+			band_filter_transition=20000,
+			**kwargs)
 
 	def state_def(self, callback):
 		super(WFMDemodulator, self).state_def(callback)
