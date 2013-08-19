@@ -1425,6 +1425,7 @@ var sdr = sdr || {};
         var rec_freq_now = rec_freq_cell.depend(draw);
         var band_filter_cell = receiver.demodulator.band_filter_shape;
         if (band_filter_cell) {
+          receiver.demodulator._deathNotice.listen(draw);
           var band_filter_now = band_filter_cell.depend(draw);
         }
 
@@ -1441,6 +1442,7 @@ var sdr = sdr || {};
         // TODO: marks ought to be part of a distinct widget
         var squelch_threshold_cell = receiver.demodulator.squelch_threshold;
         if (squelch_threshold_cell) {
+          receiver.demodulator._deathNotice.listen(draw);
           // TODO: this y calculation may be nonsense
           var squelch = Math.floor(yZero + squelch_threshold_cell.depend(draw) * yScale) + 0.5;
           var squelchL, squelchR;
