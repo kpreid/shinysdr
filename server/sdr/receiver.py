@@ -120,7 +120,7 @@ class Receiver(gr.hier_block2, ExportedState):
 		return self.rec_freq
 	
 	def set_rec_freq(self, rec_freq):
-		self.rec_freq = rec_freq
+		self.rec_freq = float(rec_freq)
 		self.__update_oscillator()
 		self.context.revalidate()
 	
