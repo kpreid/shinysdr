@@ -19,6 +19,14 @@
   </div>
 </section>
 
+<section id="section-map" class="stretchy">
+  <h2>Map</h2>
+  <!-- This pair of position: wrappers allows OpenLayers' internal height: 100%; use to work inside of our flexbox layout. -->
+  <div style="position: relative; height: 100%; width: 100%;">
+    <div id="map" style="position: absolute; height: 100%; width: 100%;"></div>
+  </div>
+</section>
+
 <section id="section-radio">
   <h2>Radio Config</h2>
   <div class="sidebar frame" data-widget="Top"></div>
@@ -32,11 +40,14 @@
   </div>
 </section>
 
+<script src="client/openlayers/OpenLayers.debug.js"></script>
+
 <script src="client/events.js"></script>
 <script src="client/values.js"></script>
 <script src="client/network.js"></script>
 <script src="client/database.js"></script>
 <script src="client/widgets.js"></script>
 <script src="client/sections.js"></script>
+<script src="client/maps.js"></script>
 <script src="client/main.js"></script>
 </body></html>

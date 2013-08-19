@@ -16,6 +16,7 @@ html, body {
   display: flex;
   flex-direction: column;
   flex: 0 1 auto;
+  height: 100%; /* doesn't change layout height, but enables percentage height to work inside */
 }
 .ui-sections > section.stretchy {
   flex: 1 2;

@@ -11,6 +11,9 @@
   freqDB.add(sdr.database.allSystematic);
   freqDB.add(sdr.database.fromCatalog('dbs/'));
   
+  // Map
+  var map = new sdr.maps.Map(document.getElementById('map'), scheduler, freqDB);
+  
   var radio;
   sdr.network.connect('radio', function gotDesc(remote) {
     radio = remote;

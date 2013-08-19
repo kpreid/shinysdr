@@ -320,6 +320,10 @@ def listen(config, top, noteDirty):
 		jasmine.putChild(name, static.File(os.path.join(
 				os.path.dirname(__file__), 'deps/jasmine/lib/jasmine-core/', name)))
 	
+	client = reify(appRoot, 'client')
+	client.putChild('openlayers', static.File(os.path.join(
+		os.path.dirname(__file__), 'deps/openlayers')))
+	
 	if rootCap is None:
 		root = appRoot
 	else:
