@@ -834,7 +834,7 @@ var sdr = sdr || {};
           // Adjust drawing region
           var len = fftCell.get().length;
           var viewCenterFreq = radio.source.freq.depend(draw);
-          var bandwidth = radio.input_rate.depend(draw);
+          var bandwidth = fftCell.getSampleRate();
           var lsf = viewCenterFreq - bandwidth/2;
           var rsf = viewCenterFreq + bandwidth/2;
           var xScale = (rvf-lvf)/(rsf-lsf);
@@ -887,7 +887,7 @@ var sdr = sdr || {};
           var len = averageBuffer.length;
 
           var viewCenterFreq = radio.source.freq.depend(draw);
-          var bandwidth = radio.input_rate.depend(draw);
+          var bandwidth = fftCell.getSampleRate();
           var halfBinWidth = bandwidth / len / 2;
           xZero = freqToCoord(viewCenterFreq - bandwidth/2 + halfBinWidth);
           xAfterLast = freqToCoord(viewCenterFreq + bandwidth/2 + halfBinWidth);
@@ -945,7 +945,7 @@ var sdr = sdr || {};
     var canvas;
     function commonBeforeDraw(viewCenterFreq, draw) {
       view.n.listen(draw);
-      var bandwidth = config.radio.input_rate.depend(draw);
+      var bandwidth = fftCell.getSampleRate();
       canvas.style.marginLeft = view.freqToCSSLeft(viewCenterFreq - bandwidth/2);
       canvas.style.width = view.freqToCSSLength(bandwidth);
     }
@@ -1235,7 +1235,7 @@ var sdr = sdr || {};
           commonBeforeDraw(viewCenterFreq, draw);
 
           gl.uniform1f(u_scroll, slicePtr / history);
-          var fs = 1.0 / radio.input_rate.depend(draw);
+          var fs = 1.0 / fftCell.getSampleRate();
           //console.log(fs);
           gl.uniform1f(u_freqScale, fs);
           gl.uniform1f(u_currentFreq, radio.source.freq.depend(draw));
@@ -1325,7 +1325,7 @@ var sdr = sdr || {};
             }
           }
 
-          var offsetScale = w / radio.input_rate.depend(draw);  // TODO parameter for rate
+          var offsetScale = w / fftCell.getSampleRate();
           if (hasNewData && lastDrawnCenterFreq === viewCenterFreq) {
             // Scroll
             ctx.drawImage(ctx.canvas, 0, 0, w, h-1, 0, 1, w, h-1);

@@ -345,7 +345,7 @@ class Top(gr.top_block, ExportedState):
 		self.spectrum_fft_block.set_vec_rate(value)
 	
 	def get_spectrum_fft_info(self):
-		return self.input_freq
+		return (self.input_freq, self.input_rate)
 	
 	def get_spectrum_fft_queue(self):
 		return self.spectrum_queue

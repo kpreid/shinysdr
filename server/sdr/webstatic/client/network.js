@@ -176,13 +176,15 @@ var sdr = sdr || {};
     var swapbuf = new Float32Array(0);
     var VSIZE = Float32Array.BYTES_PER_ELEMENT;
     var centerFreq = NaN;
+    var sampleRate = NaN;
     
     function transform(json) {
       if (json === null) {
         // occurs when server is paused on load — TODO fix server so it always returns an array
         return fft;
       }
-      centerFreq = json[0];
+      centerFreq = json[0][0];
+      sampleRate = json[0][1];
       var arrayFFT = json[1];
 
       var halfFFTSize = arrayFFT.length / 2;
@@ -205,6 +207,9 @@ var sdr = sdr || {};
     
     this.getCenterFreq = function() {
       return centerFreq;
+    };
+    this.getSampleRate = function() {
+      return sampleRate;
     };
   }
   SpectrumCell.prototype = Object.create(ReadCell.prototype, {constructor: {value: SpectrumCell}});
