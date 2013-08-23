@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 
+from twisted.plugin import IPlugin, getPlugins
+from zope.interface import Interface, implements  # available via Twisted
+
 import gnuradio
 from gnuradio import analog
 from gnuradio import gr
 from gnuradio import blocks
 
 from sdr.values import ExportedState, Cell, BlockCell, Range, Enum
+from sdr import plugins
 
-from sdr.demod import basic
-import sdr.demod.mode_s
-import sdr.demod.vor
 
 class Receiver(gr.hier_block2, ExportedState):
 	# TODO: demodulator should not be an arg, maybe state should
@@ -54,17 +55,10 @@ class Receiver(gr.hier_block2, ExportedState):
 	
 	def state_def(self, callback):
 		super(Receiver, self).state_def(callback)
-		callback(Cell(self, 'mode', writable=True, ctor=Enum({
-			# TODO: derive from a list of found plugins
-			'AM': 'AM',
-			'NFM': 'Narrow FM',
-			'WFM': 'Wide FM',
-			'USB': 'SSB (U)',
-			'LSB': 'SSB (L)',
-			'IQ': 'Raw IQ',
-			'VOR': 'VOR',
-			'MODE-S': 'Mode S'
-		})))
+		modes = {}
+		for modeDef in getModes():
+			modes[modeDef.mode] = modeDef.label
+		callback(Cell(self, 'mode', writable=True, ctor=Enum(modes)))
 		# TODO: rename rec_freq to just freq
 		callback(Cell(self, 'rec_freq', writable=True, ctor=float))
 		# TODO: support non-audio demodulators at which point these controls should be optional
@@ -166,20 +160,10 @@ class Receiver(gr.hier_block2, ExportedState):
 	def __make_demodulator(self, mode, state):
 		'''Returns the demodulator.'''
 
-		if mode == 'IQ':
-			clas = basic.IQDemodulator
-		elif mode == 'NFM':
-			clas = basic.NFMDemodulator
-		elif mode == 'WFM':
-			clas = basic.WFMDemodulator
-		elif mode == 'AM':
-			clas = basic.AMDemodulator
-		elif mode == 'USB' or mode == 'LSB':
-			clas = basic.SSBDemodulator
-		elif mode == 'VOR':
-			clas = sdr.demod.vor.VOR
-		elif mode == 'MODE-S':
-			clas = sdr.demod.mode_s.ModeSDemodulator
+		for modeDef in getModes():
+			if modeDef.mode == mode:
+				clas = modeDef.demodClass
+				break
 		else:
 			raise ValueError('Unknown mode: ' + mode)
 
@@ -234,3 +218,44 @@ class ContextForDemodulator(object):
 	def replace_me(self, mode):
 		assert self._enabled
 		self._split._rebuild_receiver(mode=mode)
+
+
+class IDemodulator(Interface):
+	def can_set_mode(mode):
+		'''
+		Return whether this demodulator can reconfigure itself to demodulate the specified mode.
+		
+		If it returns False, it will typically be replaced with a newly created demodulator.
+		'''
+	
+	def set_mode(mode):
+		'''
+		Per can_set_mode.
+		'''
+	
+	def get_half_bandwidth():
+		'''
+		TODO explain
+		'''
+
+
+class IModeDef(Interface):
+	'''
+	Demodulator plugin interface object
+	'''
+	# Only needed to make the plugin system work
+	# TODO write interface methods anyway
+
+
+class ModeDef(object):
+	implements(IPlugin, IModeDef)
+	
+	def __init__(self, mode, label, demodClass):
+		self.mode = mode
+		self.label = label
+		self.demodClass = demodClass
+
+
+def getModes():
+	# TODO caching? prebuilt mode table?
+	return getPlugins(IModeDef, plugins)

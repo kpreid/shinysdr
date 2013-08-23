@@ -1,7 +1,11 @@
+from zope.interface import implements
+from twisted.plugin import IPlugin
+
 from gnuradio import gr
 from gnuradio import blocks
 from gnuradio import analog
 
+from sdr.receiver import ModeDef, IDemodulator
 from sdr.values import Cell, ExportedState
 from sdr.filters import MultistageChannelFilter
 
@@ -14,6 +18,8 @@ transition_width = 500000
 
 
 class ModeSDemodulator(gr.hier_block2, ExportedState):
+	implements(IDemodulator)
+	
 	def __init__(self, mode='MODE-S', input_rate=0, input_center_freq=0, audio_rate=0, context=None):
 		assert input_rate > 0
 		gr.hier_block2.__init__(
@@ -81,3 +87,5 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 			'high': pipe_rate/2,
 			'width': transition_width
 		}
+
+pluginDef = ModeDef('MODE-S', label='Mode S', demodClass=ModeSDemodulator)

@@ -1,5 +1,8 @@
 # TODO: fully clean up this GRC-generated file
 
+from zope.interface import implements
+from twisted.plugin import IPlugin
+
 from gnuradio import gr
 from gnuradio import blocks
 from gnuradio import analog
@@ -10,7 +13,8 @@ from gnuradio.filter import firdes
 import math
 
 from sdr import filters
-from sdr.demod.basic import SimpleAudioDemodulator
+from sdr.receiver import ModeDef, IDemodulator
+from sdr.plugins.basic_demod import SimpleAudioDemodulator
 from sdr.values import Cell
 
 audio_modulation_index = 0.07
@@ -19,7 +23,8 @@ fm_deviation = 480
 
 
 class VOR(SimpleAudioDemodulator):
-
+	implements(IDemodulator)
+	
 	def __init__(self, mode='VOR', zero_point=59, **kwargs):
 		self.channel_rate = channel_rate = 40000
 		internal_audio_rate = 20000  # TODO over spec'd
@@ -123,3 +128,5 @@ class VOR(SimpleAudioDemodulator):
 
 	def get_angle(self):
 		return self.probe.level()
+
+pluginDef = ModeDef('VOR', label='VOR', demodClass=VOR)

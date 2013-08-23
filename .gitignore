@@ -1,2 +1,3 @@
 *.pyc
+dropin.cache
 /server/sdr/webstatic/test/jasmine/

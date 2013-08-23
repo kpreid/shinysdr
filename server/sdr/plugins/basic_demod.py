@@ -1,15 +1,20 @@
+from zope.interface import implements
+from twisted.plugin import IPlugin
+
 from gnuradio import gr
 from gnuradio import blocks
 from gnuradio import analog
 from gnuradio import filter as grfilter  # don't shadow builtin
 from gnuradio.filter import firdes
 
+from sdr.receiver import ModeDef, IDemodulator
 from sdr.filters import MultistageChannelFilter, make_resampler
 from sdr.values import ExportedState, Cell, Range
 
 import math
 
 class Demodulator(gr.hier_block2, ExportedState):
+	implements(IDemodulator)
 	def __init__(self, mode, input_rate=0, input_center_freq=0, audio_rate=0, rec_freq=100.0, audio_gain=0.25, audio_pan=0, squelch_threshold=-100, context=None):
 		assert input_rate > 0
 		assert audio_rate > 0
@@ -105,6 +110,9 @@ class IQDemodulator(SimpleAudioDemodulator):
 		self.connect_audio_output((self.split_block, 0), (self.split_block, 1))
 
 
+pluginDef_iq = ModeDef('IQ', label='Raw I/Q', demodClass=IQDemodulator)
+
+
 class AMDemodulator(SimpleAudioDemodulator):
 	def __init__(self, **kwargs):
 		demod_rate = 48000
@@ -131,6 +139,9 @@ class AMDemodulator(SimpleAudioDemodulator):
 			dc_blocker,
 			self.resampler_block)
 		self.connect_audio_output(self.resampler_block, self.resampler_block)
+
+
+pluginDef_am = ModeDef('AM', label='AM', demodClass=AMDemodulator)
 
 
 class FMDemodulator(SimpleAudioDemodulator):
@@ -189,6 +200,10 @@ class NFMDemodulator(FMDemodulator):
 			band_filter=deviation + transition * 0.3,
 			band_filter_transition=transition,
 			**kwargs)
+
+
+pluginDef_nfm = ModeDef('NFM', label='Narrow FM', demodClass=NFMDemodulator)
+
 
 class WFMDemodulator(FMDemodulator):
 	def __init__(self, stereo=True, audio_filter=True, **kwargs):
@@ -299,7 +314,10 @@ class WFMDemodulator(FMDemodulator):
 		else:
 			self.connect(mono, resamplerL)
 			self.connect_audio_output(resamplerL, resamplerL)
-		
+
+
+pluginDef_wfm = ModeDef('WFM', label='Broadcast FM', demodClass=WFMDemodulator)
+
 
 class SSBDemodulator(SimpleAudioDemodulator):
 	def __init__(self, mode, audio_rate=0, **kwargs):
@@ -356,3 +374,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
 			'high': self.band_filter_high,
 			'width': self.band_filter_width
 		}
+
+
+pluginDef_lsb = ModeDef('LSB', label='SSB (L)', demodClass=SSBDemodulator)
+pluginDef_usb = ModeDef('USB', label='SSB (U)', demodClass=SSBDemodulator)
