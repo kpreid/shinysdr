@@ -27,10 +27,11 @@ import sdr.source
 if args.createConfig:
 	with open(args.configFile, 'w') as f:
 		f.write('''\
+import sdr.plugins.osmosdr
 sources = {
 	# OsmoSDR generic device source; handles USRP, RTL-SDR, FunCube
 	# Dongle, HackRF, etc.
-	'osmo': sdr.source.OsmoSDRSource(''),
+	'osmo': sdr.plugins.osmosdr.OsmoSDRSource(''),
 
 	# For hardware which uses a sound-card as its ADC or appears as an
 	# audio device.
