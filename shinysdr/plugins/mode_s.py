@@ -28,7 +28,9 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 		self.input_rate = input_rate
 		
 		# Subprocess
-		self.dump1090 = SubprocessSink(['dump1090', '--ifile', '-'])
+		self.dump1090 = SubprocessSink(
+			args=['dump1090', '--ifile', '-'],
+			itemsize=gr.sizeof_char)
 		
 		# Output
 		self.band_filter_block = filter = MultistageChannelFilter(

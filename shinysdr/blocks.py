@@ -117,10 +117,10 @@ def make_resampler(in_rate, out_rate):
 
 
 class SubprocessSink(gr.hier_block2):
-	def __init__(self, args):
+	def __init__(self, args, itemsize=gr.sizeof_char):
 		gr.hier_block2.__init__(
 			self, 'subprocess ' + repr(args),
-			gr.io_signature(1, 1, gr.sizeof_char * 1),
+			gr.io_signature(1, 1, itemsize),
 			gr.io_signature(0, 0, 0),
 		)
 		self.__p = subprocess.Popen(
@@ -134,7 +134,7 @@ class SubprocessSink(gr.hier_block2):
 		self.__p.stdin.close()  # not going to use
 		self.connect(
 			self,
-			blocks.file_descriptor_sink(gr.sizeof_char, fd_owned_by_sink))
+			blocks.file_descriptor_sink(itemsize, fd_owned_by_sink))
 	
 	# we may find this needed later...
 	#def __del__(self):

@@ -154,7 +154,7 @@ pluginDef_am = ModeDef('AM', label='AM', demodClass=AMDemodulator)
 
 
 class FMDemodulator(SimpleAudioDemodulator):
-	def __init__(self, mode, deviation=75000, demod_rate=48000, post_demod_rate=None, band_filter=None, band_filter_transition=None, **kwargs):
+	def __init__(self, mode, deviation=75000, demod_rate=48000, post_demod_rate=None, band_filter=None, band_filter_transition=None, tau=75e-6, **kwargs):
 		SimpleAudioDemodulator.__init__(self,
 			mode=mode,
 			demod_rate=demod_rate,
@@ -172,9 +172,9 @@ class FMDemodulator(SimpleAudioDemodulator):
 			channel_rate=demod_rate,
 			audio_decim=audio_decim,
 			deviation=deviation,
-			audio_pass=15000,
-			audio_stop=16000,
-			tau=75e-6,
+			audio_pass=post_demod_rate * 0.5 - 1000,
+			audio_stop=post_demod_rate * 0.5,
+			tau=tau,
 		)
 		self.do_connect()
 	
@@ -201,13 +201,13 @@ class NFMDemodulator(FMDemodulator):
 	def __init__(self, audio_rate, **kwargs):
 		# TODO support 2.5kHz deviation
 		deviation = 5000
-		transition = 3000
+		transition = 1000
 		FMDemodulator.__init__(self,
 			demod_rate=48000,  # TODO justify this number
 			audio_rate=audio_rate,
 			post_demod_rate=audio_rate,
 			deviation=deviation,
-			band_filter=deviation + transition * 0.3,
+			band_filter=deviation + transition * 0.5,
 			band_filter_transition=transition,
 			**kwargs)
 
