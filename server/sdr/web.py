@@ -12,6 +12,7 @@ import array
 import json
 import urllib
 import os.path
+import weakref
 
 import sdr.top
 
@@ -73,41 +74,44 @@ class BlockResource(resource.Resource):
 
 	def __init__(self, block, noteDirty, deleteSelf):
 		resource.Resource.__init__(self)
-		self._blockResources = {}
-		self._blockCells = {}
 		self._block = block
 		self._noteDirty = noteDirty
 		self._deleteSelf = deleteSelf
 		self._dynamic = block.state_is_dynamic()
-		for key, cell in block.state().iteritems():
-			ctor = cell.ctor()
-			if cell.isBlock():
-				self._blockResources[key] = None
-				self._blockCells[key] = cell
-			elif ctor is sdr.top.SpectrumTypeStub:
-				self.putChild(key, SpectrumResource(cell, self._noteDirty))
-			else:
-				self.putChild(key, JSONResource(cell, self._noteDirty))
+		# Weak dict ensures that we don't hold references to blocks that are no longer held by this block
+		self._blockResourceCache = weakref.WeakKeyDictionary()
+		if not self._dynamic: # currently dynamic blocks can only have block children
+			self._blockCells = {}
+			for key, cell in block.state().iteritems():
+				ctor = cell.ctor()
+				if cell.isBlock():
+					self._blockCells[key] = cell
+				elif ctor is sdr.top.SpectrumTypeStub:
+					self.putChild(key, SpectrumResource(cell, self._noteDirty))
+				else:
+					self.putChild(key, JSONResource(cell, self._noteDirty))
 	
 	def getChild(self, name, request):
-		if name in self._blockResources:
-			currentResource = self._blockResources[name]
-			currentBlock = self._blockCells[name].getBlock()
-			if currentResource is None or not currentResource.isForBlock(currentBlock):
-				self._blockResources[name] = currentResource = self.makeChildBlockResource(name, currentBlock)
-			return currentResource
-		elif self._dynamic:
+		if self._dynamic:
 			curstate = self._block.state()
 			if name in curstate:
 				cell = curstate[name]
 				if cell.isBlock():
-					currentResource = self.makeChildBlockResource(name, cell.getBlock())
-					self._blockCells[name] = cell
-					self._blockResources[name] = currentResource
-					return currentResource
+					return self.__getBlockChild(name, cell.getBlock())
+		else:
+			if name in self._blockCells:
+				return self.__getBlockChild(name, self._blockCells[name].getBlock())
+		# old-style-class super call
 		return resource.Resource.getChild(self, name, request)
 	
-	def makeChildBlockResource(self, name, block):
+	def __getBlockChild(self, name, block):
+		r = self._blockResourceCache.get(block)
+		if r is None:
+			r = self.__makeChildBlockResource(name, block)
+			self._blockResourceCache[block] = r
+		return r
+	
+	def __makeChildBlockResource(self, name, block):
 		def deleter():
 			self._block.delete_child(name)
 		return BlockResource(block, self._noteDirty, deleter)
