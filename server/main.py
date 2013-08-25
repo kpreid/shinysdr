@@ -74,16 +74,7 @@ def restore(root):
 		root.state_from_json(json.load(open(stateFile, 'r')))
 		# make a backup in case this code version misreads the state and loses things on save (but only if the load succeeded, in case the file but not its backup is bad)
 		shutil.copyfile(stateFile, stateFile + '~')
-	
 
-# TODO: This should not be a file copy operation; we should do an overlay somehow inside the web server.
-print 'Building web UI content...'
-jasmineOut = os.path.join(sdr.web.staticResourcePath, 'test/jasmine/')
-if os.path.exists(jasmineOut):
-	shutil.rmtree(jasmineOut)
-os.mkdir(jasmineOut)
-for name in ['jasmine.css', 'jasmine.js', 'jasmine-html.js']:
-	shutil.copyfile('deps/jasmine/lib/jasmine-core/' + name, jasmineOut + name)
 
 print 'Flow graph...'
 top = sdr.top.Top(sources=sources)

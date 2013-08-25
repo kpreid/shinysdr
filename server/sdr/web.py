@@ -293,15 +293,32 @@ class OurStreamFactory(protocol.Factory):
 staticResourcePath = os.path.join(os.path.dirname(__file__), 'webstatic')
 
 
+def makeStatic(filePath):
+	r = static.File(filePath)
+	r.contentTypes['.csv'] = 'text/csv'
+	r.indexNames = ['index.html']
+	return r
+
+def reify(parent, name):
+	# do what getChild would do
+	r = parent.createSimilarFile(parent.child(name).path)
+	parent.putChild(name, r)
+	return r
+
 def listen(config, top, noteDirty):
 	rootCap = config['rootCap']
 	
 	strports.listen(config['wsPort'], txws.WebSocketFactory(OurStreamFactory(top, rootCap)))
 	
-	appRoot = static.File(staticResourcePath)
-	appRoot.contentTypes['.csv'] = 'text/csv'
-	appRoot.indexNames = ['index.html']
+	appRoot = makeStatic(staticResourcePath)
 	appRoot.putChild('radio', BlockResource(top, noteDirty, notDeletable))
+	
+	# Construct explicit resources for merge.
+	test = reify(appRoot, 'test')
+	jasmine = reify(test, 'jasmine')
+	for name in ['jasmine.css', 'jasmine.js', 'jasmine-html.js']:
+		jasmine.putChild(name, static.File(os.path.join(
+				os.path.dirname(__file__), 'deps/jasmine/lib/jasmine-core/', name)))
 	
 	if rootCap is None:
 		root = appRoot
