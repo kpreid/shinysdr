@@ -1,3 +1,4 @@
 *.pyc
 dropin.cache
+_trial_temp*/
 /server/sdr/deps/

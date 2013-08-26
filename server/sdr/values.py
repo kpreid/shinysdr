@@ -202,10 +202,16 @@ class ExportedState(object):
 			def err(adjective, suffix):
 				# TODO better printing/logging, ship to client
 				print 'Warning: Discarding ' + adjective + ' state', str(self) + '.' + key, '=', state[key], suffix
+			def doTry(f):
+				try:
+					f()
+				except (LookupError, TypeError, ValueError) as e:
+					# a plausible set of exceptions, so we don't catch implausible ones
+					err('erroneous', '(' + type(e).__name__ + ': ' + str(e) + ')')
 			cell = cells.get(key, None)
 			if cell is None:
 				if dynamic:
-					self.state_insert(key, state[key])
+					doTry(lambda: self.state_insert(key, state[key]))
 				else:
 					err('nonexistent', '')
 			elif cell.isBlock():
@@ -213,11 +219,7 @@ class ExportedState(object):
 			elif not cell.isWritable():
 				err('non-writable', '')
 			else:
-				try:
-					cells[key].set(state[key])
-				except (LookupError, TypeError, ValueError) as e:
-					# a plausible set of exceptions, so we don't catch implausible ones
-					err('erroneous', '(' + type(e).__name__ + ': ' + str(e) + ')')
+				doTry(lambda: cells[key].set(state[key]))
 		# blocks are deferred because the specific blocks may depend on other keys
 		for key in defer:
 			cells[key].set(state[key])
