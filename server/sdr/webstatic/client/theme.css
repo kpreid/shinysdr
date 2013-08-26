@@ -3,6 +3,12 @@ body {
   color: black;
 }
 
+section > h2 {
+  border: #EEE outset;
+  border-width: 0 1px;
+  background: linear-gradient(to bottom, #FFF 0%,#CCC 100%);
+}
+
 .panel, .frame > details > summary {
   border-color: #DDD;
   background: #BBB;

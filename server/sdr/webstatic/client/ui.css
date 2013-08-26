@@ -5,18 +5,46 @@ html, body {
   height: 100%;
 }
 
-/* UI layout incl widgets */
-.controlpanel {
+/* (collapsible) sections */
+.ui-sections {
+  height: 100%;
   display: -webkit-flex;
   -webkit-flex-direction: row;
 }
-.controlpanel > .hscalegroup { /* TODO wrongish selector */
+.ui-sections > section {
+  display: -webkit-flex;
+  -webkit-flex-direction: column;
+  -webkit-flex: 0 1 auto;
+}
+.ui-sections > section.stretchy {
   -webkit-flex: 1 2;
   width: auto;
 }
+section > h2 {
+  font-size: 100%;
+  margin: 0;
+  padding: .2em;
+  -webkit-flex: 0 0 auto;
+}
+.ui-section-show-buttons {
+  display: block;
+  float: right;
+  font-size: 80%;
+}
+.ui-section-show-button {
+  display: inline-block;
+  margin: 0 .2em;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* widgets */
 .sidebar {
+  -webkit-flex: 1 1 auto;
+  height: auto;
   width: 17em;
-  -webkit-flex: 0 1 auto;
   overflow-y: auto;
 }
 .frame {
@@ -61,6 +89,7 @@ html, body {
 
 /* main visualizations */
 .hscalegroup {
+  -webkit-flex: 1 1;
   display: -webkit-flex;
   -webkit-flex-direction: column;
   height: 100%;

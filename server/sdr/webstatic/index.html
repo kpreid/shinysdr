@@ -3,30 +3,40 @@
   <title>Untitled Web SDR</title>
   <link rel="stylesheet" href="client/ui.css">
   <link rel="stylesheet" href="client/theme.css">
-</head><body class="controlpanel">
+</head><body class="ui-sections">
 
-<div class="hscalegroup">
-  <div class="hscale">
-    <div data-widget="ReceiverMarks" class="overlay"></div>
-    <canvas class="overlay" id="spectrum" data-widget="SpectrumPlot" data-target="spectrum_fft"></canvas>
+<section id="section-spectrum" class="stretchy">
+  <h2>Spectrum</h2>
+  <div class="hscalegroup">
+    <div class="hscale">
+      <div data-widget="ReceiverMarks" class="overlay"></div>
+      <canvas class="overlay" id="spectrum" data-widget="SpectrumPlot" data-target="spectrum_fft"></canvas>
+    </div>
+    <div data-target="source">
+    <span data-widget="FreqScale" data-target="freq"></span>
+    </div>
+    <canvas class="hscale" data-widget="WaterfallPlot" data-target="spectrum_fft" height="400"></canvas>
   </div>
-  <div data-target="source">
-  <span data-widget="FreqScale" data-target="freq"></span>
+</section>
+
+<section id="section-radio">
+  <h2>Radio Config</h2>
+  <div class="sidebar frame" data-widget="Top"></div>
+</section>
+
+<section id="section-db">
+  <h2>Frequency DB</h2>
+  <div class="sidebar frame">
+    <div class="panel" data-widget="RecordDetails" data-target="preset"></div>
+    <div class="panel" data-widget="FreqList" id="freqlist"></div>
   </div>
-  <canvas class="hscale" data-widget="WaterfallPlot" data-target="spectrum_fft" height="400"></canvas>
-</div>
-
-<div class="sidebar frame" data-widget="Top"></div>
-
-<div class="sidebar frame">
-  <div class="panel" data-widget="RecordDetails" data-target="preset"></div>
-  <div class="panel" data-widget="FreqList" id="freqlist"></div>
-</div>
+</section>
 
 <script src="client/events.js"></script>
 <script src="client/values.js"></script>
 <script src="client/network.js"></script>
 <script src="client/database.js"></script>
 <script src="client/widgets.js"></script>
+<script src="client/sections.js"></script>
 <script src="client/main.js"></script>
 </body></html>
