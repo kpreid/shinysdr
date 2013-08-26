@@ -8,24 +8,24 @@ html, body {
 /* (collapsible) sections */
 .ui-sections {
   height: 100%;
-  display: -webkit-flex;
-  -webkit-flex-direction: row;
-  -webkit-justify-content: center;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
 }
 .ui-sections > section {
-  display: -webkit-flex;
-  -webkit-flex-direction: column;
-  -webkit-flex: 0 1 auto;
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
 }
 .ui-sections > section.stretchy {
-  -webkit-flex: 1 2;
+  flex: 1 2;
   width: auto;
 }
 section > h2 {
   font-size: 100%;
   margin: 0;
   padding: .2em;
-  -webkit-flex: 0 0 auto;
+  flex: 0 0 auto;
 }
 .ui-section-show-buttons {
   display: block;
@@ -43,19 +43,19 @@ section > h2 {
 
 /* widgets */
 .sidebar {
-  -webkit-flex: 1 1 auto;
+  flex: 1 1 auto;
   height: auto;
   width: 17em;
   overflow-y: auto;
 }
 .frame {
-  display: -webkit-flex;
-  -webkit-flex-direction: column;
+  display: flex;
+  flex-direction: column;
 }
 .panel, .frame > details > summary {
   border-style: outset;
   border-width: .1em;
-  -webkit-flex-shrink: 0; /* default value to be overridden */
+  flex-shrink: 0; /* default value to be overridden */
   padding: .2em;
 }
 .frame > details {
@@ -90,20 +90,20 @@ section > h2 {
 
 /* main visualizations */
 .hscalegroup {
-  -webkit-flex: 1 1;
-  display: -webkit-flex;
-  -webkit-flex-direction: column;
+  flex: 1 1;
+  display: flex;
+  flex-direction: column;
   height: 100%;
   overflow-x: scroll;
   overflow-y: hidden;
   min-width: 0px; /* cause Chrome 27.0.1453.116 to be willing to scroll the flex element rather than stretch; don't know whether this is a bug or what */
 }
 .hscale {
-  display: -webkit-flex; /* don't expect this to be _used_ but causes "height 100%" of its contents to use the computed shrunk size rather than the written one */
-  -webkit-flex-direction: column;
+  display: flex; /* don't expect this to be _used_ but causes "height 100%" of its contents to use the computed shrunk size rather than the written one */
+  flex-direction: column;
   position: relative; /* allow contents to absolute position */
   width: 100%;
-  -webkit-flex: 100 100;
+  flex: 100 100;
   height: 50%;
 }
 .overlay {
@@ -183,7 +183,7 @@ section > h2 {
   font-family: 'Arial', sans-serif;
   font-size: .75em;
 
-  -webkit-flex-shrink: 0;
+  flex-shrink: 0;
   height: 1em;
   position: relative;
 }
@@ -225,10 +225,10 @@ section > h2 {
 /* widgets: frequency database list */
 .widget-FreqList {
   min-height: 10em;
-  -webkit-flex: 2 2;
+  flex: 2 2;
   
-  display: -webkit-flex;
-  -webkit-flex-direction: column;
+  display: flex;
+  flex-direction: column;
 }
 .widget-FreqList .freqlist-box, .widget-FreqList input {
   width: 100%;
@@ -236,10 +236,10 @@ section > h2 {
   box-sizing: border-box;
 }
 .widget-FreqList input {
-  /*-webkit-flex: 0 0;*/
+  /*flex: 0 0;*/
 }
 .widget-FreqList .freqlist-box {
-  -webkit-flex: 1 1;
+  flex: 1 1;
   overflow-x: hidden;
   overflow-y: scroll;
   min-height: 0px; /* cause Chrome 27.0.1453.116 to be willing to scroll the flex element rather than stretch; don't know whether this is a bug or what */
@@ -286,45 +286,45 @@ section > h2 {
 
 /* TODO(kpreid): SmallKnob/Slider duplication */
 .widget-SmallKnob-panel {
-  display: -webkit-flex;
-  -webkit-flex-direction: row;
+  display: flex;
+  flex-direction: row;
 }
 .widget-SmallKnob-label {
   display: inline-block;
-  -webkit-align-self: center;
+  align-self: center;
   overflow: hidden;
   text-overflow: ellipsis;
 
-  -webkit-flex: 0 0 auto;
+  flex: 0 0 auto;
   max-width: 8em;
 }
 .widget-SmallKnob-panel input {
-  -webkit-flex: 1 1 auto;
+  flex: 1 1 auto;
 
   vertical-align: middle;
 }
 
 .widget-Slider-panel {
-  display: -webkit-flex;
-  -webkit-flex-direction: row;
+  display: flex;
+  flex-direction: row;
 }
 .widget-Slider-label, .widget-Slider-text {
   display: inline-block;
-  -webkit-align-self: center;
+  align-self: center;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .widget-Slider-label {
-  -webkit-flex: 0 0 auto;
+  flex: 0 0 auto;
   max-width: 8em;
 }
 .widget-Slider-panel input {
-  -webkit-flex: 1 1 auto;
+  flex: 1 1 auto;
 
   vertical-align: middle;
 }
 .widget-Slider-text {
-  -webkit-flex: 0 0 8ex;
+  flex: 0 0 8ex;
   text-align: right;
   font-family: monospace;
 }
