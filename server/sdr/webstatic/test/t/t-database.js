@@ -64,8 +64,16 @@ describe('database', function () {
       expect(r.freq).toBeNaN();
       expect(r.lowerFreq).toBeNaN();
       expect(r.upperFreq).toBeNaN();
+      expect(r.location).toEqual(null);
       expect(r.label).toEqual('');
       expect(r.notes).toEqual('');
+    });
+
+    it('record should coerce a location', function () {
+      var r = (new sdr.database.Table()).add({location: ['1', '2']});
+      expect(r.location.length).toEqual(2);
+      expect(r.location[0]).toEqual(1);
+      expect(r.location[1]).toEqual(2);
     });
   });
 

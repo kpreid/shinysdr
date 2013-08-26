@@ -2059,6 +2059,7 @@ var sdr = sdr || {};
     menu(cell('type'), 'Type', {'channel': 'Channel', 'band': 'Band'});
     input(cell('freq'), 'Freq');  // TODO add lowerFreq/upperFreq display
     menu(cell('mode'), 'Mode', allModes);
+    input(cell('location'), 'Location').readOnly = true;  // can't edit yet
     input(cell('label'), 'Label');
     textarea(cell('notes'));
   }

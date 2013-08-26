@@ -249,7 +249,7 @@ var sdr = sdr || {};
   };
   database.fromCatalog = fromCatalog;
   
-  // Read the given resource as an index containing links to CSV files in Chirp <http://chirp.danplanet.com/> generic format. No particular reason for choosing Chirp other than it was a the first source and format of machine-readable channel data I found to experiment with.
+  // Read the given resource as an index containing links to CSV files in slightly extended Chirp <http://chirp.danplanet.com/> generic format. No particular reason for choosing Chirp other than it was a the first source and format of machine-readable channel data I found to experiment with.
   function fromCSV(url) {
     var table = new Table(decodeURIComponent(url.replace(/^.*\//, '')));
     sdr.network.externalGet(url, 'text', function(csv) {
@@ -274,20 +274,28 @@ var sdr = sdr || {};
           // TODO: Not sure what distinction the data is actually making
           mode: record.Mode === 'FM' ? 'NFM' : record.Mode || '',
           label: record.Name || '',
-          notes: record.Comment || ''
+          notes: record.Comment || '',
         };
+        // freq
         var match;
         if ((match = /^(\d+(?:\.\d+)?)(?:\s*-\s*(\d+(?:\.\d+)?))?$/.exec(record.Frequency))) {
           if (match[2]) {
+            // band is extension to the format
             entry.type = 'band';
             entry.lowerFreq = 1e6 * parseFloat(match[1]);
             entry.upperFreq = 1e6 * parseFloat(match[2]);
           } else {
+            // TODO: Consider making a distinction between channels and stations
             entry.type = 'channel';
             entry.freq = 1e6 * parseFloat(match[1]);
           }
         } else {
           error('Bad frequency value');
+        }
+        // geographic location -- extension to the format
+        if (record.Latitude && record.Longitude) {  // note that '0' is true
+          entry.location = Object.freeze([
+            parseFloat(record.Latitude), parseFloat(record.Longitude)]);
         }
         table.add(entry);
       });
@@ -308,6 +316,10 @@ var sdr = sdr || {};
     this.n.notify();
   }
   
+  function OptCoord(record) {
+    // might want to make this not _re_allocate at some point
+    return record === null ? null : Object.freeze([+record[0], +record[1]]);
+  }
   function makeRecordProp(name, coerce, defaultValue) {
     var internalName = '_stored_' + name;
     return {
@@ -316,7 +328,7 @@ var sdr = sdr || {};
         return this[internalName];
       },
       set: function (value) {
-        this[internalName] = value;
+        this[internalName] = coerce(value);
         (0, this._hook)();
         this.n.notify();
       },
@@ -324,12 +336,12 @@ var sdr = sdr || {};
     };
   }
   var recordProps = {
-    // TODO add value validation
     type: makeRecordProp('type', String, 'channel'), // TODO enum constraint
     mode: makeRecordProp('mode', String, '?'),
     freq: makeRecordProp('freq', Number, NaN), // TODO only for channel
     lowerFreq: makeRecordProp('lowerFreq', Number, NaN),  // TODO only for band
     upperFreq: makeRecordProp('upperFreq', Number, NaN),  // TODO only for band
+    location: makeRecordProp('location', OptCoord, null),
     label: makeRecordProp('label', String, ''),
     notes: makeRecordProp('notes', String, '')
   };
