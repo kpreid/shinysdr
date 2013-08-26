@@ -150,10 +150,7 @@ class Receiver(gr.hier_block2, ExportedState):
 		else:
 			defaults = self.demodulator.state_to_json()
 		if mode is None:
-			if 'mode' in defaults:
-				mode = defaults['mode']
-			else:
-				mode = 'AM'
+			mode = self.mode
 		self.demodulator = self.__make_demodulator(mode, defaults)
 		self.mode = mode
 
@@ -202,22 +199,18 @@ class Receiver(gr.hier_block2, ExportedState):
 
 
 class ContextForDemodulator(object):
-	def __init__(self, split):
-		self._split = split
+	def __init__(self, receiver):
+		self._receiver = receiver
 		self._enabled = False # assigned outside
 	
 	def revalidate(self):
 		raise NotImplementedError('ContextForDemodulator not done')
 		if self._enabled:
-			self._top._update_receiver_validity(self._key)
+			self._receiver.context._update_receiver_validity(self._key)
 	
 	def rebuild_me(self):
 		assert self._enabled
-		self._split._rebuild_receiver()
-	
-	def replace_me(self, mode):
-		assert self._enabled
-		self._split._rebuild_receiver(mode=mode)
+		self._receiver._rebuild_demodulator()
 
 
 class IDemodulator(Interface):
