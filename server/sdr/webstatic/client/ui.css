@@ -259,13 +259,12 @@ html, body {
   display: -webkit-flex;
   -webkit-flex-direction: row;
 }
-.widget-SmallKnob-label, {
+.widget-SmallKnob-label {
   display: inline-block;
   -webkit-align-self: center;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.widget-SmallKnob-label {
+
   -webkit-flex: 0 0 auto;
   max-width: 8em;
 }
