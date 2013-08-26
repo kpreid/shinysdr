@@ -10,6 +10,7 @@ html, body {
   height: 100%;
   display: -webkit-flex;
   -webkit-flex-direction: row;
+  -webkit-justify-content: center;
 }
 .ui-sections > section {
   display: -webkit-flex;
