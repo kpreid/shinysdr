@@ -50,7 +50,7 @@ class Top(gr.top_block, ExportedState):
 
 		# Configuration
 		self._sources = dict(sources)
-		self.source_name = 'audio'  # placeholder - TODO be nothing instead
+		self.source_name = self._sources.keys()[0]  # arbitrary valid initial value
 		self.audio_rate = audio_rate = 32000
 		self.spectrum_resolution = 4096
 		self.spectrum_rate = 30
