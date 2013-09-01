@@ -389,8 +389,8 @@ define(['./values', './events'], function (values, events) {
       ignore('preset');  // displayed separately, not real state
       ignore('targetDB');  // not real state
       
-      if ('running' in block) {
-        addWidget('running', 'Toggle', 'Run');
+      if ('unpaused' in block) {
+        addWidget('unpaused', 'Toggle', 'Run');
       }
       if ('source_name' in block) {
         addWidget('source_name', 'Radio');

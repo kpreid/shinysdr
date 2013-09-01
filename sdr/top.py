@@ -45,7 +45,8 @@ class Top(gr.top_block, ExportedState):
 
 	def __init__(self, sources={}):
 		gr.top_block.__init__(self, "SDR top block")
-		self._running = False
+		self.__unpaused = False  # user state
+		self.__running = False  # actually started
 		self.__lock_count = 0
 
 		# Configuration
@@ -138,11 +139,15 @@ class Top(gr.top_block, ExportedState):
 		interleaver = blocks.streams_to_vector(gr.sizeof_float, num_audio_channels)
 		# TODO: bundle the interleaver and sink in a hier block so it doesn't have to be reconnected
 		self.audio_queue_sinks[queue] = (queue_rate, interleaver, sink)
+		
 		self.__needs_reconnect = True
 		self._do_connect()
+		self.__start_or_stop()
 	
 	def remove_audio_queue(self, queue):
 		del self.audio_queue_sinks[queue]
+		
+		self.__start_or_stop()
 		self.__needs_reconnect = True
 		self._do_connect()
 
@@ -264,7 +269,7 @@ class Top(gr.top_block, ExportedState):
 
 	def state_def(self, callback):
 		super(Top, self).state_def(callback)
-		callback(Cell(self, 'running', writable=True, ctor=bool))
+		callback(Cell(self, 'unpaused', writable=True, ctor=bool))
 		callback(Cell(self, 'source_name', writable=True,
 			ctor=Enum(dict([(k, str(v)) for (k, v) in self._sources.iteritems()]))))
 		callback(Cell(self, 'input_rate', ctor=int))
@@ -285,14 +290,24 @@ class Top(gr.top_block, ExportedState):
 		self._recursive_unlock()
 		
 		super(Top, self).start()
+		self.__running = True
 
-	def get_running(self):
-		return self._running
+	def stop(self):
+		super(Top, self).stop()
+		self.__running = False
+
+	def get_unpaused(self):
+		return self.__unpaused
 	
-	def set_running(self, value):
-		if value != self._running:
-			self._running = value
-			if value:
+	def set_unpaused(self, value):
+		self.__unpaused = bool(value)
+		self.__start_or_stop()
+	
+	def __start_or_stop(self):
+		# TODO: We should also run if at least one client is watching the spectrum or demodulators' cell-based outputs, but there's no good way to recognize that yet.
+		should_run = self.__unpaused and len(self.audio_queue_sinks) > 0
+		if should_run != self.__running:
+			if should_run:
 				self.start()
 			else:
 				self.stop()
