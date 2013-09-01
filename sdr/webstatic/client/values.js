@@ -1,8 +1,7 @@
-var sdr = sdr || {};
-(function () {
+define(['./events'], function (events) {
   'use strict';
   
-  var exports = sdr.values = {};
+  var exports = {};
   
   function Enum(valuesIn) {
     var values = Object.create(null);
@@ -52,7 +51,7 @@ var sdr = sdr || {};
   function Cell(type) {
     if (type === undefined) { throw new Error('oops type: ' + this.constructor.name); }
     this.type = type;
-    this.n = new sdr.events.Notifier();
+    this.n = new events.Notifier();
   }
   Cell.prototype.depend = function(listener) {
     this.n.listen(listener);
@@ -90,5 +89,5 @@ var sdr = sdr || {};
   };
   exports.StorageNamespace = StorageNamespace;
   
-  Object.freeze(exports);
-}());
+  return Object.freeze(exports);
+});

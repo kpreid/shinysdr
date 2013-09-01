@@ -1,8 +1,7 @@
-var sdr = sdr || {};
-(function () {
+define(['./events', './network'], function (events, network) {
   'use strict';
   
-  var database = {};
+  var exports = {};
   
   function Source() {
     
@@ -147,7 +146,7 @@ var sdr = sdr || {};
     this._listeners = [];
     this._chainedListening = false;
     
-    var notifier = new sdr.events.Notifier();
+    var notifier = new events.Notifier();
     function forward() {
       //console.log(this + ' forwarding');
       this._chainedListening = false;
@@ -203,10 +202,10 @@ var sdr = sdr || {};
       return source.getGeneration() === this._sourceGenerations[i] && source._isUpToDate();
     }.bind(this));
   };
-  database.Union = Union;
+  exports.Union = Union;
   
   function Table(label) {
-    this.n = new sdr.events.Notifier();
+    this.n = new events.Notifier();
     View.call(this, this);
     this._viewGeneration = 0;
     this._label = label;
@@ -233,11 +232,11 @@ var sdr = sdr || {};
     trigger();
     return record;
   };
-  database.Table = Table;
+  exports.Table = Table;
   
   function fromCatalog(url) {
     var union = new Union();
-    sdr.network.externalGet(url, 'document', function(indexDoc) {
+    network.externalGet(url, 'document', function(indexDoc) {
       var anchors = indexDoc.querySelectorAll('a[href]');
       //console.log('Fetched database index with ' + anchors.length + ' links.');
       Array.prototype.forEach.call(anchors, function (anchor) {
@@ -247,12 +246,12 @@ var sdr = sdr || {};
     });
     return union;
   };
-  database.fromCatalog = fromCatalog;
+  exports.fromCatalog = fromCatalog;
   
   // Read the given resource as an index containing links to CSV files in slightly extended Chirp <http://chirp.danplanet.com/> generic format. No particular reason for choosing Chirp other than it was a the first source and format of machine-readable channel data I found to experiment with.
   function fromCSV(url) {
     var table = new Table(decodeURIComponent(url.replace(/^.*\//, '')));
-    sdr.network.externalGet(url, 'text', function(csv) {
+    network.externalGet(url, 'text', function(csv) {
       //console.group('Parsing ' + url);
       var csvLines = csv.split(/[\r\n]+/);
       var columns = csvLines.shift().split(/,/);
@@ -303,7 +302,7 @@ var sdr = sdr || {};
     });
     return table;
   }
-  database.fromCSV = fromCSV;
+  exports.fromCSV = fromCSV;
 
   function compareRecord(a, b) {
     return (a.freq || a.lowerFreq) - (b.freq || b.lowerFreq);
@@ -347,7 +346,7 @@ var sdr = sdr || {};
   };
   function Record(initial, changeHook) {
     this._hook = changeHook;
-    this.n = new sdr.events.Notifier();
+    this.n = new events.Notifier();
     for (var name in recordProps) {
       this[name] = initial.propertyIsEnumerable(name) ? initial[name] : recordProps[name]._my_default;
     }
@@ -409,10 +408,10 @@ var sdr = sdr || {};
     }
     return fields;
   }
-  database._parseCSVLine = parseCSVLine; // exported for testing only
+  exports._parseCSVLine = parseCSVLine; // exported for testing only
   
   // Generic FM broadcast channels
-  database.fm = (function () {
+  exports.fm = (function () {
     // Wikipedia currently says FM channels are numbered like so, but no one uses the numbers. Well, I'll use the numbers, just to start from integers. http://en.wikipedia.org/wiki/FM_broadcasting_in_the_USA
     var table = new Table('builtin FM');
     for (var channel = 200; channel <= 300; channel++) {
@@ -429,7 +428,7 @@ var sdr = sdr || {};
   }());
   
   // Aircraft band channels
-  database.air = (function () {
+  exports.air = (function () {
     // http://en.wikipedia.org/wiki/Airband
     var table = new Table('builtin air');
     for (var freq = 108e6; freq <= 117.96e6; freq += 50e3) {
@@ -451,10 +450,10 @@ var sdr = sdr || {};
     return table;
   }());
   
-  database.allSystematic = new Union();
-  database.allSystematic.add(database.fm);
+  exports.allSystematic = new Union();
+  exports.allSystematic.add(exports.fm);
   // TODO: This is currently too much clutter. Re-add this sort of info once we have ways to deemphasize repetitive information.
-  //database.allSystematic.add(database.air);
+  //exports.allSystematic.add(exports.air);
   
-  sdr.database = Object.freeze(database);
-}());
+  return Object.freeze(exports);
+});

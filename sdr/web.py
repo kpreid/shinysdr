@@ -323,6 +323,8 @@ def listen(config, top, noteDirty):
 	client = reify(appRoot, 'client')
 	client.putChild('openlayers', static.File(os.path.join(
 		os.path.dirname(__file__), 'deps/openlayers')))
+	client.putChild('require.js', static.File(os.path.join(
+		os.path.dirname(__file__), 'deps/require.js')))
 	
 	if rootCap is None:
 		root = appRoot

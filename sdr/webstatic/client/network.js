@@ -1,11 +1,10 @@
-var sdr = sdr || {};
-(function () {
+define(['./values', './events'], function (values, events) {
   'use strict';
   
-  var Cell = sdr.values.Cell;
-  var typeFromDesc = sdr.values.typeFromDesc;
+  var Cell = values.Cell;
+  var typeFromDesc = values.typeFromDesc;
   
-  var network = sdr.network = {};
+  var exports = {};
   
   // Connectivity management
   var isDown = false;
@@ -71,7 +70,7 @@ var sdr = sdr || {};
     r.send(data);
     console.log(url, data);
   }
-  network.xhrput = xhrput;
+  exports.xhrput = xhrput;
   
   function xhrpost(url, data, opt_callback) {
     // TODO add retry behavior (once we know our idempotence story)
@@ -86,7 +85,7 @@ var sdr = sdr || {};
     r.send(data);
     console.log(url, data);
   }
-  network.xhrpost = xhrpost;
+  exports.xhrpost = xhrpost;
   
   function xhrdelete(url, opt_callback) {
     if (isDown) {
@@ -105,7 +104,7 @@ var sdr = sdr || {};
     r.send();
     console.log('DELETE', url);
   }
-  network.xhrdelete = xhrdelete;
+  exports.xhrdelete = xhrdelete;
   
   function externalGet(url, responseType, callback) {
     var r = new XMLHttpRequest();
@@ -122,7 +121,7 @@ var sdr = sdr || {};
     r.open('GET', url, true);
     r.send();
   }
-  network.externalGet = externalGet;
+  exports.externalGet = externalGet;
   
   function ReadWriteCell(name, assumed, type) {
     Cell.call(this, type);
@@ -154,7 +153,7 @@ var sdr = sdr || {};
     }.bind(this);
   }
   ReadWriteCell.prototype = Object.create(Cell.prototype, {constructor: {value: ReadWriteCell}});
-  network.ReadWriteCell = ReadWriteCell;
+  exports.ReadWriteCell = ReadWriteCell;
   
   function ReadCell(name, /* initial */ value, type, transform) {
     Cell.call(this, type);
@@ -169,7 +168,7 @@ var sdr = sdr || {};
     };
   }
   ReadCell.prototype = Object.create(Cell.prototype, {constructor: {value: ReadCell}});
-  network.ReadCell = ReadCell;
+  exports.ReadCell = ReadCell;
   
   function SpectrumCell(url) {
     var fft = new Float32Array(0);
@@ -203,7 +202,7 @@ var sdr = sdr || {};
       return fft;
     }
     
-    ReadCell.call(this, url, fft, sdr.values.any, transform);
+    ReadCell.call(this, url, fft, values.any, transform);
     
     this.getCenterFreq = function() {
       return centerFreq;
@@ -213,7 +212,7 @@ var sdr = sdr || {};
     };
   }
   SpectrumCell.prototype = Object.create(ReadCell.prototype, {constructor: {value: SpectrumCell}});
-  network.SpectrumCell = SpectrumCell;
+  exports.SpectrumCell = SpectrumCell;
   
   function setNonEnum(o, p, v) {
     Object.defineProperty(o, p, {
@@ -236,8 +235,8 @@ var sdr = sdr || {};
       case 'block':
         var sub = {};
         setNonEnum(sub, '_url', url); // TODO kludge
-        setNonEnum(sub, '_deathNotice', new sdr.events.Notifier());
-        setNonEnum(sub, '_reshapeNotice', new sdr.events.Notifier());
+        setNonEnum(sub, '_deathNotice', new events.Notifier());
+        setNonEnum(sub, '_reshapeNotice', new events.Notifier());
         for (var k in desc.children) {
           // TODO: URL should come from server instead of being constructed here
           sub[k] = buildFromDesc(url + '/' + encodeURIComponent(k), desc.children[k]);
@@ -266,7 +265,7 @@ var sdr = sdr || {};
     }, true);
     return ws;
   }
-  network.openWebSocket = openWebSocket;
+  exports.openWebSocket = openWebSocket;
   
   function connect(rootURL, callback) {
     var cellTree;
@@ -330,7 +329,7 @@ var sdr = sdr || {};
       callback(cellTree);
     });
   }
-  network.connect = connect;
+  exports.connect = connect;
   
-  Object.freeze(network);
-}());
+  return Object.freeze(exports);
+});

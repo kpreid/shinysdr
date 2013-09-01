@@ -1,15 +1,13 @@
-var sdr = sdr || {};
-(function () {
+define(['./values', './events'], function (values, events) {
   'use strict';
   
-  var Cell = sdr.values.Cell;
-  var StorageNamespace = sdr.values.StorageNamespace;
+  var Cell = values.Cell;
+  var StorageNamespace = values.StorageNamespace;
   
-  // support components module
-  var widget = sdr.widget = {};
+  var exports = {};
   
-  // sdr.widgets contains *only* widget types and can be used as a lookup namespace
-  var widgets = sdr.widgets = Object.create(null);
+  // contains *only* widget types and can be used as a lookup namespace
+  var widgets = Object.create(null);
   
   function mod(value, modulus) {
     return (value % modulus + modulus) % modulus;
@@ -31,7 +29,7 @@ var sdr = sdr || {};
     this.freqDB = config.freqDB;
     this.spectrumView = config.spectrumView;
   }
-  sdr.widget.Context = Context;
+  exports.Context = Context;
   
   function createWidgetsList(rootTarget, context, list) {
     Array.prototype.forEach.call(list, function (child) {
@@ -42,7 +40,7 @@ var sdr = sdr || {};
     var scheduler = context.scheduler;
     if (node.hasAttribute && node.hasAttribute('data-widget')) {
       var typename = node.getAttribute('data-widget');
-      var T = sdr.widgets[typename];
+      var T = widgets[typename];
       if (!T) {
         console.error('Bad widget type:', node);
         return;
@@ -148,7 +146,7 @@ var sdr = sdr || {};
       createWidgetsList(rootTarget, context, node.childNodes);
     }
   }
-  sdr.widget.createWidgets = createWidgets;
+  exports.createWidgets = createWidgets;
   
   // Defines the display parameters and coordinate calculations of the spectrum widgets
   var MAX_ZOOM_BINS = 60; // Maximum zoom shows this many FFT bins
@@ -165,7 +163,7 @@ var sdr = sdr || {};
     scrollStub.style.marginTop = '-1px';
     scrollStub.style.visibility = 'hidden';
     
-    var n = this.n = new sdr.events.Notifier();
+    var n = this.n = new events.Notifier();
     
     // per-drawing-frame parameters
     var bandwidth, centerFreq, leftFreq, pixelWidth, pixelsPerHertz, cacheScrollLeft;
@@ -315,7 +313,7 @@ var sdr = sdr || {};
       }, false);
     }.bind(this);
   }
-  sdr.widget.SpectrumView = SpectrumView;
+  exports.SpectrumView = SpectrumView;
   
   // Superclass for a sub-block widget
   function Block(config, optSpecial) {
@@ -366,9 +364,9 @@ var sdr = sdr || {};
       
       var member = block[name];
       if (member instanceof Cell) {
-        if (member.type instanceof sdr.values.Range) {
+        if (member.type instanceof values.Range) {
           addWidget(name, member.type.logarithmic ? 'LogSlider' : 'LinSlider', name);
-        } else if (member.type instanceof sdr.values.Enum) {
+        } else if (member.type instanceof values.Enum) {
           addWidget(name, 'Radio', name);
         } else if (member.type === Boolean) {
           addWidget(name, 'Toggle', name);
@@ -1481,7 +1479,7 @@ var sdr = sdr || {};
     var lowerBound = -Infinity;
     var upperBound = Infinity;
     var type = target.type;
-    if (type instanceof sdr.values.Range) {  // TODO: better type protocol
+    if (type instanceof values.Range) {  // TODO: better type protocol
       lowerBound = type.min;
       upperBound = type.max;
       // TODO: use integer flag, w decimal points?
@@ -2142,7 +2140,7 @@ var sdr = sdr || {};
     }
     
     var type = target.type;
-    if (type instanceof sdr.values.Range) {
+    if (type instanceof values.Range) {
       input.min = getT(type.min);
       input.max = getT(type.max);
       input.step = (type.integer && !type.logarithmic) ? 1 : 'any';
@@ -2195,7 +2193,7 @@ var sdr = sdr || {};
     var format = function(n) { return n.toFixed(2); };
     
     var type = target.type;
-    if (type instanceof sdr.values.Range) {
+    if (type instanceof values.Range) {
       slider.min = getT(type.min);
       slider.max = getT(type.max);
       slider.step = (type.integer && !type.logarithmic) ? 1 : 'any';
@@ -2351,5 +2349,6 @@ var sdr = sdr || {};
   }
   widgets.Angle = Angle;
   
-  Object.freeze(widgets);
-}());
+  exports.widgets = Object.freeze(widgets);
+  return Object.freeze(exports);
+});

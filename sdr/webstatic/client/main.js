@@ -1,21 +1,21 @@
-(function () {
+define(['./values', './events', './database', './network', './maps', './widget', './audio', './sections'], function (values, events, database, network, maps, widget, audio, sections) {
   'use strict';
   
-  var any = sdr.values.any;
-  var LocalCell = sdr.values.LocalCell;
-  var StorageNamespace = sdr.values.StorageNamespace;
+  var any = values.any;
+  var LocalCell = values.LocalCell;
+  var StorageNamespace = values.StorageNamespace;
   
-  var scheduler = new sdr.events.Scheduler();
+  var scheduler = new events.Scheduler();
   
-  var freqDB = new sdr.database.Union();
-  freqDB.add(sdr.database.allSystematic);
-  freqDB.add(sdr.database.fromCatalog('dbs/'));
+  var freqDB = new database.Union();
+  freqDB.add(database.allSystematic);
+  freqDB.add(database.fromCatalog('dbs/'));
   
   // Map
-  var map = new sdr.maps.Map(document.getElementById('map'), scheduler, freqDB);
+  var map = new maps.Map(document.getElementById('map'), scheduler, freqDB);
   
   var radio;
-  sdr.network.connect('radio', function gotDesc(remote) {
+  network.connect('radio', function gotDesc(remote) {
     radio = remote;
 
     // Takes center freq as parameter so it can be used on hypotheticals and so on.
@@ -107,26 +107,26 @@
     };
     
     // kludge till we have proper editing
-    var writableDB = new sdr.database.Table();
+    var writableDB = new database.Table();
     freqDB.add(writableDB);
     radio.targetDB = writableDB; // kludge reference
   
-    var view = new sdr.widget.SpectrumView({
+    var view = new widget.SpectrumView({
       scheduler: scheduler,
       radio: radio,
       element: document.querySelector('.hscalegroup'), // TODO relic
       storage: new StorageNamespace(localStorage, 'sdr.viewState.spectrum.')
     });
     
-    var context = new sdr.widget.Context({
+    var context = new widget.Context({
       radio: radio,
       spectrumView: view,
       freqDB: freqDB,
       scheduler: scheduler
     });
     
-    sdr.widget.createWidgets(radio, context, document);
+    widget.createWidgets(radio, context, document);
   }); // end gotDesc
   
-  sdr.audio.connectAudio('/audio');  // TODO get url from server
-}());
+  audio.connectAudio('/audio');  // TODO get url from server
+});

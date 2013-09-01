@@ -5,18 +5,19 @@
   <link rel="stylesheet" href="jasmine/jasmine.css">
   <script src="jasmine/jasmine.js"></script>
   <script src="jasmine/jasmine-html.js"></script>
-  
-  <script src="../client/events.js"></script>
-  <script src="../client/values.js"></script>
-  <script src="../client/database.js"></script>
-  <script src="../client/network.js"></script>
-  <script src="../client/widgets.js"></script>
-  <script src="../client/sections.js"></script>
-  <script src="../client/maps.js"></script>
-  <script src="../client/audio.js"></script>
+  <script src="../client/require.js"></script>
 </head><body>
   <script>
-    (function() {
+    // TODO: kludge to use old style namespaces
+    var sdr = {};
+    var load_names = ['audio', 'database', 'events', 'maps', 'network', 'sections', 'values', 'widget'];
+    require(load_names.map(function(x) { return '../client/' + x; }), function() {
+      var args = arguments;
+      console.log(args);
+      load_names.forEach(function (name, i) {
+        sdr[name] = args[i];
+      });
+      
       // recipe from Jasmine docs
       var jasmineEnv = jasmine.getEnv();
       jasmineEnv.updateInterval = 250;
@@ -45,6 +46,6 @@
           }
         });
       });
-    }());
+    });
   </script>
 </body></html>

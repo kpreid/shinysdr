@@ -1,7 +1,7 @@
-var sdr = sdr || {};
-(function () {
+define(['./network'], function (network) {
+  'use strict';
   
-  sdr.audio = {};
+  var exports = {};
   
   function connectAudio(url) {
     // TODO portability
@@ -12,7 +12,7 @@ var sdr = sdr || {};
     var queue = [];
     function openWS() {
       // TODO: refactor reconnecting logic
-      var ws = sdr.network.openWebSocket(url + '?rate=' + encodeURIComponent(JSON.stringify(audio.sampleRate)));
+      var ws = network.openWebSocket(url + '?rate=' + encodeURIComponent(JSON.stringify(audio.sampleRate)));
       ws.onmessage = function(event) {
         if (queue.length > 100) {
           console.log('Extreme audio overrun.');
@@ -83,7 +83,7 @@ var sdr = sdr || {};
     //console.log('audio init done');
   }
   
-  sdr.audio.connectAudio = connectAudio;
+  exports.connectAudio = connectAudio;
   
-  Object.freeze(sdr.audio);
-}());
+  return Object.freeze(exports);
+});

@@ -31,7 +31,7 @@ describe('widget', function () {
     it('should hold a negative zero', function () {
       var cell = new sdr.values.LocalCell(sdr.values.any);
       cell.set(0);
-      widget = new sdr.widgets.Knob({
+      widget = new sdr.widget.widgets.Knob({
         target: cell,
         scheduler: scheduler
       });

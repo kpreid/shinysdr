@@ -1,8 +1,7 @@
-var sdr = sdr || {};
-(function () {
+define(function () {
   'use strict';
   
-  var events = sdr.events = {};
+  var exports = {};
   
   function schedulerRAFCallback() {
     var limit = 10;
@@ -28,7 +27,7 @@ var sdr = sdr || {};
       window.webkitRequestAnimationFrame(this._callback);
     }
   }
-  events.Scheduler = Scheduler;
+  exports.Scheduler = Scheduler;
   
   function nSchedule(fn) {
     //console.log('Notifier scheduling ' + fn.toString().split('\n')[0]);
@@ -54,5 +53,7 @@ var sdr = sdr || {};
     }
     this._listening.push(fn);
   };
-  events.Notifier = Notifier;
-}());
+  exports.Notifier = Notifier;
+  
+  return Object.freeze(exports);
+});

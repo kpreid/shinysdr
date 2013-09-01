@@ -1,8 +1,8 @@
-var sdr = sdr || {};
-(function () {
+// Note OpenLayers dependency; OpenLayers is not an AMD module
+define(function () {
   'use strict';
   
-  var maps = sdr.maps = {};
+  var exports = {};
   
   function Map(element, scheduler, db) {
     function projectedPoint(lat, lon) {
@@ -59,7 +59,7 @@ var sdr = sdr || {};
     updateDBLayer.scheduler = scheduler;
     updateDBLayer();
   }
-  maps.Map = Map;
+  exports.Map = Map;
   
-  Object.freeze(maps);
-}());
+  return Object.freeze(exports);
+});

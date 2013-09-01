@@ -1,9 +1,9 @@
 // Manages collapsing of top-level UI sections (which are not <details> because those interact poorly with flexbox on Chrome)
 
-(function () {
+define(['./values'], function (values) {
   'use strict';
 
-  var StorageNamespace = sdr.values.StorageNamespace;
+  var StorageNamespace = values.StorageNamespace;
 
   var allSections = [];
   var visibleCount = NaN;
@@ -80,4 +80,6 @@
     });
   }
   allSections.forEach(function (r) { r.update(); });
-}());
+  
+  // TODO make this have exports rather than a side effect
+});
