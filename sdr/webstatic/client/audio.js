@@ -61,7 +61,9 @@ define(['./network'], function (network) {
         }
         if (queue.length > targetQueueSize) {
           var drop = (queue.length - targetQueueSize) * 3;
-          console.log('Audio overrun; dropping', drop, 'samples.');
+          if (drop > 6) {  // ignore small clock-skew-ish amounts of overrun
+            console.log('Audio overrun; dropping', drop, 'samples.');
+          }
           j = Math.max(0, j - drop);
         }
       }
