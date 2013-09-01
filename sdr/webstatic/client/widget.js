@@ -752,8 +752,11 @@ define(['./values', './events'], function (values, events) {
       var fftSize = Math.max(1, config.target.get().length), history = Math.max(1, canvas.height);
 
       function setScale() {
-        gl.uniform1f(gl.getUniformLocation(program, 'xRes'), canvas.width);
-        gl.uniform1f(gl.getUniformLocation(program, 'yRes'), canvas.height);
+        var w = canvas.width;
+        var h = canvas.height;
+        gl.uniform1f(gl.getUniformLocation(program, 'xRes'), w);
+        gl.uniform1f(gl.getUniformLocation(program, 'yRes'), h);
+        gl.viewport(0, 0, w, h);
       }
       setScale();
 
@@ -802,8 +805,6 @@ define(['./values', './events'], function (values, events) {
           }
 
           commonNewData(buffer, bufferCenterFreq);
-
-          gl.viewport(0, 0, canvas.width, canvas.height);
 
           gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
           var minLevel = view.minLevel;
