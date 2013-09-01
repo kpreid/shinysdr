@@ -225,6 +225,9 @@ define(['./values', './events'], function (values, events) {
     this.rightVisibleFreq = function rightVisibleFreq() {
       return leftFreq + (cacheScrollLeft + pixelWidth) / pixelsPerHertz;
     };
+    this.getVisiblePixelWidth = function getVisiblePixelWidth() {
+      return pixelWidth;
+    };
     
     this.changeZoom = function changeZoom(delta, cursorX) {
       var maxZoom = Math.max(
@@ -1828,7 +1831,7 @@ define(['./values', './events'], function (values, events) {
       outer.style.marginLeft = view.freqToCSSLeft(centerFreq - bandwidth/2);
       outer.style.width = view.freqToCSSLength(bandwidth);
       
-      var maxLabels = outer.offsetWidth / labelWidth;
+      var maxLabels = view.getVisiblePixelWidth() / labelWidth;
       
       // We could try to calculate the step using logarithms, but floating-point error would be tiresome.
       // TODO: Make these thresholds less magic-numbery.
