@@ -58,6 +58,12 @@ define(function () {
     }
     updateDBLayer.scheduler = scheduler;
     updateDBLayer();
+    
+    // No good way to listen for layout updates, so poll
+    // TODO: build a generic resize hook that SpectrumView can use too
+    setInterval(function() {
+      olm.updateSize();
+    }, 1000);
   }
   exports.Map = Map;
   
