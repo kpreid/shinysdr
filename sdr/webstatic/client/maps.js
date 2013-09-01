@@ -13,7 +13,9 @@ var sdr = sdr || {};
       return {externalGraphic: 'client/openlayers/img/marker' + s + '.png', graphicHeight: 21, graphicWidth: 16};
     }
     
-    var baseLayer = new OpenLayers.Layer('(Blank)', {isBaseLayer: true});
+    var baseLayer = new OpenLayers.Layer('Blank', {
+      isBaseLayer: true
+    });
     // var baseLayer = new OpenLayers.Layer.OSM();
     var olm = new OpenLayers.Map(element, {
       projection: 'EPSG:3857',
@@ -21,6 +23,8 @@ var sdr = sdr || {};
       center: projectedPoint(37.663576, -122.271652).getBounds().getCenterLonLat(),
       zoom: 9
     });
+    
+    olm.addControl(new OpenLayers.Control.LayerSwitcher());
     
     var dbLayer = new OpenLayers.Layer.Vector('Database', {
       styleMap: new OpenLayers.StyleMap({'default':{
