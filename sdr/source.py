@@ -30,7 +30,7 @@ class Source(gr.hier_block2, ExportedState):
 	def state_def(self, callback):
 		super(Source, self).state_def(callback)
 		callback(Cell(self, 'sample_rate', ctor=int))
-		# all sources should also have 'freq' but writability is not guaranteed so not specified here
+		# all sources should also have 'freq' but type and writability need to be defined per subclass
 
 	def get_sample_rate(self):
 		raise NotImplementedError()

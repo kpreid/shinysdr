@@ -1478,6 +1478,18 @@ var sdr = sdr || {};
   function Knob(config) {
     var target = config.target;
 
+    var lowerBound = -Infinity;
+    var upperBound = Infinity;
+    var type = target.type;
+    if (type instanceof sdr.values.Range) {  // TODO: better type protocol
+      lowerBound = type.min;
+      upperBound = type.max;
+      // TODO: use integer flag, w decimal points?
+    }
+    function clamp(value) {
+      return Math.min(upperBound, Math.max(lowerBound, value));
+    }
+
     var container = this.element = document.createElement("span");
     container.className = "knob";
     var places = [];
@@ -1498,7 +1510,7 @@ var sdr = sdr || {};
       places[i] = {element: digit, text: digitText};
       var scale = Math.pow(10, i);
       function spin(direction) {
-        target.set(direction * scale + target.get());
+        target.set(clamp(direction * scale + target.get()));
       }
       digit.addEventListener("mousewheel", function(event) { // Not in FF
         // TODO: deal with high-res/accelerated scrolling
@@ -1573,7 +1585,7 @@ var sdr = sdr || {};
         }
         value += (input - currentDigitValue) * scale;
         if (negative) { value = -value; }
-        target.set(value);
+        target.set(clamp(value));
 
         focusNext();
         event.preventDefault();

@@ -43,14 +43,14 @@ class OsmoSDRSource(Source):
 
 	def state_def(self, callback):
 		super(OsmoSDRSource, self).state_def(callback)
-		callback(Cell(self, 'freq', writable=True, ctor=float))
+		# TODO: apply correction_ppm to freq range
+		# TODO: understand range gaps and artificially insert 0Hz range step
+		callback(Cell(self, 'freq', writable=True, ctor=convert_osmosdr_range(
+			self.osmosdr_source_block.get_freq_range(ch), strict=False)))
 		callback(Cell(self, 'correction_ppm', writable=True, ctor=float))
 		callback(Cell(self, 'agc', writable=True, ctor=bool))
-		
-		gain_range = self.osmosdr_source_block.get_gain_range(ch)
-		# Note: range may have gaps and we don't represent that
-		callback(Cell(self, 'gain', writable=True, ctor=
-			Range(gain_range.start(), gain_range.stop(), strict=False)))
+		callback(Cell(self, 'gain', writable=True, ctor=convert_osmosdr_range(
+			self.osmosdr_source_block.get_gain_range(ch), strict=False)))
 		
 	def get_sample_rate(self):
 		# TODO review why cast
@@ -108,3 +108,6 @@ class OsmoSDRSource(Source):
 		self.osmosdr_source_block.set_gain(float(value), ch)
 
 
+def convert_osmosdr_range(range, **kwargs):
+	# Note: range may have gaps and we don't yet represent that
+	return Range(range.start(), range.stop(), **kwargs)
