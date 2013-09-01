@@ -333,3 +333,8 @@ section > h2 {
 .widget-ReceiverMarks {
   pointer-events: none;
 }
+
+/* for Toggle widget, but is a generally applicable principle */
+label.panel {
+  display: block;
+}
