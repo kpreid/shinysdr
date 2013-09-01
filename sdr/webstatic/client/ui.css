@@ -46,7 +46,7 @@ section > h2 {
 .sidebar {
   flex: 1 1 auto;
   height: auto;
-  width: 17em;
+  width: 18em;
   overflow-y: auto;
 }
 .frame {
