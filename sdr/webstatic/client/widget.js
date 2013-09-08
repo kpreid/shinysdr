@@ -1823,6 +1823,10 @@ define(['./values', './events'], function (values, events) {
       }
     });
     
+    var scale_coarse = 10;
+    var scale_fine1 = 4;
+    var scale_fine2 = 2;
+    
     function draw() {
       var centerFreq = tunerSource.depend(draw);
       view.n.listen(draw);
@@ -1838,15 +1842,14 @@ define(['./values', './events'], function (values, events) {
       var maxLabels = view.getTotalPixelWidth() / labelWidth;
       
       // We could try to calculate the step using logarithms, but floating-point error would be tiresome.
-      // TODO: Make these thresholds less magic-numbery.
       var step = 1;
-      while (isFinite(step) && (upper - lower) / step > maxLabels) {
-        step *= 10;
+      while (isFinite(step) && bandwidth / step > maxLabels) {
+        step *= scale_coarse;
       }
-      if ((upper - lower) / step < maxLabels * 0.25) {
-        step /= 4;
-      } else if ((upper - lower) / step < maxLabels * 0.5) {
-        step /= 2;
+      if (bandwidth / step < maxLabels / scale_fine1) {
+        step /= scale_fine1;
+      } else if (bandwidth / step < maxLabels / scale_fine2) {
+        step /= scale_fine2;
       }
       
       for (var i = lower - mod(lower, step), sanity = 1000;
