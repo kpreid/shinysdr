@@ -208,6 +208,12 @@ class ContextForDemodulator(object):
 		assert self._enabled
 		self._receiver._rebuild_demodulator()
 
+	def lock(self):
+		self._receiver.context.lock()
+
+	def unlock(self):
+		self._receiver.context.unlock()
+
 
 class IDemodulator(Interface):
 	def can_set_mode(mode):
