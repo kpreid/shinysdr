@@ -234,7 +234,7 @@ class WFMDemodulator(FMDemodulator):
 	def set_stereo(self, value):
 		if value == self.stereo: return
 		self.stereo = bool(value)
-		# TODO: Doing it this way causes 'input port 0 out of range for Multistage Channel Filter' which may be a gnuradio bug wrt disconnect_all and hier blocks (previously discussed Feb 2013).
+		# TODO: Reconfiguring this way causes the flowgraph to sometimes stop (until prodded by some other change). Troubleshoot.
 		#self.lock()
 		#self.disconnect_all()
 		#self.do_connect()
