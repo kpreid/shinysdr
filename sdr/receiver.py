@@ -63,7 +63,7 @@ class Receiver(gr.hier_block2, ExportedState):
 		callback(Cell(self, 'rec_freq', writable=True, ctor=float))
 		# TODO: support non-audio demodulators at which point these controls should be optional
 		callback(Cell(self, 'audio_gain', writable=True, ctor=
-			Range(0.01, 100, strict=False, logarithmic=True)))
+			Range(0.001, 100, strict=False, logarithmic=True)))
 		callback(Cell(self, 'audio_pan', writable=True, ctor=
 			Range(-1, 1, strict=True)))
 		callback(Cell(self, 'is_valid'))
