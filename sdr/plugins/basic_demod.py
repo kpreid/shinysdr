@@ -15,7 +15,7 @@ import math
 
 class Demodulator(gr.hier_block2, ExportedState):
 	implements(IDemodulator)
-	def __init__(self, mode, input_rate=0, input_center_freq=0, audio_rate=0, rec_freq=100.0, audio_gain=0.25, audio_pan=0, squelch_threshold=-100, context=None):
+	def __init__(self, mode, input_rate=0, input_center_freq=0, audio_rate=0, rec_freq=100.0, audio_gain=0.25, audio_pan=0, context=None):
 		assert input_rate > 0
 		assert audio_rate > 0
 		gr.hier_block2.__init__(
@@ -31,8 +31,6 @@ class Demodulator(gr.hier_block2, ExportedState):
 		self.rec_freq = rec_freq
 		self.context = context
 		
-		# TODO: squelch alpha needs to depend on intermediate sample rate
-		self.squelch_block = analog.simple_squelch_cc(squelch_threshold, 0.0002)
 
 	def can_set_mode(self, mode):
 		return False
@@ -40,26 +38,32 @@ class Demodulator(gr.hier_block2, ExportedState):
 	def get_half_bandwidth(self):
 		raise NotImplementedError('Demodulator.get_half_bandwidth')
 
+	# TODO: remove this indirection
+	def connect_audio_output(self, l_port, r_port):
+		self.connect(l_port, (self, 0))
+		self.connect(r_port, (self, 1))
+
+
+class SquelchMixin(ExportedState):
+	def __init__(self, squelch_rate, squelch_threshold=-100):
+		self.squelch_block = analog.simple_squelch_cc(squelch_threshold, 9.6 / squelch_rate)
+
 	def get_squelch_threshold(self):
 		return self.squelch_block.threshold()
 
 	def set_squelch_threshold(self, level):
 		self.squelch_block.set_threshold(level)
 
-	# TODO: remove this indirection
-	def connect_audio_output(self, l_port, r_port):
-		self.connect(l_port, (self, 0))
-		self.connect(r_port, (self, 1))
-
 	def state_def(self, callback):
-		super(Demodulator, self).state_def(callback)
+		super(SquelchMixin, self).state_def(callback)
 		callback(Cell(self, 'squelch_threshold', writable=True, ctor=
 			Range(-100, 0, strict=False, logarithmic=False)))
-	
 
-class SimpleAudioDemodulator(Demodulator):
+
+class SimpleAudioDemodulator(Demodulator, SquelchMixin):
 	def __init__(self, demod_rate=0, band_filter=None, band_filter_transition=None, **kwargs):
 		Demodulator.__init__(self, **kwargs)
+		SquelchMixin.__init__(self, demod_rate)
 		
 		self.band_filter = band_filter
 		self.band_filter_transition = band_filter_transition
