@@ -53,8 +53,6 @@ class AudioSource(Source):
 		self.__complex = blocks.float_to_complex(1)
 		self.__source = None
 		
-		self.connect(self.__complex, self)
-		
 		self.__do_connect()
 	
 	def __str__(self):
@@ -78,11 +76,7 @@ class AudioSource(Source):
 		return 0.0
 
 	def __do_connect(self):
-		if self.__source is not None:
-			# detailed disconnect because disconnect_all on hier blocks is broken
-			self.disconnect(self.__source, self.__complex)
-			if self.__quadrature_as_stereo:
-				self.disconnect((self.__source, 1), (self.__complex, 1))
+		self.disconnect_all()
 		
 		# work around OSX audio source bug; does not work across flowgraph restarts
 		self.__source = audio.source(
@@ -90,7 +84,7 @@ class AudioSource(Source):
 			device_name=self.__device_name,
 			ok_to_block=True)
 		
-		self.connect(self.__source, self.__complex)
+		self.connect(self.__source, self.__complex, self)
 		if self.__quadrature_as_stereo:
 			# if we don't do this, the imaginary component is 0 and the spectrum is symmetric
 			self.connect((self.__source, 1), (self.__complex, 1))

@@ -51,12 +51,6 @@ class Receiver(gr.hier_block2, ExportedState):
 		self.audio_gain_l_block = blocks.multiply_const_ff(self.audio_gain)
 		self.audio_gain_r_block = blocks.multiply_const_ff(self.audio_gain)
 		
-		# Permanent connections
-		self.connect(self, self.mixer)
-		self.connect(self.oscillator, (self.mixer, 1))
-		self.connect(self.audio_gain_l_block, (self, 0))
-		self.connect(self.audio_gain_r_block, (self, 1))
-		
 		self.__do_connect()
 	
 	def state_def(self, callback):
@@ -80,15 +74,11 @@ class Receiver(gr.hier_block2, ExportedState):
 	def __do_connect(self):
 		self.context.lock()
 		try:
-			# disconnect_all() is currently broken <http://gnuradio.org/redmine/issues/520>, so we have to explicitly disconnect individually
-			if self.connected_demodulator is not None:
-				self.disconnect(self.mixer, self.connected_demodulator)
-				self.disconnect((self.connected_demodulator, 0), self.audio_gain_l_block)
-				self.disconnect((self.connected_demodulator, 1), self.audio_gain_r_block)
-			self.connected_demodulator = self.demodulator
-			self.connect(self.mixer, self.demodulator)
-			self.connect((self.demodulator, 0), self.audio_gain_l_block)
-			self.connect((self.demodulator, 1), self.audio_gain_r_block)
+			self.disconnect_all()
+			self.connect(self.oscillator, (self.mixer, 1))
+			self.connect(self, self.mixer, self.demodulator)
+			self.connect((self.demodulator, 0), self.audio_gain_l_block, (self, 0))
+			self.connect((self.demodulator, 1), self.audio_gain_r_block, (self, 1))
 		finally:
 			self.context.unlock()
 
