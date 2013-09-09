@@ -1839,16 +1839,19 @@ define(['./values', './events'], function (values, events) {
       outer.style.marginLeft = view.freqToCSSLeft(centerFreq - bandwidth/2);
       outer.style.width = view.freqToCSSLength(bandwidth);
       
-      var maxLabels = view.getTotalPixelWidth() / labelWidth;
+      // Minimum spacing between labels in Hz
+      var MinHzPerLabel = bandwidth * labelWidth / view.getTotalPixelWidth();
       
-      // We could try to calculate the step using logarithms, but floating-point error would be tiresome.
       var step = 1;
-      while (isFinite(step) && bandwidth / step > maxLabels) {
+      // Widen label spacing exponentially until they have sufficient separation.
+      // We could try to calculate the step using logarithms, but floating-point error would be tiresome.
+      while (isFinite(step) && step < MinHzPerLabel) {
         step *= scale_coarse;
       }
-      if (bandwidth / step < maxLabels / scale_fine1) {
+      // Try to narrow the spacing using two possible fine scales.
+      if (step / scale_fine1 > MinHzPerLabel) {
         step /= scale_fine1;
-      } else if (bandwidth / step < maxLabels / scale_fine2) {
+      } else if (step / scale_fine2 > MinHzPerLabel) {
         step /= scale_fine2;
       }
       
