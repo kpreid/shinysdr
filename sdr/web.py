@@ -48,7 +48,7 @@ class JSONResource(CellResource):
 		CellResource.__init__(self, cell, noteDirty)
 
 	def grparse(self, value):
-		return self._cell.ctor()(json.loads(value))
+		return json.loads(value)
 
 	def grrender(self, value, request):
 		return json.dumps(value)
@@ -83,10 +83,9 @@ class BlockResource(resource.Resource):
 		if not self._dynamic: # currently dynamic blocks can only have block children
 			self._blockCells = {}
 			for key, cell in block.state().iteritems():
-				ctor = cell.ctor()
 				if cell.isBlock():
 					self._blockCells[key] = cell
-				elif ctor is sdr.top.SpectrumTypeStub:
+				elif cell.description()['type'] == 'spectrum':  # TODO better interface
 					self.putChild(key, SpectrumResource(cell, self._noteDirty))
 				else:
 					self.putChild(key, JSONResource(cell, self._noteDirty))

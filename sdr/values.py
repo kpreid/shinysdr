@@ -14,10 +14,6 @@ class BaseCell(object):
 	def key(self):
 		return self._key
 
-	def ctor(self):
-		# TODO where should this actually apply
-		return None
-
 	def get(self):
 		raise NotImplementedError()
 	
@@ -38,9 +34,6 @@ class ValueCell(BaseCell):
 	def __init__(self, target, key, ctor=None, **kwargs):
 		BaseCell.__init__(self, target, key, **kwargs)
 		self._ctor = ctor
-	
-	def ctor(self):
-		return self._ctor
 	
 	def description(self):
 		return {
@@ -63,16 +56,13 @@ class Cell(ValueCell):
 	def isBlock(self):
 		return False
 	
-	def ctor(self):
-		return self._ctor
-	
 	def get(self):
 		return self._getter()
 	
 	def set(self, value):
 		if not self.isWritable():
 			raise Exception('Not writable.')
-		return self._setter(value)
+		return self._setter(self._ctor(value))
 
 
 sizeof_float = 4
