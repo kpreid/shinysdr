@@ -13,8 +13,14 @@ from sdr import plugins
 
 
 class Receiver(gr.hier_block2, ExportedState):
-	# TODO: demodulator should not be an arg, maybe state should
-	def __init__(self, mode, input_rate=0, input_center_freq=0, audio_rate=0, rec_freq=100.0, audio_gain=0.25, audio_pan=0, context=None):
+	def __init__(self, mode,
+			input_rate=0,
+			input_center_freq=0,
+			audio_rate=0,
+			rec_freq=100.0,
+			audio_gain=0.25,
+			audio_pan=0,
+			context=None):
 		assert input_rate > 0
 		assert audio_rate > 0
 		gr.hier_block2.__init__(
