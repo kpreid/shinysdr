@@ -16,9 +16,6 @@ class OsmoSDRSource(Source):
 			sample_rate=2400000,
 			**kwargs):
 		Source.__init__(self, name=name, **kwargs)
-
-		# TODO present sample rate configuration using source.get_sample_rates().values()
-		# TODO present hw freq range
 		
 		self.__osmo_device = osmo_device
 		
