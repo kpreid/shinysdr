@@ -130,7 +130,7 @@ class AMDemodulator(SimpleAudioDemodulator):
 		audio_rate = self.audio_rate
 		
 		inherent_gain = 0.5  # fudge factor so that our output is similar level to narrow FM
-		self.agc_block = analog.feedforward_agc_cc(1024, inherent_gain)
+		self.agc_block = analog.feedforward_agc_cc(int(.02 * demod_rate), inherent_gain)
 		self.demod_block = blocks.complex_to_mag(1)
 		self.resampler_block = make_resampler(demod_rate, audio_rate)
 		
