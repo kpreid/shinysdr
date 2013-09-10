@@ -28,7 +28,12 @@ define(['./network'], function (network) {
     }
     openWS();
     
-    var bufferSize = 2048;
+    // Choose buffer size
+    var maxDelay = 0.20;
+    var maxBufferSize = audio.sampleRate * maxDelay;
+    var bufferSize = 1 << Math.floor(Math.log(maxBufferSize) / Math.LN2);
+    //console.log(maxBufferSize, bufferSize);
+    
     var ascr = audio.createScriptProcessor(bufferSize, 0, 2);
     var empty = [];
     var audioStreamChunk = empty;
