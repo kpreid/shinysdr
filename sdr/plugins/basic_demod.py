@@ -9,7 +9,7 @@ from gnuradio.filter import firdes
 
 from sdr.receiver import ModeDef, IDemodulator
 from sdr.filters import MultistageChannelFilter, make_resampler
-from sdr.values import ExportedState, Cell, Range
+from sdr.values import ExportedState, Range, exported_value, setter
 
 import math
 
@@ -51,16 +51,13 @@ class SquelchMixin(ExportedState):
 	def __init__(self, squelch_rate, squelch_threshold=-100):
 		self.squelch_block = analog.simple_squelch_cc(squelch_threshold, 9.6 / squelch_rate)
 
+	@exported_value(ctor=Range(-100, 0, strict=False, logarithmic=False))
 	def get_squelch_threshold(self):
 		return self.squelch_block.threshold()
 
+	@setter
 	def set_squelch_threshold(self, level):
 		self.squelch_block.set_threshold(level)
-
-	def state_def(self, callback):
-		super(SquelchMixin, self).state_def(callback)
-		callback(Cell(self, 'squelch_threshold', writable=True, ctor=
-			Range(-100, 0, strict=False, logarithmic=False)))
 
 
 class SimpleAudioDemodulator(Demodulator, SquelchMixin):
@@ -81,13 +78,10 @@ class SimpleAudioDemodulator(Demodulator, SquelchMixin):
 			cutoff_freq=band_filter,
 			transition_width=band_filter_transition)
 
-	def state_def(self, callback):
-		super(SimpleAudioDemodulator, self).state_def(callback)
-		callback(Cell(self, 'band_filter_shape'))
-	
 	def get_half_bandwidth(self):
 		return self.band_filter
 
+	@exported_value()
 	def get_band_filter_shape(self):
 		return {
 			'low': -self.band_filter,
@@ -224,13 +218,11 @@ class WFMDemodulator(FMDemodulator):
 			band_filter_transition=20000,
 			**kwargs)
 
-	def state_def(self, callback):
-		super(WFMDemodulator, self).state_def(callback)
-		callback(Cell(self, 'stereo', writable=True, ctor=bool))
-		callback(Cell(self, 'audio_filter', writable=True, ctor=bool))
-	
+	@exported_value(ctor=bool)
 	def get_stereo(self):
 		return self.stereo
+	
+	@setter
 	def set_stereo(self, value):
 		if value == self.stereo: return
 		self.stereo = bool(value)
@@ -241,8 +233,11 @@ class WFMDemodulator(FMDemodulator):
 		#self.unlock()
 		self.context.rebuild_me()
 	
+	@exported_value(ctor=bool)
 	def get_audio_filter(self):
 		return self.audio_filter
+	
+	@setter
 	def set_audio_filter(self, value):
 		if value == self.audio_filter: return
 		self.audio_filter = bool(value)

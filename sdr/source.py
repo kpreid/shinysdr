@@ -11,7 +11,7 @@ from gnuradio.filter import firdes
 
 import math
 
-from sdr.values import Cell, Range, ExportedState
+from sdr.values import Range, ExportedState, exported_value, setter
 
 
 class Source(gr.hier_block2, ExportedState):
@@ -27,12 +27,12 @@ class Source(gr.hier_block2, ExportedState):
 	def set_tune_hook(self, value):
 		self.tune_hook = value
 
-	def state_def(self, callback):
-		super(Source, self).state_def(callback)
-		callback(Cell(self, 'sample_rate', ctor=int))
-		# all sources should also have 'freq' but type and writability need to be defined per subclass
-
+	@exported_value(ctor=float)
 	def get_sample_rate(self):
+		raise NotImplementedError()
+
+	@exported_value(ctor=float)
+	def get_freq(self):
 		raise NotImplementedError()
 
 	def notify_reconnecting_or_restarting(self):
@@ -58,10 +58,6 @@ class AudioSource(Source):
 	def __str__(self):
 		return 'Audio ' + self.__device_name
 	
-	def state_def(self, callback):
-		super(AudioSource, self).state_def(callback)
-		callback(Cell(self, 'freq', ctor=float))
-		
 	def get_sample_rate(self):
 		return self.__sample_rate
 
@@ -69,8 +65,9 @@ class AudioSource(Source):
 		# work around OSX audio source bug; does not work across flowgraph restarts
 		self.__do_connect()
 
+	@exported_value(ctor=float)
 	def get_freq(self):
-		return 0
+		return 0.0
 
 	def get_tune_delay(self):
 		return 0.0
@@ -222,24 +219,22 @@ class SimulatedSource(Source):
 	def __str__(self):
 		return 'Simulated RF'
 
-	def state_def(self, callback):
-		super(SimulatedSource, self).state_def(callback)
-		callback(Cell(self, 'freq', writable=False, ctor=float))
-		callback(Cell(self, 'noise_level', writable=True, ctor=Range(-5, 1)))
-		
 	def get_sample_rate(self):
 		# TODO review why cast
 		return int(self.__sample_rate)
 		
+	@exported_value(ctor=float)
 	def get_freq(self):
 		return 0
 	
 	def get_tune_delay(self):
 		return 0.0
 	
+	@exported_value(ctor=Range(-5, 1))
 	def get_noise_level(self):
 		return self.noise_level
 	
+	@setter
 	def set_noise_level(self, value):
 		self.noise_source.set_amplitude(10 ** value)
 		self.noise_level = value

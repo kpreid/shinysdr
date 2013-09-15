@@ -8,7 +8,7 @@ from gnuradio import analog
 from gnuradio import gr
 from gnuradio import blocks
 
-from sdr.values import ExportedState, Cell, BlockCell, Range, Enum
+from sdr.values import ExportedState, BlockCell, Range, Enum, exported_value, setter
 from sdr import plugins
 
 
@@ -55,21 +55,8 @@ class Receiver(gr.hier_block2, ExportedState):
 	
 	def state_def(self, callback):
 		super(Receiver, self).state_def(callback)
-		modes = {}
-		for modeDef in getModes():
-			modes[modeDef.mode] = modeDef.label
-		callback(Cell(self, 'mode', writable=True, ctor=Enum(modes)))
-		# TODO: rename rec_freq to just freq
-		callback(Cell(self, 'rec_freq', writable=True, ctor=float))
-		# TODO: support non-audio demodulators at which point these controls should be optional
-		callback(Cell(self, 'audio_gain', writable=True, ctor=
-			Range(0.001, 100, strict=False, logarithmic=True)))
-		callback(Cell(self, 'audio_pan', writable=True, ctor=
-			Range(-1, 1, strict=True)))
-		callback(Cell(self, 'is_valid'))
+		# TODO decoratorify
 		callback(BlockCell(self, 'demodulator'))
-		# contained demodulator might have:
-		#	callback(Cell(self, 'band_filter_shape'))
 	
 	def __do_connect(self):
 		self.context.lock()
@@ -95,9 +82,12 @@ class Receiver(gr.hier_block2, ExportedState):
 		self.__update_oscillator()
 		# note does not revalidate() because the caller will handle that
 
+	# type construction is deferred because we don't want loading this file to trigger loading plugins
+	@exported_value(ctor_fn=lambda self: Enum({d.mode: d.label for d in getModes()}))
 	def get_mode(self):
 		return self.mode
 	
+	@setter
 	def set_mode(self, mode):
 		mode = unicode(mode)
 		if self.demodulator and self.demodulator.can_set_mode(mode):
@@ -106,28 +96,37 @@ class Receiver(gr.hier_block2, ExportedState):
 		else:
 			self._rebuild_demodulator(mode=mode)
 
+	# TODO: rename rec_freq to just freq
+	@exported_value(ctor=float)
 	def get_rec_freq(self):
 		return self.rec_freq
 	
+	@setter
 	def set_rec_freq(self, rec_freq):
 		self.rec_freq = float(rec_freq)
 		self.__update_oscillator()
 		self.context.revalidate()
 	
+	# TODO: support non-audio demodulators at which point these controls should be optional
+	@exported_value(ctor=Range(0.001, 100, strict=False, logarithmic=True))
 	def get_audio_gain(self):
 		return self.audio_gain
-	
+
+	@setter
 	def set_audio_gain(self, value):
 		self.audio_gain = value
 		self.__update_audio_gain()
 	
+	@exported_value(ctor=Range(-1, 1, strict=True))
 	def get_audio_pan(self):
 		return self.audio_pan
 	
+	@setter
 	def set_audio_pan(self, value):
 		self.audio_pan = value
 		self.__update_audio_gain()
 	
+	@exported_value(ctor=bool)
 	def get_is_valid(self):
 		valid_bandwidth = self.input_rate / 2 - abs(self.rec_freq - self.input_center_freq)
 		return self.demodulator is not None and valid_bandwidth >= self.demodulator.get_half_bandwidth()

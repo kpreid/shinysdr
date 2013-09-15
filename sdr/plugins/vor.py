@@ -15,7 +15,7 @@ import math
 from sdr import filters
 from sdr.receiver import ModeDef, IDemodulator
 from sdr.plugins.basic_demod import SimpleAudioDemodulator
-from sdr.values import Cell
+from sdr.values import exported_value, setter
 
 audio_modulation_index = 0.07
 fm_subcarrier = 9960
@@ -114,18 +114,16 @@ class VOR(SimpleAudioDemodulator):
 			self.zeroer,
 			self.probe)
 
-	def state_def(self, callback):
-		super(SimpleAudioDemodulator, self).state_def(callback)
-		callback(Cell(self, 'zero_point', writable=True, ctor=float))
-		callback(Cell(self, 'angle'))
-
+	@exported_value(ctor=float)
 	def get_zero_point(self):
 		return self.zero_point
 
+	@setter
 	def set_zero_point(self, zero_point):
 		self.zero_point = zero_point
 		self.zeroer.set_k((self.zero_point * (math.pi / 180), ))
 
+	@exported_value(ctor=float)
 	def get_angle(self):
 		return self.probe.level()
 

@@ -7,7 +7,7 @@ from gnuradio import gr
 from gnuradio.eng_option import eng_option
 from gnuradio.filter import firdes
 from optparse import OptionParser
-from sdr.values import ExportedState, Cell, CollectionState, BlockCell, MsgQueueCell, Enum, Range, NoneES
+from sdr.values import ExportedState, CollectionState, exported_value, setter, BlockCell, MsgQueueCell, Enum, Range
 from sdr.filters import make_resampler
 from sdr.receiver import Receiver
 
@@ -269,20 +269,11 @@ class Top(gr.top_block, ExportedState):
 
 	def state_def(self, callback):
 		super(Top, self).state_def(callback)
-		callback(Cell(self, 'unpaused', writable=True, ctor=bool))
-		callback(Cell(self, 'source_name', writable=True,
-			ctor=Enum(dict([(k, str(v)) for (k, v) in self._sources.iteritems()]))))
-		callback(Cell(self, 'input_rate', ctor=int))
-		callback(Cell(self, 'audio_rate', ctor=int))
-		callback(Cell(self, 'spectrum_resolution', writable=True, ctor=
-			Range(2, 4096, logarithmic=True, integer=True)))
-		callback(Cell(self, 'spectrum_rate', writable=True, ctor=
-			Range(1, 60, logarithmic=True, integer=False)))
+		# TODO make this possible to be decorator style
 		callback(MsgQueueCell(self, 'spectrum_fft', fill=True, ctor=SpectrumTypeStub))
 		callback(BlockCell(self, 'sources'))
 		callback(BlockCell(self, 'source', persists=False))
 		callback(BlockCell(self, 'receivers'))
-		callback(Cell(self, 'cpu_use', ctor=float))
 
 	def start(self):
 		# trigger reconnect/restart notification
@@ -296,9 +287,11 @@ class Top(gr.top_block, ExportedState):
 		super(Top, self).stop()
 		self.__running = False
 
+	@exported_value(ctor=bool)
 	def get_unpaused(self):
 		return self.__unpaused
 	
+	@setter
 	def set_unpaused(self, value):
 		self.__unpaused = bool(value)
 		self.__start_or_stop()
@@ -313,9 +306,12 @@ class Top(gr.top_block, ExportedState):
 				self.stop()
 				self.wait()
 
+	@exported_value(ctor_fn=lambda self:
+		Enum({k: str(v) for (k, v) in self._sources.iteritems()}))
 	def get_source_name(self):
 		return self.source_name
 	
+	@setter
 	def set_source_name(self, value):
 		if value == self.source_name:
 			return
@@ -338,23 +334,29 @@ class Top(gr.top_block, ExportedState):
 		facet._enabled = True
 		return receiver
 
+	@exported_value(ctor=int)
 	def get_input_rate(self):
 		return self.input_rate
 
+	@exported_value(ctor=int)
 	def get_audio_rate(self):
 		return self.audio_rate
 	
+	@exported_value(ctor=Range(2, 4096, logarithmic=True, integer=True))
 	def get_spectrum_resolution(self):
 		return self.spectrum_resolution
 
+	@setter
 	def set_spectrum_resolution(self, spectrum_resolution):
 		self.spectrum_resolution = spectrum_resolution
 		self.__needs_spectrum = True
 		self._do_connect()
 
+	@exported_value(ctor=Range(1, 60, logarithmic=True, integer=False))
 	def get_spectrum_rate(self):
 		return self.spectrum_rate
 
+	@setter
 	def set_spectrum_rate(self, value):
 		self.spectrum_rate = value
 		self.spectrum_fft_block.set_vec_rate(value)
@@ -365,6 +367,7 @@ class Top(gr.top_block, ExportedState):
 	def get_spectrum_fft_queue(self):
 		return self.spectrum_queue
 	
+	@exported_value(ctor=float)
 	def get_cpu_use(self):
 		cur_wall_time = time.time()
 		elapsed_wall = cur_wall_time - self.last_wall_time

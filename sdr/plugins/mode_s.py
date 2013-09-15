@@ -6,7 +6,7 @@ from gnuradio import blocks
 from gnuradio import analog
 
 from sdr.receiver import ModeDef, IDemodulator
-from sdr.values import Cell, ExportedState
+from sdr.values import ExportedState, exported_value
 from sdr.filters import MultistageChannelFilter
 
 import subprocess
@@ -71,16 +71,13 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 		self.connect(self.throttle, (self, 0))
 		self.connect(self.throttle, (self, 1))
 
-	def state_def(self, callback):
-		super(ModeSDemodulator, self).state_def(callback)
-		callback(Cell(self, 'band_filter_shape'))
-
 	def can_set_mode(self, mode):
 		return False
 
 	def get_half_bandwidth(self):
 		return pipe_rate / 2
 
+	@exported_value()
 	def get_band_filter_shape(self):
 		return {
 			'low': -pipe_rate/2,

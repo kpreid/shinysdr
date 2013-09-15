@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 from sdr.source import Source
-from sdr.values import Cell, Range, Enum
+from sdr.values import exported_value, setter, Range, Enum
 
 import osmosdr
 
@@ -38,32 +38,18 @@ class OsmoSDRSource(Source):
 	def __str__(self):
 		return 'OsmoSDR ' + self.__osmo_device
 
-	def state_def(self, callback):
-		super(OsmoSDRSource, self).state_def(callback)
-		# TODO: apply correction_ppm to freq range
-		# TODO: understand range gaps and artificially insert 0Hz tuning point when applicable
-		callback(Cell(self, 'freq', writable=True, ctor=convert_osmosdr_range(
-			self.osmosdr_source_block.get_freq_range(ch), strict=False)))
-		callback(Cell(self, 'correction_ppm', writable=True, ctor=float))
-		# TODO: Perhaps expose individual gain stages.
-		callback(Cell(self, 'gain', writable=True, ctor=convert_osmosdr_range(
-			self.osmosdr_source_block.get_gain_range(ch), strict=False)))
-		callback(Cell(self, 'agc', writable=True, ctor=bool))
-		callback(Cell(self, 'antenna', ctor=Enum(
-			{unicode(name): unicode(name) for name in self.osmosdr_source_block.get_antennas()})))
-		# Note: dc_cancel and iq_balance have 'manual' modes we are not exposing
-		callback(Cell(self, 'dc_cancel', writable=True, ctor=bool))
-		callback(Cell(self, 'iq_balance', writable=True, ctor=bool))
-		callback(Cell(self, 'bandwidth', writable=True, ctor=convert_osmosdr_range(
-			self.osmosdr_source_block.get_bandwidth_range(ch))))
-		
 	def get_sample_rate(self):
 		# TODO review why cast
 		return int(self.osmosdr_source_block.get_sample_rate())
-		
+	
+	# TODO: apply correction_ppm to freq range
+	# TODO: understand range gaps and artificially insert 0Hz tuning point when applicable
+	@exported_value(ctor_fn=lambda self: convert_osmosdr_range(
+		self.osmosdr_source_block.get_freq_range(ch), strict=False))
 	def get_freq(self):
 		return self.freq
 
+	@setter
 	def set_freq(self, freq):
 		actual_freq = self._compute_frequency(freq)
 		# TODO: This limitation is in librtlsdr's interface. If we support other gr-osmosdr devices, change it.
@@ -78,9 +64,11 @@ class OsmoSDRSource(Source):
 	def get_tune_delay(slf):
 		return 0.25  # TODO: make configurable and/or account for as many factors as we can
 
+	@exported_value(ctor=float)
 	def get_correction_ppm(self):
 		return self.correction_ppm
 	
+	@setter
 	def set_correction_ppm(self, value):
 		self.correction_ppm = value
 		# Not using the hardware feature because I only get garbled output from it
@@ -101,25 +89,36 @@ class OsmoSDRSource(Source):
 		
 		self.tune_hook()
 
+	# TODO: Perhaps expose individual gain stages.
+	@exported_value(ctor_fn=lambda self: convert_osmosdr_range(
+			self.osmosdr_source_block.get_gain_range(ch), strict=False))
 	def get_gain(self):
 		return self.osmosdr_source_block.get_gain(ch)
 	
+	@setter
 	def set_gain(self, value):
 		self.osmosdr_source_block.set_gain(float(value), ch)
 	
+	@exported_value(ctor=bool)
 	def get_agc(self):
 		return bool(self.osmosdr_source_block.get_gain_mode(ch))
 	
+	@setter
 	def set_agc(self, value):
 		self.osmosdr_source_block.set_gain_mode(bool(value), ch)
 	
+	@exported_value(ctor_fn=lambda self: Enum(
+		{unicode(name): unicode(name) for name in self.osmosdr_source_block.get_antennas()}))
 	def get_antenna(self):
 		return unicode(self.osmosdr_source_block.get_antenna(ch))
 		# TODO review whether set_antenna is safe to expose
 	
+	# Note: dc_cancel has a 'manual' mode we are not yet exposing
+	@exported_value(ctor=bool)
 	def get_dc_cancel(self):
 		return bool(self.dc_state)
 	
+	@setter
 	def set_dc_cancel(self, value):
 		self.dc_state = bool(value)
 		if self.dc_state:
@@ -128,9 +127,12 @@ class OsmoSDRSource(Source):
 			mode = 0
 		self.osmosdr_source_block.set_dc_offset_mode(mode, ch)
 	
+	# Note: iq_balance has a 'manual' mode we are not yet exposing
+	@exported_value(ctor=bool)
 	def get_iq_balance(self):
 		return bool(self.iq_state)
-	
+
+	@setter
 	def set_iq_balance(self, value):
 		self.iq_state = bool(value)
 		if self.iq_state:
@@ -139,9 +141,12 @@ class OsmoSDRSource(Source):
 			mode = 0
 		self.osmosdr_source_block.set_iq_balance_mode(mode, ch)
 	
+	@exported_value(ctor_fn=lambda self: convert_osmosdr_range(
+		self.osmosdr_source_block.get_bandwidth_range(ch)))
 	def get_bandwidth(self):
 		return self.osmosdr_source_block.get_bandwidth(ch)
 	
+	@setter
 	def set_bandwidth(self, value):
 		self.osmosdr_source_block.set_bandwidth(float(value), ch)
 

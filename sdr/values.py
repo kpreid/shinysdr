@@ -175,6 +175,20 @@ class ExportedState(object):
 			def callback(cell):
 				cache[cell.key()] = cell
 			self.state_def(callback)
+			
+			# decorator support
+			# TODO kludgy introspection, figure out what is better
+			for k in dir(type(self)):
+				if not hasattr(self, k): continue
+				v = getattr(type(self), k)
+				if isinstance(v, ExportedGetter):
+					if not k.startswith('get_'):
+						# TODO factor out attribute name usage in Cell so this restriction is moot
+						raise Error('Bad getter name', k)
+					else:
+						k = k[len('get_'):]
+					cache[k] = v.make_cell(self, k)
+			
 		return self.__cache
 	
 	def state_to_json(self):
@@ -244,13 +258,54 @@ class CollectionState(ExportedState):
 				self.__cells[key] = CollectionMemberCell(self.__collection, key)
 			callback(self.__cells[key])
 
-class NoneESType(ExportedState):
-	'''Used like None but implementing ExportedState.'''
-	def state_def(self, callback):
-		super(NoneESType, self).state_def(callback)
+
+def exported_value(**cell_kwargs):
+	'''Decorator for exported state; takes Cell's kwargs.'''
+	def decorator(f):
+		return ExportedGetter(f, cell_kwargs)
+	return decorator
 
 
-NoneES = NoneESType()
+def setter(f):
+	'''Decorator for setters of exported state; must be paired with a getter'''
+	return ExportedSetter(f)
+
+
+class ExportedGetter(object):
+	def __init__(self, f, cell_kwargs):
+		self.__function = f
+		self._cell_kwargs = cell_kwargs
+	
+	def __get__(self, obj, type=None):
+		'''implements method binding'''
+		if obj is None:
+			return self
+		else:
+			return self.__function.__get__(obj, type)
+	
+	def make_cell(self, obj, attr):
+		kwargs = self._cell_kwargs
+		if 'ctor_fn' in kwargs:
+			if 'ctor' in kwargs:
+				raise ValueError('cannot specify both ctor and ctor_fn')
+			kwargs['ctor'] = kwargs['ctor_fn'](obj)
+			del kwargs['ctor_fn']
+		# TODO kludgy introspection, figure out what is better
+		writable = hasattr(obj, 'set_' + attr) and isinstance(getattr(type(obj), 'set_' + attr), ExportedSetter)
+		return Cell(obj, attr, writable=writable, **kwargs)
+
+
+class ExportedSetter(object):
+	def __init__(self, f):
+		# TODO: Coerce value with ctor?
+		self.__function = f
+	
+	def __get__(self, obj, type=None):
+		'''implements method binding'''
+		if obj is None:
+			return self
+		else:
+			return self.__function.__get__(obj, type)
 
 
 def type_to_json(t):
