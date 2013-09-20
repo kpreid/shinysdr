@@ -4,7 +4,7 @@ define(function () {
   
   var exports = {};
   
-  function Map(element, scheduler, db) {
+  function Map(element, scheduler, db, radio) {
     function projectedPoint(lat, lon) {
       return new OpenLayers.Geometry.Point(lon, lat).transform('EPSG:4326', 'EPSG:3857');
     }

@@ -11,9 +11,6 @@ define(['./values', './events', './database', './network', './maps', './widget',
   freqDB.add(database.allSystematic);
   freqDB.add(database.fromCatalog('dbs/'));
   
-  // Map
-  var map = new maps.Map(document.getElementById('map'), scheduler, freqDB);
-  
   var radio;
   network.connect('radio', function gotDesc(remote) {
     radio = remote;
@@ -125,7 +122,11 @@ define(['./values', './events', './database', './network', './maps', './widget',
       scheduler: scheduler
     });
     
+    // generic control UI widget tree
     widget.createWidgets(radio, context, document);
+    
+    // Map (all geographic data)
+    var map = new maps.Map(document.getElementById('map'), scheduler, freqDB, radio);
   }); // end gotDesc
   
   audio.connectAudio('/audio');  // TODO get url from server
