@@ -13,6 +13,7 @@ from sdr.receiver import Receiver
 
 from twisted.internet import reactor
 
+import math
 import time
 
 
@@ -195,7 +196,11 @@ class Top(gr.top_block, ExportedState):
 				avg_alpha=1.0,
 				average=False,
 			)
-
+			# adjust units so displayed level is independent of resolution (log power per bandwidth rather than per bin)
+			# TODO work out and document exactly what units we're using
+			self.spectrum_rescale_block = blocks.add_const_vff(
+				[10*math.log10(self.spectrum_resolution)] * self.spectrum_resolution)
+		
 		if rate_changed:
 			print 'Changing sample rate'
 			for receiver in self._receivers.itervalues():
@@ -213,9 +218,13 @@ class Top(gr.top_block, ExportedState):
 			# input counts fails; TODO: report/fix bug
 			audio_sum_l = blocks.add_ff()
 			audio_sum_r = blocks.add_ff()
-
-			self.connect(self.source, self.spectrum_fft_block, self.spectrum_sink)
-
+			
+			self.connect(
+				self.source,
+				self.spectrum_fft_block,
+				self.spectrum_rescale_block,
+				self.spectrum_sink)
+			
 			audio_sum_index = 0
 			for key, receiver in self._receivers.iteritems():
 				self._receiver_valid[key] = receiver.get_is_valid()

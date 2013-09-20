@@ -206,9 +206,9 @@ define(['./values', './events'], function (values, events) {
     // exported for the sake of createWidgets -- TODO proper factoring?
     this.scheduler = scheduler;
     
-    // TODO legacy stubs
-    this.minLevel = -100;
-    this.maxLevel = 0;
+    // TODO legacy stubs -- vertical scale should be managed separately
+    this.minLevel = -60;
+    this.maxLevel = 30;
     
     this.freqToCSSLeft = function freqToCSSLeft(freq) {
       return ((freq - leftFreq) * pixelsPerHertz) + 'px';
