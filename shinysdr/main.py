@@ -34,8 +34,10 @@ import shinysdr.plugins.osmosdr
 sources = {
 	# OsmoSDR generic device source; handles USRP, RTL-SDR, FunCube
 	# Dongle, HackRF, etc.
+	# Use shinysdr.plugins.osmosdr.OsmoSDRProfile to set more parameters
+	# to make the best use of your specific hardware's capabilities.
 	'osmo': shinysdr.plugins.osmosdr.OsmoSDRSource(''),
-
+	
 	# For hardware which uses a sound-card as its ADC or appears as an
 	# audio device.
 	'audio': shinysdr.source.AudioSource(''),

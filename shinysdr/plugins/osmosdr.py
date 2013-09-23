@@ -9,15 +9,36 @@ import osmosdr
 ch = 0  # single channel number used
 
 
+class OsmoSDRProfile(object):
+	'''
+	Description of the characteristics of specific hardware which cannot
+	be obtained automatically via OsmoSDR.
+	'''
+	def __init__(self, dc_offset=False, e4000=False):
+		'''
+		dc_offset: If true, the output has a DC offset and tuning should
+		    the area around DC.
+		e4000: The device is an RTL2832U + E4000 tuner and can be
+		    confused into tuning to 0 Hz.
+		'''
+		# TODO: Propagate DC offset info to client tune() -- currently unused
+		self.dc_offset = dc_offset
+		self.e4000 = e4000
+
+
 class OsmoSDRSource(Source):
 	def __init__(self,
 			osmo_device,
-			name='OsmoSDR Source',
+			name=None,
+			profile=OsmoSDRProfile(),
 			sample_rate=2400000,
 			**kwargs):
+		if name is None:
+			name = 'OsmoSDR %s' % osmo_device
 		Source.__init__(self, name=name, **kwargs)
 		
 		self.__osmo_device = osmo_device
+		self.__profile = profile
 		
 		self.freq = freq = 98e6
 		self.correction_ppm = 0
@@ -43,9 +64,8 @@ class OsmoSDRSource(Source):
 		return int(self.osmosdr_source_block.get_sample_rate())
 	
 	# TODO: apply correction_ppm to freq range
-	# TODO: understand range gaps and artificially insert 0Hz tuning point when applicable
 	@exported_value(ctor_fn=lambda self: convert_osmosdr_range(
-		self.osmosdr_source_block.get_freq_range(ch), strict=False))
+		self.osmosdr_source_block.get_freq_range(ch), strict=False, add_zero=self.__profile.e4000))
 	def get_freq(self):
 		return self.freq
 
@@ -71,7 +91,7 @@ class OsmoSDRSource(Source):
 		self._update_frequency()
 	
 	def _compute_frequency(self, effective_freq):
-		if effective_freq == 0.0:
+		if effective_freq == 0.0 and self.__profile.e4000:
 			# Quirk: Tuning to 3686.6-3730 MHz (on some tuner HW) causes operation effectively at 0Hz.
 			# Original report: <http://www.reddit.com/r/RTLSDR/comments/12d2wc/a_very_surprising_discovery/>
 			return 3700e6
@@ -146,11 +166,14 @@ class OsmoSDRSource(Source):
 		self.osmosdr_source_block.set_bandwidth(float(value), ch)
 
 
-def convert_osmosdr_range(meta_range, **kwargs):
+def convert_osmosdr_range(meta_range, add_zero=False, **kwargs):
 	if len(meta_range.values()) == 0:
 		# If we don't check this condition, start() and stop() will raise
 		# TODO better stub value
 		return Range(-1, -1, **kwargs)
-	else:
-		# Note: meta_range may have gaps and we don't yet represent that
-		return Range(meta_range.start(), meta_range.stop(), **kwargs)
+	# Note: meta_range may have gaps and we don't yet represent that
+	start = meta_range.start()
+	stop = meta_range.stop()
+	if add_zero:
+		start = min(0, start)
+	return Range(start, stop, **kwargs)
