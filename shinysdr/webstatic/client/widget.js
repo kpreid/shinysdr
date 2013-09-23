@@ -76,7 +76,7 @@ define(['./values', './events'], function (values, events) {
           view: context.spectrumView, // TODO should be context-dependent
           freqDB: context.freqDB, // TODO: remove the need for this
           radio: context.radio, // TODO: remove the need for this
-          storage: node.hasAttribute('id') ? new StorageNamespace(localStorage, 'sdr.widgetState.' + node.getAttribute('id') + '.') : null,
+          storage: node.hasAttribute('id') ? new StorageNamespace(localStorage, 'shinysdr.widgetState.' + node.getAttribute('id') + '.') : null,
           shouldBePanel: shouldBePanel
         });
         widget.element.classList.add('widget-' + typename);
@@ -134,7 +134,7 @@ define(['./values', './events'], function (values, events) {
 
     }()); else if (node.nodeName === 'DETAILS' && node.hasAttribute('id')) {
       // Make any ID'd <details> element persistent
-      var ns = new StorageNamespace(localStorage, 'sdr.elementState.' + node.id + '.');
+      var ns = new StorageNamespace(localStorage, 'shinysdr.elementState.' + node.id + '.');
       var stored = ns.getItem('detailsOpen');
       if (stored !== null) node.open = JSON.parse(stored);
       new MutationObserver(function(mutations) {

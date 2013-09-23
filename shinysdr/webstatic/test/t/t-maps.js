@@ -4,8 +4,8 @@ describe('maps', function () {
   describe('Map', function () {
     // TODO more tests
     it('exists', function () {
-      expect(typeof sdr.maps).toBe('object');
-      expect(typeof sdr.maps.Map).toBe('function');
+      expect(typeof shinysdr.maps).toBe('object');
+      expect(typeof shinysdr.maps.Map).toBe('function');
     });
   });
 });

@@ -25,7 +25,7 @@ define(['./values'], function (values) {
 
     if (section.id) {
       // same protocol as we install on <details>
-      var ns = new StorageNamespace(localStorage, 'sdr.elementState.' + section.id + '.');
+      var ns = new StorageNamespace(localStorage, 'shinysdr.elementState.' + section.id + '.');
       var stored = ns.getItem('detailsOpen');
       if (stored !== null) visible = JSON.parse(stored);
     }

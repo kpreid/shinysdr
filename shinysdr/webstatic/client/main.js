@@ -121,7 +121,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
         scheduler: scheduler,
         radio: radio,
         element: document.querySelector('.hscalegroup'), // TODO relic
-        storage: new StorageNamespace(localStorage, 'sdr.viewState.spectrum.')
+        storage: new StorageNamespace(localStorage, 'shinysdr.viewState.spectrum.')
       });
     
       var context = new widget.Context({

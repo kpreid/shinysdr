@@ -9,13 +9,13 @@
 </head><body>
   <script>
     // TODO: kludge to use old style namespaces
-    var sdr = {};
+    var shinysdr = {};
     var load_names = ['audio', 'database', 'events', 'maps', 'network', 'sections', 'values', 'widget'];
     require(load_names.map(function(x) { return '../client/' + x; }), function() {
       var args = arguments;
       console.log(args);
       load_names.forEach(function (name, i) {
-        sdr[name] = args[i];
+        shinysdr[name] = args[i];
       });
       
       // recipe from Jasmine docs
@@ -25,7 +25,7 @@
       jasmineEnv.addReporter(htmlReporter);
       jasmineEnv.specFilter = htmlReporter.specFilter.bind(htmlReporter);
       
-      sdr.network.externalGet('t/', 'document', function(indexDoc) {
+      shinysdr.network.externalGet('t/', 'document', function(indexDoc) {
         var anchors = indexDoc.querySelectorAll('a[href]');
         var pending = 0;
         Array.prototype.forEach.call(anchors, function (anchor) {

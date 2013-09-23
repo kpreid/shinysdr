@@ -173,7 +173,7 @@ define(['./events', './network'], function (events, network) {
   }
   Union.prototype = Object.create(Source.prototype, {constructor: {value: Union}});
   Union.prototype.toString = function () {
-    return '[sdr.database.Union ' + this._unionSources + ']';
+    return '[shinysdr.database.Union ' + this._unionSources + ']';
   };
   Union.prototype.add = function (source) {
     this._unionSources.push(source);
@@ -213,7 +213,7 @@ define(['./events', './network'], function (events, network) {
   // TODO: Make Table inherit only Source, not View, as it's not obvious what the resulting requirements for how View works are
   Table.prototype = Object.create(View.prototype, {constructor: {value: Table}});
   Table.prototype.toString = function () {
-    return '[sdr.database.Table ' + this._label + ']';
+    return '[shinysdr.database.Table ' + this._label + ']';
   };
   Table.prototype.getAll = function () {
     var entries;

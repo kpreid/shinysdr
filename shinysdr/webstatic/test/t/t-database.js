@@ -3,7 +3,7 @@
 describe('database', function () {
   var s;
   beforeEach(function () {
-    s = new sdr.events.Scheduler(window);
+    s = new shinysdr.events.Scheduler(window);
   });
   function createListenerSpy() {
     var l = jasmine.createSpy();
@@ -26,7 +26,7 @@ describe('database', function () {
   
   describe('Table', function () {
     it('should notify on record addition', function () {
-      var t = new sdr.database.Table();
+      var t = new shinysdr.database.Table();
       var l = createListenerSpy();
       t.n.listen(l);
       t.add(dummyRecord);
@@ -34,7 +34,7 @@ describe('database', function () {
     });
     
     it('should notify from table on record modification', function () {
-      var t = new sdr.database.Table();
+      var t = new shinysdr.database.Table();
       var l = createListenerSpy();
       var r = t.add({
         type: 'channel',
@@ -46,7 +46,7 @@ describe('database', function () {
     });
 
     it('should notify from record on record modification', function () {
-      var t = new sdr.database.Table();
+      var t = new shinysdr.database.Table();
       var l = createListenerSpy();
       var r = t.add({
         type: 'channel',
@@ -58,7 +58,7 @@ describe('database', function () {
     });
 
     it('record should have default values', function () {
-      var r = (new sdr.database.Table()).add({});
+      var r = (new shinysdr.database.Table()).add({});
       expect(r.type).toEqual('channel');
       expect(r.mode).toEqual('?');
       expect(r.freq).toBeNaN();
@@ -70,7 +70,7 @@ describe('database', function () {
     });
 
     it('record should coerce a location', function () {
-      var r = (new sdr.database.Table()).add({location: ['1', '2']});
+      var r = (new shinysdr.database.Table()).add({location: ['1', '2']});
       expect(r.location.length).toEqual(2);
       expect(r.location[0]).toEqual(1);
       expect(r.location[1]).toEqual(2);
@@ -80,7 +80,7 @@ describe('database', function () {
   describe('GroupView', function () {
     var t, r1, r2, view;
     beforeEach(function () {
-      t = new sdr.database.Table();
+      t = new shinysdr.database.Table();
       r1 = t.add({type: 'channel', freq: 100e6, label: 'a'});
       r2 = t.add({type: 'channel', freq: 100e6, label: 'b'});
       view = t.groupSameFreq();
@@ -115,8 +115,8 @@ describe('database', function () {
 
   describe('Union', function () {
     it('should notify on member change', function () {
-      var t = new sdr.database.Table();
-      var u = new sdr.database.Union();
+      var t = new shinysdr.database.Table();
+      var u = new shinysdr.database.Union();
       u.add(t);
       var l = createListenerSpy();
       u.n.listen(l);
@@ -127,7 +127,7 @@ describe('database', function () {
   
   describe('CSV parser', function () {
     // I generally hold to the 'test only the public interface', but this is sufficiently hairy but doesn't otherwise have a reasonable exported interface (entire CSV files would make the test cases needlessly large).
-    var parseCSVLine = sdr.database._parseCSVLine;
+    var parseCSVLine = shinysdr.database._parseCSVLine;
     function t(csv, out) {
       it('should parse: ' + csv, function () {
         expect(parseCSVLine(csv)).toEqual(out);

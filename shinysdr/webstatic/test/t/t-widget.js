@@ -3,7 +3,7 @@
 describe('widget', function () {
   var scheduler, widget;
   beforeEach(function () {
-    scheduler = new sdr.events.Scheduler(window);
+    scheduler = new shinysdr.events.Scheduler(window);
     widget = undefined;
   });
   afterEach(function () {
@@ -29,9 +29,9 @@ describe('widget', function () {
   
   describe('Knob', function () {
     it('should hold a negative zero', function () {
-      var cell = new sdr.values.LocalCell(sdr.values.any);
+      var cell = new shinysdr.values.LocalCell(shinysdr.values.any);
       cell.set(0);
-      widget = new sdr.widget.widgets.Knob({
+      widget = new shinysdr.widget.widgets.Knob({
         target: cell,
         scheduler: scheduler
       });
