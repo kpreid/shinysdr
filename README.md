@@ -12,7 +12,7 @@ For example, the earliest technical feature of note is its **persistent waterfal
 
 Some other notable features:
 
-* **Browser-based UI:** The receiver can be listened to and remotely controlled over a network or the Internet, as well as from the same machine the actual hardware is connected to.
+* **Browser-based UI:** The receiver can be listened to and remotely controlled over a network or the Internet, as well as from the same machine the actual hardware is connected to. (However, the response time and audio stream may be unsatisfactory for Internet use.)
 
 * **Modularity**: plugin system allows adding support for new modes (types of modulation) and hardware devices.
 
@@ -38,26 +38,38 @@ Dependencies:
 * [Google Chrome](https://www.google.com/chrome/) is currently required for the user interface. While it is not *intended* to be Chrome-only, no attempt has been made to avoid using facilities which are (draft) standards, but not yet implemented in other browsers.
 
 The server uses a configuration file, which is Python code.
-Run <code>python -m shinysdr.main --create <var>filename</var></code> to create an example file.
+Run
+
+<pre>python -m shinysdr.main --create <var>filename</var></pre>
+
+to create an example file.
 Edit it to specify your available hardware and other desired configuration (such as a HTTPS server certificate).
 
 
 Running
 -------
 
-Once you have prepared a configuration file, you can run the server using <code>python -m shinysdr.main <var>filename</var></code> and access it using your browser at the displayed URL.
+Once you have prepared a configuration file, you can run the server using
+
+<pre>python -m shinysdr.main <var>filename</var></pre>
+
+and access it using your browser at the displayed URL.
 
 
 Creating plugins
 ----------------
 
+ShinySDR plugins are defined based on [the Twisted plugin system](https://twistedmatrix.com/documents/12.0.0/core/howto/plugin.html). A plugin is a Python module or package which provides objects implementing a defined plugin interface. To be loaded, a plugin must be placed somewhere on your Python module search path (`PYTHONPATH`) in the `shinysdr.plugins` package.
 
-TODO explain extensibility points
+Plugins can currently:
 
-TODO show how to add plugins to the path
+  * Add new RF source types. (This does not have a specific interface since sources are written explicitly in the configuration file.)
+  * Add new demodulators (`ModeDef`).
+  * Add JS code or other web resources to be loaded by the client (`ClientResourceDef`). This can be used to define new widgets.
 
-TODO link to Twisted plugin docs
+The included VOR demodulator plugin (`shinysdr/plugins/vor/`) may be a useful example.
 
+TODO: formally document plugin interfaces
 
 Copyright and License
 ---------------------
