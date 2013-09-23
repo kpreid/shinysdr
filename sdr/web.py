@@ -1,8 +1,9 @@
 from twisted.web import static, server, resource
-from twisted.internet import reactor
 from twisted.internet import protocol
 from twisted.internet import task
 from twisted.application import strports
+from twisted.plugin import IPlugin, getPlugins
+from zope.interface import Interface, implements  # available via Twisted
 
 from gnuradio import gr
 
@@ -15,6 +16,8 @@ import os.path
 import weakref
 
 import sdr.top
+import sdr.plugins
+
 
 class CellResource(resource.Resource):
 	isLeaf = True
@@ -288,6 +291,23 @@ class OurStreamFactory(protocol.Factory):
 		return p
 
 
+class IClientResourceDef(Interface):
+	'''
+	Client plugin interface object
+	'''
+	# Only needed to make the plugin system work
+	# TODO write interface methods anyway
+
+
+class ClientResourceDef(object):
+	implements(IPlugin, IClientResourceDef)
+	
+	def __init__(self, key, resource, loadURL=None):
+		self.key = key
+		self.resource = resource
+		self.loadURL = loadURL
+
+
 # used externally
 staticResourcePath = os.path.join(os.path.dirname(__file__), 'webstatic')
 
@@ -324,6 +344,19 @@ def listen(config, top, noteDirty):
 		os.path.dirname(__file__), 'deps/openlayers')))
 	client.putChild('require.js', static.File(os.path.join(
 		os.path.dirname(__file__), 'deps/require.js')))
+	
+	# Plugin resources
+	loadList = []
+	pluginResources = resource.Resource()
+	client.putChild('plugins', pluginResources)
+	for resourceDef in getPlugins(IClientResourceDef, sdr.plugins):
+		pluginResources.putChild(resourceDef.key, resourceDef.resource)
+		if resourceDef.loadURL is not None:
+			# TODO constrain value
+			loadList.append('client/plugins/' + urllib.quote(resourceDef.key, safe='') + '/' + resourceDef.loadURL)
+	
+	# Client plugin list
+	client.putChild('plugin-index.json', static.Data(json.dumps(loadList), 'application/json'))
 	
 	if rootCap is None:
 		root = appRoot

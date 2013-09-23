@@ -1,5 +1,6 @@
 # TODO: fully clean up this GRC-generated file
 
+from twisted.web import static
 from zope.interface import implements
 from twisted.plugin import IPlugin
 
@@ -11,11 +12,13 @@ from gnuradio import filter as grfilter  # don't shadow builtin
 from gnuradio.filter import firdes
 
 import math
+import os.path
 
 from sdr import filters
 from sdr.receiver import ModeDef, IDemodulator
 from sdr.plugins.basic_demod import SimpleAudioDemodulator
 from sdr.values import exported_value, setter
+from sdr.web import ClientResourceDef
 
 audio_modulation_index = 0.07
 fm_subcarrier = 9960
@@ -127,4 +130,10 @@ class VOR(SimpleAudioDemodulator):
 	def get_angle(self):
 		return self.probe.level()
 
-pluginDef = ModeDef('VOR', label='VOR', demodClass=VOR)
+
+# Twisted plugin exports
+pluginMode = ModeDef('VOR', label='VOR', demodClass=VOR)
+pluginClient = ClientResourceDef(
+	key=__name__,
+	resource=static.File(os.path.join(os.path.split(__file__)[0], 'client')),
+	loadURL='vor.js')
