@@ -360,9 +360,11 @@ def listen(config, top, noteDirty):
 	
 	if rootCap is None:
 		root = appRoot
+		visitPath = '/'
 	else:
 		root = resource.Resource()
 		root.putChild(rootCap, appRoot)
+		visitPath = '/' + urllib.quote(rootCap, safe='') + '/'
 	
 	strports.listen(config['httpPort'], server.Site(root))
 
@@ -370,8 +372,8 @@ def listen(config, top, noteDirty):
 	(hmethod, hargs, hkwargs) = strports.parse(config['httpPort'], None)
 	print hmethod
 	if hmethod == 'TCP':
-		return 'http://localhost:' + str(hargs[0]) + '/'
+		return 'http://localhost:' + str(hargs[0]) + visitPath
 	elif hmethod == 'SSL':
-		return 'https://localhost:' + str(hargs[0]) + '/'
+		return 'https://localhost:' + str(hargs[0]) + visitPath
 	else:
 		return '???'

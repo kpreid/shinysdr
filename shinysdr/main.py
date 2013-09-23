@@ -8,6 +8,7 @@ import os.path
 import shutil
 import argparse
 import sys
+import webbrowser
 
 from twisted.internet import reactor
 
@@ -17,6 +18,8 @@ argParser.add_argument('configFile', metavar='CONFIG',
 	help='path of configuration file')
 argParser.add_argument('--create', dest='createConfig', action='store_true',
 	help='write template configuration file to CONFIG and exit')
+argParser.add_argument('-g, --go', dest='openBrowser', action='store_true',
+	help='open the UI in a web browser')
 args = argParser.parse_args()
 
 import shinysdr.top
@@ -85,5 +88,10 @@ restore(top)
 print 'Web server...'
 url = shinysdr.web.listen(webConfig, top, noteDirty)
 
-print 'Ready. Visit ' + url
+if args.openBrowser:
+	print 'Ready. Opening ' + url
+	webbrowser.open(url=url, new=1, autoraise=True)
+else:
+	print 'Ready. Visit ' + url
+
 reactor.run()
