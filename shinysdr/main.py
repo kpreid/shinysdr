@@ -19,26 +19,26 @@ argParser.add_argument('--create', dest='createConfig', action='store_true',
 	help='write template configuration file to CONFIG and exit')
 args = argParser.parse_args()
 
-import sdr.top
-import sdr.web
-import sdr.source
+import shinysdr.top
+import shinysdr.web
+import shinysdr.source
 
 # Load config file
 if args.createConfig:
 	with open(args.configFile, 'w') as f:
 		f.write('''\
-import sdr.plugins.osmosdr
+import shinysdr.plugins.osmosdr
 sources = {
 	# OsmoSDR generic device source; handles USRP, RTL-SDR, FunCube
 	# Dongle, HackRF, etc.
-	'osmo': sdr.plugins.osmosdr.OsmoSDRSource(''),
+	'osmo': shinysdr.plugins.osmosdr.OsmoSDRSource(''),
 
 	# For hardware which uses a sound-card as its ADC or appears as an
 	# audio device.
-	'audio': sdr.source.AudioSource(''),
+	'audio': shinysdr.source.AudioSource(''),
 	
 	# Locally generated RF signals for test purposes.
-	'sim': sdr.source.SimulatedSource(),
+	'sim': shinysdr.source.SimulatedSource(),
 }
 
 stateFile = 'state.json'
@@ -53,7 +53,7 @@ wsPort = 'tcp:8101'
 		sys.exit(0)
 else:
 	# TODO: better ways to manage the namespaces?
-	configEnv = {'sdr': sdr}
+	configEnv = {'shinysdr': shinysdr}
 	execfile(args.configFile, __builtins__.__dict__, configEnv)
 	sources = configEnv['sources']
 	stateFile = str(configEnv['stateFile'])
@@ -77,13 +77,13 @@ def restore(root):
 
 
 print 'Flow graph...'
-top = sdr.top.Top(sources=sources)
+top = shinysdr.top.Top(sources=sources)
 
 print 'Restoring state...'
 restore(top)
 
 print 'Web server...'
-url = sdr.web.listen(webConfig, top, noteDirty)
+url = shinysdr.web.listen(webConfig, top, noteDirty)
 
 print 'Ready. Visit ' + url
 reactor.run()

@@ -8,8 +8,8 @@ from gnuradio import analog
 from gnuradio import gr
 from gnuradio import blocks
 
-from sdr.values import ExportedState, BlockCell, Range, Enum, exported_value, setter
-from sdr import plugins
+from shinysdr.values import ExportedState, BlockCell, Range, Enum, exported_value, setter
+from shinysdr import plugins
 
 
 class Receiver(gr.hier_block2, ExportedState):

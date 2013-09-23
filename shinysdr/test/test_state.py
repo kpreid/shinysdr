@@ -1,6 +1,6 @@
 import unittest
 
-from sdr.values import ExportedState, CollectionState, exported_value, setter, Range
+from shinysdr.values import ExportedState, CollectionState, exported_value, setter, Range
 
 
 class TestDecorator(unittest.TestCase):

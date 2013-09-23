@@ -309,7 +309,7 @@ class ExportedSetter(object):
 
 
 def type_to_json(t):
-	if str(t) == 'sdr.top.SpectrumTypeStub':
+	if str(t) == 'shinysdr.top.SpectrumTypeStub':
 		# TODO: make this into a ValueType?
 		return u'spectrum'
 	elif isinstance(t, ValueType):

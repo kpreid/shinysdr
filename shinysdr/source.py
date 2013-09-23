@@ -11,7 +11,7 @@ from gnuradio.filter import firdes
 
 import math
 
-from sdr.values import Range, ExportedState, exported_value, setter
+from shinysdr.values import Range, ExportedState, exported_value, setter
 
 
 class Source(gr.hier_block2, ExportedState):

@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
-from sdr.source import Source
-from sdr.values import exported_value, setter, Range, Enum
+from shinysdr.source import Source
+from shinysdr.values import exported_value, setter, Range, Enum
 
 import osmosdr
 

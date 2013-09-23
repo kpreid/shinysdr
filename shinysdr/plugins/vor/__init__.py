@@ -14,11 +14,11 @@ from gnuradio.filter import firdes
 import math
 import os.path
 
-from sdr import filters
-from sdr.receiver import ModeDef, IDemodulator
-from sdr.plugins.basic_demod import SimpleAudioDemodulator
-from sdr.values import exported_value, setter
-from sdr.web import ClientResourceDef
+from shinysdr import filters
+from shinysdr.receiver import ModeDef, IDemodulator
+from shinysdr.plugins.basic_demod import SimpleAudioDemodulator
+from shinysdr.values import exported_value, setter
+from shinysdr.web import ClientResourceDef
 
 audio_modulation_index = 0.07
 fm_subcarrier = 9960

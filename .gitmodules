@@ -1,3 +1,3 @@
-[submodule "sdr/deps/jasmine"]
-	path = sdr/deps/jasmine
+[submodule "shinysdr/deps/jasmine"]
+	path = shinysdr/deps/jasmine
 	url = https://github.com/pivotal/jasmine

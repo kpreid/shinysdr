@@ -31,21 +31,21 @@ Dependencies:
     * [Python](http://www.python.org/) 2.7 or later compatible version.
     * [GNU Radio](http://gnuradio.org/) 3.7.1 or later.
     * [`gr-osmosdr`](http://sdr.osmocom.org/trac/wiki/GrOsmoSDR), and any applicable hardware drivers such as `librtlsdr`. (Plugins may be written to use other RF sources, but the only built-in support is for `gr-osmosdr`.)
-* In the `sdr/deps/` directory, copy or symlink the following items:
+* In the `shinysdr/deps/` directory, copy or symlink the following items:
     * `jasmine/` ([Jasmine](https://github.com/pivotal/jasmine/) 1.3.1 or later)
     * `openlayers/` ([OpenLayers](http://openlayers.org/) 2.13.1 or later)
     * `require.js` ([RequireJS](http://requirejs.org/) 2.1.8 or later)
 * [Google Chrome](https://www.google.com/chrome/) is currently required for the user interface. While it is not *intended* to be Chrome-only, no attempt has been made to avoid using facilities which are (draft) standards, but not yet implemented in other browsers.
 
 The server uses a configuration file, which is Python code.
-Run <code>python -m sdr.main --create <var>filename</var></code> to create an example file.
+Run <code>python -m shinysdr.main --create <var>filename</var></code> to create an example file.
 Edit it to specify your available hardware and other desired configuration (such as a HTTPS server certificate).
 
 
 Running
 -------
 
-Once you have prepared a configuration file, you can run the server using <code>python -m sdr.main <var>filename</var></code> and access it using your browser at the displayed URL.
+Once you have prepared a configuration file, you can run the server using <code>python -m shinysdr.main <var>filename</var></code> and access it using your browser at the displayed URL.
 
 
 Creating plugins

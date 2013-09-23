@@ -5,9 +5,9 @@ from gnuradio import gr
 from gnuradio import blocks
 from gnuradio import analog
 
-from sdr.receiver import ModeDef, IDemodulator
-from sdr.values import ExportedState, exported_value
-from sdr.filters import MultistageChannelFilter
+from shinysdr.receiver import ModeDef, IDemodulator
+from shinysdr.values import ExportedState, exported_value
+from shinysdr.filters import MultistageChannelFilter
 
 import subprocess
 import os

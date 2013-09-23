@@ -15,8 +15,8 @@ import urllib
 import os.path
 import weakref
 
-import sdr.top
-import sdr.plugins
+import shinysdr.top
+import shinysdr.plugins
 
 
 class CellResource(resource.Resource):
@@ -349,7 +349,7 @@ def listen(config, top, noteDirty):
 	loadList = []
 	pluginResources = resource.Resource()
 	client.putChild('plugins', pluginResources)
-	for resourceDef in getPlugins(IClientResourceDef, sdr.plugins):
+	for resourceDef in getPlugins(IClientResourceDef, shinysdr.plugins):
 		pluginResources.putChild(resourceDef.key, resourceDef.resource)
 		if resourceDef.loadURL is not None:
 			# TODO constrain value

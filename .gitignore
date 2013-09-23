@@ -1,4 +1,4 @@
 *.pyc
 dropin.cache
 _trial_temp*/
-/sdr/deps/
+/shinysdr/deps/
