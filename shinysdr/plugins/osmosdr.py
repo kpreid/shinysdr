@@ -52,11 +52,6 @@ class OsmoSDRSource(Source):
 	@setter
 	def set_freq(self, freq):
 		actual_freq = self._compute_frequency(freq)
-		# TODO: This limitation is in librtlsdr's interface. If we support other gr-osmosdr devices, change it.
-		maxint32 = 2 ** 32 - 1
-		if actual_freq < 0 or actual_freq > maxint32:
-			raise ValueError('Frequency must be between 0 and ' + str(maxint32) + ' Hz')
-
 		self.freq = freq
 		self._update_frequency()
 		# TODO: According to OsmoSDR's interface, the frequency tuned to (get_center_freq) may not be the one we requested. Handle that.
