@@ -43,7 +43,7 @@ Run
 <pre>python -m shinysdr.main --create <var>filename</var></pre>
 
 to create an example file.
-Edit it to specify your available hardware and other desired configuration (such as a HTTPS server certificate).
+Edit it to specify your available hardware and other desired configuration (such as a HTTPS server certificate and the location of the state persistence file).
 
 
 Running
@@ -53,7 +53,7 @@ Once you have prepared a configuration file, you can run the server using
 
 <pre>python -m shinysdr.main <var>filename</var></pre>
 
-and access it using your browser at the displayed URL.
+and access it using your browser at the displayed URL. (The `--go` option will automatically attempt to open your default browser, but this is unlikely to be helpful if it is not Chrome.)
 
 
 Creating plugins
