@@ -351,7 +351,7 @@ class Top(gr.top_block, ExportedState):
 	def get_audio_rate(self):
 		return self.audio_rate
 	
-	@exported_value(ctor=Range(2, 4096, logarithmic=True, integer=True))
+	@exported_value(ctor=Range([(2, 4096)], logarithmic=True, integer=True))
 	def get_spectrum_resolution(self):
 		return self.spectrum_resolution
 
@@ -361,7 +361,7 @@ class Top(gr.top_block, ExportedState):
 		self.__needs_spectrum = True
 		self._do_connect()
 
-	@exported_value(ctor=Range(1, 60, logarithmic=True, integer=False))
+	@exported_value(ctor=Range([(1, 60)], logarithmic=True, integer=False))
 	def get_spectrum_rate(self):
 		return self.spectrum_rate
 

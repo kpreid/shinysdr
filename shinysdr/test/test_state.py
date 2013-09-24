@@ -29,7 +29,7 @@ class DecoratorSpecimen(DecoratorSpecimenSuper):
 	def __init__(self):
 		self.rw = 0.0
 	
-	@exported_value(ctor=Range(0.0, 10.0))
+	@exported_value(ctor=Range([(0.0, 10.0)]))
 	def get_rw(self):
 		return self.rw
 	

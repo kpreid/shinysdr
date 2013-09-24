@@ -230,7 +230,7 @@ class SimulatedSource(Source):
 	def get_tune_delay(self):
 		return 0.0
 	
-	@exported_value(ctor=Range(-5, 1))
+	@exported_value(ctor=Range([(-5, 1)]))
 	def get_noise_level(self):
 		return self.noise_level
 	

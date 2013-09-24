@@ -51,7 +51,7 @@ class SquelchMixin(ExportedState):
 	def __init__(self, squelch_rate, squelch_threshold=-100):
 		self.squelch_block = analog.simple_squelch_cc(squelch_threshold, 9.6 / squelch_rate)
 
-	@exported_value(ctor=Range(-100, 0, strict=False, logarithmic=False))
+	@exported_value(ctor=Range([(-100, 0)], strict=False, logarithmic=False))
 	def get_squelch_threshold(self):
 		return self.squelch_block.threshold()
 

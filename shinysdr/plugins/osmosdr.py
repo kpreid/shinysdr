@@ -167,13 +167,10 @@ class OsmoSDRSource(Source):
 
 
 def convert_osmosdr_range(meta_range, add_zero=False, **kwargs):
-	if len(meta_range.values()) == 0:
-		# If we don't check this condition, start() and stop() will raise
-		# TODO better stub value
-		return Range(-1, -1, **kwargs)
-	# Note: meta_range may have gaps and we don't yet represent that
-	start = meta_range.start()
-	stop = meta_range.stop()
+	subranges = []
+	for i in xrange(0, meta_range.size()):
+		range = meta_range[i]
+		subranges.append((range.start(), range.stop()))
 	if add_zero:
-		start = min(0, start)
-	return Range(start, stop, **kwargs)
+		subranges[0:0] = [(0, 0)]
+	return Range(subranges, **kwargs)

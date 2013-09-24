@@ -108,7 +108,7 @@ class Receiver(gr.hier_block2, ExportedState):
 		self.context.revalidate()
 	
 	# TODO: support non-audio demodulators at which point these controls should be optional
-	@exported_value(ctor=Range(0.001, 100, strict=False, logarithmic=True))
+	@exported_value(ctor=Range([(0.001, 100)], strict=False, logarithmic=True))
 	def get_audio_gain(self):
 		return self.audio_gain
 
@@ -117,7 +117,7 @@ class Receiver(gr.hier_block2, ExportedState):
 		self.audio_gain = value
 		self.__update_audio_gain()
 	
-	@exported_value(ctor=Range(-1, 1, strict=True))
+	@exported_value(ctor=Range([(-1, 1)], strict=True))
 	def get_audio_pan(self):
 		return self.audio_pan
 	

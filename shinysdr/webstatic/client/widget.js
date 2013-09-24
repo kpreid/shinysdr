@@ -1483,16 +1483,14 @@ define(['./values', './events'], function (values, events) {
   function Knob(config) {
     var target = config.target;
 
-    var lowerBound = -Infinity;
-    var upperBound = Infinity;
     var type = target.type;
-    if (type instanceof values.Range) {  // TODO: better type protocol
-      lowerBound = type.min;
-      upperBound = type.max;
-      // TODO: use integer flag, w decimal points?
-    }
-    function clamp(value) {
-      return Math.min(upperBound, Math.max(lowerBound, value));
+    // TODO: use integer flag of Range, w decimal points?
+    function clamp(value, direction) {
+      if (type instanceof values.Range) {  // TODO: better type protocol
+        return type.round(value, direction);
+      } else {
+        return value;
+      }
     }
 
     var container = this.element = document.createElement("span");
@@ -1515,7 +1513,7 @@ define(['./values', './events'], function (values, events) {
       places[i] = {element: digit, text: digitText};
       var scale = Math.pow(10, i);
       function spin(direction) {
-        target.set(clamp(direction * scale + target.get()));
+        target.set(clamp(direction * scale + target.get(), direction));
       }
       digit.addEventListener("mousewheel", function(event) { // Not in FF
         // TODO: deal with high-res/accelerated scrolling
@@ -1590,7 +1588,7 @@ define(['./values', './events'], function (values, events) {
         }
         value += (input - currentDigitValue) * scale;
         if (negative) { value = -value; }
-        target.set(clamp(value));
+        target.set(clamp(value, 0));
 
         focusNext();
         event.preventDefault();
@@ -2154,13 +2152,13 @@ define(['./values', './events'], function (values, events) {
     
     var type = target.type;
     if (type instanceof values.Range) {
-      input.min = getT(type.min);
-      input.max = getT(type.max);
+      input.min = getT(type.getMin());
+      input.max = getT(type.getMax());
       input.step = (type.integer && !type.logarithmic) ? 1 : 'any';
     }
 
     input.addEventListener('change', function(event) {
-      target.set(input.valueAsNumber);
+      target.set(type.round(input.valueAsNumber, 0));
     }, false);
     function draw() {
       var value = +target.depend(draw);
@@ -2207,8 +2205,8 @@ define(['./values', './events'], function (values, events) {
     
     var type = target.type;
     if (type instanceof values.Range) {
-      slider.min = getT(type.min);
-      slider.max = getT(type.max);
+      slider.min = getT(type.getMin());
+      slider.max = getT(type.getMax());
       slider.step = (type.integer && !type.logarithmic) ? 1 : 'any';
       if (type.integer) {
         format = function(n) { return '' + n; };
@@ -2216,7 +2214,7 @@ define(['./values', './events'], function (values, events) {
     }
 
     slider.addEventListener('change', function(event) {
-      target.set(setT(slider.valueAsNumber));
+      target.set(type.round(setT(slider.valueAsNumber), 0));
     }, false);
     function draw() {
       var value = +target.depend(draw);

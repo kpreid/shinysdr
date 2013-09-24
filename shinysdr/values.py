@@ -1,4 +1,5 @@
 import array
+import bisect
 
 class BaseCell(object):
 	def __init__(self, target, key, persists=True, writable=False):
@@ -343,9 +344,10 @@ class Enum(ValueType):
 
 
 class Range(ValueType):
-	def __init__(self, min, max, strict=True, logarithmic=False, integer=False):
-		self.__min = min
-		self.__max = max
+	def __init__(self, subranges, strict=True, logarithmic=False, integer=False):
+		# TODO validate subranges are sorted
+		self.__mins = [min for (min, max) in subranges]
+		self.__maxes = [max for (min, max) in subranges]
 		self.__strict = strict
 		self.__logarithmic = logarithmic
 		self.__integer = integer
@@ -353,8 +355,7 @@ class Range(ValueType):
 	def type_to_json(self):
 		return {
 			'type': 'range',
-			'min': self.__min,
-			'max': self.__max,
+			'subranges': zip(self.__mins, self.__maxes),
 			'logarithmic': self.__logarithmic,
 			'integer': self.__integer
 		}
@@ -364,8 +365,14 @@ class Range(ValueType):
 		if self.__integer:
 			specimen = int(round(specimen))
 		if self.__strict:
-			if specimen < self.__min:
-				specimen = self.__min
-			if specimen > self.__max:
-				specimen = self.__max
+			mins = self.__mins
+			maxes = self.__maxes
+			i = bisect.bisect_right(mins, specimen)
+			if i >= len(mins): i = len(mins) - 1
+			# i is now the index of the highest subrange which is not too high to contain specimen
+			# TODO: Round to nearest range instead of lower one. For now, the client handles all user-visible rounding.
+			if specimen < mins[i]:
+				specimen = mins[i]
+			if specimen > maxes[i]:
+				specimen = maxes[i]
 		return specimen
