@@ -67,7 +67,7 @@ define(function () {
     
     // Receiver-derived data
     function addModeLayer(filterMode, prepare) {
-      var modeLayer = new OpenLayers.Layer.Vector('VOR');
+      var modeLayer = new OpenLayers.Layer.Vector(filterMode);
       olm.addLayer(modeLayer);
 
       function updateOnReceivers() {
