@@ -8,7 +8,7 @@ from gnuradio import filter as grfilter  # don't shadow builtin
 from gnuradio.filter import firdes
 
 from shinysdr.receiver import ModeDef, IDemodulator
-from shinysdr.filters import MultistageChannelFilter, make_resampler
+from shinysdr.blocks import MultistageChannelFilter, make_resampler
 from shinysdr.values import ExportedState, Range, exported_value, setter
 
 import math

@@ -4,6 +4,8 @@ from gnuradio import filter as grfilter
 from gnuradio.filter import pfb
 from gnuradio.filter import firdes
 
+import subprocess
+import os
 
 def _factorize(n):
 	# I wish there was a nice standard library function for this...
@@ -112,5 +114,30 @@ def make_resampler(in_rate, out_rate):
 		resample_ratio,
 		firdes.low_pass(pfbsize, pfbsize, 0.4 * resample_ratio, 0.2 * resample_ratio),
 		pfbsize)
+
+
+class SubprocessSink(gr.hier_block2):
+	def __init__(self, args):
+		gr.hier_block2.__init__(
+			self, 'subprocess ' + repr(args),
+			gr.io_signature(1, 1, gr.sizeof_char * 1),
+			gr.io_signature(0, 0, 0),
+		)
+		self.__p = subprocess.Popen(
+			args=args,
+			stdin=subprocess.PIPE,
+			stdout=None,
+			stderr=None,
+			close_fds=True)
+		# we dup the fd because the stdin object and file_descriptor_sink both expect to own it
+		# TODO: verify no fd leak
+		self.connect(
+			self,
+			blocks.file_descriptor_sink(
+				gr.sizeof_char,
+				os.dup(self.__p.stdin.fileno())))
+	
+	def __del__(self):
+		self.__p.kill()
 
 

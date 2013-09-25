@@ -7,10 +7,7 @@ from gnuradio import analog
 
 from shinysdr.receiver import ModeDef, IDemodulator
 from shinysdr.values import ExportedState, exported_value
-from shinysdr.filters import MultistageChannelFilter
-
-import subprocess
-import os
+from shinysdr.blocks import MultistageChannelFilter, SubprocessSink
 
 
 pipe_rate = 2000000
@@ -32,12 +29,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 		self.input_rate = input_rate
 		
 		# Subprocess
-		self.dump1090 = subprocess.Popen(
-			args=['dump1090', '--ifile', '-'],
-			stdin=subprocess.PIPE,
-			stdout=None,
-			stderr=None,
-			close_fds=True)
+		self.dump1090 = SubprocessSink(['dump1090', '--ifile', '-'])
 		
 		# Output
 		self.band_filter_block = filter = MultistageChannelFilter(
@@ -54,9 +46,8 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 			blocks.add_const_ff(255.0/2),
 			blocks.float_to_uchar(),
 			(interleaver, 0),
-			# we dup the fd because the stdin object and file_descriptor_sink both expect to own it
-			# TODO: verify no fd leak
-			blocks.file_descriptor_sink(gr.sizeof_char, os.dup(self.dump1090.stdin.fileno())))
+			self.dump1090)
+		
 		self.connect(
 			filter,
 			blocks.complex_to_imag(1),

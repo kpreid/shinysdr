@@ -14,7 +14,7 @@ from gnuradio.filter import firdes
 import math
 import os.path
 
-from shinysdr import filters
+from shinysdr.blocks import make_resampler
 from shinysdr.receiver import ModeDef, IDemodulator
 from shinysdr.plugins.basic_demod import SimpleAudioDemodulator
 from shinysdr.values import exported_value, setter
@@ -72,7 +72,7 @@ class VOR(SimpleAudioDemodulator):
 		
 		self.probe = blocks.probe_signal_f()
 		
-		self.resampler_block = filters.make_resampler(internal_audio_rate, self.audio_rate)
+		self.resampler_block = make_resampler(internal_audio_rate, self.audio_rate)
 
 		##################################################
 		# Connections

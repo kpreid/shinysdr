@@ -8,7 +8,7 @@ from gnuradio.eng_option import eng_option
 from gnuradio.filter import firdes
 from optparse import OptionParser
 from shinysdr.values import ExportedState, CollectionState, exported_value, setter, BlockCell, MsgQueueCell, Enum, Range
-from shinysdr.filters import make_resampler
+from shinysdr.blocks import make_resampler
 from shinysdr.receiver import Receiver
 
 from twisted.internet import reactor
