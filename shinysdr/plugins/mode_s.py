@@ -1,5 +1,4 @@
 from zope.interface import implements
-from twisted.plugin import IPlugin
 
 from gnuradio import gr
 from gnuradio import blocks
