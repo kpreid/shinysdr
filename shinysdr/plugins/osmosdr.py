@@ -27,12 +27,19 @@ class OsmoSDRProfile(object):
 
 
 class OsmoSDRSource(Source):
+	# TODO remove Source superclass overall
 	def __init__(self,
 			osmo_device,
 			name=None,
 			profile=OsmoSDRProfile(),
-			sample_rate=2400000,
+			sample_rate=None,
 			**kwargs):
+		'''
+		osmo_device: gr-osmosdr device string
+		name: block name (usually not specified)
+		profile: an OsmoSDRProfile (see docs)
+		sample_rate: desired sample rate, or None == maximum available rate.
+		'''
 		if name is None:
 			name = 'OsmoSDR %s' % osmo_device
 		Source.__init__(self, name=name, **kwargs)
@@ -47,7 +54,10 @@ class OsmoSDRSource(Source):
 		
 		self.osmosdr_source_block = source = osmosdr.source("nchan=1 " + osmo_device)
 		# Note: Docs for these setters at gr-osmosdr/lib/source_iface.h
-		source.set_sample_rate(sample_rate)
+		if sample_rate is None:
+			source.set_sample_rate(source.get_sample_rates().stop())
+		else:
+			source.set_sample_rate(sample_rate)
 		source.set_center_freq(freq, ch)
 		# freq_corr: We implement correction internally because setting this at runtime breaks things
 		source.set_dc_offset_mode(self.dc_state, ch)  # no getter, set to known state
