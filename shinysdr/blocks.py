@@ -130,14 +130,14 @@ class SubprocessSink(gr.hier_block2):
 			stderr=None,
 			close_fds=True)
 		# we dup the fd because the stdin object and file_descriptor_sink both expect to own it
-		# TODO: verify no fd leak
+		fd_owned_by_sink = os.dup(self.__p.stdin.fileno())
+		self.__p.stdin.close()  # not going to use
 		self.connect(
 			self,
-			blocks.file_descriptor_sink(
-				gr.sizeof_char,
-				os.dup(self.__p.stdin.fileno())))
+			blocks.file_descriptor_sink(gr.sizeof_char, fd_owned_by_sink))
 	
-	def __del__(self):
-		self.__p.kill()
+	# we may find this needed later...
+	#def __del__(self):
+	#	self.__p.kill()
 
 
