@@ -175,7 +175,6 @@ class Receiver(gr.hier_block2, ExportedState):
 		demodulator = clas(
 			mode=mode,
 			input_rate=self.input_rate,
-			input_center_freq=self.input_center_freq,
 			audio_rate=self.audio_rate,
 			context=facet,
 			**init

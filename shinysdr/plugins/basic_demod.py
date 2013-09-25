@@ -17,7 +17,6 @@ class Demodulator(gr.hier_block2, ExportedState):
 	implements(IDemodulator)
 	def __init__(self, mode,
 			input_rate=0,
-			input_center_freq=0,
 			audio_rate=0,
 			context=None):
 		assert input_rate > 0
@@ -30,7 +29,6 @@ class Demodulator(gr.hier_block2, ExportedState):
 		)
 		self.mode = mode
 		self.input_rate = input_rate
-		self.input_center_freq = input_center_freq
 		self.audio_rate = audio_rate
 		self.context = context
 		
