@@ -38,6 +38,12 @@ define(['./values'], function (values) {
       }
       distributeButtons();
       if (ns) ns.setItem('detailsOpen', JSON.stringify(visible));
+      
+      // kludge to trigger relayout on other elements that need it
+      // This kludge is needed because there's no way for an element to be notified on relayout.
+      var resize = document.createEvent('Event');
+      resize.initEvent('resize', false, false);
+      window.dispatchEvent(resize);
     }
     function toggle(event) {
       if (visible && visibleCount <= 1) return;
