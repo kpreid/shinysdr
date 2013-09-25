@@ -2158,7 +2158,11 @@ define(['./values', './events'], function (values, events) {
     }
 
     input.addEventListener('change', function(event) {
-      target.set(type.round(input.valueAsNumber, 0));
+      if (type instanceof values.Range) {
+        target.set(type.round(input.valueAsNumber, 0));
+      } else {
+        target.set(input.valueAsNumber);
+      }
     }, false);
     function draw() {
       var value = +target.depend(draw);
@@ -2214,7 +2218,11 @@ define(['./values', './events'], function (values, events) {
     }
 
     slider.addEventListener('change', function(event) {
-      target.set(type.round(setT(slider.valueAsNumber), 0));
+      if (type instanceof values.Range) {
+        target.set(type.round(setT(slider.valueAsNumber), 0));
+      } else {
+        target.set(setT(slider.valueAsNumber));
+      }
     }, false);
     function draw() {
       var value = +target.depend(draw);
