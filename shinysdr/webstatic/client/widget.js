@@ -490,6 +490,9 @@ define(['./values', './events'], function (values, events) {
         ignore('gain');
       }
       
+      if ('external_freq_shift' in block) {
+        addWidget('external_freq_shift', 'SmallKnob', 'External frequency shift');
+      }
       if ('correction_ppm' in block) {
         addWidget('correction_ppm', 'SmallKnob', 'Freq.corr. (PPM)');
       }

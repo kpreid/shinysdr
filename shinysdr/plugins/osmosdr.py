@@ -48,6 +48,7 @@ class OsmoSDRSource(Source):
 		self.__profile = profile
 		
 		self.freq = freq = 98e6
+		self.external_freq_shift = 0
 		self.correction_ppm = 0
 		self.dc_state = 0
 		self.iq_state = 0
@@ -75,7 +76,10 @@ class OsmoSDRSource(Source):
 	
 	# TODO: apply correction_ppm to freq range
 	@exported_value(ctor_fn=lambda self: convert_osmosdr_range(
-		self.osmosdr_source_block.get_freq_range(ch), strict=False, add_zero=self.__profile.e4000))
+		self.osmosdr_source_block.get_freq_range(ch),
+		strict=False,
+		transform=lambda f: self._invert_frequency(f),
+		add_zero=self.__profile.e4000))
 	def get_freq(self):
 		return self.freq
 
@@ -88,29 +92,47 @@ class OsmoSDRSource(Source):
 
 	def get_tune_delay(slf):
 		return 0.25  # TODO: make configurable and/or account for as many factors as we can
-
+	
+	@exported_value(ctor=float)
+	def get_external_freq_shift(self):
+		return self.external_freq_shift
+	
+	@setter
+	def set_external_freq_shift(self, value):
+		self.external_freq_shift = float(value)
+		self._update_frequency()
+	
 	@exported_value(ctor=float)
 	def get_correction_ppm(self):
 		return self.correction_ppm
 	
 	@setter
 	def set_correction_ppm(self, value):
-		self.correction_ppm = value
+		self.correction_ppm = float(value)
 		# Not using the hardware feature because I only get garbled output from it
 		#self.osmosdr_source_block.set_freq_corr(value, 0)
 		self._update_frequency()
 	
 	def _compute_frequency(self, effective_freq):
-		if effective_freq == 0.0 and self.__profile.e4000:
-			# Quirk: Tuning to 3686.6-3730 MHz (on some tuner HW) causes operation effectively at 0Hz.
+		effective_freq += self.external_freq_shift
+		if abs(effective_freq) < 1e-2 and self.__profile.e4000:
+			# Quirk: Tuning to 3686.6-3730 MHz on the E4000 causes operation effectively at 0Hz.
 			# Original report: <http://www.reddit.com/r/RTLSDR/comments/12d2wc/a_very_surprising_discovery/>
 			return 3700e6
 		else:
 			return effective_freq * (1 - 1e-6 * self.correction_ppm)
 	
+	def _invert_frequency(self, freq):
+		'''hardware frequency to displayed frequency, inverse of _compute_frequency'''
+		freq = freq / (1 - 1e-6 * self.correction_ppm)
+		if 3686.6e6 <= freq <= 3730e6 and self.__profile.e4000:
+			freq = 0.0
+		freq -= self.external_freq_shift
+		return freq
+	
 	def _update_frequency(self):
 		self.osmosdr_source_block.set_center_freq(self._compute_frequency(self.freq), 0)
-		# TODO: read back actual frequency and store
+		self.freq = self._invert_frequency(self.osmosdr_source_block.get_center_freq())
 		
 		self.tune_hook()
 
@@ -176,11 +198,11 @@ class OsmoSDRSource(Source):
 		self.osmosdr_source_block.set_bandwidth(float(value), ch)
 
 
-def convert_osmosdr_range(meta_range, add_zero=False, **kwargs):
+def convert_osmosdr_range(meta_range, add_zero=False, transform=lambda f: f, **kwargs):
 	subranges = []
 	for i in xrange(0, meta_range.size()):
 		range = meta_range[i]
-		subranges.append((range.start(), range.stop()))
+		subranges.append((transform(range.start()), transform(range.stop())))
 	if add_zero:
 		subranges[0:0] = [(0, 0)]
 	return Range(subranges, **kwargs)
