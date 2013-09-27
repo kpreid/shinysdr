@@ -530,6 +530,9 @@ define(['./values', './events'], function (values, events) {
   function Demodulator(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion) {
       ignore('band_filter_shape');
+      if ('rf_power' in block) {
+        addWidget('rf_power', 'Meter', 'Power');
+      }
       if ('squelch_threshold' in block) {
         addWidget('squelch_threshold', 'LinSlider', 'Squelch');
       }

@@ -47,15 +47,21 @@ class Demodulator(gr.hier_block2, ExportedState):
 
 class SquelchMixin(ExportedState):
 	def __init__(self, squelch_rate, squelch_threshold=-100):
-		self.squelch_block = analog.simple_squelch_cc(squelch_threshold, 9.6 / squelch_rate)
+		alpha = 9.6 / squelch_rate
+		self.rf_squelch_block = analog.simple_squelch_cc(squelch_threshold, alpha)
+		self.rf_probe_block = analog.probe_avg_mag_sqrd_c(0, alpha=alpha)
+
+	@exported_value(ctor=Range([(-100, 0)], strict=False))
+	def get_rf_power(self):
+		return 10 * math.log10(max(1e-10, self.rf_probe_block.level()))
 
 	@exported_value(ctor=Range([(-100, 0)], strict=False, logarithmic=False))
 	def get_squelch_threshold(self):
-		return self.squelch_block.threshold()
+		return self.rf_squelch_block.threshold()
 
 	@setter
 	def set_squelch_threshold(self, level):
-		self.squelch_block.set_threshold(level)
+		self.rf_squelch_block.set_threshold(level)
 
 
 class SimpleAudioDemodulator(Demodulator, SquelchMixin):
@@ -104,8 +110,9 @@ class IQDemodulator(SimpleAudioDemodulator):
 		self.connect(
 			self,
 			self.band_filter_block,
-			self.squelch_block,
+			self.rf_squelch_block,
 			self.split_block)
+		self.connect(self.band_filter_block, self.rf_probe_block)
 		self.connect_audio_output((self.split_block, 0), (self.split_block, 1))
 
 
@@ -132,11 +139,12 @@ class AMDemodulator(SimpleAudioDemodulator):
 		self.connect(
 			self,
 			self.band_filter_block,
-			self.squelch_block,
+			self.rf_squelch_block,
 			self.agc_block,
 			self.demod_block,
 			dc_blocker,
 			self.resampler_block)
+		self.connect(self.band_filter_block, self.rf_probe_block)
 		self.connect_audio_output(self.resampler_block, self.resampler_block)
 
 
@@ -172,8 +180,9 @@ class FMDemodulator(SimpleAudioDemodulator):
 		self.connect(
 			self,
 			self.band_filter_block,
-			self.squelch_block,
+			self.rf_squelch_block,
 			self.demod_block)
+		self.connect(self.band_filter_block, self.rf_probe_block)
 		self.connect_audio_stage()
 		
 	def _make_resampler(self):
@@ -362,9 +371,10 @@ class SSBDemodulator(SimpleAudioDemodulator):
 			self,
 			self.band_filter_block,
 			self.sharp_filter_block,
-			self.squelch_block,
+			self.rf_squelch_block,
 			self.agc_block,
 			self.ssb_demod_block)
+		self.connect(self.sharp_filter_block, self.rf_probe_block)
 		self.connect_audio_output(self.ssb_demod_block, self.ssb_demod_block)
 
 	# override
