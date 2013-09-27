@@ -3,14 +3,22 @@ define(['./network'], function (network) {
   
   var exports = {};
   
-  // Currently, this parameter is set by what is needed to keep the (gnuradio.blocks.throttle)-based SimulatedSource from repeatedly overrunning and underrunning. Ideally, we ought to optimize it for cross-Internet use -- it needs to be big enough to compensate for the burstiness of stream processing and network delivery.
-  // TODO: is it better to keep it in terms of chunks or samples?
-  var targetQueueSize = 9;
+  var minQueueAdjust = 2;
+  var maxQueueAdjust = 20;
   
   function connectAudio(url) {
     // TODO portability
     var audio = new webkitAudioContext();
     //console.log('Sample rate: ' + audio.sampleRate);
+
+    // Queue size management
+    // The queue should be large to avoid underruns due to bursty processing/delivery.
+    // The queue should be small to minimize latency.
+    var targetQueueSize = minQueueAdjust;
+    var queueHistory = new Int32Array(30);
+    var queueHistoryPtr = 0;
+    var hasOverrun = false;
+    var hasUnderrun = false;
 
     var queue = [];
     function openWS() {
@@ -23,6 +31,21 @@ define(['./network'], function (network) {
           return;
         }
         queue.push(JSON.parse(event.data));
+        
+        // Update queue size management
+        queueHistory[queueHistoryPtr] = queue.length;
+        queueHistoryPtr = (queueHistoryPtr + 1) % queueHistory.length;
+        var least = Math.min.apply(undefined, queueHistory);
+        //console.log('least=', least, queueHistory);
+        if (hasUnderrun && least <= 1 && targetQueueSize < maxQueueAdjust) {
+          console.log('inc', least, targetQueueSize);
+          targetQueueSize++;
+          hasUnderrun = false;
+        } else if (hasOverrun && least > 4 && targetQueueSize > minQueueAdjust) {
+          console.log('dec', least, targetQueueSize);
+          targetQueueSize--;
+          hasOverrun = false;
+        }
       };
       ws.onclose = function() {
         console.error('Lost WebSocket connection');
@@ -69,21 +92,23 @@ define(['./network'], function (network) {
         }
         if (queue.length > targetQueueSize) {
           var drop = (queue.length - targetQueueSize) * 3;
-          if (drop > 6) {  // ignore small clock-skew-ish amounts of overrun
+          hasOverrun = true;
+          if (drop > 12) {  // ignore small clock-skew-ish amounts of overrun
             console.log('Audio overrun; dropping', drop, 'samples.');
           }
           j = Math.max(0, j - drop);
         }
       }
+      var underrun = abuf.length - j;
       for (; j < abuf.length; j++) {
         // Fill any underrun
         l[j] = 0;
         r[j] = 0;
       }
-      var underrun = abuf.length - j;
       if (prevUnderrun != 0 && underrun != bufferSize) {
         // Report underrun, but only if it's not just due to the stream stopping
         console.log('Audio underrun by', prevUnderrun, 'samples.');
+        hasUnderrun = true;
       }
       prevUnderrun = underrun;
     };
