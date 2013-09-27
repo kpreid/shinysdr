@@ -8,6 +8,8 @@ from gnuradio import analog
 from gnuradio import gr
 from gnuradio import blocks
 
+import math
+
 from shinysdr.values import ExportedState, BlockCell, Range, Enum, exported_value, setter
 from shinysdr import plugins
 
@@ -47,9 +49,9 @@ class Receiver(gr.hier_block2, ExportedState):
 		self.oscillator = analog.sig_source_c(input_rate, analog.GR_COS_WAVE, -rec_freq, 1, 0)
 		self.mixer = blocks.multiply_cc(1)
 		self.demodulator = self.__make_demodulator(mode, {})
-		self.connected_demodulator = None
 		self.audio_gain_l_block = blocks.multiply_const_ff(self.audio_gain)
 		self.audio_gain_r_block = blocks.multiply_const_ff(self.audio_gain)
+		self.probe_audio = analog.probe_avg_mag_sqrd_f(0, alpha=10.0/audio_rate)
 		
 		self.__do_connect()
 	
@@ -62,10 +64,13 @@ class Receiver(gr.hier_block2, ExportedState):
 		self.context.lock()
 		try:
 			self.disconnect_all()
+			
 			self.connect(self.oscillator, (self.mixer, 1))
 			self.connect(self, self.mixer, self.demodulator)
 			self.connect((self.demodulator, 0), self.audio_gain_l_block, (self, 0))
 			self.connect((self.demodulator, 1), self.audio_gain_r_block, (self, 1))
+			
+			self.connect((self.demodulator, 0), self.probe_audio)
 		finally:
 			self.context.unlock()
 
@@ -130,6 +135,15 @@ class Receiver(gr.hier_block2, ExportedState):
 	def get_is_valid(self):
 		valid_bandwidth = self.input_rate / 2 - abs(self.rec_freq - self.input_center_freq)
 		return self.demodulator is not None and valid_bandwidth >= self.demodulator.get_half_bandwidth()
+	
+	# Note that we cannot measure RF power at this point because we don't know what the channel bandwidth is.
+	@exported_value(ctor=Range([(-60, 0)], strict=False))
+	def get_audio_power(self):
+		if self.get_is_valid():
+			return 10 * math.log10(max(1e-6, self.probe_audio.level()))
+		else:
+			# will not be receiving samples, so value will be meaningless
+			return 0.0
 	
 	def __update_oscillator(self):
 		self.oscillator.set_frequency(self.input_center_freq - self.rec_freq)

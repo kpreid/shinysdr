@@ -510,6 +510,9 @@ define(['./values', './events'], function (values, events) {
         addWidget('mode', 'Radio');
       }
       addWidget('demodulator', 'Demodulator');
+      if ('audio_power' in block) {
+        addWidget('audio_power', 'Meter', 'Level');
+      }
       if ('audio_gain' in block) {
         addWidget('audio_gain', 'LogSlider', 'Volume');
       }
@@ -518,9 +521,6 @@ define(['./values', './events'], function (values, events) {
       }
       if ('rec_freq' in block) {
         addWidget(null, 'SaveButton');
-      }
-      if ('squelch_threshold' in block) {
-        addWidget('squelch_threshold', 'LinSlider', 'Squelch');
       }
     });
   }
@@ -2245,6 +2245,55 @@ define(['./values', './events'], function (values, events) {
   widgets.LogSlider = function(c) { return new Slider(c,
     function (v) { return Math.log(v) / Math.LN10; },
     function (v) { return Math.pow(10, v); }); };
+
+  function Meter(config) {
+    var target = config.target;
+
+    var meter;
+    var text;
+    if (config.element.nodeName !== 'METER') {
+      var container = this.element = config.element;
+      // TODO: Reusing styles for another widget -- rename to suit
+      container.classList.add('widget-Slider-panel');
+
+      if (container.hasAttribute('title')) {
+        var labelEl = container.appendChild(document.createElement('span'));
+        labelEl.classList.add('widget-Slider-label');
+        labelEl.appendChild(document.createTextNode(container.getAttribute('title')));
+        container.removeAttribute('title');
+      }
+
+      meter = container.appendChild(document.createElement('meter'));
+
+      var textEl = container.appendChild(document.createElement('span'));
+      textEl.classList.add('widget-Slider-text');
+      text = textEl.appendChild(document.createTextNode(''));
+    } else {
+      this.element = meter = config.element;
+    }
+    
+    var format = function(n) { return n.toFixed(2); };
+    
+    var type = target.type;
+    if (type instanceof values.Range) {
+      meter.min = type.getMin();
+      meter.max = type.getMax();
+      if (type.integer) {
+        format = function(n) { return '' + n; };
+      }
+    }
+
+    function draw() {
+      var value = +target.depend(draw);
+      meter.value = value;
+      if (text) {
+        text.data = format(value);
+      }
+    }
+    draw.scheduler = config.scheduler;
+    draw();
+  }
+  widgets.Meter = Meter;
   
   function Toggle(config) {
     var target = config.target;

@@ -319,7 +319,7 @@ section > h2 {
   flex: 0 0 auto;
   max-width: 8em;
 }
-.widget-Slider-panel input {
+.widget-Slider-panel input, .widget-Slider-panel meter {
   flex: 1 1 auto;
 
   vertical-align: middle;
