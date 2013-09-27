@@ -3,12 +3,15 @@ define(['./network'], function (network) {
   
   var exports = {};
   
+  // Currently, this parameter is set by what is needed to keep the (gnuradio.blocks.throttle)-based SimulatedSource from repeatedly overrunning and underrunning. Ideally, we ought to optimize it for cross-Internet use -- it needs to be big enough to compensate for the burstiness of stream processing and network delivery.
+  // TODO: is it better to keep it in terms of chunks or samples?
+  var targetQueueSize = 9;
+  
   function connectAudio(url) {
     // TODO portability
     var audio = new webkitAudioContext();
     //console.log('Sample rate: ' + audio.sampleRate);
 
-    var targetQueueSize = 2;
     var queue = [];
     function openWS() {
       // TODO: refactor reconnecting logic
