@@ -2330,7 +2330,9 @@ define(['./values', './events'], function (values, events) {
     });
 
     if (target.type) {
-      Object.keys(target.type.values || {}).forEach(function (value) {
+      var array = Object.keys(target.type.values || {});
+      array.sort();
+      array.forEach(function (value) {
         if (seen[value]) return;
         var label = container.appendChild(document.createElement('label'));
         var rb = label.appendChild(document.createElement('input'));
