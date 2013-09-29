@@ -1303,27 +1303,6 @@ define(['./values', './events'], function (values, events) {
               record[1] = bufferCenterFreq;
             }
 
-            // low-pass filter to remove the edge-to-center variation from the spectrum (disabled because I'm not sure fiddling with the data like this is a good idea until such time as I make it an option, and so on)
-            if (false) {
-              var filterspan = 160;
-              var filtersum = 0;
-              var count = 0;
-              var hpf = new Float32Array(w);
-              for (var i = -filterspan; i < w + filterspan; i++) {
-                if (i + filterspan < w) {
-                  filtersum += buffer[i + filterspan];
-                  count++;
-                }
-                if (i - filterspan >= 0) {
-                  filtersum -= buffer[i - filterspan];
-                  count--;
-                }
-                if (i >= 0 && i < w) {
-                  hpf[i] = filtersum / count;
-                }
-              }
-            }
-
             // Generate image slice from latest FFT data.
             var xScale = buffer.length / w;
             var cScale = 1 / (view.maxLevel - view.minLevel);
@@ -1332,7 +1311,7 @@ define(['./values', './events'], function (values, events) {
             for (var x = 0; x < w; x++) {
               var base = x * 4;
               var i = Math.round(x * xScale);
-              var colorVal = (buffer[i] /* - hpf[i]*/) * cScale + cZero;
+              var colorVal = buffer[i] * cScale + cZero;
               interpolateColor(colorVal, data, base);
             }
           }
