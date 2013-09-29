@@ -1,3 +1,5 @@
+from __future__ import division
+
 from zope.interface import implements
 from twisted.plugin import IPlugin
 
