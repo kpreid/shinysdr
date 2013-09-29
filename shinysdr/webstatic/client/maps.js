@@ -42,18 +42,24 @@ define(function () {
         externalGraphic: 'client/openlayers/img/marker-green.png',
         graphicHeight: 21,
         graphicWidth: 16
-      }})
+      }}),
+      eventListeners: {
+        featureclick: function (event) {
+          console.log('click');
+          radio.preset.set(event.feature.attributes.record);
+        }
+      }
     });
     olm.addLayer(dbLayer);
     function updateDBLayer() {
       db.n.listen(updateDBLayer);
       dbLayer.removeAllFeatures();
-      db.forEach(function(entry) {
+      db.forEach(function(record) {
         // TODO: Add geographic bounds query
-        if (entry.location) {
+        if (record.location) {
           var feature = new OpenLayers.Feature.Vector(
-            projectedPoint(entry.location[0], entry.location[1]),
-            {label: entry.label});
+            projectedPoint(record.location[0], record.location[1]),
+            {label: record.label, record: record});
           dbLayer.addFeatures([feature]);
         }
       });
