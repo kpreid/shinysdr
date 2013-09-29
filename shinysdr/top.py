@@ -53,7 +53,7 @@ class Top(gr.top_block, ExportedState):
 		# Configuration
 		self._sources = dict(sources)
 		self.source_name = self._sources.keys()[0]  # arbitrary valid initial value
-		self.audio_rate = audio_rate = 32000
+		self.audio_rate = audio_rate = 44100
 		self.spectrum_resolution = 4096
 		self.spectrum_rate = 30
 
@@ -245,7 +245,8 @@ class Top(gr.top_block, ExportedState):
 					used_resamplers = set()
 					for (queue_rate, interleaver, sink) in self.audio_queue_sinks.itervalues():
 						if queue_rate == self.audio_rate:
-							self.connect(self.audio_stream_join, sink)
+							self.connect(audio_sum_l, (interleaver, 0))
+							self.connect(audio_sum_r, (interleaver, 1))
 						else:
 							if queue_rate not in self.audio_resampler_cache:
 								# Moderately expensive due to the internals using optfir
@@ -258,7 +259,7 @@ class Top(gr.top_block, ExportedState):
 							used_resamplers.add(resamplers)
 							self.connect(resamplers[0], (interleaver, 0))
 							self.connect(resamplers[1], (interleaver, 1))
-							self.connect(interleaver, sink)
+						self.connect(interleaver, sink)
 					for resamplers in used_resamplers:
 						self.connect(audio_sum_l, resamplers[0])
 						self.connect(audio_sum_r, resamplers[1])
