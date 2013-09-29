@@ -1383,6 +1383,7 @@ define(['./values', './events'], function (values, events) {
     var textOffsetFromTop =
         //ctx.measureText('j').fontBoundingBoxAscent; -- not yet supported
         10 + 2; // default font size is "10px", ignoring effect of baseline
+    var textSpacing = 10 + 1;
     
     // Drawing parameters and functions
     // Each variable is updated in draw()
@@ -1478,7 +1479,12 @@ define(['./values', './events'], function (values, events) {
         ctx.strokeStyle = 'white';
         drawHair(rec_freq_now); // receiver
         ctx.fillStyle = 'white';
-        ctx.fillText(recKey, freqToCoord(rec_freq_now) + 2, textOffsetFromTop);
+        var textX = freqToCoord(rec_freq_now) + 2;
+        var textY = textOffsetFromTop - textSpacing;
+
+        ctx.fillText(recKey, textX, textY += textSpacing);
+        ctx.fillText(formatFreqExact(receiver.rec_freq.depend(draw)), textX, textY += textSpacing);
+        ctx.fillText(receiver.mode.depend(draw), textX, textY += textSpacing);
       }
     }
     draw.scheduler = config.scheduler;
