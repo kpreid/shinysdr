@@ -170,6 +170,7 @@ define(['./values', './events'], function (values, events) {
     
     function prepare() {
       // TODO: unbreakable notify loop here; need to be lazy
+      radio.source._deathNotice.listen(prepare);
       bandwidth = radio.input_rate.depend(prepare);
       centerFreq = radio.source.freq.depend(prepare);
       leftFreq = centerFreq - bandwidth / 2;
@@ -1240,14 +1241,16 @@ define(['./values', './events'], function (values, events) {
           slicePtr = mod(slicePtr + 1, history);
         },
         beforeDraw: function () {
-          var viewCenterFreq = config.radio.source.freq.depend(draw);
+          var source = radio.source;
+          source._deathNotice.listen(draw);
+          var viewCenterFreq = source.freq.depend(draw);
           commonBeforeDraw(viewCenterFreq, draw);
 
           gl.uniform1f(u_scroll, slicePtr / history);
           var fs = 1.0 / fftCell.getSampleRate();
           //console.log(fs);
           gl.uniform1f(u_freqScale, fs);
-          gl.uniform1f(u_currentFreq, radio.source.freq.depend(draw));
+          gl.uniform1f(u_currentFreq, source.freq.depend(draw));
         }
       };
     }
