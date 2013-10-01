@@ -31,6 +31,8 @@ if args.createConfig:
 	with open(args.configFile, 'w') as f:
 		f.write('''\
 import shinysdr.plugins.osmosdr
+import shinysdr.plugins.simulate
+
 sources = {
 	# OsmoSDR generic device source; handles USRP, RTL-SDR, FunCube
 	# Dongle, HackRF, etc.
@@ -43,7 +45,7 @@ sources = {
 	'audio': shinysdr.source.AudioSource(''),
 	
 	# Locally generated RF signals for test purposes.
-	'sim': shinysdr.source.SimulatedSource(),
+	'sim': shinysdr.plugins.simulate.SimulatedSource(),
 }
 
 stateFile = 'state.json'
