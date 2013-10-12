@@ -340,3 +340,27 @@ section > h2 {
 label.panel {
   display: block;
 }
+
+table.widget-Demodulator-squelch-and-power {
+  margin: 0;
+  box-sizing: border-box;
+  width: 100%;
+
+  border-spacing: 0;
+}
+.widget-Demodulator-squelch-and-power th {
+  width: 10%;
+  text-align: left;
+  font: inherit;
+}
+.widget-Demodulator-squelch-and-power th,
+.widget-Demodulator-squelch-and-power td {
+  padding: 0;
+}
+.widget-Demodulator-squelch-and-power td:nth-child(2) > * {
+  width: 100%;
+}
+.widget-Demodulator-squelch-and-power td:nth-child(3) {
+  width: 8ex;
+  text-align: right;
+}

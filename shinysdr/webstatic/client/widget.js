@@ -538,11 +538,34 @@ define(['./values', './events'], function (values, events) {
   function Demodulator(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion) {
       ignore('band_filter_shape');
-      if ('rf_power' in block) {
-        addWidget('rf_power', 'Meter', 'Power');
-      }
-      if ('squelch_threshold' in block) {
-        addWidget('squelch_threshold', 'LinSlider', 'Squelch');
+      if ('rf_power' in block && 'squelch_threshold' in block) (function() {
+        var squelchAndPowerPanel = this.element.appendChild(document.createElement('table'));
+        squelchAndPowerPanel.classList.add('panel');
+        squelchAndPowerPanel.classList.add('widget-Demodulator-squelch-and-power');
+        function addRow(label, wtarget, wclass, wel) {
+          ignore(wtarget);
+          var row = squelchAndPowerPanel.appendChild(document.createElement('tr'));
+          row.appendChild(document.createElement('th'))
+            .appendChild(document.createTextNode(label));
+          var widgetEl = row.appendChild(document.createElement('td'))
+            .appendChild(document.createElement(wel));
+          if (wel === 'input') widgetEl.type = 'range';
+          widgetEl.setAttribute('data-widget', wclass);
+          widgetEl.setAttribute('data-target', wtarget);
+          var numberEl = row.appendChild(document.createElement('td'))
+            .appendChild(document.createElement('tt'));
+          numberEl.setAttribute('data-widget', 'Number');
+          numberEl.setAttribute('data-target', wtarget);
+        }
+        addRow('RF', 'rf_power', 'Meter', 'meter');
+        addRow('Squelch', 'squelch_threshold', 'LinSlider', 'input');
+      }.call(this)); else {
+        if ('rf_power' in block) {
+          addWidget('rf_power', 'Meter', 'Power');
+        }
+        if ('squelch_threshold' in block) {
+          addWidget('squelch_threshold', 'LinSlider', 'Squelch');
+        }
       }
       
       // TODO break dependency on plugin
@@ -2160,6 +2183,26 @@ define(['./values', './events'], function (values, events) {
       });
   }
   widgets.Generic = Generic;
+  
+  function NumberWidget(config) {
+    SimpleElementWidget.call(this, config, 'TT',
+      function buildPanel(container) {
+        if (config.shouldBePanel) {
+          container.appendChild(document.createTextNode(container.getAttribute('title') + ': '));
+          container.removeAttribute('title');
+          return container.appendChild(document.createElement('tt'));
+        } else {
+          return container;
+        }
+      },
+      function init(container, target) {
+        var textNode = container.appendChild(document.createTextNode(''));
+        return function updateGeneric(value) {
+          textNode.textContent = (+value).toFixed(2);
+        };
+      });
+  }
+  widgets.Number = NumberWidget;
   
   function SmallKnob(config) {
     SimpleElementWidget.call(this, config, 'INPUT',
