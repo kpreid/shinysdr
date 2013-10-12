@@ -403,9 +403,18 @@ define(['./values', './events'], function (values, events) {
       if ('unpaused' in block) {
         addWidget('unpaused', 'Toggle', 'Run');
       }
+      
+      // TODO: summary element is inappropriate
+      var sourceToolbar = this.element.appendChild(document.createElement('summary'));
+      sourceToolbar.className = 'panel frame-controls';
+      sourceToolbar.appendChild(document.createTextNode('RF source '));
       if ('source_name' in block) {
-        addWidget('source_name', 'Select', 'RF source');
+        ignore('source_name');
+        var sourceEl = sourceToolbar.appendChild(document.createElement('select'));
+        sourceEl.setAttribute('data-widget', 'Select');
+        sourceEl.setAttribute('data-target', 'source_name');
       }
+      
       if (false) { // TODO: Figure out a good way to display options for all sources
         ignore('source');
         if ('sources' in block) {
