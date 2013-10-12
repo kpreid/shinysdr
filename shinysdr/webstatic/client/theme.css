@@ -38,11 +38,11 @@ section > h2 {
   stroke: #00FFAA;
 }
 
-.widget-Knob {
+.widget-Knob-outer {
   background: black;
   color: white;
 }
-.widget-Knob .knob-digit:focus {
+.widget-Knob-outer .knob-digit:focus {
   background: #555;
   color: white;
 }

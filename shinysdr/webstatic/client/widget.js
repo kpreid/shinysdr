@@ -83,16 +83,7 @@ define(['./values', './events'], function (values, events) {
         
         var newEl = widget.element;
         var placeMark = newSourceEl.nextSibling;
-        if (shouldBePanel && !newEl.classList.contains('panel')) {
-          var widgetPanel = document.createElement('div');
-          widgetPanel.classList.add('panel');
-          if (newSourceEl.hasAttribute('title')) {
-            widgetPanel.appendChild(document.createTextNode(
-              newSourceEl.getAttribute('title') + ' '));
-          }
-          widgetPanel.appendChild(newEl);
-          newEl = widgetPanel;
-        } else if (newSourceEl.hasAttribute('title')) {
+        if (newSourceEl.hasAttribute('title')) {
           console.warn('Widget ' + typename + ' did not handle title attribute');
         }
         
@@ -323,14 +314,14 @@ define(['./values', './events'], function (values, events) {
   exports.SpectrumView = SpectrumView;
   
   // Superclass for a sub-block widget
-  function Block(config, optSpecial) {
+  function Block(config, optSpecial, optEmbed) {
     var block = config.target;
     var container = this.element = config.element;
     var claimed = Object.create(null);
     
     container.textContent = '';
     container.classList.add('frame');
-    if (config.shouldBePanel) {
+    if (config.shouldBePanel && !optEmbed) {
       container.classList.add('panel');
     }
     
@@ -466,7 +457,7 @@ define(['./values', './events'], function (values, events) {
           
           addWidget(name, widgetName);
         }, this);
-      });
+      }, true);
     };
   }
   widgets.SourceSet = BlockSet('Source', 'Source', false);
@@ -559,7 +550,7 @@ define(['./values', './events'], function (values, events) {
         addWidget('angle', 'VOR$Angle', '');
       }
       ignore('zero_point');
-    });
+    }, true);
   }
   widgets.Demodulator = Demodulator;
   
@@ -1499,9 +1490,23 @@ define(['./values', './events'], function (values, events) {
         return value;
       }
     }
-
-    var container = this.element = document.createElement("span");
-    container.className = "knob";
+    
+    var container = document.createElement('span');
+    container.classList.add('widget-Knob-outer');
+    
+    if (config.shouldBePanel) {
+      var panel = document.createElement('div');
+      panel.classList.add('panel');
+      if (config.element.hasAttribute('title')) {
+        panel.appendChild(document.createTextNode(config.element.getAttribute('title')));
+        config.element.removeAttribute('title');
+      }
+      panel.appendChild(container);
+      this.element = panel;
+    } else {
+      this.element = container;
+    }
+    
     var places = [];
     var marks = [];
     for (var i = 9; i >= 0; i--) (function(i) {
@@ -2098,6 +2103,7 @@ define(['./values', './events'], function (values, events) {
     var radio = config.radio; // use mode, receiver
     var receiver = config.target;
     var panel = this.element = config.element;
+    panel.classList.add('panel');
     
     var button = panel.querySelector('button');
     if (!button) {
@@ -2391,6 +2397,7 @@ define(['./values', './events'], function (values, events) {
   function Radio(config) {
     var target = config.target;
     var container = this.element = config.element;
+    container.classList.add('panel');
 
     initEnumElements(container, 'input[type=radio]', target, function createRadio(name) {
       var label = container.appendChild(document.createElement('label'));

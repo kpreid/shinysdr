@@ -53,10 +53,12 @@ section > h2 {
   display: flex;
   flex-direction: column;
 }
+.frame > * {
+  flex-shrink: 0;  /* sometimes overridden, but in general we want scrolling rather than scrunching */
+}
 .panel, .frame > details > summary {
   border-style: outset;
   border-width: .1em;
-  flex-shrink: 0; /* default value to be overridden */
   padding: .2em;
 }
 .frame > details {
@@ -126,11 +128,11 @@ section > h2 {
 }
 
 /* widgets: knob */
-.panel > .knob {
+.panel > .widget-Knob-outer {
   display: block;
   text-align: center;
 }
-.knob {
+.widget-Knob-outer {
   white-space: nowrap;
   font-family: monospace;
   font-size: 2.8em;
