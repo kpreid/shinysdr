@@ -2104,134 +2104,145 @@ define(['./values', './events'], function (values, events) {
   }
   widgets.SaveButton = SaveButton;
   
-  function Generic(config) {
+  // TODO: lousy name
+  // This abstract widget class is for widgets which use an INPUT or similar element and optionally wrap it in a panel.
+  function SimpleElementWidget(config, expectedNodeName, buildPanel, initDataEl, update) {
     var target = config.target;
-    var container = this.element = config.element;
     
-    container.appendChild(document.createTextNode(container.getAttribute('title') + ': '));
-    container.removeAttribute('title');
-
-    var valueNode = container.appendChild(document.createTextNode(''));
-
+    var dataElement;
+    if (config.element.nodeName !== expectedNodeName) {
+      var container = this.element = config.element;
+      dataElement = buildPanel(container);
+    } else {
+      this.element = dataElement = config.element;
+    }
+    
+    var update = initDataEl(dataElement, target);
+    
     function draw() {
-      valueNode.textContent = String(target.depend(draw));
+      var value = target.depend(draw);
+      update(value);
     }
     draw.scheduler = config.scheduler;
     draw();
   }
+  
+  function Generic(config) {
+    SimpleElementWidget.call(this, config, undefined,
+      function buildPanel(container) {
+        container.appendChild(document.createTextNode(container.getAttribute('title') + ': '));
+        container.removeAttribute('title');
+        return container.appendChild(document.createTextNode(''));
+      },
+      function init(node, target) {
+        return function updateGeneric(value) {
+          node.textContent = value;
+        };
+      });
+  }
   widgets.Generic = Generic;
   
-  // TODO: duplicate code w/ Slider; generalize bits
   function SmallKnob(config) {
-    var target = config.target;
+    SimpleElementWidget.call(this, config, 'INPUT',
+      function buildPanelForSmallKnob(container) {
+        container.classList.add('widget-SmallKnob-panel');
+        
+        if (container.hasAttribute('title')) {
+          var labelEl = container.appendChild(document.createElement('span'));
+          labelEl.classList.add('widget-SmallKnob-label');
+          labelEl.appendChild(document.createTextNode(container.getAttribute('title')));
+          container.removeAttribute('title');
+        }
+        
+        var input = container.appendChild(document.createElement('input'));
+        input.type = 'number';
+        input.step = 'any';
+        
+        return input;
+      },
+      function initSmallKnob(input, target) {
+        var type = target.type;
+        if (type instanceof values.Range) {
+          input.min = getT(type.getMin());
+          input.max = getT(type.getMax());
+          input.step = (type.integer && !type.logarithmic) ? 1 : 'any';
+        }
 
-    var input;
-    if (config.element.nodeName !== 'INPUT') {
-      var container = this.element = config.element;
-      container.classList.add('widget-SmallKnob-panel');
-
-      if (container.hasAttribute('title')) {
-        var labelEl = container.appendChild(document.createElement('span'));
-        labelEl.classList.add('widget-SmallKnob-label');
-        labelEl.appendChild(document.createTextNode(container.getAttribute('title')));
-        container.removeAttribute('title');
-      }
-
-      input = container.appendChild(document.createElement('input'));
-      input.type = 'number';
-      input.step = 'any';
-    } else {
-      this.element = input = config.element;
-    }
-    
-    var type = target.type;
-    if (type instanceof values.Range) {
-      input.min = getT(type.getMin());
-      input.max = getT(type.getMax());
-      input.step = (type.integer && !type.logarithmic) ? 1 : 'any';
-    }
-
-    input.addEventListener('change', function(event) {
-      if (type instanceof values.Range) {
-        target.set(type.round(input.valueAsNumber, 0));
-      } else {
-        target.set(input.valueAsNumber);
-      }
-    }, false);
-    function draw() {
-      var value = +target.depend(draw);
-      var sValue = +value;
-      if (!isFinite(sValue)) {
-        sValue = 0;
-      }
-      input.disabled = false;
-      input.valueAsNumber = sValue;
-    }
-    draw.scheduler = config.scheduler;
-    draw();
+        input.addEventListener('change', function(event) {
+          if (type instanceof values.Range) {
+            target.set(type.round(input.valueAsNumber, 0));
+          } else {
+            target.set(input.valueAsNumber);
+          }
+        }, false);
+        
+        return function updateSmallKnob(value) {
+          var sValue = +value;
+          if (!isFinite(sValue)) {
+            sValue = 0;
+          }
+          input.disabled = false;
+          input.valueAsNumber = sValue;
+        }
+      });
   }
   widgets.SmallKnob = SmallKnob;
   
   function Slider(config, getT, setT) {
-    var target = config.target;
-
-    var slider;
     var text;
-    if (config.element.nodeName !== 'INPUT') {
-      var container = this.element = config.element;
-      container.classList.add('widget-Slider-panel');
+    SimpleElementWidget.call(this, config, 'INPUT',
+      function buildPanelForSlider(container) {
+        container.classList.add('widget-Slider-panel');
+        
+        if (container.hasAttribute('title')) {
+          var labelEl = container.appendChild(document.createElement('span'));
+          labelEl.classList.add('widget-Slider-label');
+          labelEl.appendChild(document.createTextNode(container.getAttribute('title')));
+          container.removeAttribute('title');
+        }
+        
+        var slider = container.appendChild(document.createElement('input'));
+        slider.type = 'range';
+        slider.step = 'any';
+        
+        var textEl = container.appendChild(document.createElement('span'));
+        textEl.classList.add('widget-Slider-text');
+        text = textEl.appendChild(document.createTextNode(''));
+        
+        return slider;
+      },
+      function initSlider(slider, target) {
+        var format = function(n) { return n.toFixed(2); };
 
-      if (container.hasAttribute('title')) {
-        var labelEl = container.appendChild(document.createElement('span'));
-        labelEl.classList.add('widget-Slider-label');
-        labelEl.appendChild(document.createTextNode(container.getAttribute('title')));
-        container.removeAttribute('title');
-      }
+        var type = target.type;
+        if (type instanceof values.Range) {
+          slider.min = getT(type.getMin());
+          slider.max = getT(type.getMax());
+          slider.step = (type.integer && !type.logarithmic) ? 1 : 'any';
+          if (type.integer) {
+            format = function(n) { return '' + n; };
+          }
+        }
 
-      slider = container.appendChild(document.createElement('input'));
-      slider.type = 'range';
-      slider.step = 'any';
-
-      var textEl = container.appendChild(document.createElement('span'));
-      textEl.classList.add('widget-Slider-text');
-      text = textEl.appendChild(document.createTextNode(''));
-    } else {
-      this.element = slider = config.element;
-    }
-    
-    var format = function(n) { return n.toFixed(2); };
-    
-    var type = target.type;
-    if (type instanceof values.Range) {
-      slider.min = getT(type.getMin());
-      slider.max = getT(type.getMax());
-      slider.step = (type.integer && !type.logarithmic) ? 1 : 'any';
-      if (type.integer) {
-        format = function(n) { return '' + n; };
-      }
-    }
-
-    slider.addEventListener('change', function(event) {
-      if (type instanceof values.Range) {
-        target.set(type.round(setT(slider.valueAsNumber), 0));
-      } else {
-        target.set(setT(slider.valueAsNumber));
-      }
-    }, false);
-    function draw() {
-      var value = +target.depend(draw);
-      var sValue = getT(value);
-      if (!isFinite(sValue)) {
-        sValue = 0;
-      }
-      slider.disabled = false;
-      slider.valueAsNumber = sValue;
-      if (text) {
-        text.data = format(value);
-      }
-    }
-    draw.scheduler = config.scheduler;
-    draw();
+        slider.addEventListener('change', function(event) {
+          if (type instanceof values.Range) {
+            target.set(type.round(setT(slider.valueAsNumber), 0));
+          } else {
+            target.set(setT(slider.valueAsNumber));
+          }
+        }, false);
+        return function updateSlider(value) {
+          var sValue = getT(value);
+          if (!isFinite(sValue)) {
+            sValue = 0;
+          }
+          slider.disabled = false;
+          slider.valueAsNumber = sValue;
+          if (text) {
+            text.data = format(value);
+          }
+        };
+      });
   }
   widgets.LinSlider = function(c) { return new Slider(c,
     function (v) { return v; },
@@ -2241,78 +2252,69 @@ define(['./values', './events'], function (values, events) {
     function (v) { return Math.pow(10, v); }); };
 
   function Meter(config) {
-    var target = config.target;
-
-    var meter;
     var text;
-    if (config.element.nodeName !== 'METER') {
-      var container = this.element = config.element;
-      // TODO: Reusing styles for another widget -- rename to suit
-      container.classList.add('widget-Slider-panel');
-
-      if (container.hasAttribute('title')) {
-        var labelEl = container.appendChild(document.createElement('span'));
-        labelEl.classList.add('widget-Slider-label');
-        labelEl.appendChild(document.createTextNode(container.getAttribute('title')));
-        container.removeAttribute('title');
-      }
-
-      meter = container.appendChild(document.createElement('meter'));
-
-      var textEl = container.appendChild(document.createElement('span'));
-      textEl.classList.add('widget-Slider-text');
-      text = textEl.appendChild(document.createTextNode(''));
-    } else {
-      this.element = meter = config.element;
-    }
-    
-    var format = function(n) { return n.toFixed(2); };
-    
-    var type = target.type;
-    if (type instanceof values.Range) {
-      meter.min = type.getMin();
-      meter.max = type.getMax();
-      if (type.integer) {
-        format = function(n) { return '' + n; };
-      }
-    }
-
-    function draw() {
-      var value = +target.depend(draw);
-      meter.value = value;
-      if (text) {
-        text.data = format(value);
-      }
-    }
-    draw.scheduler = config.scheduler;
-    draw();
+    SimpleElementWidget.call(this, config, 'METER',
+      function buildPanelForMeter(container) {
+        // TODO: Reusing styles for another widget -- rename to suit
+        container.classList.add('widget-Slider-panel');
+        
+        if (container.hasAttribute('title')) {
+          var labelEl = container.appendChild(document.createElement('span'));
+          labelEl.classList.add('widget-Slider-label');
+          labelEl.appendChild(document.createTextNode(container.getAttribute('title')));
+          container.removeAttribute('title');
+        }
+        
+        var meter = container.appendChild(document.createElement('meter'));
+        
+        var textEl = container.appendChild(document.createElement('span'));
+        textEl.classList.add('widget-Slider-text');
+        text = textEl.appendChild(document.createTextNode(''));
+        
+        return meter;
+      },
+      function initMeter(meter, target) {
+        var format = function(n) { return n.toFixed(2); };
+        
+        var type = target.type;
+        if (type instanceof values.Range) {
+          meter.min = type.getMin();
+          meter.max = type.getMax();
+          if (type.integer) {
+            format = function(n) { return '' + n; };
+          }
+        }
+        
+        return function updateMeter(value) {
+          value = +value;
+          meter.value = value;
+          if (text) {
+            text.data = format(value);
+          }
+        };
+      });
   }
   widgets.Meter = Meter;
   
   function Toggle(config) {
-    var target = config.target;
-
-    var checkbox;
-    if (config.element.nodeName === 'INPUT') {
-      this.element = checkbox = config.element;
-    } else {
-      var label = config.element.appendChild(document.createElement('label'));
-      if (config.shouldBePanel) { label.classList.add('panel'); }
-      checkbox = label.appendChild(document.createElement('input'));
-      checkbox.type = 'checkbox';
-      label.appendChild(document.createTextNode(config.element.getAttribute('title')));
-      this.element = label;
-      config.element.removeAttribute('title');
-    }
-
-    checkbox.addEventListener('change', function(event) {
-      target.set(checkbox.checked);
-    }, false);
-    function draw() {
-      checkbox.checked = target.depend(draw);
-    }
-    draw.scheduler = config.scheduler;
-    draw();
+    var text;
+    SimpleElementWidget.call(this, config, 'INPUT',
+      function buildPanelForToggle(container) {
+        var label = container.appendChild(document.createElement('label'));
+        var checkbox = label.appendChild(document.createElement('input'));
+        checkbox.type = 'checkbox';
+        label.appendChild(document.createTextNode(container.getAttribute('title')));
+        container.removeAttribute('title');
+        return checkbox;
+      },
+      function initToggle(checkbox, target) {
+        checkbox.addEventListener('change', function(event) {
+          target.set(checkbox.checked);
+        }, false);
+        return function updateToggle(value) {
+          checkbox.checked = value;
+        };
+      });
   }
   widgets.Toggle = Toggle;
   
