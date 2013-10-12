@@ -371,6 +371,10 @@ define(['./values', './events'], function (values, events) {
       
       var member = block[name];
       if (member instanceof Cell) {
+        // TODO: Stop using Boolean etc. as type objects and remove the need for this feature test
+        if (member.type.isSingleValued && member.type.isSingleValued()) {
+          return;
+        }
         if (member.type instanceof values.Range) {
           addWidget(name, member.type.logarithmic ? 'LogSlider' : 'LinSlider', name);
         } else if (member.type instanceof values.Enum) {

@@ -10,6 +10,9 @@ define(['./events'], function (events) {
     }
     this.values = Object.freeze(values);
   }
+  Enum.prototype.isSingleValued = function () {
+    return Object.keys(this.values).length <= 1;
+  };
   exports.Enum = Enum;
 
   function Range(subranges, logarithmic, integer) {
@@ -18,6 +21,9 @@ define(['./events'], function (events) {
     this.logarithmic = logarithmic;
     this.integer = integer;
   }
+  Range.prototype.isSingleValued = function () {
+    return this.mins.length <= 1 && this.maxes.length <= 1 && this.mins[0] === this.maxes[0];
+  };
   Range.prototype.getMin = function() {
     return this.mins[0];
   };
