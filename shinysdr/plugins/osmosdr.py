@@ -85,10 +85,8 @@ class OsmoSDRSource(Source):
 
 	@setter
 	def set_freq(self, freq):
-		actual_freq = self._compute_frequency(freq)
 		self.freq = freq
 		self._update_frequency()
-		# TODO: According to OsmoSDR's interface, the frequency tuned to (get_center_freq) may not be the one we requested. Handle that.
 
 	def get_tune_delay(slf):
 		return 0.25  # TODO: make configurable and/or account for as many factors as we can
@@ -109,7 +107,7 @@ class OsmoSDRSource(Source):
 	@setter
 	def set_correction_ppm(self, value):
 		self.correction_ppm = float(value)
-		# Not using the hardware feature because I only get garbled output from it
+		# Not using the osmosdr feature because changing it at runtime produces glitches like the sample rate got changed
 		#self.osmosdr_source_block.set_freq_corr(value, 0)
 		self._update_frequency()
 	
@@ -132,7 +130,12 @@ class OsmoSDRSource(Source):
 	
 	def _update_frequency(self):
 		self.osmosdr_source_block.set_center_freq(self._compute_frequency(self.freq), 0)
-		self.freq = self._invert_frequency(self.osmosdr_source_block.get_center_freq())
+		
+		# update freq to what osmosdr reported, but only if the difference is large enough that it probably isn't just FP error in the corrections
+		# TODO: This doesn't seem to be working quite right so has been disabled for now. Need to more precisely examine whether it's actually broken (osmosdr being too asynchronous?) or whether our UI is rounding wrong (or similar).
+		#tuned_freq = self._invert_frequency(self.osmosdr_source_block.get_center_freq())
+		#if abs(tuned_freq - self.freq) > 1e-10:
+		#	self.freq = tuned_freq
 		
 		self.tune_hook()
 
