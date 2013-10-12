@@ -404,7 +404,7 @@ define(['./values', './events'], function (values, events) {
         addWidget('unpaused', 'Toggle', 'Run');
       }
       if ('source_name' in block) {
-        addWidget('source_name', 'Radio');
+        addWidget('source_name', 'Select', 'RF source');
       }
       if (false) { // TODO: Figure out a good way to display options for all sources
         ignore('source');
@@ -2322,31 +2322,74 @@ define(['./values', './events'], function (values, events) {
   }
   widgets.Toggle = Toggle;
   
-  function Radio(config) {
-    var target = config.target;
-    var container = this.element = config.element;
-
+  // Create children of 'container' according to target's enum type, unless appropriate children already exist.
+  function initEnumElements(container, selector, target, createElement) {
+    var type = target.type;
+    if (!(type instanceof values.Enum)) type = null;
+    
     var seen = Object.create(null);
-    Array.prototype.forEach.call(container.querySelectorAll('input[type=radio]'), function (rb) {
-      var value = rb.value;
+    Array.prototype.forEach.call(container.querySelectorAll(selector), function (element) {
+      var value = element.value;
       seen[value] = true;
-      if (target.type) {
-        rb.disabled = !(rb.value in target.type.values);
+      if (type) {
+        element.disabled = !(element.value in type.values);
       }
     });
 
-    if (target.type) {
+    if (type) {
       var array = Object.keys(target.type.values || {});
       array.sort();
       array.forEach(function (value) {
         if (seen[value]) return;
-        var label = container.appendChild(document.createElement('label'));
-        var rb = label.appendChild(document.createElement('input'));
-        label.appendChild(document.createTextNode(target.type.values[value]));
-        rb.type = 'radio';
-        rb.value = value;
+        var element = createElement(type.values[value]);
+        element.value = value;
       });
     }
+  }
+  
+  function Select(config) {
+    SimpleElementWidget.call(this, config, 'SELECT',
+      function buildPanelForSelect(container) {
+        //container.classList.add('widget-Popup-panel');
+        
+        // TODO: recurring pattern -- extract
+        if (container.hasAttribute('title')) {
+          var labelEl = container.appendChild(document.createElement('span'));
+          labelEl.appendChild(document.createTextNode(container.getAttribute('title')));
+          container.removeAttribute('title');
+        }
+        
+        return container.appendChild(document.createElement('select'));
+      },
+      function initSelect(select, target) {
+        initEnumElements(select, 'option', target, function createOption(name) {
+          var option = select.appendChild(document.createElement('option'));
+          option.appendChild(document.createTextNode(name));
+          return option;
+        })
+
+        select.addEventListener('change', function(event) {
+          target.set(select.value);
+        }, false);
+        
+        return function updateSelect(value) {
+          select.value = value;
+        };
+      });
+  }
+  widgets.Select = Select;
+  
+  function Radio(config) {
+    var target = config.target;
+    var container = this.element = config.element;
+
+    initEnumElements(container, 'input[type=radio]', target, function createRadio(name) {
+      var label = container.appendChild(document.createElement('label'));
+      var rb = label.appendChild(document.createElement('input'));
+      label.appendChild(document.createTextNode(name));
+      rb.type = 'radio';
+      return rb;
+    });
 
     Array.prototype.forEach.call(container.querySelectorAll('input[type=radio]'), function (rb) {
       rb.addEventListener('change', function(event) {
