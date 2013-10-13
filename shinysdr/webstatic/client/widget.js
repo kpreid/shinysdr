@@ -2043,6 +2043,9 @@ define(['./values', './events'], function (values, events) {
     this.set = function (value) {
       recordCell.get()[prop] = value;
     };
+    this.isWritable = function () {
+      return recordCell.get().writable;
+    };
     this.n = {
       listen: function (l) {
         var now = recordCell.get();
@@ -2077,7 +2080,7 @@ define(['./values', './events'], function (values, events) {
         if (now === NO_RECORD) {
           field.disabled = true;
         } else {
-          field.disabled = false;
+          field.disabled = !cell.isWritable();
           if (field.value !== now) field.value = now;
         }
       }

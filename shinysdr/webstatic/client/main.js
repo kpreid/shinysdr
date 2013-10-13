@@ -113,7 +113,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
       };
     
       // kludge till we have proper editing
-      var writableDB = new database.Table();
+      var writableDB = new database.Table('writable stub', true);
       freqDB.add(writableDB);
       radio.targetDB = writableDB; // kludge reference
   
@@ -130,12 +130,17 @@ define(['./values', './events', './database', './network', './maps', './widget',
         freqDB: freqDB,
         scheduler: scheduler
       });
-    
+      
       // generic control UI widget tree
       widget.createWidgets(radio, context, document);
-    
+      
       // Map (all geographic data)
       var map = new maps.Map(document.getElementById('map'), scheduler, freqDB, radio);
+      
+      // globals for debugging / interactive programming purposes only
+      window.DfreqDB = freqDB;
+      window.DwritableDB = writableDB;
+      window.Dradio = radio;
     }); // end gotDesc
   
     audio.connectAudio('/audio');  // TODO get url from server

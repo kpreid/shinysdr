@@ -26,7 +26,7 @@ describe('database', function () {
   
   describe('Table', function () {
     it('should notify on record addition', function () {
-      var t = new shinysdr.database.Table();
+      var t = new shinysdr.database.Table('foo', true);
       var l = createListenerSpy();
       t.n.listen(l);
       t.add(dummyRecord);
@@ -34,7 +34,7 @@ describe('database', function () {
     });
     
     it('should notify from table on record modification', function () {
-      var t = new shinysdr.database.Table();
+      var t = new shinysdr.database.Table('foo', true);
       var l = createListenerSpy();
       var r = t.add({
         type: 'channel',
@@ -46,7 +46,7 @@ describe('database', function () {
     });
 
     it('should notify from record on record modification', function () {
-      var t = new shinysdr.database.Table();
+      var t = new shinysdr.database.Table('foo', true);
       var l = createListenerSpy();
       var r = t.add({
         type: 'channel',
@@ -58,7 +58,8 @@ describe('database', function () {
     });
 
     it('record should have default values', function () {
-      var r = (new shinysdr.database.Table()).add({});
+      var r = (new shinysdr.database.Table('foo', true)).add({});
+      expect(r.writable).toEqual(true);
       expect(r.type).toEqual('channel');
       expect(r.mode).toEqual('?');
       expect(r.freq).toBeNaN();
@@ -70,17 +71,39 @@ describe('database', function () {
     });
 
     it('record should coerce a location', function () {
-      var r = (new shinysdr.database.Table()).add({location: ['1', '2']});
+      var r = (new shinysdr.database.Table('foo', true)).add({location: ['1', '2']});
       expect(r.location.length).toEqual(2);
       expect(r.location[0]).toEqual(1);
       expect(r.location[1]).toEqual(2);
+    });
+
+    it('should report writability', function () {
+      expect(new shinysdr.database.Table('writable', true).writable).toBe(true);
+      expect(new shinysdr.database.Table('ro', false).writable).toBe(false);
+    });
+
+    it('should refuse to add records if not writable', function () {
+      expect(function () {
+        new shinysdr.database.Table('writable', false).add({});
+      }).toThrow('This table is read-only');
+    });
+
+    it('should refuse to modify records if not writable', function () {
+      var table = new shinysdr.database.Table('writable', false, function(add) {
+        add({freq: 0, label: 'foo'});
+      });
+      expect(table.getAll()[0].writable).toBe(false);
+      expect(function () {
+        table.getAll()[0].label = 'bar';
+      }).toThrow('This record is read-only');
+      expect(table.getAll()[0].label).toBe('foo');
     });
   });
 
   describe('GroupView', function () {
     var t, r1, r2, view;
     beforeEach(function () {
-      t = new shinysdr.database.Table();
+      t = new shinysdr.database.Table('foo', true);
       r1 = t.add({type: 'channel', freq: 100e6, label: 'a'});
       r2 = t.add({type: 'channel', freq: 100e6, label: 'b'});
       view = t.groupSameFreq();
@@ -115,7 +138,7 @@ describe('database', function () {
 
   describe('Union', function () {
     it('should notify on member change', function () {
-      var t = new shinysdr.database.Table();
+      var t = new shinysdr.database.Table('foo', true);
       var u = new shinysdr.database.Union();
       u.add(t);
       var l = createListenerSpy();
