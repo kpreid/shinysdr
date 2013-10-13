@@ -50,6 +50,8 @@ sources = {
 
 stateFile = 'state.json'
 
+databasesDir = 'dbs/'
+
 # These are in Twisted endpoint description syntax:
 # <http://twistedmatrix.com/documents/current/api/twisted.internet.endpoints.html#serverFromString>
 # Note: wsPort must currently be 1 greater than httpPort; if one is SSL
@@ -65,7 +67,7 @@ else:
 	sources = configEnv['sources']
 	stateFile = str(configEnv['stateFile'])
 	webConfig = {}
-	for k in ['httpPort', 'wsPort', 'rootCap']:
+	for k in ['httpPort', 'wsPort', 'rootCap', 'databasesDir']:
 		webConfig[k] = str(configEnv[k])
 
 

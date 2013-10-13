@@ -241,69 +241,23 @@ define(['./events', './network'], function (events, network) {
       //console.log('Fetched database index with ' + anchors.length + ' links.');
       Array.prototype.forEach.call(anchors, function (anchor) {
         // Conveniently, the browser resolves URLs for us here
-        union.add(fromCSV(anchor.href));
+        union.add(fromURL(anchor.href));
       });
     });
     return union;
   };
   exports.fromCatalog = fromCatalog;
   
-  // Read the given resource as an index containing links to CSV files in slightly extended Chirp <http://chirp.danplanet.com/> generic format. No particular reason for choosing Chirp other than it was a the first source and format of machine-readable channel data I found to experiment with.
-  function fromCSV(url) {
+  function fromURL(url) {
     var table = new Table(decodeURIComponent(url.replace(/^.*\//, '')));
-    network.externalGet(url, 'text', function(csv) {
-      //console.group('Parsing ' + url);
-      var csvLines = csv.split(/[\r\n]+/);
-      var columns = csvLines.shift().split(/,/);
-      csvLines.forEach(function (line, lineNoBase) {
-        var lineNo = lineNoBase + 2;
-        function error(msg) {
-          console.error(url + ':' + lineNo + ': ' + msg + '\n' + line + '\n', fields, '\n', record);
-        }
-        if (/^\s*$/.test(line)) return; // allow whitespace
-        var fields = parseCSVLine(line);
-        if (fields.length > columns.length) {
-          error('Too many fields');
-        }
-        var record = Object.create(null);
-        columns.forEach(function (name, index) {
-          record[name] = fields[index];
-        });
-        var entry = {
-          // TODO: Not sure what distinction the data is actually making
-          mode: record.Mode === 'FM' ? 'NFM' : record.Mode || '',
-          label: record.Name || '',
-          notes: record.Comment || '',
-        };
-        // freq
-        var match;
-        if ((match = /^(\d+(?:\.\d+)?)(?:\s*-\s*(\d+(?:\.\d+)?))?$/.exec(record.Frequency))) {
-          if (match[2]) {
-            // band is extension to the format
-            entry.type = 'band';
-            entry.lowerFreq = 1e6 * parseFloat(match[1]);
-            entry.upperFreq = 1e6 * parseFloat(match[2]);
-          } else {
-            // TODO: Consider making a distinction between channels and stations
-            entry.type = 'channel';
-            entry.freq = 1e6 * parseFloat(match[1]);
-          }
-        } else {
-          error('Bad frequency value');
-        }
-        // geographic location -- extension to the format
-        if (record.Latitude && record.Longitude) {  // note that '0' is true
-          entry.location = Object.freeze([
-            parseFloat(record.Latitude), parseFloat(record.Longitude)]);
-        }
-        table.add(entry);
-      });
-      //console.groupEnd();
+    // TODO (implicitly) check mime type
+    network.externalGet(url, 'text', function(jsonString) {
+      JSON.parse(jsonString).forEach(table.add.bind(table));
     });
     return table;
   }
-  exports.fromCSV = fromCSV;
-
+  exports.fromURL = fromURL;
+  
   function compareRecord(a, b) {
     return (a.freq || a.lowerFreq) - (b.freq || b.lowerFreq);
   }
@@ -353,62 +307,6 @@ define(['./events', './network'], function (events, network) {
     //Object.preventExtensions(this);  // TODO enable this after the _view_element kludge is gone
   }
   Object.defineProperties(Record.prototype, recordProps);
-  
-  function parseCSVLine(line) {
-    //function debug(i, note) { console.log(line.slice(0, i) + '|' + line.slice(i) + ' ' + note); }
-    var fields = [];
-    var start = 0;
-    //debug(start, 'begin');
-    for (var sanity = -1;start > sanity;sanity++) { // prevent a bug from being an infinite loop; TODO warn
-      //debug(start, 'outer');
-      if (line[start] === '"') {
-        start++;
-        //debug(start, 'found quoted');
-        var text = '';
-        for (;;) {
-          var end = line.indexOf('"', start);
-          if (end === -1) {
-            console.warn('CSV unclosed quote', line[start]);
-            break;
-          } else {
-            //console.log(start, end);
-            text += line.slice(start, end);
-            start = end + 1;
-            //debug(start, 'found close');
-            if (line[start] === '"') {
-              text += '"';
-              start++;
-              //debug(start, 'double quote');
-              // continue quote parser
-            } else if (start >= line.length || line[start] === ',') {
-              start++;
-              //debug(start, 'next field');
-              break; // done with quote parsing
-            } else {
-              console.warn('CSV garbage after quote', line[start]);
-              break;
-            }
-          }
-        }
-        fields.push(text);
-        if (start > line.length) {
-          break;
-        }
-      } else {
-        var end = line.indexOf(',', start);
-        if (end === -1) {
-          fields.push(line.slice(start));
-          break;
-        } else {
-          fields.push(line.slice(start, end));
-          start = end + 1;
-          //debug(start, 'looping back');
-        }
-      }
-    }
-    return fields;
-  }
-  exports._parseCSVLine = parseCSVLine; // exported for testing only
   
   // Generic FM broadcast channels
   exports.fm = (function () {

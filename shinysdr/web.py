@@ -17,6 +17,7 @@ import weakref
 
 import shinysdr.top
 import shinysdr.plugins
+import shinysdr.db
 
 
 class CellResource(resource.Resource):
@@ -331,6 +332,9 @@ def listen(config, top, noteDirty):
 	
 	appRoot = makeStatic(staticResourcePath)
 	appRoot.putChild('radio', BlockResource(top, noteDirty, notDeletable))
+	
+	# Frequency DB
+	appRoot.putChild('dbs', shinysdr.db.DatabasesResource(config['databasesDir']))
 	
 	# Construct explicit resources for merge.
 	test = reify(appRoot, 'test')
