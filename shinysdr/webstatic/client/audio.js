@@ -4,6 +4,7 @@ define(['./network'], function (network) {
   var exports = {};
   
   var minQueueAdjust = 2;
+  var initialQueueSize = 12;
   var maxQueueAdjust = 20;
   
   function connectAudio(url) {
@@ -14,7 +15,7 @@ define(['./network'], function (network) {
     // Queue size management
     // The queue should be large to avoid underruns due to bursty processing/delivery.
     // The queue should be small to minimize latency.
-    var targetQueueSize = minQueueAdjust;
+    var targetQueueSize = initialQueueSize;
     var queueHistory = new Int32Array(30);
     var queueHistoryPtr = 0;
     var hasOverrun = false;
