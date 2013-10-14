@@ -267,6 +267,24 @@ define(['./values', './events'], function (values, events) {
   }
   exports.openWebSocket = openWebSocket;
   
+  function retryingConnection(path, callback) {
+    var succeeded = false;
+    function go() {
+      var ws = openWebSocket(path);
+      ws.addEventListener('open', function (event) {
+        succeeded = true;
+      }, true);
+      ws.addEventListener('close', function (event) {
+        if (succeeded) console.error('Lost WebSocket connection', path);
+        succeeded = false;
+        setTimeout(go, 1000);
+      }, true);
+      callback(ws);
+    }
+    go();
+  };
+  exports.retryingConnection = retryingConnection;
+  
   function connect(rootURL, callback) {
     var cellTree;
     
@@ -276,10 +294,8 @@ define(['./values', './events'], function (values, events) {
       console.log(cellTree);
 
       // WebSocket state streaming
-      var ws;
-      function openWS() {
-        ws = openWebSocket('/state');
-        ws.onmessage = function(event) {
+      retryingConnection('/state', function(ws) {
+        ws.onmessage = function (event) {
           function go(local, updates) {
             for (var key in updates) {
               var lobj = local[key];
@@ -319,12 +335,7 @@ define(['./values', './events'], function (values, events) {
           }
           go(cellTree, JSON.parse(event.data));
         };
-        ws.onclose = function() {
-          console.error('Lost WebSocket connection');
-          setTimeout(openWS, 1000);
-        };
-      }
-      openWS();
+      });
 
       callback(cellTree);
     });

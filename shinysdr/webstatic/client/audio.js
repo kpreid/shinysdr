@@ -19,11 +19,10 @@ define(['./network'], function (network) {
     var queueHistoryPtr = 0;
     var hasOverrun = false;
     var hasUnderrun = false;
-
+    
     var queue = [];
-    function openWS() {
-      // TODO: refactor reconnecting logic
-      var ws = network.openWebSocket(url + '?rate=' + encodeURIComponent(JSON.stringify(audio.sampleRate)));
+    
+    network.retryingConnection(url + '?rate=' + encodeURIComponent(JSON.stringify(audio.sampleRate)), function (ws) {
       ws.onmessage = function(event) {
         if (queue.length > 100) {
           console.log('Extreme audio overrun.');
@@ -47,12 +46,7 @@ define(['./network'], function (network) {
           hasOverrun = false;
         }
       };
-      ws.onclose = function() {
-        console.error('Lost WebSocket connection');
-        setTimeout(openWS, 1000);
-      };
-    }
-    openWS();
+    });
     
     // Choose buffer size
     var maxDelay = 0.20;
