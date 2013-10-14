@@ -267,17 +267,26 @@ define(['./values', './events'], function (values, events) {
   }
   exports.openWebSocket = openWebSocket;
   
+  var minRetryTime = 1000;
+  var maxRetryTime = 20000;
+  var backoff = 1.05;
   function retryingConnection(path, callback) {
+    var timeout = minRetryTime;
     var succeeded = false;
     function go() {
       var ws = openWebSocket(path);
       ws.addEventListener('open', function (event) {
         succeeded = true;
+        timeout = minRetryTime;
       }, true);
       ws.addEventListener('close', function (event) {
-        if (succeeded) console.error('Lost WebSocket connection', path);
+        if (succeeded) {
+          console.error('Lost WebSocket connection', path);
+        } else {
+          timeout = Math.min(maxRetryTime, timeout * backoff);
+        }
         succeeded = false;
-        setTimeout(go, 1000);
+        setTimeout(go, timeout);
       }, true);
       callback(ws);
     }
