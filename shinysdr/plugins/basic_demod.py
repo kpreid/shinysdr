@@ -349,7 +349,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
 			**kwargs)
 		input_rate = self.input_rate
 		
-		half_bandwidth = 2800 / 2
+		half_bandwidth = self.half_bandwidth = 2800 / 2
 		if lsb:
 			band_mid = -200 - half_bandwidth
 		else:
@@ -378,6 +378,11 @@ class SSBDemodulator(SimpleAudioDemodulator):
 			self.ssb_demod_block)
 		self.connect(self.sharp_filter_block, self.rf_probe_block)
 		self.connect_audio_output(self.ssb_demod_block, self.ssb_demod_block)
+
+	# override
+	# TODO: this is the interface used to determine receiver.get_is_valid, but SSB demonstrates that the interface is insufficiently expressive. Should we use get_band_filter_shape instead? Should we use a different interface designed for expressing the channel? Or are signals like SSB which are asymmetric about the "carrier" frequency uncommon enough that we should not worry about handling this case well?
+	def get_half_bandwidth(self):
+		return self.half_bandwidth
 
 	# override
 	@exported_value()
