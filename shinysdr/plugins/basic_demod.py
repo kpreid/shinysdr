@@ -380,6 +380,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
 		self.connect_audio_output(self.ssb_demod_block, self.ssb_demod_block)
 
 	# override
+	@exported_value()
 	def get_band_filter_shape(self):
 		return {
 			'low': self.band_filter_low,
