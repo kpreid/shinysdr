@@ -141,3 +141,16 @@ class SubprocessSink(gr.hier_block2):
 	#	self.__p.kill()
 
 
+def test_subprocess(args, substring, shell=False):
+	'''Check the stdout or stderr of the specified command for a specified string.'''
+	# TODO: establish resource and output size limits
+	try:
+		output = subprocess.check_output(
+			args=args,
+			shell=shell,
+			stderr=subprocess.STDOUT)
+		return substring in output
+	except OSError, e:
+		return False
+	except subprocess.CalledProcessError, e:
+		return False

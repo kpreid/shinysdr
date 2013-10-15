@@ -257,12 +257,14 @@ class IModeDef(Interface):
 class ModeDef(object):
 	implements(IPlugin, IModeDef)
 	
-	def __init__(self, mode, label, demodClass):
+	# Twisted plugin system caches whether-a-plugin-class-was-found permanently, so we need to avoid _not_ having a ModeDef if the plugin has some sort of dependency it checks -- thus the 'available' flag can be used to hide a mode while still having an IModeDef
+	def __init__(self, mode, label, demodClass, available=True):
 		self.mode = mode
 		self.label = label
 		self.demodClass = demodClass
+		self.available = available
 
 
 def getModes():
 	# TODO caching? prebuilt mode table?
-	return getPlugins(IModeDef, plugins)
+	return [p for p in getPlugins(IModeDef, plugins) if p.available]

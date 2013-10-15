@@ -6,17 +6,19 @@ from gnuradio import analog
 
 from shinysdr.receiver import ModeDef, IDemodulator
 from shinysdr.values import ExportedState, exported_value
-from shinysdr.blocks import MultistageChannelFilter, SubprocessSink, make_resampler
+from shinysdr.blocks import MultistageChannelFilter, SubprocessSink, test_subprocess, make_resampler
 from shinysdr.plugins.basic_demod import NFMDemodulator
 
 import subprocess
 import os
 import math
+import warnings
 
 pipe_rate = 22050  # what multimon-ng expects
 _maxint32 = (2**15-1)
 audio_gain = 0.5
 int_scale = _maxint32 * audio_gain
+
 
 class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 	implements(IDemodulator)
@@ -71,6 +73,6 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 	def get_band_filter_shape(self):
 		return self.fm_demod.get_band_filter_shape()
 
-
-pluginDef_APRS = ModeDef('APRS', label='APRS', demodClass=MultimonNGDemodulator)
-# TODO defs for other multimon-supported modes
+# TODO: Arrange for a way for the user to see why it is unavailable.
+pluginDef_APRS = ModeDef('APRS', label='APRS', demodClass=MultimonNGDemodulator,
+	available=test_subprocess('multimon-ng -h; exit 0', 'available demodulators:', shell=True))

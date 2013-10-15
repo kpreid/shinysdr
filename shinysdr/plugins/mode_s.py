@@ -1,3 +1,5 @@
+import warnings
+
 from zope.interface import implements
 
 from gnuradio import gr
@@ -6,7 +8,7 @@ from gnuradio import analog
 
 from shinysdr.receiver import ModeDef, IDemodulator
 from shinysdr.values import ExportedState, exported_value
-from shinysdr.blocks import MultistageChannelFilter, SubprocessSink
+from shinysdr.blocks import MultistageChannelFilter, SubprocessSink, test_subprocess
 
 
 pipe_rate = 2000000
@@ -77,4 +79,6 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 			'width': transition_width
 		}
 
-pluginDef = ModeDef('MODE-S', label='Mode S', demodClass=ModeSDemodulator)
+# TODO: Arrange for a way for the user to see why it is unavailable.
+pluginDef = ModeDef('MODE-S', label='Mode S', demodClass=ModeSDemodulator,
+	available=test_subprocess(['dump1090', '--help'], '--enable-agc'))
