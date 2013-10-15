@@ -96,6 +96,23 @@ class SimpleAudioDemodulator(Demodulator, SquelchMixin):
 		}
 
 
+def make_lofi_audio_filter(rate):
+	'''
+	Audio output filter for speech-type receivers.
+	
+	Original motivation was to remove CTCSS tones.
+	'''
+	return grfilter.fir_filter_fff(
+		1,  # decimation
+		firdes.band_pass(
+			1.0,
+			rate,
+			500,
+			min(10000, rate / 2),
+			1000,
+			firdes.WIN_HAMMING))
+
+
 class IQDemodulator(SimpleAudioDemodulator):
 	def __init__(self, mode='IQ', audio_rate=0, **kwargs):
 		assert audio_rate > 0
@@ -193,7 +210,7 @@ class FMDemodulator(SimpleAudioDemodulator):
 	def connect_audio_stage(self):
 		'''Override point for stereo'''
 		resampler = self._make_resampler()
-		self.connect(self.demod_block, resampler)
+		self.connect(self.demod_block, make_lofi_audio_filter(self.post_demod_rate), resampler)
 		self.connect_audio_output(resampler, resampler)
 
 
