@@ -10,15 +10,15 @@ class TestStateStream(unittest.TestCase):
 		self.stream = StateStreamInner(self.object, 'urlroot')
 	
 	def test_init_mutate(self):
-		self.assertEqual(self.stream.takeMessage(), [
+		self.assertEqual(self.stream._getUpdates(), [
 			('register_block', 1, 'urlroot'),
 			('register_cell', 2, 'urlroot/rw', self.object.state()['rw'].description()),
 			('value', 1, {'rw': 2}),
 			('value', 0, 1),
 		])
-		self.assertEqual(self.stream.takeMessage(), None)
+		self.assertEqual(self.stream._getUpdates(), [])
 		self.object.set_rw(2.0)
-		self.assertEqual(self.stream.takeMessage(), [
+		self.assertEqual(self.stream._getUpdates(), [
 			('value', 2, self.object.get_rw()),
 		])
 
@@ -44,7 +44,7 @@ class TestCollectionStream(unittest.TestCase):
 		self.stream = StateStreamInner(self.object, 'urlroot')
 	
 	def test_delete(self):
-		self.assertEqual(self.stream.takeMessage(), [
+		self.assertEqual(self.stream._getUpdates(), [
 			('register_block', 1, 'urlroot'),
 			('register_cell', 2, 'urlroot/a', self.object.state()['a'].description()),
 			('register_block', 3, 'urlroot/a'),
@@ -53,9 +53,9 @@ class TestCollectionStream(unittest.TestCase):
 			('value', 1, {'a': 2}),
 			('value', 0, 1),
 		])
-		self.assertEqual(self.stream.takeMessage(), None)
+		self.assertEqual(self.stream._getUpdates(), [])
 		del self.d['a']
-		self.assertEqual(self.stream.takeMessage(), [
+		self.assertEqual(self.stream._getUpdates(), [
 			('value', 1, {}),
 			('delete', 3),
 			('delete', 2),

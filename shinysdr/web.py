@@ -224,12 +224,12 @@ class StateStreamInner(object):
 				del self._urls[obj]
 		return updates
 	
-	def takeMessage(self):
+	def takeMessageData(self):
 		updates = self._getUpdates()
 		if len(updates) == 0:
 			# Nothing to say
 			return None
-		return updates
+		return unicode(json.dumps(updates, ensure_ascii=False))
 
 
 class AudioStreamInner(object):
@@ -241,17 +241,17 @@ class AudioStreamInner(object):
 	def connectionLost(self, reason):
 		self._block.remove_audio_queue(self._queue)
 	
-	def takeMessage(self):
+	def takeMessageData(self):
 		queue = self._queue
-		unpacker = array.array('f')
+		buf = ''
 		while not queue.empty_p():
 			message = queue.delete_head()
 			if message.length() > 0: # avoid crash bug
-				unpacker.fromstring(message.to_string())
-		l = unpacker.tolist()
-		if len(l) == 0:
+				buf += message.to_string()
+		if len(buf) == 0:
 			return None
-		return l
+		else:
+		    return buf
 
 
 
@@ -291,6 +291,7 @@ class OurStreamProtocol(protocol.Protocol):
 	
 	def connectionMade(self):
 		"""twisted Protocol implementation"""
+		self.transport.setBinaryMode(True)
 		# Unfortunately, txWS calls this too soon for transport.location to be available
 		pass
 	
@@ -304,7 +305,7 @@ class OurStreamProtocol(protocol.Protocol):
 	def doSend(self):
 		if self.inner is None:
 			return
-		m = self.inner.takeMessage()
+		m = self.inner.takeMessageData()
 		if m is None:
 			return
 		# Note: txWS currently does not support binary WebSockets messages. Therefore, we send everything as JSON text. This is merely inefficient, not broken, so it will do for now.
@@ -313,7 +314,7 @@ class OurStreamProtocol(protocol.Protocol):
 			# Don't send data if we aren't successfully getting it onto the network.
 			print 'Dropping data ' + self.transport.location
 			return
-		self.transport.write(json.dumps(m))
+		self.transport.write(m)
 
 
 class OurStreamFactory(protocol.Factory):

@@ -24,13 +24,26 @@ define(['./network'], function (network) {
     var queue = [];
     
     network.retryingConnection(url + '?rate=' + encodeURIComponent(JSON.stringify(audio.sampleRate)), function (ws) {
+      ws.binaryType = 'arraybuffer';
       ws.onmessage = function(event) {
         if (queue.length > 100) {
           console.log('Extreme audio overrun.');
           queue.length = 0;
           return;
         }
-        queue.push(JSON.parse(event.data));
+        var chunk;
+        if (typeof event.data === 'string') {
+          chunk = JSON.parse(event.data);
+        } else if (event.data instanceof ArrayBuffer) {
+          // TODO think about float format portability (endianness only...?)
+          chunk = new Float32Array(event.data);
+        } else {
+          // TODO handle in general
+          console.error('bad WS data');
+          ws.close(1003);
+          return;
+        }
+        queue.push(chunk);
         
         // Update queue size management
         queueHistory[queueHistoryPtr] = queue.length;
