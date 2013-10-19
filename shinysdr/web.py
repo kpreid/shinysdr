@@ -313,37 +313,55 @@ class ClientResourceDef(object):
 staticResourcePath = os.path.join(os.path.dirname(__file__), 'webstatic')
 
 
-def makeStatic(filePath):
+def _make_static(filePath):
 	r = static.File(filePath)
 	r.contentTypes['.csv'] = 'text/csv'
 	r.indexNames = ['index.html']
 	return r
 
-def reify(parent, name):
-	# do what getChild would do
+
+def _reify(parent, name):
+	'''
+	Construct an explicit twisted.web.static.File child identical to the implicit one so that non-filesystem children can be added to it.
+	'''
 	r = parent.createSimilarFile(parent.child(name).path)
 	parent.putChild(name, r)
 	return r
+
+
+def _strport_to_url(desc, scheme='http', path='/'):
+	'''Construct a URL from a twisted.application.strports string.'''
+	# TODO: need to know canonical domain name, not localhost; can we extract from the ssl cert?
+	# TODO: strports.parse is deprecated
+	(method, args, kwargs) = strports.parse(desc, None)
+	if method == 'TCP':
+		return scheme + '://localhost:' + str(args[0]) + path
+	elif method == 'SSL':
+		return scheme + 's://localhost:' + str(args[0]) + path
+	else:
+		# TODO better error return
+		return '???'
+
 
 def listen(config, top, noteDirty):
 	rootCap = config['rootCap']
 	
 	strports.listen(config['wsPort'], txws.WebSocketFactory(OurStreamFactory(top, rootCap)))
 	
-	appRoot = makeStatic(staticResourcePath)
+	appRoot = _make_static(staticResourcePath)
 	appRoot.putChild('radio', BlockResource(top, noteDirty, notDeletable))
 	
 	# Frequency DB
 	appRoot.putChild('dbs', shinysdr.db.DatabasesResource(config['databasesDir']))
 	
 	# Construct explicit resources for merge.
-	test = reify(appRoot, 'test')
-	jasmine = reify(test, 'jasmine')
+	test = _reify(appRoot, 'test')
+	jasmine = _reify(test, 'jasmine')
 	for name in ['jasmine.css', 'jasmine.js', 'jasmine-html.js']:
 		jasmine.putChild(name, static.File(os.path.join(
 				os.path.dirname(__file__), 'deps/jasmine/lib/jasmine-core/', name)))
 	
-	client = reify(appRoot, 'client')
+	client = _reify(appRoot, 'client')
 	client.putChild('openlayers', static.File(os.path.join(
 		os.path.dirname(__file__), 'deps/openlayers')))
 	client.putChild('require.js', static.File(os.path.join(
@@ -371,13 +389,5 @@ def listen(config, top, noteDirty):
 		visitPath = '/' + urllib.quote(rootCap, safe='') + '/'
 	
 	strports.listen(config['httpPort'], server.Site(root))
-
-	# kludge to construct URL from strports string
-	(hmethod, hargs, hkwargs) = strports.parse(config['httpPort'], None)
-	print hmethod
-	if hmethod == 'TCP':
-		return 'http://localhost:' + str(hargs[0]) + visitPath
-	elif hmethod == 'SSL':
-		return 'https://localhost:' + str(hargs[0]) + visitPath
-	else:
-		return '???'
+	
+	return _strport_to_url(config['httpPort'], path=visitPath)
