@@ -9,6 +9,24 @@ class BaseCell(object):
 		self._persists = persists
 		self._writable = writable
 	
+	def __eq__(self, other):
+		if not isinstance(other, BaseCell):
+			return NotImplemented
+		elif self._target == other._target and self._key == other._key:
+			if type(self) != type(other):
+				# No two cells should have the same target and key but different details.
+				# This is not a perfect test
+				raise Exception("Shouldn't happen")
+			return True
+		else:
+			return False
+	
+	def __ne__(self, other):
+		return not self.__eq__(other)
+	
+	def __hash__(self):
+		return hash(self._target) ^ hash(self._key)
+
 	def isBlock(self):
 		raise NotImplementedError()
 	
@@ -158,7 +176,7 @@ class CollectionMemberCell(BaseBlockCell):
 		BaseBlockCell.__init__(self, target, key, persists=persists)
 	
 	def getBlock(self):
-		return self._target[self._key]
+		return self._target._collection[self._key]
 
 
 class ExportedState(object):
@@ -244,7 +262,7 @@ class ExportedState(object):
 class CollectionState(ExportedState):
 	'''Wrapper around a plain Python collection.'''
 	def __init__(self, collection, dynamic=False):
-		self.__collection = collection
+		self._collection = collection  # accessed by CollectionMemberCell
 		self.__keys = collection.keys()
 		self.__cells = {}
 		self.__dynamic = dynamic
@@ -254,9 +272,9 @@ class CollectionState(ExportedState):
 	
 	def state_def(self, callback):
 		super(CollectionState, self).state_def(callback)
-		for key in self.__collection:
+		for key in self._collection:
 			if key not in self.__cells:
-				self.__cells[key] = CollectionMemberCell(self.__collection, key)
+				self.__cells[key] = CollectionMemberCell(self, key)
 			callback(self.__cells[key])
 
 

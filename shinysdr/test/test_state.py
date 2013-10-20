@@ -1,6 +1,6 @@
 import unittest
 
-from shinysdr.values import ExportedState, CollectionState, exported_value, setter, Range
+from shinysdr.values import ExportedState, BlockCell, CollectionState, Range, exported_value, setter
 
 
 class TestDecorator(unittest.TestCase):
@@ -64,3 +64,39 @@ class InsertFailSpecimen(CollectionState):
 		else:
 			self.table[key] = ExportedState()
 			self.table[key].state_from_json(desc)
+
+
+class TestCellIdentity(unittest.TestCase):
+	def setUp(self):
+		self.object = CellIdentitySpecimen()
+
+	def assertConsistent(self, f):
+		self.assertEqual(f(), f())
+		self.assertEqual(f().__hash__(), f().__hash__())
+
+	def test_value_cell(self):
+		self.assertConsistent(lambda: self.object.state()['value'])
+			
+	def test_block_cell(self):
+		self.assertConsistent(lambda: self.object.state()['block'])
+
+
+class CellIdentitySpecimen(ExportedState):
+	'''Helper for TestCellIdentity'''
+	value = 1
+	block = None
+	def __init__(self):
+		self.block = ExportedState()
+	
+	# force worst-case
+	def state_is_dynamic(self):
+		return True
+	
+	@exported_value()
+	def get_value(self):
+		return 9
+
+	def state_def(self, callback):
+		super(CellIdentitySpecimen, self).state_def(callback)
+		# TODO make this possible to be decorator style
+		callback(BlockCell(self, 'block'))
