@@ -13,12 +13,13 @@ import array
 import json
 import urllib
 import os.path
+import struct
 import weakref
 
 import shinysdr.top
 import shinysdr.plugins
 import shinysdr.db
-from shinysdr.values import ExportedState, BaseCell, BlockCell
+from shinysdr.values import ExportedState, BaseCell, BlockCell, MsgQueueCell
 
 
 class CellResource(resource.Resource):
@@ -150,24 +151,25 @@ class BlockResource(resource.Resource):
 
 # TODO: Better name for this category of object
 class StateStreamInner(object):
-	def __init__(self, block, rootURL):
+	def __init__(self, send, block, rootURL):
+		self._send = send
 		self._block = block
 		self._cell = BlockCell(self, '_block')
 		self._previousValues = {}
 		self._lastSerial = 0
 		self._registered = {self._cell: 0}
 		self._urls = {self._cell: rootURL}
+		self._send_batch = []
 	
 	def connectionLost(self, reason):
 		pass
 	
-	def _getUpdates(self):
+	def _checkUpdates(self):
 		seen_this_time = set([self._cell])
-		updates = []
 		def maybesend(obj, compare_value, update_value):
 			if obj not in self._previousValues or compare_value != self._previousValues[obj]:
-					self._previousValues[obj] = compare_value
-					updates.append(('value', self._registered[obj], update_value))
+				self._previousValues[obj] = compare_value
+				self.__send1(False, ('value', self._registered[obj], update_value))
 		def traverse(obj):
 			#print 'traverse', obj, self._registered.get(obj, None)
 			if isinstance(obj, ExportedState):
@@ -188,6 +190,10 @@ class StateStreamInner(object):
 					block = obj.getBlock()
 					meet(block, self._urls[obj])
 					maybesend(obj, block, self._registered[block])
+				elif isinstance(obj, MsgQueueCell):  # TODO kludge
+					b = obj.get(binary=True)
+					if b is not None:
+						self.__send1(True, struct.pack('I', self._registered[obj]) + b)
 				else:
 					value = obj.get()
 					maybesend(obj, value, value)
@@ -205,35 +211,44 @@ class StateStreamInner(object):
 				self._registered[obj] = serial
 				self._urls[obj] = url
 				if isinstance(obj, BaseCell):
-					updates.append(('register_cell', serial, url, obj.description()))
+					self.__send1(False, ('register_cell', serial, url, obj.description()))
 					self._previousValues[obj] = obj.get()
 				elif isinstance(obj, ExportedState):
 					# let traverse send the details
-					updates.append(('register_block', serial, url))
+					self.__send1(False, ('register_block', serial, url))
 				else:
-					updates.append(('register', serial, url))
+					self.__send1(False, ('register', serial, url))
 			traverse(obj)
 		# walk
 		traverse(self._cell)
 		# delete not seen
 		for obj in self._registered.keys():
 			if obj not in seen_this_time:
-				updates.append(('delete', self._registered[obj]))
+				self.__send1(False, ('delete', self._registered[obj]))
 				del self._registered[obj]
 				del self._previousValues[obj]
 				del self._urls[obj]
-		return updates
 	
-	def takeMessageData(self):
-		updates = self._getUpdates()
-		if len(updates) == 0:
-			# Nothing to say
-			return None
-		return unicode(json.dumps(updates, ensure_ascii=False))
+	def __flush(self):
+		if len(self._send_batch) > 0:
+			self._send(unicode(json.dumps(self._send_batch, ensure_ascii=False)))
+			self._send_batch = []
+	
+	def __send1(self, binary, value):
+		if binary:
+			self.__flush()
+			self._send(value)
+		else:
+			self._send_batch.append(value)
+	
+	def poll(self):
+		self._checkUpdates()
+		self.__flush()
 
 
 class AudioStreamInner(object):
-	def __init__(self, block, audio_rate):
+	def __init__(self, send, block, audio_rate):
+		self._send = send
 		self._queue = gr.msg_queue(limit=100)
 		self._block = block
 		self._block.add_audio_queue(self._queue, audio_rate)
@@ -241,25 +256,22 @@ class AudioStreamInner(object):
 	def connectionLost(self, reason):
 		self._block.remove_audio_queue(self._queue)
 	
-	def takeMessageData(self):
+	def poll(self):
 		queue = self._queue
 		buf = ''
 		while not queue.empty_p():
 			message = queue.delete_head()
 			if message.length() > 0: # avoid crash bug
 				buf += message.to_string()
-		if len(buf) == 0:
-			return None
-		else:
-		    return buf
-
+		if len(buf) > 0:
+			self._send(buf)
 
 
 class OurStreamProtocol(protocol.Protocol):
 	def __init__(self, block, rootCap):
 		#protocol.Protocol.__init__(self)
 		self._block = block
-		self._sendLoop = task.LoopingCall(self.doSend)
+		self._sendLoop = task.LoopingCall(self.__poll)
 		self._seenValues = {}
 		self._rootCap = rootCap
 		self.inner = None
@@ -280,9 +292,9 @@ class OurStreamProtocol(protocol.Protocol):
 				path[0:1] = []
 		if len(path) == 1 and path[0].startswith('audio?rate='):
 			rate = int(json.loads(urllib.unquote(path[0][len('audio?rate='):])))
-			self.inner = AudioStreamInner(self._block, rate)
+			self.inner = AudioStreamInner(self.__send, self._block, rate)
 		elif len(path) == 1 and path[0] == 'state':
-			self.inner = StateStreamInner(self._block, 'radio')
+			self.inner = StateStreamInner(self.__send, self._block, 'radio')
 		else:
 			# TODO: does this close connection?
 			raise Exception('Unrecognized path: ' + repr(path))
@@ -302,19 +314,17 @@ class OurStreamProtocol(protocol.Protocol):
 		if self.inner is not None:
 			self.inner.connectionLost(reason)
 	
-	def doSend(self):
-		if self.inner is None:
-			return
-		m = self.inner.takeMessageData()
-		if m is None:
-			return
-		# Note: txWS currently does not support binary WebSockets messages. Therefore, we send everything as JSON text. This is merely inefficient, not broken, so it will do for now.
+	def __send(self, message):
 		if len(self.transport.transport.dataBuffer) > 1000000:
 			# TODO: condition is horrible implementation-diving kludge
-			# Don't send data if we aren't successfully getting it onto the network.
+			# Don't accumulate indefinite buffer if we aren't successfully getting it onto the network.
 			print 'Dropping data ' + self.transport.location
-			return
-		self.transport.write(m)
+		else:
+			self.transport.write(message)
+	
+	def __poll(self):
+		if self.inner is not None:
+			self.inner.poll()
 
 
 class OurStreamFactory(protocol.Factory):

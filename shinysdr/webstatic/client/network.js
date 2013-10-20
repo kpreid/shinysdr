@@ -301,6 +301,8 @@ define(['./values', './events'], function (values, events) {
     //externalGet(rootURL, 'text', function(text) { ... });
 
     retryingConnection('/state', function(ws) {
+      ws.binaryType = 'arraybuffer';
+
       var idMap = Object.create(null);
       var updaterMap = Object.create(null);
       var isCellMap = Object.create(null);
@@ -355,9 +357,26 @@ define(['./values', './events'], function (values, events) {
         }
       }
       
+      function oneBinaryMessage(buffer) {
+        // Currently, SpectrumCell updates are the only type of binary messages.
+        var view = new DataView(buffer);
+        var id = view.getUint32(0, true);
+        var freq = view.getFloat64(4, true);
+        var rate = view.getFloat64(4+8, true);
+        var data = new Float32Array(buffer, 4+8+8);
+        //console.log(id, freq, rate, data.length);
+        (0, updaterMap[id])([[freq, rate], data]);
+      }
+      
       ws.onmessage = function (event) {
         // TODO: close connection on exception here
-        JSON.parse(event.data).forEach(oneMessage);
+        if (typeof event.data === 'string') {
+          JSON.parse(event.data).forEach(oneMessage);
+        } else if (event.data instanceof ArrayBuffer) {
+          oneBinaryMessage(event.data);
+        } else {
+          console.error('Unknown object from state stream onmessage:', event.data);
+        }
       };
       
     });

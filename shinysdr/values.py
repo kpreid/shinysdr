@@ -1,5 +1,6 @@
 import array
 import bisect
+import struct
 
 class BaseCell(object):
 	def __init__(self, target, key, persists=True, writable=False):
@@ -100,14 +101,17 @@ class MsgQueueCell(ValueCell):
 	def isBlock(self):
 		return False
 	
-	def get(self):
+	def get(self, binary=False):
 		if self._splitting is not None:
 			(string, itemsize, count, index) = self._splitting
 		else:
 			queue = self._qgetter()
 			# we would use .delete_head_nowait() but it returns a crashy wrapper instead of a sensible value like None. So implement a test (which is safe as long as we're the only reader)
 			if queue.empty_p():
-				return self._doFill()
+				if binary:  # TODO kludge
+					return None
+				else:
+					return self._doFill()
 			else:
 				message = queue.delete_head()
 			if message.length() > 0:
@@ -126,11 +130,15 @@ class MsgQueueCell(ValueCell):
 			self._splitting = (string, itemsize, count, index + 1)
 		
 		# extract value
-		valueStr = string[itemsize * index : itemsize * (index + 1)]
-		# TODO: allow caller to provide format info (nontrivial in case of runtime variable length)
-		unpacker = array.array('f')
-		unpacker.fromstring(valueStr)
-		value = (self._igetter(), unpacker.tolist())
+		itemStr = string[itemsize * index : itemsize * (index + 1)]
+		if binary:
+			# TODO: for general case need to have configurable format string
+			value = struct.pack('dd', *self._igetter()) + itemStr
+		else:
+			# TODO: allow caller to provide format info (nontrivial in case of runtime variable length)
+			unpacker = array.array('f')
+			unpacker.fromstring(itemStr)
+			value = (self._igetter(), unpacker.tolist())
 		if self._fill:
 			self._prev = value
 		return value
