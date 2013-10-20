@@ -18,6 +18,7 @@ import weakref
 import shinysdr.top
 import shinysdr.plugins
 import shinysdr.db
+from shinysdr.values import ExportedState, BaseCell, BlockCell
 
 
 class CellResource(resource.Resource):
@@ -147,46 +148,84 @@ class BlockResource(resource.Resource):
 	def isForBlock(self, block):
 		return self._block is block
 
-
-def traverseUpdates(seen, block):
-	"""Recursive algorithm for StateStreamInner"""
-	updates = {}
-	cells = block.state()
-	for key, cell in cells.iteritems():
-		if cell.isBlock():
-			subblock = cell.getBlock()
-			if key not in seen or seen[key][1] is not subblock:
-				seen[key] = ({}, subblock)  # TODO will give 1 redundant update since seen is empty
-				updates[key] = subblock.state_description()
-			else:
-				subupdates = traverseUpdates(seen[key][0], subblock)
-				if len(subupdates) > 0:
-					updates[key] = {'kind': 'block_updates', 'updates': subupdates}
-		else:
-			value = cell.get()
-			if not key in seen or value != seen[key]:
-				updates[key] = seen[key] = value
-	dels = []
-	for key in seen:
-		if key not in cells:
-			updates[key] = {'kind': 'block_delete'}
-			dels.append(key)
-	for key in dels:
-		del seen[key]
-	return updates
-
-
 # TODO: Better name for this category of object
 class StateStreamInner(object):
-	def __init__(self, block):
+	def __init__(self, block, rootURL):
 		self._block = block
-		self._seenValues = {}
+		self._cell = BlockCell(self, '_block')
+		self._previousValues = {}
+		self._lastSerial = 0
+		self._registered = {self._cell: 0}
+		self._urls = {self._cell: rootURL}
 	
 	def connectionLost(self, reason):
 		pass
 	
+	def _getUpdates(self):
+		seen_this_time = set([self._cell])
+		updates = []
+		def maybesend(obj, compare_value, update_value):
+			if obj not in self._previousValues or compare_value != self._previousValues[obj]:
+					self._previousValues[obj] = compare_value
+					updates.append(('value', self._registered[obj], update_value))
+		def traverse(obj):
+			#print 'traverse', obj, self._registered.get(obj, None)
+			if isinstance(obj, ExportedState):
+				#print '  is block'
+				url = self._urls[obj]
+				for key, cell in obj.state().iteritems():
+					#print '  child: ', key, cell
+					meet(cell, url + '/' + urllib.unquote(key))
+				if obj.state_is_dynamic() or obj not in self._previousValues:
+					# functions as (current) signature of object
+					state = obj.state()
+					maybesend(obj, state, {k: self._registered[v] for k, v in state.iteritems()})
+				else:
+					state = None
+			elif isinstance(obj, BaseCell):   # TODO: be an interface type?
+				#print '  is cell'
+				if obj.isBlock():
+					block = obj.getBlock()
+					meet(block, self._urls[obj])
+					maybesend(obj, block, self._registered[block])
+				else:
+					value = obj.get()
+					maybesend(obj, value, value)
+			else:
+				#print '  unrecognized'
+				# TODO: warn unrecognized
+				return
+		def meet(obj, url):
+			#print 'meet', obj, url
+			seen_this_time.add(obj)
+			if obj not in self._registered:
+				self._lastSerial += 1
+				serial = self._lastSerial
+				#print 'registering', obj, serial
+				self._registered[obj] = serial
+				self._urls[obj] = url
+				if isinstance(obj, BaseCell):
+					updates.append(('register_cell', serial, url, obj.description()))
+					self._previousValues[obj] = obj.get()
+				elif isinstance(obj, ExportedState):
+					# let traverse send the details
+					updates.append(('register_block', serial, url))
+				else:
+					updates.append(('register', serial, url))
+			traverse(obj)
+		# walk
+		traverse(self._cell)
+		# delete not seen
+		for obj in self._registered.keys():
+			if obj not in seen_this_time:
+				updates.append(('delete', self._registered[obj]))
+				del self._registered[obj]
+				del self._previousValues[obj]
+				del self._urls[obj]
+		return updates
+	
 	def takeMessage(self):
-		updates = traverseUpdates(self._seenValues, self._block)
+		updates = self._getUpdates()
 		if len(updates) == 0:
 			# Nothing to say
 			return None
@@ -243,7 +282,7 @@ class OurStreamProtocol(protocol.Protocol):
 			rate = int(json.loads(urllib.unquote(path[0][len('audio?rate='):])))
 			self.inner = AudioStreamInner(self._block, rate)
 		elif len(path) == 1 and path[0] == 'state':
-			self.inner = StateStreamInner(self._block)
+			self.inner = StateStreamInner(self._block, 'radio')
 		else:
 			# TODO: does this close connection?
 			raise Exception('Unrecognized path: ' + repr(path))

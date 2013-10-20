@@ -6,6 +6,8 @@ define(['./values', './events'], function (values, events) {
   
   var exports = {};
   
+  function identity(x) { return x; }
+  
   // Connectivity management
   var isDown = false;
   var queuedToRetry = Object.create(null);
@@ -161,7 +163,7 @@ define(['./values', './events'], function (values, events) {
     this._update = function(data) {
       value = transform(data);
       this.n.notify();
-    };
+    }.bind(this);
     
     this.get = function() {
       return value;
@@ -221,40 +223,6 @@ define(['./values', './events'], function (values, events) {
     })
   }
   
-  function buildFromDesc(url, desc) {
-    switch (desc.kind) {
-      case 'value':
-        if (desc.type === 'spectrum') {
-          // TODO eliminate special case
-          return new SpectrumCell(url);
-        } else if (desc.writable) {
-          return new ReadWriteCell(url, desc.current, typeFromDesc(desc.type));
-        } else {
-          return new ReadCell(url, desc.current, typeFromDesc(desc.type), function (x) { return x; });
-        }
-      case 'block':
-        var sub = {};
-        setNonEnum(sub, '_url', url); // TODO kludge
-        setNonEnum(sub, '_deathNotice', new events.Notifier());
-        setNonEnum(sub, '_reshapeNotice', new events.Notifier());
-        for (var k in desc.children) {
-          // TODO: URL should come from server instead of being constructed here
-          sub[k] = buildFromDesc(url + '/' + encodeURIComponent(k), desc.children[k]);
-        }
-        setNonEnum(sub, 'create', function(desc) {
-          // TODO arrange a callback with the resulting _object_
-          xhrpost(url, JSON.stringify(desc));
-        });
-        setNonEnum(sub, 'delete', function(key) {
-          xhrdelete(url + '/' + encodeURIComponent(key));
-        });
-        return sub;
-      default:
-        console.error(url + ': Unknown kind ' + desc.kind + ' in', desc);
-        return {};
-    }
-  }
-  
   function openWebSocket(path) {
     // TODO: Have server deliver websocket URL, remove port number requirement
     if (!/^\//.test(path)) throw new Error('bad path');
@@ -294,60 +262,111 @@ define(['./values', './events'], function (values, events) {
   };
   exports.retryingConnection = retryingConnection;
   
-  function connect(rootURL, callback) {
-    var cellTree;
-    
-    externalGet(rootURL, 'text', function(text) {
-      var desc = JSON.parse(text);
-      cellTree = buildFromDesc(rootURL, desc);
-      console.log(cellTree);
-
-      // WebSocket state streaming
-      retryingConnection('/state', function(ws) {
-        ws.onmessage = function (event) {
-          function go(local, updates) {
-            for (var key in updates) {
-              var lobj = local[key];
-              var updateItem = updates[key];
-              if (lobj instanceof Cell) {
-                lobj._update(updateItem); // TODO use parallel write facet structure instead
-              } else if ('kind' in updateItem) {
-                if (updateItem.kind === 'block') {
-                  // TODO: Explicitly inactivate all cells in the old structure
-                  if (lobj) {  // absent if this is a new block
-                    lobj._deathNotice.notify();
-                  } else {
-                    // reshape notification is only when the key set changes
-                    local._reshapeNotice.notify();
-                  }
-                  // TODO: avoid url construction
-                  local[key] = buildFromDesc(local._url + '/' + encodeURIComponent(key), updateItem);
-                } else if (updateItem.kind === 'block_updates') {
-                  if (lobj) {
-                    go(lobj, updateItem.updates);
-                  } else {
-                    console.error("Got updates for block we don't have: " + key);
-                  }
-                } else if (updateItem.kind === 'block_delete') {
-                  if (lobj) {
-                    lobj._deathNotice.notify();
-                  }
-                  delete local[key];
-                  local._reshapeNotice.notify();
-                } else {
-                  console.error("Don't know what to do with update structure ", updateItem);
-                }
-              } else {
-                console.error("Don't know what to do with update structure ", updateItem);
-              }
-            }
-          }
-          go(cellTree, JSON.parse(event.data));
-        };
-      });
-
-      callback(cellTree);
+  function makeBlock(url) {
+    var block = {};
+    // TODO kludges, should be properly facetized and separately namespaced somehow
+    setNonEnum(block, '_url', url);
+    setNonEnum(block, '_reshapeNotice', new events.Notifier());
+    setNonEnum(block, 'create', function(desc) {
+      // TODO arrange a callback with the resulting _object_
+      xhrpost(url, JSON.stringify(desc));
     });
+    setNonEnum(block, 'delete', function(key) {
+      xhrdelete(url + '/' + encodeURIComponent(key));
+    });
+    return block;
+  }
+  
+  function makeCell(url, desc, idMap) {
+    var cell;
+    if (desc.type === 'spectrum') {
+      // TODO eliminate special case
+      cell = new SpectrumCell(url);
+    } else if (desc.kind === 'block') {
+      // TODO eliminate special case by making server block cells less special?
+      cell = new ReadCell(url, /* dummy */ makeBlock(url), values.block,
+        function (id) { return idMap[id]; });
+    } else if (desc.writable) {
+      cell = new ReadWriteCell(url, desc.current, typeFromDesc(desc.type));
+    } else {
+      cell = new ReadCell(url, desc.current, typeFromDesc(desc.type), identity);
+    }
+    return [cell, cell._update];
+  }
+  
+  function connect(rootURL, scheduler, callback) {
+    var rootCell = new ReadCell(null, null, values.block, identity);
+    
+    // TODO: URL contents are no longer actually used. URL should be used to derive state stream URL
+    //externalGet(rootURL, 'text', function(text) { ... });
+
+    retryingConnection('/state', function(ws) {
+      var idMap = Object.create(null);
+      var updaterMap = Object.create(null);
+      var isCellMap = Object.create(null);
+      
+      idMap[0] = rootCell;
+      updaterMap[0] = function (id) { rootCell._update(idMap[id]); };
+      isCellMap[0] = true;
+      
+      function oneMessage(message) {
+        var op = message[0];
+        var id = message[1];
+        switch (message[0]) {
+          case 'register_block':
+            var url = message[2];
+            updaterMap[id] = idMap[id] = makeBlock(url);
+            isCellMap[id] = false;
+            break;
+          case 'register_cell':
+            var url = message[2];
+            var desc = message[3];
+            var pair = makeCell(url, desc, idMap);
+            idMap[id] = pair[0];
+            updaterMap[id] = pair[1];
+            isCellMap[id] = true;
+            break;
+          case 'value':
+            var value = message[2];
+            if (!(id in idMap)) {
+              console.error('Undefined id in state stream message', message);
+              return;
+            }
+            if (isCellMap[id]) {
+              (0, updaterMap[id])(value);
+            } else {
+              // is block
+              var block = idMap[id];
+              for (var k in block) { delete block[k]; }
+              for (var k in value) {
+                block[k] = idMap[value[k]];
+              }
+              block._reshapeNotice.notify();
+            }
+            break;
+          case 'delete':
+            // TODO: explicitly invalidate the objects so we catch hanging on to them too long
+            delete idMap[id];
+            delete updaterMap[id];
+            delete isCellMap[id];
+            break;
+          default:
+            console.error('unknown state stream message', message);
+        }
+      }
+      
+      ws.onmessage = function (event) {
+        // TODO: close connection on exception here
+        JSON.parse(event.data).forEach(oneMessage);
+      };
+      
+    });
+
+    function ready() {
+      callback(rootCell.get(), rootCell);
+    }
+    ready.scheduler = scheduler;
+    rootCell.n.listen(ready);
   }
   exports.connect = connect;
   

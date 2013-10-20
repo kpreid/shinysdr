@@ -21,7 +21,8 @@ define(['./values', './events', './database', './network', './maps', './widget',
   
   function connectRadio() {
     var radio;
-    network.connect('radio', function gotDesc(remote) {
+    network.connect('radio', scheduler, function gotDesc(remote, remoteCell) {
+      // TODO always use remoteCell or change network.connect so radio is reshaped not replaced
       radio = remote;
 
       // Takes center freq as parameter so it can be used on hypotheticals and so on.
@@ -49,7 +50,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
         var receiver = options.receiver;
         //console.log('tune', alwaysCreate, freq, mode, receiver);
       
-        var receivers = radio.receivers;
+        var receivers = radio.receivers.get();
         var fit = Infinity;
         if (!receiver && !alwaysCreate) {
           // Search for nearest matching receiver
@@ -81,14 +82,15 @@ define(['./values', './events', './database', './network', './maps', './widget',
           });
           // TODO: should return stub for receiver or have a callback or something
         }
-      
-        if (options.moveCenter && !frequencyInRange(freq, radio.source.freq.get())) {
+        
+        var source = radio.source.get();
+        if (options.moveCenter && !frequencyInRange(freq, source.freq.get())) {
           if (freq < radio.input_rate.get() / 2) {
             // recognize tuning for 0Hz gimmick
-            radio.source.freq.set(0);
+            source.freq.set(0);
           } else {
             // left side, just inside of frequencyInRange's test
-            radio.source.freq.set(freq + radio.input_rate.get() * 0.374);
+            source.freq.set(freq + radio.input_rate.get() * 0.374);
           }
         }
       
@@ -132,7 +134,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
       });
       
       // generic control UI widget tree
-      widget.createWidgets(radio, context, document);
+      widget.createWidgets(remoteCell, context, document);
       
       // Map (all geographic data)
       var map = new maps.Map(document.getElementById('map'), scheduler, freqDB, radio);

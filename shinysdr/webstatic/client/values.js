@@ -65,6 +65,10 @@ define(['./events'], function (events) {
   };
   exports.Range = Range;
 
+  // type for any block
+  var block = Object.freeze({});
+  exports.block = block;
+
   var any = Object.freeze({});
   exports.any = any;
 

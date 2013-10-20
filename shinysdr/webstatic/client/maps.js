@@ -77,29 +77,23 @@ define(function () {
     function addModeLayer(filterMode, prepare) {
       var modeLayer = new OpenLayers.Layer.Vector(filterMode);
       olm.addLayer(modeLayer);
+      
+      var cancellers = [];
 
       function updateOnReceivers() {
         //console.log('updateOnReceivers');
-        var receivers = radio.receivers;
-        receivers._deathNotice.listen(updateOnReceivers);
+        var receivers = radio.receivers.depend(updateOnReceivers);
         receivers._reshapeNotice.listen(updateOnReceivers);  // TODO break loop if map is dead
         modeLayer.removeAllFeatures();
+        cancellers.forEach(function (f) { f(); });
+        cancellers = [];
         for (var key in receivers) (function(receiver) {
-          var rDead;
-          function death() {
-            rDead = true;
-            //console.log('clearing for receiver death');
-            modeLayer.removeFeatures(features);
-          }
-          death.scheduler = scheduler;
-          receiver._deathNotice.listen(death);
-          receiver._deathNotice.listen(updateOnReceivers);  // death notice possibly indicates replacement (TODO make it easier to listen for new blocks in general)
-          
+          var rDead = false;
+          cancellers.push(function () { rDead = true; });
           var features = [];
           function updateOnReceiver() {
-            if (rDead) return;
             var rMode = receiver.mode.depend(updateOnReceiver);  // TODO break loop if map is dead
-            receiver.demodulator._deathNotice.listen(updateOnReceiver);  // not necessary, but useful for our clients
+            receiver.demodulator.n.listen(updateOnReceiver);  // not necessary, but useful for our clients
             
             if (rMode !== filterMode) return;
             
@@ -120,7 +114,7 @@ define(function () {
           }
           updateOnReceiver.scheduler = scheduler;
           updateOnReceiver();
-        }(receivers[key]));
+        }(receivers[key].depend(updateOnReceivers)));
       }
       updateOnReceivers.scheduler = scheduler;
       updateOnReceivers();

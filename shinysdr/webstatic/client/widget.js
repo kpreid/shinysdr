@@ -31,12 +31,12 @@ define(['./values', './events'], function (values, events) {
   }
   exports.Context = Context;
   
-  function createWidgetsList(rootTarget, context, list) {
+  function createWidgetsList(rootTargetCell, context, list) {
     Array.prototype.forEach.call(list, function (child) {
-      createWidgets(rootTarget, context, child);
+      createWidgets(rootTargetCell, context, child);
     });
   }
-  function createWidgets(rootTarget, context, node) {
+  function createWidgets(rootTargetCell, context, node) {
     var scheduler = context.scheduler;
     if (node.hasAttribute && node.hasAttribute('data-widget')) {
       var typename = node.getAttribute('data-widget');
@@ -53,25 +53,34 @@ define(['./values', './events'], function (values, events) {
       var shouldBePanel = container.classList.contains('frame') || container.nodeName === 'DETAILS';  // TODO: less DWIM, more precise
       
       var go = function go() {
-        var stateObj;
+        var targetCell;
         if (node.hasAttribute('data-target')) {
           var targetStr = node.getAttribute('data-target');
-          stateObj = rootTarget[targetStr];
-          if (!stateObj) {
+          if (!rootTargetCell.depend) debugger;
+          targetCell = rootTargetCell.depend(go)[targetStr];
+          if (!targetCell) {
             if (node.parentNode) { // TODO: This condition shouldn't be necessary?
               node.parentNode.replaceChild(document.createTextNode('[Missing: ' + targetStr + ']'), node);
             }
             return;
           }
         } else {
-          stateObj = rootTarget;
+          targetCell = rootTargetCell;
+        }
+
+        var widgetTarget;
+        if (targetCell.type === values.block) {
+          widgetTarget = targetCell.depend(go);
+          widgetTarget._reshapeNotice.listen(go);
+        } else {
+          widgetTarget = targetCell;
         }
 
         var newSourceEl = originalStash.cloneNode(true);
         container.replaceChild(newSourceEl, currentWidgetEl);
         var widget = new T({
           scheduler: scheduler,
-          target: stateObj,
+          target: widgetTarget,
           element: newSourceEl,
           view: context.spectrumView, // TODO should be context-dependent
           freqDB: context.freqDB, // TODO: remove the need for this
@@ -94,17 +103,8 @@ define(['./values', './events'], function (values, events) {
         }
         currentWidgetEl = newEl;
         
-        // handle widget-is-a-block
-        if (stateObj && '_deathNotice' in stateObj) { // TODO bad interface
-          stateObj._deathNotice.listen(go);
-        }
-        // handle dynamic block-containing widgets
-        if (stateObj && '_reshapeNotice' in stateObj) { // TODO bad interface
-          stateObj._reshapeNotice.listen(go);
-        }
-        
         // allow widgets to embed widgets
-        createWidgetsList(stateObj || rootTarget, context, widget.element.childNodes);
+        createWidgetsList(targetCell || rootTargetCell, context, widget.element.childNodes);
       }
       go.scheduler = scheduler;
       go();
@@ -113,8 +113,7 @@ define(['./values', './events'], function (values, events) {
       while (node.firstChild) html.appendChild(node.firstChild);
       var go = function go() {
         // TODO defend against JS-significant keys
-        var target = rootTarget[node.getAttribute('data-target')];
-        target._deathNotice.listen(go);
+        var target = rootTargetCell.depend(go)[node.getAttribute('data-target')];
         
         node.textContent = ''; // fast clear
         node.appendChild(html.cloneNode(true));
@@ -131,10 +130,10 @@ define(['./values', './events'], function (values, events) {
       new MutationObserver(function(mutations) {
         ns.setItem('detailsOpen', JSON.stringify(node.open));
       }).observe(node, {attributes: true, attributeFilter: ['open']});
-      createWidgetsList(rootTarget, context, node.childNodes);
+      createWidgetsList(rootTargetCell, context, node.childNodes);
 
     } else {
-      createWidgetsList(rootTarget, context, node.childNodes);
+      createWidgetsList(rootTargetCell, context, node.childNodes);
     }
   }
   exports.createWidgets = createWidgets;
@@ -159,11 +158,22 @@ define(['./values', './events'], function (values, events) {
     // per-drawing-frame parameters
     var bandwidth, centerFreq, leftFreq, pixelWidth, pixelsPerHertz, cacheScrollLeft;
     
+    // Zoom state variables
+    // We want the cursor point to stay fixed, but scrollLeft quantizes to integer; fractionalScroll stores a virtual fractional part.
+    var zoom, fractionalScroll;
+    // Zoom initial state:
+    // TODO: clamp zoom here in the same way changeZoom does
+    zoom = parseFloat(storage.getItem('zoom')) || 1;
+    var initScroll = parseFloat(storage.getItem('scroll')) || 0;
+    scrollStub.style.width = (container.offsetWidth * zoom) + 'px';
+    container.scrollLeft = Math.floor(initScroll);
+    var fractionalScroll = mod(initScroll, 1);
+    
     function prepare() {
       // TODO: unbreakable notify loop here; need to be lazy
-      radio.source._deathNotice.listen(prepare);
+      var source = radio.source.depend(prepare);
       bandwidth = radio.input_rate.depend(prepare);
-      centerFreq = radio.source.freq.depend(prepare);
+      centerFreq = source.freq.depend(prepare);
       leftFreq = centerFreq - bandwidth / 2;
       pixelWidth = container.offsetWidth;
       pixelsPerHertz = pixelWidth / bandwidth * zoom;
@@ -174,17 +184,6 @@ define(['./values', './events'], function (values, events) {
     }
     prepare.scheduler = config.scheduler;
     prepare();
-    
-    // Zoom state variables
-    // We want the cursor point to stay fixed, but scrollLeft quantizes to integer; fractionalScroll stores a virtual fractional part.
-    var zoom, fractionalScroll;
-    // Zoom initial state:
-    // TODO: clamp zoom here in the same way changeZoom does
-    var zoom = parseFloat(storage.getItem('zoom')) || 1;
-    var initScroll = parseFloat(storage.getItem('scroll')) || 0;
-    scrollStub.style.width = (container.offsetWidth * zoom) + 'px';
-    container.scrollLeft = Math.floor(initScroll);
-    var fractionalScroll = mod(initScroll, 1);
     
     window.addEventListener('resize', function (event) {
       scheduler.enqueue(prepare);
@@ -372,11 +371,11 @@ define(['./values', './events'], function (values, events) {
           addWidget(name, 'Radio', name);
         } else if (member.type === Boolean) {
           addWidget(name, 'Toggle', name);
+        } else if (member.type === block) {
+          addWidget(name, 'Block');
         } else {
           addWidget(name, 'Generic', name);
         }
-      } else if (member._deathNotice) { // TODO better recognition of subblocks
-        addWidget(name, 'Block');
       } else {
         console.warn('Block scan got unexpected object:', member);
       }
@@ -870,7 +869,7 @@ define(['./values', './events'], function (values, events) {
 
           // Adjust drawing region
           var len = fftCell.get().length;
-          var viewCenterFreq = radio.source.freq.depend(draw);
+          var viewCenterFreq = radio.source.depend(draw).freq.depend(draw);
           var bandwidth = fftCell.getSampleRate();
           var lsf = viewCenterFreq - bandwidth/2;
           var rsf = viewCenterFreq + bandwidth/2;
@@ -923,7 +922,7 @@ define(['./values', './events'], function (values, events) {
 
           var len = averageBuffer.length;
 
-          var viewCenterFreq = radio.source.freq.depend(draw);
+          var viewCenterFreq = radio.source.depend(draw).freq.depend(draw);
           var bandwidth = fftCell.getSampleRate();
           var halfBinWidth = bandwidth / len / 2;
           xZero = freqToCoord(viewCenterFreq - bandwidth/2 + halfBinWidth);
@@ -1268,8 +1267,7 @@ define(['./values', './events'], function (values, events) {
           slicePtr = mod(slicePtr + 1, history);
         },
         beforeDraw: function () {
-          var source = radio.source;
-          source._deathNotice.listen(draw);
+          var source = radio.source.depend(draw);
           var viewCenterFreq = source.freq.depend(draw);
           commonBeforeDraw(viewCenterFreq, draw);
 
@@ -1300,7 +1298,7 @@ define(['./values', './events'], function (values, events) {
           var buffer = fftCell.get();  // CanvasSpectrumWidget takes care of listening
           var bufferCenterFreq = fftCell.getCenterFreq();
           var h = canvas.height;
-          var viewCenterFreq = radio.source.freq.depend(draw);
+          var viewCenterFreq = radio.source.depend(draw).freq.depend(draw);
           commonBeforeDraw(viewCenterFreq, draw);
 
           // rescale to discovered fft size
@@ -1435,16 +1433,16 @@ define(['./values', './events'], function (values, events) {
       }
       
       ctx.strokeStyle = 'gray';
-      drawHair(radio.source.freq.depend(draw)); // center frequency
+      drawHair(radio.source.depend(draw).freq.depend(draw)); // center frequency
       
-      radio.receivers._reshapeNotice.listen(draw);
-      for (var recKey in radio.receivers) {
-        var receiver = radio.receivers[recKey];
+      var receivers = radio.receivers.depend(draw);
+      receivers._reshapeNotice.listen(draw);
+      for (var recKey in receivers) {
+        var receiver = receivers[recKey].depend(draw);
         var rec_freq_cell = receiver.rec_freq;
         var rec_freq_now = rec_freq_cell.depend(draw);
-        var band_filter_cell = receiver.demodulator.band_filter_shape;
+        var band_filter_cell = receiver.demodulator.depend(draw).band_filter_shape;
         if (band_filter_cell) {
-          receiver.demodulator._deathNotice.listen(draw);
           var band_filter_now = band_filter_cell.depend(draw);
         }
 
@@ -1459,9 +1457,8 @@ define(['./values', './events'], function (values, events) {
         }
 
         // TODO: marks ought to be part of a distinct widget
-        var squelch_threshold_cell = receiver.demodulator.squelch_threshold;
+        var squelch_threshold_cell = receiver.demodulator.depend(draw).squelch_threshold;
         if (squelch_threshold_cell) {
-          receiver.demodulator._deathNotice.listen(draw);
           // TODO: this y calculation may be nonsense
           var squelch = Math.floor(yZero + squelch_threshold_cell.depend(draw) * yScale) + 0.5;
           var squelchL, squelchR;
@@ -1497,7 +1494,7 @@ define(['./values', './events'], function (values, events) {
       }
     }
     draw.scheduler = config.scheduler;
-    draw();
+    config.scheduler.enqueue(draw);  // must draw after widget inserted to get proper layout
   }
   widgets.ReceiverMarks = ReceiverMarks;
   
@@ -1938,8 +1935,9 @@ define(['./values', './events'], function (values, events) {
     var receiveAllButton = container.appendChild(document.createElement('button'));
     receiveAllButton.textContent = 'Receive all in search';
     receiveAllButton.addEventListener('click', function (event) {
-      for (var key in radio.receivers) {
-        radio.receivers.delete(key);
+      var receivers = radio.recevers.get();
+      for (var key in receivers) {
+        receivers.delete(key);
       }
       currentFilter.forEach(function(p) {
         radio.tune({
