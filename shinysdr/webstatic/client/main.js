@@ -55,7 +55,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
         if (!receiver && !alwaysCreate) {
           // Search for nearest matching receiver
           for (var recKey in receivers) {
-            var candidate = receivers[recKey];
+            var candidate = receivers[recKey].get();
             if (!candidate.rec_freq) continue;  // sanity check
             if (mode && candidate.mode.get() !== mode) {
               // Don't use a different mode
