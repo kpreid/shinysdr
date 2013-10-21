@@ -60,6 +60,10 @@ define(['./network'], function (network) {
           hasOverrun = false;
         }
       };
+      ws.addEventListener('close', function (event) {
+        closed();
+      });
+      setTimeout(opened, 0);
     });
     
     // Choose buffer size
@@ -120,10 +124,17 @@ define(['./network'], function (network) {
       }
       prevUnderrun = underrun;
     };
-    ascr.connect(audio.destination);
+
     // Workaround for Chromium bug https://code.google.com/p/chromium/issues/detail?id=82795 -- ScriptProcessor nodes are not kept live
     window.__dummy_audio_node_reference = ascr;
     //console.log('audio init done');
+
+    function opened() {
+      ascr.connect(audio.destination);
+    }
+    function closed() {
+      ascr.disconnect(audio.destination);
+    }
   }
   
   exports.connectAudio = connectAudio;
