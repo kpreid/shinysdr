@@ -135,6 +135,10 @@ define(['./values', './events'], function (values, events) {
       var go = function go() {
         // TODO defend against JS-significant keys
         var target = rootTargetCell.depend(go)[node.getAttribute('data-target')];
+        if (!target) {
+          node.textContent = '[Missing: ' + node.getAttribute('data-target') + ']';
+          return;
+        }
         
         node.textContent = ''; // fast clear
         node.appendChild(html.cloneNode(true));
