@@ -29,8 +29,7 @@ describe('widget', function () {
   
   describe('Knob', function () {
     it('should hold a negative zero', function () {
-      var cell = new shinysdr.values.LocalCell(shinysdr.values.any);
-      cell.set(0);
+      var cell = new shinysdr.values.LocalCell(shinysdr.values.any, 0);
       widget = new shinysdr.widget.widgets.Knob({
         target: cell,
         scheduler: scheduler

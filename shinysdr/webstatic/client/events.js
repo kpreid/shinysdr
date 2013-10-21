@@ -34,17 +34,13 @@ define(function () {
     fn.scheduler.enqueue(fn);
   }
   function Notifier() {
-    if (arguments.length !== 0) {
-      throw new Error('Obsolete notifier call');
-    }
-    var self = this;
     this._listening = [];
   }
-  Notifier.prototype.notify = function() {
+  Notifier.prototype.notify = function () {
     this._listening.forEach(nSchedule, this);
     this._listening.length = 0;
   };
-  Notifier.prototype.listen = function(fn) {
+  Notifier.prototype.listen = function (fn) {
     if (typeof fn !== 'function') {
       throw new Error('listen called with non-function ' + fn);
     }
@@ -54,6 +50,22 @@ define(function () {
     this._listening.push(fn);
   };
   exports.Notifier = Notifier;
+  
+  // Like a Notifier, but doesn't accumulate listeners and never invokes them.
+  function Neverfier() {}
+  Neverfier.prototype.notify = function () {
+    throw new Error('Neverfier.prototype.notify should not be called');
+  };
+  Neverfier.prototype.listen = function (fn) {
+    if (typeof fn !== 'function') {
+      throw new Error('listen called with non-function ' + fn);
+    }
+    if (typeof fn.scheduler === 'undefined') {
+      throw new Error('listen function without scheduler ' + fn);
+    }
+    // do nothing
+  };
+  exports.Neverfier = Neverfier;
   
   return Object.freeze(exports);
 });

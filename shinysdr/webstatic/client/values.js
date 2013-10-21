@@ -108,9 +108,9 @@ define(['./events'], function (events) {
   };
   exports.Cell = Cell;
   
-  function LocalCell(type) {
+  function LocalCell(type, initialValue) {
     Cell.call(this, type);
-    this._value = undefined;
+    this._value = initialValue;
   }
   LocalCell.prototype = Object.create(Cell.prototype, {constructor: {value: LocalCell}});
   LocalCell.prototype.get = function() {
@@ -158,10 +158,10 @@ define(['./events'], function (events) {
   }
   StorageCell.prototype = Object.create(Cell.prototype, {constructor: {value: StorageCell}});
   StorageCell.prototype.get = function() {
-    return this._storage.getItem(this._key);
+    return JSON.parse(this._storage.getItem(this._key));
   };
   StorageCell.prototype.set = function(value) {
-    this._storage.setItem(this._key, value);
+    this._storage.setItem(this._key, JSON.stringify(value));
     this.n.notify();
   };
   exports.StorageCell = StorageCell;

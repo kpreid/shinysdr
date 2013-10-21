@@ -7,7 +7,7 @@
 
 <section id="section-spectrum" class="stretchy">
   <h2>Spectrum</h2>
-  <div class="hscalegroup" id="_spectrum-container">
+  <div class="hscalegroup" id="_spectrum-container" data-target="radio">
     <div class="hscale">
       <div data-widget="ReceiverMarks" class="overlay"></div>
       <canvas class="overlay" id="spectrum" data-widget="SpectrumPlot" data-target="spectrum_fft"></canvas>
@@ -29,12 +29,22 @@
 
 <section id="section-radio">
   <h2>Radio Config</h2>
-  <div class="sidebar frame" data-widget="Top"></div>
+  <div class="sidebar">
+    <div data-widget="Top" data-target="radio"></div>
+    <div class="frame" data-target="client">
+      <details id="client-options">
+        <summary>Client options</summary><!-- TODO better label -->
+        <div data-target="opengl" data-widget="Toggle" title="Use OpenGL spectrum displays"></div>
+        <div data-target="opengl_float" data-widget="Toggle" title="...with float textures"></div>
+        <div data-target="spectrum_split" data-widget="LinSlider" title="Spectrum layout"></div>
+      </details>
+    </div>
+  </div>
 </section>
 
 <section id="section-db">
   <h2>Frequency DB</h2>
-  <div class="sidebar frame">
+  <div class="sidebar frame" data-target="radio">
     <div class="panel" data-widget="RecordDetails" data-target="preset"></div>
     <div class="panel" data-widget="FreqList" id="freqlist"></div>
   </div>

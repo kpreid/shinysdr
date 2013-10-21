@@ -4,12 +4,32 @@ define(['./values', './events', './database', './network', './maps', './widget',
   var any = values.any;
   var LocalCell = values.LocalCell;
   var StorageNamespace = values.StorageNamespace;
+  var StorageCell = values.StorageCell;
+  
+  function stubBlock(obj) {
+    obj._reshapeNotice = new events.Neverfier();
+    return obj;
+  }
   
   var scheduler = new events.Scheduler();
   
   var freqDB = new database.Union();
   freqDB.add(database.allSystematic);
   freqDB.add(database.fromCatalog('dbs/')); // TODO get url from server
+  
+  var clientStateStorage = new StorageNamespace(localStorage, 'shinysdr.client.');
+  function cc(key, type, value) {
+    var cell = new StorageCell(clientStateStorage, type, key);
+    if (cell.get() === null) {
+      cell.set(value);
+    }
+    return cell;
+  }
+  var clientBlockCell = new LocalCell(values.block, stubBlock({
+    opengl: cc('opengl', Boolean, true),
+    opengl_float: cc('opengl_float', Boolean, true),
+    spectrum_split: cc('spectrum_split', new values.Range([[-1, 1]], false, false), 0.5)
+  }));
   
   // TODO get url from server
   network.externalGet('client/plugin-index.json', 'text', function gotPluginIndex(jsonstr) {
@@ -24,7 +44,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
     network.connect('radio', scheduler, function gotDesc(remote, remoteCell) {
       // TODO always use remoteCell or change network.connect so radio is reshaped not replaced
       radio = remote;
-
+      
       // Takes center freq as parameter so it can be used on hypotheticals and so on.
       function frequencyInRange(candidate, centerFreq) {
         var halfBandwidth = radio.input_rate.get() / 2;
@@ -104,7 +124,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
     
       // Kludge to let frequency preset widgets do their thing
       // TODO(kpreid): Make this explicitly client state instead
-      radio.preset = new LocalCell(any);
+      radio.preset = new LocalCell(any, undefined);
       radio.preset.set = function(freqRecord) {
         LocalCell.prototype.set.call(this, freqRecord);
         tune({
@@ -126,8 +146,13 @@ define(['./values', './events', './database', './network', './maps', './widget',
         scheduler: scheduler
       });
       
+      var everything = new LocalCell(values.block, stubBlock({
+        client: clientBlockCell,
+        radio: remoteCell
+      }));
+      
       // generic control UI widget tree
-      widget.createWidgets(remoteCell, context, document);
+      widget.createWidgets(everything, context, document);
       
       // Map (all geographic data)
       var map = new maps.Map(document.getElementById('map'), scheduler, freqDB, radio);
