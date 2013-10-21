@@ -2180,6 +2180,7 @@ define(['./values', './events'], function (values, events) {
     var dataElement;
     if (config.element.nodeName !== expectedNodeName) {
       var container = this.element = config.element;
+      if (config.shouldBePanel) container.classList.add('panel');
       dataElement = buildPanel(container);
     } else {
       this.element = dataElement = config.element;
