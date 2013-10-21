@@ -57,17 +57,8 @@ class JSONResource(CellResource):
 		return json.loads(value)
 
 	def grrender(self, value, request):
+		print repr(value)
 		return json.dumps(value)
-
-
-class SpectrumResource(CellResource):
-	defaultContentType = 'application/octet-stream'
-
-	def grrender(self, value, request):
-		(freq, fftdata) = value
-		# TODO: Use a more structured response rather than putting data in headers
-		request.setHeader('X-SDR-Center-Frequency', str(freq))
-		return array.array('f', fftdata).tostring()
 
 
 def notDeletable():
@@ -91,8 +82,6 @@ class BlockResource(resource.Resource):
 			for key, cell in block.state().iteritems():
 				if cell.isBlock():
 					self._blockCells[key] = cell
-				elif cell.description()['type'] == 'spectrum':  # TODO better interface
-					self.putChild(key, SpectrumResource(cell, self._noteDirty))
 				else:
 					self.putChild(key, JSONResource(cell, self._noteDirty))
 	
