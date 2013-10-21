@@ -139,7 +139,7 @@ class MsgQueueCell(ValueCell):
 			unpacker = array.array('f')
 			unpacker.fromstring(itemStr)
 			value = (self._igetter(), unpacker.tolist())
-		if self._fill:
+		if self._fill and not binary:  # TODO: fill should work for binary too
 			self._prev = value
 		return value
 	
