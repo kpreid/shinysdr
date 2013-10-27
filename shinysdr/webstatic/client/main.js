@@ -119,16 +119,9 @@ define(['./values', './events', './database', './network', './maps', './widget',
       freqDB.add(writableDB);
       radio.targetDB = writableDB; // kludge reference
   
-      var view = new widget.SpectrumView({
-        scheduler: scheduler,
-        radio: radio,
-        element: document.querySelector('.hscalegroup'), // TODO relic
-        storage: new StorageNamespace(localStorage, 'shinysdr.viewState.spectrum.')
-      });
-    
       var context = new widget.Context({
         radio: radio,
-        spectrumView: view,
+        spectrumView: null,
         freqDB: freqDB,
         scheduler: scheduler
       });

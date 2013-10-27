@@ -29,10 +29,31 @@ define(['./values', './events'], function (values, events) {
     this.freqDB = config.freqDB;
     this.spectrumView = config.spectrumView;
   }
+  Context.prototype.withSpectrumView = function (element) {
+    if (!element.id) throw new Error('spectrum view element must have an id for persistence');
+    var ns = new StorageNamespace(localStorage, 'shinysdr.viewState.' + element.id + '.');
+    var view = new SpectrumView({
+      scheduler: this.scheduler,
+      radio: this.radio,
+      element: element,
+      storage: ns
+    });
+    return new Context({
+      radio: this.radio,
+      freqDB: this.freqDB,
+      scheduler: this.scheduler,
+      spectrumView: view
+    })
+  }
   exports.Context = Context;
   
-  function createWidgetsList(rootTargetCell, context, list) {
-    Array.prototype.forEach.call(list, function (child) {
+  function createWidgetsInNode(rootTargetCell, context, node) {
+    // TODO generalize this special case
+    if (node.nodeType === 1 && node.classList.contains('hscalegroup')) {
+      context = context.withSpectrumView(node);
+    }
+    
+    Array.prototype.forEach.call(node.childNodes, function (child) {
       createWidgets(rootTargetCell, context, child);
     });
   }
@@ -104,7 +125,7 @@ define(['./values', './events'], function (values, events) {
         currentWidgetEl = newEl;
         
         // allow widgets to embed widgets
-        createWidgetsList(targetCell || rootTargetCell, context, widget.element.childNodes);
+        createWidgetsInNode(targetCell || rootTargetCell, context, widget.element);
       }
       go.scheduler = scheduler;
       go();
@@ -117,7 +138,7 @@ define(['./values', './events'], function (values, events) {
         
         node.textContent = ''; // fast clear
         node.appendChild(html.cloneNode(true));
-        createWidgetsList(target, context, node.childNodes);
+        createWidgetsInNode(target, context, node);
       }
       go.scheduler = scheduler;
       go();
@@ -130,10 +151,10 @@ define(['./values', './events'], function (values, events) {
       new MutationObserver(function(mutations) {
         ns.setItem('detailsOpen', JSON.stringify(node.open));
       }).observe(node, {attributes: true, attributeFilter: ['open']});
-      createWidgetsList(rootTargetCell, context, node.childNodes);
+      createWidgetsInNode(rootTargetCell, context, node);
 
     } else {
-      createWidgetsList(rootTargetCell, context, node.childNodes);
+      createWidgetsInNode(rootTargetCell, context, node);
     }
   }
   exports.createWidgets = createWidgets;
