@@ -25,6 +25,7 @@ define(['./values', './events'], function (values, events) {
   // TODO figure out what this does and give it a better name
   function Context(config) {
     this.radio = config.radio;
+    this.clientState = config.clientState;
     this.scheduler = config.scheduler;
     this.freqDB = config.freqDB;
     this.spectrumView = config.spectrumView;
@@ -40,6 +41,7 @@ define(['./values', './events'], function (values, events) {
     });
     return new Context({
       radio: this.radio,
+      clientState: this.clientState,
       freqDB: this.freqDB,
       scheduler: this.scheduler,
       spectrumView: view
@@ -104,10 +106,12 @@ define(['./values', './events'], function (values, events) {
           target: widgetTarget,
           element: newSourceEl,
           view: context.spectrumView, // TODO should be context-dependent
+          clientState: context.clientState,
           freqDB: context.freqDB, // TODO: remove the need for this
           radio: context.radio, // TODO: remove the need for this
           storage: node.hasAttribute('id') ? new StorageNamespace(localStorage, 'shinysdr.widgetState.' + node.getAttribute('id') + '.') : null,
-          shouldBePanel: shouldBePanel
+          shouldBePanel: shouldBePanel,
+          rebuildMe: go
         });
         widget.element.classList.add('widget-' + typename);
         
@@ -607,7 +611,7 @@ define(['./values', './events'], function (values, events) {
     var fftCell = config.target;
     var view = config.view;
     
-    var useWebGL = true;
+    var useWebGL = config.clientState.opengl.depend(config.rebuildMe);
     
     var canvas = config.element;
     if (canvas.tagName !== 'CANVAS') {
@@ -1016,7 +1020,9 @@ define(['./values', './events'], function (values, events) {
     function buildGL(gl, buildProgram, draw) {
       canvas = self.element;
 
-      var useFloatTexture = !!gl.getExtension('OES_texture_float');
+      var useFloatTexture =
+        config.clientState.opengl_float.depend(config.rebuildMe) &&
+        !!gl.getExtension('OES_texture_float');
 
       var vertexShaderSource = ''
         + 'attribute vec4 position;\n'

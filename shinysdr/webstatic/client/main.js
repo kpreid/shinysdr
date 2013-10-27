@@ -25,11 +25,12 @@ define(['./values', './events', './database', './network', './maps', './widget',
     }
     return cell;
   }
-  var clientBlockCell = new LocalCell(values.block, stubBlock({
+  var clientState = stubBlock({
     opengl: cc('opengl', Boolean, true),
     opengl_float: cc('opengl_float', Boolean, true),
     spectrum_split: cc('spectrum_split', new values.Range([[-1, 1]], false, false), 0.5)
-  }));
+  });
+  var clientBlockCell = new LocalCell(values.block, clientState);
   
   // TODO get url from server
   network.externalGet('client/plugin-index.json', 'text', function gotPluginIndex(jsonstr) {
@@ -140,7 +141,9 @@ define(['./values', './events', './database', './network', './maps', './widget',
       radio.targetDB = writableDB; // kludge reference
   
       var context = new widget.Context({
+        // TODO all of this should be narrowed down, read-only, replaced with other means to get it to the widgets that need it, etc.
         radio: radio,
+        clientState: clientState,
         spectrumView: null,
         freqDB: freqDB,
         scheduler: scheduler
