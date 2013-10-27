@@ -1017,6 +1017,17 @@ define(['./values', './events'], function (values, events) {
     
     CanvasSpectrumWidget.call(this, config, buildGL, build2D);
     
+    // TODO(kpreid): This is a horrible kludge and we should replace it by making the container into a widget which manages the layout of both views instead. Also making sure that in the pure-waterfall view the channel labels are moved to the waterfall side.
+    var el = this.element;
+    function layout() {
+      var otherFlexValue = 100;
+      var proportion = config.clientState.spectrum_split.depend(layout);
+      var flexValue = otherFlexValue * proportion / (1.001 - proportion);
+      el.style.flex = flexValue + ' ' + flexValue;
+    }
+    layout.scheduler = config.scheduler;
+    layout();
+    
     function buildGL(gl, buildProgram, draw) {
       canvas = self.element;
 

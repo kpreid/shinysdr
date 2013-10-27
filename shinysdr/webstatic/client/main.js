@@ -28,7 +28,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
   var clientState = stubBlock({
     opengl: cc('opengl', Boolean, true),
     opengl_float: cc('opengl_float', Boolean, true),
-    spectrum_split: cc('spectrum_split', new values.Range([[-1, 1]], false, false), 0.5)
+    spectrum_split: cc('spectrum_split', new values.Range([[0, 1]], false, false), 0.5)
   });
   var clientBlockCell = new LocalCell(values.block, clientState);
   
