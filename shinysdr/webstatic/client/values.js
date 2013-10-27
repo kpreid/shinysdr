@@ -122,7 +122,7 @@ define(['./events'], function (events) {
   };
   exports.LocalCell = LocalCell;
   
-  // Adds a prefix to localStorage keys
+  // Adds a prefix to Storage (localStorage) keys
   function StorageNamespace(base, prefix) {
     this._base = base;
     this._prefix = prefix;
@@ -137,6 +137,34 @@ define(['./events'], function (events) {
     return this._base.removeItem(this._prefix + key);
   };
   exports.StorageNamespace = StorageNamespace;
+  
+  var allStorageCellNotifiers = [];
+  // Note that browsers do not fire this event unless the storage was changed from SOME OTHER window; so this code is not usually applicable. We're also being imprecise.
+  window.addEventListener('storage', function (event) {
+    allStorageCellNotifiers.forEach(function (n) { n.notify(); });
+  });
+  
+  // Presents a Storage (localStorage) entry as a cell
+  // Warning: Only one cell should exist per unique key, or notifications may not occur; also, creating cells repeatedly will leak.
+  function StorageCell(storage, type, key) {
+    key = String(key);
+
+    Cell.call(this, type);
+
+    this._storage = storage;
+    this._key = key;
+
+    allStorageCellNotifiers.push(this.n);
+  }
+  StorageCell.prototype = Object.create(Cell.prototype, {constructor: {value: StorageCell}});
+  StorageCell.prototype.get = function() {
+    return this._storage.getItem(this._key);
+  };
+  StorageCell.prototype.set = function(value) {
+    this._storage.setItem(this._key, value);
+    this.n.notify();
+  };
+  exports.StorageCell = StorageCell;
   
   return Object.freeze(exports);
 });

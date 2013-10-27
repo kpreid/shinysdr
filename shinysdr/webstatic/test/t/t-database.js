@@ -1,6 +1,7 @@
 'use strict';
 
 describe('database', function () {
+  // TODO: duplicated code w/ other tests; move to a common library somewhere
   var s;
   beforeEach(function () {
     s = new shinysdr.events.Scheduler(window);
@@ -19,6 +20,7 @@ describe('database', function () {
       expect(l).toHaveBeenCalledWith();
     });
   }
+
   var dummyRecord = Object.freeze({
     type: 'channel',
     freq: 100e6
