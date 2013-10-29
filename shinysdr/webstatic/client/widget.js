@@ -512,8 +512,6 @@ define(['./values', './events'], function (values, events) {
         addWidget('freq', 'Knob', 'Center frequency');
       }
       
-      setToDetails();
-      
       if ('gain' in block && 'agc' in block) {
         var gainPanel = getAppend().appendChild(document.createElement('div'));
         gainPanel.className = 'panel';
@@ -531,6 +529,8 @@ define(['./values', './events'], function (values, events) {
         ignore('agc');
         ignore('gain');
       }
+      
+      setToDetails();
       
       if ('external_freq_shift' in block) {
         addWidget('external_freq_shift', 'SmallKnob', 'External frequency shift');
