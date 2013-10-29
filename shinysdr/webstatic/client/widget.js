@@ -345,12 +345,23 @@ define(['./values', './events'], function (values, events) {
   function Block(config, optSpecial, optEmbed) {
     var block = config.target;
     var container = this.element = config.element;
+    var appendTarget = container;
     var claimed = Object.create(null);
     
     container.textContent = '';
     container.classList.add('frame');
     if (config.shouldBePanel && !optEmbed) {
       container.classList.add('panel');
+    }
+    
+    function getAppend() {
+      if (appendTarget === 'details') {
+        appendTarget = container.appendChild(document.createElement('details'));
+        //appendTarget.id = ... TODO make unique id based on path or something
+        appendTarget.appendChild(document.createElement('summary')).textContent = 'More';
+      }
+      
+      return appendTarget;
     }
     
     function addWidget(name, widgetType, optBoxLabel) {
@@ -367,19 +378,25 @@ define(['./values', './events'], function (values, events) {
       }
       // createWidgets will instantiate the widget from this
       
-      container.appendChild(wEl);
+      getAppend().appendChild(wEl);
     }
     
     function ignore(name) {
       claimed[name] = true;
     }
     
+    // TODO be less imperative
     function setInsertion(el) {
-      container = el;
+      appendTarget = el;
+    }
+    
+    function setToDetails() {
+      // special value which is instantiated if anything actually gets appended
+      appendTarget = 'details';
     }
     
     if (optSpecial) {
-      optSpecial.call(this, block, addWidget, ignore, setInsertion);
+      optSpecial.call(this, block, addWidget, ignore, setInsertion, setToDetails, getAppend);
     }
     
     var names = [];
@@ -414,7 +431,7 @@ define(['./values', './events'], function (values, events) {
   
   // Widget for the top block
   function Top(config) {
-    Block.call(this, config, function (block, addWidget, ignore, setInsertion) {
+    Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       ignore('spectrum_fft');  // displayed separately
       ignore('preset');  // displayed separately, not real state
       ignore('targetDB');  // not real state
@@ -449,20 +466,17 @@ define(['./values', './events'], function (values, events) {
         addWidget('receivers', 'ReceiverSet');
       }
       
-      var details = this.element.appendChild(document.createElement('details'));
-      details.id = 'top-options'; // TODO make unique based on path or something
-      details.appendChild(document.createElement('summary')).textContent = 'Other options';
-      
-      setInsertion(details);
+      setToDetails();
     });
   }
   widgets.Top = Top;
   
   function BlockSet(widgetName, userName, dynamic) {
     return function TypeSetInst(config) {
-      Block.call(this, config, function (block, addWidget, ignore, setInsertion) {
+      Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
         Object.keys(block).forEach(function (name) {
           if (dynamic) {
+            // TODO: summary element is abused
             var toolbar = document.createElement('summary');
             toolbar.className = 'panel frame-controls';
             
@@ -493,20 +507,15 @@ define(['./values', './events'], function (values, events) {
   
   // Widget for a source block
   function Source(config) {
-    Block.call(this, config, function (block, addWidget, ignore, setInsertion) {
-      var details = this.element.appendChild(document.createElement('details'));
-      details.id = 'rf-options'; // TODO make unique based on path or something
-      details.appendChild(document.createElement('summary')).textContent = 'RF options';
-
+    Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       if ('freq' in block) {
         addWidget('freq', 'Knob', 'Center frequency');
       }
       
-      // TODO: arrange so details disappears if empty
-      setInsertion(details);
+      setToDetails();
       
       if ('gain' in block && 'agc' in block) {
-        var gainPanel = details.appendChild(document.createElement('div'));
+        var gainPanel = getAppend().appendChild(document.createElement('div'));
         gainPanel.className = 'panel';
         gainPanel.appendChild(document.createTextNode('Gain '));
         var agcl = gainPanel.appendChild(document.createElement('label'));
@@ -537,7 +546,7 @@ define(['./values', './events'], function (values, events) {
   
   // Widget for a receiver block
   function Receiver(config) {
-    Block.call(this, config, function (block, addWidget, ignore, setInsertion) {
+    Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       ignore('is_valid');
       if ('rec_freq' in block) {
         addWidget('rec_freq', 'Knob', 'Channel frequency');
@@ -564,7 +573,7 @@ define(['./values', './events'], function (values, events) {
   
   // Widget for a receiver block
   function Demodulator(config) {
-    Block.call(this, config, function (block, addWidget, ignore, setInsertion) {
+    Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       ignore('band_filter_shape');
       if ('rf_power' in block && 'squelch_threshold' in block) (function() {
         var squelchAndPowerPanel = this.element.appendChild(document.createElement('table'));
