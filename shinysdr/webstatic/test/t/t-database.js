@@ -89,6 +89,22 @@ describe('database', function () {
       expect(r.notes).toEqual('');
     });
 
+    it('record should round-trip through JSON', function () {
+      var plainRecord = {
+        type: 'channel',
+        label: 'foo',
+        notes: 'bar',
+        mode: 'USB',
+        freq: 123.4e6,
+        lowerFreq: null,
+        upperFreq: null,
+        location: null
+      };
+      // TODO: test location value (not doing so for now because toEqual is apparently not deep)
+      var r = (new shinysdr.database.Table('foo', true)).add(plainRecord);
+      expect(r.toJSON()).toEqual(plainRecord);
+    });
+
     it('record should coerce a location', function () {
       var r = (new shinysdr.database.Table('foo', true)).add({location: ['1', '2']});
       expect(r.location.length).toEqual(2);

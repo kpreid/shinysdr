@@ -283,6 +283,9 @@ define(['./events', './network'], function (events, network) {
     // might want to make this not _re_allocate at some point
     return record === null ? null : Object.freeze([+record[0], +record[1]]);
   }
+  function OptNumber(value) {
+    return value === null ? NaN : +value;
+  }
   function makeRecordProp(name, coerce, defaultValue) {
     var internalName = '_stored_' + name;
     return {
@@ -292,7 +295,15 @@ define(['./events', './network'], function (events, network) {
       },
       set: function (value) {
         if (this._initializing || this._hook) {
-          this[internalName] = coerce(value);
+          if (this._initializing) {
+            Object.defineProperty(this, internalName, {
+              enumerable: false,
+              writable: true,
+              value: coerce(value)
+            });
+          } else {
+            this[internalName] = coerce(value);
+          }
           if (this._hook) {
             (0, this._hook)();
           }
@@ -307,9 +318,9 @@ define(['./events', './network'], function (events, network) {
   var recordProps = {
     type: makeRecordProp('type', String, 'channel'), // TODO enum constraint
     mode: makeRecordProp('mode', String, '?'),
-    freq: makeRecordProp('freq', Number, NaN), // TODO only for channel
-    lowerFreq: makeRecordProp('lowerFreq', Number, NaN),  // TODO only for band
-    upperFreq: makeRecordProp('upperFreq', Number, NaN),  // TODO only for band
+    freq: makeRecordProp('freq', OptNumber, NaN), // TODO only for channel
+    lowerFreq: makeRecordProp('lowerFreq', OptNumber, NaN),  // TODO only for band
+    upperFreq: makeRecordProp('upperFreq', OptNumber, NaN),  // TODO only for band
     location: makeRecordProp('location', OptCoord, null),
     label: makeRecordProp('label', String, ''),
     notes: makeRecordProp('notes', String, '')
@@ -328,7 +339,18 @@ define(['./events', './network'], function (events, network) {
   Object.defineProperties(Record.prototype, {
     writable: {
       get: function () { return !!this._hook; }
-    }
+    },
+    toJSON: { value: function () {
+      var out = {};
+      for (var k in this) {
+        if (recordProps.hasOwnProperty(k)) {
+          var value = this[k];
+          if (typeof value === 'number' && isNaN(value)) value = null;  // JSON.stringify does this too; this is just to be canonical even if not stringified
+          out[k] = value;
+        }
+      }
+      return out;
+    }}
   });
   
   // Generic FM broadcast channels
