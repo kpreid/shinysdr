@@ -75,6 +75,13 @@ class OsmoSDRSource(Source):
 		self.iq_state = 0
 		
 		self.osmosdr_source_block = source = osmosdr.source("nchan=1 " + osmo_device)
+		if source.get_num_channels() < 1:
+			# osmosdr.source doesn't throw an exception, allegedly because gnuradio can't handle it in a hier_block2 initializer. But we want to fail understandably, so recover by detecting it (sample rate = 0, which is otherwise nonsense)
+			raise LookupError('OsmoSDR device not found (device string = %r)' % osmo_device)
+		elif source.get_num_channels() > 1:
+			raise LookupError('Too many devices/channels; need exactly one (device string = %r)' % osmo_device)
+
+		# configure source with initial state
 		# Note: Docs for these setters at gr-osmosdr/lib/source_iface.h
 		if sample_rate is None:
 			source.set_sample_rate(source.get_sample_rates().stop())
