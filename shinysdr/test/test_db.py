@@ -137,7 +137,6 @@ def post(url, value):
 class Accumulator(Protocol):
 	# TODO eliminate this boilerplate
 	def __init__(self, finished):
-		print 'boo'
 		self.finished = finished
 		self.data = ''
 
@@ -145,5 +144,4 @@ class Accumulator(Protocol):
 		self.data += chunk
 	
 	def connectionLost(self, reason):
-		print 'boom'
 		self.finished.callback(self.data)
