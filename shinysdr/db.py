@@ -34,7 +34,9 @@ class DatabasesResource(resource.Resource):
 		self.names = []
 		for name in os.listdir(path):
 			if name.endswith('.csv'):
-				self.putChild(name, DatabaseResource(os.path.join(path, name)))
+				with open(os.path.join(path, name), 'rb') as csvfile:
+					database = _parse_csv_file(csvfile)
+				self.putChild(name, DatabaseResource(database))
 				self.names.append(name)
 
 
@@ -57,10 +59,8 @@ class _DbsIndexResource(resource.Resource):
 class DatabaseResource(resource.Resource):
 	isLeaf = False
 	
-	def __init__(self, path):
+	def __init__(self, database):
 		resource.Resource.__init__(self)
-		with open(path, 'rb') as csvfile:
-			database = _parse_csv_file(csvfile)
 		def instantiate(i):
 			self.putChild(str(i), _RecordResource(database[i]))
 		self.putChild('', _DbIndexResource(database, instantiate))

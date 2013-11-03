@@ -33,6 +33,9 @@ define(['./values', './events', './database', './network', './maps', './widget',
   var freqDB = new database.Union();
   freqDB.add(database.allSystematic);
   freqDB.add(database.fromCatalog('dbs/')); // TODO get url from server
+  // kludge till we have proper UI for selection of write targets
+  var writableDB = database.fromURL('wdb/');
+  freqDB.add(writableDB);
   
   var clientStateStorage = new StorageNamespace(localStorage, 'shinysdr.client.');
   function cc(key, type, value) {
@@ -152,9 +155,6 @@ define(['./values', './events', './database', './network', './maps', './widget',
         });
       };
     
-      // kludge till we have proper editing
-      var writableDB = new database.Table('writable stub', true);
-      freqDB.add(writableDB);
       radio.targetDB = writableDB; // kludge reference
   
       var context = new widget.Context({

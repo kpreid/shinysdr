@@ -409,6 +409,8 @@ def listen(config, top, noteDirty):
 	
 	# Frequency DB
 	appRoot.putChild('dbs', shinysdr.db.DatabasesResource(config['databasesDir']))
+	# temporary stub till we have a proper writability/target policy
+	appRoot.putChild('wdb', shinysdr.db.DatabaseResource([]))
 	
 	# Construct explicit resources for merge.
 	test = _reify(appRoot, 'test')

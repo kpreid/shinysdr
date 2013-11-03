@@ -47,10 +47,8 @@ class TestCSV(unittest.TestCase):
 				u'location': None
 			}])
 
-
 class TestDBWeb(unittest.TestCase):
 	test_data_json = [
-		# This is the data in test_db_data.csv.
 		{
 			u'type': u'channel',
 			u'lowerFreq': 10e6,
@@ -72,7 +70,7 @@ class TestDBWeb(unittest.TestCase):
 	]
 	
 	def setUp(self):
-		dbResource = db.DatabaseResource(os.path.join(os.path.dirname(__file__), 'test_db_data.csv'))
+		dbResource = db.DatabaseResource(self.test_data_json)
 		self.port = reactor.listenTCP(0, server.Site(dbResource), interface="127.0.0.1")
 	
 	def tearDown(self):
