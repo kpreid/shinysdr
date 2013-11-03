@@ -43,6 +43,19 @@ describe('database', function () {
     freq: 100e6
   });
   
+  describe('Source', function () {
+    it('should match band edges correctly', function () {
+      var t = new shinysdr.database.Table('foo', true);
+      var r = t.add({lowerFreq: 100, upperFreq: 200});
+      // slice is to work around a jasmine bug where it assumes objects are mutable
+      expect(t.inBand(0, 90).getAll().slice()).toEqual([]);
+      expect(t.inBand(90, 110).getAll().slice()).toEqual([r]);
+      expect(t.inBand(110, 190).getAll().slice()).toEqual([r]);
+      expect(t.inBand(190, 210).getAll().slice()).toEqual([r]);
+      expect(t.inBand(210, 300).getAll().slice()).toEqual([]);
+    });
+  });
+  
   describe('Table', function () {
     it('should notify on record addition', function () {
       var t = new shinysdr.database.Table('foo', true);
@@ -88,6 +101,26 @@ describe('database', function () {
   });
   
   describe('Record', function () {
+    it('should have consistent frequency values', function () {
+      var r = new shinysdr.database.Table('foo', true).add({});
+      // It is always the case that freq is the midpoint between lowerFreq and upperFreq.
+      expect(r.lowerFreq).toBeNaN();
+      expect(r.upperFreq).toBeNaN();
+      expect(r.freq).toBeNaN();
+      r.lowerFreq = 1;
+      expect(r.lowerFreq).toBe(1);
+      expect(r.upperFreq).toBeNaN();
+      expect(r.freq).toBeNaN();
+      r.upperFreq = 2;
+      expect(r.lowerFreq).toBe(1);
+      expect(r.upperFreq).toBe(2);
+      expect(r.freq).toBe(1.5);
+      r.freq = 3;
+      expect(r.lowerFreq).toBe(3);
+      expect(r.upperFreq).toBe(3);
+      expect(r.freq).toBe(3);
+    });
+    
     it('should notify on record modification', function () {
       var t = new shinysdr.database.Table('foo', true);
       var l = createListenerSpy();
@@ -119,9 +152,8 @@ describe('database', function () {
         label: 'foo',
         notes: 'bar',
         mode: 'USB',
-        freq: 123.4e6,
-        lowerFreq: null,
-        upperFreq: null,
+        lowerFreq: 123.4e6,
+        upperFreq: 123.4e6,
         location: null
       };
       // TODO: test location value (not doing so for now because toEqual is apparently not deep)

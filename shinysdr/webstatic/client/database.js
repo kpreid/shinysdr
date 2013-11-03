@@ -43,8 +43,8 @@ define(['./events', './network'], function (events, network) {
   };
   Source.prototype.inBand = function (lower, upper) {
     return new FilterView(this, function inBandFilter(record) {
-      return (record.freq || record.upperFreq) >= lower &&
-             (record.freq || record.lowerFreq) <= upper;
+      return record.upperFreq >= lower &&
+             record.lowerFreq <= upper;
     });
   };
   Source.prototype.type = function (type) {
@@ -101,7 +101,8 @@ define(['./events', './network'], function (events, network) {
   }
   GroupView.prototype = Object.create(View.prototype, {constructor: {value: GroupView}});
   GroupView.prototype._execute = function (baseEntries) {
-    var lastFreq = null;
+    var lastFreqL = null;
+    var lastFreqH = null;
     var lastGroup = [];
     var out = [];
     function flush() {
@@ -109,7 +110,9 @@ define(['./events', './network'], function (events, network) {
         if (lastGroup.length > 1) {
           out.push(Object.freeze({
             type: 'group',
-            freq: lastFreq,
+            lowerFreq: lastFreqL,
+            upperFreq: lastFreqH,
+            freq: (lastFreqL + lastFreqH) / 2,
             grouped: Object.freeze(lastGroup),
             n: Object.freeze({
               listen: function () {}
@@ -122,16 +125,12 @@ define(['./events', './network'], function (events, network) {
       }
     }
     baseEntries.forEach(function (record) {
-      if ('freq' in record) {
-        if (record.freq !== lastFreq) {
-          flush();
-          lastFreq = record.freq;
-        }
-        lastGroup.push(record);
-      } else {
+      if (record.lowerFreq !== lastFreqL || record.upperFreq !== lastFreqH) {
         flush();
-        out.push(record);
+        lastFreqL = record.lowerFreq;
+        lastFreqH = record.upperFreq;
       }
+      lastGroup.push(record);
     });
     flush();
     return out;
@@ -273,7 +272,7 @@ define(['./events', './network'], function (events, network) {
   exports.fromURL = fromURL;
   
   function compareRecord(a, b) {
-    return (a.freq || a.lowerFreq) - (b.freq || b.lowerFreq);
+    return a.lowerFreq - b.lowerFreq;
   }
   
   function finishModification() {
@@ -324,20 +323,41 @@ define(['./events', './network'], function (events, network) {
   var recordProps = {
     type: makeRecordProp('type', String, 'channel'), // TODO enum constraint
     mode: makeRecordProp('mode', String, '?'),
-    freq: makeRecordProp('freq', OptNumber, NaN), // TODO only for channel
-    lowerFreq: makeRecordProp('lowerFreq', OptNumber, NaN),  // TODO only for band
-    upperFreq: makeRecordProp('upperFreq', OptNumber, NaN),  // TODO only for band
+    lowerFreq: makeRecordProp('lowerFreq', OptNumber, NaN),
+    upperFreq: makeRecordProp('upperFreq', OptNumber, NaN),
     location: makeRecordProp('location', OptCoord, null),
     label: makeRecordProp('label', String, ''),
     notes: makeRecordProp('notes', String, '')
   };
   function Record(initial, url, changeHook) {
     if (url || changeHook) {
+      
+      // flags to avoid racing spammy updates
+      var updating = false;
+      var needAgain = false;
+      var oldState = undefined;
+      var sendUpdate = function () {
+        if (!url) return;
+        if (updating) {
+          needAgain = true;
+          return;
+        }
+        updating = true;
+        var newState = this.toJSON();
+        xhrpost(url, JSON.stringify({old: oldState, new: newState}), function () {
+          // TODO: Warn user / retry on network errors. Since we don't know whether the server has accepted the change we should retrieve it as new oldState and maybe merge
+          updating = false;
+          if (needAgain) sendUpdate();
+        });
+        oldState = newState;
+      }.bind(this);
+      
       this._hook = function(old) {
-        // TODO: Warn user / retry on network errors
         // TODO: PATCH method would be more specific
-        if (url) xhrpost(url, JSON.stringify({old: old, new: this.toJSON()}));
+        // TODO: Multiple updates should be deferred until previous ones complete
         if (changeHook) changeHook();
+        oldState = old;
+        sendUpdate();
       }.bind(this);
     } else {
       this._hook = null;
@@ -349,6 +369,10 @@ define(['./events', './network'], function (events, network) {
     for (var name in recordProps) {
       this[name] = initial.propertyIsEnumerable(name) ? initial[name] : recordProps[name]._my_default;
     }
+    if (isFinite(initial.freq)) {
+      this.freq = initial.freq;
+    }
+    // TODO report unknown keys in initial
     this._initializing = false;
     //Object.preventExtensions(this);  // TODO enable this after the _view_element kludge is gone
   }
@@ -356,6 +380,14 @@ define(['./events', './network'], function (events, network) {
   Object.defineProperties(Record.prototype, {
     writable: {
       get: function () { return !!this._hook; }
+    },
+    freq: {
+      get: function () {
+        return (this.lowerFreq + this.upperFreq) / 2;
+      },
+      set: function (value) {
+        this.lowerFreq = this.upperFreq = value;
+      }
     },
     toJSON: { value: function () {
       var out = {};

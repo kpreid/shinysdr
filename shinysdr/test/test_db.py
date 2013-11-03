@@ -39,10 +39,12 @@ class TestCSV(unittest.TestCase):
 			self.__parse('Frequency,Name,Comment\n1,a'),
 			[{
 				u'type': u'channel',
-				u'freq': 1e6,
+				u'lowerFreq': 1e6,
+				u'upperFreq': 1e6,
 				u'mode': u'',
 				u'label': u'a',
 				u'notes': u'',
+				u'location': None
 			}])
 
 
@@ -51,7 +53,8 @@ class TestDBWeb(unittest.TestCase):
 		# This is the data in test_db_data.csv.
 		{
 			u'type': u'channel',
-			u'freq': 10e6,
+			u'lowerFreq': 10e6,
+			u'upperFreq': 10e6,
 			u'mode': u'AM',
 			u'label': u'name',
 			u'notes': u'comment',
@@ -64,6 +67,7 @@ class TestDBWeb(unittest.TestCase):
 			u'mode': u'AM',
 			u'label': u'bandname',
 			u'notes': u'comment',
+			u'location': None,
 		},
 	]
 	
@@ -86,7 +90,8 @@ class TestDBWeb(unittest.TestCase):
 	def test_update_good(self):
 		new_record = {
 			u'type': u'channel',
-			u'freq': 20e6,
+			u'lowerFreq': 20e6,
+			u'upperFreq': 20e6,
 		}
 		index = 0
 		modified = self.test_data_json[:]
