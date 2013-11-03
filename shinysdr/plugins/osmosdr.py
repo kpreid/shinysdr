@@ -26,6 +26,10 @@ import osmosdr
 ch = 0  # single channel number used
 
 
+# TODO: Allow profiles to export information about known spurious signals in receivers, in the form of a freq-DB. Note that they must be flagged as uncalibrated freqs.
+# Ex: Per <http://www.reddit.com/r/RTLSDR/comments/1nl3tl/has_anybody_done_a_comparison_of_where_the_spurs/> all RTL2832U have harmonics of 28.8MHz and 48MHz.
+
+
 class OsmoSDRProfile(object):
 	'''
 	Description of the characteristics of specific hardware which cannot
