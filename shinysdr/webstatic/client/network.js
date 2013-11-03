@@ -28,6 +28,7 @@ define(['./values', './events'], function (values, events) {
   function statusCategory(httpStatus) {
     return Math.floor(httpStatus / 100);
   }
+  exports.statusCategory = statusCategory;
   
   function makeXhrStateCallback(r, whenReady) {
     return function() {

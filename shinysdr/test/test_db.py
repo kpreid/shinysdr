@@ -113,6 +113,29 @@ class TestDBWeb(unittest.TestCase):
 		d.addCallback(proceed)
 		return d
 
+	def test_create(self):
+		new_record = {
+			u'type': u'channel',
+			u'freq': 20e6,
+		}
+
+		d = post(self.__url('/'), {
+			'new': new_record
+		})
+
+		def proceed((response, data)):
+			if response.code >= 300:
+				print data
+			self.assertEqual(response.code, http.CREATED)
+			url = 'ONLYONE'.join(response.headers.getRawHeaders('Location'))
+			self.assertEqual(url, self.__url('/2'))  # URL of new entry
+			def check(s):
+				j = json.loads(s)
+				self.assertEqual(j[-1], new_record)
+			return client.getPage(self.__url('/')).addCallback(check)
+		d.addCallback(proceed)
+		return d
+
 
 def post(url, value):
 	agent = client.Agent(reactor)

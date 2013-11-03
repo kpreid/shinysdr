@@ -19,6 +19,7 @@ define(['./events', './network'], function (events, network) {
   'use strict';
   
   var xhrpost = network.xhrpost;
+  var statusCategory = network.statusCategory;
   
   var exports = {};
   
@@ -202,13 +203,14 @@ define(['./events', './network'], function (events, network) {
   };
   exports.Union = Union;
   
-  function Table(label, writable, initializer) {
+  function Table(label, writable, initializer, addURL) {
     writable = !!writable;
     this.n = new events.Notifier();
     View.call(this, this);
     this._viewGeneration = 0;
     this._label = label;
     this._triggerFacet = finishModification.bind(this);
+    this._addURL = addURL;
     this.writable = !!writable;
     if (initializer) {
       initializer(function (suppliedRecord, url) {
@@ -238,6 +240,11 @@ define(['./events', './network'], function (events, network) {
     var record = new Record(suppliedRecord, null, this._triggerFacet);
     this._entries.push(record);
     this._triggerFacet();
+    
+    if (this._addURL) {
+      record._remoteCreate(this._addURL);
+    }
+    
     return record;
   };
   exports.Table = Table;
@@ -267,7 +274,8 @@ define(['./events', './network'], function (events, network) {
             internalAdd(record, url + i);  // TODO: proper url resolution, urls from server.
           });
         });
-      });
+      },
+      url);
   }
   exports.fromURL = fromURL;
   
@@ -298,7 +306,6 @@ define(['./events', './network'], function (events, network) {
       },
       set: function (value) {
         if (this._initializing || this._hook) {
-          var old;
           if (this._initializing) {
             Object.defineProperty(this, internalName, {
               enumerable: false,
@@ -306,11 +313,10 @@ define(['./events', './network'], function (events, network) {
               value: coerce(value)
             });
           } else {
-            old = this.toJSON();
             this[internalName] = coerce(value);
           }
           if (this._hook && !this._initializing) {
-            (0, this._hook)(old);
+            (0, this._hook)();
           }
           this.n.notify();
         } else {
@@ -331,32 +337,31 @@ define(['./events', './network'], function (events, network) {
   };
   function Record(initial, url, changeHook) {
     if (url || changeHook) {
+      this._url = url;
       
       // flags to avoid racing spammy updates
       var updating = false;
       var needAgain = false;
-      var oldState = undefined;
       var sendUpdate = function () {
-        if (!url) return;
+        if (!this._oldState) throw new Error('too early');
+        if (!this._url) return;
         if (updating) {
           needAgain = true;
           return;
         }
         updating = true;
         var newState = this.toJSON();
-        xhrpost(url, JSON.stringify({old: oldState, new: newState}), function () {
+        xhrpost(this._url, JSON.stringify({old: this._oldState, new: newState}), function () {
           // TODO: Warn user / retry on network errors. Since we don't know whether the server has accepted the change we should retrieve it as new oldState and maybe merge
           updating = false;
           if (needAgain) sendUpdate();
         });
-        oldState = newState;
+        this._oldState = newState;
       }.bind(this);
       
-      this._hook = function(old) {
+      this._hook = function() {
         // TODO: PATCH method would be more specific
-        // TODO: Multiple updates should be deferred until previous ones complete
         if (changeHook) changeHook();
-        oldState = old;
         sendUpdate();
       }.bind(this);
     } else {
@@ -374,6 +379,7 @@ define(['./events', './network'], function (events, network) {
     }
     // TODO report unknown keys in initial
     this._initializing = false;
+    this._oldState = this.toJSON();
     //Object.preventExtensions(this);  // TODO enable this after the _view_element kludge is gone
   }
   Object.defineProperties(Record.prototype, recordProps);
@@ -399,6 +405,21 @@ define(['./events', './network'], function (events, network) {
         }
       }
       return out;
+    }},
+    _remoteCreate: { value: function (addURL) {
+      if (this._url) throw new Error('url already set');
+      xhrpost(addURL, JSON.stringify({new: this.toJSON()}), function (r) {
+        if (statusCategory(r.status) === 2) {
+          if (this._url) throw new Error('url already set');
+          this._url = r.getResponseHeader('Location');
+          this._hook();  // write updates occurring before url was set
+          
+        } else {
+          // TODO: retry/buffer creation or make the record defunct
+          console.error('Record creation failed! ' + r.status, r);
+        }
+      }.bind(this));
+      
     }}
   });
   

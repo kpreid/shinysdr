@@ -61,21 +61,36 @@ class DatabaseResource(resource.Resource):
 		resource.Resource.__init__(self)
 		with open(path, 'rb') as csvfile:
 			database = _parse_csv_file(csvfile)
-		self.putChild('', _DbIndexResource(database))
+		def instantiate(i):
+			self.putChild(str(i), _RecordResource(database[i]))
+		self.putChild('', _DbIndexResource(database, instantiate))
 		for i, record in enumerate(database):
-			self.putChild(str(i), _RecordResource(record))
+			instantiate(i)
 
 
 class _DbIndexResource(resource.Resource):
 	isLeaf = True
 	defaultContentType = 'application/json'
 	
-	def __init__(self, db):
+	def __init__(self, db, instantiate):
 		resource.Resource.__init__(self)
-		self.db = db
+		self.__db = db
+		self.__instantiate = instantiate
 	
 	def render_GET(self, request):
-		return json.dumps(self.db)
+		return json.dumps(self.__db)
+	
+	def render_POST(self, request):
+		desc = json.load(request.content)
+		record = _normalize_record(desc['new'])
+		self.__db.append(record)
+		index = len(self.__db) - 1
+		self.__instantiate(index)
+		url = request.prePathURL() + str(index)
+		request.setResponseCode(http.CREATED)
+		request.setHeader('Content-Type', 'text/plain')
+		request.setHeader('Location', url)
+		return url
 
 
 class _RecordResource(resource.Resource):
