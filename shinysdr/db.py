@@ -92,7 +92,7 @@ class _RecordResource(resource.Resource):
 	def render_POST(self, request):
 		assert request.getHeader('Content-Type') == 'application/json'
 		patch = json.load(request.content)
-		old = patch['old']
+		old = _normalize_record(patch['old'])
 		new = patch['new']
 		if old == self.record:
 			# TODO check syntax of record
@@ -130,16 +130,32 @@ def _parse_csv_file(csvfile):
 		if '-' in freq_str:
 			# extension of format: bands
 			record[u'type'] = u'band'
+			record[u'freq'] = None
 			record[u'lowerFreq'], record[u'upperFreq'] = map(_parse_freq, freq_str.split('-'))
 		else:
 			record[u'type'] = u'channel'
 			record[u'freq'] = _parse_freq(freq_str)
+			record[u'lowerFreq'] = None
+			record[u'upperFreq'] = None
 		# extension of format: location
 		if csvrec.get('Latitude', '') != '' and csvrec.get('Longitude', '') != '':
 			record[u'location'] = [float(csvrec['Latitude']), float(csvrec['Longitude'])]
+		else:
+			record[u'location'] = None
 		db.append(record)
 	return db
 
 
 def _parse_freq(freq_str):
 	return 1e6 * float(freq_str)
+
+
+def _normalize_record(record):
+	'''Normalize values in a record dict.'''
+	out = {}
+	for k, v in record.iteritems():
+		# JSON/JS/JSON roundtrip turns integral floats into ints
+		if isinstance(v, int):
+			v = float(v)
+		out[k] = v
+	return out

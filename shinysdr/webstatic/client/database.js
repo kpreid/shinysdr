@@ -18,6 +18,8 @@
 define(['./events', './network'], function (events, network) {
   'use strict';
   
+  var xhrpost = network.xhrpost;
+  
   var exports = {};
   
   function Source() {
@@ -210,8 +212,8 @@ define(['./events', './network'], function (events, network) {
     this._triggerFacet = finishModification.bind(this);
     this.writable = !!writable;
     if (initializer) {
-      initializer(function (suppliedRecord) {
-        this._entries.push(new Record(suppliedRecord, null, writable ? this._triggerFacet : null));
+      initializer(function (suppliedRecord, url) {
+        this._entries.push(new Record(suppliedRecord, url, writable ? this._triggerFacet : null));
       }.bind(this));
     }
   }
@@ -262,7 +264,9 @@ define(['./events', './network'], function (events, network) {
       function (internalAdd) {
         // TODO (implicitly) check mime type
         network.externalGet(url, 'text', function(jsonString) {
-          JSON.parse(jsonString).forEach(internalAdd);
+          JSON.parse(jsonString).forEach(function (record, i) {
+            internalAdd(record, url + i);  // TODO: proper url resolution, urls from server.
+          });
         });
       });
   }
@@ -295,6 +299,7 @@ define(['./events', './network'], function (events, network) {
       },
       set: function (value) {
         if (this._initializing || this._hook) {
+          var old;
           if (this._initializing) {
             Object.defineProperty(this, internalName, {
               enumerable: false,
@@ -302,10 +307,11 @@ define(['./events', './network'], function (events, network) {
               value: coerce(value)
             });
           } else {
+            old = this.toJSON();
             this[internalName] = coerce(value);
           }
-          if (this._hook) {
-            (0, this._hook)();
+          if (this._hook && !this._initializing) {
+            (0, this._hook)(old);
           }
           this.n.notify();
         } else {
