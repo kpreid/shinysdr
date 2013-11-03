@@ -21,7 +21,10 @@ import StringIO
 
 from twisted.trial import unittest
 from twisted.internet import reactor
+from twisted.internet.defer import Deferred
+from twisted.internet.protocol import Protocol
 from twisted.web import client
+from twisted.web import http
 from twisted.web import server
 
 from shinysdr import db
@@ -44,6 +47,26 @@ class TestCSV(unittest.TestCase):
 
 
 class TestDBWeb(unittest.TestCase):
+	test_data_json = [
+		# This is the data in test_db_data.csv.
+		{
+			u'type': u'channel',
+			u'freq': 10e6,
+			u'mode': u'AM',
+			u'label': u'name',
+			u'notes': u'comment',
+			u'location': [0, 90],
+		},
+		{
+			u'type': u'band',
+			u'lowerFreq': 10e6,
+			u'upperFreq': 20e6,
+			u'mode': u'AM',
+			u'label': u'bandname',
+			u'notes': u'comment',
+		},
+	]
+	
 	def setUp(self):
 		dbResource = db.DatabaseResource(os.path.join(os.path.dirname(__file__), 'test_db_data.csv'))
 		self.port = reactor.listenTCP(0, server.Site(dbResource), interface="127.0.0.1")
@@ -57,23 +80,65 @@ class TestDBWeb(unittest.TestCase):
 	def test_response(self):
 		def callback(s):
 			j = json.loads(s)
-			self.assertEqual(j, [
-				{
-					u'type': u'channel',
-					u'freq': 10e6,
-					u'mode': u'AM',
-					u'label': u'name',
-					u'notes': u'comment',
-					u'location': [0, 90],
-				},
-				{
-					u'type': u'band',
-					u'lowerFreq': 10e6,
-					u'upperFreq': 20e6,
-					u'mode': u'AM',
-					u'label': u'bandname',
-					u'notes': u'comment',
-				},
-			])
+			self.assertEqual(j, self.test_data_json)
 		return client.getPage(self.__url('/')).addCallback(callback)
 
+	def test_update_good(self):
+		new_record = {
+			u'type': u'channel',
+			u'freq': 20e6,
+		}
+		index = 0
+		modified = self.test_data_json[:]
+		modified[index] = new_record
+
+		d = post(self.__url('/' + str(index)), {
+			'old': self.test_data_json[index],
+			'new': new_record
+		})
+
+		def proceed((response, data)):
+			if response.code >= 300:
+				print data
+			self.assertEqual(response.code, http.NO_CONTENT)
+			def check(s):
+				j = json.loads(s)
+				self.assertEqual(j, modified)
+			return client.getPage(self.__url('/')).addCallback(check)
+		d.addCallback(proceed)
+		return d
+
+
+def post(url, value):
+	agent = client.Agent(reactor)
+	d = agent.request('POST', url,
+		headers=client.Headers({'Content-Type': ['application/json']}),
+		# in principle this could be streaming if we had a pipe-thing to glue between json.dump and FileBodyProducer
+		bodyProducer=client.FileBodyProducer(StringIO.StringIO(json.dumps(value))))
+	def callback(response):
+		finished = Deferred()
+		if response.code == http.NO_CONTENT:
+			# TODO: properly get whether there is a body from the response
+			# this is a special case because with no content deliverBody never signals connectionLost
+			finished.callback((response, None))
+		else:
+			response.deliverBody(Accumulator(finished))
+			finished.addCallback(lambda data: (response, data))
+		return finished
+	d.addCallback(callback)
+	return d
+
+
+class Accumulator(Protocol):
+	# TODO eliminate this boilerplate
+	def __init__(self, finished):
+		print 'boo'
+		self.finished = finished
+		self.data = ''
+
+	def dataReceived(self, chunk):
+		self.data += chunk
+	
+	def connectionLost(self, reason):
+		print 'boom'
+		self.finished.callback(self.data)

@@ -16,6 +16,7 @@
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 from twisted.web import resource
+from twisted.web import http
 
 import cgi
 import csv
@@ -61,6 +62,8 @@ class DatabaseResource(resource.Resource):
 		with open(path, 'rb') as csvfile:
 			database = _parse_csv_file(csvfile)
 		self.putChild('', _DbIndexResource(database))
+		for i, record in enumerate(database):
+			self.putChild(str(i), _RecordResource(record))
 
 
 class _DbIndexResource(resource.Resource):
@@ -73,6 +76,34 @@ class _DbIndexResource(resource.Resource):
 	
 	def render_GET(self, request):
 		return json.dumps(self.db)
+
+
+class _RecordResource(resource.Resource):
+	isLeaf = True
+	defaultContentType = 'application/json'
+	
+	def __init__(self, record):
+		resource.Resource.__init__(self)
+		self.record = record
+	
+	def render_GET(self, request):
+		return json.dumps(self.record)
+	
+	def render_POST(self, request):
+		assert request.getHeader('Content-Type') == 'application/json'
+		patch = json.load(request.content)
+		old = patch['old']
+		new = patch['new']
+		if old == self.record:
+			# TODO check syntax of record
+			self.record.clear()
+			self.record.update(new)
+			request.setResponseCode(http.NO_CONTENT)
+			return ''
+		else:
+			request.setResponseCode(http.CONFLICT)
+			request.setHeader('Content-Type', 'text/plain')
+			return 'Old values did not match: %r vs %r' % (old, self.record)
 
 
 def _parse_csv_file(csvfile):
