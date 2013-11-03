@@ -104,7 +104,7 @@ define(['./values', './events'], function (values, events) {
       this.n.notify();
       inhibit = Date.now() + 1000;  // TODO adjust value to observed latency
       xhrput(name, JSON.stringify(newValue), function(r) {
-        if (Math.floor(r.status / 100) !== 2) {
+        if (statusCategory(r.status) !== 2) {
           // some error or something other than success; revert
           inhibit = 0;
           this._update(remoteValue);

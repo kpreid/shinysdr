@@ -211,7 +211,7 @@ define(['./events', './network'], function (events, network) {
     this.writable = !!writable;
     if (initializer) {
       initializer(function (suppliedRecord) {
-        this._entries.push(new Record(suppliedRecord, writable ? this._triggerFacet : null));
+        this._entries.push(new Record(suppliedRecord, null, writable ? this._triggerFacet : null));
       }.bind(this));
     }
   }
@@ -234,7 +234,7 @@ define(['./events', './network'], function (events, network) {
     if (!this.writable) {
       throw new Error('This table is read-only');
     }
-    var record = new Record(suppliedRecord, this._triggerFacet);
+    var record = new Record(suppliedRecord, null, this._triggerFacet);
     this._entries.push(record);
     this._triggerFacet();
     return record;
@@ -325,10 +325,21 @@ define(['./events', './network'], function (events, network) {
     label: makeRecordProp('label', String, ''),
     notes: makeRecordProp('notes', String, '')
   };
-  function Record(initial, changeHook) {
-    this._hook = changeHook;
-    this.n = new events.Notifier();
-    this._initializing = true;
+  function Record(initial, url, changeHook) {
+    if (url || changeHook) {
+      this._hook = function(old) {
+        // TODO: Warn user / retry on network errors
+        // TODO: PATCH method would be more specific
+        if (url) xhrpost(url, JSON.stringify({old: old, new: this.toJSON()}));
+        if (changeHook) changeHook();
+      }.bind(this);
+    } else {
+      this._hook = null;
+    }
+    Object.defineProperties(this, {
+      n: { enumerable: false, value: new events.Notifier() },
+      _initializing: { enumerable: false, writable: true, value: true }
+    });
     for (var name in recordProps) {
       this[name] = initial.propertyIsEnumerable(name) ? initial[name] : recordProps[name]._my_default;
     }
