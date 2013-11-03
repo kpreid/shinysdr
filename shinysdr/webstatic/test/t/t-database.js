@@ -52,7 +52,7 @@ describe('database', function () {
       expectNotification(l);
     });
     
-    it('should notify from table on record modification', function () {
+    it('should notify on record modification', function () {
       var t = new shinysdr.database.Table('foo', true);
       var l = createListenerSpy();
       var r = t.add({
@@ -62,54 +62,6 @@ describe('database', function () {
       t.n.listen(l);
       r.freq = 120e6;
       expectNotification(l);
-    });
-
-    it('should notify from record on record modification', function () {
-      var t = new shinysdr.database.Table('foo', true);
-      var l = createListenerSpy();
-      var r = t.add({
-        type: 'channel',
-        freq: 100e6
-      });
-      r.n.listen(l);
-      r.freq = 120e6;
-      expectNotification(l);
-    });
-
-    it('record should have default values', function () {
-      var r = (new shinysdr.database.Table('foo', true)).add({});
-      expect(r.writable).toEqual(true);
-      expect(r.type).toEqual('channel');
-      expect(r.mode).toEqual('?');
-      expect(r.freq).toBeNaN();
-      expect(r.lowerFreq).toBeNaN();
-      expect(r.upperFreq).toBeNaN();
-      expect(r.location).toEqual(null);
-      expect(r.label).toEqual('');
-      expect(r.notes).toEqual('');
-    });
-
-    it('record should round-trip through JSON', function () {
-      var plainRecord = {
-        type: 'channel',
-        label: 'foo',
-        notes: 'bar',
-        mode: 'USB',
-        freq: 123.4e6,
-        lowerFreq: null,
-        upperFreq: null,
-        location: null
-      };
-      // TODO: test location value (not doing so for now because toEqual is apparently not deep)
-      var r = (new shinysdr.database.Table('foo', true)).add(plainRecord);
-      expect(r.toJSON()).toEqual(plainRecord);
-    });
-
-    it('record should coerce a location', function () {
-      var r = (new shinysdr.database.Table('foo', true)).add({location: ['1', '2']});
-      expect(r.location.length).toEqual(2);
-      expect(r.location[0]).toEqual(1);
-      expect(r.location[1]).toEqual(2);
     });
 
     it('should report writability', function () {
@@ -133,6 +85,57 @@ describe('database', function () {
       }).toThrow('This record is read-only');
       expect(table.getAll()[0].label).toBe('foo');
     });
+  });
+  
+  describe('Record', function () {
+    it('should notify on record modification', function () {
+      var t = new shinysdr.database.Table('foo', true);
+      var l = createListenerSpy();
+      var r = t.add({
+        type: 'channel',
+        freq: 100e6
+      });
+      r.n.listen(l);
+      r.freq = 120e6;
+      expectNotification(l);
+    });
+    
+    it('should have default values', function () {
+      var r = (new shinysdr.database.Table('foo', true)).add({});
+      expect(r.writable).toEqual(true);
+      expect(r.type).toEqual('channel');
+      expect(r.mode).toEqual('?');
+      expect(r.freq).toBeNaN();
+      expect(r.lowerFreq).toBeNaN();
+      expect(r.upperFreq).toBeNaN();
+      expect(r.location).toEqual(null);
+      expect(r.label).toEqual('');
+      expect(r.notes).toEqual('');
+    });
+
+    it('should round-trip through JSON', function () {
+      var plainRecord = {
+        type: 'channel',
+        label: 'foo',
+        notes: 'bar',
+        mode: 'USB',
+        freq: 123.4e6,
+        lowerFreq: null,
+        upperFreq: null,
+        location: null
+      };
+      // TODO: test location value (not doing so for now because toEqual is apparently not deep)
+      var r = (new shinysdr.database.Table('foo', true)).add(plainRecord);
+      expect(r.toJSON()).toEqual(plainRecord);
+    });
+
+    it('should coerce a location', function () {
+      var r = (new shinysdr.database.Table('foo', true)).add({location: ['1', '2']});
+      expect(r.location.length).toEqual(2);
+      expect(r.location[0]).toEqual(1);
+      expect(r.location[1]).toEqual(2);
+    });
+
   });
 
   describe('GroupView', function () {
