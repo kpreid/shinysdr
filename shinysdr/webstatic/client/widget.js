@@ -840,7 +840,7 @@ define(['./values', './events'], function (values, events) {
         + '}\n';
       var program = buildProgram(vertexShaderSource, fragmentShaderSource);
 
-      var fftSize = Math.max(1, config.target.get().length), history = Math.max(1, canvas.height);
+      var fftSize = Math.max(1, config.target.get().length);
 
       function setScale() {
         var w = canvas.width;
@@ -1033,12 +1033,25 @@ define(['./values', './events'], function (values, events) {
       outArray[base + 3] = 255;
     }
     
+    // TODO: Instead of hardcoding this, implement dynamic resizing of the history buffers. Punting for now because reallocating the GL textures would be messy.
+    var historyCount = Math.max(
+      1024,
+      config.element.nodeName === 'CANVAS' ? config.element.height : 0);
+    
     var canvas;
+    var cleared = true;
     function commonBeforeDraw(viewCenterFreq, draw) {
       view.n.listen(draw);
       var bandwidth = fftCell.getSampleRate();
       canvas.style.marginLeft = view.freqToCSSLeft(viewCenterFreq - bandwidth/2);
       canvas.style.width = view.freqToCSSLength(bandwidth);
+      
+      // Set vertical canvas resolution
+      var newHeight = Math.floor(Math.min(canvas.offsetHeight, historyCount));
+      if (newHeight !== canvas.height) {
+        canvas.height = newHeight;
+        cleared = true;
+      }
     }
     
     CanvasSpectrumWidget.call(this, config, buildGL, build2D);
@@ -1065,10 +1078,12 @@ define(['./values', './events'], function (values, events) {
         + 'attribute vec4 position;\n'
         + 'varying highp vec2 v_position;\n'
         + 'uniform highp float scroll;\n'
+        + 'uniform highp float yScale;\n'
         + 'void main(void) {\n'
         + '  gl_Position = position;\n'
-        + '  highp vec2 basePos = (position.xy + vec2(1.0)) / 2.0;\n'
-        + '  v_position = basePos + vec2(0.0, scroll);\n'
+        + '  highp vec2 unitPos = (position.xy + vec2(1.0)) / 2.0;\n'
+        + '  highp vec2 scalePos = 1.0 - (1.0 - unitPos) * vec2(1.0, yScale);\n'
+        + '  v_position = scalePos + vec2(0.0, scroll);\n'
         + '}\n';
       var fragmentShaderSource = ''
         + 'uniform sampler2D data;\n'
@@ -1099,12 +1114,14 @@ define(['./values', './events'], function (values, events) {
       var program = buildProgram(vertexShaderSource, fragmentShaderSource);
       
       var u_scroll = gl.getUniformLocation(program, 'scroll');
+      var u_yScale = gl.getUniformLocation(program, 'yScale');
       var u_currentFreq = gl.getUniformLocation(program, 'currentFreq');
       var u_freqScale = gl.getUniformLocation(program, 'freqScale');
       var u_gradientZero = gl.getUniformLocation(program, 'gradientZero');
       var u_gradientScale = gl.getUniformLocation(program, 'gradientScale');
       
-      var fftSize = Math.max(1, config.target.get().length), history = Math.max(1, canvas.height);
+      var fftSize = Math.max(1, config.target.get().length);
+      
 
       var bufferTexture = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
@@ -1171,8 +1188,8 @@ define(['./values', './events'], function (values, events) {
 
       function configureTexture() {
         if (useFloatTexture) {
-          var init = new Float32Array(fftSize*history);
-          for (var i = 0; i < fftSize*history; i++) {
+          var init = new Float32Array(fftSize*historyCount);
+          for (var i = 0; i < fftSize*historyCount; i++) {
             init[i] = -100;
           }
           gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
@@ -1181,14 +1198,14 @@ define(['./values', './events'], function (values, events) {
             0, // level
             gl.LUMINANCE, // internalformat
             fftSize, // width (= fft size)
-            history, // height (= history size)
+            historyCount, // height (= history size)
             0, // border
             gl.LUMINANCE, // format
             gl.FLOAT, // type -- TODO use non-float textures if needed
             init);
 
-          var init = new Float32Array(history);
-          for (var i = 0; i < history; i++) {
+          var init = new Float32Array(historyCount);
+          for (var i = 0; i < historyCount; i++) {
             init[i] = -1000000;
           }
           gl.bindTexture(gl.TEXTURE_2D, historyFreqTexture);
@@ -1197,33 +1214,33 @@ define(['./values', './events'], function (values, events) {
             0, // level
             gl.LUMINANCE, // internalformat
             1, // width
-            history, // height (= history size)
+            historyCount, // height (= history size)
             0, // border
             gl.LUMINANCE, // format
             gl.FLOAT, // type
             init);
         } else {
-          var init = new Uint8Array(fftSize*history*4);
+          var init = new Uint8Array(fftSize*historyCount*4);
           gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
           gl.texImage2D(
             gl.TEXTURE_2D,
             0, // level
             gl.LUMINANCE, // internalformat
             fftSize, // width (= fft size)
-            history, // height (= history size)
+            historyCount, // height (= history size)
             0, // border
             gl.LUMINANCE, // format
             gl.UNSIGNED_BYTE, // type
             init);
 
-          var init = new Uint8Array(history*4);
+          var init = new Uint8Array(historyCount*4);
           gl.bindTexture(gl.TEXTURE_2D, historyFreqTexture);
           gl.texImage2D(
             gl.TEXTURE_2D,
             0, // level
             gl.RGBA, // internalformat
             1, // width
-            history, // height (= history size)
+            historyCount, // height (= history size)
             0, // border
             gl.RGBA, // format
             gl.UNSIGNED_BYTE,
@@ -1264,10 +1281,9 @@ define(['./values', './events'], function (values, events) {
           }
           if (canvas.width !== fftSize) {
             canvas.width = fftSize;
+            cleared = true;
           }
-          if (canvas.height !== history) {
-            canvas.height = history;
-          }
+          // height managed by commonBeforeDraw
           gl.viewport(0, 0, canvas.width, canvas.height);
 
           if (useFloatTexture) {
@@ -1332,18 +1348,21 @@ define(['./values', './events'], function (values, events) {
           }
 
           gl.bindTexture(gl.TEXTURE_2D, null);
-          slicePtr = mod(slicePtr + 1, history);
+          slicePtr = mod(slicePtr + 1, historyCount);
         },
         beforeDraw: function () {
           var source = radio.source.depend(draw);
           var viewCenterFreq = source.freq.depend(draw);
           commonBeforeDraw(viewCenterFreq, draw);
 
-          gl.uniform1f(u_scroll, slicePtr / history);
+          gl.uniform1f(u_scroll, slicePtr / historyCount);
+          gl.uniform1f(u_yScale, canvas.height / historyCount);
           var fs = 1.0 / fftCell.getSampleRate();
           //console.log(fs);
           gl.uniform1f(u_freqScale, fs);
           gl.uniform1f(u_currentFreq, source.freq.depend(draw));
+
+          cleared = false;
         }
       };
     }
@@ -1374,6 +1393,7 @@ define(['./values', './events'], function (values, events) {
           if (canvas.width !== w) {
             // assignment clears canvas
             canvas.width = w;
+            cleared = true;
             // reallocate
             slices = [];
             slicePtr = 0;
@@ -1387,11 +1407,11 @@ define(['./values', './events'], function (values, events) {
           if (hasNewData) {
             // Find slice to write into
             var ibuf;
-            if (slices.length < h) {
+            if (slices.length < historyCount) {
               slices.push([ibuf = ctx.createImageData(w, 1), bufferCenterFreq]);
             } else {
               var record = slices[slicePtr];
-              slicePtr = mod(slicePtr + 1, h);
+              slicePtr = mod(slicePtr + 1, historyCount);
               ibuf = record[0];
               record[1] = bufferCenterFreq;
             }
@@ -1410,13 +1430,13 @@ define(['./values', './events'], function (values, events) {
           }
 
           var offsetScale = w / fftCell.getSampleRate();
-          if (hasNewData && lastDrawnCenterFreq === viewCenterFreq) {
+          if (hasNewData && lastDrawnCenterFreq === viewCenterFreq && !cleared) {
             // Scroll
             ctx.drawImage(ctx.canvas, 0, 0, w, h-1, 0, 1, w, h-1);
             // Paint newest slice
             var offset = bufferCenterFreq - viewCenterFreq;
             ctx.putImageData(ibuf, Math.round(offset * offsetScale), 0);
-          } else if (lastDrawnCenterFreq !== viewCenterFreq) {
+          } else if (cleared || lastDrawnCenterFreq !== viewCenterFreq) {
             lastDrawnCenterFreq = viewCenterFreq;
             // Paint all slices onto canvas
             ctx.fillStyle = '#777';
@@ -1425,6 +1445,7 @@ define(['./values', './events'], function (values, events) {
               var slice = slices[mod(i + slicePtr, sliceCount)];
               var offset = slice[1] - viewCenterFreq;
               var y = sliceCount - i;
+              if (y >= canvas.height) break;
 
               // fill background so scrolling is of an opaque image
               ctx.fillRect(0, y, w, 1);
@@ -1436,6 +1457,7 @@ define(['./values', './events'], function (values, events) {
           }
 
           hasNewData = false;
+          cleared = false;
         }
       };
     }
