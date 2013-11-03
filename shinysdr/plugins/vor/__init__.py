@@ -33,7 +33,7 @@ import os.path
 
 from shinysdr.blocks import make_resampler
 from shinysdr.receiver import ModeDef, IDemodulator
-from shinysdr.plugins.basic_demod import SimpleAudioDemodulator
+from shinysdr.plugins.basic_demod import SimpleAudioDemodulator, make_lofi_audio_filter
 from shinysdr.values import exported_value, setter
 from shinysdr.web import ClientResourceDef
 
@@ -89,6 +89,7 @@ class VOR(SimpleAudioDemodulator):
 		
 		self.probe = blocks.probe_signal_f()
 		
+		self.audio_filter_block = make_lofi_audio_filter(internal_audio_rate)
 		self.resampler_block = make_resampler(internal_audio_rate, self.audio_rate)
 
 		##################################################
@@ -108,6 +109,7 @@ class VOR(SimpleAudioDemodulator):
 		self.connect(
 			self.am_demod_block,
 			blocks.multiply_const_ff(1.0 / audio_modulation_index * 0.5),
+			self.audio_filter_block,
 			self.resampler_block)
 		self.connect_audio_output(self.resampler_block, self.resampler_block)
 		
