@@ -38,7 +38,7 @@ define(['./values'], function (values) {
     showButton.classList.add('ui-section-show-button');
     showButton.textContent = '\u25B8\u00A0' + header.textContent;
 
-    var visible = true;
+    var visible = section.hasAttribute('data-visible') ? JSON.parse(section.getAttribute('data-visible')) : true;
 
     if (section.id) {
       // same protocol as we install on <details>

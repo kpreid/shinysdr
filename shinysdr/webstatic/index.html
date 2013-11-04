@@ -23,7 +23,7 @@
   <link rel="stylesheet" href="client/theme.css">
 </head><body class="ui-sections">
 
-<section id="section-spectrum" class="stretchy">
+<section id="section-spectrum" class="stretchy" data-visible="true">
   <h2>Spectrum</h2>
   <div class="hscalegroup" id="_spectrum-container" data-target="radio">
     <div class="hscale">
@@ -37,7 +37,7 @@
   </div>
 </section>
 
-<section id="section-map" class="stretchy">
+<section id="section-map" class="stretchy" data-visible="false">
   <h2>Map</h2>
   <!-- This pair of position: wrappers allows OpenLayers' internal height: 100%; use to work inside of our flexbox layout. -->
   <div style="position: relative; height: 100%; width: 100%; overflow: hidden;">
@@ -45,7 +45,7 @@
   </div>
 </section>
 
-<section id="section-radio">
+<section id="section-radio" data-visible="true">
   <h2>Radio Config</h2>
   <div class="sidebar">
     <div data-widget="Top" data-target="radio"></div>
@@ -60,7 +60,7 @@
   </div>
 </section>
 
-<section id="section-db">
+<section id="section-db" data-visible="true">
   <h2>Frequency DB</h2>
   <div class="sidebar frame" data-target="radio">
     <div class="panel" data-widget="RecordDetails" data-target="preset"></div>
