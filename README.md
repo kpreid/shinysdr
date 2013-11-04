@@ -57,8 +57,8 @@ to create an example file.
 Edit it to specify your available hardware and other desired configuration (such as a HTTPS server certificate and the location of the state persistence file); instructions are provided in the comments in the example file.
 
 
-Running
--------
+Running the server
+------------------
 
 Once you have prepared a configuration file, you can run the server using
 
@@ -66,7 +66,29 @@ Once you have prepared a configuration file, you can run the server using
 
 and access it using your browser at the displayed URL. (The `--go` option will attempt to open it in your default browser, but this is unlikely to be helpful if said browser is not Chrome.)
 
-[TODO: Explain the UI.]
+Usage
+-----
+
+Basic procedures:
+
+1. Make sure the “Run” checkbox is checked.
+
+2. Adjust the “Center frequency” to tune your RF hardware to the band you want to observe.
+
+   You can zoom in on the spectrum by scrolling up and down. (Bug: No way to do this without a scrolling input device, particularly not on a touchscreen.)
+
+3. Click on a signal of interest. This will create a *receiver*, which will be marked on the spectrum as well as displaying controls. Use the controls to select the appropriate mode (type of demodulation).
+
+   Multiple signals can be received at once by shift-clicking in the spectrum view. To stop, click the X button by the receiver.
+
+
+Ideally, the UI would be fully discoverable, but right now there are a number of things that are probably not obvious; here's a list of those that haven't already been mentioned:
+
+* A receiver whose channel frequency is outside of the band around the center frequency will be stopped as long as this is the case.
+
+* The UI is divided into several sections which can be hidden as desired by clicking on their headers. To show a hidden section, click on its name, which will appear on the right side of the header of the section to the left of it.
+
+* The large-text frequency fields can be adjusted by scrolling or up and down arrows as well as by typing digits.
 
 Creating plugins
 ----------------
