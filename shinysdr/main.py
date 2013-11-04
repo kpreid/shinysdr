@@ -94,6 +94,25 @@ else:
 		webConfig[k] = str(configEnv[k])
 
 
+def top_defaults(top):
+	'''Return a friendly initial state for the top block using knowledge of the default config file.'''
+	state = {}
+	
+	# TODO: fix fragility of assumptions
+	sources = top.state()['source_name'].type().values()
+	restricted = dict(sources)
+	del restricted['audio']  # typically not RF
+	del restricted['sim']  # would prefer the real thing
+	if 'osmo' in restricted:
+		state['source_name'] = 'osmo'
+	elif len(restricted.keys()) > 0:
+		state['source_name'] = restricted.keys()[0]
+	else:
+		# out of ideas, let top block pick
+		pass
+	
+	return state
+
 def noteDirty():
 	# just immediately write (revisit this when more performance is needed)
 	with open(stateFile, 'w') as f:
@@ -101,18 +120,20 @@ def noteDirty():
 	pass
 
 
-def restore(root):
+def restore(root, get_defaults):
 	if os.path.isfile(stateFile):
 		root.state_from_json(json.load(open(stateFile, 'r')))
 		# make a backup in case this code version misreads the state and loses things on save (but only if the load succeeded, in case the file but not its backup is bad)
 		shutil.copyfile(stateFile, stateFile + '~')
+	else:
+		root.state_from_json(get_defaults(root))
 
 
 print 'Flow graph...'
 top = shinysdr.top.Top(sources=sources)
 
 print 'Restoring state...'
-restore(top)
+restore(top, top_defaults)
 
 print 'Web server...'
 url = shinysdr.web.listen(webConfig, top, noteDirty)

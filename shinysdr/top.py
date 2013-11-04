@@ -61,7 +61,7 @@ class Top(gr.top_block, ExportedState):
 
 	def __init__(self, sources={}):
 		gr.top_block.__init__(self, "SDR top block")
-		self.__unpaused = False  # user state
+		self.__unpaused = True  # user state
 		self.__running = False  # actually started
 		self.__lock_count = 0
 

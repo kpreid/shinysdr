@@ -72,6 +72,9 @@ class ValueCell(BaseCell):
 		BaseCell.__init__(self, target, key, **kwargs)
 		self._ctor = ctor
 	
+	def type(self):
+		return self._ctor
+	
 	def description(self):
 		return {
 			'kind': 'value',
@@ -376,6 +379,9 @@ class Enum(ValueType):
 	def __init__(self, values):
 		"""values: dict of {value: description}"""
 		self.__values = dict(values)  # paranoid copy
+	
+	def values(self):
+		return self.__values
 	
 	def type_to_json(self):
 		return {'type': 'enum', 'values': self.__values}
