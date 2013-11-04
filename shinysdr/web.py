@@ -225,15 +225,22 @@ class StateStreamInner(object):
 				else:
 					self.__send1(False, ('register', serial, url))
 			traverse(obj)
+		
 		# walk
 		traverse(self._cell)
+		
 		# delete not seen
-		for obj in self._registered.keys():
+		deletions = []
+		for obj in self._registered:
 			if obj not in seen_this_time:
-				self.__send1(False, ('delete', self._registered[obj]))
-				del self._registered[obj]
-				del self._previousValues[obj]
-				del self._urls[obj]
+				deletions.append(obj)
+		deletions.sort(key=lambda obj: self._registered[obj])  # deterministic order
+		for obj in deletions:
+			self.__send1(False, ('delete', self._registered[obj]))
+			del self._registered[obj]
+			del self._previousValues[obj]
+			del self._urls[obj]
+			
 	
 	def __flush(self):
 		if len(self._send_batch) > 0:

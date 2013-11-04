@@ -88,8 +88,8 @@ class TestCollectionStream(StateStreamTestCase):
 		del self.d['a']
 		self.assertEqual(self.getUpdates(), [
 			['value', 1, {}],
-			['delete', 3],
 			['delete', 2],
+			['delete', 3],
 		])
 
 
