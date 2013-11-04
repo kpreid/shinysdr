@@ -20,9 +20,11 @@ from twisted.web import http
 
 import cgi
 import csv
+import errno
 import json
 import os.path
 import urllib
+import warnings
 
 
 class DatabasesResource(resource.Resource):
@@ -32,7 +34,12 @@ class DatabasesResource(resource.Resource):
 		resource.Resource.__init__(self)
 		self.putChild('', _DbsIndexResource(self))
 		self.names = []
-		for name in os.listdir(path):
+		try:
+			filenames = os.listdir(path)
+		except OSError as e:
+			warnings.warn('Error opening database directory %r: %r' % (path, e))
+			return
+		for name in filenames:
 			if name.endswith('.csv'):
 				with open(os.path.join(path, name), 'rb') as csvfile:
 					database = _parse_csv_file(csvfile)
