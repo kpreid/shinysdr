@@ -19,17 +19,18 @@
 
 import gnuradio.eng_option
 
+import argparse
+import base64
 import json
 import os
 import os.path
 import shutil
-import argparse
 import sys
 import webbrowser
 
 from twisted.internet import reactor
 
-# Option parsing is done before importing the main modules so as to avoid the cost of initializing gnuradio.
+# Option parsing is done before importing the main modules so as to avoid the cost of initializing gnuradio if we are aborting early. TODO: Make that happen for createConfig too.
 argParser = argparse.ArgumentParser()
 argParser.add_argument('configFile', metavar='CONFIG',
 	help='path of configuration file')
@@ -75,7 +76,12 @@ databasesDir = 'dbs/'
 # then both must be. These restrictions will be relaxed later.
 httpPort = 'tcp:8100'
 wsPort = 'tcp:8101'
-''')
+
+# A secret placed in the URL as simple access control. Does not
+# provide any real security unless using HTTPS. The default value
+# in this file has been automatically generated from 128 random bits.
+rootCap = '%(rootCap)s'
+''' % {'rootCap': base64.urlsafe_b64encode(os.urandom(128 / 8)).replace('=','')})
 		sys.exit(0)
 else:
 	# TODO: better ways to manage the namespaces?
