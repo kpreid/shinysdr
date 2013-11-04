@@ -39,6 +39,10 @@ define(['./values', './events'], function (values, events) {
   allModes.USB = 'Upper SSB';
   allModes.VOR = 'VOR';
   
+  function alwaysCreateReceiverFromEvent(event) {
+    return event.shiftKey;
+  }
+  
   // TODO figure out what this does and give it a better name
   function Context(config) {
     this.radio = config.radio;
@@ -336,7 +340,7 @@ define(['./values', './events'], function (values, events) {
           dragReceiver = radio.tune({
             receiver: dragReceiver,
             freq: freq,
-            alwaysCreate: firstEvent && event.shiftKey
+            alwaysCreate: firstEvent && alwaysCreateReceiverFromEvent(event)
           });
           
           // handled event
@@ -1903,7 +1907,14 @@ define(['./values', './events'], function (values, events) {
         + (channel.label || channel.mode);
       // TODO: be an <a> or <button>
       el.addEventListener('click', function(event) {
-        states.preset.set(channel);
+        if (alwaysCreateReceiverFromEvent(event)) {
+          states.tune({
+            record: channel,
+            alwaysCreate: true
+          });
+        } else {
+          states.preset.set(channel);
+        }
         event.stopPropagation();
       }, false);
       el.my_update = function() {

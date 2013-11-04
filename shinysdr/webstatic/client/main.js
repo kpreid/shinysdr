@@ -86,8 +86,9 @@ define(['./values', './events', './database', './network', './maps', './widget',
       //   moveCenter: optional boolean (false)
       function tune(options) {
         var alwaysCreate = options.alwaysCreate;
-        var freq = +options.freq;
-        var mode = options.mode;
+        var record = options.record;
+        var freq = +options.freq || (record && record.freq);
+        var mode = options.mode || (record && record.mode);
         var receiver = options.receiver;
         //console.log('tune', alwaysCreate, freq, mode, receiver);
       
@@ -149,8 +150,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
       radio.preset.set = function(freqRecord) {
         LocalCell.prototype.set.call(this, freqRecord);
         tune({
-          freq: freqRecord.freq,
-          mode: freqRecord.mode,
+          record: freqRecord,
           moveCenter: true
         });
       };
