@@ -15,10 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from gnuradio import gr
-from gnuradio import blocks
 from gnuradio import analog
+from gnuradio import blocks
+from gnuradio import channels
 from gnuradio import filter
+from gnuradio import gr
 from gnuradio.filter import firdes
 
 import math
@@ -53,9 +54,16 @@ class SimulatedSource(Source):
 			return mult
 		
 		self.bus = blocks.add_vcc(1)
+		self.channel_model = channels.channel_model(
+			noise_voltage=10 ** self.noise_level,
+			frequency_offset=0,
+			epsilon=1.01, # TODO: expose this parameter
+			#taps=...,  # TODO: apply something here?
+			)
 		self.throttle = blocks.throttle(gr.sizeof_gr_complex, rf_rate)
 		self.connect(
 			self.bus,
+			self.channel_model,
 			self.throttle,
 			self)
 		signals = []
@@ -64,10 +72,6 @@ class SimulatedSource(Source):
 		pitch = analog.sig_source_f(audio_rate, analog.GR_SAW_WAVE, -1, 2000, 1000)
 		audio_signal = vco = blocks.vco_f(audio_rate, 1, 1)
 		self.connect(pitch, vco)
-		
-		# Noise source
-		self.noise_source = analog.noise_source_c(analog.GR_GAUSSIAN, 10 ** self.noise_level, 0)
-		signals.append(self.noise_source)
 		
 		# Baseband / DSB channel
 		baseband_interp = make_interpolator()
@@ -176,7 +180,7 @@ class SimulatedSource(Source):
 	
 	@setter
 	def set_noise_level(self, value):
-		self.noise_source.set_amplitude(10 ** value)
+		self.channel_model.set_noise_voltage(10 ** value)
 		self.noise_level = value
 
 	def notify_reconnecting_or_restarting(self):
