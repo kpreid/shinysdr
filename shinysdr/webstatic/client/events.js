@@ -21,27 +21,39 @@ define(function () {
   var exports = {};
   
   function schedulerRAFCallback() {
-    var limit = 10;
-    while (this._queue.length > 0 && limit-- > 0) {
-      var queue = this._queue;
-      this._queue = [];
-      queue.forEach(function (queued) {
-        queued._scheduler_scheduled = false;
-        queued();
-      });
+    try {
+      var limit = 10;
+      while (this._queue.length > 0 && limit-- > 0) {
+        var queue = this._queue;
+        this._queue = [];  // TODO: Avoid dropping callbacks in the event of an exception
+        queue.forEach(function (queued) {
+          queued._scheduler_scheduled = false;
+          queued();
+        });
+      }
+    } finally {
+      if (this._queue.length > 0) {
+        window.requestAnimationFrame(this._callback);
+      } else {
+        this._queue_scheduled = false;
+      }
     }
   }
   
   function Scheduler(window) {
+    // Things to do in the next requestAnimationFrame callback
     this._queue = [];
+    // Whether we have an outstanding requestAnimationFrame callback
+    this._queue_scheduled = false;
     this._callback = schedulerRAFCallback.bind(this);
   }
   Scheduler.prototype.enqueue = function (callback) {
     if (callback._scheduler_scheduled) return;
     this._queue.push(callback);
     callback._scheduler_scheduled = true;  // TODO: use a WeakMap instead
-    if (this._queue.length === 1) { // just became nonempty
-      window.webkitRequestAnimationFrame(this._callback);
+    if (this._queue.length === 1 && !this._queue_scheduled) { // just became nonempty
+      this._queue_scheduled = true;
+      window.requestAnimationFrame(this._callback);
     }
   }
   exports.Scheduler = Scheduler;
