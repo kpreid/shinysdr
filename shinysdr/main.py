@@ -80,6 +80,7 @@ wsPort = 'tcp:8101'
 # A secret placed in the URL as simple access control. Does not
 # provide any real security unless using HTTPS. The default value
 # in this file has been automatically generated from 128 random bits.
+# Set to None to not use any secret.
 rootCap = '%(rootCap)s'
 ''' % {'rootCap': base64.urlsafe_b64encode(os.urandom(128 / 8)).replace('=','')})
 		sys.exit(0)
@@ -91,7 +92,7 @@ else:
 	stateFile = str(configEnv['stateFile'])
 	webConfig = {}
 	for k in ['httpPort', 'wsPort', 'rootCap', 'databasesDir']:
-		webConfig[k] = str(configEnv[k])
+		webConfig[k] = configEnv[k]
 
 
 def top_defaults(top):
