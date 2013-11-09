@@ -74,7 +74,7 @@ class OsmoSDRSource(Source):
 		self.dc_state = 0
 		self.iq_state = 0
 		
-		self.osmosdr_source_block = source = osmosdr.source("nchan=1 " + osmo_device)
+		self.osmosdr_source_block = source = osmosdr.source('numchan=1 ' + osmo_device)
 		if source.get_num_channels() < 1:
 			# osmosdr.source doesn't throw an exception, allegedly because gnuradio can't handle it in a hier_block2 initializer. But we want to fail understandably, so recover by detecting it (sample rate = 0, which is otherwise nonsense)
 			raise LookupError('OsmoSDR device not found (device string = %r)' % osmo_device)
