@@ -1,4 +1,14 @@
+# Python
 *.pyc
+
+# Python setuptools
+/build
+/dist
+/*.egg-info
+
+# Twisted
 dropin.cache
 _trial_temp*/
+
+# our files
 /shinysdr/deps/
