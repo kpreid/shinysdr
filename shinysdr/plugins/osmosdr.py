@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
+from __future__ import absolute_import, division
 
 from shinysdr.source import Source
 from shinysdr.values import exported_value, setter, Range, Enum

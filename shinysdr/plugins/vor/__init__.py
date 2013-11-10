@@ -17,6 +17,8 @@
 
 # TODO: fully clean up this GRC-generated file
 
+from __future__ import absolute_import, division
+
 from twisted.web import static
 from zope.interface import implements
 from twisted.plugin import IPlugin
@@ -62,8 +64,8 @@ class VOR(SimpleAudioDemodulator):
 
 		if internal_audio_rate % dir_rate != 0:
 			raise ValueError('Audio rate %s is not a multiple of direction-finding rate %s' % (internal_audio_rate, dir_rate))
-		self.dir_scale = dir_scale = int(internal_audio_rate / dir_rate)
-		self.audio_scale = audio_scale = int(channel_rate / internal_audio_rate)
+		self.dir_scale = dir_scale = internal_audio_rate // dir_rate
+		self.audio_scale = audio_scale = channel_rate // internal_audio_rate
 
 		self.zeroer = blocks.add_const_vff((zero_point * (math.pi / 180), ))
 		

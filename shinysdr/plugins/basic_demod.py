@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import division
+from __future__ import absolute_import, division
 
 from zope.interface import implements
 from twisted.plugin import IPlugin

@@ -17,6 +17,8 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import, division
+
 import gnuradio.eng_option
 
 import argparse
@@ -82,7 +84,7 @@ wsPort = 'tcp:8101'
 # in this file has been automatically generated from 128 random bits.
 # Set to None to not use any secret.
 rootCap = '%(rootCap)s'
-''' % {'rootCap': base64.urlsafe_b64encode(os.urandom(128 / 8)).replace('=','')})
+''' % {'rootCap': base64.urlsafe_b64encode(os.urandom(128 // 8)).replace('=','')})
 		sys.exit(0)
 else:
 	# TODO: better ways to manage the namespaces?
