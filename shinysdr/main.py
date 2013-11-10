@@ -27,6 +27,7 @@ import os.path
 import shutil
 import sys
 import webbrowser
+import __builtin__
 
 from twisted.internet import reactor
 
@@ -89,7 +90,7 @@ rootCap = '%(rootCap)s'
 	else:
 		# TODO: better ways to manage the namespaces?
 		configEnv = {'shinysdr': shinysdr}
-		execfile(args.configFile, __builtins__.__dict__, configEnv)
+		execfile(args.configFile, __builtin__.__dict__, configEnv)
 		sources = configEnv['sources']
 		stateFile = str(configEnv['stateFile'])
 		webConfig = {}
