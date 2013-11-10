@@ -376,6 +376,9 @@ class ClientResourceDef(object):
 staticResourcePath = os.path.join(os.path.dirname(__file__), 'webstatic')
 
 
+_templatePath = os.path.join(os.path.dirname(__file__), 'webparts')
+
+
 def _make_static(filePath):
 	r = static.File(filePath)
 	r.contentTypes['.csv'] = 'text/csv'
@@ -411,7 +414,23 @@ def listen(config, top, noteDirty):
 	
 	strports.listen(config['wsPort'], txws.WebSocketFactory(OurStreamFactory(top, rootCap)))
 	
-	appRoot = _make_static(staticResourcePath)
+	# Roots of resource trees
+	# - appRoot is everything stateful/authority-bearing
+	# - serverRoot is the HTTP '/' and static resources are placed there
+	serverRoot = _make_static(staticResourcePath)
+	if rootCap is None:
+		appRoot = serverRoot
+		visitPath = '/'
+	else:
+		serverRoot = _make_static(staticResourcePath)
+		appRoot = resource.Resource()
+		serverRoot.putChild(rootCap, appRoot)
+		visitPath = '/' + urllib.quote(rootCap, safe='') + '/'
+	
+	# UI entry point
+	appRoot.putChild('', _make_static(os.path.join(_templatePath, 'index.html')))
+	
+	# Exported radio control objects
 	appRoot.putChild('radio', BlockResource(top, noteDirty, notDeletable))
 	
 	# Frequency DB
@@ -420,13 +439,13 @@ def listen(config, top, noteDirty):
 	appRoot.putChild('wdb', shinysdr.db.DatabaseResource([]))
 	
 	# Construct explicit resources for merge.
-	test = _reify(appRoot, 'test')
+	test = _reify(serverRoot, 'test')
 	jasmine = _reify(test, 'jasmine')
 	for name in ['jasmine.css', 'jasmine.js', 'jasmine-html.js']:
 		jasmine.putChild(name, static.File(os.path.join(
 				os.path.dirname(__file__), 'deps/jasmine/lib/jasmine-core/', name)))
 	
-	client = _reify(appRoot, 'client')
+	client = _reify(serverRoot, 'client')
 	client.putChild('openlayers', static.File(os.path.join(
 		os.path.dirname(__file__), 'deps/openlayers')))
 	client.putChild('require.js', static.File(os.path.join(
@@ -440,19 +459,11 @@ def listen(config, top, noteDirty):
 		pluginResources.putChild(resourceDef.key, resourceDef.resource)
 		if resourceDef.loadURL is not None:
 			# TODO constrain value
-			loadList.append('client/plugins/' + urllib.quote(resourceDef.key, safe='') + '/' + resourceDef.loadURL)
+			loadList.append('/client/plugins/' + urllib.quote(resourceDef.key, safe='') + '/' + resourceDef.loadURL)
 	
 	# Client plugin list
 	client.putChild('plugin-index.json', static.Data(json.dumps(loadList), 'application/json'))
 	
-	if rootCap is None:
-		root = appRoot
-		visitPath = '/'
-	else:
-		root = resource.Resource()
-		root.putChild(rootCap, appRoot)
-		visitPath = '/' + urllib.quote(rootCap, safe='') + '/'
-	
-	strports.listen(config['httpPort'], server.Site(root))
+	strports.listen(config['httpPort'], server.Site(serverRoot))
 	
 	return _strport_to_url(config['httpPort'], path=visitPath)

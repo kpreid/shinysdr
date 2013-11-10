@@ -27,7 +27,7 @@ define(function () {
   exports.projectedPoint = projectedPoint;
 
   function markerGraphic(s) {
-    return {externalGraphic: 'client/openlayers/img/marker' + s + '.png', graphicHeight: 21, graphicWidth: 16};
+    return {externalGraphic: '/client/openlayers/img/marker' + s + '.png', graphicHeight: 21, graphicWidth: 16};
   }
   exports.markerGraphic = markerGraphic;
   
@@ -56,7 +56,7 @@ define(function () {
         labelOutlineColor: 'white',
         labelOutlineWidth: 3,
         
-        externalGraphic: 'client/openlayers/img/marker-green.png',
+        externalGraphic: '/client/openlayers/img/marker-green.png',
         graphicHeight: 21,
         graphicWidth: 16
       }}),

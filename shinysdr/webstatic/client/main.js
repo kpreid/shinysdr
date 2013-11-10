@@ -53,7 +53,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
   var clientBlockCell = new LocalCell(values.block, clientState);
   
   // TODO get url from server
-  network.externalGet('client/plugin-index.json', 'text', function gotPluginIndex(jsonstr) {
+  network.externalGet('/client/plugin-index.json', 'text', function gotPluginIndex(jsonstr) {
     var names = Array.prototype.slice.call(JSON.parse(jsonstr));
     requirejs(names, function (plugins) {
       connectRadio();
