@@ -19,8 +19,6 @@
 
 from __future__ import absolute_import, division
 
-import gnuradio.eng_option
-
 import argparse
 import base64
 import json
@@ -32,24 +30,26 @@ import webbrowser
 
 from twisted.internet import reactor
 
-# Option parsing is done before importing the main modules so as to avoid the cost of initializing gnuradio if we are aborting early. TODO: Make that happen for createConfig too.
-argParser = argparse.ArgumentParser()
-argParser.add_argument('configFile', metavar='CONFIG',
-	help='path of configuration file')
-argParser.add_argument('--create', dest='createConfig', action='store_true',
-	help='write template configuration file to CONFIG and exit')
-argParser.add_argument('-g, --go', dest='openBrowser', action='store_true',
-	help='open the UI in a web browser')
-args = argParser.parse_args()
 
-import shinysdr.top
-import shinysdr.web
-import shinysdr.source
+def main():
+	# Option parsing is done before importing the main modules so as to avoid the cost of initializing gnuradio if we are aborting early. TODO: Make that happen for createConfig too.
+	argParser = argparse.ArgumentParser()
+	argParser.add_argument('configFile', metavar='CONFIG',
+		help='path of configuration file')
+	argParser.add_argument('--create', dest='createConfig', action='store_true',
+		help='write template configuration file to CONFIG and exit')
+	argParser.add_argument('-g, --go', dest='openBrowser', action='store_true',
+		help='open the UI in a web browser')
+	args = argParser.parse_args()
 
-# Load config file
-if args.createConfig:
-	with open(args.configFile, 'w') as f:
-		f.write('''\
+	import shinysdr.top
+	import shinysdr.web
+	import shinysdr.source
+
+	# Load config file
+	if args.createConfig:
+		with open(args.configFile, 'w') as f:
+			f.write('''\
 import shinysdr.plugins.osmosdr
 import shinysdr.plugins.simulate
 
@@ -85,16 +85,48 @@ wsPort = 'tcp:8101'
 # Set to None to not use any secret.
 rootCap = '%(rootCap)s'
 ''' % {'rootCap': base64.urlsafe_b64encode(os.urandom(128 // 8)).replace('=','')})
-		sys.exit(0)
-else:
-	# TODO: better ways to manage the namespaces?
-	configEnv = {'shinysdr': shinysdr}
-	execfile(args.configFile, __builtins__.__dict__, configEnv)
-	sources = configEnv['sources']
-	stateFile = str(configEnv['stateFile'])
-	webConfig = {}
-	for k in ['httpPort', 'wsPort', 'rootCap', 'databasesDir']:
-		webConfig[k] = configEnv[k]
+			sys.exit(0)
+	else:
+		# TODO: better ways to manage the namespaces?
+		configEnv = {'shinysdr': shinysdr}
+		execfile(args.configFile, __builtins__.__dict__, configEnv)
+		sources = configEnv['sources']
+		stateFile = str(configEnv['stateFile'])
+		webConfig = {}
+		for k in ['httpPort', 'wsPort', 'rootCap', 'databasesDir']:
+			webConfig[k] = configEnv[k]
+	
+	def noteDirty():
+		# just immediately write (revisit this when more performance is needed)
+		with open(stateFile, 'w') as f:
+			json.dump(top.state_to_json(), f)
+		pass
+	
+	def restore(root, get_defaults):
+		if os.path.isfile(stateFile):
+			root.state_from_json(json.load(open(stateFile, 'r')))
+			# make a backup in case this code version misreads the state and loses things on save (but only if the load succeeded, in case the file but not its backup is bad)
+			shutil.copyfile(stateFile, stateFile + '~')
+		else:
+			root.state_from_json(get_defaults(root))
+	
+	
+	print 'Flow graph...'
+	top = shinysdr.top.Top(sources=sources)
+	
+	print 'Restoring state...'
+	restore(top, top_defaults)
+	
+	print 'Web server...'
+	url = shinysdr.web.listen(webConfig, top, noteDirty)
+	
+	if args.openBrowser:
+		print 'Ready. Opening ' + url
+		webbrowser.open(url=url, new=1, autoraise=True)
+	else:
+		print 'Ready. Visit ' + url
+	
+	reactor.run()
 
 
 def top_defaults(top):
@@ -116,35 +148,6 @@ def top_defaults(top):
 	
 	return state
 
-def noteDirty():
-	# just immediately write (revisit this when more performance is needed)
-	with open(stateFile, 'w') as f:
-		json.dump(top.state_to_json(), f)
-	pass
 
-
-def restore(root, get_defaults):
-	if os.path.isfile(stateFile):
-		root.state_from_json(json.load(open(stateFile, 'r')))
-		# make a backup in case this code version misreads the state and loses things on save (but only if the load succeeded, in case the file but not its backup is bad)
-		shutil.copyfile(stateFile, stateFile + '~')
-	else:
-		root.state_from_json(get_defaults(root))
-
-
-print 'Flow graph...'
-top = shinysdr.top.Top(sources=sources)
-
-print 'Restoring state...'
-restore(top, top_defaults)
-
-print 'Web server...'
-url = shinysdr.web.listen(webConfig, top, noteDirty)
-
-if args.openBrowser:
-	print 'Ready. Opening ' + url
-	webbrowser.open(url=url, new=1, autoraise=True)
-else:
-	print 'Ready. Visit ' + url
-
-reactor.run()
+if __name__ == '__main__':
+	main()
