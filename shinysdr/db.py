@@ -134,6 +134,7 @@ def _parse_csv_file(csvfile):
 	db = []
 	for csvrec in csv.DictReader(csvfile):
 		# csv does not deal in unicode itself
+		# TODO: This will crash if one of the CSV rows has too many columns. Factor out Unicodeization, then make sure there's a nice error.
 		csvrec = {unicode(k, 'utf-8'): unicode(v, 'utf-8')
 			for k, v in csvrec.iteritems()
 				if v is not None}
