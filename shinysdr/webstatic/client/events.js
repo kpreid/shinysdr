@@ -20,19 +20,43 @@ define(function () {
   
   var exports = {};
   
+  // little abstraction to make the scheduler simpler
+  function Queue() {
+    this.in = [];
+    this.out = [];
+  }
+  Queue.prototype.enqueue = function (value) {
+    this.in.push(value);
+  };
+  Queue.prototype.nonempty = function () {
+    return this.in.length > 0 || this.out.length > 0;
+  };
+  Queue.prototype.dequeue = function () {
+    var inArray = this.in, outArray = this.out;
+    if (outArray.length > 0) {
+      return outArray.pop();
+    } else if (inArray.length > 0) {
+      inArray.reverse();
+      this.out = inArray;
+      this.in = outArray;
+      return inArray.pop();
+    } else {
+      throw new Error('empty queue');
+    }
+  };
+  
+  // internal function of Scheduler
   function schedulerRAFCallback() {
     try {
-      var limit = 10;
-      while (this._queue.length > 0 && limit-- > 0) {
-        var queue = this._queue;
-        this._queue = [];  // TODO: Avoid dropping callbacks in the event of an exception
-        queue.forEach(function (queued) {
-          queued._scheduler_scheduled = false;
-          queued();
-        });
+      var limit = 1000;
+      var queue = this._queue;
+      while (queue.nonempty() && limit-- > 0) {
+        var queued = queue.dequeue();
+        queued._scheduler_scheduled = false;
+        queued();
       }
     } finally {
-      if (this._queue.length > 0) {
+      if (queue.nonempty()) {
         window.requestAnimationFrame(this._callback);
       } else {
         this._queue_scheduled = false;
@@ -42,16 +66,17 @@ define(function () {
   
   function Scheduler(window) {
     // Things to do in the next requestAnimationFrame callback
-    this._queue = [];
+    this._queue = new Queue();
     // Whether we have an outstanding requestAnimationFrame callback
     this._queue_scheduled = false;
     this._callback = schedulerRAFCallback.bind(this);
   }
   Scheduler.prototype.enqueue = function (callback) {
     if (callback._scheduler_scheduled) return;
-    this._queue.push(callback);
-    callback._scheduler_scheduled = true;  // TODO: use a WeakMap instead
-    if (this._queue.length === 1 && !this._queue_scheduled) { // just became nonempty
+    var wasNonempty = this._queue.nonempty();
+    this._queue.enqueue(callback);
+    callback._scheduler_scheduled = true;  // TODO: use a WeakMap instead once ES6 is out
+    if (!wasNonempty && !this._queue_scheduled) { // just became nonempty
       this._queue_scheduled = true;
       window.requestAnimationFrame(this._callback);
     }
