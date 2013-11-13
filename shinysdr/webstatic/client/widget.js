@@ -236,13 +236,15 @@ define(['./values', './events'], function (values, events) {
     prepare();
     
     window.addEventListener('resize', function (event) {
-      scheduler.enqueue(prepare);
+      // immediate to ensure smooth animation
+      scheduler.callNow(prepare);
     });
     
-    container.addEventListener('scroll', function (event) {
-      scheduler.enqueue(prepare);
+    container.addEventListener('scroll', scheduler.syncEventCallback(function (event) {
       storage.setItem('scroll', String(container.scrollLeft + fractionalScroll));
-    }, false);
+      // immediate to ensure smooth animation and interaction
+      scheduler.callNow(prepare);
+    }), false);
     
     // exported for the sake of createWidgets -- TODO proper factoring?
     this.scheduler = scheduler;

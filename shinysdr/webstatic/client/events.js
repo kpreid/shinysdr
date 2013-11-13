@@ -52,8 +52,10 @@ define(function () {
       var queue = this._queue;
       while (queue.nonempty() && limit-- > 0) {
         var queued = queue.dequeue();
-        queued._scheduler_scheduled = false;
-        queued();
+        if (queued._scheduler_scheduled) {
+          queued._scheduler_scheduled = false;
+          queued();
+        }
       }
     } finally {
       if (queue.nonempty()) {
@@ -72,6 +74,7 @@ define(function () {
     this._callback = schedulerRAFCallback.bind(this);
   }
   Scheduler.prototype.enqueue = function (callback) {
+    if (callback.scheduler !== this) throw new Error('Wrong scheduler');
     if (callback._scheduler_scheduled) return;
     var wasNonempty = this._queue.nonempty();
     this._queue.enqueue(callback);
@@ -80,7 +83,22 @@ define(function () {
       this._queue_scheduled = true;
       window.requestAnimationFrame(this._callback);
     }
-  }
+  };
+  Scheduler.prototype.callNow = function (callback) {
+    if (callback.scheduler !== this) throw new Error('Wrong scheduler');
+    callback._scheduler_scheduled = false;
+    // TODO: Revisit whether we should catch errors here
+    callback();
+  };
+  // Kludge for when we need the consequences of user interaction to happen promptly (before the event handler returns). Requirement: use this only to wrap 'top level' callbacks called with nothing significant on the stack.
+  Scheduler.prototype.syncEventCallback = function (eventCallback) {
+    return function wrappedForSync() {
+      // note no error catching -- don't think it needs it
+      var value = eventCallback();
+      this._callback();
+      return value;
+    }.bind(this);
+  };
   exports.Scheduler = Scheduler;
   
   function nSchedule(fn) {

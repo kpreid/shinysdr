@@ -21,6 +21,27 @@ describe('events', function () {
   describe('Scheduler', function () {
     var Scheduler = shinysdr.events.Scheduler;
     
+    it('should have callNow which cancels scheduling', function () {
+      var scheduler = new Scheduler(window);
+      var cb = jasmine.createSpy('cb');
+      cb.scheduler = scheduler;
+      var waiter = jasmine.createSpy('waiter');
+      waiter.scheduler = scheduler;
+      
+      scheduler.enqueue(cb);
+      scheduler.enqueue(waiter);
+      expect(cb.calls.length).toBe(0);
+      scheduler.callNow(cb);
+      expect(cb.calls.length).toBe(1);
+      
+      waitsFor(function() {
+        return waiter.calls.length;
+      }, 'did a schedule', 100);
+      runs(function() {
+        expect(cb.calls.length).toBe(1);
+      });
+    });
+    
     it('should invoke callbacks after one which throws', function () {
       var scheduler = new Scheduler(window);
       
