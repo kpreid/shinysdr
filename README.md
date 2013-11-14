@@ -25,6 +25,9 @@ On the other hand, you may find that the shiny thing is lacking substance: if yo
 Requirements and Installation
 -----------------------------
 
+(There is a standard Python `setup.py`, but using it is not required unless you like your software *installed*.
+Furthermore, there are many dependencies, as described below, which cannot be handled by setuptools.)
+
 Install the following software on the machine which has your SDR hardware attached and will run the ShinySDR server:
 
 * [Python](http://www.python.org/) 2.7 or later compatible version.
