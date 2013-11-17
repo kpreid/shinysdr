@@ -41,6 +41,11 @@ import shinysdr.db
 from shinysdr.values import ExportedState, BaseCell, BlockCell, MsgQueueCell
 
 
+# temporary kludge until upstream takes our patch
+if hasattr(txws, 'WebSocketProtocol') and not hasattr(txws.WebSocketProtocol, 'setBinaryMode'):
+	raise ImportError('The installed version of txWS does not support sending binary messages and cannot be used.')
+
+
 class CellResource(resource.Resource):
 	isLeaf = True
 
