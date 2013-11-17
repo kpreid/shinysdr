@@ -25,9 +25,6 @@ On the other hand, you may find that the shiny thing is lacking substance: if yo
 Requirements and Installation
 -----------------------------
 
-(There is a standard Python `setup.py`, but using it is not required unless you like your software *installed*.
-Furthermore, there are many dependencies, as described below, which cannot be handled by setuptools.)
-
 Install the following software on the machine which has your SDR hardware attached and will run the ShinySDR server:
 
 * [Python](http://www.python.org/) 2.7 or later compatible version.
@@ -36,13 +33,15 @@ Install the following software on the machine which has your SDR hardware attach
 * [GNU Radio](http://gnuradio.org/) 3.7.1 or later.
 * [`gr-osmosdr`](http://sdr.osmocom.org/trac/wiki/GrOsmoSDR), and any applicable hardware drivers such as `librtlsdr`. (Plugins may be written to use other RF sources, but the only built-in support is for `gr-osmosdr`.)
 
-In the `shinysdr/deps/` directory, copy or symlink the following items:
+Then either run the script `fetch-js-deps.sh`, or copy or symlink the following items into the `shinysdr/deps/` directory:
 
 * `jasmine/` ([Jasmine](https://github.com/pivotal/jasmine/) 1.3.1 or later)
 * `openlayers/` ([OpenLayers](http://openlayers.org/) 2.13.1 or later)
 * `require.js` ([RequireJS](http://requirejs.org/) 2.1.8 or later)
 
-[TODO: Have a way to automatically download these dependencies.]
+[TODO: Integrate fetch-js-deps or equivalent effects into setup.py.]
+
+After the above dependencies have been installed, you may use the Python `setup.py` to install ShinySDR, or simply run it from this directory — installation is entirely optional.
 
 The web UI currently supports only [Google Chrome](https://www.google.com/chrome/) (including Chrome OS and Chrome for Android; no testing has been done on Chromium).
 While it is not *intended* to be Chrome-only, no attempt has been made to avoid using facilities which are *not yet* implemented in other browsers.
