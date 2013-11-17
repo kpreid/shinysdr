@@ -28,8 +28,8 @@ Requirements and Installation
 Install the following software on the machine which has your SDR hardware attached and will run the ShinySDR server:
 
 * [Python](http://www.python.org/) 2.7 or later compatible version.
-* [Twisted](http://twistedmatrix.com/) 12.0.0 or later.
-* [txWS](https://github.com/MostAwesomeDude/txWS) with my [binary message support patch](https://github.com/kpreid/txWS/tree/binary) (hopefully to be included upstream).
+* [Twisted](http://twistedmatrix.com/) 12.0.0 or later. (If you use `setup.py`, this will be automatic.)
+* [txWS **with my binary message support patch**](https://github.com/kpreid/txWS/tree/binary) (hopefully to be included [upstream](https://github.com/MostAwesomeDude/txWS) eventually).
 * [GNU Radio](http://gnuradio.org/) 3.7.1 or later.
 * [`gr-osmosdr`](http://sdr.osmocom.org/trac/wiki/GrOsmoSDR), and any applicable hardware drivers such as `librtlsdr`. (Plugins may be written to use other RF sources, but the only built-in support is for `gr-osmosdr`.)
 
@@ -53,11 +53,12 @@ Setup
 -----
 
 The server uses a configuration file, which is Python code.
-Run
+Run this command to create an example file:
 
 <pre>python -m shinysdr.main --create <var>filename</var></pre>
 
-to create an example file.
+(If you have installed ShinySDR via `setup.py` then you can write `shinysdr` instead of `python -m shinysdr.main`.)
+
 Edit it to specify your available hardware and other desired configuration (such as a HTTPS server certificate and the location of the state persistence file); instructions are provided in the comments in the example file.
 
 
@@ -69,6 +70,8 @@ Once you have prepared a configuration file, you can run the server using
 <pre>python -m shinysdr.main <var>filename</var></pre>
 
 and access it using your browser at the displayed URL. (The `--go` option will attempt to open it in your default browser, but this is unlikely to be helpful if said browser is not Chrome.)
+
+(If you have installed ShinySDR via `setup.py` then you can write `shinysdr` instead of `python -m shinysdr.main`.)
 
 Usage
 -----
