@@ -579,10 +579,10 @@ define(['./values', './events'], function (values, events) {
       }
       addWidget('demodulator', 'Demodulator');
       if ('audio_power' in block) {
-        addWidget('audio_power', 'Meter', 'Level');
+        addWidget('audio_power', 'Meter', 'Audio');
       }
       if ('audio_gain' in block) {
-        addWidget('audio_gain', 'LogSlider', 'Volume');
+        addWidget('audio_gain', 'LinSlider', 'Volume');
       }
       if ('audio_pan' in block) {
         addWidget('audio_pan', 'LinSlider', 'Pan');

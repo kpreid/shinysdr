@@ -37,7 +37,7 @@ class Receiver(gr.hier_block2, ExportedState):
 			input_center_freq=0,
 			audio_rate=0,
 			rec_freq=100.0,
-			audio_gain=0.25,
+			audio_gain=-6,
 			audio_pan=0,
 			context=None):
 		assert input_rate > 0
@@ -66,10 +66,11 @@ class Receiver(gr.hier_block2, ExportedState):
 		self.oscillator = analog.sig_source_c(input_rate, analog.GR_COS_WAVE, -rec_freq, 1, 0)
 		self.mixer = blocks.multiply_cc(1)
 		self.demodulator = self.__make_demodulator(mode, {})
-		self.audio_gain_l_block = blocks.multiply_const_ff(self.audio_gain)
-		self.audio_gain_r_block = blocks.multiply_const_ff(self.audio_gain)
+		self.audio_gain_l_block = blocks.multiply_const_ff(0.0)
+		self.audio_gain_r_block = blocks.multiply_const_ff(0.0)
 		self.probe_audio = analog.probe_avg_mag_sqrd_f(0, alpha=10.0/audio_rate)
 		
+		self.__update_audio_gain()
 		self.__do_connect()
 	
 	def state_def(self, callback):
@@ -130,7 +131,7 @@ class Receiver(gr.hier_block2, ExportedState):
 		self.context.revalidate()
 	
 	# TODO: support non-audio demodulators at which point these controls should be optional
-	@exported_value(ctor=Range([(0.001, 100)], strict=False, logarithmic=True))
+	@exported_value(ctor=Range([(-30, 20)], strict=False))
 	def get_audio_gain(self):
 		return self.audio_gain
 
@@ -216,11 +217,11 @@ class Receiver(gr.hier_block2, ExportedState):
 		return demodulator
 
 	def __update_audio_gain(self):
-		gain = self.audio_gain
+		gain_lin = 10 ** (self.audio_gain / 10)
 		pan = self.audio_pan
 		# TODO: Determine correct computation for panning. http://en.wikipedia.org/wiki/Pan_law seems relevant but was short on actual formulas. May depend on headphones vs speakers? This may be correct already for headphones -- it sounds nearly-flat to me.
-		self.audio_gain_l_block.set_k(gain * (1 - pan))
-		self.audio_gain_r_block.set_k(gain * (1 + pan))
+		self.audio_gain_l_block.set_k(gain_lin * (1 - pan))
+		self.audio_gain_r_block.set_k(gain_lin * (1 + pan))
 
 
 class ContextForDemodulator(object):
