@@ -756,6 +756,7 @@ define(['./values', './events'], function (values, events) {
     var radio = config.radio;
     var fftCell = config.target;
     var view = config.view;
+    var avgAlphaCell = config.clientState.spectrum_average;
     
     var canvas; // set later
     
@@ -764,6 +765,8 @@ define(['./values', './events'], function (values, events) {
     var lastDrawnCenterFreq = NaN;
     function commonNewData(buffer, bufferCenterFreq) {
       var len = buffer.length;
+      var alpha = avgAlphaCell.get();
+      var invAlpha = 1 - alpha;
 
       // averaging
       // TODO: Get separate averaged and unaveraged FFTs from server so that averaging behavior is not dependent on frame rate over the network
@@ -776,7 +779,7 @@ define(['./values', './events'], function (values, events) {
       }
 
       for (var i = 0; i < len; i++) {
-        averageBuffer[i] = averageBuffer[i] * 0.75 + buffer[i] * 0.25;
+        averageBuffer[i] = averageBuffer[i] * invAlpha + buffer[i] * alpha;
       }
     }
 

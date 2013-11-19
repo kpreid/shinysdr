@@ -37,6 +37,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
   var writableDB = database.fromURL('wdb/');
   freqDB.add(writableDB);
   
+  // TODO(kpreid): Client state should be more closely associated with the components that use it.
   var clientStateStorage = new StorageNamespace(localStorage, 'shinysdr.client.');
   function cc(key, type, value) {
     var cell = new StorageCell(clientStateStorage, type, key);
@@ -48,7 +49,8 @@ define(['./values', './events', './database', './network', './maps', './widget',
   var clientState = stubBlock({
     opengl: cc('opengl', Boolean, true),
     opengl_float: cc('opengl_float', Boolean, true),
-    spectrum_split: cc('spectrum_split', new values.Range([[0, 1]], false, false), 0.5)
+    spectrum_split: cc('spectrum_split', new values.Range([[0, 1]], false, false), 0.5),
+    spectrum_average: cc('spectrum_average', new values.Range([[0.05, 1]], true, false), 0.25)
   });
   var clientBlockCell = new LocalCell(values.block, clientState);
   
