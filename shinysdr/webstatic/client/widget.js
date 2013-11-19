@@ -463,8 +463,7 @@ define(['./values', './events'], function (values, events) {
         addWidget('unpaused', 'Toggle', 'Run');
       }
       
-      // TODO: summary element is inappropriate
-      var sourceToolbar = this.element.appendChild(document.createElement('summary'));
+      var sourceToolbar = this.element.appendChild(document.createElement('div'));
       sourceToolbar.className = 'panel frame-controls';
       sourceToolbar.appendChild(document.createTextNode('RF source '));
       if ('source_name' in block) {
@@ -499,8 +498,7 @@ define(['./values', './events'], function (values, events) {
       Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
         Object.keys(block).forEach(function (name) {
           if (dynamic) {
-            // TODO: summary element is abused
-            var toolbar = document.createElement('summary');
+            var toolbar = document.createElement('div');
             toolbar.className = 'panel frame-controls';
             
             var del = document.createElement('button');
