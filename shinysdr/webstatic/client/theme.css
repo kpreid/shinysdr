@@ -59,7 +59,7 @@ section > h2 {
 
 .hscalegroup {
   /* TODO: We actually want this to be the SpectrumPlot's background color, but no good way to express that currently */
-  background: #333;
+  background: black;
 }
 [data-widget=SpectrumPlot] { /* TODO: should be .widget-SpectrumPlot but doesn't work because read too early */
   /* these properties (normally SVG-only) are read by the widget's code */
@@ -78,7 +78,8 @@ section > h2 {
 }
 
 .widget-FreqScale {
-  background: #BBB;
+  background: #444;
+  color: #FFF;
 }
 .freqscale-channel, .freqscale-band {
   opacity: 0.7;
