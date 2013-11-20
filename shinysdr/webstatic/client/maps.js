@@ -33,7 +33,8 @@ define(function () {
   
   function Map(element, scheduler, db, radio) {
     var baseLayer = new OpenLayers.Layer('Blank', {
-      isBaseLayer: true
+      isBaseLayer: true,
+      displayInLayerSwitcher: false,  // only one, not useful
     });
     // var baseLayer = new OpenLayers.Layer.OSM();
     var olm = new OpenLayers.Map(element, {
@@ -42,6 +43,14 @@ define(function () {
       center: projectedPoint(37.663576, -122.271652).getBounds().getCenterLonLat(),
       zoom: 9
     });
+    
+    // Since we don't have a data-ful base layer, add a grid to make it not bare.
+    olm.addControl(new OpenLayers.Control.Graticule({
+      numPoints: 2,
+      labelled: true,
+      targetSize: 300,
+      labelFormat: 'dm'  // decimal degrees only
+    }));
     
     olm.addControl(new OpenLayers.Control.LayerSwitcher());
     
