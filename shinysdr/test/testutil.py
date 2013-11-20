@@ -25,6 +25,12 @@ from twisted.web import client
 from twisted.web import http
 
 
+def http_get(reactor, url):
+	agent = client.Agent(reactor)
+	d = agent.request('GET', url)
+	return _handle_agent_response(d)
+
+
 def http_post(reactor, url, value):
 	agent = client.Agent(reactor)
 	d = agent.request('POST', url,

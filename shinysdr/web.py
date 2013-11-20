@@ -17,11 +17,12 @@
 
 from __future__ import absolute_import, division
 
-from twisted.web import static, server, resource
+from twisted.application import strports
+from twisted.internet import defer
 from twisted.internet import protocol
 from twisted.internet import task
-from twisted.application import strports
 from twisted.plugin import IPlugin, getPlugins
+from twisted.web import http, static, server, resource
 from zope.interface import Interface, implements  # available via Twisted
 
 from gnuradio import gr
@@ -44,6 +45,15 @@ from shinysdr.values import ExportedState, BaseCell, BlockCell, MsgQueueCell
 # temporary kludge until upstream takes our patch
 if hasattr(txws, 'WebSocketProtocol') and not hasattr(txws.WebSocketProtocol, 'setBinaryMode'):
 	raise ImportError('The installed version of txWS does not support sending binary messages and cannot be used.')
+
+
+class _SlashedResource(resource.Resource):
+	'''Redirects /.../this to /.../this/.'''
+	
+	def render(self, request):
+		request.setHeader('Location', request.childLink(''))
+		request.setResponseCode(http.MOVED_PERMANENTLY)
+		return ''
 
 
 class CellResource(resource.Resource):
@@ -402,15 +412,17 @@ def _reify(parent, name):
 	return r
 
 
-def _strport_to_url(desc, scheme='http', path='/'):
+def _strport_to_url(desc, scheme='http', path='/', socket_port=0):
 	'''Construct a URL from a twisted.application.strports string.'''
 	# TODO: need to know canonical domain name, not localhost; can we extract from the ssl cert?
 	# TODO: strports.parse is deprecated
 	(method, args, kwargs) = strports.parse(desc, None)
+	if socket_port == 0:
+		socket_port = args[0]
 	if method == 'TCP':
-		return scheme + '://localhost:' + str(args[0]) + path
+		return scheme + '://localhost:' + str(socket_port) + path
 	elif method == 'SSL':
-		return scheme + 's://localhost:' + str(args[0]) + path
+		return scheme + 's://localhost:' + str(socket_port) + path
 	else:
 		# TODO better error return
 		return '???'
@@ -419,7 +431,8 @@ def _strport_to_url(desc, scheme='http', path='/'):
 def listen(config, top, noteDirty):
 	rootCap = config['rootCap']
 	
-	strports.listen(config['wsPort'], txws.WebSocketFactory(OurStreamFactory(top, rootCap)))
+	ws_port_obj = strports.listen(config['wsPort'],
+		txws.WebSocketFactory(OurStreamFactory(top, rootCap)))
 	
 	# Roots of resource trees
 	# - appRoot is everything stateful/authority-bearing
@@ -430,7 +443,7 @@ def listen(config, top, noteDirty):
 		visitPath = '/'
 	else:
 		serverRoot = _make_static(staticResourcePath)
-		appRoot = resource.Resource()
+		appRoot = _SlashedResource()
 		serverRoot.putChild(rootCap, appRoot)
 		visitPath = '/' + urllib.quote(rootCap, safe='') + '/'
 	
@@ -471,6 +484,13 @@ def listen(config, top, noteDirty):
 	# Client plugin list
 	client.putChild('plugin-index.json', static.Data(json.dumps(loadList), 'application/json'))
 	
-	strports.listen(config['httpPort'], server.Site(serverRoot))
+	web_port_obj = strports.listen(config['httpPort'], server.Site(serverRoot))
+	port_num = web_port_obj.socket.getsockname()[1]  # TODO touching implementation, report need for a better way (web_port_obj.port is 0 if specified port is 0, not actual port)
 	
-	return _strport_to_url(config['httpPort'], path=visitPath)
+	url = _strport_to_url(config['httpPort'], socket_port=port_num, path=visitPath)
+	def stop():
+		# TODO: Does Twisted already have something to bundle up a bunch of ports for shutdown?
+		return defer.DeferredList([
+			web_port_obj.stopListening(),
+			ws_port_obj.stopListening()])
+	return (stop, url)

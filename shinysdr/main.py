@@ -119,7 +119,7 @@ rootCap = '%(rootCap)s'
 	restore(top, top_defaults)
 	
 	print 'Web server...'
-	url = shinysdr.web.listen(webConfig, top, noteDirty)
+	(stop, url) = shinysdr.web.listen(webConfig, top, noteDirty)
 	
 	if args.openBrowser:
 		print 'Ready. Opening ' + url

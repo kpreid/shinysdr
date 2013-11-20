@@ -17,12 +17,51 @@
 
 from __future__ import absolute_import, division
 
-import unittest
 import json
+import urlparse
+
+from twisted.trial import unittest
+from twisted.internet import reactor
+from twisted.web import http
 
 from shinysdr.values import ExportedState, BlockCell, CollectionState, exported_value, setter
 # TODO: StateStreamInner is an implementation detail; arrange a better interface to test
-from shinysdr.web import StateStreamInner
+from shinysdr.web import StateStreamInner, listen
+from shinysdr.test import testutil
+
+
+class TestWebSite(unittest.TestCase):
+	def setUp(self):
+		# TODO: arrange so we don't need to pass as many bogus strings
+		(self.__stop, self.url) = listen(
+			{
+				'httpPort': 'tcp:0',
+				'wsPort': 'tcp:0',
+				'rootCap': 'ROOT',
+				'databasesDir': 'NONEXISTENT_PATH',
+			},
+			SiteStateStub(),
+			_noop)
+	
+	def tearDown(self):
+		return self.__stop()
+	
+	def test_app_redirect(self):
+		url_without_slash = self.url[:-1]
+		def callback((response, data)):
+			self.assertEqual(response.code, http.MOVED_PERMANENTLY)
+			self.assertEqual(self.url,
+				urlparse.urljoin(url_without_slash,
+					'ONLYONE'.join(response.headers.getRawHeaders('Location'))))
+		return testutil.http_get(reactor, url_without_slash).addCallback(callback)
+
+
+def _noop(): pass
+
+
+class SiteStateStub(ExportedState):
+	pass
+
 
 class StateStreamTestCase(unittest.TestCase):
 	def setUp(self):
@@ -36,6 +75,7 @@ class StateStreamTestCase(unittest.TestCase):
 		u = self.updates
 		self.updates = []
 		return u
+
 
 class TestStateStream(StateStreamTestCase):
 	def setUp(self):
