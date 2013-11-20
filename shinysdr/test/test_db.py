@@ -23,13 +23,12 @@ import StringIO
 
 from twisted.trial import unittest
 from twisted.internet import reactor
-from twisted.internet.defer import Deferred
-from twisted.internet.protocol import Protocol
 from twisted.web import client
 from twisted.web import http
 from twisted.web import server
 
 from shinysdr import db
+from shinysdr.test import testutil
 
 
 class TestCSV(unittest.TestCase):
@@ -97,7 +96,7 @@ class TestDBWeb(unittest.TestCase):
 		modified = self.test_data_json[:]
 		modified[index] = new_record
 
-		d = post(self.__url('/' + str(index)), {
+		d = testutil.http_post(reactor, self.__url('/' + str(index)), {
 			'old': self.test_data_json[index],
 			'new': new_record
 		})
@@ -119,7 +118,7 @@ class TestDBWeb(unittest.TestCase):
 			u'freq': 20e6,
 		}
 
-		d = post(self.__url('/'), {
+		d = testutil.http_post(reactor, self.__url('/'), {
 			'new': new_record
 		})
 
@@ -137,34 +136,3 @@ class TestDBWeb(unittest.TestCase):
 		return d
 
 
-def post(url, value):
-	agent = client.Agent(reactor)
-	d = agent.request('POST', url,
-		headers=client.Headers({'Content-Type': ['application/json']}),
-		# in principle this could be streaming if we had a pipe-thing to glue between json.dump and FileBodyProducer
-		bodyProducer=client.FileBodyProducer(StringIO.StringIO(json.dumps(value))))
-	def callback(response):
-		finished = Deferred()
-		if response.code == http.NO_CONTENT:
-			# TODO: properly get whether there is a body from the response
-			# this is a special case because with no content deliverBody never signals connectionLost
-			finished.callback((response, None))
-		else:
-			response.deliverBody(Accumulator(finished))
-			finished.addCallback(lambda data: (response, data))
-		return finished
-	d.addCallback(callback)
-	return d
-
-
-class Accumulator(Protocol):
-	# TODO eliminate this boilerplate
-	def __init__(self, finished):
-		self.finished = finished
-		self.data = ''
-
-	def dataReceived(self, chunk):
-		self.data += chunk
-	
-	def connectionLost(self, reason):
-		self.finished.callback(self.data)
