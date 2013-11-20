@@ -49,6 +49,7 @@ class OsmoSDRProfile(object):
 
 class OsmoSDRSource(Source):
 	# TODO remove Source superclass overall
+	# Note: Docs for gr-osmosdr are in comments at gr-osmosdr/lib/source_iface.h
 	def __init__(self,
 			osmo_device,
 			name=None,
@@ -68,33 +69,39 @@ class OsmoSDRSource(Source):
 		self.__osmo_device = osmo_device
 		self.__profile = profile
 		
-		self.freq = freq = 98e6
-		self.external_freq_shift = 0
-		self.correction_ppm = 0
-		self.dc_state = 0
-		self.iq_state = 0
-		
 		self.osmosdr_source_block = source = osmosdr.source('numchan=1 ' + osmo_device)
 		if source.get_num_channels() < 1:
 			# osmosdr.source doesn't throw an exception, allegedly because gnuradio can't handle it in a hier_block2 initializer. But we want to fail understandably, so recover by detecting it (sample rate = 0, which is otherwise nonsense)
 			raise LookupError('OsmoSDR device not found (device string = %r)' % osmo_device)
 		elif source.get_num_channels() > 1:
 			raise LookupError('Too many devices/channels; need exactly one (device string = %r)' % osmo_device)
-
-		# configure source with initial state
-		# Note: Docs for these setters at gr-osmosdr/lib/source_iface.h
+		
 		if sample_rate is None:
-			source.set_sample_rate(source.get_sample_rates().stop())
+			# If sample_rate is unspecified, we pick the closest available rate to a reasonable value. (Reasonable in that it's within the data handling capabilities of this software and of USB 2.0 connections.) Previously, we chose the maximum sample rate, but that may be too high for the connection the RF hardware, or too high for the CPU to FFT/demodulate.
+			source.set_sample_rate(convert_osmosdr_range(source.get_sample_rates())(2.4e6))
 		else:
 			source.set_sample_rate(sample_rate)
-		source.set_center_freq(freq, ch)
-		# freq_corr: We implement correction internally because setting this at runtime breaks things
+		
+		self.connect(self.osmosdr_source_block, self)
+		
+		# Misc state
+		self.external_freq_shift = 0
+		self.correction_ppm = 0
+		self.dc_state = 0
+		self.iq_state = 0
 		source.set_dc_offset_mode(self.dc_state, ch)  # no getter, set to known state
 		source.set_iq_balance_mode(self.iq_state, ch)  # no getter, set to known state
-		# Note: DC cancel facility is not implemented for RTLSDR
-	
-		self.connect(self.osmosdr_source_block, self)
-	
+
+		hw_initial_freq = source.get_center_freq()
+		if hw_initial_freq == 0.0:
+			# If the hardware/driver isn't providing a reasonable default (RTLs don't), do it ourselves; go to the middle of the FM broadcast band (rounded up or down to what the hardware reports it supports).
+			self.set_freq(100e6)
+		else:
+			# Note: _invert_frequency won't actually do anything useful currently because external_freq_shift and correction_ppm aren't initialized at this point; it's just the most-correct expression. And if we add ctor args for the frequency modifiers, it'll do the right thing.
+			self.freq = self._invert_frequency(hw_initial_freq)
+		
+		# Misc initial state
+		
 	def __str__(self):
 		return 'OsmoSDR ' + self.__osmo_device
 
@@ -102,7 +109,7 @@ class OsmoSDRSource(Source):
 		# TODO review why cast
 		return int(self.osmosdr_source_block.get_sample_rate())
 	
-	# TODO: apply correction_ppm to freq range
+	# TODO: correction_ppm isn't being applied properly, probably due to cell caching; fix the caching
 	@exported_value(ctor_fn=lambda self: convert_osmosdr_range(
 		self.osmosdr_source_block.get_freq_range(ch),
 		strict=False,
@@ -135,7 +142,7 @@ class OsmoSDRSource(Source):
 	@setter
 	def set_correction_ppm(self, value):
 		self.correction_ppm = float(value)
-		# Not using the osmosdr feature because changing it at runtime produces glitches like the sample rate got changed
+		# Not using the osmosdr feature because changing it at runtime produces glitches like the sample rate got changed; therefore we emulate it ourselves.
 		#self.osmosdr_source_block.set_freq_corr(value, 0)
 		self._update_frequency()
 	

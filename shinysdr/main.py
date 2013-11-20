@@ -57,6 +57,7 @@ import shinysdr.plugins.simulate
 sources = {
 	# OsmoSDR generic device source; handles USRP, RTL-SDR, FunCube
 	# Dongle, HackRF, etc.
+	# If desired, add sample_rate=<n> parameter.
 	# Use shinysdr.plugins.osmosdr.OsmoSDRProfile to set more parameters
 	# to make the best use of your specific hardware's capabilities.
 	'osmo': shinysdr.plugins.osmosdr.OsmoSDRSource(''),
