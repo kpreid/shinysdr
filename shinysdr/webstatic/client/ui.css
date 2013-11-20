@@ -74,25 +74,37 @@ section > h2 {
 .frame > * {
   flex-shrink: 0;  /* sometimes overridden, but in general we want scrolling rather than scrunching */
 }
-.panel, .frame > details > summary {
-  border-style: outset;
-  border-width: .1em;
+.panel, details.frame summary {
   padding: .2em;
 }
-.frame > details {
-  padding: 0 0 0 .4em;
-}
-.frame > details > summary {
-  margin-left: -.4em;
+
+.frame-controls, .panel.frame, details.frame summary {
+  margin-top: 0.2em;
 }
 .frame-controls {
-  margin-bottom: -.1em; /* collapse border with following frame */
+  margin-bottom: -0.2em; /* collapse margin with following frame */
 }
 .panel.frame {
-  border-style: ridge;
-  border-width: .19em;
-  padding: 0 0 0 .4em;
+  margin-top: 0.2em;
+  margin-bottom: 0.2em;
+  border-style: solid;
+  border-width: 0 0 .3em .3em;
+  padding: 0;  /* override .panel padding */
 }
+.frame > details > summary { /* a frame's "more" section */
+  padding-left: .2em;
+
+  font-style: italic;
+  text-transform: lowercase;
+}
+
+details.frame summary {
+  margin: -.2em 0 -.4em -.3em; /* cancel panel padding and close up body */
+}
+details[open].frame summary {
+  margin: -.2em 0 0 -.3em; /* cancel panel padding */
+}
+
 .frame-delete-button {
   /* TODO: better styling; look up good ways to make "X" buttons */
   vertical-align: middle;
