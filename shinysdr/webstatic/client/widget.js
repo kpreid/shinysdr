@@ -2555,6 +2555,7 @@ define(['./values', './events'], function (values, events) {
       var rb = label.appendChild(document.createElement('input'));
       label.appendChild(document.createTextNode(name));
       rb.type = 'radio';
+      if (!target.set) rb.disabled = true;
       return rb;
     });
 
