@@ -435,7 +435,11 @@ define(['./values', './events'], function (values, events) {
           return;
         }
         if (member.type instanceof values.Range) {
-          addWidget(name, member.type.logarithmic ? 'LogSlider' : 'LinSlider', name);
+          if (member.set) {
+            addWidget(name, member.type.logarithmic ? 'LogSlider' : 'LinSlider', name);
+          } else {
+            addWidget(name, 'Meter', name);
+          }
         } else if (member.type instanceof values.Enum) {
           addWidget(name, 'Radio', name);
         } else if (member.type === Boolean) {
