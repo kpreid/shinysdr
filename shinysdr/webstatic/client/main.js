@@ -167,7 +167,8 @@ define(['./values', './events', './database', './network', './maps', './widget',
       
       var everything = new ConstantCell(values.block, makeBlock({
         client: clientBlockCell,
-        radio: remoteCell
+        radio: remoteCell,
+        audio: new ConstantCell(values.block, audioState)  // defined below
       }));
       
       // generic control UI widget tree
@@ -182,6 +183,6 @@ define(['./values', './events', './database', './network', './maps', './widget',
       window.Dradio = radio;
     }); // end gotDesc
   
-    audio.connectAudio('/audio');  // TODO get url from server
+    var audioState = audio.connectAudio('/audio');  // TODO get url from server
   }
 });

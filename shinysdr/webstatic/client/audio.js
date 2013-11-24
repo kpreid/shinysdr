@@ -15,37 +15,79 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./network'], function (network) {
+define(['./values', './events', './network'], function (values, events, network) {
   'use strict';
   
   var exports = {};
   
-  var minQueueAdjust = 2;
-  var initialQueueSize = 12;
-  var maxQueueAdjust = 20;
+  var EMPTY_CHUNK = [];
   
   function connectAudio(url) {
     // TODO portability
     var audio = new webkitAudioContext();
-    //console.log('Sample rate: ' + audio.sampleRate);
-
+    var sampleRate = audio.sampleRate;
+    
     // Queue size management
     // The queue should be large to avoid underruns due to bursty processing/delivery.
     // The queue should be small to minimize latency.
-    var targetQueueSize = initialQueueSize;
-    var queueHistory = new Int32Array(30);
+    var targetQueueSize = Math.round(0.2 * sampleRate);
+    var queueHistory = new Int32Array(20);
     var queueHistoryPtr = 0;
-    var hasOverrun = false;
-    var hasUnderrun = false;
     
+    // Size of data chunks we get from network and the audio context wants, used for tuning our margins
+    var inputChunkSizeSample = 0;
+    var outputChunkSizeSample = 0;
+    
+    // Queue of chunks
     var queue = [];
+    var queueSampleCount = 0;
     
-    network.retryingConnection(url + '?rate=' + encodeURIComponent(JSON.stringify(audio.sampleRate)), function (ws) {
+    // Chunk currently being copied into audio node buffer
+    var audioStreamChunk = EMPTY_CHUNK;
+    var chunkIndex = 0;
+    var prevUnderrun = 0;
+    
+    // User-facing status display
+    // TODO should be faceted read-only when exported
+    var errorTime = 0;
+    function error(s) {
+      info.error._update(String(s));
+      errorTime = Date.now() + 1000;
+    }
+    var info = values.makeBlock({
+      buffered: new values.LocalReadCell(new values.Range([[0, 2]], false, false), 0),
+      target: new values.LocalReadCell(String, ''),  // TODO should be numeric w/ unit
+      error: new values.LocalReadCell(String, ''),
+    });
+    function updateStatus() {
+      var buffered = (queueSampleCount + audioStreamChunk.length - chunkIndex) / sampleRate;
+      var target = targetQueueSize / sampleRate;
+      info.buffered._update(buffered / target);
+      info.target._update(target.toFixed(2) + ' s');
+      if (errorTime < Date.now()) {
+        info.error._update('');
+      }
+    }
+    
+    function updateParameters() {
+      // Update queue size management
+      queueHistory[queueHistoryPtr] = queueSampleCount;
+      queueHistoryPtr = (queueHistoryPtr + 1) % queueHistory.length;
+      var least = Math.min.apply(undefined, queueHistory);
+      var most = Math.max.apply(undefined, queueHistory);
+      targetQueueSize = Math.max(1, Math.round(
+        ((most - least) + Math.max(inputChunkSizeSample, outputChunkSizeSample))));
+      
+      updateStatus();
+    }
+    
+    network.retryingConnection(url + '?rate=' + encodeURIComponent(JSON.stringify(sampleRate)), function (ws) {
       ws.binaryType = 'arraybuffer';
       ws.onmessage = function(event) {
         if (queue.length > 100) {
           console.log('Extreme audio overrun.');
           queue.length = 0;
+          queueSampleCount = 0;
           return;
         }
         var chunk;
@@ -61,41 +103,26 @@ define(['./network'], function (network) {
           return;
         }
         queue.push(chunk);
-        
-        // Update queue size management
-        queueHistory[queueHistoryPtr] = queue.length;
-        queueHistoryPtr = (queueHistoryPtr + 1) % queueHistory.length;
-        var least = Math.min.apply(undefined, queueHistory);
-        //console.log('least=', least, queueHistory);
-        if (hasUnderrun && least <= 1 && targetQueueSize < maxQueueAdjust) {
-          console.log('inc', least, targetQueueSize);
-          targetQueueSize++;
-          hasUnderrun = false;
-        } else if (hasOverrun && least > 4 && targetQueueSize > minQueueAdjust) {
-          console.log('dec', least, targetQueueSize);
-          targetQueueSize--;
-          hasOverrun = false;
-        }
+        queueSampleCount += chunk.length;
+        inputChunkSizeSample = chunk.length;
+        updateParameters();
       };
       ws.addEventListener('close', function (event) {
+        error('Disconnected.');
         closed();
       });
       setTimeout(opened, 0);
     });
     
-    // Choose buffer size
-    var maxDelay = 0.20;
-    var maxBufferSize = audio.sampleRate * maxDelay;
+    // Choose max buffer size
+    var maxDelay = 0.15;
+    var maxBufferSize = sampleRate * maxDelay;
     var bufferSize = 1 << Math.floor(Math.log(maxBufferSize) / Math.LN2);
-    //console.log(maxBufferSize, bufferSize);
     
     var ascr = audio.createScriptProcessor(bufferSize, 0, 2);
-    var empty = [];
-    var audioStreamChunk = empty;
-    var chunkIndex = 0;
-    var prevUnderrun = 0;
     ascr.onaudioprocess = function audioCallback(event) {
       var abuf = event.outputBuffer;
+      outputChunkSizeSample = abuf.length;
       var l = abuf.getChannelData(0);
       var r = abuf.getChannelData(1);
       var j;
@@ -108,22 +135,22 @@ define(['./network'], function (network) {
       while (j < abuf.length) {
         // Get next chunk
         // TODO: shift() is expensive
-        audioStreamChunk = queue.shift() || empty;
+        audioStreamChunk = queue.shift() || EMPTY_CHUNK;
+        queueSampleCount -= audioStreamChunk.length;
+        chunkIndex = 0;
         if (audioStreamChunk.length == 0) {
           break;
         }
-        chunkIndex = 0;
         for (;
              chunkIndex < audioStreamChunk.length && j < abuf.length;
              chunkIndex += 2, j++) {
           l[j] = audioStreamChunk[chunkIndex];
           r[j] = audioStreamChunk[chunkIndex + 1];
         }
-        if (queue.length > targetQueueSize) {
-          var drop = (queue.length - targetQueueSize) * 3;
-          hasOverrun = true;
+        if (queueSampleCount > targetQueueSize) {
+          var drop = Math.ceil((queueSampleCount - targetQueueSize) / 1024);
           if (drop > 12) {  // ignore small clock-skew-ish amounts of overrun
-            console.log('Audio overrun; dropping', drop, 'samples.');
+            error('Overrun; dropping ' + drop + ' samples.');
           }
           j = Math.max(0, j - drop);
         }
@@ -136,10 +163,11 @@ define(['./network'], function (network) {
       }
       if (prevUnderrun != 0 && underrun != bufferSize) {
         // Report underrun, but only if it's not just due to the stream stopping
-        console.log('Audio underrun by', prevUnderrun, 'samples.');
-        hasUnderrun = true;
+        error('Underrun by ' + prevUnderrun + ' samples.');
       }
       prevUnderrun = underrun;
+
+      updateParameters();
     };
 
     // Workaround for Chromium bug https://code.google.com/p/chromium/issues/detail?id=82795 -- ScriptProcessor nodes are not kept live
@@ -152,6 +180,8 @@ define(['./network'], function (network) {
     function closed() {
       ascr.disconnect(audio.destination);
     }
+    
+    return info;
   }
   
   exports.connectAudio = connectAudio;

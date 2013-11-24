@@ -371,7 +371,7 @@ define(['./values', './events'], function (values, events) {
     var appendTarget = container;
     var claimed = Object.create(null);
     
-    container.textContent = '';
+    //container.textContent = '';
     container.classList.add('frame');
     if (config.shouldBePanel && !optEmbed) {
       container.classList.add('panel');
