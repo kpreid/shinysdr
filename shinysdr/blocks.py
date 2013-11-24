@@ -173,3 +173,58 @@ def test_subprocess(args, substring, shell=False):
 		return False
 	except subprocess.CalledProcessError, e:
 		return False
+
+
+class _NoContext(object):
+	def lock(self): pass
+	
+	def unlock(self): pass
+
+
+class MessageDistributorSink(gr.hier_block2):
+	'''Like gnuradio.blocks.message_sink, but copies its messages to a dynamic set of queues and saves the most recent item.
+	
+	Never blocks.'''
+	def __init__(self, itemsize, context, migrate=None):
+		gr.hier_block2.__init__(
+			self, self.__class__.__name__,
+			gr.io_signature(1, 1, itemsize),
+			gr.io_signature(0, 0, 0),
+		)
+		self.__itemsize = itemsize
+		self.__context = _NoContext()
+		self.__peek = blocks.probe_signal_vb(itemsize)
+		self.__subscriptions = {}
+		
+		self.connect(self, self.__peek)
+		
+		if migrate is not None:
+			assert isinstance(migrate, MessageDistributorSink)  # sanity check
+			for queue in migrate.__subscriptions.keys():
+				migrate.unsubscribe(queue)
+				self.subscribe(queue)
+		
+		# set context now, not earlier, so as not to call it while migrating
+		self.__context = context
+
+	def get(self):
+		return self.__peek.level()
+	
+	def subscribe(self, queue):
+		assert queue not in self.__subscriptions
+		sink = blocks.message_sink(self.__itemsize, queue, True)
+		self.__subscriptions[queue] = sink
+		try:
+			self.__context.lock()
+			self.connect(self, sink)
+		finally:
+			self.__context.unlock()
+	
+	def unsubscribe(self, queue):
+		sink = self.__subscriptions[queue]
+		del self.__subscriptions[queue]
+		try:
+			self.__context.lock()
+			self.disconnect(self, sink)
+		finally:
+			self.__context.unlock()

@@ -21,6 +21,7 @@ import array
 import bisect
 import struct
 
+from gnuradio import gr
 
 class BaseCell(object):
 	def __init__(self, target, key, persists=True, writable=False):
@@ -75,6 +76,9 @@ class ValueCell(BaseCell):
 		BaseCell.__init__(self, target, key, **kwargs)
 		self._ctor = ctor
 	
+	def isBlock(self):
+		return False
+	
 	def type(self):
 		return self._ctor
 	
@@ -96,9 +100,6 @@ class Cell(ValueCell):
 		else:
 			self._setter = None
 	
-	def isBlock(self):
-		return False
-	
 	def get(self):
 		return self._getter()
 	
@@ -111,30 +112,21 @@ class Cell(ValueCell):
 sizeof_float = 4
 
 
-class MsgQueueCell(ValueCell):
-	def __init__(self, target, key, fill=True, ctor=None):
-		ValueCell.__init__(self, target, key, writable=False, persists=False, ctor=ctor)
-		self._qgetter = getattr(self._target, 'get_' + key + '_queue')
-		self._igetter = getattr(self._target, 'get_' + key + '_info')
-		self._splitting = None
-		self._fill = fill
-		if fill:
-			self._prev = None
-	
-	def isBlock(self):
-		return False
+class MessageSplitter(object):
+	def __init__(self, queue, info_getter, close):
+		self.__queue = queue
+		self.__igetter = info_getter
+		self.__splitting = None
+		self.close = close  # provided as method
 	
 	def get(self, binary=False):
-		if self._splitting is not None:
-			(string, itemsize, count, index) = self._splitting
+		if self.__splitting is not None:
+			(string, itemsize, count, index) = self.__splitting
 		else:
-			queue = self._qgetter()
+			queue = self.__queue
 			# we would use .delete_head_nowait() but it returns a crashy wrapper instead of a sensible value like None. So implement a test (which is safe as long as we're the only reader)
 			if queue.empty_p():
-				if binary:  # TODO kludge
-					return None
-				else:
-					return self._doFill()
+				return None
 			else:
 				message = queue.delete_head()
 			if message.length() > 0:
@@ -148,32 +140,43 @@ class MsgQueueCell(ValueCell):
 		
 		# update state
 		if index == count - 1:
-			self._splitting = None
+			self.__splitting = None
 		else:
-			self._splitting = (string, itemsize, count, index + 1)
+			self.__splitting = (string, itemsize, count, index + 1)
 		
 		# extract value
+		# TODO: this should be a separate concern, refactor
 		itemStr = string[itemsize * index : itemsize * (index + 1)]
 		if binary:
 			# TODO: for general case need to have configurable format string
-			value = struct.pack('dd', *self._igetter()) + itemStr
+			value = struct.pack('dd', *self.__igetter()) + itemStr
 		else:
 			# TODO: allow caller to provide format info (nontrivial in case of runtime variable length)
 			unpacker = array.array('f')
 			unpacker.fromstring(itemStr)
-			value = (self._igetter(), unpacker.tolist())
-		if self._fill and not binary:  # TODO: fill should work for binary too
-			self._prev = value
+			value = (self.__igetter(), unpacker.tolist())
 		return value
+
+
+class StreamCell(ValueCell):
+	def __init__(self, target, key, ctor=None):
+		ValueCell.__init__(self, target, key, writable=False, persists=False, ctor=ctor)
+		self._dgetter = getattr(self._target, 'get_' + key + '_distributor')
+		self._igetter = getattr(self._target, 'get_' + key + '_info')
 	
-	def _doFill(self):
-		if self._fill:
-			return self._prev
-		else:
-			return None
+	def subscribe(self):
+		queue = gr.msg_queue()
+		self._dgetter().subscribe(queue)
+		def close():
+			self._dgetter().unsubscribe(queue)
+		return MessageSplitter(queue, self._igetter, close)
+	
+	def get(self):
+		# TODO does not do proper value transformation here
+		return self._dgetter().get()
 	
 	def set(self, value):
-		raise Exception('MsgQueueCell is not writable.')
+		raise Exception('StreamCell is not writable.')
 
 
 class BaseBlockCell(BaseCell):

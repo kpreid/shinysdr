@@ -39,7 +39,7 @@ import weakref
 import shinysdr.top
 import shinysdr.plugins
 import shinysdr.db
-from shinysdr.values import ExportedState, BaseCell, BlockCell, MsgQueueCell
+from shinysdr.values import ExportedState, BaseCell, BlockCell, StreamCell
 
 
 # temporary kludge until upstream takes our patch
@@ -213,8 +213,9 @@ class StateStreamInner(object):
 					block = obj.getBlock()
 					meet(block, self._urls[obj])
 					maybesend(obj, block, self._registered[block])
-				elif isinstance(obj, MsgQueueCell):  # TODO kludge
-					b = obj.get(binary=True)
+				elif isinstance(obj, StreamCell):  # TODO kludge
+					subscription = self._previousValues[obj]
+					b = subscription.get(binary=True)
 					if b is not None:
 						self.__send1(True, struct.pack('I', self._registered[obj]) + b)
 				else:
@@ -235,7 +236,10 @@ class StateStreamInner(object):
 				self._urls[obj] = url
 				if isinstance(obj, BaseCell):
 					self.__send1(False, ('register_cell', serial, url, obj.description()))
-					self._previousValues[obj] = obj.get()
+					if isinstance(obj, StreamCell):  # TODO kludge
+						self._previousValues[obj] = obj.subscribe()
+					else:
+						self._previousValues[obj] = obj.get()
 				elif isinstance(obj, ExportedState):
 					# let traverse send the details
 					self.__send1(False, ('register_block', serial, url))

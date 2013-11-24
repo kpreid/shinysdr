@@ -24,8 +24,8 @@ from gnuradio import gr
 from gnuradio.eng_option import eng_option
 from gnuradio.filter import firdes
 from optparse import OptionParser
-from shinysdr.values import ExportedState, CollectionState, exported_value, setter, BlockCell, MsgQueueCell, Enum, Range
-from shinysdr.blocks import make_resampler
+from shinysdr.values import ExportedState, CollectionState, exported_value, setter, BlockCell, StreamCell, Enum, Range
+from shinysdr.blocks import make_resampler, MessageDistributorSink
 from shinysdr.receiver import Receiver
 
 from twisted.internet import reactor
@@ -76,7 +76,6 @@ class Top(gr.top_block, ExportedState):
 
 		# Blocks etc.
 		self.source = None
-		self.spectrum_queue = None
 		self.spectrum_sink = None
 		self.spectrum_fft_block = None
 		
@@ -200,11 +199,10 @@ class Top(gr.top_block, ExportedState):
 			self.__needs_spectrum = False
 			self.__needs_reconnect = True
 			
-			self.spectrum_queue = gr.msg_queue(limit=10)
-			self.spectrum_sink = blocks.message_sink(
-				self.spectrum_resolution * gr.sizeof_float,
-				self.spectrum_queue,
-				True) # dont_block
+			self.spectrum_sink = MessageDistributorSink(
+				itemsize=self.spectrum_resolution * gr.sizeof_float,
+				context=Context(self),
+				migrate=self.spectrum_sink)
 			self.spectrum_fft_block = gnuradio.fft.logpwrfft.logpwrfft_c(
 				sample_rate=self.input_rate,
 				fft_size=self.spectrum_resolution,
@@ -297,7 +295,7 @@ class Top(gr.top_block, ExportedState):
 	def state_def(self, callback):
 		super(Top, self).state_def(callback)
 		# TODO make this possible to be decorator style
-		callback(MsgQueueCell(self, 'spectrum_fft', fill=True, ctor=SpectrumTypeStub))
+		callback(StreamCell(self, 'spectrum_fft', ctor=SpectrumTypeStub))
 		callback(BlockCell(self, 'sources'))
 		callback(BlockCell(self, 'source', persists=False))
 		callback(BlockCell(self, 'receivers'))
@@ -391,8 +389,8 @@ class Top(gr.top_block, ExportedState):
 	def get_spectrum_fft_info(self):
 		return (self.input_freq, self.input_rate)
 	
-	def get_spectrum_fft_queue(self):
-		return self.spectrum_queue
+	def get_spectrum_fft_distributor(self):
+		return self.spectrum_sink
 	
 	@exported_value(ctor=float)
 	def get_cpu_use(self):
@@ -420,21 +418,26 @@ class Top(gr.top_block, ExportedState):
 			self.unlock()
 
 
-class ContextForReceiver(object):
-	def __init__(self, top, key):
+class Context(object):
+	def __init__(self, top):
 		self._top = top
-		self._key = key
-		self._enabled = False # assigned outside
-
-	def revalidate(self):
-		if self._enabled:
-			self._top._update_receiver_validity(self._key)
 	
 	def lock(self):
 		self._top._recursive_lock()
 	
 	def unlock(self):
 		self._top._recursive_unlock()
+
+
+class ContextForReceiver(Context):
+	def __init__(self, top, key):
+		Context.__init__(self, top)
+		self._key = key
+		self._enabled = False # assigned outside
+
+	def revalidate(self):
+		if self._enabled:
+			self._top._update_receiver_validity(self._key)
 
 
 def base26(x):
