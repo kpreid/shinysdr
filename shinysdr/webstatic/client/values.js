@@ -135,8 +135,10 @@ define(['./events'], function (events) {
     return this._value;
   };
   LocalCell.prototype.set = function(v) {
-    this._value = v;
-    this.n.notify();
+    if (this._value !== v) {
+      this._value = v;
+      this.n.notify();
+    }
   };
   exports.LocalCell = LocalCell;
   
