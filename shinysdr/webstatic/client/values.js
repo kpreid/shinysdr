@@ -142,6 +142,24 @@ define(['./events'], function (events) {
   };
   exports.LocalCell = LocalCell;
   
+  // Cell whose state is not settable
+  function LocalReadCell(type, initialValue) {
+    Cell.call(this, type);
+    this._value = initialValue;
+    // TODO use facets instead
+    this._update = function(v) {
+      if (this._value !== v) {
+        this._value = v;
+        this.n.notify();
+      }
+    }.bind(this);
+  }
+  LocalReadCell.prototype = Object.create(Cell.prototype, {constructor: {value: LocalReadCell}});
+  LocalReadCell.prototype.get = function() {
+    return this._value;
+  };
+  exports.LocalReadCell = LocalReadCell;
+  
   // Cell which cannot be set
   function ConstantCell(type, value) {
     Cell.call(this, type);
