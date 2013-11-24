@@ -19,14 +19,11 @@ define(['./values', './events', './database', './network', './maps', './widget',
   'use strict';
   
   var any = values.any;
+  var ConstantCell = values.ConstantCell;
   var LocalCell = values.LocalCell;
-  var StorageNamespace = values.StorageNamespace;
+  var makeBlock = values.makeBlock;
   var StorageCell = values.StorageCell;
-  
-  function stubBlock(obj) {
-    obj._reshapeNotice = new events.Neverfier();
-    return obj;
-  }
+  var StorageNamespace = values.StorageNamespace;
   
   var scheduler = new events.Scheduler();
   
@@ -46,13 +43,13 @@ define(['./values', './events', './database', './network', './maps', './widget',
     }
     return cell;
   }
-  var clientState = stubBlock({
+  var clientState = makeBlock({
     opengl: cc('opengl', Boolean, true),
     opengl_float: cc('opengl_float', Boolean, true),
     spectrum_split: cc('spectrum_split', new values.Range([[0, 1]], false, false), 0.5),
     spectrum_average: cc('spectrum_average', new values.Range([[0.05, 1]], true, false), 0.25)
   });
-  var clientBlockCell = new LocalCell(values.block, clientState);
+  var clientBlockCell = new ConstantCell(values.block, clientState);
   
   // TODO get url from server
   network.externalGet('/client/plugin-index.json', 'text', function gotPluginIndex(jsonstr) {
@@ -168,7 +165,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
         scheduler: scheduler
       });
       
-      var everything = new LocalCell(values.block, stubBlock({
+      var everything = new ConstantCell(values.block, makeBlock({
         client: clientBlockCell,
         radio: remoteCell
       }));

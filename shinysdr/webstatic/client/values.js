@@ -124,7 +124,8 @@ define(['./events'], function (events) {
     return this.get();
   };
   exports.Cell = Cell;
-  
+
+  // Cell whose state is not persistent
   function LocalCell(type, initialValue) {
     Cell.call(this, type);
     this._value = initialValue;
@@ -138,6 +139,18 @@ define(['./events'], function (events) {
     this.n.notify();
   };
   exports.LocalCell = LocalCell;
+  
+  // Cell which cannot be set
+  function ConstantCell(type, value) {
+    Cell.call(this, type);
+    this._value = value;
+    this.n = new events.Neverfier();  // TODO throwing away initial value, unclean
+  }
+  ConstantCell.prototype = Object.create(Cell.prototype, {constructor: {value: ConstantCell}});
+  ConstantCell.prototype.get = function() {
+    return this._value;
+  };
+  exports.ConstantCell = ConstantCell;
   
   // Adds a prefix to Storage (localStorage) keys
   function StorageNamespace(base, prefix) {
@@ -182,6 +195,13 @@ define(['./events'], function (events) {
     this.n.notify();
   };
   exports.StorageCell = StorageCell;
+  
+  // make an object which is like a remote object (called block for legacy reasons)
+  function makeBlock(obj) {
+    Object.defineProperty(obj, '_reshapeNotice', {value: new events.Neverfier()});
+    return obj;
+  }
+  exports.makeBlock = makeBlock;
   
   return Object.freeze(exports);
 });
