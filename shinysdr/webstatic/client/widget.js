@@ -1737,22 +1737,23 @@ define(['./values', './events'], function (values, events) {
       }, false);
       
       // spin buttons
-      digit.style.position = 'relative';
-      [-1, 1].forEach(function (direction) {
-        var up = direction > 0;
-        var layoutShim = digit.appendChild(document.createElement('span'));
-        layoutShim.className = 'knob-spin-button-shim knob-spin-' + (up ? 'up' : 'down');
-        var button = layoutShim.appendChild(document.createElement('button'));
-        button.className = 'knob-spin-button knob-spin-' + (up ? 'up' : 'down');
-        button.textContent = up ? '+' : '-';
-        button.addEventListener('click', function (event) {
-          spin(direction);
-          event.preventDefault();
-          event.stopPropagation();
-        }, false);
-        // If in the normal tab order, its appearing/disappearing causes trouble
-        button.tabIndex = -1;
-      });
+      // TODO: These no longer work due to some change in Chrome's handling of clicks on the CSS-auto-hidden buttons. Disabled until we get around to fixing them, or find some other UI technique that's plausibly appropriate for touchscreens.
+      //digit.style.position = 'relative';
+      //[-1, 1].forEach(function (direction) {
+      //  var up = direction > 0;
+      //  var layoutShim = digit.appendChild(document.createElement('span'));
+      //  layoutShim.className = 'knob-spin-button-shim knob-spin-' + (up ? 'up' : 'down');
+      //  var button = layoutShim.appendChild(document.createElement('button'));
+      //  button.className = 'knob-spin-button knob-spin-' + (up ? 'up' : 'down');
+      //  button.textContent = up ? '+' : '-';
+      //  button.addEventListener('click', function (event) {
+      //    spin(direction);
+      //    event.preventDefault();
+      //    event.stopPropagation();
+      //  }, false);
+      //  // If in the normal tab order, its appearing/disappearing causes trouble
+      //  button.tabIndex = -1;
+      //});
     }(i));
     
     places[places.length - 1].element.tabIndex = 0; // initial tabbable digit

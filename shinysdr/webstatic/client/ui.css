@@ -179,8 +179,17 @@ details[open].frame summary {
   opacity: 0.18;
 }
 .knob-dim:focus {
-  opacity: 1.0; /* for the sake of the buttons */
+  opacity: 1.0;
 }
+.knob-digit:focus {
+  /* hide normal focus ring */
+  outline: none;
+  /* and replace with a different more text-selectiony cue */
+  background: #555;
+  color: white;
+}
+/*
+TODO: These no longer work due to some change in Chrome's handling of clicks on the CSS-auto-hidden buttons. Disabled until we get around to fixing them, or find some other UI technique that's plausibly appropriate for touchscreens.
 .knob-spin-button-shim {
   position: absolute;
   right: 50%;
@@ -189,13 +198,6 @@ details[open].frame summary {
 .knob-digit:focus .knob-spin-button-shim {
   outline: none;
   display: inline-block;
-}
-.knob-digit:focus {
-  /* the outline goes wacky due to the button centering trick, so hide it */
-  outline: none;
-  /* and replace with a different cue */
-  background: #555;
-  color: white;
 }
 .knob-spin-button-shim.knob-spin-up { bottom: 100%; }
 .knob-spin-button-shim.knob-spin-down { top: 100%; }
@@ -209,7 +211,7 @@ details[open].frame summary {
   padding: 0;
   margin: 0;
   display: block;
-}
+}*/
 
 /* widgets: frequency scale */
 .freqscale {
