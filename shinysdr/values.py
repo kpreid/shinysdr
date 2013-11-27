@@ -325,6 +325,7 @@ def setter(f):
 
 
 class ExportedGetter(object):
+	'''Descriptor for a getter exported using @exported_value.'''
 	def __init__(self, f, cell_kwargs):
 		self.__function = f
 		self._cell_kwargs = cell_kwargs
@@ -349,6 +350,7 @@ class ExportedGetter(object):
 
 
 class ExportedSetter(object):
+	'''Descriptor for a setter exported using @setter.'''
 	def __init__(self, f):
 		# TODO: Coerce value with ctor?
 		self.__function = f
