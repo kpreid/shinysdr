@@ -41,6 +41,8 @@ def main():
 		help='write template configuration file to CONFIG and exit')
 	argParser.add_argument('-g, --go', dest='openBrowser', action='store_true',
 		help='open the UI in a web browser')
+	argParser.add_argument('--force-run', dest='force_run', action='store_true',
+		help='Run DSP even if no client is connected (for debugging).')
 	args = argParser.parse_args()
 
 	import shinysdr.top
@@ -127,6 +129,12 @@ rootCap = '%(rootCap)s'
 		webbrowser.open(url=url, new=1, autoraise=True)
 	else:
 		print 'Ready. Visit ' + url
+	
+	if args.force_run:
+		print 'force_run'
+		from gnuradio.gr import msg_queue
+		top.add_audio_queue(msg_queue(limit=2), 44100)
+		top.set_unpaused(True)
 	
 	reactor.run()
 
