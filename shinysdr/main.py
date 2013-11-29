@@ -32,7 +32,7 @@ import __builtin__
 from twisted.internet import reactor
 
 
-def main():
+def main(args_strings=sys.argv, _abort_for_test=False):
 	# Option parsing is done before importing the main modules so as to avoid the cost of initializing gnuradio if we are aborting early. TODO: Make that happen for createConfig too.
 	argParser = argparse.ArgumentParser()
 	argParser.add_argument('configFile', metavar='CONFIG',
@@ -43,7 +43,7 @@ def main():
 		help='open the UI in a web browser')
 	argParser.add_argument('--force-run', dest='force_run', action='store_true',
 		help='Run DSP even if no client is connected (for debugging).')
-	args = argParser.parse_args()
+	args = argParser.parse_args(args=args_strings)
 
 	import shinysdr.top
 	import shinysdr.web
@@ -136,7 +136,10 @@ rootCap = '%(rootCap)s'
 		top.add_audio_queue(msg_queue(limit=2), 44100)
 		top.set_unpaused(True)
 	
-	reactor.run()
+	if _abort_for_test:
+		stop()
+	else:
+		reactor.run()
 
 
 def top_defaults(top):
@@ -146,8 +149,8 @@ def top_defaults(top):
 	# TODO: fix fragility of assumptions
 	sources = top.state()['source_name'].type().values()
 	restricted = dict(sources)
-	del restricted['audio']  # typically not RF
-	del restricted['sim']  # would prefer the real thing
+	if 'audio' in restricted: del restricted['audio']  # typically not RF
+	if 'sim' in restricted: del restricted['sim']  # would prefer the real thing
 	if 'osmo' in restricted:
 		state['source_name'] = 'osmo'
 	elif len(restricted.keys()) > 0:
