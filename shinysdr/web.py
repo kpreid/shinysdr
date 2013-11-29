@@ -185,7 +185,17 @@ class StateStreamInner(object):
 		self._send_batch = []
 	
 	def connectionLost(self, reason):
-		pass
+		for obj in self._registered.keys():
+			self.__drop(obj)
+	
+	def __drop(self, obj):
+		if isinstance(obj, StreamCell):  # TODO kludge; use generic interface
+			subscription = self._previousValues[obj]
+			subscription.close()
+		del self._registered[obj]
+		del self._previousValues[obj]
+		del self._urls[obj]
+		
 	
 	def _checkUpdates(self):
 		seen_this_time = set([self._cell])
@@ -258,9 +268,7 @@ class StateStreamInner(object):
 		deletions.sort(key=lambda obj: self._registered[obj])  # deterministic order
 		for obj in deletions:
 			self.__send1(False, ('delete', self._registered[obj]))
-			del self._registered[obj]
-			del self._previousValues[obj]
-			del self._urls[obj]
+			self.__drop(obj)
 			
 	
 	def __flush(self):
