@@ -124,7 +124,18 @@ define(['./events'], function (events) {
     return this.get();
   };
   exports.Cell = Cell;
-
+  
+  function identical(a, b) {
+    if (typeof a === 'number' && typeof b === 'number') {
+      return (
+        (a === b && 1/a === 1/b)  // finite, zero, or infinity
+        || (isNaN(a) && isNaN(b))  // NaN
+      );
+    } else {
+      return a === b;
+    }
+  }
+  
   // Cell whose state is not persistent
   function LocalCell(type, initialValue) {
     Cell.call(this, type);
@@ -135,7 +146,7 @@ define(['./events'], function (events) {
     return this._value;
   };
   LocalCell.prototype.set = function(v) {
-    if (this._value !== v) {
+    if (!identical(this._value, v)) {
       this._value = v;
       this.n.notify();
     }
