@@ -225,8 +225,9 @@ class StateStreamInner(object):
 					maybesend(obj, block, self._registered[block])
 				elif isinstance(obj, StreamCell):  # TODO kludge
 					subscription = self._previousValues[obj]
-					b = subscription.get(binary=True)
-					if b is not None:
+					while True:
+						b = subscription.get(binary=True)
+						if b is None: break
 						self.__send1(True, struct.pack('I', self._registered[obj]) + b)
 				else:
 					value = obj.get()
