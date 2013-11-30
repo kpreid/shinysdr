@@ -667,7 +667,6 @@ define(['./values', './events'], function (values, events) {
     var dataHook = function () {}, drawOuter = function () {};
     
     function draw() {
-      fftCell.n.listen(newFFTFrame);
       drawOuter();
     }
     draw.scheduler = config.scheduler;
@@ -741,15 +740,15 @@ define(['./values', './events'], function (values, events) {
       drawOuter = drawImpl.performDraw.bind(drawImpl);
     }.call(this));
     
-    function newFFTFrame() {
-      var buffer = fftCell.get();  // draw() will do the listening
-      var freq = fftCell.getCenterFreq();
+    function newFFTFrame(bundle) {
+      var freq = bundle[0][0];
+      var buffer = bundle[1];
       dataHook(buffer, freq);
       draw.scheduler.enqueue(draw);
     }
     newFFTFrame.scheduler = config.scheduler;
 
-    newFFTFrame();
+    fftCell.subscribe(newFFTFrame);
     draw();
   }
   

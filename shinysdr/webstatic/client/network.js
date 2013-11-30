@@ -146,14 +146,19 @@ define(['./values', './events'], function (values, events) {
     var VSIZE = Float32Array.BYTES_PER_ELEMENT;
     var centerFreq = NaN;
     var sampleRate = NaN;
+
+    // kludge to ensure that widgets get all of the frames
+    // TODO: put this on a more general and sound framework
+    var subscriptions = [];
     
     function transform(json) {
       if (json === null) {
         // occurs when server is paused on load — TODO fix server so it always returns an array
         return fft;
       }
-      centerFreq = json[0][0];
-      sampleRate = json[0][1];
+      var info = json[0];
+      centerFreq = info[0];
+      sampleRate = info[1];
       var arrayFFT = json[1];
 
       var halfFFTSize = arrayFFT.length / 2;
@@ -169,6 +174,12 @@ define(['./values', './events'], function (values, events) {
       fft.set(swapbuf.subarray(0, halfFFTSize), halfFFTSize);
       fft.set(swapbuf.subarray(halfFFTSize, fft.length), 0);
       
+      var bundled = [info, fft];
+      // TODO replace this with something async (note that fft is mutated so we need to allocate or use a free-list/circular-buffer strategy)
+      for (var i = 0; i < subscriptions.length; i++) {
+        (0,subscriptions[i])(bundled);
+      }
+      
       return fft;
     }
     
@@ -179,6 +190,11 @@ define(['./values', './events'], function (values, events) {
     };
     this.getSampleRate = function() {
       return sampleRate;
+    };
+    this.subscribe = function(callback) {
+      // TODO need to provide for unsubscribing
+      subscriptions.push(callback);
+      callback([[centerFreq, sampleRate], fft]);
     };
   }
   SpectrumCell.prototype = Object.create(ReadCell.prototype, {constructor: {value: SpectrumCell}});
