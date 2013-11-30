@@ -32,9 +32,9 @@ import __builtin__
 from twisted.internet import reactor
 
 
-def main(args_strings=sys.argv, _abort_for_test=False):
+def main(argv=sys.argv, _abort_for_test=False):
 	# Option parsing is done before importing the main modules so as to avoid the cost of initializing gnuradio if we are aborting early. TODO: Make that happen for createConfig too.
-	argParser = argparse.ArgumentParser()
+	argParser = argparse.ArgumentParser(prog=argv[0])
 	argParser.add_argument('configFile', metavar='CONFIG',
 		help='path of configuration file')
 	argParser.add_argument('--create', dest='createConfig', action='store_true',
@@ -43,7 +43,7 @@ def main(args_strings=sys.argv, _abort_for_test=False):
 		help='open the UI in a web browser')
 	argParser.add_argument('--force-run', dest='force_run', action='store_true',
 		help='Run DSP even if no client is connected (for debugging).')
-	args = argParser.parse_args(args=args_strings)
+	args = argParser.parse_args(args=argv[1:])
 
 	import shinysdr.top
 	import shinysdr.web

@@ -52,5 +52,5 @@ class TestMain(unittest.TestCase):
 	def test_main_first_run_sources(self):
 		'''Regression: first run with no state file would fail due to assumptions about the source names.'''
 		main.main(
-			args_strings=[self.__config_name],
+			argv=['shinysdr', self.__config_name],
 			_abort_for_test=True)
