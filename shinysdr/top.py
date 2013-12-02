@@ -21,9 +21,7 @@ import gnuradio
 import gnuradio.fft.logpwrfft
 from gnuradio import blocks
 from gnuradio import gr
-from gnuradio.eng_option import eng_option
 from gnuradio.filter import firdes
-from optparse import OptionParser
 from shinysdr.values import ExportedState, CollectionState, exported_value, setter, BlockCell, StreamCell, Enum, Range
 from shinysdr.blocks import make_resampler, MessageDistributorSink
 from shinysdr.receiver import Receiver
