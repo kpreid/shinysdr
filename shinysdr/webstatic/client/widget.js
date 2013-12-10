@@ -19,6 +19,8 @@ define(['./values', './events'], function (values, events) {
   'use strict';
   
   var Cell = values.Cell;
+  var ConstantCell = values.ConstantCell;
+  var DerivedCell = values.DerivedCell;
   var StorageNamespace = values.StorageNamespace;
   
   var exports = {};
@@ -80,80 +82,98 @@ define(['./values', './events'], function (values, events) {
       createWidgets(rootTargetCell, context, child);
     });
   }
-  function createWidgets(rootTargetCell, context, node) {
+  
+  // Replace the given template/input node with a widget node.
+  function createWidget(targetCellCell, targetStr, context, node, widgetCtor) {
     var scheduler = context.scheduler;
-    if (node.hasAttribute && node.hasAttribute('data-widget')) {
-      var typename = node.getAttribute('data-widget');
-      var T = widgets[typename];
-      if (!T) {
-        console.error('Bad widget type:', node);
+    
+    var originalStash = node;
+    
+    var container = node.parentNode;
+    var currentWidgetEl = node;
+    var shouldBePanel = container.classList.contains('frame') || container.nodeName === 'DETAILS';  // TODO: less DWIM, more precise
+    
+    var go = function go() {
+      var targetCell = targetCellCell.depend(go);
+      if (!targetCell) {
+        if (node.parentNode) { // TODO: This condition shouldn't be necessary?
+          node.parentNode.replaceChild(document.createTextNode('[Missing: ' + targetStr + ']'), node);
+        }
         return;
       }
       
-      var originalStash = node;
-      
-      var container = node.parentNode;
-      var currentWidgetEl = node;
-      var shouldBePanel = container.classList.contains('frame') || container.nodeName === 'DETAILS';  // TODO: less DWIM, more precise
-      
-      var go = function go() {
-        var targetCell;
-        if (node.hasAttribute('data-target')) {
-          var targetStr = node.getAttribute('data-target');
-          if (!rootTargetCell.depend) debugger;
-          targetCell = rootTargetCell.depend(go)[targetStr];
-          if (!targetCell) {
-            if (node.parentNode) { // TODO: This condition shouldn't be necessary?
-              node.parentNode.replaceChild(document.createTextNode('[Missing: ' + targetStr + ']'), node);
-            }
-            return;
-          }
-        } else {
-          targetCell = rootTargetCell;
-        }
-
-        var widgetTarget;
-        if (targetCell.type === values.block) {
-          widgetTarget = targetCell.depend(go);
-          widgetTarget._reshapeNotice.listen(go);
-        } else {
-          widgetTarget = targetCell;
-        }
-
-        var newSourceEl = originalStash.cloneNode(true);
-        container.replaceChild(newSourceEl, currentWidgetEl);
-        var widget = new T({
-          scheduler: scheduler,
-          target: widgetTarget,
-          element: newSourceEl,
-          view: context.spectrumView, // TODO should be context-dependent
-          clientState: context.clientState,
-          freqDB: context.freqDB, // TODO: remove the need for this
-          radio: context.radio, // TODO: remove the need for this
-          storage: node.hasAttribute('id') ? new StorageNamespace(localStorage, 'shinysdr.widgetState.' + node.getAttribute('id') + '.') : null,
-          shouldBePanel: shouldBePanel,
-          rebuildMe: go
-        });
-        widget.element.classList.add('widget-' + typename);
-        
-        var newEl = widget.element;
-        var placeMark = newSourceEl.nextSibling;
-        if (newSourceEl.hasAttribute('title')) {
-          console.warn('Widget ' + typename + ' did not handle title attribute');
-        }
-        
-        if (newSourceEl.parentNode === container) {
-          container.replaceChild(newEl, newSourceEl);
-        } else {
-          container.insertBefore(newEl, placeMark);
-        }
-        currentWidgetEl = newEl;
-        
-        // allow widgets to embed widgets
-        createWidgetsInNode(targetCell || rootTargetCell, context, widget.element);
+      var widgetTarget;
+      if (targetCell.type === values.block) {
+        widgetTarget = targetCell.depend(go);
+        widgetTarget._reshapeNotice.listen(go);
+      } else {
+        widgetTarget = targetCell;
       }
-      go.scheduler = scheduler;
-      go();
+
+      var newSourceEl = originalStash.cloneNode(true);
+      container.replaceChild(newSourceEl, currentWidgetEl);
+      var widget = new widgetCtor({
+        scheduler: scheduler,
+        target: widgetTarget,
+        element: newSourceEl,
+        view: context.spectrumView, // TODO should be context-dependent
+        clientState: context.clientState,
+        freqDB: context.freqDB, // TODO: remove the need for this
+        radio: context.radio, // TODO: remove the need for this
+        storage: node.hasAttribute('id') ? new StorageNamespace(localStorage, 'shinysdr.widgetState.' + node.getAttribute('id') + '.') : null,
+        shouldBePanel: shouldBePanel,
+        rebuildMe: go
+      });
+      widget.element.classList.add('widget-' + widgetCtor.name);
+      
+      var newEl = widget.element;
+      var placeMark = newSourceEl.nextSibling;
+      if (newSourceEl.hasAttribute('title')) {
+        console.warn('Widget ' + widgetCtor.name + ' did not handle title attribute');
+      }
+      
+      if (newSourceEl.parentNode === container) {
+        container.replaceChild(newEl, newSourceEl);
+      } else {
+        container.insertBefore(newEl, placeMark);
+      }
+      currentWidgetEl = newEl;
+      
+      // allow widgets to embed widgets
+      createWidgetsInNode(targetCell || rootTargetCell, context, widget.element);
+    }
+    go.scheduler = scheduler;
+    go();
+  }
+  
+  function createWidgets(rootTargetCell, context, node) {
+    var scheduler = context.scheduler;
+    if (node.hasAttribute && node.hasAttribute('data-widget')) {
+      var targetCellCell, targetStr;
+      if (node.hasAttribute('data-target')) {
+        targetStr = node.getAttribute('data-target');
+        targetCellCell = new DerivedCell(values.any, scheduler, function (dirty) {
+          return rootTargetCell.depend(dirty)[targetStr];
+        });
+      } else {
+        targetStr = "<can't happen>";
+        targetCellCell = new ConstantCell(values.any, rootTargetCell);
+      }
+      
+      var typename = node.getAttribute('data-widget');
+      if (typename === null) {
+        console.error('Unspecified widget type:', node);
+        return;
+      }
+      var widgetCtor = widgets[typename];
+      if (!widgetCtor) {
+        console.error('Bad widget type:', node);
+        return;
+      }
+      // TODO: use a placeholder widget (like Squeak Morphic does) instead of having a different code path for the above errors
+      
+      createWidget(targetCellCell, targetStr, context, node, widgetCtor);
+      
     } else if (node.hasAttribute && node.hasAttribute('data-target')) (function () {
       var html = document.createDocumentFragment();
       while (node.firstChild) html.appendChild(node.firstChild);
