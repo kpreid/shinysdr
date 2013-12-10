@@ -18,6 +18,8 @@
 'use strict';
 
 describe('values', function () {
+  var values = shinysdr.values;
+  
   // TODO: duplicated code w/ other tests; move to a common library somewhere
   var s;
   beforeEach(function () {
@@ -39,7 +41,7 @@ describe('values', function () {
   }
 
   describe('Range', function () {
-    var Range = shinysdr.values.Range;
+    var Range = values.Range;
     function frange(subranges) {
       return new Range(subranges, false, false);
     }
@@ -74,8 +76,8 @@ describe('values', function () {
     it('should function as a cell', function () {
       // TODO: use a mock storage instead of abusing sessionStorage
       sessionStorage.clear();
-      var ns = new shinysdr.values.StorageNamespace(sessionStorage, 'foo.');
-      var cell = new shinysdr.values.StorageCell(ns, 'bar');
+      var ns = new values.StorageNamespace(sessionStorage, 'foo.');
+      var cell = new values.StorageCell(ns, 'bar');
       expect(cell.get()).toBe(null);
       cell.set('a');
       expect(cell.get()).toBe('a');
