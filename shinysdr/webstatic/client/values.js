@@ -183,6 +183,22 @@ define(['./events'], function (events) {
   };
   exports.ConstantCell = ConstantCell;
   
+  function DerivedCell(type, scheduler, compute) {
+    Cell.call(this, type);
+    this._compute = compute;
+    this._dirty = function derivedCellDirtyCallback() {
+      this.n.notify();
+    }.bind(this);
+    this._dirty.scheduler = scheduler;
+    this.get();  // TODO kludge to register initial notifications -- this would not be necessary if .depend() were the only interface instead of .n.listen(), so we should consider that
+  }
+  DerivedCell.prototype = Object.create(Cell.prototype, {constructor: {value: DerivedCell}});
+  DerivedCell.prototype.get = function () {
+    // TODO: Cache computation. Doing so will require that we have a way to notice if we are synchronously dirty (that is, someone has done scheduler.enqueue(this._dirty)). This seems like a reasonable feature to add explicitly to schedulers.
+    return (1,this._compute)(this._dirty);
+  }
+  exports.DerivedCell = DerivedCell;
+  
   // Adds a prefix to Storage (localStorage) keys
   function StorageNamespace(base, prefix) {
     this._base = base;

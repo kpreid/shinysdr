@@ -71,6 +71,20 @@ describe('values', function () {
     });
   });
   
+  describe('LocalCell', function () {
+    it('should not notify immediately after its creation', function () {
+      var cell = new values.LocalCell(values.any, 'foo');
+      var l = createListenerSpy();
+      cell.n.listen(l);
+      var dummyWait = createListenerSpy();
+      s.enqueue(dummyWait);
+      expectNotification(dummyWait);
+      runs(function () {
+        expect(l).not.toHaveBeenCalled();
+      });
+    });
+  });
+  
   describe('StorageCell', function () {
     // TODO: break up this into individual tests
     it('should function as a cell', function () {
@@ -86,6 +100,35 @@ describe('values', function () {
       cell.set('b');
       expect(cell.get()).toBe('b');
       expectNotification(l);
+    });
+  });
+  
+  describe('DerivedCell', function () {
+    var base, f;
+    beforeEach(function () {
+      base = new values.LocalCell(values.any, 1);
+      f = new values.DerivedCell(values.any, s, function (dirty) {
+        return base.depend(dirty) + 1;
+      });
+    })
+    
+    it('should return a computed value', function () {
+      expect(f.get()).toEqual(2);
+    });
+    
+    it('should return an immediately updated value', function () {
+      base.set(10);
+      expect(f.get()).toEqual(11);
+    });
+    
+    it('should notify and update when the base value is updated', function () {
+      var l = createListenerSpy();
+      f.n.listen(l);
+      base.set(10);
+      expectNotification(l);
+      runs(function () {
+        expect(f.get()).toEqual(11);
+      });
     });
   });
 });
