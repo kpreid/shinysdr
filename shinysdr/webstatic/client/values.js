@@ -178,7 +178,7 @@ define(['./events'], function (events) {
     this.n = new events.Neverfier();  // TODO throwing away initial value, unclean
   }
   ConstantCell.prototype = Object.create(Cell.prototype, {constructor: {value: ConstantCell}});
-  ConstantCell.prototype.get = function() {
+  ConstantCell.prototype.get = function () {
     return this._value;
   };
   exports.ConstantCell = ConstantCell;
