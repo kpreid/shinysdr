@@ -342,6 +342,7 @@ class ExportedGetter(object):
 		if 'ctor_fn' in kwargs:
 			if 'ctor' in kwargs:
 				raise ValueError('cannot specify both ctor and ctor_fn')
+			kwargs = kwargs.copy()
 			kwargs['ctor'] = kwargs['ctor_fn'](obj)
 			del kwargs['ctor_fn']
 		# TODO kludgy introspection, figure out what is better
