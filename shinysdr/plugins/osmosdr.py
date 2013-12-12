@@ -55,13 +55,19 @@ class OsmoSDRSource(Source):
 			name=None,
 			profile=OsmoSDRProfile(),
 			sample_rate=None,
+			external_freq_shift=0.0,
+			correction_ppm=0.0,
 			**kwargs):
 		'''
 		osmo_device: gr-osmosdr device string
 		name: block name (usually not specified)
 		profile: an OsmoSDRProfile (see docs)
-		sample_rate: desired sample rate, or None == maximum available rate.
+		sample_rate: desired sample rate, or None == guess a good rate
+		external_freq_shift: external (down|up)converter frequency (Hz)
+		correction_ppm: oscillator frequency calibration (parts-per-million)
 		'''
+		# The existence of the external_freq_shift and correction_ppm parameters (but not all of the others) is a workaround for the current inability to dynamically change an exported field's type (the frequency range), allowing them to be initialized early enough, in the configuration, to take effect.
+		
 		if name is None:
 			name = 'OsmoSDR %s' % osmo_device
 		Source.__init__(self, name=name, **kwargs)
@@ -85,8 +91,8 @@ class OsmoSDRSource(Source):
 		self.connect(self.osmosdr_source_block, self)
 		
 		# Misc state
-		self.external_freq_shift = 0
-		self.correction_ppm = 0
+		self.external_freq_shift = external_freq_shift
+		self.correction_ppm = correction_ppm
 		self.dc_state = 0
 		self.iq_state = 0
 		source.set_dc_offset_mode(self.dc_state, ch)  # no getter, set to known state
