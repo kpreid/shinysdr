@@ -45,63 +45,58 @@ def _factorize(n):
 
 
 class MultistageChannelFilter(gr.hier_block2):
+	'''
+	Provides frequency translation, low-pass filtering, and arbitrary sample rate conversion.
+	
+	The multistage aspect improves CPU efficiency and also enables high decimations/sharp filters that would otherwise run into buffer length limits. Or at least, those were the problems I was seeing which I wrote this to fix.
+	'''
 	def __init__(self,
 			name='Multistage Channel Filter',
-			input_rate=None,
-			output_rate=None,
-			cutoff_freq=None,
-			transition_width=None):
+			input_rate=0,
+			output_rate=0,
+			cutoff_freq=0,
+			transition_width=0,
+			center_freq=0):
+		assert input_rate > 0
+		assert output_rate > 0
+		assert cutoff_freq > 0
+		assert transition_width > 0
+		
 		gr.hier_block2.__init__(
 			self, name,
 			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
 			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
 		)
 		
+		self.cutoff_freq = cutoff_freq
+		self.transition_width = transition_width
+		
 		total_decimation = max(1, input_rate // output_rate)
 		stage_decimations = _factorize(total_decimation)
 		stage_decimations.reverse()
 		if len(stage_decimations) == 0:
-			# We need at least one filter to do the frequency shift
+			# We need at least one filter to do the frequency shift and to apply the user-specified LPF
 			stage_decimations = [1]
 		
+		self.stages = []
+		
+		placeholder_taps = [0]
 		prev_block = self
 		stage_input_rate = input_rate
 		for i, stage_decimation in enumerate(stage_decimations):
-			first = i == 0
-			last = i == len(stage_decimations) - 1
 			next_rate = stage_input_rate / stage_decimation
 			
-			# filter taps
-			if last:
-				taps = firdes.low_pass(
-					1.0,
-					stage_input_rate,
-					cutoff_freq,
-					transition_width,
-					firdes.WIN_HAMMING)
-			else:
-				# TODO check for collision with user filter
-				user_inner = cutoff_freq - transition_width / 2
-				limit = next_rate / 2
-				taps = firdes.low_pass(
-					1.0,
-					stage_input_rate,
-					(user_inner + limit) / 2,
-					limit - user_inner,
-					firdes.WIN_HAMMING)
-			
-			#print 'Stage %i decimation %i rate %i taps %i' % (i, stage_decimation, stage_input_rate, len(taps))
-			
-			# filter block
-			if first:
+			if i == 0:
 				stage_filter = grfilter.freq_xlating_fir_filter_ccc(
 					stage_decimation,
-					taps,
-					0,  # default frequency
+					placeholder_taps,
+					center_freq,
 					stage_input_rate)
 				self.freq_filter_block = stage_filter
 			else:
-				stage_filter = grfilter.fir_filter_ccc(stage_decimation, taps)
+				stage_filter = grfilter.fir_filter_ccc(stage_decimation, placeholder_taps)
+			
+			self.stages.append((stage_filter, stage_input_rate, next_rate))
 			
 			self.connect(prev_block, stage_filter)
 			prev_block = stage_filter
@@ -120,6 +115,50 @@ class MultistageChannelFilter(gr.hier_block2):
 				pfb.arb_resampler_ccf(float(output_rate) / stage_input_rate),
 				self)
 			#print 'resampling %s/%s = %s' % (output_rate, stage_input_rate, float(output_rate) / stage_input_rate)
+		
+		self.__do_taps()
+	
+	def __do_taps(self):
+		cutoff_freq = self.cutoff_freq
+		transition_width = self.transition_width
+		lastIndex = len(self.stages) - 1
+		for i, (stage_filter, stage_input_rate, stage_output_rate) in enumerate(self.stages):
+			if i == lastIndex:
+				taps = firdes.low_pass(
+					1.0,
+					stage_input_rate,
+					cutoff_freq,
+					transition_width,
+					firdes.WIN_HAMMING)
+			else:
+				# TODO check for collision with user filter
+				user_inner = cutoff_freq - transition_width / 2
+				limit = stage_output_rate / 2
+				taps = firdes.low_pass(
+					1.0,
+					stage_input_rate,
+					(user_inner + limit) / 2,
+					limit - user_inner,
+					firdes.WIN_HAMMING)
+			#print 'Stage %i decimation %i rate %i taps %i' % (i, stage_decimation, stage_input_rate, len(taps))
+			stage_filter.set_taps(taps)
+	
+	def get_cutoff_freq(self):
+		return self.cutoff_freq
+	
+	def set_cutoff_freq(self, value):
+		self.cutoff_freq = float(value)
+		self.__do_taps()
+	
+	def get_transition_width(self):
+		return self.transition_width
+	
+	def set_transition_width(self, value):
+		self.transition_width = float(value)
+		self.__do_taps()
+	
+	def get_center_freq(self):
+		return self.freq_filter_block.center_freq()
 	
 	def set_center_freq(self, freq):
 		self.freq_filter_block.set_center_freq(freq)
