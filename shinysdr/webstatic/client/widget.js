@@ -288,6 +288,9 @@ define(['./values', './events'], function (values, events) {
     this.rightVisibleFreq = function rightVisibleFreq() {
       return leftFreq + (cacheScrollLeft + pixelWidth) / pixelsPerHertz;
     };
+    this.getCenterFreq = function getCenterFreq() {
+      return centerFreq;
+    };
     this.getBandwidth = function getBandwidth() {
       return bandwidth;
     };
@@ -775,7 +778,6 @@ define(['./values', './events'], function (values, events) {
   
   function SpectrumPlot(config) {
     var self = this;
-    var radio = config.radio;
     var fftCell = config.target;
     var view = config.view;
     var avgAlphaCell = config.clientState.spectrum_average;
@@ -959,7 +961,7 @@ define(['./values', './events'], function (values, events) {
 
           // Adjust drawing region
           var len = fftCell.get().length;
-          var viewCenterFreq = radio.source.depend(draw).freq.depend(draw);
+          var viewCenterFreq = view.getCenterFreq();
           var bandwidth = view.getBandwidth();
           var lsf = viewCenterFreq - bandwidth/2;
           var rsf = viewCenterFreq + bandwidth/2;
@@ -1012,7 +1014,7 @@ define(['./values', './events'], function (values, events) {
 
           var len = averageBuffer.length;
 
-          var viewCenterFreq = radio.source.depend(draw).freq.depend(draw);
+          var viewCenterFreq = view.getCenterFreq();
           var bandwidth = view.getBandwidth();
           var halfBinWidth = bandwidth / len / 2;
           xZero = freqToCoord(viewCenterFreq - bandwidth/2 + halfBinWidth);
@@ -1040,7 +1042,6 @@ define(['./values', './events'], function (values, events) {
   
   function WaterfallPlot(config) {
     var self = this;
-    var radio = config.radio;
     var fftCell = config.target;
     var view = config.view;
     
@@ -1389,15 +1390,15 @@ define(['./values', './events'], function (values, events) {
           slicePtr = mod(slicePtr + 1, historyCount);
         },
         beforeDraw: function () {
-          var source = radio.source.depend(draw);
-          var viewCenterFreq = source.freq.depend(draw);
+          view.n.listen(draw);
+          var viewCenterFreq = view.getCenterFreq();
           commonBeforeDraw(viewCenterFreq, draw);
 
           gl.uniform1f(u_scroll, slicePtr / historyCount);
           gl.uniform1f(u_yScale, canvas.height / historyCount);
           var fs = 1.0 / view.getBandwidth();
           gl.uniform1f(u_freqScale, fs);
-          gl.uniform1f(u_currentFreq, source.freq.depend(draw));
+          gl.uniform1f(u_currentFreq, viewCenterFreq);
 
           cleared = false;
         }
@@ -1420,7 +1421,7 @@ define(['./values', './events'], function (values, events) {
         },
         performDraw: function () {
           var h = canvas.height;
-          var viewCenterFreq = radio.source.depend(draw).freq.depend(draw);
+          var viewCenterFreq = view.getCenterFreq();
           commonBeforeDraw(viewCenterFreq, draw);
 
           var buffer, bufferCenterFreq;
@@ -1561,7 +1562,7 @@ define(['./values', './events'], function (values, events) {
       }
       
       ctx.strokeStyle = 'gray';
-      drawHair(radio.source.depend(draw).freq.depend(draw)); // center frequency
+      drawHair(view.getCenterFreq()); // center frequency
       
       var receivers = radio.receivers.depend(draw);
       receivers._reshapeNotice.listen(draw);
@@ -2260,7 +2261,7 @@ define(['./values', './events'], function (values, events) {
   
   // Silly single-purpose widget 'till we figure out more where the UI is going
   function SaveButton(config) {
-    var radio = config.radio; // use mode, receiver
+    var radio = config.radio; // use .preset, .targetDB
     var receiver = config.target;
     var panel = this.element = config.element;
     panel.classList.add('panel');
