@@ -32,11 +32,61 @@ import math
 import time
 
 
+class _OverlapGimmick(gr.hier_block2):
+	'''
+	Pure flowgraph kludge to cause a logpwrfft block to perform overlapped FFTs.
+	
+	The more correct solution would be to replace stream_to_vector_decimator (used inside of logpwrfft) with a block which takes arbitrarily-spaced vector chunks of the input rather than chunking and then decimating in terms of whole chunks. The cost of doing this instead is more scheduling steps and more data copies.
+	
+	To adjust for the data rate, the logpwrfft block's sample rate parameter must be multiplied by the factor parameter of this block; or equivalently, the frame rate must be divided by it.
+	'''
+	__element = gr.sizeof_gr_complex
+	
+	def __init__(self, size, factor, migrate=None):
+		'''
+		size: (int) vector size (FFT size) of next block
+		factor: (int) output will have this many more samples than input
+		
+		If size is not divisible by factor, then the output will necessarily have jitter.
+		'''
+		size = int(size)
+		factor = int(factor)
+		# assert size % factor == 0
+		offset = size // factor
+		
+		gr.hier_block2.__init__(
+			self, self.__class__.__name__,
+			gr.io_signature(1, 1, self.__element),
+			gr.io_signature(1, 1, self.__element),
+		)
+		
+		if factor == 1:
+			# No duplication needed; simplify flowgraph
+			# GR refused to connect self to self, so insert a dummy block
+			self.connect(self, blocks.copy(self.__element), self)
+		else:
+			interleave = blocks.interleave(self.__element * size)
+			self.connect(
+				interleave,
+				blocks.vector_to_stream(self.__element, size),
+				self)
+		
+			for i in xrange(0, factor):
+				self.connect(
+					self,
+					blocks.delay(self.__element, (factor - 1 - i) * offset),
+					blocks.stream_to_vector(self.__element, size),
+					(interleave, i))
+
+
 class SpectrumTypeStub:
 	pass
 
 
-num_audio_channels = 2
+_num_audio_channels = 2
+
+
+_maximum_spectrum_rate = 120
 
 
 class ReceiverCollection(CollectionState):
@@ -148,10 +198,10 @@ class Top(gr.top_block, ExportedState):
 	def add_audio_queue(self, queue, queue_rate):
 		# TODO: place limit on maximum requested sample rate
 		sink = blocks.message_sink(
-			gr.sizeof_float * num_audio_channels,
+			gr.sizeof_float * _num_audio_channels,
 			queue,
 			True)
-		interleaver = blocks.streams_to_vector(gr.sizeof_float, num_audio_channels)
+		interleaver = blocks.streams_to_vector(gr.sizeof_float, _num_audio_channels)
 		# TODO: bundle the interleaver and sink in a hier block so it doesn't have to be reconnected
 		self.audio_queue_sinks[queue] = (queue_rate, interleaver, sink)
 		
@@ -197,12 +247,16 @@ class Top(gr.top_block, ExportedState):
 			self.__needs_spectrum = False
 			self.__needs_reconnect = True
 			
+			overlap_factor = int(math.ceil(_maximum_spectrum_rate * self.spectrum_resolution / self.input_rate))
 			self.spectrum_sink = MessageDistributorSink(
 				itemsize=self.spectrum_resolution * gr.sizeof_float,
 				context=Context(self),
 				migrate=self.spectrum_sink)
+			self.overlap_gimmick = _OverlapGimmick(
+				size=self.spectrum_resolution,
+				factor=overlap_factor)
 			self.spectrum_fft_block = gnuradio.fft.logpwrfft.logpwrfft_c(
-				sample_rate=self.input_rate,
+				sample_rate=self.input_rate * overlap_factor,
 				fft_size=self.spectrum_resolution,
 				ref_scale=2,
 				frame_rate=self.spectrum_rate,
@@ -234,6 +288,7 @@ class Top(gr.top_block, ExportedState):
 			
 			self.connect(
 				self.source,
+				self.overlap_gimmick,
 				self.spectrum_fft_block,
 				self.spectrum_rescale_block,
 				self.spectrum_sink)
@@ -375,7 +430,7 @@ class Top(gr.top_block, ExportedState):
 		self.__needs_spectrum = True
 		self._do_connect()
 
-	@exported_value(ctor=Range([(1, 60)], logarithmic=True, integer=False))
+	@exported_value(ctor=Range([(1, _maximum_spectrum_rate)], logarithmic=True, integer=False))
 	def get_spectrum_rate(self):
 		return self.spectrum_rate
 
