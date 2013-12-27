@@ -288,6 +288,9 @@ define(['./values', './events'], function (values, events) {
     this.rightVisibleFreq = function rightVisibleFreq() {
       return leftFreq + (cacheScrollLeft + pixelWidth) / pixelsPerHertz;
     };
+    this.getBandwidth = function getBandwidth() {
+      return bandwidth;
+    };
     this.getVisiblePixelWidth = function getVisiblePixelWidth() {
       return pixelWidth;
     };
@@ -761,9 +764,7 @@ define(['./values', './events'], function (values, events) {
     }.call(this));
     
     function newFFTFrame(bundle) {
-      var freq = bundle[0][0];
-      var buffer = bundle[1];
-      dataHook(buffer, freq);
+      dataHook(bundle);
       draw.scheduler.enqueue(draw);
     }
     newFFTFrame.scheduler = config.scheduler;
@@ -784,7 +785,9 @@ define(['./values', './events'], function (values, events) {
     // common logic
     var averageBuffer = null;
     var lastDrawnCenterFreq = NaN;
-    function commonNewData(buffer, bufferCenterFreq) {
+    function commonNewData(fftBundle) {
+      var buffer = fftBundle[1];
+      var bufferCenterFreq = fftBundle[0].freq;
       var len = buffer.length;
       var alpha = avgAlphaCell.get();
       var invAlpha = 1 - alpha;
@@ -914,7 +917,9 @@ define(['./values', './events'], function (values, events) {
       var intConversionBuffer, intConversionOut;
       
       return {
-        newData: function (buffer, bufferCenterFreq) {
+        newData: function (fftBundle) {
+          var buffer = fftBundle[1];
+          var bufferCenterFreq = fftBundle[0].freq;
           if (buffer.length === 0) {
             return;
           }
@@ -925,7 +930,7 @@ define(['./values', './events'], function (values, events) {
             intConversionOut = new Uint8Array(intConversionBuffer.buffer);
           }
 
-          commonNewData(buffer, bufferCenterFreq);
+          commonNewData(fftBundle);
 
           gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
           var minLevel = view.minLevel;
@@ -955,7 +960,7 @@ define(['./values', './events'], function (values, events) {
           // Adjust drawing region
           var len = fftCell.get().length;
           var viewCenterFreq = radio.source.depend(draw).freq.depend(draw);
-          var bandwidth = fftCell.getSampleRate();
+          var bandwidth = view.getBandwidth();
           var lsf = viewCenterFreq - bandwidth/2;
           var rsf = viewCenterFreq + bandwidth/2;
           var xScale = (rvf-lvf)/(rsf-lsf);
@@ -996,8 +1001,8 @@ define(['./values', './events'], function (values, events) {
       }
       
       return {
-        newData: function (buffer, bufferCenterFreq) {
-          commonNewData(buffer, bufferCenterFreq);
+        newData: function (fftBundle) {
+          commonNewData(fftBundle);
         },
         performDraw: function () {
           var didClear = commonBeforeDraw(draw);
@@ -1008,7 +1013,7 @@ define(['./values', './events'], function (values, events) {
           var len = averageBuffer.length;
 
           var viewCenterFreq = radio.source.depend(draw).freq.depend(draw);
-          var bandwidth = fftCell.getSampleRate();
+          var bandwidth = view.getBandwidth();
           var halfBinWidth = bandwidth / len / 2;
           xZero = freqToCoord(viewCenterFreq - bandwidth/2 + halfBinWidth);
           xAfterLast = freqToCoord(viewCenterFreq + bandwidth/2 + halfBinWidth);
@@ -1072,7 +1077,7 @@ define(['./values', './events'], function (values, events) {
     var cleared = true;
     function commonBeforeDraw(viewCenterFreq, draw) {
       view.n.listen(draw);
-      var bandwidth = fftCell.getSampleRate();
+      var bandwidth = view.getBandwidth();
       canvas.style.marginLeft = view.freqToCSSLeft(viewCenterFreq - bandwidth/2);
       canvas.style.width = view.freqToCSSLength(bandwidth);
       
@@ -1298,7 +1303,10 @@ define(['./values', './events'], function (values, events) {
       var intConversionBuffer, intConversionOut;
       
       return {
-        newData: function (buffer, bufferCenterFreq) {
+        newData: function (fftBundle) {
+          var buffer = fftBundle[1];
+          var bufferCenterFreq = fftBundle[0].freq;
+          
           if (buffer.length === 0) {
             return;
           }
@@ -1387,8 +1395,7 @@ define(['./values', './events'], function (values, events) {
 
           gl.uniform1f(u_scroll, slicePtr / historyCount);
           gl.uniform1f(u_yScale, canvas.height / historyCount);
-          var fs = 1.0 / fftCell.getSampleRate();
-          //console.log(fs);
+          var fs = 1.0 / view.getBandwidth();
           gl.uniform1f(u_freqScale, fs);
           gl.uniform1f(u_currentFreq, source.freq.depend(draw));
 
@@ -1405,36 +1412,37 @@ define(['./values', './events'], function (values, events) {
       var slicePtr = 0;
       var lastDrawnCenterFreq = NaN;
 
-      var hasNewData = false;
+      var dataToDraw = null;  // TODO this is a data flow kludge
       return {
-        newData: function (buffer, bufferCenterFreq) {
-          hasNewData = true;
+        newData: function (fftBundle) {
+          dataToDraw = fftBundle;
           this.performDraw();
         },
         performDraw: function () {
-          var buffer = fftCell.get();  // CanvasSpectrumWidget takes care of listening
-          var bufferCenterFreq = fftCell.getCenterFreq();
           var h = canvas.height;
           var viewCenterFreq = radio.source.depend(draw).freq.depend(draw);
           commonBeforeDraw(viewCenterFreq, draw);
 
-          // rescale to discovered fft size
-          var w = buffer.length;
-          if (canvas.width !== w) {
-            // assignment clears canvas
-            canvas.width = w;
-            cleared = true;
-            // reallocate
-            slices = [];
-            slicePtr = 0;
-          }
+          var buffer, bufferCenterFreq;
+          if (dataToDraw) {
+            buffer = dataToDraw[1];
+            bufferCenterFreq = dataToDraw[0].freq;
+            // rescale to discovered fft size
+            var w = buffer.length;
+            if (canvas.width !== w) {
+              // assignment clears canvas
+              canvas.width = w;
+              cleared = true;
+              // reallocate
+              slices = [];
+              slicePtr = 0;
+            }
 
-          // can't draw with w=0
-          if (w === 0) {
-            return;
-          }
+            // can't draw with w=0
+            if (w === 0) {
+              return;
+            }
 
-          if (hasNewData) {
             // Find slice to write into
             var ibuf;
             if (slices.length < historyCount) {
@@ -1459,8 +1467,8 @@ define(['./values', './events'], function (values, events) {
             }
           }
 
-          var offsetScale = w / fftCell.getSampleRate();
-          if (hasNewData && lastDrawnCenterFreq === viewCenterFreq && !cleared) {
+          var offsetScale = w / view.getBandwidth();
+          if (dataToDraw && lastDrawnCenterFreq === viewCenterFreq && !cleared) {
             // Scroll
             ctx.drawImage(ctx.canvas, 0, 0, w, h-1, 0, 1, w, h-1);
             // Paint newest slice
@@ -1486,7 +1494,7 @@ define(['./values', './events'], function (values, events) {
             ctx.fillRect(0, y+1, w, h);
           }
 
-          hasNewData = false;
+          dataToDraw = null;
           cleared = false;
         }
       };

@@ -144,21 +144,14 @@ define(['./values', './events'], function (values, events) {
     var fft = new Float32Array(0);
     var swapbuf = new Float32Array(0);
     var VSIZE = Float32Array.BYTES_PER_ELEMENT;
-    var centerFreq = NaN;
-    var sampleRate = NaN;
+    var lastValue = [[NaN, NaN], fft];
 
     // kludge to ensure that widgets get all of the frames
     // TODO: put this on a more general and sound framework
     var subscriptions = [];
     
     function transform(json) {
-      if (json === null) {
-        // occurs when server is paused on load — TODO fix server so it always returns an array
-        return fft;
-      }
       var info = json[0];
-      centerFreq = info[0];
-      sampleRate = info[1];
       var arrayFFT = json[1];
 
       var halfFFTSize = arrayFFT.length / 2;
@@ -175,26 +168,22 @@ define(['./values', './events'], function (values, events) {
       fft.set(swapbuf.subarray(halfFFTSize, fft.length), 0);
       
       var bundled = [info, fft];
+      lastValue = bundled;
+      
       // TODO replace this with something async (note that fft is mutated so we need to allocate or use a free-list/circular-buffer strategy)
       for (var i = 0; i < subscriptions.length; i++) {
         (0,subscriptions[i])(bundled);
       }
       
-      return fft;
+      return bundled;
     }
     
     ReadCell.call(this, url, fft, values.any, transform);
     
-    this.getCenterFreq = function() {
-      return centerFreq;
-    };
-    this.getSampleRate = function() {
-      return sampleRate;
-    };
     this.subscribe = function(callback) {
       // TODO need to provide for unsubscribing
       subscriptions.push(callback);
-      callback([[centerFreq, sampleRate], fft]);
+      callback(lastValue);
     };
   }
   SpectrumCell.prototype = Object.create(ReadCell.prototype, {constructor: {value: SpectrumCell}});
@@ -349,7 +338,7 @@ define(['./values', './events'], function (values, events) {
         var rate = view.getFloat64(4+8, true);
         var data = new Float32Array(buffer, 4+8+8);
         //console.log(id, freq, rate, data.length);
-        (0, updaterMap[id])([[freq, rate], data]);
+        (0, updaterMap[id])([{freq:freq, rate:rate}, data]);
       }
       
       ws.onmessage = function (event) {
