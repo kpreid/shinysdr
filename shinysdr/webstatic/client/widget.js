@@ -116,6 +116,7 @@ define(['./values', './events'], function (values, events) {
         scheduler: scheduler,
         target: widgetTarget,
         element: newSourceEl,
+        context: context, // TODO redundant values -- added for programmatic widget-creation; maybe facetize createWidget
         view: context.spectrumView, // TODO should be context-dependent
         clientState: context.clientState,
         freqDB: context.freqDB, // TODO: remove the need for this
@@ -144,6 +145,15 @@ define(['./values', './events'], function (values, events) {
     }
     go.scheduler = scheduler;
     go();
+  }
+  
+  function createWidgetExt(context, widgetCtor, node, targetCell) {
+    createWidget(
+      new ConstantCell(values.any, targetCell),
+      String(targetCell),
+      context,
+      node,
+      widgetCtor);
   }
   
   function createWidgets(rootTargetCell, context, node) {
@@ -416,18 +426,29 @@ define(['./values', './events'], function (values, events) {
     function addWidget(name, widgetType, optBoxLabel) {
       var wEl = document.createElement('div');
       if (optBoxLabel !== undefined) { wEl.classList.add('panel'); }
-      // TODO non-string-based interface for this.
-      wEl.setAttribute('data-widget', widgetType);
+      
+      var targetCell;
       if (typeof name === 'string') {
         claimed[name] = true;
-        wEl.setAttribute('data-target', name);
+        targetCell = block[name];
+      } else {
+        targetCell = new ConstantCell(values.block, block);
       }
+      
       if (optBoxLabel !== undefined) {
         wEl.setAttribute('title', optBoxLabel);
       }
-      // createWidgets will instantiate the widget from this
+      
+      var widgetCtor;
+      if (typeof widgetType === 'string') {
+        throw new Error('string widget types being deprecated, not supported here');
+      } else {
+        widgetCtor = widgetType;
+      }
       
       getAppend().appendChild(wEl);
+      // TODO: Maybe createWidgetExt should be a method of the context?
+      createWidgetExt(config.context, widgetCtor, wEl, targetCell);
     }
     
     function ignore(name) {
@@ -462,18 +483,18 @@ define(['./values', './events'], function (values, events) {
         }
         if (member.type instanceof values.Range) {
           if (member.set) {
-            addWidget(name, member.type.logarithmic ? 'LogSlider' : 'LinSlider', name);
+            addWidget(name, member.type.logarithmic ? LogSlider : LinSlider, name);
           } else {
-            addWidget(name, 'Meter', name);
+            addWidget(name, Meter, name);
           }
         } else if (member.type instanceof values.Enum) {
-          addWidget(name, 'Radio', name);
+          addWidget(name, Radio, name);
         } else if (member.type === Boolean) {
-          addWidget(name, 'Toggle', name);
+          addWidget(name, Toggle, name);
         } else if (member.type === block) {
-          addWidget(name, 'Block');
+          addWidget(name, Block);
         } else {
-          addWidget(name, 'Generic', name);
+          addWidget(name, Generic, name);
         }
       } else {
         console.warn('Block scan got unexpected object:', member);
@@ -490,7 +511,7 @@ define(['./values', './events'], function (values, events) {
       ignore('targetDB');  // not real state
       
       if ('unpaused' in block) {
-        addWidget('unpaused', 'Toggle', 'Run');
+        addWidget('unpaused', Toggle, 'Run');
       }
       
       var sourceToolbar = this.element.appendChild(document.createElement('div'));
@@ -499,23 +520,22 @@ define(['./values', './events'], function (values, events) {
       if ('source_name' in block) {
         ignore('source_name');
         var sourceEl = sourceToolbar.appendChild(document.createElement('select'));
-        sourceEl.setAttribute('data-widget', 'Select');
-        sourceEl.setAttribute('data-target', 'source_name');
+        createWidgetExt(config.context, Select, sourceEl, block.source_name);
       }
       
       if (false) { // TODO: Figure out a good way to display options for all sources
         ignore('source');
         if ('sources' in block) {
-          addWidget('sources', 'SourceSet');
+          addWidget('sources', SourceSet);
         }
       } else {
         ignore('sources');
         if ('source' in block) {
-          addWidget('source', 'Source');
+          addWidget('source', Source);
         }
       }
       if ('receivers' in block) {
-        addWidget('receivers', 'ReceiverSet');
+        addWidget('receivers', ReceiverSet);
       }
       
       setToDetails();
@@ -523,7 +543,7 @@ define(['./values', './events'], function (values, events) {
   }
   widgets.Top = Top;
   
-  function BlockSet(widgetName, userName, dynamic) {
+  function BlockSet(widgetCtor, userName, dynamic) {
     return function TypeSetInst(config) {
       Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
         Object.keys(block).forEach(function (name) {
@@ -548,19 +568,19 @@ define(['./values', './events'], function (values, events) {
             this.element.appendChild(toolbar);
           }
           
-          addWidget(name, widgetName);
+          addWidget(name, widgetCtor);
         }, this);
       }, true);
     };
   }
-  widgets.SourceSet = BlockSet('Source', 'Source', false);
-  widgets.ReceiverSet = BlockSet('Receiver', 'Receiver', true);
+  var SourceSet = widgets.SourceSet = BlockSet(Source, 'Source', false);
+  var ReceiverSet = widgets.ReceiverSet = BlockSet(Receiver, 'Receiver', true);
   
   // Widget for a source block
   function Source(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       if ('freq' in block) {
-        addWidget('freq', 'Knob', 'Center frequency');
+        addWidget('freq', Knob, 'Center frequency');
       }
       
       if ('gain' in block && 'agc' in block) {
@@ -570,13 +590,11 @@ define(['./values', './events'], function (values, events) {
         var agcl = gainPanel.appendChild(document.createElement('label'));
         var agcc = agcl.appendChild(document.createElement('input'));
         agcc.type = 'checkbox';
-        agcc.setAttribute('data-widget', 'Toggle');
-        agcc.setAttribute('data-target', 'agc');
+        createWidgetExt(config.context, Toggle, agcc, block.agc);
         agcl.appendChild(document.createTextNode('Auto '));
         var gain = gainPanel.appendChild(document.createElement('input'));
         gain.type = 'range';
-        gain.setAttribute('data-widget', 'LinSlider');
-        gain.setAttribute('data-target', 'gain');
+        createWidgetExt(config.context, LinSlider, gain, block.gain);
         ignore('agc');
         ignore('gain');
       }
@@ -584,10 +602,10 @@ define(['./values', './events'], function (values, events) {
       setToDetails();
       
       if ('external_freq_shift' in block) {
-        addWidget('external_freq_shift', 'SmallKnob', 'External frequency shift');
+        addWidget('external_freq_shift', SmallKnob, 'External frequency shift');
       }
       if ('correction_ppm' in block) {
-        addWidget('correction_ppm', 'SmallKnob', 'Freq.corr. (PPM)');
+        addWidget('correction_ppm', SmallKnob, 'Freq.corr. (PPM)');
       }
       
       ignore('sample_rate');
@@ -600,23 +618,23 @@ define(['./values', './events'], function (values, events) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       ignore('is_valid');
       if ('rec_freq' in block) {
-        addWidget('rec_freq', 'Knob', 'Channel frequency');
+        addWidget('rec_freq', Knob, 'Channel frequency');
       }
       if ('mode' in block) {
-        addWidget('mode', 'Radio');
+        addWidget('mode', Radio);
       }
-      addWidget('demodulator', 'Demodulator');
+      addWidget('demodulator', Demodulator);
       if ('audio_power' in block) {
-        addWidget('audio_power', 'Meter', 'Audio');
+        addWidget('audio_power', Meter, 'Audio');
       }
       if ('audio_gain' in block) {
-        addWidget('audio_gain', 'LinSlider', 'Volume');
+        addWidget('audio_gain', LinSlider, 'Volume');
       }
       if ('audio_pan' in block) {
-        addWidget('audio_pan', 'LinSlider', 'Pan');
+        addWidget('audio_pan', LinSlider, 'Pan');
       }
       if ('rec_freq' in block) {
-        addWidget(null, 'SaveButton');
+        addWidget(null, SaveButton);
       }
     });
   }
@@ -638,27 +656,25 @@ define(['./values', './events'], function (values, events) {
           var widgetEl = row.appendChild(document.createElement('td'))
             .appendChild(document.createElement(wel));
           if (wel === 'input') widgetEl.type = 'range';
-          widgetEl.setAttribute('data-widget', wclass);
-          widgetEl.setAttribute('data-target', wtarget);
+          createWidgetExt(config.context, wclass, widgetEl, block[wtarget]);
           var numberEl = row.appendChild(document.createElement('td'))
             .appendChild(document.createElement('tt'));
-          numberEl.setAttribute('data-widget', 'Number');
-          numberEl.setAttribute('data-target', wtarget);
+          createWidgetExt(config.context, NumberWidget, numberEl, block[wtarget]);
         }
-        addRow('RF', 'rf_power', 'Meter', 'meter');
-        addRow('Squelch', 'squelch_threshold', 'LinSlider', 'input');
+        addRow('RF', 'rf_power', Meter, 'meter');
+        addRow('Squelch', 'squelch_threshold', LinSlider, 'input');
       }.call(this)); else {
         if ('rf_power' in block) {
-          addWidget('rf_power', 'Meter', 'Power');
+          addWidget('rf_power', Meter, 'Power');
         }
         if ('squelch_threshold' in block) {
-          addWidget('squelch_threshold', 'LinSlider', 'Squelch');
+          addWidget('squelch_threshold', LinSlider, 'Squelch');
         }
       }
       
       // TODO break dependency on plugin
       if ('angle' in block) {
-        addWidget('angle', 'VOR$Angle', '');
+        addWidget('angle', widgets.VOR$Angle, '');
       }
       ignore('zero_point');
     }, true);
@@ -2445,10 +2461,10 @@ define(['./values', './events'], function (values, events) {
         };
       });
   }
-  widgets.LinSlider = function(c) { return new Slider(c,
+  var LinSlider = widgets.LinSlider = function(c) { return new Slider(c,
     function (v) { return v; },
     function (v) { return v; }); };
-  widgets.LogSlider = function(c) { return new Slider(c,
+  var LogSlider = widgets.LogSlider = function(c) { return new Slider(c,
     function (v) { return Math.log(v) / Math.LN10; },
     function (v) { return Math.pow(10, v); }); };
 
