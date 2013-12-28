@@ -66,10 +66,12 @@ class Receiver(gr.hier_block2, ExportedState):
 		self.oscillator = analog.sig_source_c(input_rate, analog.GR_COS_WAVE, -rec_freq, 1, 0)
 		self.mixer = blocks.multiply_cc(1)
 		self.demodulator = self.__make_demodulator(mode, {})
+		self.__demod_tunable = ITunableDemodulator.providedBy(self.demodulator)
 		self.audio_gain_l_block = blocks.multiply_const_ff(0.0)
 		self.audio_gain_r_block = blocks.multiply_const_ff(0.0)
 		self.probe_audio = analog.probe_avg_mag_sqrd_f(0, alpha=10.0/audio_rate)
 		
+		self.__update_oscillator()  # in case of __demod_tunable
 		self.__update_audio_gain()
 		self.__do_connect()
 	
@@ -83,8 +85,11 @@ class Receiver(gr.hier_block2, ExportedState):
 		try:
 			self.disconnect_all()
 			
-			self.connect(self.oscillator, (self.mixer, 1))
-			self.connect(self, self.mixer, self.demodulator)
+			if self.__demod_tunable:
+				self.connect(self, self.demodulator)
+			else:
+				self.connect(self.oscillator, (self.mixer, 1))
+				self.connect(self, self.mixer, self.demodulator)
 			self.connect((self.demodulator, 0), self.audio_gain_l_block, (self, 0))
 			self.connect((self.demodulator, 1), self.audio_gain_r_block, (self, 1))
 			
@@ -164,7 +169,11 @@ class Receiver(gr.hier_block2, ExportedState):
 			return 0.0
 	
 	def __update_oscillator(self):
-		self.oscillator.set_frequency(self.input_center_freq - self.rec_freq)
+		offset = self.rec_freq - self.input_center_freq
+		if self.__demod_tunable:
+			self.demodulator.set_rec_freq(offset)
+		else:
+			self.oscillator.set_frequency(-offset)
 	
 	# called from facet
 	def _rebuild_demodulator(self, mode=None):
@@ -179,6 +188,8 @@ class Receiver(gr.hier_block2, ExportedState):
 		if mode is None:
 			mode = self.mode
 		self.demodulator = self.__make_demodulator(mode, defaults)
+		self.__demod_tunable = ITunableDemodulator.providedBy(self.demodulator)
+		self.__update_oscillator()
 		self.mode = mode
 
 	def __make_demodulator(self, mode, state):
@@ -261,6 +272,13 @@ class IDemodulator(Interface):
 	def get_half_bandwidth():
 		'''
 		TODO explain
+		'''
+
+
+class ITunableDemodulator(IDemodulator):
+	def set_rec_freq(freq):
+		'''
+		Set the nominal (carrier) frequency offset of the signal to be demodulated within the input signal.
 		'''
 
 
