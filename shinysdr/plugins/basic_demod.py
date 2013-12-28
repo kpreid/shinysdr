@@ -26,7 +26,7 @@ from gnuradio import analog
 from gnuradio import filter as grfilter  # don't shadow builtin
 from gnuradio.filter import firdes
 
-from shinysdr.receiver import ModeDef, IDemodulator
+from shinysdr.receiver import ModeDef, IDemodulator, ITunableDemodulator
 from shinysdr.blocks import MultistageChannelFilter, make_resampler
 from shinysdr.values import ExportedState, Range, exported_value, setter
 
@@ -84,6 +84,7 @@ class SquelchMixin(ExportedState):
 
 
 class SimpleAudioDemodulator(Demodulator, SquelchMixin):
+	implements(ITunableDemodulator)
 	def __init__(self, demod_rate=0, band_filter=None, band_filter_transition=None, **kwargs):
 		Demodulator.__init__(self, **kwargs)
 		SquelchMixin.__init__(self, demod_rate)
@@ -103,6 +104,10 @@ class SimpleAudioDemodulator(Demodulator, SquelchMixin):
 
 	def get_half_bandwidth(self):
 		return self.band_filter
+
+	def set_rec_freq(self, freq):
+		'''for ITunableDemodulator'''
+		self.band_filter_block.set_center_freq(freq)
 
 	@exported_value()
 	def get_band_filter_shape(self):
