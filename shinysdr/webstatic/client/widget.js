@@ -47,6 +47,7 @@ define(['./values', './events'], function (values, events) {
   
   // TODO figure out what this does and give it a better name
   function Context(config) {
+    this.widgets = config.widgets;
     this.radio = config.radio;
     this.clientState = config.clientState;
     this.scheduler = config.scheduler;
@@ -63,6 +64,7 @@ define(['./values', './events'], function (values, events) {
       storage: ns
     });
     return new Context({
+      widgets: this.widgets,
       radio: this.radio,
       clientState: this.clientState,
       freqDB: this.freqDB,
@@ -116,7 +118,7 @@ define(['./values', './events'], function (values, events) {
         scheduler: scheduler,
         target: widgetTarget,
         element: newSourceEl,
-        context: context, // TODO redundant values -- added for programmatic widget-creation; maybe facetize createWidget
+        context: context, // TODO redundant values -- added for programmatic widget-creation; maybe facetize createWidget. Also should remove text-named widget table from this to make it more tightly scoped, perhaps.
         view: context.spectrumView, // TODO should be context-dependent
         clientState: context.clientState,
         freqDB: context.freqDB, // TODO: remove the need for this
@@ -175,7 +177,7 @@ define(['./values', './events'], function (values, events) {
         console.error('Unspecified widget type:', node);
         return;
       }
-      var widgetCtor = widgets[typename];
+      var widgetCtor = context.widgets[typename];
       if (!widgetCtor) {
         console.error('Bad widget type:', node);
         return;

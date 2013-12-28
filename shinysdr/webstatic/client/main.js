@@ -158,6 +158,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
   
       var context = new widget.Context({
         // TODO all of this should be narrowed down, read-only, replaced with other means to get it to the widgets that need it, etc.
+        widgets: widget.widgets,
         radio: radio,
         clientState: clientState,
         spectrumView: null,
