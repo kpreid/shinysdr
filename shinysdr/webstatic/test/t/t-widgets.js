@@ -17,7 +17,7 @@
 
 'use strict';
 
-describe('widget', function () {
+describe('widgets', function () {
   var scheduler, widget;
   beforeEach(function () {
     scheduler = new shinysdr.events.Scheduler(window);
@@ -47,7 +47,7 @@ describe('widget', function () {
   describe('Knob', function () {
     it('should hold a negative zero', function () {
       var cell = new shinysdr.values.LocalCell(shinysdr.values.any, 0);
-      widget = new shinysdr.widget.widgets.Knob({
+      widget = new shinysdr.widgets.Knob({
         target: cell,
         scheduler: scheduler
       });

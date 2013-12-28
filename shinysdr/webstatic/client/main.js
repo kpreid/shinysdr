@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./values', './events', './database', './network', './maps', './widget', './audio', './sections'], function (values, events, database, network, maps, widget, audio, sections) {
+define(['./values', './events', './database', './network', './maps', './widget', './widgets', './audio', './sections'], function (values, events, database, network, maps, widget, widgets, audio, sections) {
   'use strict';
   
   var any = values.any;
@@ -158,7 +158,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
   
       var context = new widget.Context({
         // TODO all of this should be narrowed down, read-only, replaced with other means to get it to the widgets that need it, etc.
-        widgets: widget.widgets,
+        widgets: widgets,
         radio: radio,
         clientState: clientState,
         spectrumView: null,

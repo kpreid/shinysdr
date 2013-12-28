@@ -16,7 +16,7 @@
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 // TODO: May be using the wrong relative module id -- otherwise this should have ..s
-define(['maps', 'widget'], function (maps, widget) {
+define(['maps', 'widgets'], function (maps, widgets) {
   'use strict';
   
   var projectedPoint = maps.projectedPoint;
@@ -84,7 +84,7 @@ define(['maps', 'widget'], function (maps, widget) {
   }
   
   // TODO: Better widget-plugin system so we're not modifying should-be-static tables
-  widget.widgets.VOR$Angle = Angle;
+  widgets.VOR$Angle = Angle;
   
   function addVORMapLayer(db, scheduler, addModeLayer) {
     addModeLayer('VOR', function(receiver, interested, addFeature, drawFeature) {

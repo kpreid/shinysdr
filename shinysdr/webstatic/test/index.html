@@ -28,7 +28,7 @@
   <script>
     // TODO: kludge to use old style namespaces
     var shinysdr = {};
-    var load_names = ['audio', 'database', 'events', 'maps', 'network', 'sections', 'values', 'widget'];
+    var load_names = ['audio', 'database', 'events', 'maps', 'network', 'sections', 'values', 'widget', 'widgets'];
     require(load_names.map(function(x) { return '../client/' + x; }), function() {
       var args = arguments;
       console.log(args);
