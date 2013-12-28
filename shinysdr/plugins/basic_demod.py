@@ -373,8 +373,13 @@ class SSBDemodulator(SimpleAudioDemodulator):
 	def __init__(self, mode, audio_rate=0, **kwargs):
 		if mode == 'LSB':
 			lsb = True
+			cw = False
 		elif mode == 'USB':
 			lsb = False
+			cw = False
+		elif mode == 'CW':
+			lsb = False
+			cw = True
 		else:
 			raise ValueError('Not an SSB mode: %r' % (mode,))
 		demod_rate = audio_rate
@@ -383,28 +388,38 @@ class SSBDemodulator(SimpleAudioDemodulator):
 			mode=mode,
 			audio_rate=audio_rate,
 			demod_rate=demod_rate,
-			band_filter=audio_rate / 2,  # unused
-			band_filter_transition=audio_rate / 2,  # unused
+			band_filter=audio_rate / 2,  # note narrower filter applied later
+			band_filter_transition=audio_rate / 2,
 			**kwargs)
 		input_rate = self.input_rate
 		
-		half_bandwidth = self.half_bandwidth = 2800 / 2
-		if lsb:
-			band_mid = -200 - half_bandwidth
+		if cw:
+			self.__offset = 1500
+			half_bandwidth = self.half_bandwidth = 100
+			self.band_filter_width = 80
+			band_mid = 0
+			agc_reference = 0.1
 		else:
-			band_mid = 200 + half_bandwidth
+			self.__offset = 0
+			half_bandwidth = self.half_bandwidth = 2800 / 2
+			self.band_filter_width = half_bandwidth / 5
+			if lsb:
+				band_mid = -200 - half_bandwidth
+			else:
+				band_mid = 200 + half_bandwidth
+			agc_reference = 0.25
+		
 		self.band_filter_low = band_mid - half_bandwidth
 		self.band_filter_high = band_mid + half_bandwidth
-		self.band_filter_width = half_bandwidth / 5
 		self.sharp_filter_block = grfilter.fir_filter_ccc(
 			1,
 			firdes.complex_band_pass(1.0, demod_rate,
-				self.band_filter_low,
-				self.band_filter_high,
+				self.band_filter_low + self.__offset,
+				self.band_filter_high + self.__offset,
 				self.band_filter_width,
 				firdes.WIN_HAMMING))
 		
-		self.agc_block = analog.agc2_cc(reference=0.25)
+		self.agc_block = analog.agc2_cc(reference=agc_reference)
 		
 		self.ssb_demod_block = blocks.complex_to_real(1)
 		
@@ -422,7 +437,11 @@ class SSBDemodulator(SimpleAudioDemodulator):
 	# TODO: this is the interface used to determine receiver.get_is_valid, but SSB demonstrates that the interface is insufficiently expressive. Should we use get_band_filter_shape instead? Should we use a different interface designed for expressing the channel? Or are signals like SSB which are asymmetric about the "carrier" frequency uncommon enough that we should not worry about handling this case well?
 	def get_half_bandwidth(self):
 		return self.half_bandwidth
-
+	
+	# override
+	def set_rec_freq(self, freq):
+		super(SSBDemodulator, self).set_rec_freq(freq - self.__offset)
+	
 	# override
 	@exported_value()
 	def get_band_filter_shape(self):
@@ -435,3 +454,4 @@ class SSBDemodulator(SimpleAudioDemodulator):
 
 pluginDef_lsb = ModeDef('LSB', label='SSB (L)', demodClass=SSBDemodulator)
 pluginDef_usb = ModeDef('USB', label='SSB (U)', demodClass=SSBDemodulator)
+pluginDef_cw = ModeDef('CW', label='CW', demodClass=SSBDemodulator)
