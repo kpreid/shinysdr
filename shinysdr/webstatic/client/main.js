@@ -86,7 +86,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
       function tune(options) {
         var alwaysCreate = options.alwaysCreate;
         var record = options.record;
-        var freq = +options.freq || (record && record.freq);
+        var freq = options.freq !== undefined ? +options.freq : (record && record.freq);
         var mode = options.mode || (record && record.mode);
         var receiver = options.receiver;
         //console.log('tune', alwaysCreate, freq, mode, receiver);
