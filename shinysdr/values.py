@@ -23,6 +23,8 @@ import struct
 
 from gnuradio import gr
 
+from twisted.python import log
+
 class BaseCell(object):
 	def __init__(self, target, key, persists=True, writable=False):
 		# The exact relationship of target and key depends on the subtype
@@ -257,8 +259,8 @@ class ExportedState(object):
 		defer = []
 		for key in state:
 			def err(adjective, suffix):
-				# TODO better printing/logging, ship to client
-				print 'Warning: Discarding ' + adjective + ' state', str(self) + '.' + key, '=', state[key], suffix
+				# TODO ship to client
+				log.msg('Warning: Discarding ' + adjective + ' state', str(self) + '.' + key, '=', state[key], suffix)
 			def doTry(f):
 				try:
 					f()

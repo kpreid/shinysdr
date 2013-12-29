@@ -140,8 +140,8 @@ def _parse_csv_file(csvfile):
 				if v is not None}
 		#print csvrec
 		if 'Frequency' not in csvrec:
-			# TODO: warn properly
-			print 'skipping record without frequency'
+			# TODO: better targeted messsage
+			log.msg('skipping record without frequency', db_record=csvrec)
 			continue
 		record = {
 			u'mode': csvrec.get('Mode', ''),

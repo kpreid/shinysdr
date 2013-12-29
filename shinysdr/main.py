@@ -22,6 +22,7 @@ from __future__ import absolute_import, division
 import argparse
 import base64
 import json
+import logging
 import os
 import os.path
 import shutil
@@ -29,10 +30,17 @@ import sys
 import webbrowser
 import __builtin__
 
+from twisted.python import log
 from twisted.internet import reactor
 
 
 def main(argv=sys.argv, _abort_for_test=False):
+	# Configure logging. Some log messages would be discarded if we did not set up things early
+	# TODO: Consult best practices for Python and Twisted logging.
+	# TODO: Logs which are observably relevant should be sent to the client (e.g. the warning of refusing to have more receivers active)
+	logging.basicConfig(level=logging.INFO)
+	log.startLoggingWithObserver(log.PythonLoggingObserver(loggerName='shinysdr').emit, False)
+	
 	# Option parsing is done before importing the main modules so as to avoid the cost of initializing gnuradio if we are aborting early. TODO: Make that happen for createConfig too.
 	argParser = argparse.ArgumentParser(prog=argv[0])
 	argParser.add_argument('configFile', metavar='CONFIG',
@@ -115,23 +123,23 @@ rootCap = '%(rootCap)s'
 			root.state_from_json(get_defaults(root))
 	
 	
-	print 'Flow graph...'
+	log.msg('Constructing flow graph...')
 	top = shinysdr.top.Top(sources=sources)
 	
-	print 'Restoring state...'
+	log.msg('Restoring state...')
 	restore(top, top_defaults)
 	
-	print 'Web server...'
+	log.msg('Starting web server...')
 	(stop, url) = shinysdr.web.listen(webConfig, top, noteDirty)
 	
 	if args.openBrowser:
-		print 'Ready. Opening ' + url
+		log.msg('ShinySDR is ready. Opening ' + url)
 		webbrowser.open(url=url, new=1, autoraise=True)
 	else:
-		print 'Ready. Visit ' + url
+		log.msg('ShinySDR is ready. Visit ' + url)
 	
 	if args.force_run:
-		print 'force_run'
+		log.msg('force_run')
 		from gnuradio.gr import msg_queue
 		top.add_audio_queue(msg_queue(limit=2), 44100)
 		top.set_unpaused(True)

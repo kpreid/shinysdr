@@ -22,6 +22,7 @@ from twisted.internet import defer
 from twisted.internet import protocol
 from twisted.internet import task
 from twisted.plugin import IPlugin, getPlugins
+from twisted.python import log
 from twisted.web import http, static, server, resource
 from zope.interface import Interface, implements  # available via Twisted
 
@@ -91,7 +92,6 @@ class JSONResource(CellResource):
 		return json.loads(value)
 
 	def grrender(self, value, request):
-		print repr(value)
 		return json.dumps(value)
 
 
@@ -324,7 +324,7 @@ class OurStreamProtocol(protocol.Protocol):
 		if self.inner is not None:
 			return
 		loc = self.transport.location
-		print 'WebSocket connection to', loc
+		log.msg('Stream connection to ', loc)
 		path = [urllib.unquote(x) for x in loc.split('/')]
 		assert path[0] == ''
 		path[0:1] = []
@@ -361,7 +361,8 @@ class OurStreamProtocol(protocol.Protocol):
 		if len(self.transport.transport.dataBuffer) > 1000000:
 			# TODO: condition is horrible implementation-diving kludge
 			# Don't accumulate indefinite buffer if we aren't successfully getting it onto the network.
-			print 'Dropping data ' + self.transport.location
+			# TODO: State streams cannot in general safely drop data; provide for dropping the connection (so we can recover from a clean state) instead
+			log.err('Dropping data going to stream ' + self.transport.location)
 		else:
 			self.transport.write(message)
 	

@@ -27,6 +27,7 @@ from shinysdr.blocks import make_resampler, MessageDistributorSink
 from shinysdr.receiver import Receiver
 
 from twisted.internet import reactor
+from twisted.python import log
 
 import math
 import time
@@ -220,7 +221,7 @@ class Top(gr.top_block, ExportedState):
 		"""Do all reconfiguration operations in the proper order."""
 		rate_changed = False
 		if self.source is not self._sources[self.source_name]:
-			print 'Switching source'
+			log.msg('Flow graph: Switching RF source')
 			self.__needs_reconnect = True
 			
 			def tune_hook():
@@ -243,7 +244,7 @@ class Top(gr.top_block, ExportedState):
 			self.input_freq = this_source.get_freq()
 		
 		if self.__needs_spectrum or rate_changed:
-			print 'Rebuilding spectrum FFT'
+			log.msg('Flow graph: Rebuilding FFT component')
 			self.__needs_spectrum = False
 			self.__needs_reconnect = True
 			
@@ -269,12 +270,12 @@ class Top(gr.top_block, ExportedState):
 				[10*math.log10(self.spectrum_resolution)] * self.spectrum_resolution)
 		
 		if rate_changed:
-			print 'Changing sample rate'
+			log.msg('Flow graph: Changing receiver input sample rates')
 			for receiver in self._receivers.itervalues():
 				receiver.set_input_rate(self.input_rate)
 
 		if self.__needs_reconnect:
-			print 'Reconnecting'
+			log.msg('Flow graph: Rebuilding connections')
 			self.__needs_reconnect = False
 			
 			self._recursive_lock()
@@ -300,7 +301,7 @@ class Top(gr.top_block, ExportedState):
 					if audio_sum_index >= 6:
 						# Sanity-check to avoid burning arbitrary resources
 						# TODO: less arbitrary constant; communicate this restriction to client
-						print 'Refusing to connect more than 6 receivers'
+						log.err('Flow graph: Refusing to connect more than 6 receivers')
 						break
 					self.connect(self.source, receiver)
 					self.connect((receiver, 0), (audio_sum_l, audio_sum_index))
@@ -318,7 +319,7 @@ class Top(gr.top_block, ExportedState):
 						else:
 							if queue_rate not in self.audio_resampler_cache:
 								# Moderately expensive due to the internals using optfir
-								print 'Constructing resampler for audio rate', queue_rate
+								log.msg('Flow graph: Constructing resampler for audio rate %i' % queue_rate)
 								self.audio_resampler_cache[queue_rate] = (
 									make_resampler(self.audio_rate, queue_rate),
 									make_resampler(self.audio_rate, queue_rate)
@@ -337,7 +338,7 @@ class Top(gr.top_block, ExportedState):
 					self.connect(audio_sum_r, blocks.null_sink(gr.sizeof_float))
 		
 			self._recursive_unlock()
-			print 'Done reconnecting'
+			log.msg('Flow graph: ...done reconnecting.')
 
 	def _update_receiver_validity(self, key):
 		receiver = self._receivers[key]
