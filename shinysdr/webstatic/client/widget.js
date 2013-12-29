@@ -311,7 +311,7 @@ define(['./values', './events'], function (values, events) {
       var maxZoom = Math.max(
         1,  // at least min zoom,
         Math.max(
-          bandwidth / 100e3, // at least 100KHz
+          bandwidth / 10e3, // at least 10 kHz
           radio.spectrum_fft.get().length / MAX_ZOOM_BINS));
       
       cursorX += fractionalScroll;
