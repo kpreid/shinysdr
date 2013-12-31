@@ -1,0 +1,57 @@
+<!doctype html>
+<!--
+  Copyright 2013 Kevin Reid <kpreid@switchb.org>
+  
+  This file is part of ShinySDR.
+  
+  ShinySDR is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+  
+  ShinySDR is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public License
+  along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<html lang="en"><head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>ShinySDR Manual: Frequency Databases</title>
+  <meta name="viewport" content="width=device-width">
+  <link rel="stylesheet" href="/manual/manual-style.css">
+</head><body>
+
+<h1>ShinySDR Manual: Frequency Databases</h1>
+
+<p><a href="./">Up to table of contents</a>
+
+<p>TODO: Explain the purpose of frequency databases.
+
+<h2>Data Format</h2>
+
+<p>The import/export format for frequency databases is an extended version of <a href="http://chirp.danplanet.com/">CHIRP</a>'s <a href="https://en.wikipedia.org/wiki/Comma-separated_values">CSV</a> format.
+  (Why that? Because it was the first documented and straightforward existing data format I found.)
+  <a href="http://chirp.danplanet.com/projects/chirp/wiki/MemoryEditorColumns">Here is CHIRP's documentation of the column formats.</a>
+  Not all columns are currently used by ShinySDR; in particular, those related to transmitter settings are not.</p>
+
+<p>The minimum columns required for a useful database are <code>Frequency</code> (in megahertz) and <code>Name</code>; for example,
+
+<blockquote><pre>Frequency,Name
+10,WWV</pre></blockquote>
+
+<p>The extensions are as follows:</p>
+
+<ul>
+  <li><p>The <code>Frequency</code> column may contain two frequencies separated by a hyphen “-”.
+    In this case, the record defines a <em>band</em> instead of a channel.
+    The lower frequency should always be specified first.
+    (TODO: Make sure code either rejects or fixes this.)</p></li>
+  <li><p>Two additional columns <code>Latitude</code> and <code>Longitude</code> can be used to specify the geographic location of a specific station. Each value, if not blank, should be a decimal number of degrees (negative values are south or west) and, if you want to be exact, in the <a href="https://en.wikipedia.org/wiki/World_Geodetic_System">WGS 84</a> coordinate system.</p></li>
+</ul>
+
+<p>TODO: Write up our own documentation of all of the columns, to be fully precise and in case CHIRP makes changes to their version.</p>
+
+</body></html>

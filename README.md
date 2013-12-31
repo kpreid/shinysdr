@@ -76,7 +76,9 @@ and access it using your browser at the displayed URL. (The `--go` option will a
 Usage
 -----
 
-Basic procedures:
+For information on using and programming ShinySDR, see the manual, which can be accessed at `/manual/` on the running server (there is a link in the UI).
+
+A very brief summary of basic operation:
 
 1. Make sure the “Run” checkbox is checked.
 
@@ -87,30 +89,6 @@ Basic procedures:
 3. Click on a signal of interest. This will create a *receiver*, which will be marked on the spectrum as well as displaying controls. Use the controls to select the appropriate mode (type of demodulation).
 
    Multiple signals can be received at once by shift-clicking in the spectrum view. To stop, click the X button by the receiver.
-
-
-Ideally, the UI would be fully discoverable, but right now there are a number of things that are probably not obvious; here's a list of those that haven't already been mentioned:
-
-* A receiver whose channel frequency is outside of the band around the center frequency will be stopped as long as this is the case.
-
-* The UI is divided into several sections which can be hidden as desired by clicking on their headers. To show a hidden section, click on its name, which will appear on the right side of the header of the section to the left of it.
-
-* The large-text frequency fields can be adjusted by scrolling or up and down arrows as well as by typing digits.
-
-Creating plugins
-----------------
-
-ShinySDR plugins are defined based on [the Twisted plugin system](https://twistedmatrix.com/documents/12.0.0/core/howto/plugin.html). A plugin is a Python module or package which provides objects implementing a defined plugin interface. To be loaded, a plugin must be placed somewhere on your Python module search path (`PYTHONPATH`) in the `shinysdr.plugins` package.
-
-Plugins can currently:
-
-  * Add new RF source types. (This does not have a specific interface since sources are written explicitly in the configuration file.)
-  * Add new demodulators (`ModeDef`).
-  * Add JS code or other web resources to be loaded by the client (`ClientResourceDef`). This can be used to define new user interface elements.
-
-The included VOR demodulator plugin (`shinysdr/plugins/vor/`) may be a useful example.
-
-[TODO: formally document plugin interfaces]
 
 Copyright and License
 ---------------------

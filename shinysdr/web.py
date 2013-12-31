@@ -416,6 +416,7 @@ def _make_static(filePath):
 	r = static.File(filePath)
 	r.contentTypes['.csv'] = 'text/csv'
 	r.indexNames = ['index.html']
+	r.ignoreExt('.html')
 	return r
 
 

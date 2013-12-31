@@ -1,0 +1,76 @@
+<!doctype html>
+<!--
+  Copyright 2013 Kevin Reid <kpreid@switchb.org>
+  
+  This file is part of ShinySDR.
+  
+  ShinySDR is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+  
+  ShinySDR is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public License
+  along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<html lang="en"><head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>ShinySDR Manual: Operation</title>
+  <meta name="viewport" content="width=device-width">
+  <link rel="stylesheet" href="/manual/manual-style.css">
+</head><body>
+
+<h1>ShinySDR Manual: Operation</h1>
+
+<p><a href="./">Up to table of contents</a>
+
+<p>This section of the manual describes how to use ShinySDR as a radio once the server has been properly configured. For setting up the server, see [TODO write and link that part]</p>
+
+<h2>Quick start</h2>
+
+<p>After you have ShinySDR open in your web browser (the server will give you the URL when it starts up):</p>
+
+<ol>
+
+<li><p>Make sure the “Run” checkbox is checked.</p></li>
+
+<li><p>Adjust the “Center frequency” to tune your RF hardware to the band you want to observe.</p></li>
+
+<li><p>You can zoom in on the spectrum by scrolling up and down. (Bug: No way to do this without a scrolling input device, particularly not on a touchscreen.)</p></li>
+
+<li><p>Click on a signal of interest. This will create a <em>receiver</em>, which will be marked on the spectrum as well as displaying controls. Use the controls to select the appropriate mode (type of demodulation).</p>
+
+  <p>Multiple signals can be received at once by shift-clicking in the spectrum view. To stop, click the X button by the receiver.</p></li>
+
+</ol>
+
+<h2>Basic concepts</h2>
+
+<p>There are <em>sources</em> and <em>receivers</em>. [TODO improve this wording]</p>
+
+<p>A <dfn>source</dfn> provides an RF input, and usually corresponds to a hardware device with antenna, tuner, ADC, etc. Which sources are available is set in the configuration file. The source's options, as well as a menu to select the active source if there is more than one, are displayed at the top of the <em>Radio Config</em> section.</p>
+
+<p>A source has a <dfn>center frequency</dfn> which determines what range of the radio spectrum is digitized. It is marked by a hairline in the center of the spectrum view.</p>
+
+<p>A <dfn>receiver</dfn> selects and demodulates a specific signal within the band received by a source. A receiver has its own <dfn>channel frequency</dfn>; whenever the channel frequency is not sufficiently close to the center frequency to be within the bandwidth of the source, it will be inactive.</p>
+
+<p>Receivers are displayed as additional hairlines in the spectrum section and below the source in the Radio Config section. Normally there is only one receiver, but additional receivers can be created and deleted. Note that additional receivers result in additional CPU load on the server.</p>
+
+<h2>Tricky bits</h2>
+
+<p>Ideally, the UI would be fully discoverable, but right now there are a number of things that are probably not obvious; here's a list of those that haven't already been mentioned:</p>
+
+<ul>
+  <li><p>A receiver whose channel frequency is outside of the band around the center frequency will be stopped as long as this is the case.</p></li>
+
+  <li><p>The UI is divided into several sections which can be hidden as desired by clicking on their headers. To show a hidden section, click on its name, which will appear on the right side of the header of the section to the left of it.</p></li>
+
+  <li><p>The large-text frequency fields can be adjusted by scrolling or up and down arrows as well as by typing digits.</p></li>
+</ul>
+
+
+</body></html>
