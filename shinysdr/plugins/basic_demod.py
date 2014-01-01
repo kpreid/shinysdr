@@ -395,8 +395,8 @@ class SSBDemodulator(SimpleAudioDemodulator):
 		
 		if cw:
 			self.__offset = 1500
-			half_bandwidth = self.half_bandwidth = 100
-			self.band_filter_width = 80
+			half_bandwidth = self.half_bandwidth = 500
+			self.band_filter_width = 120
 			band_mid = 0
 			agc_reference = 0.1
 		else:
