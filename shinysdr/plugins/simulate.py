@@ -31,13 +31,14 @@ from shinysdr.source import Source
 
 
 class SimulatedSource(Source):
-	def __init__(self, name='Simulated Source', **kwargs):
-		Source.__init__(self, name=name, **kwargs)
+	def __init__(self, name='Simulated Source', freq=0):
+		Source.__init__(self, name=name)
 		
 		audio_rate = 1e4
 		rf_rate = self.__sample_rate = 200e3
 		interp = int(rf_rate / audio_rate)
 		
+		self.__freq = freq
 		self.noise_level = -2
 		
 		interp_taps = firdes.low_pass(
@@ -171,7 +172,7 @@ class SimulatedSource(Source):
 		
 	@exported_value(ctor=float)
 	def get_freq(self):
-		return 0
+		return self.__freq
 	
 	def get_tune_delay(self):
 		return 0.0

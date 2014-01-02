@@ -234,6 +234,7 @@ class Top(gr.top_block, ExportedState):
 				for key, receiver in self._receivers.iteritems():
 					receiver.set_input_center_freq(freq)
 					self._update_receiver_validity(key)
+					# TODO: If multiple receivers change validity we'll do redundant reconnects in this loop; avoid that.
 
 			this_source = self._sources[self.source_name]
 			this_source.set_tune_hook(tune_hook)
@@ -242,6 +243,8 @@ class Top(gr.top_block, ExportedState):
 			rate_changed = self.input_rate != this_rate
 			self.input_rate = this_rate
 			self.input_freq = this_source.get_freq()
+			for key, receiver in self._receivers.iteritems():
+				receiver.set_input_center_freq(self.input_freq)
 		
 		if self.__needs_spectrum or rate_changed:
 			log.msg('Flow graph: Rebuilding FFT component')
