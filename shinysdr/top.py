@@ -66,7 +66,7 @@ class Top(gr.top_block, ExportedState):
 		# Blocks etc.
 		self.source = None
 		self.monitor = MonitorSink(
-			sample_rate=10000, # dummy value will be updated in _do_connect
+			sample_rate=10000,  # dummy value will be updated in _do_connect
 			complex_in=True,
 			context=Context(self))
 		
@@ -167,6 +167,7 @@ class Top(gr.top_block, ExportedState):
 			
 			def tune_hook():
 				reactor.callLater(self.source.get_tune_delay(), tune_hook_actual)
+			
 			def tune_hook_actual():
 				if self.source is not this_source:
 					return
@@ -378,7 +379,7 @@ class ContextForReceiver(Context):
 	def __init__(self, top, key):
 		Context.__init__(self, top)
 		self._key = key
-		self._enabled = False # assigned outside
+		self._enabled = False  # assigned outside
 
 	def revalidate(self):
 		if self._enabled:

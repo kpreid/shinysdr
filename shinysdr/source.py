@@ -95,5 +95,3 @@ class AudioSource(Source):
 		if self.__quadrature_as_stereo:
 			# if we don't do this, the imaginary component is 0 and the spectrum is symmetric
 			self.connect((self.__source, 1), (self.__complex, 1))
-
-

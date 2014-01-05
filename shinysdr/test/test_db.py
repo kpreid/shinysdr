@@ -45,8 +45,8 @@ class TestCSV(unittest.TestCase):
 				u'mode': u'',
 				u'label': u'a',
 				u'notes': u'',
-				u'location': None
-			}])
+				u'location': None}])
+
 
 class TestDBWeb(unittest.TestCase):
 	test_data_json = [
@@ -105,9 +105,11 @@ class TestDBWeb(unittest.TestCase):
 			if response.code >= 300:
 				print data
 			self.assertEqual(response.code, http.NO_CONTENT)
+			
 			def check(s):
 				j = json.loads(s)
 				self.assertEqual(j, modified)
+			
 			return client.getPage(self.__url('/')).addCallback(check)
 		d.addCallback(proceed)
 		return d
@@ -128,11 +130,11 @@ class TestDBWeb(unittest.TestCase):
 			self.assertEqual(response.code, http.CREATED)
 			url = 'ONLYONE'.join(response.headers.getRawHeaders('Location'))
 			self.assertEqual(url, self.__url('/2'))  # URL of new entry
+			
 			def check(s):
 				j = json.loads(s)
 				self.assertEqual(j[-1], new_record)
+			
 			return client.getPage(self.__url('/')).addCallback(check)
 		d.addCallback(proceed)
 		return d
-
-

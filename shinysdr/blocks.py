@@ -30,6 +30,7 @@ from gnuradio.fft import logpwrfft
 
 from shinysdr.values import ExportedState, exported_value, setter, Range, StreamCell
 
+
 def _factorize(n):
 	# I wish there was a nice standard library function for this...
 	# Wrote the simplest thing I could think of
@@ -393,7 +394,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
 		# adjust units so displayed level is independent of resolution (log power per bandwidth rather than per bin)
 		# TODO work out and document exactly what units we're using
 		self.__fft_rescale = blocks.add_const_vff(
-			[10*math.log10(self.__freq_resolution)] * self.__freq_resolution)
+			[10 * math.log10(self.__freq_resolution)] * self.__freq_resolution)
 	
 	def __connect(self):
 		self.__context.lock()

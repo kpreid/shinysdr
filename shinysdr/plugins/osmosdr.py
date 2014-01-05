@@ -38,7 +38,7 @@ class OsmoSDRProfile(object):
 	def __init__(self, dc_offset=False, e4000=False):
 		'''
 		dc_offset: If true, the output has a DC offset and tuning should
-		    the area around DC.
+		    avoid the area around DC.
 		e4000: The device is an RTL2832U + E4000 tuner and can be
 		    confused into tuning to 0 Hz.
 		'''

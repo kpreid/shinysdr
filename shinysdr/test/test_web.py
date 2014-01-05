@@ -48,11 +48,13 @@ class TestWebSite(unittest.TestCase):
 	
 	def test_app_redirect(self):
 		url_without_slash = self.url[:-1]
+		
 		def callback((response, data)):
 			self.assertEqual(response.code, http.MOVED_PERMANENTLY)
 			self.assertEqual(self.url,
 				urlparse.urljoin(url_without_slash,
 					'ONLYONE'.join(response.headers.getRawHeaders('Location'))))
+		
 		return testutil.http_get(reactor, url_without_slash).addCallback(callback)
 
 
@@ -66,8 +68,10 @@ class SiteStateStub(ExportedState):
 class StateStreamTestCase(unittest.TestCase):
 	def setUp(self):
 		self.updates = []
+		
 		def send(value):
 			self.updates.extend(json.loads(value))
+		
 		self.stream = StateStreamInner(send, self.object, 'urlroot')
 	
 	def getUpdates(self):
@@ -133,5 +137,3 @@ class TestCollectionStream(StateStreamTestCase):
 			['delete', 2],
 			['delete', 3],
 		])
-
-

@@ -33,8 +33,9 @@ import os
 import math
 import warnings
 
+
 pipe_rate = 22050  # what multimon-ng expects
-_maxint32 = (2**15-1)
+_maxint32 = 2 ** 15 - 1
 audio_gain = 0.5
 int_scale = _maxint32 * audio_gain
 

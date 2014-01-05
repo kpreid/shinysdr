@@ -32,8 +32,10 @@ from shinysdr.values import ExportedState, Range, exported_value, setter
 
 import math
 
+
 class Demodulator(gr.hier_block2, ExportedState):
 	implements(IDemodulator)
+	
 	def __init__(self, mode,
 			input_rate=0,
 			audio_rate=0,
@@ -50,7 +52,6 @@ class Demodulator(gr.hier_block2, ExportedState):
 		self.input_rate = input_rate
 		self.audio_rate = audio_rate
 		self.context = context
-		
 
 	def can_set_mode(self, mode):
 		return False
@@ -85,6 +86,7 @@ class SquelchMixin(ExportedState):
 
 class SimpleAudioDemodulator(Demodulator, SquelchMixin):
 	implements(ITunableDemodulator)
+	
 	def __init__(self, demod_rate=0, band_filter=None, band_filter_transition=None, **kwargs):
 		Demodulator.__init__(self, **kwargs)
 		SquelchMixin.__init__(self, demod_rate)

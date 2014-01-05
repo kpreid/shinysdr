@@ -61,7 +61,6 @@ class Receiver(gr.hier_block2, ExportedState):
 		self.audio_gain = audio_gain
 		self.audio_pan = min(1, max(-1, audio_pan))
 		
-		
 		# Blocks
 		self.oscillator = analog.sig_source_c(input_rate, analog.GR_COS_WAVE, -rec_freq, 1, 0)
 		self.mixer = blocks.multiply_cc(1)
@@ -69,7 +68,7 @@ class Receiver(gr.hier_block2, ExportedState):
 		self.__demod_tunable = ITunableDemodulator.providedBy(self.demodulator)
 		self.audio_gain_l_block = blocks.multiply_const_ff(0.0)
 		self.audio_gain_r_block = blocks.multiply_const_ff(0.0)
-		self.probe_audio = analog.probe_avg_mag_sqrd_f(0, alpha=10.0/audio_rate)
+		self.probe_audio = analog.probe_avg_mag_sqrd_f(0, alpha=10.0 / audio_rate)
 		
 		self.__update_oscillator()  # in case of __demod_tunable
 		self.__update_audio_gain()
@@ -238,12 +237,12 @@ class Receiver(gr.hier_block2, ExportedState):
 class ContextForDemodulator(object):
 	def __init__(self, receiver):
 		self._receiver = receiver
-		self._enabled = False # assigned outside
+		self._enabled = False  # assigned outside
 	
 	def revalidate(self):
 		raise NotImplementedError('ContextForDemodulator not done')
-		if self._enabled:
-			self._receiver.context._update_receiver_validity(self._key)
+		#if self._enabled:
+		#	self._receiver.context._update_receiver_validity(self._key)
 	
 	def rebuild_me(self):
 		assert self._enabled

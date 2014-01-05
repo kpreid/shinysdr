@@ -56,16 +56,16 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 		# Output
 		self.band_filter_block = filter = MultistageChannelFilter(
 			input_rate=input_rate,
-			output_rate=pipe_rate, # expected by dump1090
+			output_rate=pipe_rate,  # expected by dump1090
 			cutoff_freq=pipe_rate / 2,
-			transition_width=transition_width) # TODO optimize filter band
+			transition_width=transition_width)  # TODO optimize filter band
 		interleaver = blocks.interleave(gr.sizeof_char)
 		self.connect(
 			self,
 			filter,
 			blocks.complex_to_real(1),
-			blocks.multiply_const_ff(255.0/2),
-			blocks.add_const_ff(255.0/2),
+			blocks.multiply_const_ff(255.0 / 2),
+			blocks.add_const_ff(255.0 / 2),
 			blocks.float_to_uchar(),
 			(interleaver, 0),
 			self.dump1090)
@@ -73,8 +73,8 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 		self.connect(
 			filter,
 			blocks.complex_to_imag(1),
-			blocks.multiply_const_ff(255.0/2),
-			blocks.add_const_ff(255.0/2),
+			blocks.multiply_const_ff(255.0 / 2),
+			blocks.add_const_ff(255.0 / 2),
 			blocks.float_to_uchar(),
 			(interleaver, 1))
 		# Dummy audio
@@ -93,8 +93,8 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 	@exported_value()
 	def get_band_filter_shape(self):
 		return {
-			'low': -pipe_rate/2,
-			'high': pipe_rate/2,
+			'low': -pipe_rate / 2,
+			'high': pipe_rate / 2,
 			'width': transition_width
 		}
 

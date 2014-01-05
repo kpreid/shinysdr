@@ -70,8 +70,10 @@ class DatabaseResource(resource.Resource):
 	
 	def __init__(self, database):
 		resource.Resource.__init__(self)
+		
 		def instantiate(i):
 			self.putChild(str(i), _RecordResource(database[i]))
+		
 		self.putChild('', _DbIndexResource(database, instantiate))
 		for i, record in enumerate(database):
 			instantiate(i)

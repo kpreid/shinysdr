@@ -104,6 +104,7 @@ class CellIdentitySpecimen(ExportedState):
 	'''Helper for TestCellIdentity'''
 	value = 1
 	block = None
+	
 	def __init__(self):
 		self.block = ExportedState()
 	

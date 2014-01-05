@@ -29,8 +29,8 @@ class TestTop(unittest.TestCase):
 		Regression test: Switching sources was not updating receiver input frequency.
 		'''
 		top = Top(sources={
-			's1':simulate.SimulatedSource(freq=0),
-			's2':simulate.SimulatedSource(freq=1e6),
+			's1': simulate.SimulatedSource(freq=0),
+			's2': simulate.SimulatedSource(freq=1e6),
 		})
 		top.set_source_name('s1')
 		(_, receiver) = top.add_receiver('AM', key='a')

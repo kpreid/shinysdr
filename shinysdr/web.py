@@ -111,7 +111,7 @@ class BlockResource(resource.Resource):
 		self._dynamic = block.state_is_dynamic()
 		# Weak dict ensures that we don't hold references to blocks that are no longer held by this block
 		self._blockResourceCache = weakref.WeakKeyDictionary()
-		if not self._dynamic: # currently dynamic blocks can only have block children
+		if not self._dynamic:  # currently dynamic blocks can only have block children
 			self._blockCells = {}
 			for key, cell in block.state().iteritems():
 				if cell.isBlock():
@@ -155,7 +155,7 @@ class BlockResource(resource.Resource):
 		key = block.create_child(reqjson)  # note may fail
 		self._noteDirty()
 		url = request.prePathURL() + '/receivers/' + urllib.quote(key, safe='')
-		request.setResponseCode(201) # Created
+		request.setResponseCode(201)  # Created
 		request.setHeader('Location', url)
 		# TODO consider a more useful response
 		return json.dumps(url)
@@ -163,7 +163,7 @@ class BlockResource(resource.Resource):
 	def render_DELETE(self, request):
 		self._deleteSelf()
 		self._noteDirty()
-		request.setResponseCode(204) # No Content
+		request.setResponseCode(204)  # No Content
 		return ''
 	
 	def resourceDescription(self):
@@ -171,6 +171,7 @@ class BlockResource(resource.Resource):
 	
 	def isForBlock(self, block):
 		return self._block is block
+
 
 # TODO: Better name for this category of object
 class StateStreamInner(object):
@@ -195,14 +196,15 @@ class StateStreamInner(object):
 		del self._registered[obj]
 		del self._previousValues[obj]
 		del self._urls[obj]
-		
 	
 	def _checkUpdates(self):
 		seen_this_time = set([self._cell])
+		
 		def maybesend(obj, compare_value, update_value):
 			if obj not in self._previousValues or compare_value != self._previousValues[obj]:
 				self._previousValues[obj] = compare_value
 				self.__send1(False, ('value', self._registered[obj], update_value))
+		
 		def traverse(obj):
 			#print 'traverse', obj, self._registered.get(obj, None)
 			if isinstance(obj, ExportedState):
@@ -236,6 +238,7 @@ class StateStreamInner(object):
 				#print '  unrecognized'
 				# TODO: warn unrecognized
 				return
+		
 		def meet(obj, url):
 			#print 'meet', obj, url
 			seen_this_time.add(obj)
@@ -270,7 +273,6 @@ class StateStreamInner(object):
 		for obj in deletions:
 			self.__send1(False, ('delete', self._registered[obj]))
 			self.__drop(obj)
-			
 	
 	def __flush(self):
 		if len(self._send_batch) > 0:
@@ -304,7 +306,7 @@ class AudioStreamInner(object):
 		buf = ''
 		while not queue.empty_p():
 			message = queue.delete_head()
-			if message.length() > 0: # avoid crash bug
+			if message.length() > 0:  # avoid crash bug
 				buf += message.to_string()
 		if len(buf) > 0:
 			self._send(buf)
@@ -502,6 +504,7 @@ def listen(config, top, noteDirty):
 	port_num = web_port_obj.socket.getsockname()[1]  # TODO touching implementation, report need for a better way (web_port_obj.port is 0 if specified port is 0, not actual port)
 	
 	url = _strport_to_url(config['httpPort'], socket_port=port_num, path=visitPath)
+	
 	def stop():
 		# TODO: Does Twisted already have something to bundle up a bunch of ports for shutdown?
 		return defer.DeferredList([

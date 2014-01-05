@@ -42,11 +42,12 @@ class SimulatedSource(Source):
 		self.noise_level = -2
 		
 		interp_taps = firdes.low_pass(
-			1, # gain
+			1,  # gain
 			rf_rate,
 			audio_rate / 2,
 			audio_rate * 0.2,
 			firdes.WIN_HAMMING)
+		
 		def make_interpolator():
 			return filter.interp_fir_filter_ccf(interp, interp_taps)
 		
@@ -60,7 +61,7 @@ class SimulatedSource(Source):
 		self.channel_model = channels.channel_model(
 			noise_voltage=10 ** self.noise_level,
 			frequency_offset=0,
-			epsilon=1.01, # TODO: expose this parameter
+			epsilon=1.01,  # TODO: expose this parameter
 			#taps=...,  # TODO: apply something here?
 			)
 		self.throttle = blocks.throttle(gr.sizeof_gr_complex, rf_rate)
@@ -122,10 +123,10 @@ class SimulatedSource(Source):
 			# Audio/AM signal
 			self.connect(
 				vor_30,
-				blocks.multiply_const_ff(0.3), # M_n
+				blocks.multiply_const_ff(0.3),  # M_n
 				(vor_audio, 0))
 			self.connect(audio_signal,
-				blocks.multiply_const_ff(0.07), # M_i
+				blocks.multiply_const_ff(0.07),  # M_i
 				(vor_audio, 1))
 			# Carrier component
 			self.connect(
@@ -146,9 +147,9 @@ class SimulatedSource(Source):
 				(vor_fm_mult, 1))
 			self.connect(  # modulation
 				vor_30,
-				filter.interp_fir_filter_fff(interp, interp_taps), # float not complex
+				filter.interp_fir_filter_fff(interp, interp_taps),  # float not complex
 				analog.frequency_modulator_fc(2 * math.pi * vor_dev / rf_rate),
-				blocks.multiply_const_cc(0.3), # M_d
+				blocks.multiply_const_cc(0.3),  # M_d
 				vor_fm_mult,
 				(vor_add, 2))
 			self.connect(

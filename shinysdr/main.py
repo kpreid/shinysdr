@@ -96,7 +96,7 @@ wsPort = 'tcp:8101'
 # in this file has been automatically generated from 128 random bits.
 # Set to None to not use any secret.
 rootCap = '%(rootCap)s'
-''' % {'rootCap': base64.urlsafe_b64encode(os.urandom(128 // 8)).replace('=','')})
+''' % {'rootCap': base64.urlsafe_b64encode(os.urandom(128 // 8)).replace('=', '')})
 			sys.exit(0)
 	else:
 		# TODO: better ways to manage the namespaces?
@@ -121,7 +121,6 @@ rootCap = '%(rootCap)s'
 			shutil.copyfile(stateFile, stateFile + '~')
 		else:
 			root.state_from_json(get_defaults(root))
-	
 	
 	log.msg('Constructing flow graph...')
 	top = shinysdr.top.Top(sources=sources)

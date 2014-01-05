@@ -25,6 +25,7 @@ from gnuradio import gr
 
 from twisted.python import log
 
+
 class BaseCell(object):
 	def __init__(self, target, key, persists=True, writable=False):
 		# The exact relationship of target and key depends on the subtype
@@ -132,9 +133,9 @@ class MessageSplitter(object):
 			else:
 				message = queue.delete_head()
 			if message.length() > 0:
-				string = message.to_string() # only interface available
+				string = message.to_string()  # only interface available
 			else:
-				string = '' # avoid crash bug
+				string = ''  # avoid crash bug
 			itemsize = int(message.arg1())
 			count = int(message.arg2())
 			index = 0
@@ -148,7 +149,7 @@ class MessageSplitter(object):
 		
 		# extract value
 		# TODO: this should be a separate concern, refactor
-		itemStr = string[itemsize * index : itemsize * (index + 1)]
+		itemStr = string[itemsize * index:itemsize * (index + 1)]
 		if binary:
 			# TODO: for general case need to have configurable format string
 			value = struct.pack('dd', *self.__igetter()) + itemStr
@@ -169,8 +170,10 @@ class StreamCell(ValueCell):
 	def subscribe(self):
 		queue = gr.msg_queue()
 		self._dgetter().subscribe(queue)
+		
 		def close():
 			self._dgetter().unsubscribe(queue)
+		
 		return MessageSplitter(queue, self._igetter, close)
 	
 	def get(self):
@@ -205,6 +208,7 @@ class BlockCell(BaseBlockCell):
 	def getBlock(self):
 		# TODO method-based access
 		return getattr(self._target, self._key)
+
 
 # TODO: It's unclear whether or not the Cell design makes sense in light of this. We seem to have conflated the index in the container and the type of the contained into one object.
 class CollectionMemberCell(BaseBlockCell):
@@ -261,12 +265,14 @@ class ExportedState(object):
 			def err(adjective, suffix):
 				# TODO ship to client
 				log.msg('Warning: Discarding ' + adjective + ' state', str(self) + '.' + key, '=', state[key], suffix)
+			
 			def doTry(f):
 				try:
 					f()
 				except (LookupError, TypeError, ValueError) as e:
 					# a plausible set of exceptions, so we don't catch implausible ones
 					err('erroneous', '(' + type(e).__name__ + ': ' + str(e) + ')')
+			
 			cell = cells.get(key, None)
 			if cell is None:
 				if dynamic:
@@ -372,7 +378,7 @@ def type_to_json(t):
 		return u'spectrum'
 	elif isinstance(t, ValueType):
 		return t.type_to_json()
-	elif t is bool: # TODO can we generalize this?
+	elif t is bool:  # TODO can we generalize this?
 		return u'boolean'
 	else:
 		return None
