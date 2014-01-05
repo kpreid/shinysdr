@@ -116,6 +116,7 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
 		add_modulator(30e3, 'fm', 'NFM')
 		add_modulator(-30e3, 'vor1', 'VOR', angle=0)
 		add_modulator(-60e3, 'vor2', 'VOR', angle=math.pi / 2)
+		add_modulator(50e3, 'rtty', 'RTTY', message='The quick brown fox jumped over the lazy dog.\n')
 		
 		bus_input = 0
 		for signal in signals:
@@ -172,13 +173,21 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
 		
 		self.modulator = modulator  # exported
 		
-		audio_resampler = make_resampler(audio_rate, modulator.get_input_type().get_sample_rate())
+		modulator_input_type = modulator.get_input_type()
+		if modulator_input_type.get_kind() == 'MONO':
+			audio_resampler = make_resampler(audio_rate, modulator_input_type.get_sample_rate())
+			self.connect(self, audio_resampler, modulator)
+		elif modulator_input_type.get_kind() == 'NONE':
+			self.connect(self, blocks.null_sink(gr.sizeof_float))
+		else:
+			raise Exception('don\'t know how to supply input of type %s' % modulator_input_type)
+		
 		rf_resampler = rational_resampler.rational_resampler_ccf(
 			interpolation=int(rf_rate),
 			decimation=int(modulator.get_output_type().get_sample_rate()))
 		self.__rotator = blocks.rotator_cc(rotator_inc(rate=rf_rate, shift=freq))
 		self.__mult = blocks.multiply_const_cc(10.0 ** -1)
-		self.connect(self, audio_resampler, modulator, rf_resampler, self.__rotator, self.__mult, self)
+		self.connect(modulator, rf_resampler, self.__rotator, self.__mult, self)
 	
 	def state_def(self, callback):
 		super(_SimulatedTransmitter, self).state_def(callback)
@@ -201,5 +210,3 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
 	@setter
 	def set_gain(self, value):
 		self.__mult.set_k(10.0 ** (float(value) / 10))
-
-
