@@ -151,15 +151,27 @@ define(['./values', './events'], function (values, events) {
   }
   exports.createWidgetExt = createWidgetExt;
   
+  // return a cell containing the cell from rootCell's block according to str
+  // e.g. if str is foo.bar then the returned cell's value is
+  //   rootCell.get().foo.get().bar
+  function evalTargetStr(rootCell, str, scheduler) {
+    var steps = str.split(/\./);
+    return new DerivedCell(values.any, scheduler, function (dirty) {
+      var cell = rootCell;
+      steps.forEach(function (name) {
+        if (cell !== undefined) cell = cell.depend(dirty)[name];
+      });
+      return cell;
+    });
+  }
+  
   function createWidgets(rootTargetCell, context, node) {
     var scheduler = context.scheduler;
     if (node.hasAttribute && node.hasAttribute('data-widget')) {
       var targetCellCell, targetStr;
       if (node.hasAttribute('data-target')) {
         targetStr = node.getAttribute('data-target');
-        targetCellCell = new DerivedCell(values.any, scheduler, function (dirty) {
-          return rootTargetCell.depend(dirty)[targetStr];
-        });
+        targetCellCell = evalTargetStr(rootTargetCell, targetStr, scheduler);
       } else {
         targetStr = "<can't happen>";
         targetCellCell = new ConstantCell(values.any, rootTargetCell);
@@ -184,7 +196,7 @@ define(['./values', './events'], function (values, events) {
       while (node.firstChild) html.appendChild(node.firstChild);
       var go = function go() {
         // TODO defend against JS-significant keys
-        var target = rootTargetCell.depend(go)[node.getAttribute('data-target')];
+        var target = evalTargetStr(rootTargetCell, node.getAttribute('data-target'), scheduler).depend(go);
         if (!target) {
           node.textContent = '[Missing: ' + node.getAttribute('data-target') + ']';
           return;
