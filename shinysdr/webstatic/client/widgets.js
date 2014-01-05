@@ -145,9 +145,9 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   // Widget for the top block
   function Top(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
-      ignore('spectrum_fft');  // displayed separately
       ignore('preset');  // displayed separately, not real state
       ignore('targetDB');  // not real state
+      ignore('monitor');  // displayed separately
       
       if ('unpaused' in block) {
         addWidget('unpaused', Toggle, 'Run');
@@ -279,7 +279,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   }
   widgets.Receiver = Receiver;
   
-  // Widget for a receiver block
+  // Widget for a demodulator block
   function Demodulator(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       ignore('band_filter_shape');
@@ -319,6 +319,20 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     }, true);
   }
   widgets.Demodulator = Demodulator;
+  
+  // Widget for incidental controls for a monitor block
+  function MonitorParameters(config) {
+    Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
+      ignore('fft');
+      if ('frame_rate' in block) {
+        addWidget('frame_rate', LogSlider, 'Rate');
+      }
+      if ('freq_resolution' in block) {
+        addWidget('freq_resolution', LogSlider, 'Resolution');
+      }
+    });
+  }
+  widgets.MonitorParameters = MonitorParameters;
   
   // Abstract
   function CanvasSpectrumWidget(config, buildGL, build2D) {

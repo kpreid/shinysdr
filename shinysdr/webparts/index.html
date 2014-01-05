@@ -26,16 +26,18 @@
 </head><body class="ui-sections">
 
 <section id="section-spectrum" class="stretchy" data-visible="true">
-  <h2>Spectrum</h2>
+  <h2>Spectrum <span data-target="radio"><span data-target="monitor" data-widget="MonitorParameters"></span></span></h2>
   <div class="hscalegroup" id="_spectrum-container" data-target="radio">
-    <div class="hscale">
+    <div class="hscale" data-target="monitor">
       <div data-widget="ReceiverMarks" class="overlay"></div>
-      <canvas class="overlay" id="spectrum" data-widget="SpectrumPlot" data-target="spectrum_fft"></canvas>
+      <canvas class="overlay" id="spectrum" data-widget="SpectrumPlot" data-target="fft"></canvas>
     </div>
     <div data-target="source">
     <span data-widget="FreqScale" data-target="freq"></span>
     </div>
-    <canvas class="hscale" data-widget="WaterfallPlot" data-target="spectrum_fft"></canvas>
+    <div class="hscale" data-target="monitor">
+      <canvas data-widget="WaterfallPlot" data-target="fft"></canvas>
+    </div>
   </div>
 </section>
 

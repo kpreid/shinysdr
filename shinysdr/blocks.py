@@ -17,14 +17,18 @@
 
 from __future__ import absolute_import, division
 
+import math
+import os
+import subprocess
+
 from gnuradio import gr
 from gnuradio import blocks
 from gnuradio import filter as grfilter
 from gnuradio.filter import pfb
 from gnuradio.filter import firdes
+from gnuradio.fft import logpwrfft
 
-import subprocess
-import os
+from shinysdr.values import ExportedState, exported_value, setter, Range, StreamCell
 
 def _factorize(n):
 	# I wish there was a nice standard library function for this...
@@ -267,3 +271,175 @@ class MessageDistributorSink(gr.hier_block2):
 			self.disconnect(self, sink)
 		finally:
 			self.__context.unlock()
+
+
+_maximum_fft_rate = 120
+
+
+class _OverlapGimmick(gr.hier_block2):
+	'''
+	Pure flowgraph kludge to cause a logpwrfft block to perform overlapped FFTs.
+	
+	The more correct solution would be to replace stream_to_vector_decimator (used inside of logpwrfft) with a block which takes arbitrarily-spaced vector chunks of the input rather than chunking and then decimating in terms of whole chunks. The cost of doing this instead is more scheduling steps and more data copies.
+	
+	To adjust for the data rate, the logpwrfft block's sample rate parameter must be multiplied by the factor parameter of this block; or equivalently, the frame rate must be divided by it.
+	'''
+	__element = gr.sizeof_gr_complex
+	
+	def __init__(self, size, factor, migrate=None):
+		'''
+		size: (int) vector size (FFT size) of next block
+		factor: (int) output will have this many more samples than input
+		
+		If size is not divisible by factor, then the output will necessarily have jitter.
+		'''
+		size = int(size)
+		factor = int(factor)
+		# assert size % factor == 0
+		offset = size // factor
+		
+		gr.hier_block2.__init__(
+			self, self.__class__.__name__,
+			gr.io_signature(1, 1, self.__element),
+			gr.io_signature(1, 1, self.__element),
+		)
+		
+		if factor == 1:
+			# No duplication needed; simplify flowgraph
+			# GR refused to connect self to self, so insert a dummy block
+			self.connect(self, blocks.copy(self.__element), self)
+		else:
+			interleave = blocks.interleave(self.__element * size)
+			self.connect(
+				interleave,
+				blocks.vector_to_stream(self.__element, size),
+				self)
+		
+			for i in xrange(0, factor):
+				self.connect(
+					self,
+					blocks.delay(self.__element, (factor - 1 - i) * offset),
+					blocks.stream_to_vector(self.__element, size),
+					(interleave, i))
+
+
+class SpectrumTypeStub:  # TODO get rid of this or make it not a "stub"
+	pass
+
+
+class MonitorSink(gr.hier_block2, ExportedState):
+	'''
+	Convenience wrapper around all the bits and pieces to display the signal spectrum to the client.
+	'''
+	def __init__(self,
+			sample_rate=None,
+			complex_in=True,
+			freq_resolution=4096,
+			frame_rate=30.0,
+			input_center_freq=0.0,
+			context=None):
+		assert sample_rate > 0
+		assert context is not None
+		complex_in = bool(complex_in)
+		if complex_in:
+			itemsize = gr.sizeof_gr_complex
+		else:
+			itemsize = gr.sizeof_float
+		
+		gr.hier_block2.__init__(
+			self, self.__class__.__name__,
+			gr.io_signature(1, 1, itemsize),
+			gr.io_signature(0, 0, 0),
+		)
+		
+		# constant parameters
+		self.__complex = complex_in
+		self.__itemsize = itemsize
+		self.__context = context
+		
+		# settable parameters
+		self.__sample_rate = float(sample_rate)
+		self.__freq_resolution = int(freq_resolution)
+		self.__frame_rate = float(frame_rate)
+		self.__input_center_freq = float(input_center_freq)
+		
+		# this block attr needs to exist early
+		self.__fft_sink = None
+		
+		self.__rebuild()
+		self.__connect()
+	
+	def state_def(self, callback):
+		super(MonitorSink, self).state_def(callback)
+		# TODO make this possible to be decorator style
+		callback(StreamCell(self, 'fft', ctor=SpectrumTypeStub))
+
+	def __rebuild(self):
+		overlap_factor = int(math.ceil(_maximum_fft_rate * self.__freq_resolution / self.__sample_rate))
+		self.__fft_sink = MessageDistributorSink(
+			itemsize=self.__freq_resolution * gr.sizeof_float,
+			context=self.__context,
+			migrate=self.__fft_sink)
+		self.__overlapper = _OverlapGimmick(
+			size=self.__freq_resolution,
+			factor=overlap_factor)
+		self.__logpwrfft = logpwrfft.logpwrfft_c(
+			sample_rate=self.__sample_rate * overlap_factor,
+			fft_size=self.__freq_resolution,
+			ref_scale=2,
+			frame_rate=self.__frame_rate,
+			avg_alpha=1.0,
+			average=False)
+		# adjust units so displayed level is independent of resolution (log power per bandwidth rather than per bin)
+		# TODO work out and document exactly what units we're using
+		self.__fft_rescale = blocks.add_const_vff(
+			[10*math.log10(self.__freq_resolution)] * self.__freq_resolution)
+	
+	def __connect(self):
+		self.__context.lock()
+		try:
+			self.disconnect_all()
+			self.connect(
+				self,
+				self.__overlapper,
+				self.__logpwrfft,
+				self.__fft_rescale,
+				self.__fft_sink)
+		finally:
+			self.__context.unlock()
+	
+	# non-exported
+	def set_sample_rate(self, value):
+		self.__sample_rate = float(value)
+		self.__rebuild()
+		self.__connect()
+	
+	# non-exported
+	def set_input_center_freq(self, value):
+		self.__input_center_freq = float(value)	
+	
+	@exported_value(ctor=Range([(2, 4096)], logarithmic=True, integer=True))
+	def get_freq_resolution(self):
+		return self.__freq_resolution
+
+	@setter
+	def set_freq_resolution(self, freq_resolution):
+		self.__freq_resolution = freq_resolution
+		self.__rebuild()
+		self.__connect()
+
+	@exported_value(ctor=Range([(1, _maximum_fft_rate)], logarithmic=True, integer=False))
+	def get_frame_rate(self):
+		return self.__frame_rate
+
+	@setter
+	def set_frame_rate(self, value):
+		self.__frame_rate = value
+		self.__logpwrfft.set_vec_rate(value)
+	
+	# exported via state_def
+	def get_fft_info(self):
+		return (self.__input_center_freq, self.__sample_rate)
+	
+	def get_fft_distributor(self):
+		return self.__fft_sink

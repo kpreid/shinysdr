@@ -121,6 +121,26 @@ details[open].frame summary {
   border-radius: 99em;
 }
 
+/* widget-in-inline-context gimmicks */
+/* TODO need to make this more generally applicable */
+h2 .frame {
+  display: inline-flex;
+  flex-direction: row;
+  margin: 0 .5em;
+  
+  /* override heading styling */
+  font-weight: normal;
+}
+h2 .panel {
+  padding: 0 .2em;
+  border: none;
+  width: 12em;
+}
+h2 input {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
 /* main visualizations */
 .hscalegroup {
   flex: 1 1;

@@ -17,77 +17,19 @@
 
 from __future__ import absolute_import, division
 
-import gnuradio
-import gnuradio.fft.logpwrfft
-from gnuradio import blocks
-from gnuradio import gr
-from gnuradio.filter import firdes
-from shinysdr.values import ExportedState, CollectionState, exported_value, setter, BlockCell, StreamCell, Enum, Range
-from shinysdr.blocks import make_resampler, MessageDistributorSink
-from shinysdr.receiver import Receiver
+import time
 
 from twisted.internet import reactor
 from twisted.python import log
 
-import math
-import time
-
-
-class _OverlapGimmick(gr.hier_block2):
-	'''
-	Pure flowgraph kludge to cause a logpwrfft block to perform overlapped FFTs.
-	
-	The more correct solution would be to replace stream_to_vector_decimator (used inside of logpwrfft) with a block which takes arbitrarily-spaced vector chunks of the input rather than chunking and then decimating in terms of whole chunks. The cost of doing this instead is more scheduling steps and more data copies.
-	
-	To adjust for the data rate, the logpwrfft block's sample rate parameter must be multiplied by the factor parameter of this block; or equivalently, the frame rate must be divided by it.
-	'''
-	__element = gr.sizeof_gr_complex
-	
-	def __init__(self, size, factor, migrate=None):
-		'''
-		size: (int) vector size (FFT size) of next block
-		factor: (int) output will have this many more samples than input
-		
-		If size is not divisible by factor, then the output will necessarily have jitter.
-		'''
-		size = int(size)
-		factor = int(factor)
-		# assert size % factor == 0
-		offset = size // factor
-		
-		gr.hier_block2.__init__(
-			self, self.__class__.__name__,
-			gr.io_signature(1, 1, self.__element),
-			gr.io_signature(1, 1, self.__element),
-		)
-		
-		if factor == 1:
-			# No duplication needed; simplify flowgraph
-			# GR refused to connect self to self, so insert a dummy block
-			self.connect(self, blocks.copy(self.__element), self)
-		else:
-			interleave = blocks.interleave(self.__element * size)
-			self.connect(
-				interleave,
-				blocks.vector_to_stream(self.__element, size),
-				self)
-		
-			for i in xrange(0, factor):
-				self.connect(
-					self,
-					blocks.delay(self.__element, (factor - 1 - i) * offset),
-					blocks.stream_to_vector(self.__element, size),
-					(interleave, i))
-
-
-class SpectrumTypeStub:
-	pass
+from gnuradio import blocks
+from gnuradio import gr
+from shinysdr.values import ExportedState, CollectionState, exported_value, setter, BlockCell, Enum
+from shinysdr.blocks import make_resampler, MonitorSink
+from shinysdr.receiver import Receiver
 
 
 _num_audio_channels = 2
-
-
-_maximum_spectrum_rate = 120
 
 
 class ReceiverCollection(CollectionState):
@@ -120,13 +62,13 @@ class Top(gr.top_block, ExportedState):
 		self._sources = dict(sources)
 		self.source_name = self._sources.keys()[0]  # arbitrary valid initial value
 		self.audio_rate = audio_rate = 44100
-		self.spectrum_resolution = 4096
-		self.spectrum_rate = 30
 
 		# Blocks etc.
 		self.source = None
-		self.spectrum_sink = None
-		self.spectrum_fft_block = None
+		self.monitor = MonitorSink(
+			sample_rate=10000, # dummy value will be updated in _do_connect
+			complex_in=True,
+			context=Context(self))
 		
 		# Receiver blocks (multiple, eventually)
 		self._receivers = {}
@@ -141,7 +83,6 @@ class Top(gr.top_block, ExportedState):
 		self.audio_queue_sinks = {}
 		
 		# Flags, other state
-		self.__needs_spectrum = True
 		self.__needs_reconnect = True
 		self.input_rate = None
 		self.input_freq = None
@@ -231,6 +172,7 @@ class Top(gr.top_block, ExportedState):
 					return
 				freq = this_source.get_freq()
 				self.input_freq = freq
+				self.monitor.set_input_center_freq(freq)
 				for key, receiver in self._receivers.iteritems():
 					receiver.set_input_center_freq(freq)
 					self._update_receiver_validity(key)
@@ -246,34 +188,9 @@ class Top(gr.top_block, ExportedState):
 			for key, receiver in self._receivers.iteritems():
 				receiver.set_input_center_freq(self.input_freq)
 		
-		if self.__needs_spectrum or rate_changed:
-			log.msg('Flow graph: Rebuilding FFT component')
-			self.__needs_spectrum = False
-			self.__needs_reconnect = True
-			
-			overlap_factor = int(math.ceil(_maximum_spectrum_rate * self.spectrum_resolution / self.input_rate))
-			self.spectrum_sink = MessageDistributorSink(
-				itemsize=self.spectrum_resolution * gr.sizeof_float,
-				context=Context(self),
-				migrate=self.spectrum_sink)
-			self.overlap_gimmick = _OverlapGimmick(
-				size=self.spectrum_resolution,
-				factor=overlap_factor)
-			self.spectrum_fft_block = gnuradio.fft.logpwrfft.logpwrfft_c(
-				sample_rate=self.input_rate * overlap_factor,
-				fft_size=self.spectrum_resolution,
-				ref_scale=2,
-				frame_rate=self.spectrum_rate,
-				avg_alpha=1.0,
-				average=False,
-			)
-			# adjust units so displayed level is independent of resolution (log power per bandwidth rather than per bin)
-			# TODO work out and document exactly what units we're using
-			self.spectrum_rescale_block = blocks.add_const_vff(
-				[10*math.log10(self.spectrum_resolution)] * self.spectrum_resolution)
-		
 		if rate_changed:
-			log.msg('Flow graph: Changing receiver input sample rates')
+			log.msg('Flow graph: Changing sample rates')
+			self.monitor.set_sample_rate(self.input_rate)
 			for receiver in self._receivers.itervalues():
 				receiver.set_input_rate(self.input_rate)
 
@@ -283,19 +200,15 @@ class Top(gr.top_block, ExportedState):
 			
 			self._recursive_lock()
 			self.disconnect_all()
-
-
+			
+			self.connect(
+				self.source,
+				self.monitor)
+			
 			# recreated each time because reusing an add_ff w/ different
 			# input counts fails; TODO: report/fix bug
 			audio_sum_l = blocks.add_ff()
 			audio_sum_r = blocks.add_ff()
-			
-			self.connect(
-				self.source,
-				self.overlap_gimmick,
-				self.spectrum_fft_block,
-				self.spectrum_rescale_block,
-				self.spectrum_sink)
 			
 			audio_sum_index = 0
 			for key, receiver in self._receivers.iteritems():
@@ -352,7 +265,7 @@ class Top(gr.top_block, ExportedState):
 	def state_def(self, callback):
 		super(Top, self).state_def(callback)
 		# TODO make this possible to be decorator style
-		callback(StreamCell(self, 'spectrum_fft', ctor=SpectrumTypeStub))
+		callback(BlockCell(self, 'monitor'))
 		callback(BlockCell(self, 'sources'))
 		callback(BlockCell(self, 'source', persists=False))
 		callback(BlockCell(self, 'receivers'))
@@ -423,31 +336,6 @@ class Top(gr.top_block, ExportedState):
 	@exported_value(ctor=int)
 	def get_audio_rate(self):
 		return self.audio_rate
-	
-	@exported_value(ctor=Range([(2, 4096)], logarithmic=True, integer=True))
-	def get_spectrum_resolution(self):
-		return self.spectrum_resolution
-
-	@setter
-	def set_spectrum_resolution(self, spectrum_resolution):
-		self.spectrum_resolution = spectrum_resolution
-		self.__needs_spectrum = True
-		self._do_connect()
-
-	@exported_value(ctor=Range([(1, _maximum_spectrum_rate)], logarithmic=True, integer=False))
-	def get_spectrum_rate(self):
-		return self.spectrum_rate
-
-	@setter
-	def set_spectrum_rate(self, value):
-		self.spectrum_rate = value
-		self.spectrum_fft_block.set_vec_rate(value)
-	
-	def get_spectrum_fft_info(self):
-		return (self.input_freq, self.input_rate)
-	
-	def get_spectrum_fft_distributor(self):
-		return self.spectrum_sink
 	
 	@exported_value(ctor=float)
 	def get_cpu_use(self):

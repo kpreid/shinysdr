@@ -63,6 +63,11 @@ define(['./values'], function (values) {
       window.dispatchEvent(resize);
     }
     function toggle(event) {
+      // Don't grab events from controls in headers
+      // There doesn't seem to be a better more composable way to handle this --
+      // http://stackoverflow.com/questions/15657776/detect-default-event-handling
+      if (event.target.tagName === 'INPUT') return;
+      
       if (visible && visibleCount <= 1) return;
       visible = !visible;
       update();

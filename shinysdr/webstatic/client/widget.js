@@ -312,7 +312,7 @@ define(['./values', './events'], function (values, events) {
         1,  // at least min zoom,
         Math.max(
           bandwidth / 10e3, // at least 10 kHz
-          radio.spectrum_fft.get().length / MAX_ZOOM_BINS));
+          radio.monitor.get().freq_resolution.get() / MAX_ZOOM_BINS));
       
       cursorX += fractionalScroll;
       var cursor01 = cursorX / pixelWidth;
