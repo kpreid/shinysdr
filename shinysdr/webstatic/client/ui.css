@@ -178,11 +178,22 @@ h2 input {
 
 /* widgets: radio button group */
 .widget-Radio label {
-  display: inline-block;
+  display: inline-flex;
   box-sizing: border-box;
-  width: 49%;
+  margin: 0.08em 0;
+  width: 32.5%;
+  padding: 0 0.1em;
+  
   text-align: left;
   white-space: nowrap;
+}
+.widget-Radio label span {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0 0.1em;
+  
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* widgets: knob */

@@ -2579,7 +2579,8 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     initEnumElements(container, 'input[type=radio]', target, function createRadio(name) {
       var label = container.appendChild(document.createElement('label'));
       var rb = label.appendChild(document.createElement('input'));
-      label.appendChild(document.createTextNode(name));
+      var textEl = label.appendChild(document.createElement('span'));  // styling hook
+      textEl.textContent = name;
       rb.type = 'radio';
       if (!target.set) rb.disabled = true;
       return rb;

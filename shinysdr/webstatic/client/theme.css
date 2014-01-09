@@ -106,3 +106,36 @@ section > h2 {
 .widget-FreqList tr:hover {
   background: #EEE;
 }
+
+.widget-Radio input {
+  opacity: 0;  /* hide without disabling focusability */
+  width: 0.0em;
+  margin: 0;
+  border: none;
+  padding: 0;
+}
+/* turn label text into beveled buttons */
+.widget-Radio input + * {
+  border-radius: 0.38em;
+  box-shadow: 0 0.1em 0.1em 0.0em #666,
+      inset 0 0.1em 0.1em 0.0em #FFF;
+  margin: 0.05em 0.05em 0.1em;
+  background: #E4E4E4;
+  color: black;
+  
+  text-align: center;
+  
+  /*font-stretch: condensed;*/  /* Not currently supported by Chrome, so do the following instead */
+  font-size: 0.85em;
+  letter-spacing: -0.04em;
+}
+.widget-Radio input:checked + * {
+  background: black;
+  color: white;
+  box-shadow: 0 0.1em 0.1em 0.0em #EEE,
+      inset 0 0.08em 0.1em 0.0em #666;
+}
+.widget-Radio input:focus + * {
+  /* this is a Windows-style focus ring, but there doesn't seem to be a standard way to ask for a native one */
+  outline: 0.1em dotted black;
+}
