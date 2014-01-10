@@ -116,11 +116,6 @@ define(['./values', './events'], function (values, events) {
   exports.Context = Context;
   
   function createWidgetsInNode(rootTargetCell, context, node) {
-    // TODO generalize this special case
-    if (node.nodeType === 1 && node.classList.contains('hscalegroup')) {
-      context = context.withSpectrumView(node);
-    }
-    
     Array.prototype.forEach.call(node.childNodes, function (child) {
       createWidgets(rootTargetCell, context, child);
     });
@@ -319,7 +314,7 @@ define(['./values', './events'], function (values, events) {
     // used to force the container's scroll range to widen immediately
     var scrollStub = container.appendChild(document.createElement('div'));
     scrollStub.style.height = '1px';
-    scrollStub.style.marginTop = '-1px';
+    scrollStub.style.marginBottom = '-1px';
     scrollStub.style.visibility = 'hidden';
     
     var n = this.n = new events.Notifier();

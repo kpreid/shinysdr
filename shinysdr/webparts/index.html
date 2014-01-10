@@ -27,14 +27,7 @@
 
 <section id="section-spectrum" class="stretchy" data-visible="true">
   <h2>Spectrum <span data-target="radio"><span data-target="monitor" data-widget="MonitorParameters"></span></span></h2>
-  <div class="hscalegroup" id="_spectrum-container" data-target="radio">
-    <div class="hscale" data-target="monitor">
-      <div data-widget="ReceiverMarks" class="overlay"></div>
-      <canvas class="overlay" id="spectrum" data-widget="SpectrumPlot" data-target="fft"></canvas>
-    </div>
-    <span data-widget="FreqScale" data-target="source.freq"></span>
-    <canvas class="hscale" data-widget="WaterfallPlot" data-target="monitor.fft"></canvas>
-  </div>
+  <div data-widget="Monitor" data-target="radio.monitor"></div>
 </section>
 
 <section id="section-map" class="stretchy" data-visible="false">

@@ -20,6 +20,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   
   var Cell = values.Cell;
   var ConstantCell = values.ConstantCell;
+  var DerivedCell = values.DerivedCell;
   var alwaysCreateReceiverFromEvent = widget.alwaysCreateReceiverFromEvent;
   var createWidgetExt = widget.createWidgetExt;
   
@@ -327,6 +328,49 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     }, true);
   }
   widgets.Demodulator = Demodulator;
+  
+  // Widget for a monitor block
+  function Monitor(config) {
+    Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
+      var element = this.element = document.createElement('div');
+      element.classList.add('hscalegroup');
+      // TODO evil global special case
+      element.id = '_spectrum-container';
+      var context = config.context.withSpectrumView(element);
+      
+      var overlayContainer = element.appendChild(document.createElement('div'));
+      overlayContainer.classList.add('hscale');
+      function makeOverlayPiece(name) {
+        var el = overlayContainer.appendChild(document.createElement(name));
+        el.classList.add('overlay');
+        return el;
+      }
+      createWidgetExt(context, ReceiverMarks, makeOverlayPiece('div'), block.fft);
+      createWidgetExt(context, SpectrumPlot, makeOverlayPiece('canvas'), block.fft);
+      
+      // TODO this is clunky. (Note we're not just using rebuildMe because we don't want to lose waterfall history and reinit GL and and and...)
+      var sourceCell = config.radio.source;
+      var freqCell = new DerivedCell(Number, config.scheduler, function (dirty) {
+        return sourceCell.depend(dirty).freq.depend(dirty);
+      });
+      createWidgetExt(context, FreqScale, element.appendChild(document.createElement('div')), freqCell);
+      
+      createWidgetExt(context, WaterfallPlot, element.appendChild(document.createElement('canvas')), block.fft);
+      
+      // TODO should logically be doing this -- need to support "widget with possibly multiple target elements"
+      //addWidget(null, MonitorParameters);
+      ignore('frame_rate');
+      ignore('freq_resolution')
+      
+      // kludge to trigger SpectrumView layout computations after it's added to the DOM :(
+      setTimeout(function() {
+        var resize = document.createEvent('Event');
+        resize.initEvent('resize', false, false);
+        window.dispatchEvent(resize);
+      }, 0);
+    });
+  }
+  widgets.Monitor = Monitor;
   
   // Widget for incidental controls for a monitor block
   function MonitorParameters(config) {
