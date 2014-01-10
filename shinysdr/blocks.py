@@ -285,9 +285,8 @@ class _OverlapGimmick(gr.hier_block2):
 	
 	To adjust for the data rate, the logpwrfft block's sample rate parameter must be multiplied by the factor parameter of this block; or equivalently, the frame rate must be divided by it.
 	'''
-	__element = gr.sizeof_gr_complex
 	
-	def __init__(self, size, factor, migrate=None):
+	def __init__(self, size, factor, itemsize=gr.sizeof_gr_complex, migrate=None):
 		'''
 		size: (int) vector size (FFT size) of next block
 		factor: (int) output will have this many more samples than input
@@ -298,29 +297,29 @@ class _OverlapGimmick(gr.hier_block2):
 		factor = int(factor)
 		# assert size % factor == 0
 		offset = size // factor
-		
+
 		gr.hier_block2.__init__(
 			self, self.__class__.__name__,
-			gr.io_signature(1, 1, self.__element),
-			gr.io_signature(1, 1, self.__element),
+			gr.io_signature(1, 1, itemsize),
+			gr.io_signature(1, 1, itemsize),
 		)
 		
 		if factor == 1:
 			# No duplication needed; simplify flowgraph
 			# GR refused to connect self to self, so insert a dummy block
-			self.connect(self, blocks.copy(self.__element), self)
+			self.connect(self, blocks.copy(itemsize), self)
 		else:
-			interleave = blocks.interleave(self.__element * size)
+			interleave = blocks.interleave(itemsize * size)
 			self.connect(
 				interleave,
-				blocks.vector_to_stream(self.__element, size),
+				blocks.vector_to_stream(itemsize, size),
 				self)
 		
 			for i in xrange(0, factor):
 				self.connect(
 					self,
-					blocks.delay(self.__element, (factor - 1 - i) * offset),
-					blocks.stream_to_vector(self.__element, size),
+					blocks.delay(itemsize, (factor - 1 - i) * offset),
+					blocks.stream_to_vector(itemsize, size),
 					(interleave, i))
 
 
@@ -383,8 +382,9 @@ class MonitorSink(gr.hier_block2, ExportedState):
 			migrate=self.__fft_sink)
 		self.__overlapper = _OverlapGimmick(
 			size=self.__freq_resolution,
-			factor=overlap_factor)
-		self.__logpwrfft = logpwrfft.logpwrfft_c(
+			factor=overlap_factor,
+			itemsize=self.__itemsize)
+		self.__logpwrfft = [logpwrfft.logpwrfft_f, logpwrfft.logpwrfft_c][self.__complex](
 			sample_rate=self.__sample_rate * overlap_factor,
 			fft_size=self.__freq_resolution,
 			ref_scale=2,
