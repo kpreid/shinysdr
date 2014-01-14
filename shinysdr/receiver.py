@@ -31,6 +31,11 @@ from shinysdr.values import ExportedState, BlockCell, Range, Enum, exported_valu
 from shinysdr import plugins
 
 
+# arbitrary non-infinite limit
+_audio_power_minimum_dB = -60
+_audio_power_minimum_amplitude = 10 ** (_audio_power_minimum_dB / 10)
+
+
 class Receiver(gr.hier_block2, ExportedState):
 	def __init__(self, mode,
 			input_rate=0,
@@ -158,14 +163,14 @@ class Receiver(gr.hier_block2, ExportedState):
 		valid_bandwidth = self.input_rate / 2 - abs(self.rec_freq - self.input_center_freq)
 		return self.demodulator is not None and valid_bandwidth >= self.demodulator.get_half_bandwidth()
 	
-	# Note that we cannot measure RF power at this point because we don't know what the channel bandwidth is.
-	@exported_value(ctor=Range([(-60, 0)], strict=False))
+	# Note that the receiver cannot measure RF power because we don't know what the channel bandwidth is; we have to leave that to the demodulator.
+	@exported_value(ctor=Range([(_audio_power_minimum_dB, 0)], strict=False))
 	def get_audio_power(self):
 		if self.get_is_valid():
-			return 10 * math.log10(max(1e-6, self.probe_audio.level()))
+			return 10 * math.log10(max(_audio_power_minimum_amplitude, self.probe_audio.level()))
 		else:
-			# will not be receiving samples, so value will be meaningless
-			return 0.0
+			# will not be receiving samples, so probe's value will be meaningless
+			return _audio_power_minimum_dB
 	
 	def __update_oscillator(self):
 		offset = self.rec_freq - self.input_center_freq
