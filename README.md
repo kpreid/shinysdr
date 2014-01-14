@@ -29,7 +29,7 @@ Install the following software on the machine which has your SDR hardware attach
 
 * [Python](http://www.python.org/) 2.7 or later compatible version.
 * [Twisted](http://twistedmatrix.com/) 12.0.0 or later. (If you use `setup.py`, this will be automatic.)
-* [txWS **with my binary message support patch**](https://github.com/kpreid/txWS/tree/binary) (hopefully to be included [upstream](https://github.com/MostAwesomeDude/txWS) eventually).
+* [txWS](https://github.com/MostAwesomeDude/txWS) 0.8 or later.
 * [GNU Radio](http://gnuradio.org/) 3.7.1 or later.
 * [`gr-osmosdr`](http://sdr.osmocom.org/trac/wiki/GrOsmoSDR), and any applicable hardware drivers such as `librtlsdr`. (Plugins may be written to use other RF sources, but the only built-in support is for `gr-osmosdr`.)
 

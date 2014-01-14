@@ -44,12 +44,9 @@ setup(
 		#'gnuradio',  # Not PyPI
 		#'osmosdr',  # Not PyPI
 		'twisted',
-		#'txws',  # Currently need a forked version, and we can't download it automatically
+		'txws',
 	],
-	dependency_links=[
-		# This doesn't work, because txWS uses vcversioner to determine version number and doesn't take the archive
-		#'https://github.com/kpreid/txWS/archive/binary.zip#egg=txws-0.0.0-1'
-	],
+	dependency_links=[],
 	# zip_safe: TODO: Investigate. I suspect unsafe due to serving web resources relative to __file__.
 	zip_safe=False,
 	entry_points={
