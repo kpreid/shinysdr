@@ -28,13 +28,19 @@ class TestTop(unittest.TestCase):
 		'''
 		Regression test: Switching sources was not updating receiver input frequency.
 		'''
+		freq = 1e6
 		top = Top(sources={
 			's1': simulate.SimulatedSource(freq=0),
-			's2': simulate.SimulatedSource(freq=1e6),
+			's2': simulate.SimulatedSource(freq=freq),
 		})
 		top.set_source_name('s1')
+		self.assertEqual(top.monitor.get_fft_info()[0], 0)
+		
 		(_, receiver) = top.add_receiver('AM', key='a')
-		receiver.set_rec_freq(1e6)
+		receiver.set_rec_freq(freq)
 		self.assertFalse(receiver.get_is_valid())
+		
 		top.set_source_name('s2')
+		# TODO: instead of top.monitor, should go through state interface
+		self.assertEqual(top.monitor.get_fft_info()[0], freq)
 		self.assertTrue(receiver.get_is_valid())

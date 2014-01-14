@@ -164,6 +164,15 @@ class Top(gr.top_block, ExportedState):
 		if self.source is not self._sources[self.source_name]:
 			log.msg('Flow graph: Switching RF source')
 			self.__needs_reconnect = True
+
+			this_source = self._sources[self.source_name]
+			
+			def update_input_freqs():
+				freq = this_source.get_freq()
+				self.input_freq = freq
+				self.monitor.set_input_center_freq(freq)
+				for key, receiver in self._receivers.iteritems():
+					receiver.set_input_center_freq(freq)
 			
 			def tune_hook():
 				reactor.callLater(self.source.get_tune_delay(), tune_hook_actual)
@@ -171,23 +180,17 @@ class Top(gr.top_block, ExportedState):
 			def tune_hook_actual():
 				if self.source is not this_source:
 					return
-				freq = this_source.get_freq()
-				self.input_freq = freq
-				self.monitor.set_input_center_freq(freq)
+				update_input_freqs()
 				for key, receiver in self._receivers.iteritems():
-					receiver.set_input_center_freq(freq)
 					self._update_receiver_validity(key)
 					# TODO: If multiple receivers change validity we'll do redundant reconnects in this loop; avoid that.
 
-			this_source = self._sources[self.source_name]
 			this_source.set_tune_hook(tune_hook)
 			self.source = this_source
 			this_rate = this_source.get_sample_rate()
 			rate_changed = self.input_rate != this_rate
 			self.input_rate = this_rate
-			self.input_freq = this_source.get_freq()
-			for key, receiver in self._receivers.iteritems():
-				receiver.set_input_center_freq(self.input_freq)
+			update_input_freqs()
 		
 		if rate_changed:
 			log.msg('Flow graph: Changing sample rates')
