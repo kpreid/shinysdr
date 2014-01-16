@@ -1578,6 +1578,86 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     };
   }
   
+  // A collection/algorithm which allocates integer indexes to provided intervals such that no overlapping intervals have the same index.
+  // Intervals are treated as open, unless the endpoints are equal in which case they are treated as closed (TODO: slightly inconsistently but it doesn't matter for the application).
+  function IntervalStacker() {
+    this._elements = [];
+  }
+  IntervalStacker.prototype.clear = function () {
+    this._elements.length = 0;
+  };
+  // Find index of value in the array, or index to insert at
+  IntervalStacker.prototype._search1 = function (position) {
+    // if it turns out to matter, replace this with a binary search
+    var array = this._elements;
+    for (var i = 0; i < array.length; i++) {
+      if (array[i].key >= position) return i;
+    }
+    return i;
+  };
+  IntervalStacker.prototype._ensure1 = function (position, which) {
+    var index = this._search1(position);
+    var el = this._elements[index];
+    if (!(el && el.key === position)) {
+      // insert
+      var newEl = {key: position, below: Object.create(null), above: Object.create(null)};
+      // insert neighbors' info
+      var lowerNeighbor = this._elements[index - 1];
+      if (lowerNeighbor) {
+        Object.keys(lowerNeighbor.above).forEach(function (value) {
+          newEl.below[value] = newEl.above[value] = true;
+        });
+      }
+      var upperNeighbor = this._elements[index + 1];
+      if (upperNeighbor) {
+        Object.keys(upperNeighbor.below).forEach(function (value) {
+          newEl.below[value] = newEl.above[value] = true;
+        });
+      }
+      
+      // TODO: if it turns out to be worthwhile, use a more efficient insertion
+      this._elements.push(newEl);
+      this._elements.sort(function (a, b) { return a.key - b.key; });
+      var index2 = this._search1(position);
+      if (index2 !== index) throw new Error('assumption violated');
+      if (this._elements[index].key !== position) { debugger; throw new Error('assumption2 violated'); }
+    }
+    return index;
+  };
+  // Given an interval, which may be zero-length, claim and return the lowest index (>= 0) which has not previously been used for an overlapping interval.
+  IntervalStacker.prototype.claim = function (low, high) {
+    // TODO: Optimize by not _storing_ zero-length intervals
+    // note must be done in this order to not change the low index
+    var lowIndex = this._ensure1(low);
+    var highIndex = this._ensure1(high);
+    //console.log(this._elements.map(function(x){return x.key;}), lowIndex, highIndex);
+    
+    for (var value = 0; value < 1000; value++) {
+      var free = true;
+      for (var i = lowIndex; i <= highIndex; i++) {
+        var element = this._elements[i];
+        if (i > lowIndex || lowIndex === highIndex) {
+          free = free && !element.below[value];
+        }
+        if (i < highIndex || lowIndex === highIndex) {
+          free = free && !element.above[value];
+        }
+      }
+      if (!free) continue;
+      for (var i = lowIndex; i <= highIndex; i++) {
+        var element = this._elements[i];
+        if (i > lowIndex) {
+          element.below[value] = true;
+        }
+        if (i < highIndex) {
+          element.above[value] = true;
+        }
+      }
+      return value;
+    }
+    return null;
+  };
+  
   function FreqScale(config) {
     var tunerSource = config.target;
     var states = config.radio;
@@ -1591,6 +1671,12 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     
     // view parameters closed over
     var lower, upper;
+    
+    
+    var stacker = new IntervalStacker();
+    function pickY(lowerFreq, upperFreq) {
+      return (stacker.claim(lowerFreq, upperFreq) + 1) * 1.15;
+    }
 
     var outer = this.element = document.createElement("div");
     outer.className = "freqscale";
@@ -1624,6 +1710,8 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       }, false);
       el.my_update = function() {
         el.style.left = view.freqToCSSLeft(freq);
+        // TODO: the 2 is a fudge factor
+        el.style.bottom = (pickY(freq, freq) - 2) + 'em';
       };
       return el;
     }
@@ -1636,6 +1724,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         var labelUpper = Math.min(record.upperFreq, upper);
         el.style.left = view.freqToCSSLeft(labelLower);
         el.style.width = view.freqToCSSLength(labelUpper - labelLower);
+        el.style.bottom = pickY(record.lowerFreq, record.upperFreq) + 'em';
       }
       return el;
     }
@@ -1698,6 +1787,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       }
       numberCache.flush();
       
+      stacker.clear();
       if (!(lower === qLower && upper === qUpper)) {
         query = dataSource.inBand(lower, upper);
         qLower = lower;
