@@ -88,6 +88,10 @@ define(['maps', 'widgets'], function (maps, widgets) {
   function addVORMapLayer(db, scheduler, addModeLayer) {
     addModeLayer('VOR', function(receiver, interested, addFeature, drawFeature) {
       var angleCell = receiver.demodulator.get().angle;  // demodulator change will be handled by addModeLayer
+      if (!angleCell) {
+        console.warn('addVORMapLayer saw a non-VOR demodulator');
+        return;  // TODO not-yet-investigated bug
+      }
       var freqCell = receiver.rec_freq;
       var lengthInDegrees = 0.5;
       
