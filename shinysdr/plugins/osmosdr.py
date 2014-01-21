@@ -111,6 +111,7 @@ class OsmoSDRSource(Source):
 	def __str__(self):
 		return 'OsmoSDR ' + self.__osmo_device
 
+	@exported_value(ctor=float)
 	def get_sample_rate(self):
 		# TODO review why cast
 		return int(self.osmosdr_source_block.get_sample_rate())

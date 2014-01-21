@@ -20,7 +20,6 @@ define(['maps', 'widgets'], function (maps, widgets) {
   'use strict';
   
   var projectedPoint = maps.projectedPoint;
-  var markerGraphic = maps.markerGraphic;
   
   var exports = {};
   
@@ -110,11 +109,9 @@ define(['maps', 'widgets'], function (maps, widgets) {
       var lengthProjected = projectedPoint(lat + lengthInDegrees, lon).y - origin.y;
       
       var ray = new OpenLayers.Geometry.LineString([origin]);
-      var marker = new OpenLayers.Feature.Vector(origin, {}, markerGraphic('-gold'));
       var rayFeature = new OpenLayers.Feature.Vector(ray, {}, {
         strokeDashstyle: 'dot'
       });
-      addFeature(marker);
       addFeature(rayFeature);
       
       var prevEndPoint;

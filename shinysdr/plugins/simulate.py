@@ -167,6 +167,7 @@ class SimulatedSource(Source):
 	def __str__(self):
 		return 'Simulated RF'
 
+	@exported_value(ctor=float)
 	def get_sample_rate(self):
 		# TODO review why cast
 		return int(self.__sample_rate)

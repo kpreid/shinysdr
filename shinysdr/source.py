@@ -68,6 +68,7 @@ class AudioSource(Source):
 	def __str__(self):
 		return 'Audio ' + self.__device_name
 	
+	@exported_value(ctor=float)
 	def get_sample_rate(self):
 		return self.__sample_rate
 
