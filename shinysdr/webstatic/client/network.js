@@ -235,7 +235,7 @@ define(['./values', './events'], function (values, events) {
   };
   exports.retryingConnection = retryingConnection;
   
-  function makeBlock(url) {
+  function makeBlock(url, interfaces) {
     var block = {};
     // TODO kludges, should be properly facetized and separately namespaced somehow
     setNonEnum(block, '_url', url);
@@ -247,6 +247,10 @@ define(['./values', './events'], function (values, events) {
     setNonEnum(block, 'delete', function(key) {
       xhrdelete(url + '/' + encodeURIComponent(key));
     });
+    interfaces.forEach(function(interfaceName) {
+      // TODO: kludge
+      setNonEnum(block, '_implements_' + interfaceName, true);
+    });
     return block;
   }
   
@@ -257,7 +261,7 @@ define(['./values', './events'], function (values, events) {
       cell = new SpectrumCell(url);
     } else if (desc.kind === 'block') {
       // TODO eliminate special case by making server block cells less special?
-      cell = new ReadCell(url, /* dummy */ makeBlock(url), values.block,
+      cell = new ReadCell(url, /* dummy */ makeBlock(url, []), values.block,
         function (id) { return idMap[id]; });
     } else if (desc.writable) {
       cell = new ReadWriteCell(url, desc.current, typeFromDesc(desc.type));
@@ -290,7 +294,8 @@ define(['./values', './events'], function (values, events) {
         switch (message[0]) {
           case 'register_block':
             var url = message[2];
-            updaterMap[id] = idMap[id] = makeBlock(url);
+            var interfaces = message[3];
+            updaterMap[id] = idMap[id] = makeBlock(url, interfaces);
             isCellMap[id] = false;
             break;
           case 'register_cell':

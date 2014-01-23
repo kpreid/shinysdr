@@ -24,7 +24,7 @@ from twisted.internet import task
 from twisted.plugin import IPlugin, getPlugins
 from twisted.python import log
 from twisted.web import http, static, server, resource
-from zope.interface import Interface, implements  # available via Twisted
+from zope.interface import Interface, implements, providedBy  # available via Twisted
 
 from gnuradio import gr
 
@@ -173,6 +173,15 @@ class BlockResource(resource.Resource):
 		return self._block is block
 
 
+def _fqn(class_):
+	# per http://stackoverflow.com/questions/2020014/get-fully-qualified-class-name-of-an-object-in-python
+	return class_.__module__ + '.' + class_.__name__
+
+
+def _get_interfaces(obj):
+	return [_fqn(interface) for interface in providedBy(obj)]
+
+
 # TODO: Better name for this category of object
 class StateStreamInner(object):
 	def __init__(self, send, block, rootURL):
@@ -255,9 +264,10 @@ class StateStreamInner(object):
 					else:
 						self._previousValues[obj] = obj.get()
 				elif isinstance(obj, ExportedState):
-					# let traverse send the details
-					self.__send1(False, ('register_block', serial, url))
+					# let traverse send the state details
+					self.__send1(False, ('register_block', serial, url, _get_interfaces(obj)))
 				else:
+					# TODO: not implemented on client (but shouldn't happen)
 					self.__send1(False, ('register', serial, url))
 			traverse(obj)
 		

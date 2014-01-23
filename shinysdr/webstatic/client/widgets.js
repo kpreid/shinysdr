@@ -131,6 +131,8 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         } else if (member.type === Boolean) {
           addWidget(name, Toggle, name);
         } else if (member.type === block) {
+          // TODO: Add hook to choose a widget class based on interfaces
+          // Furthermore, use that for the specific block widget classes too, rather than each one knowing the types of its sub-widgets.
           addWidget(name, Block);
         } else {
           addWidget(name, Generic, name);
