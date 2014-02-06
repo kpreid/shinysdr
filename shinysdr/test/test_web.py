@@ -20,6 +20,8 @@ from __future__ import absolute_import, division
 import json
 import urlparse
 
+from zope.interface import Interface, implements  # available via Twisted
+
 from twisted.trial import unittest
 from twisted.internet import reactor
 from twisted.web import http
@@ -88,7 +90,7 @@ class TestStateStream(StateStreamTestCase):
 	
 	def test_init_mutate(self):
 		self.assertEqual(self.getUpdates(), [
-			['register_block', 1, 'urlroot'],
+			['register_block', 1, 'urlroot', ['shinysdr.test.test_web.IFoo']],
 			['register_cell', 2, 'urlroot/rw', self.object.state()['rw'].description()],
 			['value', 1, {'rw': 2}],
 			['value', 0, 1],
@@ -100,8 +102,14 @@ class TestStateStream(StateStreamTestCase):
 		])
 
 
+class IFoo(Interface):
+	pass
+
+
 class StateSpecimen(ExportedState):
 	'''Helper for TestStateStream'''
+	implements(IFoo)
+
 	def __init__(self):
 		self.rw = 1.0
 	
@@ -122,9 +130,9 @@ class TestCollectionStream(StateStreamTestCase):
 	
 	def test_delete(self):
 		self.assertEqual(self.getUpdates(), [
-			['register_block', 1, 'urlroot'],
+			['register_block', 1, 'urlroot', []],
 			['register_cell', 2, 'urlroot/a', self.object.state()['a'].description()],
-			['register_block', 3, 'urlroot/a'],
+			['register_block', 3, 'urlroot/a', []],
 			['value', 3, {}],
 			['value', 2, 3],
 			['value', 1, {'a': 2}],
