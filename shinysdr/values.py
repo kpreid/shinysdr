@@ -1,4 +1,4 @@
-# Copyright 2013 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -95,8 +95,9 @@ class ValueCell(BaseCell):
 
 
 class Cell(ValueCell):
-	def __init__(self, target, key, writable=False, ctor=None):
-		ValueCell.__init__(self, target, key, writable=writable, persists=writable, ctor=ctor)
+	def __init__(self, target, key, writable=False, persists=None, ctor=None):
+		if persists is None: persists = writable
+		ValueCell.__init__(self, target, key, writable=writable, persists=persists, ctor=ctor)
 		self._getter = getattr(self._target, 'get_' + key)
 		if writable:
 			self._setter = getattr(self._target, 'set_' + key)
