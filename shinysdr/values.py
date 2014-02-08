@@ -303,6 +303,14 @@ class ExportedState(object):
 		return description
 
 
+class NullExportedState(ExportedState):
+	'''An ExportedState object containing no cells, for use analogously to None.'''
+	pass
+
+
+nullExportedState = NullExportedState()
+
+
 class CollectionState(ExportedState):
 	'''Wrapper around a plain Python collection.'''
 	def __init__(self, collection, dynamic=False):

@@ -56,7 +56,7 @@ class ReceiverCollection(CollectionState):
 
 class Top(gr.top_block, ExportedState):
 
-	def __init__(self, sources={}):
+	def __init__(self, sources={}, accessories={}):
 		gr.top_block.__init__(self, "SDR top block")
 		self.__unpaused = True  # user state
 		self.__running = False  # actually started
@@ -74,6 +74,8 @@ class Top(gr.top_block, ExportedState):
 			complex_in=True,
 			context=Context(self))
 		
+		self._accessories = accessories # NOT copied out of necessity -- TODO better architecture
+		
 		# Receiver blocks (multiple, eventually)
 		self._receivers = {}
 		self._receiver_valid = {}
@@ -81,6 +83,7 @@ class Top(gr.top_block, ExportedState):
 		# kludge for using collection like block - TODO: better architecture
 		self.sources = CollectionState(self._sources)
 		self.receivers = ReceiverCollection(self._receivers, self)
+		self.accessories = CollectionState(self._accessories, dynamic=True)
 		
 		# Audio stream bits
 		self.audio_resampler_cache = {}
@@ -277,6 +280,7 @@ class Top(gr.top_block, ExportedState):
 		callback(BlockCell(self, 'sources'))
 		callback(BlockCell(self, 'source', persists=False))
 		callback(BlockCell(self, 'receivers'))
+		callback(BlockCell(self, 'accessories', persists=False))
 
 	def start(self):
 		# trigger reconnect/restart notification

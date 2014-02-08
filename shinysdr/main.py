@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2013 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -31,14 +31,17 @@ import webbrowser
 import __builtin__
 
 from twisted.python import log
+from twisted.internet import defer
 from twisted.internet import reactor
 
 
 class _Config(object):
-	def __init__(self):
+	def __init__(self, reactor):
+		self.reactor = reactor
 		self._state_filename = None
 		self.sources = _ConfigDict()
 		self.databases = _ConfigDbs()
+		self.accessories = _ConfigAccessories()
 		self._service = None
 	
 	def _validate(self):
@@ -64,6 +67,7 @@ class _Config(object):
 		
 		self._service = listen
 
+
 class _ConfigDict(object):
 	def __init__(self):
 		self._values = {}
@@ -73,6 +77,20 @@ class _ConfigDict(object):
 		if key in self._values:
 			raise KeyError('Key %r already present' % (key,))
 		self._values[key] = value
+
+
+class _ConfigAccessories(_ConfigDict):
+	def add(self, key, value):
+		import shinysdr.values
+		
+		if key in self._values:
+			raise KeyError('Accessory key %r already present' % (key,))
+		
+		def f(r):
+			self._values[key] = r
+		
+		self._values[key] = shinysdr.values.nullExportedState
+		defer.maybeDeferred(lambda: value).addCallback(f)
 
 
 class _ConfigDbs(object):
@@ -149,7 +167,7 @@ config.serve_web(
 ''' % {'root_cap': base64.urlsafe_b64encode(os.urandom(128 // 8)).replace('=', '')})
 			sys.exit(0)
 	else:
-		configObj = _Config()
+		configObj = _Config(reactor)
 		
 		# TODO: better ways to manage the namespaces?
 		execfile(
@@ -174,7 +192,9 @@ config.serve_web(
 			root.state_from_json(get_defaults(root))
 	
 	log.msg('Constructing flow graph...')
-	top = shinysdr.top.Top(sources=configObj.sources._values)
+	top = shinysdr.top.Top(
+		sources=configObj.sources._values,
+		accessories=configObj.accessories._values)
 	
 	log.msg('Restoring state...')
 	restore(top, top_defaults)
