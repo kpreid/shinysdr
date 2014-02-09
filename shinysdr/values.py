@@ -394,9 +394,11 @@ class ValueType(object):
 
 
 class Enum(ValueType):
-	def __init__(self, values):
+	def __init__(self, values, strict=False, base_type=unicode):
 		"""values: dict of {value: description}"""
 		self.__values = dict(values)  # paranoid copy
+		self.__strict = bool(strict)
+		self.__base_type = base_type
 	
 	def values(self):
 		return self.__values
@@ -405,7 +407,8 @@ class Enum(ValueType):
 		return {'type': 'enum', 'values': self.__values}
 	
 	def __call__(self, specimen):
-		if specimen not in self.__values:
+		specimen = self.__base_type(specimen)
+		if specimen not in self.__values and self.__strict:
 			raise ValueError('Not a permitted value: ' + repr(specimen))
 		return specimen
 
