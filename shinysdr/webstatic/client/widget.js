@@ -1,4 +1,4 @@
-// Copyright 2013 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -36,6 +36,55 @@ define(['./values', './events'], function (values, events) {
     return event.shiftKey;
   }
   exports.alwaysCreateReceiverFromEvent = alwaysCreateReceiverFromEvent;
+  
+  // HTML element life cycle facility
+  // We want to know "This element has been inserted in the final tree (has layout)" and "This element will no longer be used".
+  
+  function fireLifecycleEvent(element, condition) {
+    //console.log('fire', element, condition);
+    var key = '__shinysdr_lifecycle_' + condition + '__';
+    if (key in element) {
+      element[key].forEach(function(callback) {
+        // TODO: error handling and think about scheduling
+        callback();
+      });
+    }
+  }
+  
+  function addLifecycleListener(element, condition, callback) {
+    var key = '__shinysdr_lifecycle_' + condition + '__';
+    if (!(key in element)) {
+      element[key] = [];
+    }
+    element[key].push(callback);
+  }
+  exports.addLifecycleListener = addLifecycleListener;
+  
+  function lifecycleInit(element) {
+    if (element.__shinysdr_lifecycle__ !== undefined) return;
+    
+    var root = element;
+    while (root.parentNode) root = root.parentNode;
+    if (root.nodeType !== Node.DOCUMENT_NODE) return;
+    
+    element.__shinysdr_lifecycle__ = 'live';
+    fireLifecycleEvent(element, 'init');
+    
+    //Array.prototype.forEach.call(element.children, function (childEl) {
+    //  lifecycleInit(childEl);
+    //});
+  }
+  
+  function lifecycleDestroy(element) {
+    if (element.__shinysdr_lifecycle__ !== 'live') return;
+    
+    element.__shinysdr_lifecycle__ = 'dead';
+    fireLifecycleEvent(element, 'destroy');
+    
+    Array.prototype.forEach.call(element.children, function (childEl) {
+      lifecycleDestroy(childEl);
+    });
+  }
   
   // TODO figure out what this does and give it a better name
   function Context(config) {
@@ -104,6 +153,15 @@ define(['./values', './events'], function (values, events) {
         widgetTarget = targetCell;
       }
 
+      var boundedFnEnabled = true;
+      function boundedFn(f) {
+        return function boundedFnWrapper() {
+          if (boundedFnEnabled) f();
+        }
+      }
+
+      lifecycleDestroy(currentWidgetEl);
+
       var newSourceEl = originalStash.cloneNode(true);
       container.replaceChild(newSourceEl, currentWidgetEl);
       var widget = new widgetCtor({
@@ -117,7 +175,8 @@ define(['./values', './events'], function (values, events) {
         radio: context.radio, // TODO: remove the need for this
         storage: node.hasAttribute('id') ? new StorageNamespace(localStorage, 'shinysdr.widgetState.' + node.getAttribute('id') + '.') : null,
         shouldBePanel: shouldBePanel,
-        rebuildMe: go
+        rebuildMe: go,
+        boundedFn: boundedFn
       });
       widget.element.classList.add('widget-' + widgetCtor.name);
       
@@ -136,13 +195,31 @@ define(['./values', './events'], function (values, events) {
       
       // allow widgets to embed widgets
       createWidgetsInNode(targetCell || rootTargetCell, context, widget.element);
+      
+      addLifecycleListener(newEl, 'destroy', function() {
+        boundedFnEnabled = false;
+      });
+      
+      // signal now that we've inserted
+      // TODO: Make this less DWIM
+      lifecycleInit(newEl);
+      setTimeout(function() {
+        lifecycleInit(newEl);
+      }, 0);
     }
     go.scheduler = scheduler;
     go();
+    
+    return Object.freeze({
+      destroy: function() {
+        lifecycleDestroy(currentWidgetEl);
+        container.replaceChild(originalStash, currentWidgetEl);
+      }
+    });
   }
   
   function createWidgetExt(context, widgetCtor, node, targetCell) {
-    createWidget(
+    return createWidget(
       new ConstantCell(values.any, targetCell),
       String(targetCell),
       context,
