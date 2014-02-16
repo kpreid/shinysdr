@@ -1,4 +1,4 @@
-// Copyright 2013 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -49,7 +49,8 @@ describe('widgets', function () {
       var cell = new shinysdr.values.LocalCell(shinysdr.values.any, 0);
       widget = new shinysdr.widgets.Knob({
         target: cell,
-        scheduler: scheduler
+        scheduler: scheduler,
+        boundedFn: function(f) { return f; }
       });
       
       document.body.appendChild(widget.element);

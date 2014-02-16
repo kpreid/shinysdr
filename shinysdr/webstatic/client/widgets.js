@@ -1,4 +1,4 @@
-// Copyright 2013 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -363,9 +363,9 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     
     var dataHook = function () {}, drawOuter = function () {};
     
-    function draw() {
+    var draw = config.boundedFn(function drawOuterTrampoline() {
       drawOuter();
-    }
+    });
     draw.scheduler = config.scheduler;
     
     if (gl) (function() {
@@ -1084,91 +1084,93 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       var slicePtr = 0;
       var lastDrawnCenterFreq = NaN;
 
+      var performDraw = config.boundedFn(function performDrawImpl() {
+        var h = canvas.height;
+        var viewCenterFreq = view.getCenterFreq();
+        commonBeforeDraw(viewCenterFreq, draw);
+
+        var buffer, bufferCenterFreq;
+        if (dataToDraw) {
+          buffer = dataToDraw[1];
+          bufferCenterFreq = dataToDraw[0].freq;
+          // rescale to discovered fft size
+          var w = buffer.length;
+          if (canvas.width !== w) {
+            // assignment clears canvas
+            canvas.width = w;
+            cleared = true;
+            // reallocate
+            slices = [];
+            slicePtr = 0;
+          }
+
+          // can't draw with w=0
+          if (w === 0) {
+            return;
+          }
+
+          // Find slice to write into
+          var ibuf;
+          if (slices.length < historyCount) {
+            slices.push([ibuf = ctx.createImageData(w, 1), bufferCenterFreq]);
+          } else {
+            var record = slices[slicePtr];
+            slicePtr = mod(slicePtr + 1, historyCount);
+            ibuf = record[0];
+            record[1] = bufferCenterFreq;
+          }
+
+          // Generate image slice from latest FFT data.
+          var xScale = buffer.length / w;
+          var cScale = 1 / (view.maxLevel - view.minLevel);
+          var cZero = 1 - view.maxLevel * cScale;
+          var data = ibuf.data;
+          for (var x = 0; x < w; x++) {
+            var base = x * 4;
+            var i = Math.round(x * xScale);
+            var colorVal = buffer[i] * cScale + cZero;
+            interpolateColor(colorVal, data, base);
+          }
+        }
+
+        var offsetScale = w / view.getBandwidth();
+        if (dataToDraw && lastDrawnCenterFreq === viewCenterFreq && !cleared) {
+          // Scroll
+          ctx.drawImage(ctx.canvas, 0, 0, w, h-1, 0, 1, w, h-1);
+          // Paint newest slice
+          var offset = bufferCenterFreq - viewCenterFreq;
+          ctx.putImageData(ibuf, Math.round(offset * offsetScale), 0);
+        } else if (cleared || lastDrawnCenterFreq !== viewCenterFreq) {
+          lastDrawnCenterFreq = viewCenterFreq;
+          // Paint all slices onto canvas
+          ctx.fillStyle = '#777';
+          var sliceCount = slices.length;
+          for (var i = sliceCount - 1; i >= 0; i--) {
+            var slice = slices[mod(i + slicePtr, sliceCount)];
+            var offset = slice[1] - viewCenterFreq;
+            var y = sliceCount - i;
+            if (y >= canvas.height) break;
+
+            // fill background so scrolling is of an opaque image
+            ctx.fillRect(0, y, w, 1);
+
+            // paint slice
+            ctx.putImageData(slice[0], Math.round(offset * offsetScale), y);
+          }
+          ctx.fillRect(0, y+1, w, h);
+        }
+
+        dataToDraw = null;
+        cleared = false;
+      });
+
       var dataToDraw = null;  // TODO this is a data flow kludge
       return {
         newData: function (fftBundle) {
           dataToDraw = fftBundle;
-          this.performDraw();
+          performDraw();
         },
-        performDraw: function () {
-          var h = canvas.height;
-          var viewCenterFreq = view.getCenterFreq();
-          commonBeforeDraw(viewCenterFreq, draw);
-
-          var buffer, bufferCenterFreq;
-          if (dataToDraw) {
-            buffer = dataToDraw[1];
-            bufferCenterFreq = dataToDraw[0].freq;
-            // rescale to discovered fft size
-            var w = buffer.length;
-            if (canvas.width !== w) {
-              // assignment clears canvas
-              canvas.width = w;
-              cleared = true;
-              // reallocate
-              slices = [];
-              slicePtr = 0;
-            }
-
-            // can't draw with w=0
-            if (w === 0) {
-              return;
-            }
-
-            // Find slice to write into
-            var ibuf;
-            if (slices.length < historyCount) {
-              slices.push([ibuf = ctx.createImageData(w, 1), bufferCenterFreq]);
-            } else {
-              var record = slices[slicePtr];
-              slicePtr = mod(slicePtr + 1, historyCount);
-              ibuf = record[0];
-              record[1] = bufferCenterFreq;
-            }
-
-            // Generate image slice from latest FFT data.
-            var xScale = buffer.length / w;
-            var cScale = 1 / (view.maxLevel - view.minLevel);
-            var cZero = 1 - view.maxLevel * cScale;
-            var data = ibuf.data;
-            for (var x = 0; x < w; x++) {
-              var base = x * 4;
-              var i = Math.round(x * xScale);
-              var colorVal = buffer[i] * cScale + cZero;
-              interpolateColor(colorVal, data, base);
-            }
-          }
-
-          var offsetScale = w / view.getBandwidth();
-          if (dataToDraw && lastDrawnCenterFreq === viewCenterFreq && !cleared) {
-            // Scroll
-            ctx.drawImage(ctx.canvas, 0, 0, w, h-1, 0, 1, w, h-1);
-            // Paint newest slice
-            var offset = bufferCenterFreq - viewCenterFreq;
-            ctx.putImageData(ibuf, Math.round(offset * offsetScale), 0);
-          } else if (cleared || lastDrawnCenterFreq !== viewCenterFreq) {
-            lastDrawnCenterFreq = viewCenterFreq;
-            // Paint all slices onto canvas
-            ctx.fillStyle = '#777';
-            var sliceCount = slices.length;
-            for (var i = sliceCount - 1; i >= 0; i--) {
-              var slice = slices[mod(i + slicePtr, sliceCount)];
-              var offset = slice[1] - viewCenterFreq;
-              var y = sliceCount - i;
-              if (y >= canvas.height) break;
-
-              // fill background so scrolling is of an opaque image
-              ctx.fillRect(0, y, w, 1);
-
-              // paint slice
-              ctx.putImageData(slice[0], Math.round(offset * offsetScale), y);
-            }
-            ctx.fillRect(0, y+1, w, h);
-          }
-
-          dataToDraw = null;
-          cleared = false;
-        }
+        performDraw: performDraw
       };
     }
   }
@@ -1214,8 +1216,8 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       ctx.fillRect(x1, 0, x2 - x1, ctx.canvas.height);
     }
     
-    function draw() {
-      view.n.listen(draw); // TODO this is an unbreakable notify loop; we should have a 'if widget is removed stop depending' scheme
+    var draw = config.boundedFn(function drawImpl() {
+      view.n.listen(draw);
       lvf = view.leftVisibleFreq();
       rvf = view.rightVisibleFreq();
       var yScale = -h / (view.maxLevel - view.minLevel);
@@ -1292,7 +1294,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         ctx.fillText(formatFreqExact(receiver.rec_freq.depend(draw)), textX, textY += textSpacing);
         ctx.fillText(receiver.mode.depend(draw), textX, textY += textSpacing);
       }
-    }
+    });
     draw.scheduler = config.scheduler;
     config.scheduler.enqueue(draw);  // must draw after widget inserted to get proper layout
   }
@@ -1457,7 +1459,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     
     places[places.length - 1].element.tabIndex = 0; // initial tabbable digit
     
-    function draw() {
+    var draw = config.boundedFn(function drawImpl() {
       var value = target.depend(draw);
       var valueStr = String(Math.round(value));
       if (valueStr === '0' && value === 0 && 1/value === -Infinity) {
@@ -1474,7 +1476,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       for (var i = 0; i < marks.length; i++) {
         marks[i].classList[i < numMarks ? 'remove' : 'add']('knob-dim');
       }
-    }
+    });
     draw.scheduler = config.scheduler;
     draw();
   }
@@ -1754,7 +1756,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     var scale_fine1 = 4;
     var scale_fine2 = 2;
     
-    function draw() {
+    var draw = config.boundedFn(function drawImpl() {
       var centerFreq = tunerSource.depend(draw);
       view.n.listen(draw);
       
@@ -1801,7 +1803,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         if (label) label.my_update();
       });
       labelCache.flush();
-    }
+    });
     draw.scheduler = config.scheduler;
     draw();
   }
@@ -1911,7 +1913,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       }
     }
     
-    function draw() {
+    var draw = config.boundedFn(function drawImpl() {
       //console.group('draw');
       //console.log(currentFilter.getAll().map(function (r) { return r.label; }));
       currentFilter.n.listen(draw);
@@ -1923,7 +1925,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       // sanity check
       var count = currentFilter.getAll().length;
       receiveAllButton.disabled = !(count > 0 && count <= 10);
-    }
+    });
     draw.scheduler = scheduler;
 
     refilter();
@@ -1971,7 +1973,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       return field;
     }
     function formFieldHooks(field, cell) {
-      function draw() {
+      var draw = config.boundedFn(function drawImpl() {
         var now = cell.depend(draw);
         if (now === NO_RECORD) {
           field.disabled = true;
@@ -1979,7 +1981,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
           field.disabled = !cell.isWritable();
           if (field.value !== now) field.value = now;
         }
-      }
+      });
       draw.scheduler = config.scheduler;
       field.addEventListener('change', function(event) {
         if (field.value !== cell.get()) {
@@ -2061,10 +2063,10 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     
     var update = initDataEl(dataElement, target);
     
-    function draw() {
+    var draw = config.boundedFn(function drawImpl() {
       var value = target.depend(draw);
       update(value);
-    }
+    });
     draw.scheduler = config.scheduler;
     draw();
   }
@@ -2356,12 +2358,12 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         target.set(rb.value);
       }, false);
     });
-    function draw() {
+    var draw = config.boundedFn(function drawImpl() {
       var value = config.target.depend(draw);
       Array.prototype.forEach.call(container.querySelectorAll('input[type=radio]'), function (rb) {
         rb.checked = rb.value === value;
       });
-    }
+    });
     draw.scheduler = config.scheduler;
     draw();
   }
