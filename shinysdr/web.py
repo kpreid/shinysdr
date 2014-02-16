@@ -481,7 +481,10 @@ def listen(config, top, noteDirty):
 	appRoot.putChild('radio', BlockResource(top, noteDirty, notDeletable))
 	
 	# Frequency DB
-	appRoot.putChild('dbs', shinysdr.db.DatabasesResource(config['databasesDir']))
+	if config['databasesDir'] is not None:
+		appRoot.putChild('dbs', shinysdr.db.DatabasesResource(config['databasesDir']))
+	else:
+		appRoot.putChild('dbs', resource.Resource())
 	# temporary stub till we have a proper writability/target policy
 	appRoot.putChild('wdb', shinysdr.db.DatabaseResource([]))
 	

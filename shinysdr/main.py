@@ -34,6 +34,58 @@ from twisted.python import log
 from twisted.internet import reactor
 
 
+class _Config(object):
+	def __init__(self):
+		self._state_filename = None
+		self.sources = _ConfigDict()
+		self.databases = _ConfigDbs()
+		self._service = None
+	
+	def _validate(self):
+		if self._state_filename is None:
+			raise Exception('Having no state file is not yet supported.')
+		if self._service is None:
+			raise Exception('Having no web service is not yet supported.')
+	
+	def persist_to_file(self, filename):
+		self._state_filename = str(filename)
+
+	def serve_web(self, http_endpoint, ws_endpoint, root_cap='%(root_cap)s'):
+		# TODO: See if we're reinventing bits of Twisted service stuff here
+		
+		def listen(top, noteDirty):
+			import shinysdr.web
+			return shinysdr.web.listen({
+					'databasesDir': self.databases._directory,
+					'httpPort': http_endpoint,
+					'wsPort': ws_endpoint,
+					'rootCap': root_cap,
+				}, top, noteDirty)
+		
+		self._service = listen
+
+class _ConfigDict(object):
+	def __init__(self):
+		self._values = {}
+
+	def add(self, key, value):
+		key = unicode(key)
+		if key in self._values:
+			raise KeyError('Key %r already present' % (key,))
+		self._values[key] = value
+
+
+class _ConfigDbs(object):
+	def __init__(self):
+		self._directory = None
+
+	def add_directory(self, path):
+		path = str(path)
+		if self._directory is not None:
+			raise Exception('Multiple database directories are not yet supported.')
+		self._directory = path
+
+
 def main(argv=sys.argv, _abort_for_test=False):
 	# Configure logging. Some log messages would be discarded if we did not set up things early
 	# TODO: Consult best practices for Python and Twisted logging.
@@ -54,7 +106,6 @@ def main(argv=sys.argv, _abort_for_test=False):
 	args = argParser.parse_args(args=argv[1:])
 
 	import shinysdr.top
-	import shinysdr.web
 	import shinysdr.source
 
 	# Load config file
@@ -64,49 +115,49 @@ def main(argv=sys.argv, _abort_for_test=False):
 import shinysdr.plugins.osmosdr
 import shinysdr.plugins.simulate
 
-sources = {
-	# OsmoSDR generic device source; handles USRP, RTL-SDR, FunCube
-	# Dongle, HackRF, etc.
-	# If desired, add sample_rate=<n> parameter.
-	# Use shinysdr.plugins.osmosdr.OsmoSDRProfile to set more parameters
-	# to make the best use of your specific hardware's capabilities.
-	'osmo': shinysdr.plugins.osmosdr.OsmoSDRSource(''),
-	
-	# For hardware which uses a sound-card as its ADC or appears as an
-	# audio device.
-	'audio': shinysdr.source.AudioSource(''),
-	
-	# Locally generated RF signals for test purposes.
-	'sim': shinysdr.plugins.simulate.SimulatedSource(),
-}
+# OsmoSDR generic device source; handles USRP, RTL-SDR, FunCube
+# Dongle, HackRF, etc.
+# If desired, add sample_rate=<n> parameter.
+# Use shinysdr.plugins.osmosdr.OsmoSDRProfile to set more parameters
+# to make the best use of your specific hardware's capabilities.
+config.sources.add(u'osmo', shinysdr.plugins.osmosdr.OsmoSDRSource(''))
 
-stateFile = 'state.json'
+# For hardware which uses a sound-card as its ADC or appears as an
+# audio device.
+config.sources.add(u'audio', shinysdr.source.AudioSource(''))
 
-databasesDir = 'dbs/'
+# Locally generated RF signals for test purposes.
+config.sources.add(u'sim', shinysdr.plugins.simulate.SimulatedSource())
 
-# These are in Twisted endpoint description syntax:
-# <http://twistedmatrix.com/documents/current/api/twisted.internet.endpoints.html#serverFromString>
-# Note: wsPort must currently be 1 greater than httpPort; if one is SSL
-# then both must be. These restrictions will be relaxed later.
-httpPort = 'tcp:8100'
-wsPort = 'tcp:8101'
+config.persist_to_file('state.json')
 
-# A secret placed in the URL as simple access control. Does not
-# provide any real security unless using HTTPS. The default value
-# in this file has been automatically generated from 128 random bits.
-# Set to None to not use any secret.
-rootCap = '%(rootCap)s'
-''' % {'rootCap': base64.urlsafe_b64encode(os.urandom(128 // 8)).replace('=', '')})
+config.databases.add_directory('dbs/')
+
+config.serve_web(
+	# These are in Twisted endpoint description syntax:
+	# <http://twistedmatrix.com/documents/current/api/twisted.internet.endpoints.html#serverFromString>
+	# Note: ws_endpoint must currently be 1 greater than http_endpoint; if one
+	# is SSL then both must be. These restrictions will be relaxed later.
+	http_endpoint='tcp:8100',
+	ws_endpoint='tcp:8101',
+
+	# A secret placed in the URL as simple access control. Does not
+	# provide any real security unless using HTTPS. The default value
+	# in this file has been automatically generated from 128 random bits.
+	# Set to None to not use any secret.
+	root_cap='%(root_cap)s')
+''' % {'root_cap': base64.urlsafe_b64encode(os.urandom(128 // 8)).replace('=', '')})
 			sys.exit(0)
 	else:
+		configObj = _Config()
+		
 		# TODO: better ways to manage the namespaces?
-		configEnv = {'shinysdr': shinysdr}
-		execfile(args.configFile, __builtin__.__dict__, configEnv)
-		sources = configEnv['sources']
-		stateFile = str(configEnv['stateFile'])
-		webConfig = {}
-		for k in ['httpPort', 'wsPort', 'rootCap', 'databasesDir']:
-			webConfig[k] = configEnv[k]
+		execfile(
+			args.configFile,
+			__builtin__.__dict__,
+			{'shinysdr': shinysdr, 'config': configObj})
+		configObj._validate()
+		stateFile = configObj._state_filename
 	
 	def noteDirty():
 		# just immediately write (revisit this when more performance is needed)
@@ -123,13 +174,13 @@ rootCap = '%(rootCap)s'
 			root.state_from_json(get_defaults(root))
 	
 	log.msg('Constructing flow graph...')
-	top = shinysdr.top.Top(sources=sources)
+	top = shinysdr.top.Top(sources=configObj.sources._values)
 	
 	log.msg('Restoring state...')
 	restore(top, top_defaults)
 	
 	log.msg('Starting web server...')
-	(stop, url) = shinysdr.web.listen(webConfig, top, noteDirty)
+	(stop, url) = configObj._service(top, noteDirty)
 	
 	if args.openBrowser:
 		log.msg('ShinySDR is ready. Opening ' + url)
@@ -145,6 +196,7 @@ rootCap = '%(rootCap)s'
 	
 	if _abort_for_test:
 		stop()
+		return top, noteDirty
 	else:
 		reactor.run()
 

@@ -36,14 +36,12 @@ class TestMain(unittest.TestCase):
 		with open(self.__config_name, 'w') as config:
 			config.write(textwrap.dedent('''\
 				import shinysdr.plugins.simulate
-				sources = {
-					'sim_foobar': shinysdr.plugins.simulate.SimulatedSource(),
-				}
-				stateFile = %r
-				databasesDir = 'NONEXISTENT'
-				httpPort = 'tcp:0'
-				wsPort = 'tcp:0'
-				rootCap = None
+				config.sources.add('sim_foobar', shinysdr.plugins.simulate.SimulatedSource())
+				config.persist_to_file(%r)
+				config.serve_web(
+					http_endpoint='tcp:0',
+					ws_endpoint='tcp:0',
+					root_cap=None)
 			''') % (state_name,))
 	
 	def tearDown(self):
@@ -54,3 +52,16 @@ class TestMain(unittest.TestCase):
 		main.main(
 			argv=['shinysdr', self.__config_name],
 			_abort_for_test=True)
+	
+	def test_persistence(self):
+		'''Test that state persists.'''
+		(top, note_dirty) = main.main(
+			argv=['shinysdr', self.__config_name],
+			_abort_for_test=True)
+		self.assertEqual(top.get_unpaused(), True)  # check initial assumption
+		top.set_unpaused(False)
+		note_dirty()
+		(top2, _) = main.main(
+			argv=['shinysdr', self.__config_name],
+			_abort_for_test=True)
+		self.assertEqual(top.get_unpaused(), False)  # check persistence
