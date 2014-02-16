@@ -1403,6 +1403,13 @@ define(['./values', './events', './widget'], function (values, events, widget) {
           case '=':
             target.set(Math.abs(value));
             return;
+          case 'z':
+          case 'Z':
+            // zero all digits here and to the right
+            // | 0 is used to round towards zero
+            var zeroFactor = scale * 10;
+            target.set(((value / zeroFactor) | 0) * zeroFactor);
+            return;
           default:
             break;
         }
