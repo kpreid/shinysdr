@@ -415,7 +415,7 @@ define(['./values', './events'], function (values, events) {
       zoom = Math.min(maxZoom, Math.max(1.0, zoom));
       
       // Recompute parameters now so we can adjust pan (scroll)
-      prepare();
+      scheduler.callNow(prepare);
       
       var unadjustedCursorFreq = this.leftVisibleFreq() * (1-cursor01) + this.rightVisibleFreq() * cursor01;
       
@@ -433,7 +433,8 @@ define(['./values', './events'], function (values, events) {
       storage.setItem('zoom', String(zoom));
       storage.setItem('scroll', String(scroll));
       
-      scheduler.enqueue(prepare);
+      // recompute with new scrollLeft/fractionalScroll
+      scheduler.callNow(prepare);
     };
     
     container.addEventListener('mousewheel', function(event) { // Portability note: Not in FF
