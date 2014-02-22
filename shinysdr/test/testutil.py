@@ -16,7 +16,7 @@
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 # pylint: disable=signature-differs
-# (twisted is inconsistent about connectionMade/connectionLost)
+# (signature-differs: twisted is inconsistent about connectionMade/connectionLost)
 
 import json
 import StringIO

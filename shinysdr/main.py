@@ -72,6 +72,14 @@ class _Config(object):
 		
 		self._service_makers.append(make_service)
 
+	def serve_ghpsdr(self):
+		# TODO: Alternate services should be provided using getPlugins rather than hardcoded
+		def make_service(top, note_dirty):
+			import shinysdr.plugins.ghpsdr as lazy_ghpsdr
+			return lazy_ghpsdr.DspserverService(top, note_dirty, 'tcp:8000')
+		
+		self._service_makers.append(make_service)
+
 
 class _ConfigDict(object):
 	def __init__(self):

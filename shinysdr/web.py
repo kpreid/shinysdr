@@ -17,7 +17,7 @@
 
 # pylint: disable=maybe-no-member, attribute-defined-outside-init, no-init
 # (maybe-no-member is incorrect)
-# (attribute-defined-outside-init is a Twisted convention)
+# (attribute-defined-outside-init is a Twisted convention for protocol objects)
 # (no-init is pylint being confused by interfaces)
 
 
