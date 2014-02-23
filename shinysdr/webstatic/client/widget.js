@@ -329,14 +329,23 @@ define(['./values', './events'], function (values, events) {
     
     // Zoom state variables
     // We want the cursor point to stay fixed, but scrollLeft quantizes to integer; fractionalScroll stores a virtual fractional part.
-    var zoom, fractionalScroll;
-    // Zoom initial state:
-    // TODO: clamp zoom here in the same way changeZoom does
-    zoom = parseFloat(storage.getItem('zoom')) || 1;
-    var initScroll = parseFloat(storage.getItem('scroll')) || 0;
-    scrollStub.style.width = (container.offsetWidth * zoom) + 'px';
-    container.scrollLeft = Math.floor(initScroll);
-    var fractionalScroll = mod(initScroll, 1);
+    var zoom = 1, fractionalScroll = 0;
+    
+    // Restore persistent zoom state
+    addLifecycleListener(container, 'init', function() {
+      // TODO: clamp zoom here in the same way changeZoom does
+      zoom = parseFloat(storage.getItem('zoom')) || 1;
+      var initScroll = parseFloat(storage.getItem('scroll')) || 0;
+      scrollStub.style.width = (container.offsetWidth * zoom) + 'px';
+      prepare();
+      function later() {  // gack kludge
+        container.scrollLeft = Math.floor(initScroll);
+        fractionalScroll = mod(initScroll, 1);
+        prepare();
+      }
+      later.scheduler = scheduler;
+      scheduler.enqueue(later);
+    });
     
     function prepare() {
       // TODO: unbreakable notify loop here; need to be lazy
@@ -487,6 +496,8 @@ define(['./values', './events'], function (values, events) {
         clickTune(event);
       }, false);
     }.bind(this);
+    
+    lifecycleInit(container);
   }
   exports.SpectrumView = SpectrumView;
   
