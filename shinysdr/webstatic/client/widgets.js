@@ -1183,7 +1183,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   widgets.WaterfallPlot = WaterfallPlot;
 
   function ReceiverMarks(config) {
-    var tunerSource = config.target;
+    /* does not use config.target */
     var view = config.view;
     var radio = config.radio;
     
