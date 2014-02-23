@@ -55,7 +55,10 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     function getAppend() {
       if (appendTarget === 'details') {
         appendTarget = container.appendChild(document.createElement('details'));
-        //appendTarget.id = ... TODO make unique id based on path or something
+        if (config.idPrefix) {
+          // hook for state persistence
+          appendTarget.id = config.idPrefix + '_details';
+        }
         appendTarget.appendChild(document.createElement('summary')).textContent = 'More';
       }
       
@@ -70,6 +73,9 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       if (typeof name === 'string') {
         claimed[name] = true;
         targetCell = block[name];
+        if (config.idPrefix) {
+          wEl.id = config.idPrefix + name;
+        }
       } else {
         targetCell = new ConstantCell(values.block, block);
       }

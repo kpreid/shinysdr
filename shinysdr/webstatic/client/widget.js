@@ -136,6 +136,9 @@ define(['./values', './events'], function (values, events) {
     var currentWidgetEl = node;
     var shouldBePanel = container.classList.contains('frame') || container.nodeName === 'DETAILS';  // TODO: less DWIM, more precise
     
+    var id = node.id;
+    var idPrefix = id === '' ? null : node.id + '.';
+    
     var go = function go() {
       var targetCell = targetCellCell.depend(go);
       if (!targetCell) {
@@ -173,10 +176,11 @@ define(['./values', './events'], function (values, events) {
         clientState: context.clientState,
         freqDB: context.freqDB, // TODO: remove the need for this
         radio: context.radio, // TODO: remove the need for this
-        storage: node.hasAttribute('id') ? new StorageNamespace(localStorage, 'shinysdr.widgetState.' + node.getAttribute('id') + '.') : null,
+        storage: idPrefix ? new StorageNamespace(localStorage, 'shinysdr.widgetState.' + idPrefix) : null,
         shouldBePanel: shouldBePanel,
         rebuildMe: go,
-        boundedFn: boundedFn
+        boundedFn: boundedFn,
+        idPrefix: idPrefix
       });
       widget.element.classList.add('widget-' + widgetCtor.name);
       
