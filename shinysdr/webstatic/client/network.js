@@ -1,4 +1,4 @@
-// Copyright 2013 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -240,17 +240,19 @@ define(['./values', './events'], function (values, events) {
     // TODO kludges, should be properly facetized and separately namespaced somehow
     setNonEnum(block, '_url', url);
     setNonEnum(block, '_reshapeNotice', new events.Notifier());
-    setNonEnum(block, 'create', function(desc) {
-      // TODO arrange a callback with the resulting _object_
-      xhrpost(url, JSON.stringify(desc));
-    });
-    setNonEnum(block, 'delete', function(key) {
-      xhrdelete(url + '/' + encodeURIComponent(key));
-    });
     interfaces.forEach(function(interfaceName) {
       // TODO: kludge
       setNonEnum(block, '_implements_' + interfaceName, true);
     });
+    if (block['_implements_shinysdr.values.IWritableCollection']) {
+      setNonEnum(block, 'create', function(desc) {
+        // TODO arrange a callback with the resulting _object_
+        xhrpost(url, JSON.stringify(desc));
+      });
+      setNonEnum(block, 'delete', function(key) {
+        xhrdelete(url + '/' + encodeURIComponent(key));
+      });
+    }
     return block;
   }
   

@@ -199,13 +199,15 @@ define(['./values', './events', './widget'], function (values, events, widget) {
             var toolbar = document.createElement('div');
             toolbar.className = 'panel frame-controls';
             
-            var del = document.createElement('button');
-            del.textContent = '\u2573';
-            del.className = 'frame-delete-button';
-            toolbar.appendChild(del);
-            del.addEventListener('click', function(event) {
-              block.delete(name);
-            });
+            if (block['_implements_shinysdr.values.IWritableCollection']) {
+              var del = document.createElement('button');
+              del.textContent = '\u2573';
+              del.className = 'frame-delete-button';
+              toolbar.appendChild(del);
+              del.addEventListener('click', function(event) {
+                block.delete(name);
+              });
+            }
             
             toolbar.appendChild(document.createTextNode(' ' + userName + ' '));
             

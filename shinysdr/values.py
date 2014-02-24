@@ -21,9 +21,10 @@ import array
 import bisect
 import struct
 
-from gnuradio import gr
-
 from twisted.python import log
+from zope.interface import Interface  # available via Twisted
+
+from gnuradio import gr
 
 
 class BaseCell(object):
@@ -319,6 +320,12 @@ class CollectionState(ExportedState):
 			if key not in self.__cells:
 				self.__cells[key] = CollectionMemberCell(self, key)
 			callback(self.__cells[key])
+
+
+class IWritableCollection(Interface):
+	'''
+	Marker that a dynamic state object should expose create/delete operations
+	'''
 
 
 def exported_value(**cell_kwargs):

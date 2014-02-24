@@ -1,4 +1,4 @@
-# Copyright 2013 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -40,7 +40,7 @@ import weakref
 import shinysdr.top
 import shinysdr.plugins
 import shinysdr.db
-from shinysdr.values import ExportedState, BaseCell, BlockCell, StreamCell
+from shinysdr.values import ExportedState, BaseCell, BlockCell, StreamCell, IWritableCollection
 
 
 # temporary kludge until upstream takes our patch
@@ -141,6 +141,8 @@ class BlockResource(resource.Resource):
 	
 	def __makeChildBlockResource(self, name, block):
 		def deleter():
+			if not IWritableCollection.providedBy(self._block):
+				raise Exception('Block is not a writable collection')
 			self._block.delete_child(name)
 		return BlockResource(block, self._noteDirty, deleter)
 	
@@ -150,6 +152,8 @@ class BlockResource(resource.Resource):
 	def render_POST(self, request):
 		'''currently only meaningful to create children of CollectionResources'''
 		block = self._block
+		if not IWritableCollection.providedBy(block):
+			raise Exception('Block is not a writable collection')
 		assert request.getHeader('Content-Type') == 'application/json'
 		reqjson = json.load(request.content)
 		key = block.create_child(reqjson)  # note may fail

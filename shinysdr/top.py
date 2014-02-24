@@ -1,4 +1,4 @@
-# Copyright 2013 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -21,10 +21,12 @@ import time
 
 from twisted.internet import reactor
 from twisted.python import log
+from zope.interface import implements  # available via Twisted
 
 from gnuradio import blocks
 from gnuradio import gr
-from shinysdr.values import ExportedState, CollectionState, exported_value, setter, BlockCell, Enum
+
+from shinysdr.values import ExportedState, CollectionState, exported_value, setter, BlockCell, Enum, IWritableCollection
 from shinysdr.blocks import make_resampler, MonitorSink
 from shinysdr.receiver import Receiver
 
@@ -33,6 +35,8 @@ _num_audio_channels = 2
 
 
 class ReceiverCollection(CollectionState):
+	implements(IWritableCollection)
+	
 	def __init__(self, table, top):
 		CollectionState.__init__(self, table, dynamic=True)
 		self.__top = top
