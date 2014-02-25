@@ -186,6 +186,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       if ('receivers' in block) {
         addWidget('receivers', ReceiverSet);
       }
+      addWidget('accessories', AccessorySet);
       
       setToDetails();
     });
@@ -226,6 +227,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   }
   var SourceSet = widgets.SourceSet = BlockSet(Source, 'Source', false);
   var ReceiverSet = widgets.ReceiverSet = BlockSet(Receiver, 'Receiver', true);
+  var AccessorySet = widgets.AccessorySet = BlockSet(Block, 'Accessory', true);
   
   // Widget for a source block
   function Source(config) {
