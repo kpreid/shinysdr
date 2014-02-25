@@ -42,7 +42,8 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   
   // Superclass for a sub-block widget
   function Block(config, optSpecial, optEmbed) {
-    var block = config.target;
+    var block = config.target.depend(config.rebuildMe);
+    block._reshapeNotice.listen(config.rebuildMe);
     var container = this.element = config.element;
     var appendTarget = container;
     var claimed = Object.create(null);

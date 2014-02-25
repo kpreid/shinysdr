@@ -143,14 +143,6 @@ define(['./values', './events'], function (values, events) {
         return;
       }
       
-      var widgetTarget;
-      if (targetCell.type === values.block) {
-        widgetTarget = targetCell.depend(go);
-        widgetTarget._reshapeNotice.listen(go);
-      } else {
-        widgetTarget = targetCell;
-      }
-
       var boundedFnEnabled = true;
       function boundedFn(f) {
         return function boundedFnWrapper() {
@@ -165,7 +157,7 @@ define(['./values', './events'], function (values, events) {
       
       var config = Object.freeze({
         scheduler: scheduler,
-        target: widgetTarget,
+        target: targetCell,
         element: newSourceEl,
         context: context, // TODO redundant values -- added for programmatic widget-creation; maybe facetize createWidget. Also should remove text-named widget table from this to make it more tightly scoped, perhaps.
         view: context.spectrumView, // TODO should be context-dependent
