@@ -23,6 +23,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   var DerivedCell = values.DerivedCell;
   var alwaysCreateReceiverFromEvent = widget.alwaysCreateReceiverFromEvent;
   var createWidgetExt = widget.createWidgetExt;
+  var addLifecycleListener = widget.addLifecycleListener;
   
   // contains *only* widget types and can be used as a lookup namespace
   var widgets = Object.create(null);
@@ -706,8 +707,12 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       
-      var fillStyle = getComputedStyle(canvas).fill;
-      var strokeStyle = getComputedStyle(canvas).stroke;
+      var fillStyle = 'white';
+      var strokeStyle = 'white';
+      addLifecycleListener(canvas, 'init', function() {
+        fillStyle = getComputedStyle(canvas).fill;
+        strokeStyle = getComputedStyle(canvas).stroke;
+      });
       
       // Drawing parameters and functions
       // Each variable is updated in draw()

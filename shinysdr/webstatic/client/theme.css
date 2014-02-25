@@ -61,7 +61,7 @@ section > h2 {
   /* TODO: We actually want this to be the SpectrumPlot's background color, but no good way to express that currently */
   background: black;
 }
-[data-widget=SpectrumPlot] { /* TODO: should be .widget-SpectrumPlot but doesn't work because read too early */
+.widget-SpectrumPlot {
   /* these properties (normally SVG-only) are read by the widget's code */
   fill: rgba(64, 100, 100, 0.75);
   stroke: #00FFAA;
