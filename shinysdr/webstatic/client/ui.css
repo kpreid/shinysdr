@@ -168,6 +168,14 @@ h2 input {
   height: 100%;
 }
 
+.widget-ErrorWidget {
+  margin: 0;
+  border: .3em solid red;
+  padding: 0.2em;
+  backgroun: white;
+  color: black;
+}
+
 /* widgets: radio button group */
 .widget-Radio label {
   display: inline-block;

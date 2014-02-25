@@ -29,6 +29,20 @@ describe('widget', function () {
   });
   
   describe('createWidget', function () {
+    it('should handle a broken widget', function() {
+      function TestWidget(config) {
+        throw new Error('bang');
+      }
+      
+      var container = document.createElement('div');
+      document.body.appendChild(container);
+      var wEl = container.appendChild(document.createElement('div'));
+      var cell = new shinysdr.values.LocalCell(Number, 0);
+      var widgetHandle = shinysdr.widget.createWidgetExt(context, TestWidget, wEl, cell);
+      // implicitly expect not to throw
+      expect(container.firstChild.className).toBe('widget-ErrorWidget');
+    });
+
     it('should call lifecycle callbacks', function() {
       var calledInit = 0;
       var calledDestroy = 0;

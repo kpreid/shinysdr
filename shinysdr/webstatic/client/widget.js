@@ -162,7 +162,8 @@ define(['./values', './events'], function (values, events) {
 
       var newSourceEl = originalStash.cloneNode(true);
       container.replaceChild(newSourceEl, currentWidgetEl);
-      var widget = new widgetCtor({
+      
+      var config = Object.freeze({
         scheduler: scheduler,
         target: widgetTarget,
         element: newSourceEl,
@@ -177,7 +178,15 @@ define(['./values', './events'], function (values, events) {
         boundedFn: boundedFn,
         idPrefix: idPrefix
       });
-      widget.element.classList.add('widget-' + widgetCtor.name);
+      var widget = undefined;
+      try {
+        widget = new widgetCtor(config);
+      } catch (error) {
+        console.error('Error creating widget: ', error);
+        widget = new ErrorWidget(config, widgetCtor, error);
+      }
+      
+      widget.element.classList.add('widget-' + widget.constructor.name);  // TODO use stronger namespacing
       
       var newEl = widget.element;
       var placeMark = newSourceEl.nextSibling;
@@ -495,6 +504,12 @@ define(['./values', './events'], function (values, events) {
     lifecycleInit(container);
   }
   exports.SpectrumView = SpectrumView;
+  
+  function ErrorWidget(config, widgetCtor, error) {
+    this.element = document.createElement('div');
+    this.element.appendChild(document.createTextNode('An error occurred preparing what should occupy this space (' + widgetCtor.name + ' named ' + config.element.getAttribute('title') + '). '));
+    this.element.appendChild(document.createElement('code')).textContent = String(error);
+  }
   
   return Object.freeze(exports);
 });
