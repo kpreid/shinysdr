@@ -51,9 +51,9 @@ class Source(gr.hier_block2, ExportedState):
 
 class AudioSource(Source):
 	def __init__(self,
-			name='Audio Device Source',
-			device_name='',
+			device_name='',  # may be used positionally, not recommented
 			quadrature_as_stereo=False,
+			name='Audio Device Source',
 			**kwargs):
 		Source.__init__(self, name=name, **kwargs)
 		self.__name = name  # for reinit only
