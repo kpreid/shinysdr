@@ -233,6 +233,10 @@ define(['./values', './events'], function (values, events) {
   }
   
   function createWidgetExt(context, widgetCtor, node, targetCell) {
+    if (!targetCell) {
+      // catch a likely early error
+      throw new Error('createWidgetExt: missing targetCell');
+    }
     return createWidget(
       new ConstantCell(values.any, targetCell),
       String(targetCell),
