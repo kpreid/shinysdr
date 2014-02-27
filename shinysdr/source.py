@@ -97,7 +97,6 @@ class AudioSource(Source):
 			self.__complex = _Complexifier(hilbert_length=128)
 			self.__sample_rate_out = sample_rate / 2
 			self.__offset = sample_rate / 4
-		self.__source = None
 		
 		if self.__tuning_cell is not None:
 			freq_range = self.__tuning_cell.type()
@@ -115,34 +114,6 @@ class AudioSource(Source):
 			**kwargs)
 		self.freq_cell.set(freq)
 		
-		self.__do_connect()
-	
-	def __str__(self):
-		return 'Audio ' + self.__device_name
-
-	@exported_value(ctor=float)
-	def get_sample_rate(self):
-		return self.__sample_rate_out
-
-	def notify_reconnecting_or_restarting(self):
-		# work around OSX audio source bug; does not work across flowgraph restarts
-		self.__do_connect()
-
-	def __update_from_tuning_source(self):
-		freq = self.__tuning_cell.get() + self.__offset
-		self.freq_cell.set_internal(freq)
-
-	def _really_set_frequency(self, freq):
-		if self.__tuning_cell is not None:
-			self.__tuning_cell.set(freq - self.__offset)
-
-	def get_tune_delay(self):
-		return 0.0
-
-	def __do_connect(self):
-		self.disconnect_all()
-		
-		# work around OSX audio source bug; does not work across flowgraph restarts
 		self.__source = audio.source(
 			self.__sample_rate_in,
 			device_name=self.__device_name,
@@ -152,6 +123,24 @@ class AudioSource(Source):
 		if self.__quadrature_as_stereo:
 			# if we don't do this, the imaginary component is 0 and the spectrum is symmetric
 			self.connect((self.__source, 1), (self.__complex, 1))
+	
+	def __str__(self):
+		return 'Audio ' + self.__device_name
+
+	@exported_value(ctor=float)
+	def get_sample_rate(self):
+		return self.__sample_rate_out
+
+	def __update_from_tuning_source(self):
+		freq = self.__tuning_cell.get() + self.__offset
+		self.freq_cell.set_internal(freq)
+
+	def _really_set_frequency(self, freq):
+		if self.__tuning_cell is not None:
+			self.__tuning_cell.set(freq - self.__offset)
+	
+	def get_tune_delay(self):
+		return 0.0
 
 
 class _Complexifier(gr.hier_block2):
