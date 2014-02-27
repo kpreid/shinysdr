@@ -76,6 +76,22 @@ define(['./values', './events', './database', './network', './maps', './widget',
         return fromCenter > 0.01 && // DC peak
                fromCenter < 0.85;  // loss at edges
       }
+      
+      // Get mode from frequency DB
+      function bandMode(freq) {
+        var foundWidth = Infinity;
+        var foundMode = null;
+        freqDB.inBand(freq, freq).forEach(function(record) {
+          var l = record.lowerFreq;
+          var u = record.upperFreq;
+          var bandwidth = Math.abs(u - l);  // should not be negative but not enforced, abs for robustness
+          if (bandwidth < foundWidth) {
+            foundWidth = bandwidth;
+            foundMode = record.mode;
+          }
+        });
+        return foundMode;
+      }
 
       // Options
       //   receiver: optional receiver
@@ -87,7 +103,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
         var alwaysCreate = options.alwaysCreate;
         var record = options.record;
         var freq = options.freq !== undefined ? +options.freq : (record && record.freq);
-        var mode = options.mode || (record && record.mode);
+        var mode = options.mode || (record && record.mode) || bandMode(freq);
         var receiver = options.receiver;
         //console.log('tune', alwaysCreate, freq, mode, receiver);
       

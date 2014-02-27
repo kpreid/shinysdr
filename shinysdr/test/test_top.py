@@ -44,3 +44,11 @@ class TestTop(unittest.TestCase):
 		# TODO: instead of top.monitor, should go through state interface
 		self.assertEqual(top.monitor.get_fft_info()[0], freq)
 		self.assertTrue(receiver.get_is_valid())
+
+	def test_add_unknown_mode(self):
+		'''
+		Specifying an unknown mode should not _fail_.
+		'''
+		top = Top(sources={'s1': simulate.SimulatedSource(freq=0)})
+		(_, receiver) = top.add_receiver('NONSENSE', key='a')
+		self.assertEqual(receiver.get_mode(), 'AM')

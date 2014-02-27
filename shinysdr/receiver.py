@@ -18,6 +18,7 @@
 from __future__ import absolute_import, division
 
 from twisted.plugin import IPlugin, getPlugins
+from twisted.python import log
 from zope.interface import Interface, implements  # available via Twisted
 
 import gnuradio
@@ -53,6 +54,11 @@ class Receiver(gr.hier_block2, ExportedState):
 			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
 			gr.io_signature(2, 2, gr.sizeof_float * 1),
 		)
+		
+		if _lookup_mode(mode) is None:
+			# TODO: communicate back to client if applicable
+			log.msg('Unknown mode %r in Receiver(); using AM' % (mode,))
+			mode = 'AM'
 		
 		# Provided by caller
 		self.input_rate = input_rate
@@ -199,12 +205,10 @@ class Receiver(gr.hier_block2, ExportedState):
 	def __make_demodulator(self, mode, state):
 		'''Returns the demodulator.'''
 
-		for modeDef in getModes():
-			if modeDef.mode == mode:
-				clas = modeDef.demodClass
-				break
-		else:
+		mode_def = _lookup_mode(mode)
+		if mode_def is None:
 			raise ValueError('Unknown mode: ' + mode)
+		clas = mode_def.demodClass
 
 		# TODO: extend state_from_json so we can decide to load things with keyword args and lose the init dict/state dict distinction
 		init = {}
@@ -308,3 +312,12 @@ class ModeDef(object):
 def getModes():
 	# TODO caching? prebuilt mode table?
 	return [p for p in getPlugins(IModeDef, plugins) if p.available]
+
+
+def _lookup_mode(mode):
+	# TODO sensible lookup table (doesn't matter for now because small N)
+	for mode_def in getModes():
+		if mode_def.mode == mode:
+			return mode_def
+	else:
+		return None
