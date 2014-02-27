@@ -142,9 +142,9 @@ define(['./values', './events'], function (values, events) {
   exports.ReadCell = ReadCell;
   
   function BulkDataCell(url, type) {
-    var fft = new Float32Array(0);
+    var fft = new Float32Array(1);
     var VSIZE = Float32Array.BYTES_PER_ELEMENT;
-    var lastValue = [[NaN, NaN], fft];
+    var lastValue = [{freq:0, rate:1}, fft];
 
     // kludge to ensure that widgets get all of the frames
     // TODO: put this on a more general and sound framework
@@ -196,7 +196,7 @@ define(['./values', './events'], function (values, events) {
     };
   }
   BulkDataCell.prototype = Object.create(ReadCell.prototype, {constructor: {value: BulkDataCell}});
-  //exports.BulkDataCell = BulkDataCell;
+  exports.BulkDataCell = BulkDataCell;
   
   function setNonEnum(o, p, v) {
     Object.defineProperty(o, p, {

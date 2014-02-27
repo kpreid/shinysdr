@@ -506,7 +506,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   // Widget for a monitor block
   function Monitor(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
-      var element = this.element = document.createElement('div');
+      var element = this.element = config.element;
       element.classList.add('hscalegroup');
       element.id = config.element.id;
       
@@ -523,6 +523,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       }
       if (isRFSpectrum) createWidgetExt(context, ReceiverMarks, makeOverlayPiece('div'), block.fft);
       createWidgetExt(context, SpectrumPlot, makeOverlayPiece('canvas'), block.fft);
+      ignore('fft');
       
       // TODO this is clunky. (Note we're not just using rebuildMe because we don't want to lose waterfall history and reinit GL and and and...)
       var radioCell = config.radioCell;
@@ -532,6 +533,9 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       createWidgetExt(context, FreqScale, element.appendChild(document.createElement('div')), freqCell);
       
       createWidgetExt(context, WaterfallPlot, element.appendChild(document.createElement('canvas')), block.fft);
+      
+      ignore('scope');
+      ignore('time_length');
       
       // TODO should logically be doing this -- need to support "widget with possibly multiple target elements"
       //addWidget(null, MonitorParameters);
