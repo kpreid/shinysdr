@@ -114,11 +114,8 @@ define(['./values', './events', './database', './network', './maps', './widget',
           for (var recKey in receivers) {
             var candidate = receivers[recKey].get();
             if (!candidate.rec_freq) continue;  // sanity check
-            if (mode && candidate.mode.get() !== mode) {
-              // Don't use a different mode
-              continue;
-            }
-            var thisFit = Math.abs(candidate.rec_freq.get() - freq);
+            var sameMode = candidate.mode.get() === mode;
+            var thisFit = Math.abs(candidate.rec_freq.get() - freq) + (sameMode ? 0 : 1e6);
             if (thisFit < fit) {
               fit = thisFit;
               receiver = candidate;
