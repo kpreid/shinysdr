@@ -382,6 +382,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   function MonitorParameters(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       ignore('fft');
+      ignore('scope');
       if ('frame_rate' in block) {
         addWidget('frame_rate', LogSlider, 'Rate');
       }

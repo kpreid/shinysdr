@@ -334,7 +334,9 @@ class MonitorSink(gr.hier_block2, ExportedState):
 	def __init__(self,
 			sample_rate=None,
 			complex_in=True,
+			enable_scope=False,
 			freq_resolution=4096,
+			time_length=2048,
 			frame_rate=30.0,
 			input_center_freq=0.0,
 			context=None):
@@ -356,15 +358,18 @@ class MonitorSink(gr.hier_block2, ExportedState):
 		self.__complex = complex_in
 		self.__itemsize = itemsize
 		self.__context = context
+		self.__enable_scope = enable_scope
 		
 		# settable parameters
 		self.__sample_rate = float(sample_rate)
 		self.__freq_resolution = int(freq_resolution)
+		self.__time_length = int(time_length)
 		self.__frame_rate = float(frame_rate)
 		self.__input_center_freq = float(input_center_freq)
 		
 		# this block attr needs to exist early
 		self.__fft_sink = None
+		self.__scope_sink = None
 		
 		self.__rebuild()
 		self.__connect()
@@ -373,6 +378,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
 		super(MonitorSink, self).state_def(callback)
 		# TODO make this possible to be decorator style
 		callback(StreamCell(self, 'fft', ctor=SpectrumTypeStub))
+		callback(StreamCell(self, 'scope', ctor=SpectrumTypeStub))  # TODO distinct type
 
 	def __rebuild(self):
 		overlap_factor = int(math.ceil(_maximum_fft_rate * self.__freq_resolution / self.__sample_rate))
@@ -399,6 +405,16 @@ class MonitorSink(gr.hier_block2, ExportedState):
 		self.__fft_rescale = blocks.add_const_vff(
 			[10 * math.log10(self.__freq_resolution)] * self.__freq_resolution)
 	
+		self.__scope_sink = MessageDistributorSink(
+			itemsize=self.__time_length * gr.sizeof_gr_complex,
+			context=self.__context,
+			migrate=self.__scope_sink)
+		self.__scope_chunker = blocks.stream_to_vector_decimator(
+			item_size=gr.sizeof_gr_complex,
+			sample_rate=self.__sample_rate,
+			vec_rate=self.__frame_rate,  # TODO doesn't need to be coupled
+			vec_len=self.__time_length)
+
 	def __connect(self):
 		self.__context.lock()
 		try:
@@ -409,6 +425,11 @@ class MonitorSink(gr.hier_block2, ExportedState):
 				self.__logpwrfft,
 				self.__fft_rescale,
 				self.__fft_sink)
+			if self.__enable_scope:
+				self.connect(
+					self,
+					self.__scope_chunker,
+					self.__scope_sink)
 		finally:
 			self.__context.unlock()
 	
@@ -432,6 +453,16 @@ class MonitorSink(gr.hier_block2, ExportedState):
 		self.__rebuild()
 		self.__connect()
 
+	@exported_value(ctor=Range([(1, 4096)], logarithmic=True, integer=True))
+	def get_time_length(self):
+		return self.__time_length
+
+	@setter
+	def set_time_length(self, value):
+		self.__time_length = value
+		self.__rebuild()
+		self.__connect()
+
 	@exported_value(ctor=Range([(1, _maximum_fft_rate)], logarithmic=True, integer=False))
 	def get_frame_rate(self):
 		return self.__frame_rate
@@ -447,3 +478,10 @@ class MonitorSink(gr.hier_block2, ExportedState):
 	
 	def get_fft_distributor(self):
 		return self.__fft_sink
+	
+	# exported via state_def
+	def get_scope_info(self):
+		return (0, self.__sample_rate)  # one field not used
+	
+	def get_scope_distributor(self):
+		return self.__scope_sink
