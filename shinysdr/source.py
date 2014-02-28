@@ -17,9 +17,10 @@
 
 from __future__ import absolute_import, division
 
-from gnuradio import gr
-from gnuradio import blocks
 from gnuradio import audio
+from gnuradio import blocks
+from gnuradio import filter as grfilter
+from gnuradio import gr
 
 from shinysdr.values import Range, ExportedState, exported_value, setter
 
@@ -59,9 +60,14 @@ class AudioSource(Source):
 		Source.__init__(self, name=name, **kwargs)
 		self.__name = name  # for reinit only
 		self.__device_name = device_name
-		self.__sample_rate = sample_rate
+		self.__sample_rate_in = sample_rate
 		self.__quadrature_as_stereo = quadrature_as_stereo
-		self.__complex = blocks.float_to_complex(1)
+		if self.__quadrature_as_stereo:
+			self.__complex = blocks.float_to_complex(1)
+			self.__sample_rate_out = sample_rate
+		else:
+			self.__complex = _Complexifier(hilbert_length=128)
+			self.__sample_rate_out = sample_rate / 2
 		self.__source = None
 		
 		self.__do_connect()
@@ -71,7 +77,7 @@ class AudioSource(Source):
 	
 	@exported_value(ctor=float)
 	def get_sample_rate(self):
-		return self.__sample_rate
+		return self.__sample_rate_out
 
 	def notify_reconnecting_or_restarting(self):
 		# work around OSX audio source bug; does not work across flowgraph restarts
@@ -79,7 +85,10 @@ class AudioSource(Source):
 
 	@exported_value(ctor=float)
 	def get_freq(self):
-		return 0.0
+		if self.__quadrature_as_stereo:
+			return 0.0
+		else:
+			return self.__sample_rate_out / 2.0
 
 	def get_tune_delay(self):
 		return 0.0
@@ -89,7 +98,7 @@ class AudioSource(Source):
 		
 		# work around OSX audio source bug; does not work across flowgraph restarts
 		self.__source = audio.source(
-			self.__sample_rate,
+			self.__sample_rate_in,
 			device_name=self.__device_name,
 			ok_to_block=True)
 		
@@ -97,3 +106,29 @@ class AudioSource(Source):
 		if self.__quadrature_as_stereo:
 			# if we don't do this, the imaginary component is 0 and the spectrum is symmetric
 			self.connect((self.__source, 1), (self.__complex, 1))
+
+
+class _Complexifier(gr.hier_block2):
+	'''
+	Turn a real signal into a complex signal of half the sample rate with the same band.
+	'''
+	
+	def __init__(self, hilbert_length):
+		gr.hier_block2.__init__(
+			self, self.__class__.__name__,
+			gr.io_signature(1, 1, gr.sizeof_float),
+			gr.io_signature(1, 1, gr.sizeof_gr_complex),
+		)
+		
+		self.__hilbert = grfilter.hilbert_fc(hilbert_length)
+		self.__rotate = grfilter.freq_xlating_fir_filter_ccc(
+			2,  # decimation
+			[1],  # taps
+			0.25,  # freq shift
+			1)  # sample rate
+		
+		self.connect(
+			self,
+			self.__hilbert,
+			self.__rotate,
+			self)
