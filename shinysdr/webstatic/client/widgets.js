@@ -392,14 +392,41 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     });
   }
   widgets.MonitorParameters = MonitorParameters;
+
+  var GLtools = {
+    getGL: function getGL(config, canvas, options) {
+      var useWebGL = config.clientState.opengl.depend(config.rebuildMe);
+      return !useWebGL ? null : canvas.getContext('webgl', options) || canvas.getContext('experimental-webgl', options);
+    },
+    buildProgram: function buildProgram(gl, vertexShaderSource, fragmentShaderSource) {
+      function compileShader(type, source) {
+        var shader = gl.createShader(type);
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+          throw new Error(gl.getShaderInfoLog(shader));
+        }
+        return shader;
+      }
+      var vertexShader = compileShader(gl.VERTEX_SHADER, vertexShaderSource);
+      var fragmentShader = compileShader(gl.FRAGMENT_SHADER, fragmentShaderSource);
+      var program = gl.createProgram();
+      gl.attachShader(program, vertexShader);
+      gl.attachShader(program, fragmentShader);
+      gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        throw new Error(gl.getProgramInfoLog(program));
+      }
+      gl.useProgram(program);
+      return program;
+    }
+  }
   
   // Abstract
   function CanvasSpectrumWidget(config, buildGL, build2D) {
     var self = this;
     var fftCell = config.target;
     var view = config.view;
-    
-    var useWebGL = config.clientState.opengl.depend(config.rebuildMe);
     
     var canvas = config.element;
     if (canvas.tagName !== 'CANVAS') {
@@ -415,7 +442,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       antialias: false,
       preserveDrawingBuffer: false
     };
-    var gl = !useWebGL ? null : canvas.getContext('webgl', glOptions) || canvas.getContext('experimental-webgl', glOptions);
+    var gl = GLtools.getGL(config, canvas, glOptions);
     var ctx2d = canvas.getContext('2d');
     
     var dataHook = function () {}, drawOuter = function () {};
@@ -429,25 +456,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       function initContext() {
         var att_position;
         function buildProgram(vertexShaderSource, fragmentShaderSource) {
-          function compileShader(type, source) {
-            var shader = gl.createShader(type);
-            gl.shaderSource(shader, source);
-            gl.compileShader(shader);
-            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-              throw new Error(gl.getShaderInfoLog(shader));
-            }
-            return shader;
-          }
-          var vertexShader = compileShader(gl.VERTEX_SHADER, vertexShaderSource);
-          var fragmentShader = compileShader(gl.FRAGMENT_SHADER, fragmentShaderSource);
-          var program = gl.createProgram();
-          gl.attachShader(program, vertexShader);
-          gl.attachShader(program, fragmentShader);
-          gl.linkProgram(program);
-          if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-            throw new Error(gl.getProgramInfoLog(program));
-          }
-          gl.useProgram(program);
+          var program = GLtools.buildProgram(gl, vertexShaderSource, fragmentShaderSource);
           att_position = gl.getAttribLocation(program, 'position');
           gl.enableVertexAttribArray(att_position);
           return program;
@@ -503,6 +512,160 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     fftCell.subscribe(newFFTFrame);
     draw();
   }
+  
+  function ScopePlot(config) {
+    var self = this;
+    var scopeCell = config.target;
+    var storage = config.storage;
+    var scheduler = config.scheduler;
+    
+    var canvas = config.element;
+    if (canvas.tagName !== 'CANVAS') {
+      canvas = document.createElement('canvas');
+    }
+    this.element = canvas;
+    
+    var viewAngle = storage ? (+storage.getItem('angle')) || 0 : 0;
+    
+    var bufferToDraw = null;
+    var lastLength = NaN;
+    
+    var gl = GLtools.getGL(config, canvas, {
+      alpha: false,
+      depth: true,
+      stencil: false,
+      antialias: true,
+      preserveDrawingBuffer: false
+    });
+    gl.enable(gl.DEPTH_TEST);
+    
+    var att_time;
+    var att_signal;
+    
+    var timeBuffer = gl.createBuffer();
+    var signalBuffer = gl.createBuffer();
+    
+    var vertexShaderSource = ''
+      + 'attribute float time;\n'
+      + 'attribute vec2 signal;\n'
+      + 'uniform mat4 projection;\n'
+      + 'uniform bool channel;\n'
+      + 'varying mediump float v_time;\n'
+      + 'varying mediump vec2 v_signal;\n'
+      + 'void main(void) {\n'
+      + '  float y = channel ? signal.x : signal.y;\n'
+      + '  //gl_Position = vec4(time * 2.0 - 1.0, y, 0.0, 1.0);\n'
+      + '  vec4 basePos = vec4(signal, time * 2.0 - 1.0, 1.0);\n'
+      + '  gl_Position = basePos * projection;\n'
+      + '  v_time = time;\n'
+      + '  v_signal = signal;\n'
+      + '}\n';
+    var fragmentShaderSource = ''
+      + 'varying mediump float v_time;\n'
+      + 'void main(void) {\n'
+      + '  gl_FragColor = vec4(v_time, 1.0 - v_time, 0.0, 1.0);\n'
+      + '}\n';
+    var program = GLtools.buildProgram(gl, vertexShaderSource, fragmentShaderSource);
+    var att_time = gl.getAttribLocation(program, 'time');
+    var att_signal = gl.getAttribLocation(program, 'signal');
+    gl.enableVertexAttribArray(att_time);
+    gl.enableVertexAttribArray(att_signal);
+    gl.bindBuffer(gl.ARRAY_BUFFER, timeBuffer);
+    gl.vertexAttribPointer(
+      att_time,
+      1, // components
+      gl.FLOAT,
+      false,
+      0,
+      0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, signalBuffer);
+    gl.vertexAttribPointer(
+      att_signal,
+      2, // components
+      gl.FLOAT,
+      false,
+      0,
+      0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    
+    canvas.addEventListener('webglcontextlost', function (event) {
+      event.preventDefault();
+    }, false);
+    canvas.addEventListener('webglcontextrestored', config.rebuildMe, false);
+    
+    // dragging
+    function drag(event) {
+      viewAngle += (event.movementX || event.webkitMovementX) * 0.01;
+      viewAngle = Math.min(Math.PI / 2, Math.max(0, viewAngle));
+      if (storage) storage.setItem('angle', viewAngle);
+      scheduler.enqueue(draw);
+      event.stopPropagation();
+      event.preventDefault(); // no drag selection
+    }
+    canvas.addEventListener('mousedown', function(event) {
+      if (event.button !== 0) return;  // don't react to right-clicks etc.
+      event.preventDefault();
+      document.addEventListener('mousemove', drag, true);
+      document.addEventListener('mouseup', function(event) {
+        document.removeEventListener('mousemove', drag, true);
+      }, true);
+    }, false);
+    
+    var draw = config.boundedFn(function drawImpl() {
+      if (!bufferToDraw) return;
+      
+      var w, h;
+      // Fit current layout
+      w = canvas.offsetWidth;
+      h = canvas.offsetHeight;
+      if (canvas.width !== w || canvas.height !== h) {
+        // implicitly clears
+        canvas.width = w;
+        canvas.height = h;
+      }
+      var aspect = w / h;
+      gl.viewport(0, 0, w, h);
+      
+      if (lastLength != bufferToDraw.length / 2) {
+        lastLength = bufferToDraw.length / 2;
+        gl.bindBuffer(gl.ARRAY_BUFFER, timeBuffer);
+        var timeIndexes = new Float32Array(lastLength);
+        for (var i = 0; i < lastLength; i++) {
+          timeIndexes[i] = i / lastLength;
+        }
+        if (bufferToDraw) gl.bufferData(gl.ARRAY_BUFFER, timeIndexes, gl.STREAM_DRAW);
+      }
+      
+      if (bufferToDraw) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, signalBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, bufferToDraw, gl.STREAM_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      }
+
+      gl.uniformMatrix4fv(gl.getUniformLocation(program, 'projection'), false, new Float32Array([
+        Math.cos(viewAngle) / aspect, 0, -Math.sin(viewAngle), 0,
+        0, 1, 0, 0,
+        Math.sin(viewAngle) / aspect, 0, Math.cos(viewAngle), 0,
+        0, 0, 0, 1,
+      ]));
+      
+      gl.uniform1f(gl.getUniformLocation(program, 'channel'), 0);
+      gl.drawArrays(gl.LINE_STRIP, 0, lastLength);
+      gl.uniform1f(gl.getUniformLocation(program, 'channel'), 1);
+      gl.drawArrays(gl.LINE_STRIP, 0, lastLength);
+    });
+    draw.scheduler = config.scheduler;
+    
+    function newScopeFrame(bundle) {
+      bufferToDraw = bundle[1];
+      draw.scheduler.enqueue(draw);
+    }
+    newScopeFrame.scheduler = config.scheduler;
+
+    scopeCell.subscribe(newScopeFrame);
+    draw();
+  }
+  widgets.ScopePlot = ScopePlot;
   
   function SpectrumPlot(config) {
     var self = this;

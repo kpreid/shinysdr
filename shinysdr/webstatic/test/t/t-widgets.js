@@ -44,14 +44,28 @@ describe('widgets', function () {
     });
   }
   
+  function mockWidgetConfig(element, cell) {
+    var element = document.createElement('div');
+    function rebuildMe() { throw new Error('mock rebuildMe not implemented'); }
+    rebuildMe.scheduler = scheduler;
+    return {
+      element: element,
+      target: cell,
+      scheduler: scheduler,
+      clientState: shinysdr.values.makeBlock({
+        // TODO: The shape of clientState needs to be defined in some module or we need to make it optional
+        opengl: new shinysdr.values.LocalCell(Boolean, true),
+        opengl_float: new shinysdr.values.LocalCell(Boolean, true),
+      }),
+      boundedFn: function(f) { return f; },
+      rebuildMe: rebuildMe
+    };
+  }
+  
   describe('Knob', function () {
     it('should hold a negative zero', function () {
       var cell = new shinysdr.values.LocalCell(shinysdr.values.any, 0);
-      widget = new shinysdr.widgets.Knob({
-        target: cell,
-        scheduler: scheduler,
-        boundedFn: function(f) { return f; }
-      });
+      widget = new shinysdr.widgets.Knob(mockWidgetConfig(null, cell));
       
       document.body.appendChild(widget.element);
       
@@ -66,6 +80,15 @@ describe('widgets', function () {
       simulateKey('5', widget.element.querySelector('.knob-digit:last-child'));
       
       expect(cell.get()).toBe(-5);
+    });
+  });
+  
+  describe('ScopePlot', function () {
+    it('should be successfully created', function () {
+      // stub test to exercise the code because it's currently not in the default ui. Should have more tests.
+      var cell = new shinysdr.values.LocalCell(shinysdr.values.any, [{freq:0, rate:1}, []]);
+      cell.subscribe = function() {} // TODO implement
+      widget = new shinysdr.widgets.ScopePlot(mockWidgetConfig(null, cell));
     });
   });
 });
