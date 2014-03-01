@@ -52,13 +52,14 @@ class Source(gr.hier_block2, ExportedState):
 class AudioSource(Source):
 	def __init__(self,
 			device_name='',  # may be used positionally, not recommented
+			sample_rate=44100,
 			quadrature_as_stereo=False,
 			name='Audio Device Source',
 			**kwargs):
 		Source.__init__(self, name=name, **kwargs)
 		self.__name = name  # for reinit only
 		self.__device_name = device_name
-		self.__sample_rate = 44100
+		self.__sample_rate = sample_rate
 		self.__quadrature_as_stereo = quadrature_as_stereo
 		self.__complex = blocks.float_to_complex(1)
 		self.__source = None
