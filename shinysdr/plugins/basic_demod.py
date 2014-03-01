@@ -371,6 +371,9 @@ class WFMDemodulator(FMDemodulator):
 pluginDef_wfm = ModeDef('WFM', label='Broadcast FM', demodClass=WFMDemodulator)
 
 
+_ssb_max_agc = 1.5
+
+
 class SSBDemodulator(SimpleAudioDemodulator):
 	def __init__(self, mode, audio_rate=0, **kwargs):
 		if mode == 'LSB':
@@ -422,6 +425,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
 				firdes.WIN_HAMMING))
 		
 		self.agc_block = analog.agc2_cc(reference=agc_reference)
+		self.agc_block.set_max_gain(_ssb_max_agc)
 		
 		self.ssb_demod_block = blocks.complex_to_real(1)
 		
@@ -452,6 +456,10 @@ class SSBDemodulator(SimpleAudioDemodulator):
 			'high': self.band_filter_high,
 			'width': self.band_filter_width
 		}
+	
+	@exported_value(ctor=Range([(-100, 10 * math.log10(_ssb_max_agc))]))
+	def get_agc_gain(self):
+		return 10 * math.log10(self.agc_block.gain())
 
 
 pluginDef_lsb = ModeDef('LSB', label='SSB (L)', demodClass=SSBDemodulator)
