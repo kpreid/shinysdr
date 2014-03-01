@@ -376,6 +376,9 @@ class MonitorSink(gr.hier_block2, ExportedState):
 
 	def __rebuild(self):
 		overlap_factor = int(math.ceil(_maximum_fft_rate * self.__freq_resolution / self.__sample_rate))
+		# sanity limit -- OverlapGimmick is not free
+		overlap_factor = min(16, overlap_factor)
+		
 		self.__fft_sink = MessageDistributorSink(
 			itemsize=self.__freq_resolution * gr.sizeof_float,
 			context=self.__context,
