@@ -80,36 +80,46 @@ class AudioSource(Source):
 			device_name='',  # may be used positionally, not recommented
 			sample_rate=44100,
 			quadrature_as_stereo=False,
+			tuning_cell=None,
 			name='Audio Device Source',
 			**kwargs):
 		self.__name = name  # for reinit only
 		self.__device_name = device_name
 		self.__sample_rate_in = sample_rate
 		self.__quadrature_as_stereo = quadrature_as_stereo
+		self.__tuning_cell = tuning_cell
+		
 		if self.__quadrature_as_stereo:
 			self.__complex = blocks.float_to_complex(1)
 			self.__sample_rate_out = sample_rate
+			self.__offset = 0.0
 		else:
 			self.__complex = _Complexifier(hilbert_length=128)
 			self.__sample_rate_out = sample_rate / 2
+			self.__offset = sample_rate / 4
 		self.__source = None
 		
-		if self.__quadrature_as_stereo:
-			center = 0.0
+		if self.__tuning_cell is not None:
+			freq_range = self.__tuning_cell.type()
+			if self.__offset != 0 and isinstance(freq_range, Range): # TODO kludge
+				freq_range = freq_range.shifted_by(self.__offset)
+			freq = self.__tuning_cell.get() + self.__offset
+			self.__tuning_cell.subscribe(self.__update_from_tuning_source)
 		else:
-			center = self.__sample_rate_out / 2.0
+			freq_range = Range([(self.__offset, self.__offset)], strict=True)
+			freq = self.__offset
 		
 		Source.__init__(self,
 			name=name,
-			freq_range=Range([(center, center)], strict=True),
+			freq_range=freq_range,
 			**kwargs)
-		self.freq_cell.set(center)
+		self.freq_cell.set(freq)
 		
 		self.__do_connect()
 	
 	def __str__(self):
 		return 'Audio ' + self.__device_name
-	
+
 	@exported_value(ctor=float)
 	def get_sample_rate(self):
 		return self.__sample_rate_out
@@ -118,11 +128,13 @@ class AudioSource(Source):
 		# work around OSX audio source bug; does not work across flowgraph restarts
 		self.__do_connect()
 
-	def __freq_range(self):
-		return 
+	def __update_from_tuning_source(self):
+		freq = self.__tuning_cell.get() + self.__offset
+		self.freq_cell.set_internal(freq)
 
 	def _really_set_frequency(self, freq):
-		pass
+		if self.__tuning_cell is not None:
+			self.__tuning_cell.set(freq - self.__offset)
 
 	def get_tune_delay(self):
 		return 0.0
@@ -164,6 +176,8 @@ class _Complexifier(gr.hier_block2):
 			[1],  # taps
 			0.25,  # freq shift
 			1)  # sample rate
+		
+		# TODO: We could skip the rotation step by instead passing info downstream (i.e. declaring that our band is 0..f rather than -f/2..f/2). Unclear whether the complexity is worth it. Would need to teach MonitorSink (rotate FFT output) and Receiver (validity criterion) about it.
 		
 		self.connect(
 			self,

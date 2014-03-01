@@ -104,6 +104,15 @@ class Range(ValueType):
 			if specimen > maxes[i]:
 				specimen = maxes[i]
 		return specimen
+	
+	def shifted_by(self, offset):
+		mins = self.__mins
+		maxes = self.__maxes
+		return Range(
+			[(mins[i] + offset, maxes[i] + offset) for i in xrange(len(mins))],
+			strict=self.__strict,
+			logarithmic=self.__logarithmic,
+			integer=self.__integer and offset % 1 == 0)
 
 
 class Notice(ValueType):

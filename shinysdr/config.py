@@ -135,6 +135,7 @@ class _ConfigAccessories(_ConfigDict):
 		
 		def f(r):
 			self._values[key] = r
+			return r
 		
 		self._values[key] = lazy_values.nullExportedState
 		defer.maybeDeferred(lambda: value).addCallback(f)

@@ -51,3 +51,15 @@ class TestTypes(unittest.TestCase):
 			Range([(1, 32)], strict=True, logarithmic=True, integer=True),
 			[(0, 1), 1, 2, 4, 32, (2.0, 2), (2.5, 2), (3.5, 4), (33, 32)],
 			[])
+
+	def test_Range_shifted_float(self):
+		_testType(self,
+			Range([(3, 4)], strict=True, logarithmic=False, integer=False).shifted_by(-3),
+			[(-0.5, 0), 0, 0.25, 1, (1.5, 1)],
+			[])
+
+	def test_Range_shifted_integer(self):
+		_testType(self,
+			Range([(3, 4)], strict=True, logarithmic=False, integer=True).shifted_by(-3),
+			[(-0.5, 0), 0, (0.25, 0), 1, (1.5, 1)],
+			[])
