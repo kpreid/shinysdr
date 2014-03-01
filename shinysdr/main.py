@@ -30,6 +30,7 @@ import sys
 import webbrowser
 import __builtin__
 
+from twisted.application.service import IService
 from twisted.python import log
 from twisted.internet import defer
 from twisted.internet import reactor
@@ -42,12 +43,12 @@ class _Config(object):
 		self.sources = _ConfigDict()
 		self.databases = _ConfigDbs()
 		self.accessories = _ConfigAccessories()
-		self._service = None
+		self._make_service = None
 	
 	def _validate(self):
 		if self._state_filename is None:
 			raise Exception('Having no state file is not yet supported.')
-		if self._service is None:
+		if self._make_service is None:
 			raise Exception('Having no web service is not yet supported.')
 	
 	def persist_to_file(self, filename):
@@ -56,16 +57,16 @@ class _Config(object):
 	def serve_web(self, http_endpoint, ws_endpoint, root_cap='%(root_cap)s'):
 		# TODO: See if we're reinventing bits of Twisted service stuff here
 		
-		def listen(top, noteDirty):
+		def make_service(top, noteDirty):
 			import shinysdr.web
-			return shinysdr.web.listen({
+			return shinysdr.web.WebService({
 					'databasesDir': self.databases._directory,
 					'httpPort': http_endpoint,
 					'wsPort': ws_endpoint,
 					'rootCap': root_cap,
 				}, top, noteDirty)
 		
-		self._service = listen
+		self._make_service = make_service
 
 
 class _ConfigDict(object):
@@ -200,13 +201,14 @@ config.serve_web(
 	restore(top, top_defaults)
 	
 	log.msg('Starting web server...')
-	(stop, url) = configObj._service(top, noteDirty)
+	service = IService(configObj._make_service(top, noteDirty))
+	service.startService()
 	
 	if args.openBrowser:
 		log.msg('ShinySDR is ready. Opening ' + url)
-		webbrowser.open(url=url, new=1, autoraise=True)
+		webbrowser.open(url=service.get_url(), new=1, autoraise=True)
 	else:
-		log.msg('ShinySDR is ready. Visit ' + url)
+		log.msg('ShinySDR is ready. Visit ' + service.get_url())
 	
 	if args.force_run:
 		log.msg('force_run')
@@ -215,7 +217,7 @@ config.serve_web(
 		top.set_unpaused(True)
 	
 	if _abort_for_test:
-		stop()
+		service.stopService()
 		return top, noteDirty
 	else:
 		reactor.run()

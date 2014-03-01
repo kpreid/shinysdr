@@ -18,6 +18,7 @@
 from __future__ import absolute_import, division
 
 from twisted.application import strports
+from twisted.application.service import Service
 from twisted.internet import defer
 from twisted.internet import protocol
 from twisted.internet import task
@@ -459,73 +460,89 @@ def _strport_to_url(desc, scheme='http', path='/', socket_port=0):
 		return '???'
 
 
-def listen(config, top, noteDirty):
-	rootCap = config['rootCap']
-	
-	ws_port_obj = strports.listen(config['wsPort'],
-		txws.WebSocketFactory(OurStreamFactory(top, rootCap)))
-	
-	# Roots of resource trees
-	# - appRoot is everything stateful/authority-bearing
-	# - serverRoot is the HTTP '/' and static resources are placed there
-	serverRoot = _make_static(staticResourcePath)
-	if rootCap is None:
-		appRoot = serverRoot
-		visitPath = '/'
-	else:
+class WebService(Service):
+	def __init__(self, config, top, noteDirty):
+		# TODO eliminate 'config' arg
+		rootCap = config['rootCap']
+		self.__http_port = config['httpPort']
+		self.__ws_port = config['wsPort']
+		
+		self.__ws_protocol = txws.WebSocketFactory(OurStreamFactory(top, rootCap))
+		
+		# Roots of resource trees
+		# - appRoot is everything stateful/authority-bearing
+		# - serverRoot is the HTTP '/' and static resources are placed there
 		serverRoot = _make_static(staticResourcePath)
-		appRoot = _SlashedResource()
-		serverRoot.putChild(rootCap, appRoot)
-		visitPath = '/' + urllib.quote(rootCap, safe='') + '/'
+		if rootCap is None:
+			appRoot = serverRoot
+			self.__visit_path = '/'
+		else:
+			serverRoot = _make_static(staticResourcePath)
+			appRoot = _SlashedResource()
+			serverRoot.putChild(rootCap, appRoot)
+			self.__visit_path = '/' + urllib.quote(rootCap, safe='') + '/'
+		
+		# UI entry point
+		appRoot.putChild('', _make_static(os.path.join(_templatePath, 'index.html')))
+		
+		# Exported radio control objects
+		appRoot.putChild('radio', BlockResource(top, noteDirty, notDeletable))
+		
+		# Frequency DB
+		if config['databasesDir'] is not None:
+			appRoot.putChild('dbs', shinysdr.db.DatabasesResource(config['databasesDir']))
+		else:
+			appRoot.putChild('dbs', resource.Resource())
+		# temporary stub till we have a proper writability/target policy
+		appRoot.putChild('wdb', shinysdr.db.DatabaseResource([]))
+		
+		# Construct explicit resources for merge.
+		test = _reify(serverRoot, 'test')
+		jasmine = _reify(test, 'jasmine')
+		for name in ['jasmine.css', 'jasmine.js', 'jasmine-html.js']:
+			jasmine.putChild(name, static.File(os.path.join(
+					os.path.dirname(__file__), 'deps/jasmine/lib/jasmine-core/', name)))
+		
+		client = _reify(serverRoot, 'client')
+		client.putChild('openlayers', static.File(os.path.join(
+			os.path.dirname(__file__), 'deps/openlayers')))
+		client.putChild('require.js', static.File(os.path.join(
+			os.path.dirname(__file__), 'deps/require.js')))
+		
+		# Plugin resources
+		loadList = []
+		pluginResources = resource.Resource()
+		client.putChild('plugins', pluginResources)
+		for resourceDef in getPlugins(IClientResourceDef, shinysdr.plugins):
+			pluginResources.putChild(resourceDef.key, resourceDef.resource)
+			if resourceDef.loadURL is not None:
+				# TODO constrain value
+				loadList.append('/client/plugins/' + urllib.quote(resourceDef.key, safe='') + '/' + resourceDef.loadURL)
+		
+		# Client plugin list
+		client.putChild('plugin-index.json', static.Data(json.dumps(loadList), 'application/json'))
+		
+		self.__site = server.Site(serverRoot)
+		self.__ws_port_obj = None
+		self.__http_port_obj = None
 	
-	# UI entry point
-	appRoot.putChild('', _make_static(os.path.join(_templatePath, 'index.html')))
+	def startService(self):
+		Service.startService(self)
+		if self.__ws_port_obj is not None:
+			raise Exception('Already started')
+		self.__ws_port_obj = strports.listen(self.__ws_port, self.__ws_protocol)
+		self.__http_port_obj = strports.listen(self.__http_port, self.__site)
 	
-	# Exported radio control objects
-	appRoot.putChild('radio', BlockResource(top, noteDirty, notDeletable))
-	
-	# Frequency DB
-	if config['databasesDir'] is not None:
-		appRoot.putChild('dbs', shinysdr.db.DatabasesResource(config['databasesDir']))
-	else:
-		appRoot.putChild('dbs', resource.Resource())
-	# temporary stub till we have a proper writability/target policy
-	appRoot.putChild('wdb', shinysdr.db.DatabaseResource([]))
-	
-	# Construct explicit resources for merge.
-	test = _reify(serverRoot, 'test')
-	jasmine = _reify(test, 'jasmine')
-	for name in ['jasmine.css', 'jasmine.js', 'jasmine-html.js']:
-		jasmine.putChild(name, static.File(os.path.join(
-				os.path.dirname(__file__), 'deps/jasmine/lib/jasmine-core/', name)))
-	
-	client = _reify(serverRoot, 'client')
-	client.putChild('openlayers', static.File(os.path.join(
-		os.path.dirname(__file__), 'deps/openlayers')))
-	client.putChild('require.js', static.File(os.path.join(
-		os.path.dirname(__file__), 'deps/require.js')))
-	
-	# Plugin resources
-	loadList = []
-	pluginResources = resource.Resource()
-	client.putChild('plugins', pluginResources)
-	for resourceDef in getPlugins(IClientResourceDef, shinysdr.plugins):
-		pluginResources.putChild(resourceDef.key, resourceDef.resource)
-		if resourceDef.loadURL is not None:
-			# TODO constrain value
-			loadList.append('/client/plugins/' + urllib.quote(resourceDef.key, safe='') + '/' + resourceDef.loadURL)
-	
-	# Client plugin list
-	client.putChild('plugin-index.json', static.Data(json.dumps(loadList), 'application/json'))
-	
-	web_port_obj = strports.listen(config['httpPort'], server.Site(serverRoot))
-	port_num = web_port_obj.socket.getsockname()[1]  # TODO touching implementation, report need for a better way (web_port_obj.port is 0 if specified port is 0, not actual port)
-	
-	url = _strport_to_url(config['httpPort'], socket_port=port_num, path=visitPath)
-	
-	def stop():
+	def stopService(self):
+		Service.stopService(self)
+		if self.__ws_port_obj is None:
+			raise Exception('Not started, cannot stop')
 		# TODO: Does Twisted already have something to bundle up a bunch of ports for shutdown?
 		return defer.DeferredList([
-			web_port_obj.stopListening(),
-			ws_port_obj.stopListening()])
-	return (stop, url)
+			self.__http_port_obj.stopListening(),
+			self.__ws_port_obj.stopListening()])
+	
+	def get_url(self):
+		port_num = self.__http_port_obj.socket.getsockname()[1]  # TODO touching implementation, report need for a better way (web_port_obj.port is 0 if specified port is 0, not actual port)
+	
+		return _strport_to_url(self.__http_port, socket_port=port_num, path=self.__visit_path)

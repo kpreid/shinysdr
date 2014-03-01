@@ -28,14 +28,14 @@ from twisted.web import http
 
 from shinysdr.values import ExportedState, BlockCell, CollectionState, exported_value, setter
 # TODO: StateStreamInner is an implementation detail; arrange a better interface to test
-from shinysdr.web import StateStreamInner, listen
+from shinysdr.web import StateStreamInner, WebService
 from shinysdr.test import testutil
 
 
 class TestWebSite(unittest.TestCase):
 	def setUp(self):
 		# TODO: arrange so we don't need to pass as many bogus strings
-		(self.__stop, self.url) = listen(
+		self.__service = WebService(
 			{
 				'httpPort': 'tcp:0',
 				'wsPort': 'tcp:0',
@@ -44,9 +44,11 @@ class TestWebSite(unittest.TestCase):
 			},
 			SiteStateStub(),
 			_noop)
+		self.__service.startService()
+		self.url = self.__service.get_url()
 	
 	def tearDown(self):
-		return self.__stop()
+		return self.__service.stopService()
 	
 	def test_app_redirect(self):
 		url_without_slash = self.url[:-1]
