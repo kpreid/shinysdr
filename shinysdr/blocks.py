@@ -31,6 +31,43 @@ from gnuradio.fft import logpwrfft
 from shinysdr.values import ExportedState, exported_value, setter, Range, StreamCell
 
 
+class RecursiveLockBlockMixin(object):
+	'''
+	For top blocks needing recursive locking and/or a notification to restart parts.
+	'''
+	__lock_count = 0
+	
+	def _recursive_lock_hook(self):
+		''' override'''
+		pass
+	
+	def _recursive_lock(self):
+		# gnuradio uses a non-recursive lock, which is not adequate for our purposes because we want to make changes locally or globally without worrying about having a single lock entry point
+		if self.__lock_count == 0:
+			self.lock()
+			self._recursive_lock_hook()
+		self.__lock_count += 1
+
+	def _recursive_unlock(self):
+		self.__lock_count -= 1
+		if self.__lock_count == 0:
+			self.unlock()
+
+
+class Context(object):
+	'''
+	Client facet for RecursiveLockBlockMixin.
+	'''
+	def __init__(self, top):
+		self.__top = top
+	
+	def lock(self):
+		self.__top._recursive_lock()
+	
+	def unlock(self):
+		self.__top._recursive_unlock()
+
+
 def _factorize(n):
 	# I wish there was a nice standard library function for this...
 	# Wrote the simplest thing I could think of

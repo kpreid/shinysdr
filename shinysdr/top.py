@@ -27,7 +27,7 @@ from gnuradio import blocks
 from gnuradio import gr
 
 from shinysdr.values import ExportedState, CollectionState, exported_value, setter, BlockCell, Enum, IWritableCollection
-from shinysdr.blocks import make_resampler, MonitorSink
+from shinysdr.blocks import make_resampler, MonitorSink, RecursiveLockBlockMixin, Context
 from shinysdr.receiver import Receiver
 
 
@@ -54,13 +54,12 @@ class ReceiverCollection(CollectionState):
 		self.__top.delete_receiver(key)
 
 
-class Top(gr.top_block, ExportedState):
+class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 
 	def __init__(self, sources={}, accessories={}):
 		gr.top_block.__init__(self, "SDR top block")
 		self.__unpaused = True  # user state
 		self.__running = False  # actually started
-		self.__lock_count = 0
 
 		# Configuration
 		self._sources = dict(sources)
@@ -360,41 +359,21 @@ class Top(gr.top_block, ExportedState):
 			self.last_cpu_time = cur_cpu_time
 			self.last_cpu_use = round(elapsed_cpu / elapsed_wall, 2)
 		return self.last_cpu_use
-
-	def _recursive_lock(self):
-		# gnuradio uses a non-recursive lock, which is not adequate for our purposes because we want to make changes locally or globally without worrying about having a single lock entry point
-		if self.__lock_count == 0:
-			self.lock()
-			for source in self._sources.itervalues():
-				source.notify_reconnecting_or_restarting()
-		self.__lock_count += 1
-
-	def _recursive_unlock(self):
-		self.__lock_count -= 1
-		if self.__lock_count == 0:
-			self.unlock()
-
-
-class Context(object):
-	def __init__(self, top):
-		self._top = top
 	
-	def lock(self):
-		self._top._recursive_lock()
-	
-	def unlock(self):
-		self._top._recursive_unlock()
-
+	def _recursive_lock_hook(self):
+		for source in self._sources.itervalues():
+			source.notify_reconnecting_or_restarting()
 
 class ContextForReceiver(Context):
 	def __init__(self, top, key):
 		Context.__init__(self, top)
+		self.__top = top
 		self._key = key
 		self._enabled = False  # assigned outside
 
 	def revalidate(self):
 		if self._enabled:
-			self._top._update_receiver_validity(self._key)
+			self.__top._update_receiver_validity(self._key)
 
 
 def base26(x):
