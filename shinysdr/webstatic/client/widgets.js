@@ -389,6 +389,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       if ('freq_resolution' in block) {
         addWidget('freq_resolution', LogSlider, 'Resolution');
       }
+      ignore('time_length');
     });
   }
   widgets.MonitorParameters = MonitorParameters;
