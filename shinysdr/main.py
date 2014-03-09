@@ -204,11 +204,12 @@ config.serve_web(
 	service = IService(configObj._make_service(top, noteDirty))
 	service.startService()
 	
+	url = service.get_url()
 	if args.openBrowser:
 		log.msg('ShinySDR is ready. Opening ' + url)
-		webbrowser.open(url=service.get_url(), new=1, autoraise=True)
+		webbrowser.open(url, new=1, autoraise=True)
 	else:
-		log.msg('ShinySDR is ready. Visit ' + service.get_url())
+		log.msg('ShinySDR is ready. Visit ' + url)
 	
 	if args.force_run:
 		log.msg('force_run')
