@@ -17,9 +17,6 @@
 
 from __future__ import absolute_import, division
 
-from twisted.web import resource
-from twisted.web import http
-
 import cgi
 import csv
 import errno
@@ -28,6 +25,9 @@ import os.path
 import urllib
 import warnings
 
+from twisted.python import log
+from twisted.web import http
+from twisted.web import resource
 
 class DatabasesResource(resource.Resource):
 	isLeaf = False
@@ -136,10 +136,10 @@ def _parse_csv_file(csvfile):
 	db = []
 	for csvrec in csv.DictReader(csvfile):
 		# csv does not deal in unicode itself
-		# TODO: This will crash if one of the CSV rows has too many columns. Factor out Unicodeization, then make sure there's a nice error.
+		# TODO: Warn if one of the CSV rows has too many columns (DictReader indicates this as k is None)
 		csvrec = {unicode(k, 'utf-8'): unicode(v, 'utf-8')
 			for k, v in csvrec.iteritems()
-				if v is not None}
+				if k is not None and v is not None}
 		#print csvrec
 		if 'Frequency' not in csvrec:
 			# TODO: better targeted messsage

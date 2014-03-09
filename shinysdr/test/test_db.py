@@ -35,9 +35,35 @@ class TestCSV(unittest.TestCase):
 	def __parse(self, s):
 		return db._parse_csv_file(StringIO.StringIO(s))
 	
+	def test_no_frequency(self):
+		# TODO: There should be an output for warnings and we should test we get one here
+		self.assertEqual(
+			self.__parse('Name,Frequency\na,1\nb'),
+			[{
+				u'type': u'channel',
+				u'lowerFreq': 1e6,
+				u'upperFreq': 1e6,
+				u'mode': u'',
+				u'label': u'a',
+				u'notes': u'',
+				u'location': None}])
+	
 	def test_short_line(self):
 		self.assertEqual(
 			self.__parse('Frequency,Name,Comment\n1,a'),
+			[{
+				u'type': u'channel',
+				u'lowerFreq': 1e6,
+				u'upperFreq': 1e6,
+				u'mode': u'',
+				u'label': u'a',
+				u'notes': u'',
+				u'location': None}])
+	
+	def test_long_line(self):
+		# TODO: There should be an output for warnings and we should test we get one here
+		self.assertEqual(
+			self.__parse('Frequency,Name\n1,a,boom'),
 			[{
 				u'type': u'channel',
 				u'lowerFreq': 1e6,
