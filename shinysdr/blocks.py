@@ -210,9 +210,10 @@ def make_resampler(in_rate, out_rate):
 	# magic numbers from gqrx
 	resample_ratio = float(out_rate) / in_rate
 	pfbsize = 32
+	relative_bandwidth = min(resample_ratio, 1)  # for decimating or interpolating
 	return pfb.arb_resampler_fff(
 		resample_ratio,
-		firdes.low_pass(pfbsize, pfbsize, 0.4 * resample_ratio, 0.2 * resample_ratio),
+		firdes.low_pass(pfbsize, pfbsize, 0.4 * relative_bandwidth, 0.2 * relative_bandwidth),
 		pfbsize)
 
 
