@@ -105,7 +105,10 @@ class _ConfigDbs(object):
 		self._directory = path
 
 
-def main(argv=sys.argv, _abort_for_test=False):
+def main(argv=None, _abort_for_test=False):
+	if argv is None:
+		argv = sys.argv
+	
 	# Configure logging. Some log messages would be discarded if we did not set up things early
 	# TODO: Consult best practices for Python and Twisted logging.
 	# TODO: Logs which are observably relevant should be sent to the client (e.g. the warning of refusing to have more receivers active)
