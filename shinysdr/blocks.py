@@ -407,9 +407,13 @@ class MonitorSink(gr.hier_block2, ExportedState):
 		self.__frame_rate = float(frame_rate)
 		self.__input_center_freq = float(input_center_freq)
 		
-		# this block attr needs to exist early
+		# blocks
 		self.__fft_sink = None
 		self.__scope_sink = None
+		self.__scope_chunker = None
+		self.__logpwrfft = None
+		self.__overlapper = None
+		self.__fft_rescale = None
 		
 		self.__rebuild()
 		self.__connect()

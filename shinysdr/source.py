@@ -46,6 +46,14 @@ class Source(gr.hier_block2, ExportedState):
 	def get_freq(self):
 		raise NotImplementedError()
 
+	def get_tune_delay(self):
+		'''
+		Return the amount of time, in seconds, between a call to set_freq() and the new center frequency taking effect as observed at top.monitor.fft.
+		
+		TODO: We need a better strategy for this. Stream tags might help if we can get them in the right places.
+		'''
+		raise NotImplementedError()
+
 	def notify_reconnecting_or_restarting(self):
 		pass
 

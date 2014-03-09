@@ -202,6 +202,9 @@ class BaseBlockCell(BaseCell):
 	def description(self):
 		return self.getBlock().state_description()
 
+	def getBlock(self):
+		raise NotImplementedError()
+
 
 class BlockCell(BaseBlockCell):
 	def __init__(self, target, key, persists=True):
@@ -223,7 +226,11 @@ class CollectionMemberCell(BaseBlockCell):
 
 class ExportedState(object):
 	def state_def(self, callback):
+		'''Override this to call the callback with additional cells.'''
 		pass
+	
+	def state_insert(self, key, desc):
+		raise Exception('state_insert not defined on %r', self)
 	
 	def state_is_dynamic(self):
 		return False
@@ -398,7 +405,7 @@ def type_to_json(t):
 
 
 class ValueType(object):
-	def type_to_json():
+	def type_to_json(self):
 		raise NotImplementedError()
 	
 	def __call__(self, specimen):

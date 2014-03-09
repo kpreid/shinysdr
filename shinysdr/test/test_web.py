@@ -70,6 +70,8 @@ class SiteStateStub(ExportedState):
 
 
 class StateStreamTestCase(unittest.TestCase):
+	object = None  # should be set in subclass setUp
+	
 	def setUp(self):
 		self.updates = []
 		

@@ -65,6 +65,9 @@ class CellResource(resource.Resource):
 		# TODO: instead of needing this hook, main should reuse traverseUpdates
 		self._noteDirty = noteDirty
 
+	def grparse(self, value):
+		raise NotImplementedError()
+
 	def grrender(self, value, request):
 		return str(value)
 
