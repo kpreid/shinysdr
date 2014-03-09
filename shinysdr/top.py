@@ -103,7 +103,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 	def add_receiver(self, mode, key=None):
 		if len(self._receivers) >= 100:
 			# Prevent storage-usage DoS attack
-			raise Error('Refusing to create more than 100 receivers')
+			raise Exception('Refusing to create more than 100 receivers')
 		
 		if key is not None:
 			assert key not in self._receivers

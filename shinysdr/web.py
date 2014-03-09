@@ -97,7 +97,7 @@ class JSONResource(CellResource):
 
 
 def notDeletable():
-	raise "Attempt to delete top block"
+	raise Exception('Attempt to delete top block')
 
 
 class BlockResource(resource.Resource):

@@ -245,7 +245,7 @@ class ExportedState(object):
 				if isinstance(v, ExportedGetter):
 					if not k.startswith('get_'):
 						# TODO factor out attribute name usage in Cell so this restriction is moot
-						raise Error('Bad getter name', k)
+						raise LookupError('Bad getter name', k)
 					else:
 						k = k[len('get_'):]
 					cache[k] = v.make_cell(self, k)
