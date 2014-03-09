@@ -281,12 +281,12 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 		callback(BlockCell(self, 'receivers'))
 		callback(BlockCell(self, 'accessories', persists=False))
 
-	def start(self):
+	def start(self, **kwargs):
 		# trigger reconnect/restart notification
 		self._recursive_lock()
 		self._recursive_unlock()
 		
-		super(Top, self).start()
+		super(Top, self).start(**kwargs)
 		self.__running = True
 
 	def stop(self):
