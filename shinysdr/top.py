@@ -73,7 +73,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 			complex_in=True,
 			context=Context(self))
 		
-		self._accessories = accessories # NOT copied out of necessity -- TODO better architecture
+		self._accessories = accessories  # NOT copied out of necessity -- TODO better architecture
 		
 		# Receiver blocks (multiple, eventually)
 		self._receivers = {}
@@ -363,6 +363,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 	def _recursive_lock_hook(self):
 		for source in self._sources.itervalues():
 			source.notify_reconnecting_or_restarting()
+
 
 class ContextForReceiver(Context):
 	def __init__(self, top, key):

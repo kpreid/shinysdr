@@ -28,6 +28,7 @@ from twisted.python import log
 from twisted.web import http
 from twisted.web import resource
 
+
 class DatabasesResource(resource.Resource):
 	isLeaf = False
 	
@@ -87,7 +88,7 @@ class _DbIndexResource(resource.Resource):
 		self.__db = db
 		self.__instantiate = instantiate
 	
-	def render_GET(self, request):
+	def render_GET(self, _request):
 		return json.dumps(self.__db)
 	
 	def render_POST(self, request):
@@ -111,7 +112,7 @@ class _RecordResource(resource.Resource):
 		resource.Resource.__init__(self)
 		self.record = record
 	
-	def render_GET(self, request):
+	def render_GET(self, _request):
 		return json.dumps(self.record)
 	
 	def render_POST(self, request):

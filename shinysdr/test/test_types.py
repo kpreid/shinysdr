@@ -36,12 +36,12 @@ def _testType(self, type_obj, good, bad):
 class TestTypes(unittest.TestCase):
 	def test_Enum_strict(self):
 		_testType(self,
-			Enum({u'a':u'a',u'b':u'b'}, strict=True),
+			Enum({u'a': u'a', u'b': u'b'}, strict=True),
 			[(u'a', u'a'), ('a', u'a')],
 			[u'c', 999])
 
 	def test_Enum_lenient(self):
 		_testType(self,
-			Enum({u'a':u'a',u'b':u'b'}, strict=False),
+			Enum({u'a': u'a', u'b': u'b'}, strict=False),
 			[(u'a', u'a'), ('a', u'a'), u'c', (999, u'999')],
 			[])

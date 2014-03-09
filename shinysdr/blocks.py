@@ -23,7 +23,7 @@ import subprocess
 
 from gnuradio import gr
 from gnuradio import blocks
-from gnuradio import filter as grfilter
+from gnuradio import filter as grfilter  # don't shadow builtin
 from gnuradio.filter import pfb
 from gnuradio.filter import firdes
 from gnuradio.fft import logpwrfft
@@ -257,9 +257,11 @@ def test_subprocess(args, substring, shell=False):
 
 
 class _NoContext(object):
-	def lock(self): pass
+	def lock(self):
+		pass
 	
-	def unlock(self): pass
+	def unlock(self):
+		pass
 
 
 class MessageDistributorSink(gr.hier_block2):

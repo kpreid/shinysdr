@@ -62,7 +62,8 @@ class TestWebSite(unittest.TestCase):
 		return testutil.http_get(reactor, url_without_slash).addCallback(callback)
 
 
-def _noop(): pass
+def _noop():
+	pass
 
 
 class SiteStateStub(ExportedState):

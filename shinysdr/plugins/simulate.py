@@ -20,7 +20,7 @@ from __future__ import absolute_import, division
 from gnuradio import analog
 from gnuradio import blocks
 from gnuradio import channels
-from gnuradio import filter
+from gnuradio import filter as grfilter
 from gnuradio import gr
 from gnuradio.filter import firdes
 
@@ -49,7 +49,7 @@ class SimulatedSource(Source):
 			firdes.WIN_HAMMING)
 		
 		def make_interpolator():
-			return filter.interp_fir_filter_ccf(interp, interp_taps)
+			return grfilter.interp_fir_filter_ccf(interp, interp_taps)
 		
 		def make_channel(freq):
 			osc = analog.sig_source_c(rf_rate, analog.GR_COS_WAVE, freq, 1, 0)
@@ -147,7 +147,7 @@ class SimulatedSource(Source):
 				(vor_fm_mult, 1))
 			self.connect(  # modulation
 				vor_30,
-				filter.interp_fir_filter_fff(interp, interp_taps),  # float not complex
+				grfilter.interp_fir_filter_fff(interp, interp_taps),  # float not complex
 				analog.frequency_modulator_fc(2 * math.pi * vor_dev / rf_rate),
 				blocks.multiply_const_cc(0.3),  # M_d
 				vor_fm_mult,
