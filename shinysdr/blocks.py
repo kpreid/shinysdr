@@ -28,7 +28,7 @@ from gnuradio.filter import pfb
 from gnuradio.filter import firdes
 from gnuradio.fft import logpwrfft
 
-from shinysdr.values import ExportedState, exported_value, setter, Range, StreamCell
+from shinysdr.values import ExportedState, exported_value, setter, Range, StreamCell, ValueType
 
 
 class RecursiveLockBlockMixin(object):
@@ -360,8 +360,11 @@ class _OverlapGimmick(gr.hier_block2):
 					(interleave, i))
 
 
-class SpectrumTypeStub:  # TODO get rid of this or make it not a "stub"
-	pass
+class SpectrumType(ValueType):
+	def type_to_json(self):
+		return u'spectrum'
+	
+	# TODO implement coerce behavior, generally make this more well-defined
 
 
 class MonitorSink(gr.hier_block2, ExportedState):
@@ -414,8 +417,8 @@ class MonitorSink(gr.hier_block2, ExportedState):
 	def state_def(self, callback):
 		super(MonitorSink, self).state_def(callback)
 		# TODO make this possible to be decorator style
-		callback(StreamCell(self, 'fft', ctor=SpectrumTypeStub))
-		callback(StreamCell(self, 'scope', ctor=SpectrumTypeStub))  # TODO distinct type
+		callback(StreamCell(self, 'fft', ctor=SpectrumType()))
+		callback(StreamCell(self, 'scope', ctor=SpectrumType()))  # TODO distinct type
 
 	def __rebuild(self):
 		overlap_factor = int(math.ceil(_maximum_fft_rate * self.__freq_resolution / self.__sample_rate))

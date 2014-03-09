@@ -389,10 +389,7 @@ class ExportedSetter(object):
 
 
 def type_to_json(t):
-	if str(t) == 'shinysdr.blocks.SpectrumTypeStub':
-		# TODO: make this into a ValueType?
-		return u'spectrum'
-	elif isinstance(t, ValueType):
+	if isinstance(t, ValueType):
 		return t.type_to_json()
 	elif t is bool:  # TODO can we generalize this?
 		return u'boolean'
