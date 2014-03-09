@@ -18,7 +18,6 @@
 from __future__ import absolute_import, division
 
 from zope.interface import implements
-from twisted.plugin import IPlugin
 
 from gnuradio import gr
 from gnuradio import blocks
@@ -96,7 +95,6 @@ class SimpleAudioDemodulator(Demodulator, SquelchMixin):
 		self.demod_rate = demod_rate
 
 		input_rate = self.input_rate
-		audio_rate = self.audio_rate
 		
 		self.band_filter_block = MultistageChannelFilter(
 			input_rate=input_rate,
@@ -168,16 +166,13 @@ class AMDemodulator(SimpleAudioDemodulator):
 		
 		SimpleAudioDemodulator.__init__(self, demod_rate=demod_rate, band_filter=5000, band_filter_transition=5000, **kwargs)
 	
-		input_rate = self.input_rate
-		audio_rate = self.audio_rate
-		
 		inherent_gain = 0.5  # fudge factor so that our output is similar level to narrow FM
 		self.agc_block = analog.feedforward_agc_cc(int(.02 * demod_rate), inherent_gain)
 		self.demod_block = blocks.complex_to_mag(1)
-		self.resampler_block = make_resampler(demod_rate, audio_rate)
+		self.resampler_block = make_resampler(demod_rate, self.audio_rate)
 		
 		# assuming below 40Hz is not of interest
-		dc_blocker = grfilter.dc_blocker_ff(audio_rate // 40, False)
+		dc_blocker = grfilter.dc_blocker_ff(self.audio_rate // 40, False)
 		
 		self.connect(
 			self,
@@ -203,9 +198,6 @@ class FMDemodulator(SimpleAudioDemodulator):
 			band_filter_transition=band_filter_transition,
 			**kwargs)
 		
-		input_rate = self.input_rate
-		audio_rate = self.audio_rate
-
 		audio_decim = int(demod_rate / post_demod_rate)
 		self.post_demod_rate = demod_rate / audio_decim
 
@@ -294,9 +286,7 @@ class WFMDemodulator(FMDemodulator):
 		self.context.rebuild_me()
 
 	def connect_audio_stage(self):
-		demod_rate = self.demod_rate
 		stereo_rate = self.post_demod_rate
-		audio_rate = self.audio_rate
 		normalizer = 2 * math.pi / stereo_rate
 		pilot_tone = 19000
 		pilot_low = pilot_tone * 0.9
@@ -328,7 +318,6 @@ class WFMDemodulator(FMDemodulator):
 		stereo_pilot_out = blocks.complex_to_imag()
 		difference_channel_mixer = blocks.multiply_ff()
 		difference_channel_filter = make_audio_filter()
-		difference_real = blocks.complex_to_real(1)
 		mono_channel_filter = make_audio_filter()
 		resamplerL = self._make_resampler()
 		resamplerR = self._make_resampler()
@@ -396,7 +385,6 @@ class SSBDemodulator(SimpleAudioDemodulator):
 			band_filter=audio_rate / 2,  # note narrower filter applied later
 			band_filter_transition=audio_rate / 2,
 			**kwargs)
-		input_rate = self.input_rate
 		
 		if cw:
 			self.__offset = 1500

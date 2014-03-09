@@ -250,9 +250,9 @@ def test_subprocess(args, substring, shell=False):
 			shell=shell,
 			stderr=subprocess.STDOUT)
 		return substring in output
-	except OSError, e:
+	except OSError:
 		return False
-	except subprocess.CalledProcessError, e:
+	except subprocess.CalledProcessError:
 		return False
 
 
@@ -323,7 +323,7 @@ class _OverlapGimmick(gr.hier_block2):
 	To adjust for the data rate, the logpwrfft block's sample rate parameter must be multiplied by the factor parameter of this block; or equivalently, the frame rate must be divided by it.
 	'''
 	
-	def __init__(self, size, factor, itemsize=gr.sizeof_gr_complex, migrate=None):
+	def __init__(self, size, factor, itemsize=gr.sizeof_gr_complex):
 		'''
 		size: (int) vector size (FFT size) of next block
 		factor: (int) output will have this many more samples than input

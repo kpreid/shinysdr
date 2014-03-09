@@ -21,17 +21,11 @@ from zope.interface import implements
 
 from gnuradio import gr
 from gnuradio import blocks
-from gnuradio import analog
 
 from shinysdr.receiver import ModeDef, IDemodulator
 from shinysdr.values import ExportedState, exported_value
-from shinysdr.blocks import MultistageChannelFilter, SubprocessSink, test_subprocess, make_resampler
+from shinysdr.blocks import SubprocessSink, test_subprocess, make_resampler
 from shinysdr.plugins.basic_demod import NFMDemodulator
-
-import subprocess
-import os
-import math
-import warnings
 
 
 pipe_rate = 22050  # what multimon-ng expects

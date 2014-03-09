@@ -22,7 +22,7 @@ from gnuradio import blocks
 from gnuradio import filter as grfilter
 from gnuradio import gr
 
-from shinysdr.values import Range, ExportedState, exported_value, setter
+from shinysdr.values import ExportedState, exported_value
 
 
 class Source(gr.hier_block2, ExportedState):

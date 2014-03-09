@@ -21,7 +21,6 @@ from twisted.plugin import IPlugin, getPlugins
 from twisted.python import log
 from zope.interface import Interface, implements  # available via Twisted
 
-import gnuradio
 from gnuradio import analog
 from gnuradio import gr
 from gnuradio import blocks
@@ -319,5 +318,4 @@ def _lookup_mode(mode):
 	for mode_def in getModes():
 		if mode_def.mode == mode:
 			return mode_def
-	else:
-		return None
+	return None

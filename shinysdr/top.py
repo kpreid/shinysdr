@@ -64,7 +64,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 		# Configuration
 		self._sources = dict(sources)
 		self.source_name = self._sources.keys()[0]  # arbitrary valid initial value
-		self.audio_rate = audio_rate = 44100
+		self.audio_rate = 44100
 
 		# Blocks etc.
 		self.source = None
@@ -177,7 +177,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 				freq = this_source.get_freq()
 				self.input_freq = freq
 				self.monitor.set_input_center_freq(freq)
-				for key, receiver in self._receivers.iteritems():
+				for receiver in self._receivers.itervalues():
 					receiver.set_input_center_freq(freq)
 			
 			def tune_hook():
@@ -187,7 +187,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 				if self.source is not this_source:
 					return
 				update_input_freqs()
-				for key, receiver in self._receivers.iteritems():
+				for key in self._receivers:
 					self._update_receiver_validity(key)
 					# TODO: If multiple receivers change validity we'll do redundant reconnects in this loop; avoid that.
 

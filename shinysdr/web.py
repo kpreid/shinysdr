@@ -31,7 +31,6 @@ from gnuradio import gr
 
 import txws
 
-import array
 import json
 import urllib
 import os.path
@@ -365,7 +364,6 @@ class OurStreamProtocol(protocol.Protocol):
 		"""twisted Protocol implementation"""
 		self.transport.setBinaryMode(True)
 		# Unfortunately, txWS calls this too soon for transport.location to be available
-		pass
 	
 	def connectionLost(self, reason):
 		"""twisted Protocol implementation"""
@@ -448,7 +446,7 @@ def _strport_to_url(desc, scheme='http', path='/', socket_port=0):
 	'''Construct a URL from a twisted.application.strports string.'''
 	# TODO: need to know canonical domain name, not localhost; can we extract from the ssl cert?
 	# TODO: strports.parse is deprecated
-	(method, args, kwargs) = strports.parse(desc, None)
+	(method, args, _) = strports.parse(desc, None)
 	if socket_port == 0:
 		socket_port = args[0]
 	if method == 'TCP':

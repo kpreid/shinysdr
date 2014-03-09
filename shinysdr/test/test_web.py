@@ -26,7 +26,7 @@ from twisted.trial import unittest
 from twisted.internet import reactor
 from twisted.web import http
 
-from shinysdr.values import ExportedState, BlockCell, CollectionState, exported_value, setter
+from shinysdr.values import ExportedState, CollectionState, exported_value, setter
 # TODO: StateStreamInner is an implementation detail; arrange a better interface to test
 from shinysdr.web import StateStreamInner, WebService
 from shinysdr.test import testutil

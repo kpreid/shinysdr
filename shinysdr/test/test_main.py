@@ -61,7 +61,7 @@ class TestMain(unittest.TestCase):
 		self.assertEqual(top.get_unpaused(), True)  # check initial assumption
 		top.set_unpaused(False)
 		note_dirty()
-		(top2, _) = main.main(
+		(top, note_dirty) = main.main(
 			argv=['shinysdr', self.__config_name],
 			_abort_for_test=True)
 		self.assertEqual(top.get_unpaused(), False)  # check persistence

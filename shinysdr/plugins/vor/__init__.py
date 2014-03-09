@@ -1,4 +1,4 @@
-# Copyright 2013 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -21,9 +21,7 @@ from __future__ import absolute_import, division
 
 from twisted.web import static
 from zope.interface import implements
-from twisted.plugin import IPlugin
 
-from gnuradio import gr
 from gnuradio import blocks
 from gnuradio import analog
 from gnuradio import fft

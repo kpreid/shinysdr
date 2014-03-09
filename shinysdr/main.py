@@ -182,7 +182,6 @@ config.serve_web(
 		# just immediately write (revisit this when more performance is needed)
 		with open(stateFile, 'w') as f:
 			json.dump(top.state_to_json(), f)
-		pass
 	
 	def restore(root, get_defaults):
 		if os.path.isfile(stateFile):
@@ -237,9 +236,7 @@ def top_defaults(top):
 		state['source_name'] = 'osmo'
 	elif len(restricted.keys()) > 0:
 		state['source_name'] = restricted.keys()[0]
-	else:
-		# out of ideas, let top block pick
-		pass
+	# else out of ideas, let top block pick
 	
 	return state
 

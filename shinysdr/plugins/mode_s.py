@@ -17,8 +17,6 @@
 
 from __future__ import absolute_import, division
 
-import warnings
-
 from zope.interface import implements
 
 from gnuradio import gr

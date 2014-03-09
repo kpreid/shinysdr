@@ -19,7 +19,6 @@ from __future__ import absolute_import, division
 
 import cgi
 import csv
-import errno
 import json
 import os.path
 import urllib
@@ -75,7 +74,7 @@ class DatabaseResource(resource.Resource):
 			self.putChild(str(i), _RecordResource(database[i]))
 		
 		self.putChild('', _DbIndexResource(database, instantiate))
-		for i, record in enumerate(database):
+		for i in xrange(0, len(database)):
 			instantiate(i)
 
 

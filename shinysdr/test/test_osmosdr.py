@@ -17,10 +17,9 @@
 
 from __future__ import absolute_import, division
 
-import unittest
+from twisted.trial import unittest
 
 from osmosdr import range_t, meta_range_t
-from shinysdr.values import Range
 from shinysdr.plugins.osmosdr import convert_osmosdr_range
 
 
@@ -43,5 +42,5 @@ class TestOsmoSDRRange(unittest.TestCase):
 			orange.push_back(range_t(*range_args))
 		myrange = convert_osmosdr_range(orange)
 		self.assertEqual(
-			[(min, max) for (min, max, step) in range_argses],
+			[(min, max) for (min, max, _) in range_argses],
 			myrange.type_to_json()['subranges'])

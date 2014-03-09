@@ -120,7 +120,7 @@ class OsmoSDRSource(Source):
 	@exported_value(ctor_fn=lambda self: convert_osmosdr_range(
 		self.osmosdr_source_block.get_freq_range(ch),
 		strict=False,
-		transform=lambda f: self._invert_frequency(f),
+		transform=self._invert_frequency,
 		add_zero=self.__profile.e4000))
 	def get_freq(self):
 		return self.freq
@@ -130,7 +130,7 @@ class OsmoSDRSource(Source):
 		self.freq = freq
 		self._update_frequency()
 
-	def get_tune_delay(slf):
+	def get_tune_delay(self):
 		return 0.25  # TODO: make configurable and/or account for as many factors as we can
 	
 	@exported_value(ctor=float)
