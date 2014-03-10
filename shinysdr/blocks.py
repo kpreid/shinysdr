@@ -125,6 +125,7 @@ class MultistageChannelFilter(gr.hier_block2):
 		placeholder_taps = [0]
 		prev_block = self
 		stage_input_rate = input_rate
+		last_index = len(stage_decimations) - 1
 		for i, stage_decimation in enumerate(stage_decimations):
 			next_rate = stage_input_rate / stage_decimation
 			
@@ -136,7 +137,11 @@ class MultistageChannelFilter(gr.hier_block2):
 					stage_input_rate)
 				self.freq_filter_block = stage_filter
 			else:
-				stage_filter = grfilter.fir_filter_ccc(stage_decimation, placeholder_taps)
+				taps = self.__stage_taps(i == last_index, stage_input_rate, next_rate)
+				if len(taps) > 10:
+					stage_filter = grfilter.fft_filter_ccc(stage_decimation, taps, 1)
+				else:
+					stage_filter = grfilter.fir_filter_ccc(stage_decimation, taps)
 			
 			self.stages.append((stage_filter, stage_input_rate, next_rate))
 			
@@ -158,32 +163,36 @@ class MultistageChannelFilter(gr.hier_block2):
 				self)
 			#print 'resampling %s/%s = %s' % (output_rate, stage_input_rate, float(output_rate) / stage_input_rate)
 		
+		# TODO: Shouldn't be necessary since we compute the taps in the loop above...
 		self.__do_taps()
 	
 	def __do_taps(self):
+		'''Re-assign taps for all stages.'''
+		last_index = len(self.stages) - 1
+		for i, (stage_filter, stage_input_rate, stage_output_rate) in enumerate(self.stages):
+			stage_filter.set_taps(self.__stage_taps(i == last_index, stage_input_rate, stage_output_rate))
+	
+	def __stage_taps(self, is_last, stage_input_rate, stage_output_rate):
+		'''Compute taps for one stage.'''
 		cutoff_freq = self.cutoff_freq
 		transition_width = self.transition_width
-		lastIndex = len(self.stages) - 1
-		for i, (stage_filter, stage_input_rate, stage_output_rate) in enumerate(self.stages):
-			if i == lastIndex:
-				taps = firdes.low_pass(
-					1.0,
-					stage_input_rate,
-					cutoff_freq,
-					transition_width,
-					firdes.WIN_HAMMING)
-			else:
-				# TODO check for collision with user filter
-				user_inner = cutoff_freq - transition_width / 2
-				limit = stage_output_rate / 2
-				taps = firdes.low_pass(
-					1.0,
-					stage_input_rate,
-					(user_inner + limit) / 2,
-					limit - user_inner,
-					firdes.WIN_HAMMING)
-			#print 'Stage %i decimation %i rate %i taps %i' % (i, stage_decimation, stage_input_rate, len(taps))
-			stage_filter.set_taps(taps)
+		if is_last:
+			return firdes.low_pass(
+				1.0,
+				stage_input_rate,
+				cutoff_freq,
+				transition_width,
+				firdes.WIN_HAMMING)
+		else:
+			# TODO check for collision with user filter
+			user_inner = cutoff_freq - transition_width / 2
+			limit = stage_output_rate / 2
+			return firdes.low_pass(
+				1.0,
+				stage_input_rate,
+				(user_inner + limit) / 2,
+				limit - user_inner,
+				firdes.WIN_HAMMING)
 	
 	def explain(self):
 		'''Return a description of the filter design.'''
