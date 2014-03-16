@@ -377,8 +377,8 @@ define(['./values', './events'], function (values, events) {
     this.scheduler = scheduler;
     
     // TODO legacy stubs -- vertical scale should be managed separately
-    this.minLevel = -60;
-    this.maxLevel = 30;
+    this.minLevel = -130;
+    this.maxLevel = -20;
     
     this.freqToCSSLeft = function freqToCSSLeft(freq) {
       return ((freq - leftFreq) * pixelsPerHertz) + 'px';

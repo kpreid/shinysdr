@@ -372,6 +372,8 @@ class SpectrumType(ValueType):
 class MonitorSink(gr.hier_block2, ExportedState):
 	'''
 	Convenience wrapper around all the bits and pieces to display the signal spectrum to the client.
+	
+	The units of the FFT output are dB power/Hz (power spectral density) relative to unit amplitude (i.e. dBFS assuming the source clips at +/-1). Note this is different from the standard logpwrfft result of power _per bin_, which would be undesirably dependent on the sample rate and bin size.
 	'''
 	def __init__(self,
 			sample_rate=None,
@@ -442,14 +444,13 @@ class MonitorSink(gr.hier_block2, ExportedState):
 		self.__logpwrfft = [logpwrfft.logpwrfft_f, logpwrfft.logpwrfft_c][self.__complex](
 			sample_rate=self.__sample_rate * overlap_factor,
 			fft_size=self.__freq_resolution,
-			ref_scale=2,
+			ref_scale=1.0,
 			frame_rate=self.__frame_rate,
 			avg_alpha=1.0,
 			average=False)
-		# adjust units so displayed level is independent of resolution (log power per bandwidth rather than per bin)
-		# TODO work out and document exactly what units we're using
+		# Adjust units so displayed level is independent of resolution and sample rate.
 		self.__fft_rescale = blocks.add_const_vff(
-			[10 * math.log10(self.__freq_resolution)] * self.__freq_resolution)
+			[10 * math.log10(self.__freq_resolution / self.__sample_rate)] * self.__freq_resolution)
 	
 		self.__scope_sink = MessageDistributorSink(
 			itemsize=self.__time_length * gr.sizeof_gr_complex,

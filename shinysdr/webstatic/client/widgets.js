@@ -1432,6 +1432,10 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   }
   widgets.WaterfallPlot = WaterfallPlot;
 
+  function to_dB(x) {
+    return Math.log(x) / (Math.LN10 / 10);
+  }
+
   function ReceiverMarks(config) {
     /* does not use config.target */
     var view = config.view;
@@ -1517,16 +1521,20 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         // TODO: marks ought to be part of a distinct widget
         var squelch_threshold_cell = receiver.demodulator.depend(draw).squelch_threshold;
         if (squelch_threshold_cell) {
-          // TODO: this y calculation may be nonsense
-          var squelch = Math.floor(yZero + squelch_threshold_cell.depend(draw) * yScale) + 0.5;
-          var squelchL, squelchR;
+          var squelchPower = squelch_threshold_cell.depend(draw);
+          var squelchL, squelchR, bandwidth;
           if (band_filter_now) {
             squelchL = freqToCoord(rec_freq_now + band_filter_now.low);
             squelchR = freqToCoord(rec_freq_now + band_filter_now.high);
+            bandwidth = band_filter_now.high - band_filter_now.low;
           } else {
+            // dummy
             squelchL = 0;
             squelchR = w;
+            bandwidth = 10e3;
           }
+          var squelchPSD = squelchPower - to_dB(bandwidth);
+          var squelchY = Math.floor(yZero + squelchPSD * yScale) + 0.5;
           var minSquelchHairWidth = 30;
           if (squelchR - squelchL < minSquelchHairWidth) {
             var squelchMid = (squelchR + squelchL) / 2;
@@ -1535,8 +1543,8 @@ define(['./values', './events', './widget'], function (values, events, widget) {
           }
           ctx.strokeStyle = '#F00';
           ctx.beginPath();
-          ctx.moveTo(squelchL, squelch);
-          ctx.lineTo(squelchR, squelch);
+          ctx.moveTo(squelchL, squelchY);
+          ctx.lineTo(squelchR, squelchY);
           ctx.stroke();
         }
 
