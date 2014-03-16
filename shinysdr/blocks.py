@@ -417,7 +417,6 @@ class MonitorSink(gr.hier_block2, ExportedState):
 		self.__scope_chunker = None
 		self.__logpwrfft = None
 		self.__overlapper = None
-		self.__fft_rescale = None
 		
 		self.__rebuild()
 		self.__connect()
@@ -441,16 +440,18 @@ class MonitorSink(gr.hier_block2, ExportedState):
 			size=self.__freq_resolution,
 			factor=overlap_factor,
 			itemsize=self.__itemsize)
+		
+		# Adjusts units so displayed level is independent of resolution and sample rate.
+		compensation = 10 * math.log10(self.__freq_resolution / self.__sample_rate)
+		# TODO: Consider not using the logpwrfft block
+		
 		self.__logpwrfft = [logpwrfft.logpwrfft_f, logpwrfft.logpwrfft_c][self.__complex](
 			sample_rate=self.__sample_rate * overlap_factor,
 			fft_size=self.__freq_resolution,
-			ref_scale=1.0,
+			ref_scale=10.0 ** (-compensation / 20.0) * 2,  # not actually using this as a reference scale value but avoiding needing to use a separate add operation to apply the unit change -- this expression is the inverse of what logpwrfft does internally
 			frame_rate=self.__frame_rate,
 			avg_alpha=1.0,
 			average=False)
-		# Adjust units so displayed level is independent of resolution and sample rate.
-		self.__fft_rescale = blocks.add_const_vff(
-			[10 * math.log10(self.__freq_resolution / self.__sample_rate)] * self.__freq_resolution)
 	
 		self.__scope_sink = MessageDistributorSink(
 			itemsize=self.__time_length * gr.sizeof_gr_complex,
@@ -470,7 +471,6 @@ class MonitorSink(gr.hier_block2, ExportedState):
 				self,
 				self.__overlapper,
 				self.__logpwrfft,
-				self.__fft_rescale,
 				self.__fft_sink)
 			if self.__enable_scope:
 				self.connect(
