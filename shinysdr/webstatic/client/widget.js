@@ -93,6 +93,7 @@ define(['./values', './events'], function (values, events) {
     this.clientState = config.clientState;
     this.scheduler = config.scheduler;
     this.freqDB = config.freqDB;
+    this.writableDB = config.writableDB;
     this.spectrumView = config.spectrumView;
   }
   Context.prototype.withSpectrumView = function (element) {
@@ -109,6 +110,7 @@ define(['./values', './events'], function (values, events) {
       radio: this.radio,
       clientState: this.clientState,
       freqDB: this.freqDB,
+      writableDB: this.writableDB,
       scheduler: this.scheduler,
       spectrumView: view
     })
@@ -163,6 +165,7 @@ define(['./values', './events'], function (values, events) {
         view: context.spectrumView, // TODO should be context-dependent
         clientState: context.clientState,
         freqDB: context.freqDB, // TODO: remove the need for this
+        writableDB: context.writableDB, // TODO: remove the need for this
         radio: context.radio, // TODO: remove the need for this
         storage: idPrefix ? new StorageNamespace(localStorage, 'shinysdr.widgetState.' + idPrefix) : null,
         shouldBePanel: shouldBePanel,

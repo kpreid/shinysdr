@@ -167,8 +167,6 @@ define(['./values', './events', './database', './network', './maps', './widget',
         });
       };
     
-      radio.targetDB = writableDB; // kludge reference
-  
       var context = new widget.Context({
         // TODO all of this should be narrowed down, read-only, replaced with other means to get it to the widgets that need it, etc.
         widgets: widgets,
@@ -176,6 +174,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
         clientState: clientState,
         spectrumView: null,
         freqDB: freqDB,
+        writableDB: writableDB,
         scheduler: scheduler
       });
       

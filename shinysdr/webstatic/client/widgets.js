@@ -2288,7 +2288,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   // Silly single-purpose widget 'till we figure out more where the UI is going
   function SaveButton(config) {
     var radio = config.radio; // use .preset, .targetDB
-    var receiver = config.target;
+    var receiver = config.target.get();
     var panel = this.element = config.element;
     panel.classList.add('panel');
     
@@ -2305,7 +2305,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         mode: receiver.mode.get(),
         label: 'untitled'
       };
-      radio.preset.set(radio.targetDB.add(record));
+      radio.preset.set(config.writableDB.add(record));
     };
   }
   widgets.SaveButton = SaveButton;
