@@ -2445,7 +2445,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         if (type instanceof values.Range) {
           slider.min = getT(type.getMin());
           slider.max = getT(type.getMax());
-          slider.step = (type.integer && !type.logarithmic) ? 1 : 'any';
+          slider.step = (type.integer) ? 1 : 'any';
           if (type.integer) {
             format = function(n) { return '' + n; };
           }
@@ -2475,8 +2475,8 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     function (v) { return v; },
     function (v) { return v; }); };
   var LogSlider = widgets.LogSlider = function(c) { return new Slider(c,
-    function (v) { return Math.log(v) / Math.LN10; },
-    function (v) { return Math.pow(10, v); }); };
+    function (v) { return Math.log(v) / Math.LN2; },
+    function (v) { return Math.pow(2, v); }); };
 
   function Meter(config) {
     var text;

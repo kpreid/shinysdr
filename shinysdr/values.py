@@ -19,6 +19,7 @@ from __future__ import absolute_import, division
 
 import array
 import bisect
+import math
 import struct
 
 from twisted.python import log
@@ -452,7 +453,13 @@ class Range(ValueType):
 	def __call__(self, specimen):
 		specimen = float(specimen)
 		if self.__integer:
-			specimen = int(round(specimen))
+			if self.__logarithmic:
+				# We may eventually want other log base options; currently only 2
+				if specimen <= 0:
+					specimen = self.__mins[0]
+				specimen = 2 ** int(round(math.log(specimen, 2)))
+			else:
+				specimen = int(round(specimen))
 		if self.__strict:
 			mins = self.__mins
 			maxes = self.__maxes
