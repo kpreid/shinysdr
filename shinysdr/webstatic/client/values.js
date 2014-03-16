@@ -243,6 +243,133 @@ define(['./events'], function (events) {
   };
   exports.StorageCell = StorageCell;
   
+  function getInterfaces(object) {
+    var result = [];
+    // TODO kludgy, need better representation of interfaces
+    Object.getOwnPropertyNames(object).forEach(function (key) {
+      var match = /^_implements_(.*)$/.exec(key);
+      if (match) {
+        result.push(match[1]);
+      }
+    });
+    return result;
+  }
+  exports.getInterfaces = getInterfaces;
+  
+  function isImplementing(object, interfaceName) {
+    return !!object['_implements_' + interfaceName];
+  }
+  exports.getInterfaces = getInterfaces;
+  
+  function cellProp(scheduler, cell, prop) {
+    // TODO: technically need a block-or-undefined type
+    return new DerivedCell(block, scheduler, function (dirty) {
+      var object = cell.depend(dirty);
+      if (object === undefined) {
+        return;
+      }
+      if (typeof object !== 'object') {
+        throw new Error('cellProp input neither an object nor undefined');
+      }
+      object._reshapeNotice.listen(dirty);
+      var propCell = object[prop];
+      if (propCell === undefined || propCell.type !== block) {
+        return undefined;
+      }
+      return propCell.depend(dirty);
+    });
+  }
+  
+  // Maintain an index of objects, by interface name, in a tree
+  function Index(scheduler, rootCell) {
+    var cells = [];
+    var objectsByInterface = Object.create(null);
+    
+    function gobi(interfaceName) {
+      return (objectsByInterface[interfaceName] ||
+        (objectsByInterface[interfaceName] =
+          new LocalReadCell(any, Object.freeze([]))));
+    }
+    
+    function flush(interfaceName) {
+      var objectsCell = gobi(interfaceName);
+      var old = objectsCell.get();
+      var nu = old.filter(function (cell) {
+        var object = cell.get();
+        return object !== undefined && isImplementing(object, interfaceName);
+      });
+      if (nu.length < old.length) {
+        objectsCell._update(Object.freeze(nu));
+      }
+    }
+    
+    function insert(cell) {
+      if (cells.indexOf(cell) !== -1) {
+        return;
+      }
+      if (cell.type !== block) {
+        return;
+      }
+      
+      var i = cells.length;
+      cells.push(cell);
+      
+      var propCells = Object.create(null);
+      var interfaces = [];
+      
+      function update() {
+        var object = cell.depend(update);
+        
+        interfaces.forEach(flush);
+        if (typeof object !== 'object') {  // if e.g. no longer existant
+          return;
+        }
+        
+        var nu = getInterfaces(object);
+        
+        nu.forEach(function (interfaceName) {
+          var objectsCell = gobi(interfaceName);
+          objectsCell._update(Object.freeze(objectsCell.get().concat([cell])));
+        });
+        
+        interfaces = nu;
+        
+        // Add all cells found in this object
+        // TODO removal, reshapeNotice
+        for (var key in object) {
+          var childCell = object[key];
+          if (!(childCell !== null && typeof childCell == 'object' && 'get' in childCell)) {
+            console.error('Unexpected non-cell', childCell, 'in', object);
+            continue;
+          }
+          
+          // memoized
+          if (!propCells[key]) {
+            insert(propCells[key] = cellProp(scheduler, cell, key));
+          }
+        }
+        if ('_reshapeNotice' in object) {  // TODO mandatory
+          object._reshapeNotice.listen(update);
+        }
+      }
+      update.scheduler = scheduler;
+      
+      update();
+    }
+    
+    insert(rootCell);
+    
+    this.implementing = function (interfaceName) {
+      var cellsCell = gobi(interfaceName);
+      return new DerivedCell(any, scheduler, function (dirty) {
+        return cellsCell.depend(dirty).map(function (cell) {
+          return cell.depend(dirty);
+        })
+      });
+    };
+  }
+  exports.Index = Index;
+  
   // make an object which is like a remote object (called block for legacy reasons)
   function makeBlock(obj) {
     Object.defineProperty(obj, '_reshapeNotice', {value: new events.Neverfier()});

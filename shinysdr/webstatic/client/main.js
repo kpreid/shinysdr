@@ -24,6 +24,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
   var makeBlock = values.makeBlock;
   var StorageCell = values.StorageCell;
   var StorageNamespace = values.StorageNamespace;
+  var Index = values.Index;
   
   var scheduler = new events.Scheduler();
   
@@ -187,6 +188,8 @@ define(['./values', './events', './database', './network', './maps', './widget',
       // generic control UI widget tree
       widget.createWidgets(everything, context, document);
       
+      var index = new Index(scheduler, everything);
+      
       // Map (all geographic data)
       var map = new maps.Map(document.getElementById('map'), scheduler, freqDB, radio);
       
@@ -194,6 +197,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
       window.DfreqDB = freqDB;
       window.DwritableDB = writableDB;
       window.Dradio = radio;
+      window.Dindex = index;
     }); // end gotDesc
   
     var audioState = audio.connectAudio('/audio');  // TODO get url from server

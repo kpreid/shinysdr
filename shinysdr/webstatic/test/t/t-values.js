@@ -131,4 +131,55 @@ describe('values', function () {
       });
     });
   });
+  
+  describe('Index', function () {
+    var structure;
+    beforeEach(function () {
+      structure = new values.LocalCell(values.block, values.makeBlock({
+        foo: new values.LocalCell(values.block, values.makeBlock({})),
+        bar: new values.LocalCell(values.block, values.makeBlock({}))
+      }));
+      Object.defineProperty(structure.get().foo.get(), '_implements_Foo', {value:true});
+    });
+    
+    it('should index a block', function () {
+      var index = new values.Index(s, structure);
+      var results = index.implementing('Foo').get();
+      expect(results).toContain(structure.get().foo.get());
+      expect(results.length).toBe(1);
+      
+      var noresults = index.implementing('Bar').get();
+      expect(noresults.length).toBe(0);
+    });
+    
+    it('should index a new block', function () {
+      var index = new values.Index(s, structure);
+      var resultsCell = index.implementing('Bar');
+      var l = createListenerSpy();
+      resultsCell.n.listen(l);
+      
+      var newObj = values.makeBlock({});
+      Object.defineProperty(newObj, '_implements_Bar', {value:true});
+      structure.get().bar.set(newObj);
+      
+      expectNotification(l);
+      runs(function () {
+        expect(resultsCell.get()).toContain(newObj);
+      })
+    });
+    
+    it('should forget an old block', function () {
+      var index = new values.Index(s, structure);
+      var resultsCell = index.implementing('Foo');
+      var l = createListenerSpy();
+      resultsCell.n.listen(l);
+      
+      structure.get().foo.set(values.makeBlock({}));
+      
+      expectNotification(l);
+      runs(function () {
+        expect(resultsCell.get().length).toBe(0);
+      })
+    });
+  });
 });
