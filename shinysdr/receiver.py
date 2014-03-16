@@ -36,7 +36,17 @@ _audio_power_minimum_dB = -60
 _audio_power_minimum_amplitude = 10 ** (_audio_power_minimum_dB / 10)
 
 
+class IReceiver(Interface):
+	'''
+	Marker interface for receivers.
+	
+	(This exists even though Receiver has no class hierarchy because the client would like to know what's a receiver block, and interface information is automatically delivered to the client.)
+	'''
+
+
 class Receiver(gr.hier_block2, ExportedState):
+	implements(IReceiver)
+	
 	def __init__(self, mode,
 			input_rate=0,
 			input_center_freq=0,
