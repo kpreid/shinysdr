@@ -1440,6 +1440,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     /* does not use config.target */
     var view = config.view;
     var radio = config.radio;
+    var others = config.index.implementing('shinysdr.top.IHasFrequency');
     
     var canvas = config.element;
     if (canvas.tagName !== 'CANVAS') {
@@ -1496,6 +1497,11 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       
       ctx.strokeStyle = 'gray';
       drawHair(view.getCenterFreq()); // center frequency
+      
+      others.depend(draw).forEach(function (object) {
+        ctx.strokeStyle = 'green';
+        drawHair(object.freq.depend(draw));
+      });
       
       var receivers = radio.receivers.depend(draw);
       receivers._reshapeNotice.listen(draw);

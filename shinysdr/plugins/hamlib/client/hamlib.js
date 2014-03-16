@@ -28,8 +28,8 @@ define(['widgets'], function (widgets) {
   
   function ExtRig(config) {  // TODO this should be handled in a plugin
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
-      if ('Frequency' in block) {
-        addWidget('Frequency', Knob, 'Frequency');
+      if ('freq' in block) {
+        addWidget('freq', Knob, 'Frequency');
       }
       if ('Mode' in block) {
         addWidget('Mode', Radio, 'Mode');

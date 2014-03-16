@@ -41,6 +41,7 @@ from twisted.protocols.basic import LineReceiver
 from twisted.python import log
 from twisted.web import static
 
+from shinysdr.top import IHasFrequency
 from shinysdr.values import Cell, ExportedState, Enum, Range
 from shinysdr.web import ClientResourceDef
 
@@ -199,7 +200,7 @@ __all__.append('connect_to_rig')
 
 
 class _HamlibRig(ExportedState):
-	implements(IRig)
+	implements(IRig, IHasFrequency)
 	
 	def __init__(self, protocol):
 		# info from hamlib
@@ -325,6 +326,12 @@ class _HamlibRig(ExportedState):
 
 def _install_cell(self, name, is_level, writable, callback, caps):
 	# this is a function for the sake of the closure variables
+	
+	if name == 'Frequency':
+		cell_name = 'freq'  # consistency with our naming scheme elsewhere, also IHasFrequency
+	else:
+		cell_name = name
+	
 	if is_level:
 		# TODO: Use range info from hamlib if available
 		if name == 'STRENGTH level':
@@ -358,10 +365,10 @@ def _install_cell(self, name, is_level, writable, callback, caps):
 			self._ehs_set(name, str(ctor(value)))
 	
 	# TODO: Change Cell protocol so that we don't have to setattr
-	setattr(self, 'get_' + name, getter)
+	setattr(self, 'get_' + cell_name, getter)
 	if writable:
-		setattr(self, 'set_' + name, setter)
-	callback(Cell(self, name, ctor=ctor, writable=writable, persists=False))
+		setattr(self, 'set_' + cell_name, setter)
+	callback(Cell(self, cell_name, ctor=ctor, writable=writable, persists=False))
 
 
 class _RigctldClientFactory(ClientFactory):

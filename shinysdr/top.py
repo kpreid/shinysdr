@@ -21,7 +21,7 @@ import time
 
 from twisted.internet import reactor
 from twisted.python import log
-from zope.interface import implements  # available via Twisted
+from zope.interface import Interface, implements  # available via Twisted
 
 from gnuradio import blocks
 from gnuradio import gr
@@ -375,6 +375,12 @@ class ContextForReceiver(Context):
 	def revalidate(self):
 		if self._enabled:
 			self.__top._update_receiver_validity(self._key)
+
+
+class IHasFrequency(Interface):
+	# TODO: better module placement for this
+	def get_freq():
+		pass
 
 
 def base26(x):
