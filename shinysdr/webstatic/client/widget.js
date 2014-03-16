@@ -90,6 +90,7 @@ define(['./values', './events'], function (values, events) {
   function Context(config) {
     this.widgets = config.widgets;
     this.radio = config.radio;
+    this.index = config.index;
     this.clientState = config.clientState;
     this.scheduler = config.scheduler;
     this.freqDB = config.freqDB;
@@ -108,6 +109,7 @@ define(['./values', './events'], function (values, events) {
     return new Context({
       widgets: this.widgets,
       radio: this.radio,
+      index: this.index,
       clientState: this.clientState,
       freqDB: this.freqDB,
       writableDB: this.writableDB,
@@ -167,6 +169,7 @@ define(['./values', './events'], function (values, events) {
         freqDB: context.freqDB, // TODO: remove the need for this
         writableDB: context.writableDB, // TODO: remove the need for this
         radio: context.radio, // TODO: remove the need for this
+        index: context.index, // TODO: remove the need for this
         storage: idPrefix ? new StorageNamespace(localStorage, 'shinysdr.widgetState.' + idPrefix) : null,
         shouldBePanel: shouldBePanel,
         rebuildMe: go,

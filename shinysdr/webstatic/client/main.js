@@ -167,17 +167,6 @@ define(['./values', './events', './database', './network', './maps', './widget',
           moveCenter: true
         });
       };
-    
-      var context = new widget.Context({
-        // TODO all of this should be narrowed down, read-only, replaced with other means to get it to the widgets that need it, etc.
-        widgets: widgets,
-        radio: radio,
-        clientState: clientState,
-        spectrumView: null,
-        freqDB: freqDB,
-        writableDB: writableDB,
-        scheduler: scheduler
-      });
       
       var everything = new ConstantCell(values.block, makeBlock({
         client: clientBlockCell,
@@ -185,10 +174,22 @@ define(['./values', './events', './database', './network', './maps', './widget',
         audio: new ConstantCell(values.block, audioState)  // defined below
       }));
       
+      var index = new Index(scheduler, everything);
+      
+      var context = new widget.Context({
+        // TODO all of this should be narrowed down, read-only, replaced with other means to get it to the widgets that need it, etc.
+        widgets: widgets,
+        radio: radio,
+        index: index,
+        clientState: clientState,
+        spectrumView: null,
+        freqDB: freqDB,
+        writableDB: writableDB,
+        scheduler: scheduler
+      });
+      
       // generic control UI widget tree
       widget.createWidgets(everything, context, document);
-      
-      var index = new Index(scheduler, everything);
       
       // Map (all geographic data)
       var map = new maps.Map(document.getElementById('map'), scheduler, freqDB, radio);
