@@ -142,7 +142,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         } else if (member.type === block) {
           // TODO: Add hook to choose a widget class based on interfaces
           // Furthermore, use that for the specific block widget classes too, rather than each one knowing the types of its sub-widgets.
-          addWidget(name, Block);
+          addWidget(name, PickBlock);
         } else {
           addWidget(name, Generic, name);
         }
@@ -152,6 +152,37 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     });
   }
   widgets.Block = Block;
+  
+  // Delegate to a block widget based on the block's interfaces, or default to Block.
+  function PickBlock(config) {
+    if (Object.getPrototypeOf(this) !== PickBlock.prototype) {
+      throw new Error('cannot inherit from PickBlock');
+    }
+    
+    var targetCell = config.target;
+    var context = config.context;
+    
+    var ctorCell = new DerivedCell(values.block, config.scheduler, function (dirty) {
+      var block = targetCell.depend(dirty);
+      
+      // TODO kludgy, need better representation of interfaces
+      var ctor;
+      Object.getOwnPropertyNames(block).some(function (key) {
+        var match = /^_implements_(.*)$/.exec(key);
+        if (match) {
+          var interface_ = match[1];
+          // TODO better scheme for registering widgets for interfaces
+          ctor = context.widgets['interface:' + interface_];
+          if (ctor) return true;
+        }
+      });
+      
+      return ctor || Block;
+    });
+    
+    return new (ctorCell.depend(config.rebuildMe))(config);
+  }
+  widgets.PickBlock = PickBlock;
   
   // Widget for the top block
   function Top(config) {
@@ -228,7 +259,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   }
   var SourceSet = widgets.SourceSet = BlockSet(Source, 'Source', false);
   var ReceiverSet = widgets.ReceiverSet = BlockSet(Receiver, 'Receiver', true);
-  var AccessorySet = widgets.AccessorySet = BlockSet(Block, 'Accessory', true);
+  var AccessorySet = widgets.AccessorySet = BlockSet(PickBlock, 'Accessory', true);
   
   // Widget for a source block
   function Source(config) {

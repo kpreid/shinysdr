@@ -58,7 +58,10 @@ describe('widgets', function () {
         opengl_float: new shinysdr.values.LocalCell(Boolean, true),
       }),
       boundedFn: function(f) { return f; },
-      rebuildMe: rebuildMe
+      rebuildMe: rebuildMe,
+      context: {
+        widgets: {}
+      }
     };
   }
   
@@ -89,6 +92,28 @@ describe('widgets', function () {
       var cell = new shinysdr.values.LocalCell(shinysdr.values.any, [{freq:0, rate:1}, []]);
       cell.subscribe = function() {} // TODO implement
       widget = new shinysdr.widgets.ScopePlot(mockWidgetConfig(null, cell));
+    });
+  });
+  
+  describe('PickBlock', function () {
+    it('should default to Block', function () {
+      var cell = new shinysdr.values.LocalCell(shinysdr.values.block, shinysdr.values.makeBlock({}));
+      widget = new shinysdr.widgets.PickBlock(mockWidgetConfig(null, cell));
+      expect(Object.getPrototypeOf(widget)).toBe(shinysdr.widgets.Block.prototype);
+    });
+    
+    it('should match on interfaces', function () {
+      function TestWidget(config) {
+        this.element = config.element;
+      }
+
+      var cell = new shinysdr.values.LocalCell(shinysdr.values.block, shinysdr.values.makeBlock({
+        _implements_Foo: true
+      }));
+      var config = mockWidgetConfig(null, cell);
+      config.context.widgets['interface:Foo'] = TestWidget;
+      widget = new shinysdr.widgets.PickBlock(config);
+      expect(Object.getPrototypeOf(widget)).toBe(TestWidget.prototype);
     });
   });
 });
