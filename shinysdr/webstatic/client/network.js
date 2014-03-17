@@ -222,7 +222,7 @@ define(['./values', './events'], function (values, events) {
       }, true);
       ws.addEventListener('close', function (event) {
         if (succeeded) {
-          console.error('Lost WebSocket connection', path);
+          console.error('Lost WebSocket connection', path, '- reason given:', event.reason);
         } else {
           timeout = Math.min(maxRetryTime, timeout * backoff);
         }

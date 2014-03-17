@@ -326,7 +326,7 @@ class AudioStreamInner(object):
 			if message.length() > 0:  # avoid crash bug
 				buf += message.to_string()
 		if len(buf) > 0:
-			self._send(buf)
+			self._send(buf, safe_to_drop=True)
 
 
 class OurStreamProtocol(protocol.Protocol):
@@ -375,12 +375,16 @@ class OurStreamProtocol(protocol.Protocol):
 		if self.inner is not None:
 			self.inner.connectionLost(reason)
 	
-	def __send(self, message):
+	def __send(self, message, safe_to_drop=False):
 		if len(self.transport.transport.dataBuffer) > 1000000:
 			# TODO: condition is horrible implementation-diving kludge
 			# Don't accumulate indefinite buffer if we aren't successfully getting it onto the network.
-			# TODO: State streams cannot in general safely drop data; provide for dropping the connection (so we can recover from a clean state) instead
-			log.err('Dropping data going to stream ' + self.transport.location)
+			
+			if safe_to_drop:
+				log.err('Dropping data going to stream ' + self.transport.location)
+			else:
+				log.err('Dropping connection due to too much data on stream ' + self.transport.location)
+				self.transport.close(reason='Too much data buffered')
 		else:
 			self.transport.write(message)
 	
