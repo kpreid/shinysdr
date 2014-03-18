@@ -26,36 +26,26 @@ from gnuradio.filter import firdes
 
 import math
 
-from shinysdr.values import Range, exported_value, setter
 from shinysdr.source import Source
+from shinysdr.values import BlockCell, CollectionState, ExportedState, Range, exported_value, setter
 
 
 class SimulatedSource(Source):
+	# TODO: be not hardcoded; for now this is convenient
+	audio_rate = 1e4
+	rf_rate = 200e3
+
 	def __init__(self, name='Simulated Source', freq=0):
 		Source.__init__(self, name=name)
 		
-		audio_rate = 1e4
-		rf_rate = self.__sample_rate = 200e3
-		interp = int(rf_rate / audio_rate)
+		rf_rate = self.rf_rate
+		audio_rate = self.audio_rate
 		
 		self.__freq = freq
 		self.noise_level = -2
+		self._transmitters = {}
 		
-		interp_taps = firdes.low_pass(
-			1,  # gain
-			rf_rate,
-			audio_rate / 2,
-			audio_rate * 0.2,
-			firdes.WIN_HAMMING)
-		
-		def make_interpolator():
-			return grfilter.interp_fir_filter_ccf(interp, interp_taps)
-		
-		def make_channel(freq):
-			osc = analog.sig_source_c(rf_rate, analog.GR_COS_WAVE, freq, 1, 0)
-			mult = blocks.multiply_cc(1)
-			self.connect(osc, (mult, 1))
-			return mult
+		self.transmitters = CollectionState(self._transmitters, dynamic=True)
 		
 		self.bus = blocks.add_vcc(1)
 		self.channel_model = channels.channel_model(
@@ -72,92 +62,25 @@ class SimulatedSource(Source):
 			self)
 		signals = []
 		
+		def add_modulator(freq, key, ctor, **kwargs):
+			modulator = ctor(audio_rate=audio_rate, rf_rate=rf_rate, **kwargs)
+			tx = _SimulatedTransmitter(modulator, rf_rate, freq)
+			
+			self.connect(audio_signal, tx)
+			signals.append(tx)
+			self._transmitters[key] = tx
+		
 		# Audio input signal
 		pitch = analog.sig_source_f(audio_rate, analog.GR_SAW_WAVE, -1, 2000, 1000)
 		audio_signal = vco = blocks.vco_f(audio_rate, 1, 1)
 		self.connect(pitch, vco)
 		
-		# Baseband / DSB channel
-		baseband_interp = make_interpolator()
-		self.connect(
-			audio_signal,
-			blocks.float_to_complex(1),
-			baseband_interp)
-		signals.append(baseband_interp)
-		
-		# AM channel
-		am_channel = make_channel(10e3)
-		self.connect(
-			audio_signal,
-			blocks.float_to_complex(1),
-			blocks.add_const_cc(1),
-			make_interpolator(),
-			am_channel)
-		signals.append(am_channel)
-		
-		# NFM channel
-		nfm_channel = make_channel(30e3)
-		self.connect(
-			audio_signal,
-			analog.nbfm_tx(
-				audio_rate=audio_rate,
-				quad_rate=rf_rate,
-				tau=75e-6,
-				max_dev=5e3),
-			nfm_channel)
-		signals.append(nfm_channel)
-		
-		# VOR channels
-		# TODO: My signal level parameters are probably wrong because this signal doesn't look like a real VOR signal
-		def add_vor(freq, angle):
-			compensation = math.pi / 180 * -6.5  # empirical, calibrated against VOR receiver (and therefore probably wrong)
-			angle = angle + compensation
-			angle = angle % (2 * math.pi)
-			vor_sig_freq = 30
-			phase_shift = int(rf_rate / vor_sig_freq * (angle / (2 * math.pi)))
-			vor_dev = 480
-			vor_channel = make_channel(freq)
-			vor_30 = analog.sig_source_f(audio_rate, analog.GR_COS_WAVE, vor_sig_freq, 1, 0)
-			vor_add = blocks.add_cc(1)
-			vor_audio = blocks.add_ff(1)
-			# Audio/AM signal
-			self.connect(
-				vor_30,
-				blocks.multiply_const_ff(0.3),  # M_n
-				(vor_audio, 0))
-			self.connect(audio_signal,
-				blocks.multiply_const_ff(0.07),  # M_i
-				(vor_audio, 1))
-			# Carrier component
-			self.connect(
-				analog.sig_source_c(0, analog.GR_CONST_WAVE, 0, 0, 1),
-				(vor_add, 0))
-			# AM component
-			self.connect(
-				vor_audio,
-				blocks.float_to_complex(1),
-				make_interpolator(),
-				blocks.delay(gr.sizeof_gr_complex, phase_shift),
-				(vor_add, 1))
-			# FM component
-			vor_fm_mult = blocks.multiply_cc(1)
-			self.connect(  # carrier generation
-				analog.sig_source_f(rf_rate, analog.GR_COS_WAVE, 9960, 1, 0), 
-				blocks.float_to_complex(1),
-				(vor_fm_mult, 1))
-			self.connect(  # modulation
-				vor_30,
-				grfilter.interp_fir_filter_fff(interp, interp_taps),  # float not complex
-				analog.frequency_modulator_fc(2 * math.pi * vor_dev / rf_rate),
-				blocks.multiply_const_cc(0.3),  # M_d
-				vor_fm_mult,
-				(vor_add, 2))
-			self.connect(
-				vor_add,
-				vor_channel)
-			signals.append(vor_channel)
-		add_vor(-30e3, 0)
-		add_vor(-60e3, math.pi / 2)
+		# Channels
+		add_modulator(0.0, 'dsb', _DSBModulator)
+		add_modulator(10e3, 'am', _AMModulator)
+		add_modulator(30e3, 'fm', _FMModulator)
+		add_modulator(-30e3, 'vor1', _VORModulator, angle=0)
+		add_modulator(-60e3, 'vor2', _VORModulator, angle=math.pi / 2)
 		
 		bus_input = 0
 		for signal in signals:
@@ -167,10 +90,15 @@ class SimulatedSource(Source):
 	def __str__(self):
 		return 'Simulated RF'
 
+	def state_def(self, callback):
+		super(SimulatedSource, self).state_def(callback)
+		# TODO make this possible to be decorator style
+		callback(BlockCell(self, 'transmitters'))
+
 	@exported_value(ctor=float)
 	def get_sample_rate(self):
 		# TODO review why cast
-		return int(self.__sample_rate)
+		return int(self.rf_rate)
 		
 	@exported_value(ctor=float)
 	def get_freq(self):
@@ -191,3 +119,188 @@ class SimulatedSource(Source):
 	def notify_reconnecting_or_restarting(self):
 		# throttle block runs on a clock which does not stop when the flowgraph stops; resetting the sample rate restarts the clock
 		self.throttle.set_sample_rate(self.throttle.sample_rate())
+
+
+_interp_taps = firdes.low_pass(
+	1,  # gain
+	SimulatedSource.rf_rate,
+	SimulatedSource.audio_rate / 2,
+	SimulatedSource.audio_rate * 0.2,
+	firdes.WIN_HAMMING)
+
+
+def _make_interpolator(real=False):
+	interp = int(SimulatedSource.rf_rate / SimulatedSource.audio_rate)
+	if real:
+		return grfilter.interp_fir_filter_fff(interp, _interp_taps)
+	else:
+		return grfilter.interp_fir_filter_ccf(interp, _interp_taps)
+
+
+# TODO: Eventually we expect to have general transmit support and so put the modulators next to the demodulators. For now, they can be here.
+
+
+class _SimulatedTransmitter(gr.hier_block2, ExportedState):
+	'''provides frequency parameters'''
+	def __init__(self, modulator, rf_rate, freq):
+		gr.hier_block2.__init__(
+			self, 'SimulatedChannel',
+			gr.io_signature(1, 1, gr.sizeof_float * 1),
+			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
+		)
+		
+		self.__freq = freq
+		self.__rf_rate = rf_rate
+		
+		self.modulator = modulator  # exported
+		
+		# TODO: Instead of signal source + multiply, convert to rotator block once that is available since it is more computationally efficient
+		self.__osc = analog.sig_source_c(rf_rate, analog.GR_COS_WAVE, freq, 1, 0)
+		mult = blocks.multiply_cc(1)
+		self.connect(self.__osc, (mult, 1))
+		self.connect(self, modulator, mult, self)
+	
+	def state_def(self, callback):
+		super(_SimulatedTransmitter, self).state_def(callback)
+		# TODO make this possible to be decorator style
+		callback(BlockCell(self, 'modulator'))
+
+	@exported_value(ctor_fn=lambda self: Range([(-self.__rf_rate / 2, self.__rf_rate / 2)], strict=False))
+	def get_freq(self):
+		return self.__osc.frequency()
+	
+	@setter
+	def set_freq(self, value):
+		self.__osc.set_frequency(float(value))
+	
+	@exported_value(ctor=Range([(-50.0, 0.0)], strict=False))
+	def get_gain(self):
+		return 10 * math.log10(self.__osc.amplitude())
+	
+	@setter
+	def set_gain(self, value):
+		self.__osc.set_amplitude(10.0 ** (float(value) / 10))
+
+
+class _DSBModulator(gr.hier_block2, ExportedState):
+	def __init__(self, audio_rate, rf_rate):
+		gr.hier_block2.__init__(
+			self, 'SimulatedSource DSB modulator',
+			gr.io_signature(1, 1, gr.sizeof_float * 1),
+			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
+		)
+		
+		self.connect(
+			self,
+			blocks.float_to_complex(1),
+			_make_interpolator(),
+			self)
+
+
+class _AMModulator(gr.hier_block2, ExportedState):
+	def __init__(self, audio_rate, rf_rate):
+		gr.hier_block2.__init__(
+			self, 'SimulatedSource AM modulator',
+			gr.io_signature(1, 1, gr.sizeof_float * 1),
+			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
+		)
+		
+		self.connect(
+			self,
+			blocks.float_to_complex(1),
+			blocks.add_const_cc(1),
+			_make_interpolator(),
+			self)
+
+
+class _FMModulator(gr.hier_block2, ExportedState):
+	def __init__(self, audio_rate, rf_rate):
+		gr.hier_block2.__init__(
+			self, 'SimulatedSource FM modulator',
+			gr.io_signature(1, 1, gr.sizeof_float * 1),
+			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
+		)
+		
+		self.connect(
+			self,
+			analog.nbfm_tx(
+				audio_rate=audio_rate,
+				quad_rate=rf_rate,
+				tau=75e-6,
+				max_dev=5e3),
+			self)
+
+
+class _VORModulator(gr.hier_block2, ExportedState):
+	__vor_sig_freq = 30
+
+	def __init__(self, audio_rate, rf_rate, angle):
+		gr.hier_block2.__init__(
+			self, 'SimulatedSource VOR modulator',
+			gr.io_signature(1, 1, gr.sizeof_float * 1),
+			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
+		)
+		
+		self.__rf_rate = rf_rate
+		self.__angle = angle
+		
+		# TODO: My signal level parameters are probably wrong because this signal doesn't look like a real VOR signal
+		
+		vor_dev = 480
+		vor_30 = analog.sig_source_f(audio_rate, analog.GR_COS_WAVE, self.__vor_sig_freq, 1, 0)
+		vor_add = blocks.add_cc(1)
+		vor_audio = blocks.add_ff(1)
+		# Audio/AM signal
+		self.connect(
+			vor_30,
+			blocks.multiply_const_ff(0.3),  # M_n
+			(vor_audio, 0))
+		self.connect(
+			self,
+			blocks.multiply_const_ff(0.07),  # M_i
+			(vor_audio, 1))
+		# Carrier component
+		self.connect(
+			analog.sig_source_c(0, analog.GR_CONST_WAVE, 0, 0, 1),
+			(vor_add, 0))
+		# AM component
+		self.__delay = blocks.delay(gr.sizeof_gr_complex, 0)  # configured by set_angle
+		self.connect(
+			vor_audio,
+			blocks.float_to_complex(1),
+			_make_interpolator(),
+			self.__delay,
+			(vor_add, 1))
+		# FM component
+		vor_fm_mult = blocks.multiply_cc(1)
+		self.connect(  # carrier generation
+			analog.sig_source_f(rf_rate, analog.GR_COS_WAVE, 9960, 1, 0), 
+			blocks.float_to_complex(1),
+			(vor_fm_mult, 1))
+		self.connect(  # modulation
+			vor_30,
+			_make_interpolator(real=True),
+			analog.frequency_modulator_fc(2 * math.pi * vor_dev / rf_rate),
+			blocks.multiply_const_cc(0.3),  # M_d
+			vor_fm_mult,
+			(vor_add, 2))
+		self.connect(
+			vor_add,
+			self)
+		
+		# calculate and initialize delay
+		self.set_angle(angle)
+	
+	@exported_value(ctor=Range([(0, 2 * math.pi)], strict=False))
+	def get_angle(self):
+		return self.__angle
+	
+	@setter
+	def set_angle(self, value):
+		value = float(value)
+		compensation = math.pi / 180 * -6.5  # empirical, calibrated against VOR receiver (and therefore probably wrong)
+		value = value + compensation
+		value = value % (2 * math.pi)
+		phase_shift = int(self.__rf_rate / self.__vor_sig_freq * (value / (2 * math.pi)))
+		self.__delay.set_dly(phase_shift)
+		self.__angle = value
