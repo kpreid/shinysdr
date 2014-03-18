@@ -59,7 +59,7 @@ class SimulatedSource(Source):
 		
 		self.bus = blocks.add_vcc(1)
 		self.channel_model = channels.channel_model(
-			noise_voltage=10 ** self.noise_level,
+			noise_voltage=10 ** (self.noise_level / 10.0),
 			frequency_offset=0,
 			epsilon=1.01,  # TODO: expose this parameter
 			#taps=...,  # TODO: apply something here?
@@ -179,13 +179,13 @@ class SimulatedSource(Source):
 	def get_tune_delay(self):
 		return 0.0
 	
-	@exported_value(ctor=Range([(-5, 1)]))
+	@exported_value(ctor=Range([(-50, 0)]))
 	def get_noise_level(self):
 		return self.noise_level
 	
 	@setter
 	def set_noise_level(self, value):
-		self.channel_model.set_noise_voltage(10 ** value)
+		self.channel_model.set_noise_voltage(10.0 ** (value / 10))
 		self.noise_level = value
 
 	def notify_reconnecting_or_restarting(self):
