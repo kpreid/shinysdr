@@ -45,14 +45,14 @@ class TestHamlibRig(unittest.TestCase):
 	@defer.inlineCallbacks
 	def test_getter(self):
 		yield self.__rig.sync()
-		self.assertEqual(self.__rig.state()['Frequency'].get(), 145e6)
+		self.assertEqual(self.__rig.state()['freq'].get(), 145e6)
 
 	@defer.inlineCallbacks
 	def test_setter(self):
 		yield self.__rig.sync()
-		self.__rig.state()['Frequency'].set(123e6)
+		self.__rig.state()['freq'].set(123e6)
 		yield self.__rig.sync()
-		self.assertEqual(self.__rig.state()['Frequency'].get(), 123e6)
+		self.assertEqual(self.__rig.state()['freq'].get(), 123e6)
 
 	@defer.inlineCallbacks
 	def test_sync(self):
