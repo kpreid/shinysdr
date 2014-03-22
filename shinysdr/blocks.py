@@ -113,7 +113,7 @@ class MultistageChannelFilter(gr.hier_block2):
 		self.cutoff_freq = cutoff_freq
 		self.transition_width = transition_width
 		
-		total_decimation = max(1, input_rate // output_rate)
+		total_decimation = max(1, int(input_rate // output_rate))
 		stage_decimations = _factorize(total_decimation)
 		stage_decimations.reverse()
 		if len(stage_decimations) == 0:
