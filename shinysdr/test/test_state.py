@@ -58,14 +58,20 @@ class DecoratorSpecimen(DecoratorSpecimenSuper):
 
 
 class TestStateInsert(unittest.TestCase):
-	def setUp(self):
-		self.object = InsertFailSpecimen()
-	
 	def test_success(self):
+		self.object = InsertFailSpecimen()
 		self.object.state_from_json({'foo': {'fail': False}})
 		self.assertEqual(['foo'], self.object.state().keys())
-			
+	
 	def test_failure(self):
+		self.object = InsertFailSpecimen()
+		self.object.state_from_json({'foo': {'fail': True}})
+		# throws but exception is caught
+		self.assertEqual([], self.object.state().keys())
+	
+	def test_undefined(self):
+		'''no state_insert method defined'''
+		self.object = CollectionState({}, dynamic=True)
 		self.object.state_from_json({'foo': {'fail': True}})
 		# throws but exception is caught
 		self.assertEqual([], self.object.state().keys())

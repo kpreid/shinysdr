@@ -231,7 +231,7 @@ class ExportedState(object):
 		pass
 	
 	def state_insert(self, key, desc):
-		raise Exception('state_insert not defined on %r', self)
+		raise ValueError('state_insert not defined on %r' % self)
 	
 	def state_is_dynamic(self):
 		return False
