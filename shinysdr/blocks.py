@@ -116,38 +116,48 @@ class MultistageChannelFilter(gr.hier_block2):
 		total_decimation = max(1, int(input_rate // output_rate))
 		stage_decimations = _factorize(total_decimation)
 		stage_decimations.reverse()
-		if len(stage_decimations) == 0:
-			# We need at least one filter to do the frequency shift and to apply the user-specified LPF
-			stage_decimations = [1]
 		
 		self.stages = []
 		
-		placeholder_taps = [0]
+		# loop variables
 		prev_block = self
 		stage_input_rate = input_rate
 		last_index = len(stage_decimations) - 1
-		for i, stage_decimation in enumerate(stage_decimations):
-			next_rate = stage_input_rate / stage_decimation
+		
+		if len(stage_decimations) == 0:
+			# interpolation or nothing -- don't put it in the stages
+			# TODO: consider using rotator block instead (has different API)
+			self.freq_filter_block = grfilter.freq_xlating_fir_filter_ccc(
+				1,
+				[1],
+				center_freq,
+				stage_input_rate)
+			self.connect(prev_block, self.freq_filter_block)
+			prev_block = self.freq_filter_block
+		else:
+			# decimation
+			for i, stage_decimation in enumerate(stage_decimations):
+				next_rate = stage_input_rate / stage_decimation
 			
-			if i == 0:
-				stage_filter = grfilter.freq_xlating_fir_filter_ccc(
-					stage_decimation,
-					placeholder_taps,
-					center_freq,
-					stage_input_rate)
-				self.freq_filter_block = stage_filter
-			else:
-				taps = self.__stage_taps(i == last_index, stage_input_rate, next_rate)
-				if len(taps) > 10:
-					stage_filter = grfilter.fft_filter_ccc(stage_decimation, taps, 1)
+				if i == 0:
+					stage_filter = grfilter.freq_xlating_fir_filter_ccc(
+						stage_decimation,
+						[0],  # placeholder
+						center_freq,
+						stage_input_rate)
+					self.freq_filter_block = stage_filter
 				else:
-					stage_filter = grfilter.fir_filter_ccc(stage_decimation, taps)
+					taps = self.__stage_taps(i == last_index, stage_input_rate, next_rate)
+					if len(taps) > 10:
+						stage_filter = grfilter.fft_filter_ccc(stage_decimation, taps, 1)
+					else:
+						stage_filter = grfilter.fir_filter_ccc(stage_decimation, taps)
 			
-			self.stages.append((stage_filter, stage_input_rate, next_rate))
+				self.stages.append((stage_filter, stage_input_rate, next_rate))
 			
-			self.connect(prev_block, stage_filter)
-			prev_block = stage_filter
-			stage_input_rate = next_rate
+				self.connect(prev_block, stage_filter)
+				prev_block = stage_filter
+				stage_input_rate = next_rate
 		
 		# final connection and resampling
 		if stage_input_rate == output_rate:

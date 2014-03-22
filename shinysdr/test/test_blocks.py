@@ -32,8 +32,13 @@ class TestMultistageChannelFilter(unittest.TestCase):
 		self.assertEqual(2900, filt.get_cutoff_freq())
 		self.assertEqual(1000, filt.get_transition_width())
 		self.assertEqual(10000, filt.get_center_freq())
-
+	
 	def test_float_rates(self):
 		# Either float or int rates should be accepted
 		# TODO: Test filter functionality; this only tests that the operations work
 		MultistageChannelFilter(input_rate=32000000.0, output_rate=16000.0, cutoff_freq=3000, transition_width=1200)
+	
+	def test_interpolating(self):
+		'''Output rate higher than input rate'''
+		# TODO: Test filter functionality; this only tests that the filter construction doesn't crash
+		MultistageChannelFilter(input_rate=8000, output_rate=10000, cutoff_freq=8000, transition_width=5000)
