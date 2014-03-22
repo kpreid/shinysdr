@@ -68,3 +68,5 @@ describe('events', function () {
     });
   });
 });
+
+testScriptFinished();

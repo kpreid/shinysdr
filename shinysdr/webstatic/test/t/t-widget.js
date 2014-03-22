@@ -88,3 +88,5 @@ describe('widget', function () {
     });
   });
 });
+
+testScriptFinished();

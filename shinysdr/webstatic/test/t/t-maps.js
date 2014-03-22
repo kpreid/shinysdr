@@ -26,3 +26,5 @@ describe('maps', function () {
     });
   });
 });
+
+testScriptFinished();

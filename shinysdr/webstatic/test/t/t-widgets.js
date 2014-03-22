@@ -117,3 +117,5 @@ describe('widgets', function () {
     });
   });
 });
+
+testScriptFinished();

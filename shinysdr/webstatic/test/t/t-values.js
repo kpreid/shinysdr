@@ -183,3 +183,5 @@ describe('values', function () {
     });
   });
 });
+
+testScriptFinished();

@@ -218,3 +218,5 @@ describe('database', function () {
     });
   });
 });
+
+testScriptFinished();
