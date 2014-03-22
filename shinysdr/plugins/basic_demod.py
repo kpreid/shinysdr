@@ -374,14 +374,15 @@ class SSBDemodulator(SimpleAudioDemodulator):
 			cw = True
 		else:
 			raise ValueError('Not an SSB mode: %r' % (mode,))
-		demod_rate = audio_rate
+		
+		demod_rate = 8000
 		
 		SimpleAudioDemodulator.__init__(self,
 			mode=mode,
 			audio_rate=audio_rate,
 			demod_rate=demod_rate,
-			band_filter=audio_rate / 2,  # note narrower filter applied later
-			band_filter_transition=audio_rate / 2,
+			band_filter=demod_rate / 2,  # note narrower filter applied later
+			band_filter_transition=demod_rate / 2,
 			**kwargs)
 		
 		if cw:
@@ -402,7 +403,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
 		
 		self.band_filter_low = band_mid - half_bandwidth
 		self.band_filter_high = band_mid + half_bandwidth
-		self.sharp_filter_block = grfilter.fir_filter_ccc(
+		sharp_filter_block = grfilter.fir_filter_ccc(
 			1,
 			firdes.complex_band_pass(1.0, demod_rate,
 				self.band_filter_low + self.__offset,
@@ -413,17 +414,20 @@ class SSBDemodulator(SimpleAudioDemodulator):
 		self.agc_block = analog.agc2_cc(reference=agc_reference)
 		self.agc_block.set_max_gain(_ssb_max_agc)
 		
-		self.ssb_demod_block = blocks.complex_to_real(1)
+		ssb_demod_block = blocks.complex_to_real(1)
+		
+		audio_resampler = make_resampler(demod_rate, audio_rate)
 		
 		self.connect(
 			self,
 			self.band_filter_block,
-			self.sharp_filter_block,
+			sharp_filter_block,
 			self.rf_squelch_block,
 			self.agc_block,
-			self.ssb_demod_block)
-		self.connect(self.sharp_filter_block, self.rf_probe_block)
-		self.connect_audio_output(self.ssb_demod_block, self.ssb_demod_block)
+			ssb_demod_block,
+			audio_resampler)
+		self.connect(sharp_filter_block, self.rf_probe_block)
+		self.connect_audio_output(audio_resampler, audio_resampler)
 
 	# override
 	# TODO: this is the interface used to determine receiver.get_is_valid, but SSB demonstrates that the interface is insufficiently expressive. Should we use get_band_filter_shape instead? Should we use a different interface designed for expressing the channel? Or are signals like SSB which are asymmetric about the "carrier" frequency uncommon enough that we should not worry about handling this case well?
