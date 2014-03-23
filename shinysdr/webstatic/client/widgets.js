@@ -1334,7 +1334,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     
     function build2D(ctx, draw) {
       canvas = self.element;
-
+      
       // circular buffer of ImageData objects
       var slices = [];
       var slicePtr = 0;
@@ -1342,6 +1342,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
 
       var performDraw = config.boundedFn(function performDrawImpl() {
         var h = canvas.height;
+        var w = canvas.width;
         var viewCenterFreq = view.getCenterFreq();
         commonBeforeDraw(viewCenterFreq, draw);
 
@@ -1350,10 +1351,9 @@ define(['./values', './events', './widget'], function (values, events, widget) {
           buffer = dataToDraw[1];
           bufferCenterFreq = dataToDraw[0].freq;
           // rescale to discovered fft size
-          var w = buffer.length;
-          if (canvas.width !== w) {
+          if (canvas.width !== buffer.length) {
             // assignment clears canvas
-            canvas.width = w;
+            canvas.width = w = buffer.length;
             cleared = true;
             // reallocate
             slices = [];
@@ -1389,26 +1389,35 @@ define(['./values', './events', './widget'], function (values, events, widget) {
           }
         }
 
+        // background-fill color
+        ctx.fillStyle = '#777';
+
         var offsetScale = w / view.getBandwidth();
         if (dataToDraw && lastDrawnCenterFreq === viewCenterFreq && !cleared) {
           // Scroll
           ctx.drawImage(ctx.canvas, 0, 0, w, h-1, 0, 1, w, h-1);
+
+          // fill background of new line, if needed
+          if (bufferCenterFreq !== viewCenterFreq) {
+            ctx.fillRect(0, 0, w, 1);
+          }
+
           // Paint newest slice
           var offset = bufferCenterFreq - viewCenterFreq;
           ctx.putImageData(ibuf, Math.round(offset * offsetScale), 0);
         } else if (cleared || lastDrawnCenterFreq !== viewCenterFreq) {
+          // Horizontal position changed, paint all slices onto canvas
+          
           lastDrawnCenterFreq = viewCenterFreq;
-          // Paint all slices onto canvas
-          ctx.fillStyle = '#777';
+          // fill background so scrolling is of an opaque image
+          ctx.fillRect(0, 0, w, h);
+          
           var sliceCount = slices.length;
           for (var i = sliceCount - 1; i >= 0; i--) {
             var slice = slices[mod(i + slicePtr, sliceCount)];
             var offset = slice[1] - viewCenterFreq;
-            var y = sliceCount - i;
+            var y = sliceCount - i - 1;
             if (y >= canvas.height) break;
-
-            // fill background so scrolling is of an opaque image
-            ctx.fillRect(0, y, w, 1);
 
             // paint slice
             ctx.putImageData(slice[0], Math.round(offset * offsetScale), y);
@@ -1424,6 +1433,8 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       return {
         newData: function (fftBundle) {
           dataToDraw = fftBundle;
+          // The storage/scrolling logic is in performDraw, and we call it immediately to ensure every frame gets painted.
+          // TODO: It would be more efficient to queue things so that if we _do_ have multiple frames to draw, we don't do multiple one-pixel scrolling steps
           performDraw();
         },
         performDraw: performDraw
