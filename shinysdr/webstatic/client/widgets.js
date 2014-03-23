@@ -996,6 +996,10 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       outArray[base + 3] = 255;
     }
     
+    var backgroundColor = [119, 119, 119];
+    var backgroundColorCSS = '#' + backgroundColor.map(function (v) { return ('0' + v.toString(16)).slice(-2); }).join('');
+    var backgroundColorGLSL = 'vec4(' + backgroundColor.map(function (v) { return v / 255; }).join(', ') + ', 1.0)';
+    
     // TODO: Instead of hardcoding this, implement dynamic resizing of the history buffers. Punting for now because reallocating the GL textures would be messy.
     var historyCount = Math.max(
       1024,
@@ -1066,7 +1070,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         + '  highp float freqOffset = (currentFreq - historyFreq) * freqScale;\n'
         + '  mediump vec2 shift = texLookup + vec2(freqOffset, 0.0);\n'
         + '  if (shift.x < 0.0 || shift.x > 1.0) {\n'
-        + '    gl_FragColor = vec4(0.0, 0.0, 0.5, 1.0);\n'
+        + '    gl_FragColor = ' + backgroundColorGLSL + ';\n'
         + '  } else {\n'
         + '    mediump float data = texture2D(data, shift).r;\n'
         + '    gl_FragColor = texture2D(gradient, vec2(0.5, gradientZero + gradientScale * data));\n'
@@ -1389,8 +1393,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
           }
         }
 
-        // background-fill color
-        ctx.fillStyle = '#777';
+        ctx.fillStyle = backgroundColorCSS;
 
         var offsetScale = w / view.getBandwidth();
         if (dataToDraw && lastDrawnCenterFreq === viewCenterFreq && !cleared) {
