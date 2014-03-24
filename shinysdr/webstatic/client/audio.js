@@ -47,6 +47,10 @@ define(['./values', './events', './network'], function (values, events, network)
     var chunkIndex = 0;
     var prevUnderrun = 0;
     
+    // Flags for start/stop handling
+    var started = false;
+    var startStopTickle = false;
+    
     // User-facing status display
     // TODO should be faceted read-only when exported
     var errorTime = 0;
@@ -106,12 +110,13 @@ define(['./values', './events', './network'], function (values, events, network)
         queueSampleCount += chunk.length;
         inputChunkSizeSample = chunk.length;
         updateParameters();
+        if (!started) startStop();
       };
       ws.addEventListener('close', function (event) {
         error('Disconnected.');
-        closed();
+        setTimeout(startStop, 0);
       });
-      setTimeout(opened, 0);
+      // Starting the audio ScriptProcessor will be taken care of by the onmessage handler
     });
     
     // Choose max buffer size
@@ -167,18 +172,33 @@ define(['./values', './events', './network'], function (values, events, network)
       }
       prevUnderrun = underrun;
 
+      if (underrun > 0 && !startStopTickle) {
+        // Consider stopping the audio callback
+        setTimeout(startStop, 1000);
+        startStopTickle = true;
+      }
+
       updateParameters();
     };
 
     // Workaround for Chromium bug https://code.google.com/p/chromium/issues/detail?id=82795 -- ScriptProcessor nodes are not kept live
-    window.__dummy_audio_node_reference = ascr;
+    window['__dummy_audio_node_reference_' + Math.random()] = ascr;
     //console.log('audio init done');
-
-    function opened() {
-      ascr.connect(audio.destination);
-    }
-    function closed() {
-      ascr.disconnect(audio.destination);
+    
+    function startStop() {
+      startStopTickle = false;
+      if (queue.length > 0 || audioStreamChunk !== EMPTY_CHUNK) {
+        if (!started) {
+          // Note: empirically, it's not actually _necessary_ to avoid redundant connect or disconnect operations, but I want to avoid possibly causing extra work (e.g. if the implementation prepares for a flow graph change even if it doesn't do anything).
+          started = true;
+          ascr.connect(audio.destination);
+        }
+      } else {
+        if (started) {
+          started = false;
+          ascr.disconnect(audio.destination);
+        }
+      }
     }
     
     return info;
