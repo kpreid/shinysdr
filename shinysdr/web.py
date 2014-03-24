@@ -189,16 +189,29 @@ def _get_interfaces(obj):
 	return [_fqn(interface) for interface in providedBy(obj)]
 
 
+class _StateStreamObjectRegistration(object):
+	# all 'public' fields
+	
+	def __init__(self, obj, serial, url):
+		self.obj = obj
+		self.serial = serial
+		self.url = url
+		self.has_previous_value = False
+		self.previous_value = None
+	
+	def set_previous(self, value):
+		self.has_previous_value = True
+		self.previous_value = value
+
+
 # TODO: Better name for this category of object
 class StateStreamInner(object):
 	def __init__(self, send, block, rootURL):
 		self._send = send
 		self._block = block
 		self._cell = BlockCell(self, '_block')
-		self._previousValues = {}
 		self._lastSerial = 0
-		self._registered = {self._cell: 0}
-		self._urls = {self._cell: rootURL}
+		self._registered = {self._cell: _StateStreamObjectRegistration(obj=self._cell, serial=0, url=rootURL)}
 		self._send_batch = []
 	
 	def connectionLost(self, reason):
@@ -207,49 +220,48 @@ class StateStreamInner(object):
 	
 	def __drop(self, obj):
 		if isinstance(obj, StreamCell):  # TODO kludge; use generic interface
-			subscription = self._previousValues[obj]
+			subscription = self._registered[obj].previous_value
 			subscription.close()
 		del self._registered[obj]
-		del self._previousValues[obj]
-		del self._urls[obj]
 	
 	def _checkUpdates(self):
 		seen_this_time = set([self._cell])
 		
-		def maybesend(obj, compare_value, update_value):
-			if obj not in self._previousValues or compare_value != self._previousValues[obj]:
-				self._previousValues[obj] = compare_value
-				self.__send1(False, ('value', self._registered[obj], update_value))
+		def maybesend(registration, compare_value, update_value):
+			if not registration.has_previous_value or compare_value != registration.previous_value:
+				registration.set_previous(compare_value)
+				self.__send1(False, ('value', registration.serial, update_value))
 		
 		def traverse(obj):
-			#print 'traverse', obj, self._registered.get(obj, None)
+			#print 'traverse', obj, registration.serial
+			registration = self._registered[obj]
+			url = registration.url
 			if isinstance(obj, ExportedState):
 				#print '  is block'
-				url = self._urls[obj]
 				for key, cell in obj.state().iteritems():
 					#print '  child: ', key, cell
 					meet(cell, url + '/' + urllib.unquote(key))
-				if obj.state_is_dynamic() or obj not in self._previousValues:
+				if obj.state_is_dynamic() or not registration.has_previous_value:
 					# functions as (current) signature of object
 					state = obj.state()
-					maybesend(obj, state, {k: self._registered[v] for k, v in state.iteritems()})
+					maybesend(registration, state, {k: self._registered[v].serial for k, v in state.iteritems()})
 				else:
 					state = None
 			elif isinstance(obj, BaseCell):   # TODO: be an interface type?
 				#print '  is cell'
 				if obj.isBlock():
 					block = obj.getBlock()
-					meet(block, self._urls[obj])
-					maybesend(obj, block, self._registered[block])
+					meet(block, url)
+					maybesend(registration, block, self._registered[block].serial)
 				elif isinstance(obj, StreamCell):  # TODO kludge
-					subscription = self._previousValues[obj]
+					subscription = registration.previous_value
 					while True:
 						b = subscription.get(binary=True)
 						if b is None: break
-						self.__send1(True, struct.pack('I', self._registered[obj]) + b)
+						self.__send1(True, struct.pack('I', registration.serial) + b)
 				else:
 					value = obj.get()
-					maybesend(obj, value, value)
+					maybesend(registration, value, value)
 			else:
 				#print '  unrecognized'
 				# TODO: warn unrecognized
@@ -262,14 +274,14 @@ class StateStreamInner(object):
 				self._lastSerial += 1
 				serial = self._lastSerial
 				#print 'registering', obj, serial
-				self._registered[obj] = serial
-				self._urls[obj] = url
+				registration = _StateStreamObjectRegistration(obj=obj, serial=serial, url=url)
+				self._registered[obj] = registration
 				if isinstance(obj, BaseCell):
 					self.__send1(False, ('register_cell', serial, url, obj.description()))
 					if isinstance(obj, StreamCell):  # TODO kludge
-						self._previousValues[obj] = obj.subscribe()
+						registration.set_previous(obj.subscribe())
 					else:
-						self._previousValues[obj] = obj.get()
+						registration.set_previous(obj.get())
 				elif isinstance(obj, ExportedState):
 					# let traverse send the state details
 					self.__send1(False, ('register_block', serial, url, _get_interfaces(obj)))
@@ -285,11 +297,11 @@ class StateStreamInner(object):
 		deletions = []
 		for obj in self._registered:
 			if obj not in seen_this_time:
-				deletions.append(obj)
-		deletions.sort(key=lambda obj: self._registered[obj])  # deterministic order
-		for obj in deletions:
-			self.__send1(False, ('delete', self._registered[obj]))
-			self.__drop(obj)
+				deletions.append(self._registered[obj])
+		deletions.sort(key=lambda reg: reg.serial)  # deterministic order
+		for reg in deletions:
+			self.__send1(False, ('delete', reg.serial))
+			self.__drop(reg.obj)
 	
 	def __flush(self):
 		if len(self._send_batch) > 0:
