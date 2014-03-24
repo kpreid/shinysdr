@@ -24,7 +24,7 @@ define(['./values', './events', './network'], function (values, events, network)
   
   function connectAudio(url) {
     // TODO portability
-    var audio = new webkitAudioContext();
+    var audio = new (typeof AudioContext !== 'undefined' ? AudioContext : webkitAudioContext)();
     var sampleRate = audio.sampleRate;
     
     // Queue size management

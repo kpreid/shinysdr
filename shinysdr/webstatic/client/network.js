@@ -78,6 +78,7 @@ define(['./values', './events'], function (values, events) {
   
   function externalGet(url, responseType, callback) {
     var r = new XMLHttpRequest();
+    r.open('GET', url, true);
     r.responseType = responseType;
     r.onreadystatechange = function() {
       if (r.readyState === 4) {
@@ -88,7 +89,6 @@ define(['./values', './events'], function (values, events) {
         }
       }
     };
-    r.open('GET', url, true);
     r.send();
   }
   exports.externalGet = externalGet;
