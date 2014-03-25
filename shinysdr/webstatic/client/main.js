@@ -104,7 +104,8 @@ define(['./values', './events', './database', './network', './maps', './widget',
         var alwaysCreate = options.alwaysCreate;
         var record = options.record;
         var freq = options.freq !== undefined ? +options.freq : (record && record.freq);
-        var mode = options.mode || (record && record.mode) || bandMode(freq);
+        // Note for mode selection that bandMode is only used if we are creating a receiver (below); this ensures that we don't undesirably change the mode on drag-tuning of an existing receiver. This is a kludge and should probably be replaced by (1) making a distinction between dragging a receiver and clicking elsewhere, (2) changing mode only if the receiver's mode was matched to the old band, or (3) changing mode on long jumps but not short ones.
+        var mode = options.mode || (record && record.mode);
         var receiver = options.receiver;
         //console.log('tune', alwaysCreate, freq, mode, receiver);
       
@@ -132,7 +133,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
         } else {
           // TODO less ambiguous-naming api
           receivers.create({
-            mode: mode || 'AM',
+            mode: mode || bandMode(freq) || 'AM',
             rec_freq: freq
           });
           // TODO: should return stub for receiver or have a callback or something
