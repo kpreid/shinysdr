@@ -185,6 +185,18 @@ class MultistageChannelFilter(gr.hier_block2):
 			#print 'Stage %i decimation %i rate %i taps %i' % (i, stage_decimation, stage_input_rate, len(taps))
 			stage_filter.set_taps(taps)
 	
+	def explain(self):
+		'''Return a description of the filter design.'''
+		s = '%s stages from %i to %i' % (len(self.stages), self.stages[0][1], self.stages[-1][2])
+		for i, (stage_filter, stage_input_rate, stage_output_rate) in enumerate(self.stages):
+			s += '\n  decimate by %i using %3i taps (%i) in %s' % (
+				stage_input_rate // stage_output_rate,
+				len(stage_filter.taps()),
+				stage_output_rate * len(stage_filter.taps()),
+				type(stage_filter).__name__)
+		# TODO: Explain final resampler stage if present.
+		return s
+	
 	def get_cutoff_freq(self):
 		return self.cutoff_freq
 	
