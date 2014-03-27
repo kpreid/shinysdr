@@ -26,6 +26,7 @@ from gnuradio.filter import firdes
 
 import math
 
+from shinysdr.blocks import rotator_inc
 from shinysdr.source import Source
 from shinysdr.values import BlockCell, CollectionState, ExportedState, Range, exported_value, setter
 
@@ -154,11 +155,9 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
 		
 		self.modulator = modulator  # exported
 		
-		# TODO: Instead of signal source + multiply, convert to rotator block once that is available since it is more computationally efficient
-		self.__osc = analog.sig_source_c(rf_rate, analog.GR_COS_WAVE, freq, 1, 0)
-		mult = blocks.multiply_cc(1)
-		self.connect(self.__osc, (mult, 1))
-		self.connect(self, modulator, mult, self)
+		self.__rotator = blocks.rotator_cc(rotator_inc(rate=rf_rate, shift=freq))
+		self.__mult = blocks.multiply_const_cc(1.0)
+		self.connect(self, modulator, self.__rotator, self.__mult, self)
 	
 	def state_def(self, callback):
 		super(_SimulatedTransmitter, self).state_def(callback)
@@ -167,19 +166,20 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
 
 	@exported_value(ctor_fn=lambda self: Range([(-self.__rf_rate / 2, self.__rf_rate / 2)], strict=False))
 	def get_freq(self):
-		return self.__osc.frequency()
+		return self.__freq
 	
 	@setter
 	def set_freq(self, value):
-		self.__osc.set_frequency(float(value))
+		self.__freq = float(value)
+		self.__rotator.set_phase_inc(rotator_inc(rate=self.__rf_rate, shift=self.__freq))
 	
 	@exported_value(ctor=Range([(-50.0, 0.0)], strict=False))
 	def get_gain(self):
-		return 10 * math.log10(self.__osc.amplitude())
+		return 10 * math.log10(self.__mult.k().real)
 	
 	@setter
 	def set_gain(self, value):
-		self.__osc.set_amplitude(10.0 ** (float(value) / 10))
+		self.__mult.set_k(10.0 ** (float(value) / 10))
 
 
 class _DSBModulator(gr.hier_block2, ExportedState):

@@ -27,6 +27,7 @@ from gnuradio import blocks
 
 import math
 
+from shinysdr.blocks import rotator_inc
 from shinysdr.values import ExportedState, BlockCell, Range, Enum, exported_value, setter
 from shinysdr import plugins
 
@@ -82,15 +83,14 @@ class Receiver(gr.hier_block2, ExportedState):
 		self.audio_pan = min(1, max(-1, audio_pan))
 		
 		# Blocks
-		self.oscillator = analog.sig_source_c(input_rate, analog.GR_COS_WAVE, -rec_freq, 1, 0)
-		self.mixer = blocks.multiply_cc(1)
+		self.__rotator = blocks.rotator_cc()
 		self.demodulator = self.__make_demodulator(mode, {})
 		self.__demod_tunable = ITunableDemodulator.providedBy(self.demodulator)
 		self.audio_gain_l_block = blocks.multiply_const_ff(0.0)
 		self.audio_gain_r_block = blocks.multiply_const_ff(0.0)
 		self.probe_audio = analog.probe_avg_mag_sqrd_f(0, alpha=10.0 / audio_rate)
 		
-		self.__update_oscillator()  # in case of __demod_tunable
+		self.__update_rotator()  # initialize rotator, also in case of __demod_tunable
 		self.__update_audio_gain()
 		self.__do_connect()
 	
@@ -107,8 +107,7 @@ class Receiver(gr.hier_block2, ExportedState):
 			if self.__demod_tunable:
 				self.connect(self, self.demodulator)
 			else:
-				self.connect(self.oscillator, (self.mixer, 1))
-				self.connect(self, self.mixer, self.demodulator)
+				self.connect(self, self.__rotator, self.demodulator)
 			self.connect((self.demodulator, 0), self.audio_gain_l_block, (self, 0))
 			self.connect((self.demodulator, 1), self.audio_gain_r_block, (self, 1))
 			
@@ -121,12 +120,11 @@ class Receiver(gr.hier_block2, ExportedState):
 		if self.input_rate == value:
 			return
 		self.input_rate = value
-		self.oscillator.set_sampling_freq(self.input_rate)
 		self._rebuild_demodulator()
 
 	def set_input_center_freq(self, value):
 		self.input_center_freq = value
-		self.__update_oscillator()
+		self.__update_rotator()
 		# note does not revalidate() because the caller will handle that
 
 	# type construction is deferred because we don't want loading this file to trigger loading plugins
@@ -151,7 +149,7 @@ class Receiver(gr.hier_block2, ExportedState):
 	@setter
 	def set_rec_freq(self, rec_freq):
 		self.rec_freq = float(rec_freq)
-		self.__update_oscillator()
+		self.__update_rotator()
 		self.context.revalidate()
 	
 	# TODO: support non-audio demodulators at which point these controls should be optional
@@ -187,12 +185,12 @@ class Receiver(gr.hier_block2, ExportedState):
 			# will not be receiving samples, so probe's value will be meaningless
 			return _audio_power_minimum_dB
 	
-	def __update_oscillator(self):
+	def __update_rotator(self):
 		offset = self.rec_freq - self.input_center_freq
 		if self.__demod_tunable:
 			self.demodulator.set_rec_freq(offset)
 		else:
-			self.oscillator.set_frequency(-offset)
+			self.__rotator.set_phase_inc(rotator_inc(rate=self.input_rate, shift=-offset))
 	
 	# called from facet
 	def _rebuild_demodulator(self, mode=None):
@@ -208,7 +206,7 @@ class Receiver(gr.hier_block2, ExportedState):
 			mode = self.mode
 		self.demodulator = self.__make_demodulator(mode, defaults)
 		self.__demod_tunable = ITunableDemodulator.providedBy(self.demodulator)
-		self.__update_oscillator()
+		self.__update_rotator()
 		self.mode = mode
 
 	def __make_demodulator(self, mode, state):

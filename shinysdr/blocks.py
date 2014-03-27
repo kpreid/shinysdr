@@ -238,6 +238,16 @@ def make_resampler(in_rate, out_rate):
 		pfbsize)
 
 
+def rotator_inc(rate, shift):
+	'''
+	Calculation for using gnuradio.blocks.rotator_cc or other interfaces wanting radians/sample input.
+	
+	rate: sample rate
+	shift: frequency shift in Hz
+	'''
+	return (2 * math.pi) * (shift / rate)
+
+
 class SubprocessSink(gr.hier_block2):
 	def __init__(self, args, itemsize=gr.sizeof_char):
 		gr.hier_block2.__init__(
