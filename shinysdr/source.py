@@ -21,6 +21,7 @@ from gnuradio import audio
 from gnuradio import blocks
 from gnuradio import filter as grfilter
 from gnuradio import gr
+from gnuradio.filter import firdes
 
 from shinysdr.values import ExportedState, exported_value
 
@@ -128,7 +129,11 @@ class _Complexifier(gr.hier_block2):
 			gr.io_signature(1, 1, gr.sizeof_gr_complex),
 		)
 		
-		self.__hilbert = grfilter.hilbert_fc(hilbert_length)
+		# On window selection:
+		# http://www.trondeau.com/blog/2013/9/26/hilbert-transform-and-windowing.html
+		self.__hilbert = grfilter.hilbert_fc(
+			hilbert_length,
+			window=grfilter.firdes.WIN_BLACKMAN_HARRIS)
 		self.__rotate = grfilter.freq_xlating_fir_filter_ccc(
 			2,  # decimation
 			[1],  # taps
