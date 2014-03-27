@@ -12,3 +12,6 @@ _trial_temp*/
 
 # our files
 /shinysdr/deps/
+
+# GRC-generated
+shinysdr/test/manual/channel_filter_testbed.py
