@@ -44,7 +44,9 @@ class DatabasesResource(resource.Resource):
 		for name in filenames:
 			if name.endswith('.csv'):
 				with open(os.path.join(path, name), 'rb') as csvfile:
-					database = _parse_csv_file(csvfile)
+					database, diagnostics = _parse_csv_file(csvfile)
+					for d in diagnostics:
+						log.msg('%s: %s' % (name, d))
 				self.putChild(name, DatabaseResource(database))
 				self.names.append(name)
 
@@ -134,16 +136,23 @@ class _RecordResource(resource.Resource):
 
 def _parse_csv_file(csvfile):
 	db = []
-	for csvrec in csv.DictReader(csvfile):
+	diagnostics = []
+	reader = csv.DictReader(csvfile)
+	for strcsvrec in reader:
 		# csv does not deal in unicode itself
 		# TODO: Warn if one of the CSV rows has too many columns (DictReader indicates this as k is None)
-		csvrec = {unicode(k, 'utf-8'): unicode(v, 'utf-8')
-			for k, v in csvrec.iteritems()
-				if k is not None and v is not None}
+		csvrec = {}
+		for k, v in strcsvrec.iteritems():
+			if k is None:
+				diagnostics.append(Warning(reader.line_num, 'Record contains extra columns; data discarded.'))
+				continue
+			if v is None:
+				# too few columns, consider harmless and OK
+				continue
+			csvrec[unicode(k, 'utf-8')] = unicode(v, 'utf-8')
 		#print csvrec
 		if 'Frequency' not in csvrec:
-			# TODO: better targeted messsage
-			log.msg('skipping record without frequency', db_record=csvrec)
+			diagnostics.append(Warning(reader.line_num, 'Record contains no value for Frequency column; line discarded.'))
 			continue
 		record = {
 			u'mode': csvrec.get('Mode', ''),
@@ -167,7 +176,7 @@ def _parse_csv_file(csvfile):
 		else:
 			record[u'location'] = None
 		db.append(record)
-	return db
+	return db, diagnostics
 
 
 def _parse_freq(freq_str):

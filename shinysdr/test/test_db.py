@@ -31,20 +31,31 @@ from shinysdr.test import testutil
 
 
 class TestCSV(unittest.TestCase):
-	def __parse(self, s):
-		return db._parse_csv_file(StringIO.StringIO(s))
+	def __assertDiag(self, diagnostics, expect_diagnostics):
+		for i, (line, class_, text) in enumerate(expect_diagnostics):
+			if i >= len(diagnostics):
+				self.fail('No diagnostic #%i' % i)
+			actual = diagnostics[i]
+			self.assertEqual((line, text), actual.args)
+			self.assertIsInstance(actual, class_)
+		self.assertEqual(len(diagnostics), len(expect_diagnostics), 'extra diagnostics')
 	
-	def __roundtrip(self, records):
+	def __parse(self, s, expect_records, expect_diagnostics):
+		read_records, diagnostics = db._parse_csv_file(StringIO.StringIO(s))
+		self.assertEqual(expect_records, read_records)
+		self.__assertDiag(diagnostics, expect_diagnostics)
+	
+	def __roundtrip(self, records, expect_diagnostics):
 		buffer = StringIO.StringIO()
 		db._write_csv_file(buffer, records)
 		buffer.seek(0)
-		read_records = db._parse_csv_file(buffer)
+		read_records, diagnostics = db._parse_csv_file(buffer)
 		self.assertEqual(records, read_records)
+		self.__assertDiag(diagnostics, expect_diagnostics)
 	
 	def test_no_frequency(self):
-		# TODO: There should be an output for warnings and we should test we get one here
-		self.assertEqual(
-			self.__parse('Name,Frequency\na,1\nb'),
+		self.__parse(
+			'Name,Frequency\na,1\nb',
 			[{
 				u'type': u'channel',
 				u'lowerFreq': 1e6,
@@ -52,11 +63,12 @@ class TestCSV(unittest.TestCase):
 				u'mode': u'',
 				u'label': u'a',
 				u'notes': u'',
-				u'location': None}])
+				u'location': None}],
+			[(3, Warning, 'Record contains no value for Frequency column; line discarded.')])
 	
 	def test_short_line(self):
-		self.assertEqual(
-			self.__parse('Frequency,Name,Comment\n1,a'),
+		self.__parse(
+			'Frequency,Name,Comment\n1,a',
 			[{
 				u'type': u'channel',
 				u'lowerFreq': 1e6,
@@ -64,12 +76,12 @@ class TestCSV(unittest.TestCase):
 				u'mode': u'',
 				u'label': u'a',
 				u'notes': u'',
-				u'location': None}])
+				u'location': None}],
+			[])
 	
 	def test_long_line(self):
-		# TODO: There should be an output for warnings and we should test we get one here
-		self.assertEqual(
-			self.__parse('Frequency,Name\n1,a,boom'),
+		self.__parse(
+			'Frequency,Name\n1,a,boom',
 			[{
 				u'type': u'channel',
 				u'lowerFreq': 1e6,
@@ -77,37 +89,48 @@ class TestCSV(unittest.TestCase):
 				u'mode': u'',
 				u'label': u'a',
 				u'notes': u'',
-				u'location': None}])
+				u'location': None}],
+			[(2, Warning, 'Record contains extra columns; data discarded.')])
 
 	def test_roundtrip_channel(self):
-		self.__roundtrip([{
-			u'type': u'channel',
-			u'lowerFreq': 1.1e6,
-			u'upperFreq': 1.1e6,
-			u'mode': u'FOO',
-			u'label': u'a',
-			u'notes': u'b',
-			u'location': None}])
+		self.__roundtrip(
+			[{
+				u'type': u'channel',
+				u'lowerFreq': 1.1e6,
+				u'upperFreq': 1.1e6,
+				u'mode': u'FOO',
+				u'label': u'a',
+				u'notes': u'b',
+				u'location': None}],
+			[])
 
 	def test_roundtrip_band(self):
-		self.__roundtrip([{
-			u'type': u'band',
-			u'lowerFreq': 1.1e6,
-			u'upperFreq': 1.2e6,
-			u'mode': u'FOO',
-			u'label': u'a',
-			u'notes': u'b',
-			u'location': None}])
+		self.__roundtrip(
+			[{
+				u'type': u'band',
+				u'lowerFreq': 1.1e6,
+				u'upperFreq': 1.2e6,
+				u'mode': u'FOO',
+				u'label': u'a',
+				u'notes': u'b',
+				u'location': None}],
+			[])
 
 	def test_roundtrip_location(self):
-		self.__roundtrip([{
-			u'type': u'band',
-			u'lowerFreq': 1.1e6,
-			u'upperFreq': 1.2e6,
-			u'mode': u'FOO',
-			u'label': u'a',
-			u'notes': u'b',
-			u'location': [10.0, 20.0]}])
+		self.__roundtrip(
+			[{
+				u'type': u'band',
+				u'lowerFreq': 1.1e6,
+				u'upperFreq': 1.2e6,
+				u'mode': u'FOO',
+				u'label': u'a',
+				u'notes': u'b',
+				u'location': [10.0, 20.0]}],
+			[])
+
+
+# TODO: Write test for DatabasesResource loading csv files
+
 
 class TestDBWeb(unittest.TestCase):
 	test_data_json = [
