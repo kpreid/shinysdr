@@ -174,6 +174,10 @@ def _parse_freq(freq_str):
 	return 1e6 * float(freq_str)
 
 
+def _format_freq(freq):
+	return unicode(freq / 1e6)
+
+
 def _normalize_record(record):
 	'''Normalize values in a record dict.'''
 	# TODO: type/syntax check
@@ -184,3 +188,45 @@ def _normalize_record(record):
 			v = float(v)
 		out[k] = v
 	return out
+
+
+def _write_csv_file(csvfile, db):
+	writer = csv.DictWriter(csvfile, [
+		u'Mode',
+		u'Frequency',
+		u'Name',
+		u'Latitude',
+		u'Longitude',
+		u'Comment',
+	])
+	writer.writeheader()
+	for record in db:
+		csvrecord = {}
+		lf = uf = None
+		for key, value in record.iteritems():
+			if key == u'type':
+				pass
+			elif key == u'mode':
+				csvrecord[u'Mode'] = value
+			elif key == u'lowerFreq':
+				lf = value
+			elif key == u'upperFreq':
+				uf = value = value
+			elif key == u'location':
+				if value is None:
+					csvrecord[u'Latitude'] = ''
+					csvrecord[u'Longitude'] = ''
+				else:
+					csvrecord[u'Latitude'] = value[0]
+					csvrecord[u'Longitude'] = value[1]
+			elif key == u'label':
+				csvrecord[u'Name'] = value
+			elif key == u'notes':
+				csvrecord[u'Comment'] = value
+			else:
+				raise ValueError(u'Unhandled field in db record: %s' % key)
+		if lf == uf:
+			csvrecord[u'Frequency'] = _format_freq(lf)
+		else:
+			csvrecord[u'Frequency'] = _format_freq(lf) + '-' + _format_freq(uf)
+		writer.writerow(csvrecord)

@@ -34,6 +34,13 @@ class TestCSV(unittest.TestCase):
 	def __parse(self, s):
 		return db._parse_csv_file(StringIO.StringIO(s))
 	
+	def __roundtrip(self, records):
+		buffer = StringIO.StringIO()
+		db._write_csv_file(buffer, records)
+		buffer.seek(0)
+		read_records = db._parse_csv_file(buffer)
+		self.assertEqual(records, read_records)
+	
 	def test_no_frequency(self):
 		# TODO: There should be an output for warnings and we should test we get one here
 		self.assertEqual(
@@ -72,6 +79,35 @@ class TestCSV(unittest.TestCase):
 				u'notes': u'',
 				u'location': None}])
 
+	def test_roundtrip_channel(self):
+		self.__roundtrip([{
+			u'type': u'channel',
+			u'lowerFreq': 1.1e6,
+			u'upperFreq': 1.1e6,
+			u'mode': u'FOO',
+			u'label': u'a',
+			u'notes': u'b',
+			u'location': None}])
+
+	def test_roundtrip_band(self):
+		self.__roundtrip([{
+			u'type': u'band',
+			u'lowerFreq': 1.1e6,
+			u'upperFreq': 1.2e6,
+			u'mode': u'FOO',
+			u'label': u'a',
+			u'notes': u'b',
+			u'location': None}])
+
+	def test_roundtrip_location(self):
+		self.__roundtrip([{
+			u'type': u'band',
+			u'lowerFreq': 1.1e6,
+			u'upperFreq': 1.2e6,
+			u'mode': u'FOO',
+			u'label': u'a',
+			u'notes': u'b',
+			u'location': [10.0, 20.0]}])
 
 class TestDBWeb(unittest.TestCase):
 	test_data_json = [
