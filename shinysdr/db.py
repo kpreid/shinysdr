@@ -18,8 +18,10 @@
 from __future__ import absolute_import, division
 
 import cgi
+import contextlib
 import csv
 import json
+import os
 import os.path
 import urllib
 import warnings
@@ -27,6 +29,74 @@ import warnings
 from twisted.python import log
 from twisted.web import http
 from twisted.web import resource
+
+
+class DatabaseModel(object):
+	__dirty = False
+	
+	def __init__(self, reactor, records, pathname=None, writable=False):
+		# TODO: don't expose records/writable directly
+		self.__reactor = reactor
+		self.records = records
+		self.__pathname = pathname
+		self.writable = writable
+	
+	def dirty(self):
+		'''
+		Notify that a record has been changed and the database should be written to disk.
+		'''
+		if self.__can_write() and not self.__dirty:
+			self.__dirty = True
+			self.__reactor.callLater(0.5, self.__write)
+	
+	def __write(self):
+		if self.__can_write() and self.__dirty:
+			log.msg('Writing database %s' % (self.__pathname,))
+			self.__dirty = False
+			with _atomic_open_for_write(self.__pathname, 'wb') as csvfile:
+				_write_csv_file(csvfile, self.records)
+	
+	def __can_write(self):
+		return self.__pathname is not None
+
+
+# TODO: To pair with this, create open-for-read of atomic files which
+# * uses the ~ file if the current file is not available
+# * fails out early if there is unexpectedly a .new file
+@contextlib.contextmanager
+def _atomic_open_for_write(name, mode):
+	oldname = name + '~'
+	newname = name + '.new'
+	if os.path.exists(newname):
+		raise Exception('Unexpected new file: %s' + oldname)
+		#os.remove(newname)
+	if os.path.exists(oldname):
+		if not os.path.exists(name):
+			raise Exception('Unexpected old file only: %s' % oldname)
+		os.remove(oldname)  # Windows compatibility
+		os.rename(name, oldname)
+	ok = False
+	try:
+		yield open(newname, mode)
+		ok = True
+	finally:
+		if ok:
+			os.rename(newname, name)
+		else:
+			log.msg('Not installing new-version due to error: %s' % newname)
+	
+
+
+def database_from_csv(reactor, pathname, writable):
+	if os.path.exists(pathname):
+		with open(pathname, 'rb') as csvfile:
+			records, diagnostics = _parse_csv_file(csvfile)
+	else:
+		if not writable:
+			raise Exception('Non-writable specified DB does not exist: %s' % pathname)
+		records, diagnostics = [], []
+	database = DatabaseModel(reactor, records, pathname=pathname, writable=writable)
+	return database, diagnostics
 
 
 class DatabasesResource(resource.Resource):
@@ -43,10 +113,9 @@ class DatabasesResource(resource.Resource):
 			return
 		for name in filenames:
 			if name.endswith('.csv'):
-				with open(os.path.join(path, name), 'rb') as csvfile:
-					database, diagnostics = _parse_csv_file(csvfile)
-					for d in diagnostics:
-						log.msg('%s: %s' % (name, d))
+				database, diagnostics = database_from_csv(os.path.join(path, name), writable=False)
+				for d in diagnostics:
+					log.msg('%s: %s' % (name, d))
 				self.putChild(name, DatabaseResource(database))
 				self.names.append(name)
 
@@ -74,10 +143,10 @@ class DatabaseResource(resource.Resource):
 		resource.Resource.__init__(self)
 		
 		def instantiate(i):
-			self.putChild(str(i), _RecordResource(database[i]))
+			self.putChild(str(i), _RecordResource(database, database.records[i]))
 		
 		self.putChild('', _DbIndexResource(database, instantiate))
-		for i in xrange(0, len(database)):
+		for i in xrange(0, len(database.records)):
 			instantiate(i)
 
 
@@ -87,17 +156,21 @@ class _DbIndexResource(resource.Resource):
 	
 	def __init__(self, db, instantiate):
 		resource.Resource.__init__(self)
-		self.__db = db
+		self.__database = db
 		self.__instantiate = instantiate
 	
 	def render_GET(self, _request):
-		return json.dumps(self.__db)
+		return json.dumps(self.__database.records)
 	
 	def render_POST(self, request):
 		desc = json.load(request.content)
+		if not self.__database.writable:
+			request.setResponseCode(http.FORBIDDEN)
+			request.setHeader('Content-Type', 'text/plain')
+			return 'This database is not writable.'
 		record = _normalize_record(desc['new'])
-		self.__db.append(record)
-		index = len(self.__db) - 1
+		self.__database.records.append(record)
+		index = len(self.__database.records) - 1
 		self.__instantiate(index)
 		url = request.prePathURL() + str(index)
 		request.setResponseCode(http.CREATED)
@@ -110,28 +183,34 @@ class _RecordResource(resource.Resource):
 	isLeaf = True
 	defaultContentType = 'application/json'
 	
-	def __init__(self, record):
+	def __init__(self, database, record):
 		resource.Resource.__init__(self)
-		self.record = record
+		self.__database = database
+		self.__record = record
 	
 	def render_GET(self, _request):
-		return json.dumps(self.record)
+		return json.dumps(self.__record)
 	
 	def render_POST(self, request):
 		assert request.getHeader('Content-Type') == 'application/json'
+		if not self.__database.writable:
+			request.setResponseCode(http.FORBIDDEN)
+			request.setHeader('Content-Type', 'text/plain')
+			return 'The database containing this record is not writable.'
 		patch = json.load(request.content)
 		old = _normalize_record(patch['old'])
 		new = patch['new']
-		if old == self.record:
+		if old == self.__record:
 			# TODO check syntax of record
-			self.record.clear()
-			self.record.update(new)
+			self.__record.clear()
+			self.__record.update(new)
+			self.__database.dirty()
 			request.setResponseCode(http.NO_CONTENT)
 			return ''
 		else:
 			request.setResponseCode(http.CONFLICT)
 			request.setHeader('Content-Type', 'text/plain')
-			return 'Old values did not match: %r vs %r' % (old, self.record)
+			return 'Old values did not match: %r vs %r' % (old, self.__record)
 
 
 def _parse_csv_file(csvfile):

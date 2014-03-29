@@ -35,6 +35,8 @@ from twisted.python import log
 from twisted.internet import defer
 from twisted.internet import reactor
 
+# Note that gnuradio-dependent modules are loaded later, to avoid the startup time if all we're going to do is give a usage message
+import shinysdr.db
 
 class _Config(object):
 	def __init__(self, reactor):
@@ -61,6 +63,7 @@ class _Config(object):
 			import shinysdr.web
 			return shinysdr.web.WebService({
 					'databasesDir': self.databases._directory,
+					'writable_db': self.databases._get_writable_database(),
 					'httpPort': http_endpoint,
 					'wsPort': ws_endpoint,
 					'rootCap': root_cap,
@@ -95,14 +98,28 @@ class _ConfigAccessories(_ConfigDict):
 
 
 class _ConfigDbs(object):
-	def __init__(self):
-		self._directory = None
-
+	_directory = None
+	__writable_db = None
+	
 	def add_directory(self, path):
 		path = str(path)
 		if self._directory is not None:
 			raise Exception('Multiple database directories are not yet supported.')
 		self._directory = path
+
+	def add_writable_database(self, path):
+		path = str(path)
+		if self.__writable_db is not None:
+			raise Exception('Multiple writable databases are not yet supported.')
+		self.__writable_db, diagnostics = shinysdr.db.database_from_csv(reactor, path, writable=True)
+		for d in diagnostics:
+			log.msg('%s: %s' % (path, d))
+	
+	def _get_writable_database(self):
+		if self.__writable_db is None:
+			# TODO temporary stub till the client takes more configurability -- we should omit the writable db rather than having an unbacked one
+			self.__writable_db = shinysdr.db.DatabaseModel(None, [], writable=True)
+		return self.__writable_db
 
 
 def main(argv=None, _abort_for_test=False):

@@ -510,8 +510,7 @@ class WebService(Service):
 			appRoot.putChild('dbs', shinysdr.db.DatabasesResource(config['databasesDir']))
 		else:
 			appRoot.putChild('dbs', resource.Resource())
-		# temporary stub till we have a proper writability/target policy
-		appRoot.putChild('wdb', shinysdr.db.DatabaseResource([]))
+		appRoot.putChild('wdb', shinysdr.db.DatabaseResource(config['writable_db']))
 		
 		# Construct explicit resources for merge.
 		test = _reify(serverRoot, 'test')

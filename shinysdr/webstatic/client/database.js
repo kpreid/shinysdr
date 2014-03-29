@@ -350,7 +350,9 @@ define(['./events', './network'], function (events, network) {
           return;
         }
         updating = true;
+        needAgain = false;
         var newState = this.toJSON();
+        // TODO: PATCH method would be more specific
         xhrpost(this._url, JSON.stringify({old: this._oldState, new: newState}), function () {
           // TODO: Warn user / retry on network errors. Since we don't know whether the server has accepted the change we should retrieve it as new oldState and maybe merge
           updating = false;
@@ -360,8 +362,8 @@ define(['./events', './network'], function (events, network) {
       }.bind(this);
       
       this._hook = function() {
-        // TODO: PATCH method would be more specific
         if (changeHook) changeHook();
+        // TODO: Changing lowerFreq + upperFreq sends double updates; see if we can coalesce
         sendUpdate();
       }.bind(this);
     } else {

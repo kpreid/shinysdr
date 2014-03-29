@@ -155,7 +155,8 @@ class TestDBWeb(unittest.TestCase):
 	]
 	
 	def setUp(self):
-		dbResource = db.DatabaseResource(self.test_data_json)
+		db_model = db.DatabaseModel(reactor, self.test_data_json, writable=True)
+		dbResource = db.DatabaseResource(db_model)
 		self.port = reactor.listenTCP(0, server.Site(dbResource), interface="127.0.0.1")
 	
 	def tearDown(self):

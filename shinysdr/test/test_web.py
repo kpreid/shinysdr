@@ -26,6 +26,7 @@ from twisted.trial import unittest
 from twisted.internet import reactor
 from twisted.web import http
 
+from shinysdr.db import DatabaseModel
 from shinysdr.values import ExportedState, CollectionState, exported_value, setter
 # TODO: StateStreamInner is an implementation detail; arrange a better interface to test
 from shinysdr.web import StateStreamInner, WebService
@@ -41,6 +42,7 @@ class TestWebSite(unittest.TestCase):
 				'wsPort': 'tcp:0',
 				'rootCap': 'ROOT',
 				'databasesDir': 'NONEXISTENT_PATH',
+				'writable_db': DatabaseModel(reactor, []),
 			},
 			SiteStateStub(),
 			_noop)
