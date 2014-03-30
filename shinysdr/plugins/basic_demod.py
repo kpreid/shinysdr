@@ -25,7 +25,7 @@ from gnuradio import analog
 from gnuradio import filter as grfilter  # don't shadow builtin
 from gnuradio.filter import firdes
 
-from shinysdr.receiver import ModeDef, IDemodulator, ITunableDemodulator
+from shinysdr.modes import ModeDef, IDemodulator, ITunableDemodulator
 from shinysdr.blocks import MultistageChannelFilter, make_resampler
 from shinysdr.values import ExportedState, Range, exported_value, setter
 

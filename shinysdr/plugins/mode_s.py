@@ -23,7 +23,7 @@ from gnuradio import gr
 from gnuradio import blocks
 from gnuradio import analog
 
-from shinysdr.receiver import ModeDef, IDemodulator
+from shinysdr.modes import ModeDef, IDemodulator
 from shinysdr.values import ExportedState, exported_value
 from shinysdr.blocks import MultistageChannelFilter, SubprocessSink, test_subprocess
 

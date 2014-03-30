@@ -1,4 +1,4 @@
-# Copyright 2013 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -17,7 +17,6 @@
 
 from __future__ import absolute_import, division
 
-from twisted.plugin import IPlugin, getPlugins
 from twisted.python import log
 from zope.interface import Interface, implements  # available via Twisted
 
@@ -28,8 +27,8 @@ from gnuradio import blocks
 import math
 
 from shinysdr.blocks import rotator_inc
+from shinysdr.modes import ITunableDemodulator, get_modes, lookup_mode
 from shinysdr.values import ExportedState, BlockCell, Range, Enum, exported_value, setter
-from shinysdr import plugins
 
 
 # arbitrary non-infinite limit
@@ -65,7 +64,7 @@ class Receiver(gr.hier_block2, ExportedState):
 			gr.io_signature(2, 2, gr.sizeof_float * 1),
 		)
 		
-		if _lookup_mode(mode) is None:
+		if lookup_mode(mode) is None:
 			# TODO: communicate back to client if applicable
 			log.msg('Unknown mode %r in Receiver(); using AM' % (mode,))
 			mode = 'AM'
@@ -128,7 +127,7 @@ class Receiver(gr.hier_block2, ExportedState):
 		# note does not revalidate() because the caller will handle that
 
 	# type construction is deferred because we don't want loading this file to trigger loading plugins
-	@exported_value(ctor_fn=lambda self: Enum({d.mode: d.label for d in getModes()}))
+	@exported_value(ctor_fn=lambda self: Enum({d.mode: d.label for d in get_modes()}))
 	def get_mode(self):
 		return self.mode
 	
@@ -212,7 +211,7 @@ class Receiver(gr.hier_block2, ExportedState):
 	def __make_demodulator(self, mode, state):
 		'''Returns the demodulator.'''
 
-		mode_def = _lookup_mode(mode)
+		mode_def = lookup_mode(mode)
 		if mode_def is None:
 			raise ValueError('Unknown mode: ' + mode)
 		clas = mode_def.demodClass
@@ -270,60 +269,3 @@ class ContextForDemodulator(object):
 	def unlock(self):
 		self._receiver.context.unlock()
 
-
-class IDemodulator(Interface):
-	def can_set_mode(mode):
-		'''
-		Return whether this demodulator can reconfigure itself to demodulate the specified mode.
-		
-		If it returns False, it will typically be replaced with a newly created demodulator.
-		'''
-	
-	def set_mode(mode):
-		'''
-		Per can_set_mode.
-		'''
-	
-	def get_half_bandwidth():
-		'''
-		TODO explain
-		'''
-
-
-class ITunableDemodulator(IDemodulator):
-	def set_rec_freq(freq):
-		'''
-		Set the nominal (carrier) frequency offset of the signal to be demodulated within the input signal.
-		'''
-
-
-class IModeDef(Interface):
-	'''
-	Demodulator plugin interface object
-	'''
-	# Only needed to make the plugin system work
-	# TODO write interface methods anyway
-
-
-class ModeDef(object):
-	implements(IPlugin, IModeDef)
-	
-	# Twisted plugin system caches whether-a-plugin-class-was-found permanently, so we need to avoid _not_ having a ModeDef if the plugin has some sort of dependency it checks -- thus the 'available' flag can be used to hide a mode while still having an IModeDef
-	def __init__(self, mode, label, demodClass, available=True):
-		self.mode = mode
-		self.label = label
-		self.demodClass = demodClass
-		self.available = available
-
-
-def getModes():
-	# TODO caching? prebuilt mode table?
-	return [p for p in getPlugins(IModeDef, plugins) if p.available]
-
-
-def _lookup_mode(mode):
-	# TODO sensible lookup table (doesn't matter for now because small N)
-	for mode_def in getModes():
-		if mode_def.mode == mode:
-			return mode_def
-	return None
