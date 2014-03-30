@@ -1,4 +1,4 @@
-# Copyright 2013 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -17,7 +17,10 @@
 
 from __future__ import absolute_import, division
 
-import unittest
+from twisted.trial import unittest
+
+from gnuradio import blocks
+from gnuradio import gr
 
 from shinysdr.blocks import MultistageChannelFilter
 
@@ -33,12 +36,47 @@ class TestMultistageChannelFilter(unittest.TestCase):
 		self.assertEqual(1000, filt.get_transition_width())
 		self.assertEqual(10000, filt.get_center_freq())
 	
+	def test_basic(self):
+		# TODO: Test filter functionality more
+		f = MultistageChannelFilter(input_rate=32000000, output_rate=16000, cutoff_freq=3000, transition_width=1200)
+		self.__run(f, 400000, 16000/32000000)
+	
 	def test_float_rates(self):
 		# Either float or int rates should be accepted
-		# TODO: Test filter functionality; this only tests that the operations work
-		MultistageChannelFilter(input_rate=32000000.0, output_rate=16000.0, cutoff_freq=3000, transition_width=1200)
+		f = MultistageChannelFilter(input_rate=32000000.0, output_rate=16000.0, cutoff_freq=3000, transition_width=1200)
+		self.__run(f, 400000, 16000/32000000)
 	
 	def test_interpolating(self):
 		'''Output rate higher than input rate'''
-		# TODO: Test filter functionality; this only tests that the filter construction doesn't crash
-		MultistageChannelFilter(input_rate=8000, output_rate=10000, cutoff_freq=8000, transition_width=5000)
+		# TODO: Test filter functionality more
+		f = MultistageChannelFilter(input_rate=8000, output_rate=20000, cutoff_freq=8000, transition_width=5000)
+		self.__run(f, 4000, 20000/8000)
+	
+	def test_odd_interpolating(self):
+		'''Output rate higher than input rate and not a multiple'''
+		# TODO: Test filter functionality more
+		f = MultistageChannelFilter(input_rate=8000, output_rate=21234, cutoff_freq=8000, transition_width=5000)
+		self.__run(f, 4000, 21234/8000)
+	
+	def __run(self, block, in_size, ratio):
+		'''check that the actual relative rate is as expected'''
+		delta_1 = self.__run1(block, in_size, ratio)
+		delta_2 = self.__run1(block, in_size * 2, ratio)
+		delta_3 = self.__run1(block, in_size * 10, ratio)
+		self.assertApproximates(0, delta_3, 100, '%f fewer output samples than expected' % delta_3)
+		msg = 'varying delta: %i %i %i' % (delta_1, delta_2, delta_3)
+		self.assertApproximates(delta_1, delta_2, 200, msg)
+		self.assertApproximates(delta_2, delta_3, 200, msg)
+	
+	def __run1(self, block, in_size, ratio):
+		top = gr.top_block()
+		sink = blocks.vector_sink_c()
+		top.connect(
+			blocks.vector_source_c([0] * in_size),
+			block,
+			sink)
+		top.start()
+		top.wait()
+		top.stop()
+		reference_out_size = in_size * ratio
+		return reference_out_size - len(sink.data())
