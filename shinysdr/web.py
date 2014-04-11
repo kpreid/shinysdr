@@ -478,7 +478,7 @@ def _strport_to_url(desc, scheme='http', path='/', socket_port=0):
 
 
 class WebService(Service):
-	def __init__(self, config, top, noteDirty):
+	def __init__(self, reactor, config, top, noteDirty):
 		# TODO eliminate 'config' arg
 		rootCap = config['rootCap']
 		self.__http_port = config['httpPort']
@@ -507,7 +507,7 @@ class WebService(Service):
 		
 		# Frequency DB
 		if config['databasesDir'] is not None:
-			appRoot.putChild('dbs', shinysdr.db.DatabasesResource(config['databasesDir']))
+			appRoot.putChild('dbs', shinysdr.db.DatabasesResource(reactor, config['databasesDir']))
 		else:
 			appRoot.putChild('dbs', resource.Resource())
 		appRoot.putChild('wdb', shinysdr.db.DatabaseResource(config['writable_db']))

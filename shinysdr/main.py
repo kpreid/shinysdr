@@ -61,7 +61,7 @@ class _Config(object):
 		
 		def make_service(top, noteDirty):
 			import shinysdr.web
-			return shinysdr.web.WebService({
+			return shinysdr.web.WebService(reactor, {
 					'databasesDir': self.databases._directory,
 					'writable_db': self.databases._get_writable_database(),
 					'httpPort': http_endpoint,

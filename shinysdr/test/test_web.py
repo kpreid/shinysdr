@@ -37,6 +37,7 @@ class TestWebSite(unittest.TestCase):
 	def setUp(self):
 		# TODO: arrange so we don't need to pass as many bogus strings
 		self.__service = WebService(
+			reactor,
 			{
 				'httpPort': 'tcp:0',
 				'wsPort': 'tcp:0',

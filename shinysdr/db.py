@@ -102,10 +102,11 @@ def database_from_csv(reactor, pathname, writable):
 class DatabasesResource(resource.Resource):
 	isLeaf = False
 	
-	def __init__(self, path):
+	def __init__(self, reactor, path):
 		resource.Resource.__init__(self)
 		self.putChild('', _DbsIndexResource(self))
 		self.names = []
+		# TODO: web resource should not take a reactor arg, I think, suggesting DB loading should be separately defined
 		try:
 			filenames = os.listdir(path)
 		except OSError as e:
@@ -113,7 +114,7 @@ class DatabasesResource(resource.Resource):
 			return
 		for name in filenames:
 			if name.endswith('.csv'):
-				database, diagnostics = database_from_csv(os.path.join(path, name), writable=False)
+				database, diagnostics = database_from_csv(reactor, os.path.join(path, name), writable=False)
 				for d in diagnostics:
 					log.msg('%s: %s' % (name, d))
 				self.putChild(name, DatabaseResource(database))
