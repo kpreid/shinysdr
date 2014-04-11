@@ -61,7 +61,7 @@ define(['./values', './events', './network'], function (values, events, network)
     var info = values.makeBlock({
       buffered: new values.LocalReadCell(new values.Range([[0, 2]], false, false), 0),
       target: new values.LocalReadCell(String, ''),  // TODO should be numeric w/ unit
-      error: new values.LocalReadCell(String, ''),
+      error: new values.LocalReadCell(new values.Notice(true), ''),
     });
     function updateStatus() {
       var buffered = (queueSampleCount + audioStreamChunk.length - chunkIndex) / sampleRate;

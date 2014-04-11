@@ -21,6 +21,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   var Cell = values.Cell;
   var ConstantCell = values.ConstantCell;
   var DerivedCell = values.DerivedCell;
+  var Notice = values.Notice;
   var alwaysCreateReceiverFromEvent = widget.alwaysCreateReceiverFromEvent;
   var createWidgetExt = widget.createWidgetExt;
   var addLifecycleListener = widget.addLifecycleListener;
@@ -129,6 +130,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         if (member.type.isSingleValued && member.type.isSingleValued()) {
           return;
         }
+        // TODO: Add a dispatch table of some sort to de-centralize this
         if (member.type instanceof values.Range) {
           if (member.set) {
             addWidget(name, member.type.logarithmic ? LogSlider : LinSlider, name);
@@ -139,6 +141,8 @@ define(['./values', './events', './widget'], function (values, events, widget) {
           addWidget(name, Radio, name);
         } else if (member.type === Boolean) {
           addWidget(name, Toggle, name);
+        } else if (member.type instanceof Notice) {
+          addWidget(name, Banner, name);
         } else if (member.type === values.block) {  // TODO colliding name
           // TODO: Add hook to choose a widget class based on interfaces
           // Furthermore, use that for the specific block widget classes too, rather than each one knowing the types of its sub-widgets.
@@ -2376,6 +2380,38 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       });
   }
   widgets.Generic = Generic;
+  
+  // widget for Notice type
+  function Banner(config) {
+    var type = config.target.type;
+    var alwaysVisible = type instanceof Notice && type.alwaysVisible;  // TODO something better than instanceof...?
+    
+    var textNode = document.createTextNode('');
+    SimpleElementWidget.call(this, config, undefined,
+      function buildPanel(container) {
+        // TODO: use title in some way
+        container.appendChild(textNode);
+        return container;
+      },
+      function init(node, target) {
+        return function updateGeneric(value) {
+          value = String(value);
+          textNode.textContent = value;
+          var active = value !== '';
+          if (active) {
+            node.classList.add('widget-Banner-active');
+          } else {
+            node.classList.remove('widget-Banner-active');
+          }
+          if (active || alwaysVisible) {
+            node.classList.remove('widget-Banner-hidden');
+          } else {
+            node.classList.add('widget-Banner-hidden');
+          }
+        };
+      });
+  }
+  widgets.Banner = Banner;
   
   function NumberWidget(config) {
     SimpleElementWidget.call(this, config, 'TT',

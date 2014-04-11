@@ -472,3 +472,17 @@ class Range(ValueType):
 			if specimen > maxes[i]:
 				specimen = maxes[i]
 		return specimen
+
+
+class Notice(ValueType):
+	def __init__(self, always_visible=False):
+		self.__always_visible = always_visible
+	
+	def type_to_json(self):
+		return {
+			'type': 'notice',
+			'always_visible': self.__always_visible
+		}
+	
+	def __call__(self, specimen):
+		return unicode(specimen)

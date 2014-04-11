@@ -82,6 +82,11 @@ define(['./events'], function (events) {
   };
   exports.Range = Range;
 
+  function Notice(alwaysVisible) {
+    this.alwaysVisible = alwaysVisible;
+  }
+  exports.Notice = Notice;
+
   // type for any block
   var block = Object.freeze({});
   exports.block = block;
@@ -105,6 +110,8 @@ define(['./events'], function (events) {
             return new Enum(desc.values);
           case 'range':
             return new Range(desc.subranges, desc.logarithmic, desc.integer);
+          case 'notice':
+            return new Notice(desc.always_visible);
           default:
             throw new TypeError('unknown type desc tag: ' + desc.type);
         }

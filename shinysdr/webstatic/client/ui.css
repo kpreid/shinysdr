@@ -435,3 +435,16 @@ table.widget-Demodulator-squelch-and-power {
   width: 8ex;
   text-align: right;
 }
+
+.widget-Banner {
+  min-height: 1.1em;
+  
+  text-align: center;
+}
+.widget-Banner-active {
+  background: #FFD;
+  color: black;
+}
+.widget-Banner-hidden {
+  display: none;
+}
