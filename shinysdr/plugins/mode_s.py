@@ -24,7 +24,7 @@ from gnuradio import blocks
 from gnuradio import analog
 
 from shinysdr.modes import ModeDef, IDemodulator
-from shinysdr.values import ExportedState, exported_value
+from shinysdr.values import ExportedState, Notice, exported_value
 from shinysdr.blocks import MultistageChannelFilter, SubprocessSink, test_subprocess
 
 
@@ -95,6 +95,10 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 			'high': pipe_rate / 2,
 			'width': transition_width
 		}
+	
+	@exported_value(ctor=Notice())
+	def get_notice(self):
+		return u'Properly displaying output is not yet implemented; see stdout of the server process.'
 
 # TODO: Arrange for a way for the user to see why it is unavailable.
 pluginDef = ModeDef('MODE-S', label='Mode S', demodClass=ModeSDemodulator,
