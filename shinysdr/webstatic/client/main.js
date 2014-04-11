@@ -199,6 +199,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
       window.DfreqDB = freqDB;
       window.DwritableDB = writableDB;
       window.Dradio = radio;
+      window.Deverything = everything;
       window.Dindex = index;
     }); // end gotDesc
   
