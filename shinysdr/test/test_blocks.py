@@ -26,7 +26,7 @@ from shinysdr.blocks import MultistageChannelFilter
 
 
 class TestMultistageChannelFilter(unittest.TestCase):
-	def test_settings(self):
+	def test_setters(self):
 		# TODO: Test filter functionality; this only tests that the operations work
 		filt = MultistageChannelFilter(input_rate=32000000, output_rate=16000, cutoff_freq=3000, transition_width=1200)
 		filt.set_cutoff_freq(2900)
@@ -35,6 +35,9 @@ class TestMultistageChannelFilter(unittest.TestCase):
 		self.assertEqual(2900, filt.get_cutoff_freq())
 		self.assertEqual(1000, filt.get_transition_width())
 		self.assertEqual(10000, filt.get_center_freq())
+	
+	def test_too_wide_cutoff(self):
+		self.assertRaisesRegexp(ValueError, '500.*182', MultistageChannelFilter, input_rate=200000, output_rate=182, cutoff_freq=500, transition_width=18.2)
 	
 	def test_basic(self):
 		# TODO: Test filter functionality more

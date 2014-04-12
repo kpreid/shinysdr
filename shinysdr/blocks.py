@@ -103,6 +103,11 @@ class MultistageChannelFilter(gr.hier_block2):
 		assert output_rate > 0
 		assert cutoff_freq > 0
 		assert transition_width > 0
+		# cf. firdes.sanity_check_1f (which is private)
+		# TODO better errors for other cases
+		if cutoff_freq > output_rate / 2:
+			# early check for better errors since our cascaded filters might be cryptically nonsense
+			raise ValueError('cutoff_freq (%s) is too high for output_rate (%s)' % (cutoff_freq, output_rate))
 		
 		gr.hier_block2.__init__(
 			self, name,
