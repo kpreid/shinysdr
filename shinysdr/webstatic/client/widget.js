@@ -199,6 +199,8 @@ define(['./values', './events'], function (values, events) {
       }
       currentWidgetEl = newEl;
       
+      doPersistentDetails(currentWidgetEl);
+      
       // allow widgets to embed widgets
       createWidgetsInNode(targetCell || rootTargetCell, context, widget.element);
       
@@ -275,6 +277,8 @@ define(['./values', './events'], function (values, events) {
       createWidget(targetCellCell, targetStr, context, node, widgetCtor);
       
     } else if (node.hasAttribute && node.hasAttribute('data-target')) (function () {
+      doPersistentDetails(node);
+      
       var html = document.createDocumentFragment();
       while (node.firstChild) html.appendChild(node.firstChild);
       var go = function go() {
@@ -292,21 +296,24 @@ define(['./values', './events'], function (values, events) {
       go.scheduler = scheduler;
       go();
 
-    }()); else if (node.nodeName === 'DETAILS' && node.hasAttribute('id')) {
-      // Make any ID'd <details> element persistent
+    }()); else {
+      doPersistentDetails(node);
+      createWidgetsInNode(rootTargetCell, context, node);
+    }
+  }
+  exports.createWidgets = createWidgets;
+  
+  // Bind a <details> element's open state to localStorage, if this is one
+  function doPersistentDetails(node) {
+    if (node.nodeName === 'DETAILS' && node.hasAttribute('id')) {
       var ns = new StorageNamespace(localStorage, 'shinysdr.elementState.' + node.id + '.');
       var stored = ns.getItem('detailsOpen');
       if (stored !== null) node.open = JSON.parse(stored);
       new MutationObserver(function(mutations) {
         ns.setItem('detailsOpen', JSON.stringify(node.open));
       }).observe(node, {attributes: true, attributeFilter: ['open']});
-      createWidgetsInNode(rootTargetCell, context, node);
-
-    } else {
-      createWidgetsInNode(rootTargetCell, context, node);
     }
   }
-  exports.createWidgets = createWidgets;
   
   // Defines the display parameters and coordinate calculations of the spectrum widgets
   // TODO: Revisit whether this should be in widgets.js -- it is closely tied to the spectrum widgets, but also managed by the widget framework.
