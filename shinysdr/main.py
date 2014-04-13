@@ -65,7 +65,7 @@ class _Config(object):
 				reactor=reactor,
 				top=top,
 				note_dirty=note_dirty,
-				databases_dir=self.databases._directory,
+				read_only_dbs=self.databases._get_read_only_databases(),
 				writable_db=self.databases._get_writable_database(),
 				http_endpoint=http_endpoint,
 				ws_endpoint=ws_endpoint,
@@ -100,14 +100,16 @@ class _ConfigAccessories(_ConfigDict):
 
 
 class _ConfigDbs(object):
-	_directory = None
+	__read_only_databases = None
 	__writable_db = None
 	
 	def add_directory(self, path):
 		path = str(path)
-		if self._directory is not None:
+		if self.__read_only_databases is not None:
 			raise Exception('Multiple database directories are not yet supported.')
-		self._directory = path
+		self.__read_only_databases, path_diagnostics = shinysdr.db.databases_from_directory(reactor, path)
+		for d in path_diagnostics:
+			log.msg('%s: %s' % d)
 
 	def add_writable_database(self, path):
 		path = str(path)
@@ -122,6 +124,11 @@ class _ConfigDbs(object):
 			# TODO temporary stub till the client takes more configurability -- we should omit the writable db rather than having an unbacked one
 			self.__writable_db = shinysdr.db.DatabaseModel(None, [], writable=True)
 		return self.__writable_db
+	
+	def _get_read_only_databases(self):
+		if self.__read_only_databases is None:
+			self.__read_only_databases = {}
+		return self.__read_only_databases
 
 
 def main(argv=None, _abort_for_test=False):

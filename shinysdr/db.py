@@ -99,26 +99,33 @@ def database_from_csv(reactor, pathname, writable):
 	return database, diagnostics
 
 
+def databases_from_directory(reactor, pathname):
+	dbs = {}
+	try:
+		filenames = os.listdir(pathname)
+	except OSError as e:
+		warnings.warn('Error opening database directory %r: %r' % (pathname, e))
+		return dbs
+	all_diagnostics = []
+	for name in filenames:
+		if name.endswith('.csv'):
+			database, diagnostics = database_from_csv(reactor, os.path.join(pathname, name), writable=False)
+			dbs[name] = database
+			for d in diagnostics:
+				all_diagnostics.append((name, d))
+	return dbs, all_diagnostics
+
+
 class DatabasesResource(resource.Resource):
 	isLeaf = False
 	
-	def __init__(self, reactor, path):
+	def __init__(self, databases):
 		resource.Resource.__init__(self)
 		self.putChild('', _DbsIndexResource(self))
 		self.names = []
-		# TODO: web resource should not take a reactor arg, I think, suggesting DB loading should be separately defined
-		try:
-			filenames = os.listdir(path)
-		except OSError as e:
-			warnings.warn('Error opening database directory %r: %r' % (path, e))
-			return
-		for name in filenames:
-			if name.endswith('.csv'):
-				database, diagnostics = database_from_csv(reactor, os.path.join(path, name), writable=False)
-				for d in diagnostics:
-					log.msg('%s: %s' % (name, d))
-				self.putChild(name, DatabaseResource(database))
-				self.names.append(name)
+		for (name, database) in databases.iteritems():
+			self.putChild(name, DatabaseResource(database))
+			self.names.append(name)
 
 
 class _DbsIndexResource(resource.Resource):

@@ -479,7 +479,7 @@ def _strport_to_url(desc, scheme='http', path='/', socket_port=0):
 
 class WebService(Service):
 	# TODO: Too many parameters
-	def __init__(self, reactor, top, note_dirty, databases_dir, writable_db, http_endpoint, ws_endpoint, root_cap):
+	def __init__(self, reactor, top, note_dirty, read_only_dbs, writable_db, http_endpoint, ws_endpoint, root_cap):
 		self.__http_port = http_endpoint
 		self.__ws_port = ws_endpoint
 		
@@ -505,10 +505,7 @@ class WebService(Service):
 		appRoot.putChild('radio', BlockResource(top, note_dirty, notDeletable))
 		
 		# Frequency DB
-		if databases_dir is not None:
-			appRoot.putChild('dbs', shinysdr.db.DatabasesResource(reactor, databases_dir))
-		else:
-			appRoot.putChild('dbs', resource.Resource())
+		appRoot.putChild('dbs', shinysdr.db.DatabasesResource(read_only_dbs))
 		appRoot.putChild('wdb', shinysdr.db.DatabaseResource(writable_db))
 		
 		# Construct explicit resources for merge.

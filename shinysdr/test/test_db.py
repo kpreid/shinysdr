@@ -18,7 +18,12 @@
 from __future__ import absolute_import, division
 
 import json
+import os
+import os.path
+import shutil
 import StringIO
+import tempfile
+import textwrap
 
 from twisted.trial import unittest
 from twisted.internet import reactor
@@ -129,7 +134,25 @@ class TestCSV(unittest.TestCase):
 			[])
 
 
-# TODO: Write test for DatabasesResource loading csv files
+class TestDirectory(unittest.TestCase):
+	def setUp(self):
+		self.__temp_dir = tempfile.mkdtemp(prefix='shinysdr_test_db_tmp')
+	
+	def tearDown(self):
+		shutil.rmtree(self.__temp_dir)
+	
+	# TODO: more testing
+	def test_1(self):
+		with open(os.path.join(self.__temp_dir, 'a.csv'), 'w') as f:
+			f.write(textwrap.dedent('''\
+				Name,Frequency
+				a,1
+			'''))
+		with open(os.path.join(self.__temp_dir, 'not-a-csv'), 'w') as f:
+			pass
+		dbs, diagnostics = db.databases_from_directory(reactor, self.__temp_dir)
+		self.assertEqual([], diagnostics)
+		self.assertEqual(['a.csv'], dbs.keys())
 
 
 class TestDBWeb(unittest.TestCase):

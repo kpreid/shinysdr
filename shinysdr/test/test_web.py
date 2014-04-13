@@ -41,7 +41,7 @@ class TestWebSite(unittest.TestCase):
 			http_endpoint='tcp:0',
 			ws_endpoint='tcp:0',
 			root_cap='ROOT',
-			databases_dir='NONEXISTENT_PATH',
+			read_only_dbs={},
 			writable_db=DatabaseModel(reactor, []),
 			top=SiteStateStub(),
 			note_dirty=_noop)
