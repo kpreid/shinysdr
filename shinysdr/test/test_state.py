@@ -58,6 +58,8 @@ class DecoratorSpecimen(DecoratorSpecimenSuper):
 
 
 class TestStateInsert(unittest.TestCase):
+	object = None
+	
 	def test_success(self):
 		self.object = InsertFailSpecimen()
 		self.object.state_from_json({'foo': {'fail': False}})

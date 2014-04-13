@@ -133,7 +133,7 @@ class _Complexifier(gr.hier_block2):
 		# http://www.trondeau.com/blog/2013/9/26/hilbert-transform-and-windowing.html
 		self.__hilbert = grfilter.hilbert_fc(
 			hilbert_length,
-			window=grfilter.firdes.WIN_BLACKMAN_HARRIS)
+			window=firdes.WIN_BLACKMAN_HARRIS)
 		self.__rotate = grfilter.freq_xlating_fir_filter_ccc(
 			2,  # decimation
 			[1],  # taps

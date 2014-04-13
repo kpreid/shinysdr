@@ -15,6 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+# pylint: disable=maybe-no-member, attribute-defined-outside-init, no-init
+# (maybe-no-member is incorrect)
+# (attribute-defined-outside-init is a Twisted convention)
+# (no-init is pylint being confused by interfaces)
+
+
 from __future__ import absolute_import, division
 
 from twisted.application import strports

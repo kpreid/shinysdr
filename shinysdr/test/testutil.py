@@ -15,9 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+# pylint: disable=signature-differs
+# (twisted is inconsistent about connectionMade/connectionLost)
+
 import json
 import StringIO
-
 
 from twisted.internet.defer import Deferred
 from twisted.internet.protocol import Protocol

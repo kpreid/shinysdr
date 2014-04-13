@@ -26,6 +26,10 @@ config.accessories.add('my-other-radio',
 		options=['-m', '<model ID>', '-r', '<device file name>']))
 '''
 
+# pylint: disable=no-init
+# (no-init is pylint being confused by interfaces)
+
+
 from __future__ import absolute_import, division
 
 import os.path
@@ -262,7 +266,7 @@ class _HamlibRig(ExportedState):
 			self.__cache[key] = value
 	
 	def _clientReceivedLevel(self, level_name, value_str):
-			self.__cache[level_name + ' level'] = value_str
+		self.__cache[level_name + ' level'] = value_str
 	
 	def _clientConnectionLost(self, reason):
 		self.__poller_slow.stop()
@@ -386,6 +390,7 @@ class _RigctldClientFactory(ClientFactory):
 
 class _RigctldClientProtocol(Protocol):
 	def __init__(self, connected_deferred):
+		self.__rig_obj = None
 		self.__connected_deferred = connected_deferred
 		self.__line_receiver = LineReceiver()
 		self.__line_receiver.delimiter = '\n'

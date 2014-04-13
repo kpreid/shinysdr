@@ -413,6 +413,9 @@ class SpectrumType(ValueType):
 	def type_to_json(self):
 		return u'spectrum'
 	
+	def __call__(self, specimen):
+		raise Exception('Coerce not implemented for SpectrumType')
+	
 	# TODO implement coerce behavior, generally make this more well-defined
 
 

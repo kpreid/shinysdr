@@ -15,6 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+# pylint: disable=dangerous-default-value, no-method-argument, no-init
+# (the default values in question are not mutated)
+# (pylint is confused by interfaces)
+
 from __future__ import absolute_import, division
 
 import time

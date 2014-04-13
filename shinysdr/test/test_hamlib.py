@@ -25,6 +25,7 @@ from shinysdr.plugins.hamlib import connect_to_rig
 
 class TestHamlibRig(unittest.TestCase):
 	timeout = 5
+	__rig = None
 	
 	def setUp(self):
 		d = connect_to_rig(reactor, options=['-m', '1'], port=4530)
