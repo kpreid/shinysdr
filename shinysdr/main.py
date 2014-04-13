@@ -59,8 +59,8 @@ class _Config(object):
 		# TODO: See if we're reinventing bits of Twisted service stuff here
 		
 		def make_service(top, note_dirty):
-			import shinysdr.web
-			return shinysdr.web.WebService(
+			import shinysdr.web as lazy_web
+			return lazy_web.WebService(
 				reactor=reactor,
 				top=top,
 				note_dirty=note_dirty,
@@ -86,7 +86,7 @@ class _ConfigDict(object):
 
 class _ConfigAccessories(_ConfigDict):
 	def add(self, key, value):
-		import shinysdr.values
+		import shinysdr.values as lazy_values
 		
 		if key in self._values:
 			raise KeyError('Accessory key %r already present' % (key,))
@@ -94,7 +94,7 @@ class _ConfigAccessories(_ConfigDict):
 		def f(r):
 			self._values[key] = r
 		
-		self._values[key] = shinysdr.values.nullExportedState
+		self._values[key] = lazy_values.nullExportedState
 		defer.maybeDeferred(lambda: value).addCallback(f)
 
 
@@ -152,8 +152,9 @@ def main(argv=None, _abort_for_test=False):
 		help='Run DSP even if no client is connected (for debugging).')
 	args = argParser.parse_args(args=argv[1:])
 
-	import shinysdr.top
-	import shinysdr.source
+	import shinysdr.top as lazy_top
+	# We don't actually use shinysdr.source directly, but we want it to be guaranteed available in the context of the config file.
+	import shinysdr.source as lazy_source
 
 	# Load config file
 	if args.createConfig:
@@ -220,7 +221,7 @@ config.serve_web(
 			root.state_from_json(get_defaults(root))
 	
 	log.msg('Constructing flow graph...')
-	top = shinysdr.top.Top(
+	top = lazy_top.Top(
 		sources=configObj.sources._values,
 		accessories=configObj.accessories._values)
 	
