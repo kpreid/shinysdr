@@ -28,7 +28,6 @@ import os.path
 import shutil
 import sys
 import warnings
-import webbrowser
 import __builtin__
 
 from twisted.application.service import IService, MultiService
@@ -230,21 +229,15 @@ config.serve_web(
 	
 	log.msg('Starting web server...')
 	services = MultiService()
-	one_service = None
 	for maker in configObj._service_makers:
-		one_service = maker(top, noteDirty)
-		one_service.setServiceParent(services)
+		maker(top, noteDirty).setServiceParent(services)
 	services.startService()
 	
-	if one_service is not None:
-		url = one_service.get_url()
-		if args.openBrowser:
-			log.msg('ShinySDR is ready. Opening ' + url)
-			webbrowser.open(url, new=1, autoraise=True)
-		else:
-			log.msg('ShinySDR is ready. Visit ' + url)
-	else:
-		log.msg('ShinySDR is ready (no service configured).')
+	log.msg('ShinySDR is ready.')
+	
+	for service in services:
+		# TODO: should have an interface (currently no proper module to put it in)
+		service.announce(args.openBrowser)
 	
 	if args.force_run:
 		log.msg('force_run')

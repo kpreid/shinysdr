@@ -558,3 +558,13 @@ class WebService(Service):
 		port_num = self.__http_port_obj.socket.getsockname()[1]  # TODO touching implementation, report need for a better way (web_port_obj.port is 0 if specified port is 0, not actual port)
 	
 		return _strport_to_url(self.__http_port, socket_port=port_num, path=self.__visit_path)
+
+	def announce(self, open_client):
+		'''interface used by shinysdr.main'''
+		url = self.get_url()
+		if open_client:
+			log.msg('Opening ' + url)
+			import webbrowser  # lazy load
+			webbrowser.open(url, new=1, autoraise=True)
+		else:
+			log.msg('Visit ' + url)
