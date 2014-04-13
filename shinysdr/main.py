@@ -27,13 +27,13 @@ import os
 import os.path
 import shutil
 import sys
+import warnings
 import webbrowser
 import __builtin__
 
-from twisted.application.service import IService
+from twisted.application.service import IService, MultiService
+from twisted.internet import defer, reactor
 from twisted.python import log
-from twisted.internet import defer
-from twisted.internet import reactor
 
 # Note that gnuradio-dependent modules are loaded later, to avoid the startup time if all we're going to do is give a usage message
 import shinysdr.db
@@ -45,13 +45,13 @@ class _Config(object):
 		self.sources = _ConfigDict()
 		self.databases = _ConfigDbs()
 		self.accessories = _ConfigAccessories()
-		self._make_service = None
+		self._service_makers = []
 	
 	def _validate(self):
 		if self._state_filename is None:
 			raise Exception('Having no state file is not yet supported.')
-		if self._make_service is None:
-			raise Exception('Having no web service is not yet supported.')
+		if len(self._service_makers) == 0:
+			warnings.warn('No network service defined!')
 	
 	def persist_to_file(self, filename):
 		self._state_filename = str(filename)
@@ -71,7 +71,7 @@ class _Config(object):
 				ws_endpoint=ws_endpoint,
 				root_cap=root_cap)
 		
-		self._make_service = make_service
+		self._service_makers.append(make_service)
 
 
 class _ConfigDict(object):
@@ -229,15 +229,22 @@ config.serve_web(
 	restore(top, top_defaults)
 	
 	log.msg('Starting web server...')
-	service = IService(configObj._make_service(top, noteDirty))
-	service.startService()
+	services = MultiService()
+	one_service = None
+	for maker in configObj._service_makers:
+		one_service = maker(top, noteDirty)
+		one_service.setServiceParent(services)
+	services.startService()
 	
-	url = service.get_url()
-	if args.openBrowser:
-		log.msg('ShinySDR is ready. Opening ' + url)
-		webbrowser.open(url, new=1, autoraise=True)
+	if one_service is not None:
+		url = one_service.get_url()
+		if args.openBrowser:
+			log.msg('ShinySDR is ready. Opening ' + url)
+			webbrowser.open(url, new=1, autoraise=True)
+		else:
+			log.msg('ShinySDR is ready. Visit ' + url)
 	else:
-		log.msg('ShinySDR is ready. Visit ' + url)
+		log.msg('ShinySDR is ready (no service configured).')
 	
 	if args.force_run:
 		log.msg('force_run')
@@ -246,7 +253,7 @@ config.serve_web(
 		top.set_unpaused(True)
 	
 	if _abort_for_test:
-		service.stopService()
+		services.stopService()
 		return top, noteDirty
 	else:
 		reactor.run()
