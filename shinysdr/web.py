@@ -478,39 +478,38 @@ def _strport_to_url(desc, scheme='http', path='/', socket_port=0):
 
 
 class WebService(Service):
-	def __init__(self, reactor, config, top, noteDirty):
-		# TODO eliminate 'config' arg
-		rootCap = config['rootCap']
-		self.__http_port = config['httpPort']
-		self.__ws_port = config['wsPort']
+	# TODO: Too many parameters
+	def __init__(self, reactor, top, note_dirty, databases_dir, writable_db, http_endpoint, ws_endpoint, root_cap):
+		self.__http_port = http_endpoint
+		self.__ws_port = ws_endpoint
 		
-		self.__ws_protocol = txws.WebSocketFactory(OurStreamFactory(top, rootCap))
+		self.__ws_protocol = txws.WebSocketFactory(OurStreamFactory(top, root_cap))
 		
 		# Roots of resource trees
 		# - appRoot is everything stateful/authority-bearing
 		# - serverRoot is the HTTP '/' and static resources are placed there
 		serverRoot = _make_static(staticResourcePath)
-		if rootCap is None:
+		if root_cap is None:
 			appRoot = serverRoot
 			self.__visit_path = '/'
 		else:
 			serverRoot = _make_static(staticResourcePath)
 			appRoot = _SlashedResource()
-			serverRoot.putChild(rootCap, appRoot)
-			self.__visit_path = '/' + urllib.quote(rootCap, safe='') + '/'
+			serverRoot.putChild(root_cap, appRoot)
+			self.__visit_path = '/' + urllib.quote(root_cap, safe='') + '/'
 		
 		# UI entry point
 		appRoot.putChild('', _make_static(os.path.join(_templatePath, 'index.html')))
 		
 		# Exported radio control objects
-		appRoot.putChild('radio', BlockResource(top, noteDirty, notDeletable))
+		appRoot.putChild('radio', BlockResource(top, note_dirty, notDeletable))
 		
 		# Frequency DB
-		if config['databasesDir'] is not None:
-			appRoot.putChild('dbs', shinysdr.db.DatabasesResource(reactor, config['databasesDir']))
+		if databases_dir is not None:
+			appRoot.putChild('dbs', shinysdr.db.DatabasesResource(reactor, databases_dir))
 		else:
 			appRoot.putChild('dbs', resource.Resource())
-		appRoot.putChild('wdb', shinysdr.db.DatabaseResource(config['writable_db']))
+		appRoot.putChild('wdb', shinysdr.db.DatabaseResource(writable_db))
 		
 		# Construct explicit resources for merge.
 		test = _reify(serverRoot, 'test')

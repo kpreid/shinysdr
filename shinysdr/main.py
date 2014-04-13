@@ -59,15 +59,17 @@ class _Config(object):
 	def serve_web(self, http_endpoint, ws_endpoint, root_cap='%(root_cap)s'):
 		# TODO: See if we're reinventing bits of Twisted service stuff here
 		
-		def make_service(top, noteDirty):
+		def make_service(top, note_dirty):
 			import shinysdr.web
-			return shinysdr.web.WebService(reactor, {
-					'databasesDir': self.databases._directory,
-					'writable_db': self.databases._get_writable_database(),
-					'httpPort': http_endpoint,
-					'wsPort': ws_endpoint,
-					'rootCap': root_cap,
-				}, top, noteDirty)
+			return shinysdr.web.WebService(
+				reactor=reactor,
+				top=top,
+				note_dirty=note_dirty,
+				databases_dir=self.databases._directory,
+				writable_db=self.databases._get_writable_database(),
+				http_endpoint=http_endpoint,
+				ws_endpoint=ws_endpoint,
+				root_cap=root_cap)
 		
 		self._make_service = make_service
 

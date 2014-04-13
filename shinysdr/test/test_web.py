@@ -37,16 +37,14 @@ class TestWebSite(unittest.TestCase):
 	def setUp(self):
 		# TODO: arrange so we don't need to pass as many bogus strings
 		self.__service = WebService(
-			reactor,
-			{
-				'httpPort': 'tcp:0',
-				'wsPort': 'tcp:0',
-				'rootCap': 'ROOT',
-				'databasesDir': 'NONEXISTENT_PATH',
-				'writable_db': DatabaseModel(reactor, []),
-			},
-			SiteStateStub(),
-			_noop)
+			reactor=reactor,
+			http_endpoint='tcp:0',
+			ws_endpoint='tcp:0',
+			root_cap='ROOT',
+			databases_dir='NONEXISTENT_PATH',
+			writable_db=DatabaseModel(reactor, []),
+			top=SiteStateStub(),
+			note_dirty=_noop)
 		self.__service.startService()
 		self.url = self.__service.get_url()
 	
