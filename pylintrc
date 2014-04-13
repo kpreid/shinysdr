@@ -1,13 +1,14 @@
 # This is a truncated and customized version of the default pylint configuration. The sections pertaining to reporting and other execution behavior have been removed entirely, leaving only the configuration of code style.
 
 [MESSAGES CONTROL]
-disable=trailing-whitespace,fixme,missing-docstring,protected-access,invalid-name,bad-builtin,super-init-not-called,star-args,no-self-argument,no-self-use
+disable=locally-disabled,trailing-whitespace,fixme,missing-docstring,protected-access,invalid-name,bad-builtin,super-init-not-called,star-args,no-self-argument,no-self-use,unused-argument
 # why super-init-not-called: false positives
 # why bad-builtin: I reject the premise
 # why star-args: I reject the premise
 # why protected-access: because I am using it for 'friend' access, maybe fix that
 # why no-self-argument: false positives on interface declarations
 # why no-self-use: false positives on exported state
+# why unused-argument: apparently cannot be prevented when an implementation legitimately does not use an arg
 # TODO: turn on missing-docstring, invalid-name
 
 [BASIC]
@@ -182,7 +183,8 @@ max-branches=12
 max-statements=50
 
 # Maximum number of parents for a class (see R0901).
-max-parents=7
+max-parents=10
+# increased due to gnuradio having a deep ancestry we inherit in hier blocks
 
 # Maximum number of attributes for a class (see R0902).
 max-attributes=7
