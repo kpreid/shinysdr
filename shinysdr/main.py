@@ -231,7 +231,7 @@ config.serve_web(
 	log.msg('Starting web server...')
 	services = MultiService()
 	for maker in configObj._service_makers:
-		maker(top, noteDirty).setServiceParent(services)
+		IService(maker(top, noteDirty)).setServiceParent(services)
 	services.startService()
 	
 	log.msg('ShinySDR is ready.')
