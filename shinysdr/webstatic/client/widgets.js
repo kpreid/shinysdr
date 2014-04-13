@@ -2515,13 +2515,16 @@ define(['./values', './events', './widget'], function (values, events, widget) {
           }
         }
 
-        slider.addEventListener('change', function(event) {
+        function listener(event) {
           if (type instanceof values.Range) {
             target.set(type.round(setT(slider.valueAsNumber), 0));
           } else {
             target.set(setT(slider.valueAsNumber));
           }
-        }, false);
+        }
+        // Per HTML5 spec, dragging fires 'input', but not 'change', event. However Chrome only recently (observed 2014-04-12) got this right, so we had better listen to both.
+        slider.addEventListener('change', listener, false);
+        slider.addEventListener('input', listener, false);  
         return function updateSlider(value) {
           var sValue = getT(value);
           if (!isFinite(sValue)) {
