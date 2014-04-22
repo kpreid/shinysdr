@@ -47,6 +47,11 @@ class TestMain(unittest.TestCase):
 	def tearDown(self):
 		shutil.rmtree(self.__temp_dir)
 	
+	def __run_main(self):
+		return main.main(
+			argv=['shinysdr', self.__config_name],
+			_abort_for_test=True)
+	
 	def test_main_first_run_sources(self):
 		'''Regression: first run with no state file would fail due to assumptions about the source names.'''
 		main.main(
@@ -55,13 +60,25 @@ class TestMain(unittest.TestCase):
 	
 	def test_persistence(self):
 		'''Test that state persists.'''
-		(top, note_dirty) = main.main(
-			argv=['shinysdr', self.__config_name],
-			_abort_for_test=True)
+		(top, note_dirty) = self.__run_main()
 		self.assertEqual(top.get_unpaused(), True)  # check initial assumption
 		top.set_unpaused(False)
 		note_dirty()
-		(top, note_dirty) = main.main(
-			argv=['shinysdr', self.__config_name],
-			_abort_for_test=True)
+		(top, note_dirty) = self.__run_main()
 		self.assertEqual(top.get_unpaused(), False)  # check persistence
+
+	def test_minimal(self):
+		'''Test that things function with no state file and no servers.'''
+		with open(self.__config_name, 'w') as config:
+			config.write(textwrap.dedent('''\
+				import shinysdr.plugins.simulate
+				config.sources.add('sim_foobar', shinysdr.plugins.simulate.SimulatedSource())
+			'''))
+		
+		(top, note_dirty) = self.__run_main()
+		self.assertEqual(top.get_unpaused(), True)  # check initial assumption
+		top.set_unpaused(False)
+		note_dirty()
+		(top, note_dirty) = self.__run_main()
+		self.assertEqual(top.get_unpaused(), True)  # expect NO persistence
+		

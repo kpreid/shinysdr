@@ -47,8 +47,6 @@ class _Config(object):
 		self._service_makers = []
 	
 	def _validate(self):
-		if self._state_filename is None:
-			raise Exception('Having no state file is not yet supported.')
 		if len(self._service_makers) == 0:
 			warnings.warn('No network service defined!')
 	
@@ -216,17 +214,19 @@ config.serve_web(
 		stateFile = configObj._state_filename
 	
 	def noteDirty():
-		# just immediately write (revisit this when more performance is needed)
-		with open(stateFile, 'w') as f:
-			json.dump(top.state_to_json(), f)
+		if stateFile is not None:
+			# just immediately write (revisit this when more performance is needed)
+			with open(stateFile, 'w') as f:
+				json.dump(top.state_to_json(), f)
 	
 	def restore(root, get_defaults):
-		if os.path.isfile(stateFile):
-			root.state_from_json(json.load(open(stateFile, 'r')))
-			# make a backup in case this code version misreads the state and loses things on save (but only if the load succeeded, in case the file but not its backup is bad)
-			shutil.copyfile(stateFile, stateFile + '~')
-		else:
-			root.state_from_json(get_defaults(root))
+		if stateFile is not None:
+			if os.path.isfile(stateFile):
+				root.state_from_json(json.load(open(stateFile, 'r')))
+				# make a backup in case this code version misreads the state and loses things on save (but only if the load succeeded, in case the file but not its backup is bad)
+				shutil.copyfile(stateFile, stateFile + '~')
+			else:
+				root.state_from_json(get_defaults(root))
 	
 	log.msg('Constructing flow graph...')
 	top = lazy_top.Top(
