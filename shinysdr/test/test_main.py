@@ -26,6 +26,7 @@ import textwrap
 from twisted.trial import unittest
 
 from shinysdr import main
+from shinysdr.values import ExportedState
 
 
 class TestMain(unittest.TestCase):
@@ -81,4 +82,17 @@ class TestMain(unittest.TestCase):
 		note_dirty()
 		(top, note_dirty) = self.__run_main()
 		self.assertEqual(top.get_unpaused(), True)  # expect NO persistence
+	
+	def test_accessories(self):
+		'''Test that accessories are configured properly.'''
+		# APPEND to config
+		with open(self.__config_name, 'a') as config:
+			config.write(textwrap.dedent('''\
+				config.accessories.add('foo', shinysdr.values.ExportedState())
+			'''))
 		
+		(top, note_dirty) = self.__run_main()
+		tas = top.accessories.state()
+		
+		self.assertEqual(tas.keys(), ['foo'])
+		# TODO: test value is as expected; tricky because deferred
