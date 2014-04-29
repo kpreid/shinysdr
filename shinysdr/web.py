@@ -30,7 +30,8 @@ from twisted.internet import protocol
 from twisted.internet import task
 from twisted.plugin import IPlugin, getPlugins
 from twisted.python import log
-from twisted.web import http, static, server, resource
+from twisted.python.filepath import FilePath
+from twisted.web import http, static, server, resource, template
 from zope.interface import Interface, implements, providedBy  # available via Twisted
 
 from gnuradio import gr
@@ -446,7 +447,6 @@ class ClientResourceDef(object):
 # used externally
 staticResourcePath = os.path.join(os.path.dirname(__file__), 'webstatic')
 
-
 _templatePath = os.path.join(os.path.dirname(__file__), 'webparts')
 
 
@@ -483,6 +483,41 @@ def _strport_to_url(desc, scheme='http', path='/', socket_port=0):
 		return '???'
 
 
+class _RadioIndexHtmlElement(template.Element):
+	loader = template.XMLFile(os.path.join(_templatePath, 'index.template.xhtml'))
+
+
+class _RadioIndexHtmlResource(resource.Resource):
+	isLeaf = True
+
+	def __init__(self):
+		self.__element = _RadioIndexHtmlElement()
+
+	def render_GET(self, request):
+		return renderElement(request, self.__element)
+
+	def render_PUT(self, request):
+		data = request.content.read()
+		self._cell.set(self.grparse(data))
+		request.setResponseCode(204)
+		self._noteDirty()
+		return ''
+
+	def resourceDescription(self):
+		return self._cell.description()
+
+
+def renderElement(request, element):
+	# per http://stackoverflow.com/questions/8160061/twisted-web-resource-resource-with-twisted-web-template-element-example
+	# should be replaced with twisted.web.template.renderElement once we have Twisted >= 12.1.0 available in MacPorts.
+	d = template.flatten(request, element, request.write)
+	def done(ignored):
+		request.finish()
+		return ignored
+	d.addBoth(done)
+	return server.NOT_DONE_YET
+	
+
 class WebService(Service):
 	# TODO: Too many parameters
 	def __init__(self, reactor, top, note_dirty, read_only_dbs, writable_db, http_endpoint, ws_endpoint, root_cap):
@@ -505,7 +540,7 @@ class WebService(Service):
 			self.__visit_path = '/' + urllib.quote(root_cap, safe='') + '/'
 		
 		# UI entry point
-		appRoot.putChild('', _make_static(os.path.join(_templatePath, 'index.html')))
+		appRoot.putChild('', _RadioIndexHtmlResource())
 		
 		# Exported radio control objects
 		appRoot.putChild('radio', BlockResource(top, note_dirty, notDeletable))
