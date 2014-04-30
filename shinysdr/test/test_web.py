@@ -64,6 +64,13 @@ class TestWebSite(unittest.TestCase):
 					'ONLYONE'.join(response.headers.getRawHeaders('Location'))))
 		
 		return testutil.http_get(reactor, url_without_slash).addCallback(callback)
+	
+	def test_index_page(self):
+		def callback((response, data)):
+			self.assertEqual(response.code, http.OK)
+			self.assertIn('</html>', data)
+		
+		return testutil.http_get(reactor, self.url).addCallback(callback)
 
 
 def _noop():
