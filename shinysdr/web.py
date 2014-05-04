@@ -30,7 +30,6 @@ from twisted.internet import protocol
 from twisted.internet import task
 from twisted.plugin import IPlugin, getPlugins
 from twisted.python import log
-from twisted.python.filepath import FilePath
 from twisted.web import http, static, server, resource, template
 from zope.interface import Interface, implements, providedBy  # available via Twisted
 
@@ -495,16 +494,6 @@ class _RadioIndexHtmlResource(resource.Resource):
 
 	def render_GET(self, request):
 		return renderElement(request, self.__element)
-
-	def render_PUT(self, request):
-		data = request.content.read()
-		self._cell.set(self.grparse(data))
-		request.setResponseCode(204)
-		self._noteDirty()
-		return ''
-
-	def resourceDescription(self):
-		return self._cell.description()
 
 
 def renderElement(request, element):
