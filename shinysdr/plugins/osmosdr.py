@@ -18,7 +18,8 @@
 from __future__ import absolute_import, division
 
 from shinysdr.source import Source
-from shinysdr.values import exported_value, setter, Range, Enum
+from shinysdr.types import Enum, Range
+from shinysdr.values import exported_value, setter
 
 import osmosdr
 

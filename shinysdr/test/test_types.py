@@ -19,7 +19,7 @@ from __future__ import absolute_import, division
 
 from twisted.trial import unittest
 
-from shinysdr.values import Enum, Range
+from shinysdr.types import Enum, Range
 
 
 def _testType(self, type_obj, good, bad):

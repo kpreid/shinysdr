@@ -27,7 +27,8 @@ from gnuradio.filter import firdes
 
 from shinysdr.modes import ModeDef, IDemodulator, ITunableDemodulator
 from shinysdr.blocks import MultistageChannelFilter, make_resampler
-from shinysdr.values import ExportedState, Range, exported_value, setter
+from shinysdr.types import Range
+from shinysdr.values import ExportedState, exported_value, setter
 
 import math
 

@@ -46,7 +46,8 @@ from twisted.python import log
 from twisted.web import static
 
 from shinysdr.top import IHasFrequency
-from shinysdr.values import Cell, ExportedState, Enum, Range
+from shinysdr.types import Enum, Range
+from shinysdr.values import Cell, ExportedState
 from shinysdr.web import ClientResourceDef
 
 

@@ -23,7 +23,8 @@ from gnuradio import gr
 from gnuradio import blocks
 
 from shinysdr.modes import ModeDef, IDemodulator
-from shinysdr.values import ExportedState, Notice, exported_value
+from shinysdr.types import Notice
+from shinysdr.values import ExportedState, exported_value
 from shinysdr.blocks import SubprocessSink, test_subprocess, make_resampler
 from shinysdr.plugins.basic_demod import NFMDemodulator
 

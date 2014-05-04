@@ -30,7 +30,8 @@ from zope.interface import Interface, implements  # available via Twisted
 from gnuradio import blocks
 from gnuradio import gr
 
-from shinysdr.values import ExportedState, CollectionState, exported_value, setter, BlockCell, Enum, IWritableCollection
+from shinysdr.types import Enum
+from shinysdr.values import ExportedState, CollectionState, exported_value, setter, BlockCell, IWritableCollection
 from shinysdr.blocks import make_resampler, MonitorSink, RecursiveLockBlockMixin, Context
 from shinysdr.receiver import Receiver
 

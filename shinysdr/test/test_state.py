@@ -19,7 +19,8 @@ from __future__ import absolute_import, division
 
 import unittest
 
-from shinysdr.values import ExportedState, BlockCell, CollectionState, Range, exported_value, setter
+from shinysdr.types import Range
+from shinysdr.values import ExportedState, BlockCell, CollectionState, exported_value, setter
 
 
 class TestDecorator(unittest.TestCase):

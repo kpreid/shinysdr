@@ -31,7 +31,8 @@ import math
 
 from shinysdr.blocks import rotator_inc
 from shinysdr.modes import ITunableDemodulator, get_modes, lookup_mode
-from shinysdr.values import ExportedState, BlockCell, Range, Enum, exported_value, setter
+from shinysdr.types import Enum, Range
+from shinysdr.values import ExportedState, BlockCell, exported_value, setter
 
 
 # arbitrary non-infinite limit

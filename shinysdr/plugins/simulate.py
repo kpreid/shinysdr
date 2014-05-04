@@ -28,7 +28,8 @@ import math
 
 from shinysdr.blocks import rotator_inc
 from shinysdr.source import Source
-from shinysdr.values import BlockCell, CollectionState, ExportedState, Range, exported_value, setter
+from shinysdr.types import Range
+from shinysdr.values import BlockCell, CollectionState, ExportedState, exported_value, setter
 
 
 class SimulatedSource(Source):

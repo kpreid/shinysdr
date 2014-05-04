@@ -28,7 +28,8 @@ from gnuradio.filter import pfb
 from gnuradio.filter import firdes
 from gnuradio.fft import logpwrfft
 
-from shinysdr.values import ExportedState, exported_value, setter, Range, StreamCell, ValueType
+from shinysdr.types import Range, ValueType
+from shinysdr.values import ExportedState, exported_value, setter, StreamCell
 
 
 class RecursiveLockBlockMixin(object):
