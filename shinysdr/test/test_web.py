@@ -30,7 +30,7 @@ from twisted.internet import reactor
 from twisted.web import http
 
 from shinysdr.db import DatabaseModel
-from shinysdr.values import ExportedState, CollectionState, exported_value, setter
+from shinysdr.values import BlockCell, ExportedState, CollectionState, NullExportedState, exported_value, nullExportedState, setter
 # TODO: StateStreamInner is an implementation detail; arrange a better interface to test
 from shinysdr.web import StateStreamInner, WebService
 from shinysdr.test import testutil
@@ -87,7 +87,8 @@ class SiteStateStub(ExportedState):
 class StateStreamTestCase(unittest.TestCase):
 	object = None  # should be set in subclass setUp
 	
-	def setUp(self):
+	def setUpForObject(self, obj):
+		self.object = obj
 		self.updates = []
 		
 		def send(value):
@@ -103,11 +104,8 @@ class StateStreamTestCase(unittest.TestCase):
 
 
 class TestStateStream(StateStreamTestCase):
-	def setUp(self):
-		self.object = StateSpecimen()
-		StateStreamTestCase.setUp(self)
-	
-	def test_init_mutate(self):
+	def test_init_and_mutate(self):
+		self.setUpForObject(StateSpecimen())
 		self.assertEqual(self.getUpdates(), [
 			['register_block', 1, 'urlroot', ['shinysdr.test.test_web.IFoo']],
 			['register_cell', 2, 'urlroot/rw', self.object.state()['rw'].description()],
@@ -118,6 +116,57 @@ class TestStateStream(StateStreamTestCase):
 		self.object.set_rw(2.0)
 		self.assertEqual(self.getUpdates(), [
 			['value', 2, self.object.get_rw()],
+		])
+
+	def test_two_references(self):
+		'''Two references are handled correctly, including not deleting until both are gone.'''
+		self.setUpForObject(DuplicateReferenceSpecimen())
+		self.assertEqual(self.getUpdates(), [
+			[u'register_block', 1, u'urlroot', []],
+			[u'register_cell', 2, u'urlroot/foo', self.object.state()['foo'].description()],
+			[u'register_block', 3, u'urlroot/foo', []],
+			[u'value', 3, {}],
+			[u'value', 2, 3],
+			[u'register_cell', 4, u'urlroot/bar', self.object.state()['bar'].description()],
+			[u'value', 4, 3],
+			[u'value', 1, {u'bar': 4, u'foo': 2}],
+			[u'value', 0, 1],
+		])
+		replacement = NullExportedState()
+		# becomes distinct
+		self.object.bar = replacement
+		self.assertEqual(self.getUpdates(), [
+			[u'register_block', 5, u'urlroot/bar', []],
+			[u'value', 5, {}],
+			[u'value', 4, 5]
+		])
+		# old value should be deleted
+		self.object.foo = replacement
+		self.assertEqual(self.getUpdates(), [
+			[u'value', 2, 5],
+			[u'delete', 3]
+		])
+		
+
+	def test_collection_delete(self):
+		d = {'a': ExportedState()}
+		self.setUpForObject(CollectionState(d, dynamic=True))
+		
+		self.assertEqual(self.getUpdates(), [
+			['register_block', 1, 'urlroot', []],
+			['register_cell', 2, 'urlroot/a', self.object.state()['a'].description()],
+			['register_block', 3, 'urlroot/a', []],
+			['value', 3, {}],
+			['value', 2, 3],
+			['value', 1, {'a': 2}],
+			['value', 0, 1],
+		])
+		self.assertEqual(self.getUpdates(), [])
+		del d['a']
+		self.assertEqual(self.getUpdates(), [
+			['value', 1, {}],
+			['delete', 2],
+			['delete', 3],
 		])
 
 
@@ -141,26 +190,14 @@ class StateSpecimen(ExportedState):
 		self.rw = value
 
 
-class TestCollectionStream(StateStreamTestCase):
-	def setUp(self):
-		self.d = {'a': ExportedState()}
-		self.object = CollectionState(self.d, dynamic=True)
-		StateStreamTestCase.setUp(self)
+class DuplicateReferenceSpecimen(ExportedState):
+	'''Helper for TestStateStream'''
+
+	def __init__(self):
+		self.foo = self.bar = nullExportedState
 	
-	def test_delete(self):
-		self.assertEqual(self.getUpdates(), [
-			['register_block', 1, 'urlroot', []],
-			['register_cell', 2, 'urlroot/a', self.object.state()['a'].description()],
-			['register_block', 3, 'urlroot/a', []],
-			['value', 3, {}],
-			['value', 2, 3],
-			['value', 1, {'a': 2}],
-			['value', 0, 1],
-		])
-		self.assertEqual(self.getUpdates(), [])
-		del self.d['a']
-		self.assertEqual(self.getUpdates(), [
-			['value', 1, {}],
-			['delete', 2],
-			['delete', 3],
-		])
+	def state_def(self, callback):
+		super(DuplicateReferenceSpecimen, self).state_def(callback)
+		# TODO make this possible to be decorator style
+		callback(BlockCell(self, 'foo'))
+		callback(BlockCell(self, 'bar'))

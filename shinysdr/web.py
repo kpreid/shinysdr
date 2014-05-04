@@ -46,7 +46,7 @@ import weakref
 import shinysdr.top
 import shinysdr.plugins
 import shinysdr.db
-from shinysdr.values import ExportedState, BaseCell, BlockCell, StreamCell, IWritableCollection
+from shinysdr.values import ExportedState, BaseCell, BlockCell, StreamCell, IWritableCollection, Poller
 
 
 # temporary kludge until upstream takes our patch
@@ -68,7 +68,7 @@ class CellResource(resource.Resource):
 
 	def __init__(self, cell, noteDirty):
 		self._cell = cell
-		# TODO: instead of needing this hook, main should reuse traverseUpdates
+		# TODO: instead of needing this hook, main should use poller
 		self._noteDirty = noteDirty
 
 	def grparse(self, value):
@@ -196,125 +196,178 @@ def _get_interfaces(obj):
 
 
 class _StateStreamObjectRegistration(object):
-	# all 'public' fields
-	
-	def __init__(self, obj, serial, url):
+	# TODO messy
+	def __init__(self, ssi, poller, obj, serial, url, refcount):
+		self.__ssi = ssi
 		self.obj = obj
 		self.serial = serial
 		self.url = url
 		self.has_previous_value = False
 		self.previous_value = None
+		self.value_is_references = False
+		self.__dead = False
+		if isinstance(obj, BaseCell):
+			if isinstance(obj, StreamCell):  # TODO kludge
+				self.__poller_registration = poller.subscribe(obj, self.__listen_binary_stream)
+			else:
+				self.__poller_registration = poller.subscribe(obj, self.__listen_cell)
+		else:
+			self.__poller_registration = poller.subscribe_state(obj, self.__listen_state)
+		self.__refcount = refcount
 	
-	def set_previous(self, value):
+	def set_previous(self, value, is_references):
+		if is_references:
+			for obj in value.itervalues():
+				if obj not in self.__ssi._registered:
+					raise Exception("shouldn't happen: previous value not registered", obj)
 		self.has_previous_value = True
 		self.previous_value = value
+		self.value_is_references = is_references
+	
+	def poll(self):
+		self.__poller_registration.poll_now()
+	
+	def __listen_cell(self):
+		if self.__dead:
+			return
+		obj = self.obj
+		if isinstance(obj, StreamCell):
+			raise Exception("shouldn't happen: StreamCell here")
+		if obj.isBlock():
+			block = obj.getBlock()
+			self.__ssi._lookup_or_register(block, self.url)
+			self.__maybesend_reference({u'value': block}, True)
+		else:
+			value = obj.get()
+			self.__maybesend(value, value)
+	
+	def __listen_binary_stream(self, value):
+		if self.__dead:
+			return
+		self.__ssi._send1(True, struct.pack('I', self.serial) + value)
+	
+	def __listen_state(self, state):
+		if self.__dead:
+			return
+		self.__maybesend_reference(state, False)
+	
+	# TODO fix private refs to ssi here
+	def __maybesend(self, compare_value, update_value):
+		if not self.has_previous_value or compare_value != self.previous_value[u'value']:
+			self.set_previous({u'value': compare_value}, False)
+			self.__ssi._send1(False, ('value', self.serial, update_value))
+	
+	def __maybesend_reference(self, objs, is_single):
+		registrations = {
+			k: self.__ssi._lookup_or_register(v, self.url + '/' + urllib.unquote(k))
+			for k, v in objs.iteritems()
+		}
+		serials = {k: v.serial for k, v in registrations.iteritems()}
+		if not self.has_previous_value or objs != self.previous_value:
+			for reg in registrations.itervalues():
+				reg.inc_refcount()
+			if is_single:
+				self.__ssi._send1(False, ('value', self.serial, serials[u'value']))
+			else:
+				self.__ssi._send1(False, ('value', self.serial, serials))
+			if self.has_previous_value:
+				refs = self.previous_value.values()
+				refs.sort()  # ensure determinism
+				for obj in refs:
+					if obj not in self.__ssi._registered:
+						raise Exception("Shouldn't happen: previous value not registered", obj)
+					self.__ssi._registered[obj].dec_refcount_and_maybe_notify()
+			self.set_previous(objs, True)
+	
+	def drop(self):
+		# TODO this should go away in refcount world
+		if self.__poller_registration is not None:
+			self.__poller_registration.unsubscribe()
+	
+	def inc_refcount(self):
+		if self.__dead:
+			raise Exception('incing dead reference')
+		self.__refcount += 1
+	
+	def dec_refcount_and_maybe_notify(self):
+		if self.__dead:
+			raise Exception('decing dead reference')
+		self.__refcount -= 1
+		if self.__refcount == 0:
+			self.__dead = True
+			#print 'deleting', self.obj
+			self.__ssi.do_delete(self)
+			
+			# capture refs to decrement
+			if self.value_is_references:
+				refs = self.previous_value.values()
+				refs.sort()  # ensure determinism
+			else:
+				refs = []
+			
+			# drop previous value
+			self.previous_value = None
+			self.has_previous_value = False
+			self.value_is_references = False
+			
+			# decrement refs
+			for obj in refs:
+				self.__ssi._registered[obj].dec_refcount_and_maybe_notify()
 
 
 # TODO: Better name for this category of object
 class StateStreamInner(object):
-	def __init__(self, send, block, rootURL):
+	def __init__(self, send, block, root_url):
+		self.__poller = Poller()  # TODO should be scoped to the reactor
 		self._send = send
 		self._block = block
 		self._cell = BlockCell(self, '_block')
 		self._lastSerial = 0
-		self._registered = {self._cell: _StateStreamObjectRegistration(obj=self._cell, serial=0, url=rootURL)}
+		self._registered = {self._cell: _StateStreamObjectRegistration(ssi=self, poller=self.__poller, obj=self._cell, serial=0, url=root_url, refcount=0)}
 		self._send_batch = []
+		self.__root_url = root_url
 	
 	def connectionLost(self, reason):
 		for obj in self._registered.keys():
 			self.__drop(obj)
 	
+	def do_delete(self, reg):
+		self._send1(False, ('delete', reg.serial))
+		self.__drop(reg.obj)
+	
 	def __drop(self, obj):
-		if isinstance(obj, StreamCell):  # TODO kludge; use generic interface
-			subscription = self._registered[obj].previous_value
-			subscription.close()
+		self._registered[obj].drop()
 		del self._registered[obj]
 	
-	def _checkUpdates(self):
-		seen_this_time = set([self._cell])
-		
-		def maybesend(registration, compare_value, update_value):
-			if not registration.has_previous_value or compare_value != registration.previous_value:
-				registration.set_previous(compare_value)
-				self.__send1(False, ('value', registration.serial, update_value))
-		
-		def traverse(obj):
-			#print 'traverse', obj, registration.serial
-			registration = self._registered[obj]
-			url = registration.url
-			if isinstance(obj, ExportedState):
-				#print '  is block'
-				for key, cell in obj.state().iteritems():
-					#print '  child: ', key, cell
-					meet(cell, url + '/' + urllib.unquote(key))
-				if obj.state_is_dynamic() or not registration.has_previous_value:
-					# functions as (current) signature of object
-					state = obj.state()
-					maybesend(registration, state, {k: self._registered[v].serial for k, v in state.iteritems()})
-				else:
-					state = None
-			elif isinstance(obj, BaseCell):   # TODO: be an interface type?
-				#print '  is cell'
-				if obj.isBlock():
-					block = obj.getBlock()
-					meet(block, url)
-					maybesend(registration, block, self._registered[block].serial)
-				elif isinstance(obj, StreamCell):  # TODO kludge
-					subscription = registration.previous_value
-					while True:
-						b = subscription.get(binary=True)
-						if b is None: break
-						self.__send1(True, struct.pack('I', registration.serial) + b)
-				else:
-					value = obj.get()
-					maybesend(registration, value, value)
+	def _lookup_or_register(self, obj, url):
+		if obj in self._registered:
+			return self._registered[obj]
+		else:
+			self._lastSerial += 1
+			serial = self._lastSerial
+			#print 'registering', obj, serial
+			registration = _StateStreamObjectRegistration(ssi=self, poller=self.__poller, obj=obj, serial=serial, url=url, refcount=0)
+			self._registered[obj] = registration
+			if isinstance(obj, BaseCell):
+				self._send1(False, ('register_cell', serial, url, obj.description()))
+				if isinstance(obj, StreamCell):  # TODO kludge
+					pass
+				elif not obj.isBlock():  # TODO condition is a kludge due to block cell values being gook
+					registration.set_previous({u'value': obj.get()}, False)
+			elif isinstance(obj, ExportedState):
+				self._send1(False, ('register_block', serial, url, _get_interfaces(obj)))
 			else:
-				#print '  unrecognized'
-				# TODO: warn unrecognized
-				return
-		
-		def meet(obj, url):
-			#print 'meet', obj, url
-			seen_this_time.add(obj)
-			if obj not in self._registered:
-				self._lastSerial += 1
-				serial = self._lastSerial
-				#print 'registering', obj, serial
-				registration = _StateStreamObjectRegistration(obj=obj, serial=serial, url=url)
-				self._registered[obj] = registration
-				if isinstance(obj, BaseCell):
-					self.__send1(False, ('register_cell', serial, url, obj.description()))
-					if isinstance(obj, StreamCell):  # TODO kludge
-						registration.set_previous(obj.subscribe())
-					else:
-						registration.set_previous(obj.get())
-				elif isinstance(obj, ExportedState):
-					# let traverse send the state details
-					self.__send1(False, ('register_block', serial, url, _get_interfaces(obj)))
-				else:
-					# TODO: not implemented on client (but shouldn't happen)
-					self.__send1(False, ('register', serial, url))
-			traverse(obj)
-		
-		# walk
-		traverse(self._cell)
-		
-		# delete not seen
-		deletions = []
-		for obj in self._registered:
-			if obj not in seen_this_time:
-				deletions.append(self._registered[obj])
-		deletions.sort(key=lambda reg: reg.serial)  # deterministic order
-		for reg in deletions:
-			self.__send1(False, ('delete', reg.serial))
-			self.__drop(reg.obj)
+				# TODO: not implemented on client (but shouldn't happen)
+				self._send1(False, ('register', serial, url))
+			registration.poll()  # send state details
+			return registration
 	
 	def __flush(self):
 		if len(self._send_batch) > 0:
 			self._send(unicode(json.dumps(self._send_batch, ensure_ascii=False)))
 			self._send_batch = []
 	
-	def __send1(self, binary, value):
+	def _send1(self, binary, value):
 		if binary:
 			self.__flush()
 			self._send(value)
@@ -322,7 +375,7 @@ class StateStreamInner(object):
 			self._send_batch.append(value)
 	
 	def poll(self):
-		self._checkUpdates()
+		self.__poller.poll()
 		self.__flush()
 
 

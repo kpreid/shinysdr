@@ -226,7 +226,8 @@ class CollectionMemberCell(BaseBlockCell):
 		BaseBlockCell.__init__(self, target, key, persists=persists)
 	
 	def getBlock(self):
-		return self._target._collection[self._key]
+		# fallback to nullExportedState so that if we become invalid in a dynamic collection we don't break
+		return self._target._collection.get(self._key, nullExportedState)
 
 
 class ExportedState(object):
@@ -398,3 +399,114 @@ class ExportedSetter(object):
 			return self
 		else:
 			return self.__function.__get__(obj, type)
+
+
+class Poller(object):
+	'''
+	Polls cells for new values.
+	'''
+	
+	def __init__(self):
+		self._subscriptions = set()
+		self._subscriptions_sorted = []
+	
+	def subscribe(self, cell, callback):
+		if not isinstance(cell, BaseCell):
+			# we're not actually against duck typing here; this is a sanity check
+			raise TypeError('Poller given a non-cell %r' % (cell,))
+		if isinstance(cell, StreamCell):  # TODO kludge; use generic interface
+			return _PollerStreamSubscription(self, cell, callback)
+		else:
+			return _PollerValueSubscription(self, cell, callback)
+	
+	# TODO: consider replacing this with a special derived cell
+	def subscribe_state(self, obj, callback):
+		if not isinstance(obj, ExportedState):
+			# we're not actually against duck typing here; this is a sanity check
+			raise TypeError('Poller given a non-ES %r' % (obj,))
+		return _PollerStateSubscription(self, obj, callback)
+	
+	def _add_subscription(self, subscription):
+		self._subscriptions.add(subscription)
+		# sorting provides determinism for testing etc.
+		self._subscriptions_sorted.append(subscription)
+		self._subscriptions_sorted.sort()
+	
+	def _remove_subscription(self, subscription):
+		self._subscriptions.remove(subscription)
+		self._subscriptions_sorted = list(self._subscriptions)
+		self._subscriptions_sorted.sort()
+	
+	def poll(self):
+		for subscription in self._subscriptions_sorted:
+			subscription._poll()
+
+
+class _PollerSubscription(object):
+	def __init__(self, poller, cell, callback):
+		self._cell = cell
+		self._callback = callback
+		self._poller = poller
+		poller._add_subscription(self)
+	
+	def poll_now(self):
+		self._poll()
+	
+	def _poll(self):
+		raise NotImplementedError()
+	
+	def unsubscribe(self):
+		if self not in self._poller._subscriptions:
+			raise Exception('This subscription already unsubscribed')
+		self._poller._remove_subscription(self)
+
+
+class _PollerValueSubscription(_PollerSubscription):
+	def __init__(self, poller, cell, callback):
+		_PollerSubscription.__init__(self, poller, cell, callback)
+		self.__previous_value = object()  # arbitrary unequal value, should never be seen
+
+	def _poll(self):
+		# TODO not fully implemented
+		if self._cell.isBlock():  # TODO kill this distinction
+			value = self._cell.getBlock()
+		else:
+			value = self._cell.get()
+		if value != self.__previous_value:
+			self.__previous_value = value
+			# TODO should pass value in to avoid redundant gets
+			self._callback()
+
+
+class _PollerStateSubscription(_PollerSubscription):
+	def __init__(self, poller, obj, callback):
+		_PollerSubscription.__init__(self, poller, obj, callback)
+		self.__previous_structure = None  # unequal to any state dict
+		self.__dynamic = obj.state_is_dynamic()
+
+	def _poll(self):
+		obj = self._cell  # TODO unfortunate naming
+		if self.__dynamic or self.__previous_structure is None:
+			now = obj.state()
+			if now != self.__previous_structure:
+				self.__previous_structure = now
+				self._callback(now)
+
+
+class _PollerStreamSubscription(_PollerSubscription):
+	# TODO there are no tests for stream subscriptions
+	def __init__(self, poller, cell, callback):
+		_PollerSubscription.__init__(self, poller, cell, callback)
+		self.__subscription = cell.subscribe()
+
+	def _poll(self):
+		subscription = self.__subscription
+		while True:
+			value = subscription.get(binary=True)  # TODO inflexible
+			if value is None: break
+			self._callback(value)
+	
+	def unsubscribe(self):
+		super(_PollerStreamSubscription, self).unsubscribe()
+		self.__subscription.close()
+
