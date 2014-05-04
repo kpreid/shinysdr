@@ -47,24 +47,24 @@ class TestMultistageChannelFilter(unittest.TestCase):
 	def test_basic(self):
 		# TODO: Test filter functionality more
 		f = MultistageChannelFilter(input_rate=32000000, output_rate=16000, cutoff_freq=3000, transition_width=1200)
-		self.__run(f, 400000, 16000/32000000)
+		self.__run(f, 400000, 16000 / 32000000)
 	
 	def test_float_rates(self):
 		# Either float or int rates should be accepted
 		f = MultistageChannelFilter(input_rate=32000000.0, output_rate=16000.0, cutoff_freq=3000, transition_width=1200)
-		self.__run(f, 400000, 16000/32000000)
+		self.__run(f, 400000, 16000 / 32000000)
 	
 	def test_interpolating(self):
 		'''Output rate higher than input rate'''
 		# TODO: Test filter functionality more
 		f = MultistageChannelFilter(input_rate=8000, output_rate=20000, cutoff_freq=8000, transition_width=5000)
-		self.__run(f, 4000, 20000/8000)
+		self.__run(f, 4000, 20000 / 8000)
 	
 	def test_odd_interpolating(self):
 		'''Output rate higher than input rate and not a multiple'''
 		# TODO: Test filter functionality more
 		f = MultistageChannelFilter(input_rate=8000, output_rate=21234, cutoff_freq=8000, transition_width=5000)
-		self.__run(f, 4000, 21234/8000)
+		self.__run(f, 4000, 21234 / 8000)
 	
 	def test_explain(self):
 		f = MultistageChannelFilter(input_rate=10000, output_rate=1000, cutoff_freq=500, transition_width=100)

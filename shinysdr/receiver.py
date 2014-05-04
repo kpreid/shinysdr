@@ -272,4 +272,3 @@ class ContextForDemodulator(object):
 
 	def unlock(self):
 		self._receiver.context.unlock()
-

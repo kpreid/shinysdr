@@ -84,7 +84,6 @@ def _atomic_open_for_write(name, mode):
 			os.rename(newname, name)
 		else:
 			log.msg('Not installing new-version due to error: %s' % newname)
-	
 
 
 def database_from_csv(reactor, pathname, writable):

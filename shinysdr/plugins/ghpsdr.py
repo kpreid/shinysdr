@@ -148,11 +148,11 @@ class _DspserverProtocol(protocol.Protocol):
 				0,
 				2,
 				1,
-				self._req_width, # short
-				0, # meter
-				0, # subrx meter
+				self._req_width,  # short
+				0,  # meter
+				0,  # subrx meter
 				sample_rate,
-				receiver.get_rec_freq() - freq, # lo_offset
+				receiver.get_rec_freq() - freq,  # lo_offset
 				''.join([chr(int(max(1, min(255, -(x - 20))))) for x in fft]))
 			self.transport.write(msg)
 

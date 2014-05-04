@@ -500,9 +500,11 @@ def renderElement(request, element):
 	# per http://stackoverflow.com/questions/8160061/twisted-web-resource-resource-with-twisted-web-template-element-example
 	# should be replaced with twisted.web.template.renderElement once we have Twisted >= 12.1.0 available in MacPorts.
 	d = template.flatten(request, element, request.write)
+	
 	def done(ignored):
 		request.finish()
 		return ignored
+	
 	d.addBoth(done)
 	return server.NOT_DONE_YET
 	

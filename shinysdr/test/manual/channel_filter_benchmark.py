@@ -30,6 +30,7 @@ from gnuradio import gr
 
 from shinysdr.blocks import MultistageChannelFilter
 
+
 def test_one_filter(**kwargs):
 	print '------ %s -------' % (kwargs,)
 	f = MultistageChannelFilter(**kwargs)
@@ -51,6 +52,7 @@ def test_one_filter(**kwargs):
 	t1 = time.clock()
 
 	print size, 'samples processed in', t1 - t0, 'CPU-seconds'
+
 
 if __name__ == '__main__':
 	# like SSB

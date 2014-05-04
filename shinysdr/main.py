@@ -35,6 +35,7 @@ from twisted.python import log
 import shinysdr  # put into config namespace
 from shinysdr.config import Config, make_default_config
 
+
 def main(argv=None, _abort_for_test=False):
 	if argv is None:
 		argv = sys.argv
