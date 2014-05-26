@@ -47,6 +47,7 @@ class TestWebSite(unittest.TestCase):
 			read_only_dbs={},
 			writable_db=DatabaseModel(reactor, []),
 			top=SiteStateStub(),
+			title='test title',
 			note_dirty=_noop)
 		self.__service.startService()
 		self.url = self.__service.get_url()
@@ -68,7 +69,9 @@ class TestWebSite(unittest.TestCase):
 	def test_index_page(self):
 		def callback((response, data)):
 			self.assertEqual(response.code, http.OK)
-			self.assertIn('</html>', data)
+			self.assertIn('</html>', data)  # complete
+			self.assertIn('<title>test title</title>', data)
+			# TODO: Probably not here, add an end-to-end test for page title _default_.
 		
 		return testutil.http_get(reactor, self.url).addCallback(callback)
 

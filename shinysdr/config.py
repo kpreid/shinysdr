@@ -65,7 +65,7 @@ class Config(object):
 	def persist_to_file(self, filename):
 		self._state_filename = str(filename)
 
-	def serve_web(self, http_endpoint, ws_endpoint, root_cap='%(root_cap)s'):
+	def serve_web(self, http_endpoint, ws_endpoint, root_cap='%(root_cap)s', title=u'ShinySDR'):
 		# TODO: See if we're reinventing bits of Twisted service stuff here
 		
 		def make_service(top, note_dirty):
@@ -78,7 +78,8 @@ class Config(object):
 				writable_db=self.databases._get_writable_database(),
 				http_endpoint=http_endpoint,
 				ws_endpoint=ws_endpoint,
-				root_cap=root_cap)
+				root_cap=root_cap,
+				title=title)
 		
 		self._service_makers.append(make_service)
 
@@ -186,5 +187,8 @@ config.serve_web(
 	# provide any real security unless using HTTPS. The default value
 	# in this file has been automatically generated from 128 random bits.
 	# Set to None to not use any secret.
-	root_cap='%(root_cap)s')
+	root_cap='%(root_cap)s'
+	
+	# Page title / station name
+	title='ShinySDR')
 ''' % {'root_cap': base64.urlsafe_b64encode(os.urandom(128 // 8)).replace('=', '')}

@@ -484,13 +484,20 @@ def _strport_to_url(desc, scheme='http', path='/', socket_port=0):
 
 class _RadioIndexHtmlElement(template.Element):
 	loader = template.XMLFile(os.path.join(_templatePath, 'index.template.xhtml'))
+	
+	def __init__(self, title):
+		self.__title = unicode(title)
+	
+	@template.renderer
+	def title(self, request, tag):
+		return tag(self.__title)
 
 
 class _RadioIndexHtmlResource(resource.Resource):
 	isLeaf = True
 
-	def __init__(self):
-		self.__element = _RadioIndexHtmlElement()
+	def __init__(self, title):
+		self.__element = _RadioIndexHtmlElement(title)
 
 	def render_GET(self, request):
 		return renderElement(request, self.__element)
@@ -511,7 +518,7 @@ def renderElement(request, element):
 
 class WebService(Service):
 	# TODO: Too many parameters
-	def __init__(self, reactor, top, note_dirty, read_only_dbs, writable_db, http_endpoint, ws_endpoint, root_cap):
+	def __init__(self, reactor, top, note_dirty, read_only_dbs, writable_db, http_endpoint, ws_endpoint, root_cap, title):
 		self.__http_port = http_endpoint
 		self.__ws_port = ws_endpoint
 		
@@ -531,7 +538,7 @@ class WebService(Service):
 			self.__visit_path = '/' + urllib.quote(root_cap, safe='') + '/'
 		
 		# UI entry point
-		appRoot.putChild('', _RadioIndexHtmlResource())
+		appRoot.putChild('', _RadioIndexHtmlResource(title))
 		
 		# Exported radio control objects
 		appRoot.putChild('radio', BlockResource(top, note_dirty, notDeletable))
