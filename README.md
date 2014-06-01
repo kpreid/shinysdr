@@ -43,11 +43,12 @@ Then either run the script `fetch-js-deps.sh`, or copy or symlink the following 
 
 After the above dependencies have been installed, you may use the Python `setup.py` to install ShinySDR, or simply run it from this directory — installation is entirely optional.
 
-The web UI currently supports only [Google Chrome](https://www.google.com/chrome/) (including Chrome OS and Chrome for Android; no testing has been done on Chromium).
+The only web browser currently supported is [Google Chrome](https://www.google.com/chrome/) (excluding Chrome for iPhone or iPad).
 While it is not *intended* to be Chrome-only, no attempt has been made to avoid using facilities which are *not yet* implemented in other browsers.
+Safari (Mac, 7.0.4) is known to work functionally but with broken flexbox UI layout, and Firefox (29) doesn't work at all (WebSocket fails to connect).
 
 Currently, the client must have the same endianness and floating-point format as the server.
-This may be fixed in the future.
+This may be fixed in the future (if I ever hear of this actually being a problem, or if the data in question is switched to fixed-point to reduce data rate).
 
 Setup
 -----
