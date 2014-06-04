@@ -46,7 +46,7 @@ import weakref
 import shinysdr.top
 import shinysdr.plugins
 import shinysdr.db
-from shinysdr.values import ExportedState, BaseCell, BlockCell, StreamCell, IWritableCollection, Poller
+from shinysdr.values import ExportedState, BaseCell, BlockCell, StreamCell, IWritableCollection, the_poller
 
 
 # temporary kludge until upstream takes our patch
@@ -317,8 +317,8 @@ class _StateStreamObjectRegistration(object):
 
 # TODO: Better name for this category of object
 class StateStreamInner(object):
-	def __init__(self, send, block, root_url):
-		self.__poller = Poller()  # TODO should be scoped to the reactor
+	def __init__(self, send, block, root_url, poller=the_poller):
+		self.__poller = poller
 		self._send = send
 		self._block = block
 		self._cell = BlockCell(self, '_block')
@@ -375,7 +375,7 @@ class StateStreamInner(object):
 			self._send_batch.append(value)
 	
 	def poll(self):
-		self.__poller.poll()
+		# TODO: flushing should be done as-needed rather than constantly
 		self.__flush()
 
 

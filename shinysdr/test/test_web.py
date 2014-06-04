@@ -30,7 +30,7 @@ from twisted.internet import reactor
 from twisted.web import http
 
 from shinysdr.db import DatabaseModel
-from shinysdr.values import BlockCell, ExportedState, CollectionState, NullExportedState, exported_value, nullExportedState, setter
+from shinysdr.values import BlockCell, ExportedState, CollectionState, NullExportedState, Poller, exported_value, nullExportedState, setter
 # TODO: StateStreamInner is an implementation detail; arrange a better interface to test
 from shinysdr.web import StateStreamInner, WebService
 from shinysdr.test import testutil
@@ -90,13 +90,16 @@ class StateStreamTestCase(unittest.TestCase):
 	def setUpForObject(self, obj):
 		self.object = obj
 		self.updates = []
+		self.poller = Poller()
 		
 		def send(value):
 			self.updates.extend(json.loads(value))
 		
-		self.stream = StateStreamInner(send, self.object, 'urlroot')
+		self.stream = StateStreamInner(send, self.object, 'urlroot', poller=self.poller)
 	
 	def getUpdates(self):
+		# warning: implementation poking
+		self.poller.poll()
 		self.stream.poll()
 		u = self.updates
 		self.updates = []

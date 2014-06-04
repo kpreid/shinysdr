@@ -24,6 +24,7 @@ from __future__ import absolute_import, division
 import array
 import struct
 
+from twisted.internet import task, reactor as the_reactor
 from twisted.python import log
 from zope.interface import Interface  # available via Twisted
 
@@ -442,6 +443,25 @@ class Poller(object):
 			subscription._poll()
 
 
+class AutomaticPoller(Poller):
+	def __init__(self):
+		# not paramterized with reactor because LoopingCall isn't anyway
+		Poller.__init__(self)
+		self.__loop = task.LoopingCall(self.poll)
+		self.__started = False
+	
+	def _add_subscription(self, subscription):
+		super(AutomaticPoller, self)._add_subscription(subscription)
+		if not self.__started:
+			self.__started = True
+			# TODO: eventually there should be selectable schedules for different cells / clients
+			# using callLater because start will call _immediately_ :(
+			the_reactor.callLater(0, self.__loop.start, 1.0 / 61)
+
+
+the_poller = AutomaticPoller()
+
+
 class _PollerSubscription(object):
 	def __init__(self, poller, cell, callback):
 		self._cell = cell
@@ -450,6 +470,7 @@ class _PollerSubscription(object):
 		poller._add_subscription(self)
 	
 	def poll_now(self):
+		'''If the callback should be called, call it now.'''
 		self._poll()
 	
 	def _poll(self):
