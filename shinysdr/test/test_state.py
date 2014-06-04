@@ -20,7 +20,7 @@ from __future__ import absolute_import, division
 import unittest
 
 from shinysdr.types import Range
-from shinysdr.values import ExportedState, BlockCell, CollectionState, exported_value, setter
+from shinysdr.values import ExportedState, BlockCell, CollectionState, Poller, exported_value, setter
 
 
 class TestDecorator(unittest.TestCase):
@@ -129,3 +129,43 @@ class CellIdentitySpecimen(ExportedState):
 		super(CellIdentitySpecimen, self).state_def(callback)
 		# TODO make this possible to be decorator style
 		callback(BlockCell(self, 'block'))
+
+
+class TestPoller(unittest.TestCase):
+	def setUp(self):
+		self.poller = Poller()
+		self.cells = PollerCellsSpecimen()
+	
+	def test_trivial(self):
+		cell = self.cells.state()['foo']
+		called = [0]
+		
+		def callback():
+			called[0] += 1
+		
+		self.poller.subscribe(cell, callback)
+		self.assertEqual(0, called[0], 'initial')
+		self.poller.poll()
+		self.assertEqual(0, called[0], 'noop poll')
+		self.cells.set_foo('a')
+		self.assertEqual(0, called[0], 'after set')
+		self.poller.poll()
+		self.assertEqual(1, called[0], 'poll after set')
+
+
+# TODO: this would be unnecessary if we had stand-alone cells
+class PollerCellsSpecimen(ExportedState):
+	'''Helper for TestPoller'''
+	foo = None
+	
+	# force worst-case
+	def state_is_dynamic(self):
+		return True
+	
+	@exported_value()
+	def get_foo(self):
+		return self.foo
+
+	@setter
+	def set_foo(self, value):
+		self.foo = value

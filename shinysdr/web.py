@@ -209,10 +209,13 @@ class _StateStreamObjectRegistration(object):
 		if isinstance(obj, BaseCell):
 			if isinstance(obj, StreamCell):  # TODO kludge
 				self.__poller_registration = poller.subscribe(obj, self.__listen_binary_stream)
+				self.initial_nudge = lambda: None
 			else:
 				self.__poller_registration = poller.subscribe(obj, self.__listen_cell)
+				self.initial_nudge = self.__listen_cell
 		else:
 			self.__poller_registration = poller.subscribe_state(obj, self.__listen_state)
+			self.initial_nudge = lambda: self.__listen_state(self.obj.state())
 		self.__refcount = refcount
 	
 	def set_previous(self, value, is_references):
@@ -224,8 +227,12 @@ class _StateStreamObjectRegistration(object):
 		self.previous_value = value
 		self.value_is_references = is_references
 	
-	def poll(self):
-		self.__poller_registration.poll_now()
+	def send_initial_value(self):
+		'''kludge to get initial state sent'''
+		
+	
+	def initial_nudge(self):
+		raise NotImplementedError()  # should be overridden in instance
 	
 	def __listen_cell(self):
 		if self.__dead:
@@ -323,9 +330,11 @@ class StateStreamInner(object):
 		self._block = block
 		self._cell = BlockCell(self, '_block')
 		self._lastSerial = 0
-		self._registered = {self._cell: _StateStreamObjectRegistration(ssi=self, poller=self.__poller, obj=self._cell, serial=0, url=root_url, refcount=0)}
+		root_registration = _StateStreamObjectRegistration(ssi=self, poller=self.__poller, obj=self._cell, serial=0, url=root_url, refcount=0)
+		self._registered = {self._cell: root_registration}
 		self._send_batch = []
 		self.__root_url = root_url
+		root_registration.initial_nudge()
 	
 	def connectionLost(self, reason):
 		for obj in self._registered.keys():
@@ -359,7 +368,7 @@ class StateStreamInner(object):
 			else:
 				# TODO: not implemented on client (but shouldn't happen)
 				self._send1(False, ('register', serial, url))
-			registration.poll()  # send state details
+			registration.initial_nudge()
 			return registration
 	
 	def __flush(self):

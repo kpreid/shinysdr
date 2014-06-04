@@ -22,6 +22,7 @@
 from __future__ import absolute_import, division
 
 import array
+import bisect
 import struct
 
 from twisted.internet import task, reactor as the_reactor
@@ -402,45 +403,93 @@ class ExportedSetter(object):
 			return self.__function.__get__(obj, type)
 
 
+class _SortedMultimap(object):
+	'''
+	Support for Poller.
+	Properties not explained by the name:
+	* Values must be unique within a given key.
+	* Keys are iterated in sorted order (values are not)
+	'''
+	def __init__(self):
+		# key -> set(values)
+		self.__dict = {}
+		# keys in sorted order
+		self.__sorted = []
+	
+	def iter_snapshot(self):
+		# TODO: consider not exposing the value sets directly, especially as this allows noticing mutation
+		return ((key, self.__dict[key]) for key in self.__sorted)
+	
+	def add(self, key, value):
+		if key in self.__dict:
+			values = self.__dict[key]
+		else:
+			values = set()
+			self.__dict[key] = values
+			bisect.insort(self.__sorted, key)
+		if value in values:
+			raise KeyError('Duplicate add: %r' % ((key, value),))
+		values.add(value)
+	
+	def remove(self, key, value):
+		'''Returns true if the value was the last value for that key'''
+		if key not in self.__dict:
+			raise KeyError('No key to remove: %r' % ((key, value),))
+		values = self.__dict[key]
+		if value not in values:
+			raise KeyError('No value to remove: %r' % ((key, value),))
+		values.remove(value)
+		last_out = len(values) == 0
+		if last_out:
+			sorted = self.__sorted
+			del self.__dict[key]
+			index = bisect.bisect_left(sorted, key)
+			if sorted[index] != key:
+				raise Exception("can't happen")
+			sorted[index:index + 1] = []
+		return last_out
+
+
 class Poller(object):
 	'''
 	Polls cells for new values.
 	'''
 	
 	def __init__(self):
-		self._subscriptions = set()
-		self._subscriptions_sorted = []
+		# sorting provides determinism for testing etc.
+		self.__targets = _SortedMultimap()
 	
 	def subscribe(self, cell, callback):
 		if not isinstance(cell, BaseCell):
 			# we're not actually against duck typing here; this is a sanity check
 			raise TypeError('Poller given a non-cell %r' % (cell,))
 		if isinstance(cell, StreamCell):  # TODO kludge; use generic interface
-			return _PollerStreamSubscription(self, cell, callback)
+			return _PollerSubscription(self, _PollerStreamTarget(cell), callback)
 		else:
-			return _PollerValueSubscription(self, cell, callback)
+			return _PollerSubscription(self, _PollerValueTarget(cell), callback)
 	
 	# TODO: consider replacing this with a special derived cell
 	def subscribe_state(self, obj, callback):
 		if not isinstance(obj, ExportedState):
 			# we're not actually against duck typing here; this is a sanity check
 			raise TypeError('Poller given a non-ES %r' % (obj,))
-		return _PollerStateSubscription(self, obj, callback)
+		return _PollerSubscription(self, _PollerStateTarget(obj), callback)
 	
-	def _add_subscription(self, subscription):
-		self._subscriptions.add(subscription)
-		# sorting provides determinism for testing etc.
-		self._subscriptions_sorted.append(subscription)
-		self._subscriptions_sorted.sort()
+	def _add_subscription(self, target, subscription):
+		self.__targets.add(target, subscription)
 	
-	def _remove_subscription(self, subscription):
-		self._subscriptions.remove(subscription)
-		self._subscriptions_sorted = list(self._subscriptions)
-		self._subscriptions_sorted.sort()
+	def _remove_subscription(self, target, subscription):
+		last_out = self.__targets.remove(target, subscription)
+		if last_out:
+			target.unsubscribe()
 	
 	def poll(self):
-		for subscription in self._subscriptions_sorted:
-			subscription._poll()
+		for target, subscriptions in self.__targets.iter_snapshot():
+			def fire(*args, **kwargs):
+				for s in subscriptions:
+					s._fire(*args, **kwargs)
+			
+			target.poll(fire)
 
 
 class AutomaticPoller(Poller):
@@ -450,8 +499,9 @@ class AutomaticPoller(Poller):
 		self.__loop = task.LoopingCall(self.poll)
 		self.__started = False
 	
-	def _add_subscription(self, subscription):
-		super(AutomaticPoller, self)._add_subscription(subscription)
+	def _add_subscription(self, target, subscription):
+		# Hook to start call
+		super(AutomaticPoller, self)._add_subscription(target, subscription)
 		if not self.__started:
 			self.__started = True
 			# TODO: eventually there should be selectable schedules for different cells / clients
@@ -463,71 +513,83 @@ the_poller = AutomaticPoller()
 
 
 class _PollerSubscription(object):
-	def __init__(self, poller, cell, callback):
-		self._cell = cell
-		self._callback = callback
+	def __init__(self, poller, target, callback):
+		self._fire = callback
+		self._target = target
 		self._poller = poller
-		poller._add_subscription(self)
+		poller._add_subscription(target, self)
 	
-	def poll_now(self):
-		'''If the callback should be called, call it now.'''
-		self._poll()
+	def unsubscribe(self):
+		self._poller._remove_subscription(self._target, self)
+
+
+class _PollerTarget(object):
+	def __init__(self, obj):
+		self._obj = obj
+		self._subscriptions = []
 	
-	def _poll(self):
+	def __eq__(self, other):
+		return type(self) == type(other) and self._obj == other._obj
+	
+	def __hash__(self):
+		return hash(self._obj)
+	
+	def poll(self, fire):
+		'''Call fire (with arbitrary info in args) if the thing polled has changed.'''
 		raise NotImplementedError()
 	
 	def unsubscribe(self):
-		if self not in self._poller._subscriptions:
-			raise Exception('This subscription already unsubscribed')
-		self._poller._remove_subscription(self)
+		pass
 
 
-class _PollerValueSubscription(_PollerSubscription):
-	def __init__(self, poller, cell, callback):
-		_PollerSubscription.__init__(self, poller, cell, callback)
-		self.__previous_value = object()  # arbitrary unequal value, should never be seen
+class _PollerValueTarget(_PollerTarget):
+	def __init__(self, cell):
+		_PollerTarget.__init__(self, cell)
+		self.__previous_value = self.__get()
 
-	def _poll(self):
-		# TODO not fully implemented
-		if self._cell.isBlock():  # TODO kill this distinction
-			value = self._cell.getBlock()
+	def __get(self):
+		if self._obj.isBlock():  # TODO kill this distinction
+			return  self._obj.getBlock()
 		else:
-			value = self._cell.get()
+			return self._obj.get()
+
+	def poll(self, fire):
+		value = self.__get()
 		if value != self.__previous_value:
 			self.__previous_value = value
 			# TODO should pass value in to avoid redundant gets
-			self._callback()
+			fire()
 
 
-class _PollerStateSubscription(_PollerSubscription):
-	def __init__(self, poller, obj, callback):
-		_PollerSubscription.__init__(self, poller, obj, callback)
+class _PollerStateTarget(_PollerTarget):
+	def __init__(self, block):
+		_PollerTarget.__init__(self, block)
 		self.__previous_structure = None  # unequal to any state dict
-		self.__dynamic = obj.state_is_dynamic()
+		self.__dynamic = block.state_is_dynamic()
 
-	def _poll(self):
-		obj = self._cell  # TODO unfortunate naming
+	def poll(self, fire):
+		obj = self._obj
 		if self.__dynamic or self.__previous_structure is None:
 			now = obj.state()
 			if now != self.__previous_structure:
 				self.__previous_structure = now
-				self._callback(now)
+				fire(now)
 
 
-class _PollerStreamSubscription(_PollerSubscription):
+class _PollerStreamTarget(_PollerTarget):
 	# TODO there are no tests for stream subscriptions
-	def __init__(self, poller, cell, callback):
-		_PollerSubscription.__init__(self, poller, cell, callback)
+	def __init__(self, cell):
+		_PollerTarget.__init__(self, cell)
 		self.__subscription = cell.subscribe()
 
-	def _poll(self):
+	def poll(self, fire):
 		subscription = self.__subscription
 		while True:
 			value = subscription.get(binary=True)  # TODO inflexible
 			if value is None: break
-			self._callback(value)
-	
+			fire(value)
+
 	def unsubscribe(self):
-		super(_PollerStreamSubscription, self).unsubscribe()
 		self.__subscription.close()
+		super(_PollerStreamTarget, self).unsubscribe()
 
