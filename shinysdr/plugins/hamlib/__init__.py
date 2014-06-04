@@ -183,7 +183,7 @@ def connect_to_rig(reactor, options=None, port=4532):
 	'''
 	if options is None:
 		options = []
-	host = 'localhost'
+	host = '127.0.0.1'
 	
 	process = subprocess.Popen(
 		args=['/usr/bin/env', 'rigctld', '-T', host, '-t', str(port)] + options,
