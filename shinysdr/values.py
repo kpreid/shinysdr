@@ -415,6 +415,8 @@ class _SortedMultimap(object):
 		self.__dict = {}
 		# keys in sorted order
 		self.__sorted = []
+		# count of values (= count of pairs)
+		self.__value_count = 0
 	
 	def iter_snapshot(self):
 		# TODO: consider not exposing the value sets directly, especially as this allows noticing mutation
@@ -430,6 +432,7 @@ class _SortedMultimap(object):
 		if value in values:
 			raise KeyError('Duplicate add: %r' % ((key, value),))
 		values.add(value)
+		self.__value_count += 1
 	
 	def remove(self, key, value):
 		'''Returns true if the value was the last value for that key'''
@@ -439,6 +442,7 @@ class _SortedMultimap(object):
 		if value not in values:
 			raise KeyError('No value to remove: %r' % ((key, value),))
 		values.remove(value)
+		self.__value_count -= 1
 		last_out = len(values) == 0
 		if last_out:
 			sorted = self.__sorted
@@ -448,6 +452,12 @@ class _SortedMultimap(object):
 				raise Exception("can't happen")
 			sorted[index:index + 1] = []
 		return last_out
+	
+	def count_keys(self):
+		return len(self.__dict)
+	
+	def count_values(self):
+		return self.__value_count
 
 
 class Poller(object):
