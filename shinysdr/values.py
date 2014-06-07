@@ -235,6 +235,11 @@ class CollectionMemberCell(BaseBlockCell):
 
 class ISubscribableCell(Interface):
 	def subscribe(callback):
+		'''
+		(TODO main doc)
+		
+		Note that the callback may be called _immediately_ upon value change; the callback should therefore avoid taking significant actions until later.
+		'''
 		pass
 
 
@@ -270,7 +275,9 @@ class LooseCell(ValueCell):
 			subscription._fire()
 	
 	def subscribe(self, callback):
-		self.__subscriptions.add(_LooseCellSubscription(self, callback))
+		subscription = _LooseCellSubscription(self, callback)
+		self.__subscriptions.add(subscription)
+		return subscription
 	
 	def _unsubscribe(self, subscription):
 		'''for use by the subscription only'''

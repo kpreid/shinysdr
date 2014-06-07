@@ -143,7 +143,7 @@ class TestPoller(unittest.TestCase):
 		def callback():
 			called[0] += 1
 		
-		self.poller.subscribe(cell, callback)
+		sub = self.poller.subscribe(cell, callback)
 		self.assertEqual(0, called[0], 'initial')
 		self.poller.poll()
 		self.assertEqual(0, called[0], 'noop poll')
@@ -151,6 +151,11 @@ class TestPoller(unittest.TestCase):
 		self.assertEqual(0, called[0], 'after set')
 		self.poller.poll()
 		self.assertEqual(1, called[0], 'poll after set')
+		
+		sub.unsubscribe()
+		self.cells.set_subscribable('b')
+		self.poller.poll()
+		self.assertEqual(1, called[0], 'no poll after unsubscribe')
 	
 	def test_subscription_support(self):
 		cell = self.cells.state()['subscribable']
@@ -159,7 +164,7 @@ class TestPoller(unittest.TestCase):
 		def callback():
 			called[0] += 1
 		
-		self.poller.subscribe(cell, callback)
+		sub = self.poller.subscribe(cell, callback)
 		self.assertEqual(0, self.poller._Poller__targets.count_keys(), 'no polling')
 		self.assertEqual(0, called[0], 'initial')
 		self.cells.set_subscribable('a')
@@ -167,6 +172,12 @@ class TestPoller(unittest.TestCase):
 		self.assertEqual('a', self.cells.get_subscribable())
 		self.poller.poll()
 		self.assertEqual(1, called[0], 'poll after set')
+		
+		sub.unsubscribe()
+		self.cells.set_subscribable('b')
+		self.poller.poll()
+		self.assertEqual(1, called[0], 'no poll after unsubscribe')
+		
 
 
 class PollerCellsSpecimen(ExportedState):
