@@ -37,8 +37,11 @@ class SimulatedSource(Source):
 	audio_rate = 1e4
 	rf_rate = 200e3
 
-	def __init__(self, name='Simulated Source', freq=0):
-		Source.__init__(self, name=name)
+	def __init__(self, name='Simulated Source', freq=0.0):
+		Source.__init__(self,
+			name=name,
+			freq_range=Range([(freq, freq)]))
+		self.freq_cell.set(freq)
 		
 		rf_rate = self.rf_rate
 		audio_rate = self.audio_rate
@@ -102,9 +105,8 @@ class SimulatedSource(Source):
 		# TODO review why cast
 		return int(self.rf_rate)
 		
-	@exported_value(ctor=float)
-	def get_freq(self):
-		return self.__freq
+	def _really_set_frequency(self, freq):
+		pass
 	
 	def get_tune_delay(self):
 		return 0.0

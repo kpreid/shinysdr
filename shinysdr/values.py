@@ -250,7 +250,7 @@ class LooseCell(ValueCell):
 	implements(ISubscribableCell)
 	
 	# TODO: the 'ctor' name is historic and wrong
-	def __init__(self, key, value, ctor, persists=True, writable=False):
+	def __init__(self, key, value, ctor, persists=True, writable=False, post_hook=None):
 		'''
 		The key is not used by the cell itself.
 		'''
@@ -263,13 +263,19 @@ class LooseCell(ValueCell):
 			writable=writable)
 		self.__value = value
 		self.__subscriptions = set()
-	
+		self.__post_hook = post_hook
+
 	def get(self):
 		return self.__value
 	
 	def set(self, value):
 		value = self._ctor(value)
 		self.__value = value
+		
+		# triggers before the subscriptions to allow for updating related internal state
+		if self.__post_hook is not None:
+			self.__post_hook(value)
+		
 		for subscription in self.__subscriptions:
 			# TODO: in sync with Poller, add passing the value in here
 			subscription._fire()

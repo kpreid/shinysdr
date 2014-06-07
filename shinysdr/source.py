@@ -23,28 +23,44 @@ from gnuradio import filter as grfilter
 from gnuradio import gr
 from gnuradio.filter import firdes
 
-from shinysdr.values import ExportedState, exported_value
+from shinysdr.types import Range
+from shinysdr.values import ExportedState, LooseCell, exported_value
 
 
 class Source(gr.hier_block2, ExportedState):
 	'''Generic wrapper for multiple source types, yielding complex samples.'''
-	def __init__(self, name):
+	def __init__(self, name, freq_range=float):
 		gr.hier_block2.__init__(
 			self, name,
 			gr.io_signature(0, 0, 0),
 			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
 		)
-		self.tune_hook = lambda: None
-
-	def set_tune_hook(self, value):
-		self.tune_hook = value
-
+		# TODO: 
+		self.freq_cell = LooseCell(
+			key='freq',
+			value=0.0,
+			ctor=freq_range,
+			writable=True,
+			persists=True,
+			post_hook=self._really_set_frequency)
+	
+	def state_def(self, callback):
+		super(Source, self).state_def(callback)
+		# TODO make this possible to be decorator style
+		callback(self.freq_cell)
+	
 	@exported_value(ctor=float)
 	def get_sample_rate(self):
 		raise NotImplementedError()
 
-	@exported_value(ctor=float)
 	def get_freq(self):
+		return self.freq_cell.get()
+
+	def set_freq(self, freq):
+		self.freq_cell.set(freq)
+	
+	def _really_set_frequency(self, freq):
+		'''Override point for changing the hardware frequency etc.'''
 		raise NotImplementedError()
 
 	def get_tune_delay(self):
@@ -66,7 +82,6 @@ class AudioSource(Source):
 			quadrature_as_stereo=False,
 			name='Audio Device Source',
 			**kwargs):
-		Source.__init__(self, name=name, **kwargs)
 		self.__name = name  # for reinit only
 		self.__device_name = device_name
 		self.__sample_rate_in = sample_rate
@@ -78,6 +93,17 @@ class AudioSource(Source):
 			self.__complex = _Complexifier(hilbert_length=128)
 			self.__sample_rate_out = sample_rate / 2
 		self.__source = None
+		
+		if self.__quadrature_as_stereo:
+			center = 0.0
+		else:
+			center = self.__sample_rate_out / 2.0
+		
+		Source.__init__(self,
+			name=name,
+			freq_range=Range([(center, center)], strict=True),
+			**kwargs)
+		self.freq_cell.set(center)
 		
 		self.__do_connect()
 	
@@ -92,12 +118,11 @@ class AudioSource(Source):
 		# work around OSX audio source bug; does not work across flowgraph restarts
 		self.__do_connect()
 
-	@exported_value(ctor=float)
-	def get_freq(self):
-		if self.__quadrature_as_stereo:
-			return 0.0
-		else:
-			return self.__sample_rate_out / 2.0
+	def __freq_range(self):
+		return 
+
+	def _really_set_frequency(self, freq):
+		pass
 
 	def get_tune_delay(self):
 		return 0.0

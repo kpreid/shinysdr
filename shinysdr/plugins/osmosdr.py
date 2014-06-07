@@ -71,10 +71,12 @@ class OsmoSDRSource(Source):
 		
 		if name is None:
 			name = 'OsmoSDR %s' % osmo_device
-		Source.__init__(self, name=name, **kwargs)
 		
+		# things needed early for range computation
 		self.__osmo_device = osmo_device
 		self.__profile = profile
+		self.external_freq_shift = external_freq_shift
+		self.correction_ppm = correction_ppm
 		
 		self.osmosdr_source_block = source = osmosdr.source('numchan=1 ' + osmo_device)
 		if source.get_num_channels() < 1:
@@ -89,11 +91,20 @@ class OsmoSDRSource(Source):
 		else:
 			source.set_sample_rate(sample_rate)
 		
+		# late init due to freq_range dependencies :(
+		Source.__init__(self,
+			name=name,
+			# TODO: Eventually we'd like to be able to make the freq range vary dynamically with the correction setting
+			freq_range=convert_osmosdr_range(
+				self.osmosdr_source_block.get_freq_range(ch),
+				strict=False,
+				transform=self._invert_frequency,
+				add_zero=self.__profile.e4000),
+			**kwargs)
+		
 		self.connect(self.osmosdr_source_block, self)
 		
 		# Misc state
-		self.external_freq_shift = external_freq_shift
-		self.correction_ppm = correction_ppm
 		self.dc_state = 0
 		self.iq_state = 0
 		source.set_dc_offset_mode(self.dc_state, ch)  # no getter, set to known state
@@ -117,20 +128,12 @@ class OsmoSDRSource(Source):
 		# TODO review why cast
 		return int(self.osmosdr_source_block.get_sample_rate())
 	
-	# TODO: correction_ppm isn't being applied properly, probably due to cell caching; fix the caching
-	@exported_value(ctor_fn=lambda self: convert_osmosdr_range(
-		self.osmosdr_source_block.get_freq_range(ch),
-		strict=False,
-		transform=self._invert_frequency,
-		add_zero=self.__profile.e4000))
-	def get_freq(self):
-		return self.freq
-
-	@setter
-	def set_freq(self, freq):
+	# override Source
+	def _really_set_frequency(self, freq):
 		self.freq = freq
 		self._update_frequency()
-
+	
+	# override Source
 	def get_tune_delay(self):
 		return 0.25  # TODO: make configurable and/or account for as many factors as we can
 	
@@ -179,8 +182,6 @@ class OsmoSDRSource(Source):
 		#tuned_freq = self._invert_frequency(self.osmosdr_source_block.get_center_freq())
 		#if abs(tuned_freq - self.freq) > 1e-10:
 		#	self.freq = tuned_freq
-		
-		self.tune_hook()
 
 	# TODO: Perhaps expose individual gain stages.
 	@exported_value(ctor_fn=lambda self: convert_osmosdr_range(

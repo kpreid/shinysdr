@@ -73,6 +73,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 
 		# Blocks etc.
 		self.source = None
+		self.__source_tune_subscription = None
 		self.monitor = MonitorSink(
 			sample_rate=10000,  # dummy value will be updated in _do_connect
 			complex_in=True,
@@ -186,6 +187,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 					receiver.set_input_center_freq(freq)
 			
 			def tune_hook():
+				# Note that in addition to the flow graph delay, the callLater is also needed in order to ensure we don't do our reconfiguration in the middle of the source's own workings.
 				reactor.callLater(self.source.get_tune_delay(), tune_hook_actual)
 			
 			def tune_hook_actual():
@@ -195,8 +197,11 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 				for key in self._receivers:
 					self._update_receiver_validity(key)
 					# TODO: If multiple receivers change validity we'll do redundant reconnects in this loop; avoid that.
-
-			this_source.set_tune_hook(tune_hook)
+			
+			if self.__source_tune_subscription is not None:
+				self.__source_tune_subscription.unsubscribe()
+			self.__source_tune_subscription = this_source.state()['freq'].subscribe(tune_hook)
+			
 			self.source = this_source
 			this_rate = this_source.get_sample_rate()
 			rate_changed = self.input_rate != this_rate
