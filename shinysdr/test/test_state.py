@@ -20,7 +20,7 @@ from __future__ import absolute_import, division
 import unittest
 
 from shinysdr.types import Range
-from shinysdr.values import ExportedState, BlockCell, CollectionState, Poller, exported_value, setter
+from shinysdr.values import ExportedState, BlockCell, CollectionState, LooseCell, Poller, exported_value, setter
 
 
 class TestDecorator(unittest.TestCase):
@@ -151,12 +151,35 @@ class TestPoller(unittest.TestCase):
 		self.assertEqual(0, called[0], 'after set')
 		self.poller.poll()
 		self.assertEqual(1, called[0], 'poll after set')
+	
+	def test_subscription_support(self):
+		cell = self.cells.state()['subscribable']
+		called = [0]
+		
+		def callback():
+			called[0] += 1
+		
+		self.poller.subscribe(cell, callback)
+		self.assertEqual(0, self.poller._Poller__targets.count_keys(), 'no polling')
+		self.assertEqual(0, called[0], 'initial')
+		self.cells.set_subscribable('a')
+		self.assertEqual(0, called[0], 'after set')
+		self.assertEqual('a', self.cells.get_subscribable())
+		self.poller.poll()
+		self.assertEqual(1, called[0], 'poll after set')
 
 
-# TODO: this would be unnecessary if we had stand-alone cells
 class PollerCellsSpecimen(ExportedState):
 	'''Helper for TestPoller'''
 	foo = None
+	
+	def __init__(self):
+		self.subscribable = LooseCell(key='subscribable', value='', ctor=str)
+	
+	def state_def(self, callback):
+		super(PollerCellsSpecimen, self).state_def(callback)
+		# TODO make this possible to be decorator style
+		callback(self.subscribable)
 	
 	# force worst-case
 	def state_is_dynamic(self):
@@ -169,3 +192,9 @@ class PollerCellsSpecimen(ExportedState):
 	@setter
 	def set_foo(self, value):
 		self.foo = value
+
+	def get_subscribable(self):
+		return self.subscribable.get()
+	
+	def set_subscribable(self, value):
+		self.subscribable.set(value)

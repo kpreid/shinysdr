@@ -27,7 +27,7 @@ import struct
 
 from twisted.internet import task, reactor as the_reactor
 from twisted.python import log
-from zope.interface import Interface  # available via Twisted
+from zope.interface import Interface, implements  # available via Twisted
 
 from gnuradio import gr
 
@@ -102,6 +102,7 @@ class ValueCell(BaseCell):
 		}
 
 
+# TODO this name is historical and should be changed
 class Cell(ValueCell):
 	def __init__(self, target, key, writable=False, persists=None, ctor=None):
 		if persists is None: persists = writable
@@ -230,6 +231,60 @@ class CollectionMemberCell(BaseBlockCell):
 	def getBlock(self):
 		# fallback to nullExportedState so that if we become invalid in a dynamic collection we don't break
 		return self._target._collection.get(self._key, nullExportedState)
+
+
+class ISubscribableCell(Interface):
+	def subscribe(callback):
+		pass
+
+
+class LooseCell(ValueCell):
+	'''
+	A cell which stores a value and does not get it from another object; it can therefore reliably provide update notifications.
+	'''
+	implements(ISubscribableCell)
+	
+	# TODO: the 'ctor' name is historic and wrong
+	def __init__(self, key, value, ctor, persists=True, writable=False):
+		'''
+		The key is not used by the cell itself.
+		'''
+		ValueCell.__init__(
+			self,
+			target=object(),
+			key=key,
+			ctor=ctor,
+			persists=persists,
+			writable=writable)
+		self.__value = value
+		self.__subscriptions = set()
+	
+	def get(self):
+		return self.__value
+	
+	def set(self, value):
+		value = self._ctor(value)
+		self.__value = value
+		for subscription in self.__subscriptions:
+			# TODO: in sync with Poller, add passing the value in here
+			subscription._fire()
+	
+	def subscribe(self, callback):
+		self.__subscriptions.add(_LooseCellSubscription(self, callback))
+	
+	def _unsubscribe(self, subscription):
+		'''for use by the subscription only'''
+		self.__subscriptions.remove(subscription)
+
+
+class _LooseCellSubscription(object):
+	def __init__(self, cell, callback):
+		self._fire = callback
+		self.__cell = cell
+
+	def unsubscribe(self):
+		self.__cell._unsubscribe(self)
+
 
 
 class ExportedState(object):
@@ -468,11 +523,14 @@ class Poller(object):
 	def __init__(self):
 		# sorting provides determinism for testing etc.
 		self.__targets = _SortedMultimap()
+		self.__functions = []
 	
 	def subscribe(self, cell, callback):
 		if not isinstance(cell, BaseCell):
 			# we're not actually against duck typing here; this is a sanity check
 			raise TypeError('Poller given a non-cell %r' % (cell,))
+		if ISubscribableCell.providedBy(cell):
+			return _NonPollingSubscription(self, cell, callback)
 		if isinstance(cell, StreamCell):  # TODO kludge; use generic interface
 			return _PollerSubscription(self, _PollerStreamTarget(cell), callback)
 		else:
@@ -500,6 +558,19 @@ class Poller(object):
 					s._fire(*args, **kwargs)
 			
 			target.poll(fire)
+		
+		functions = self.__functions
+		if len(functions) > 0:
+			self.__functions = []
+			for function in functions:
+				function()
+	
+	def queue_function(self, function, *args, **kwargs):
+		'''Queue a function to be called on the same schedule as the poller would.'''
+		def thunk():
+			function(*args, **kwargs)
+		
+		self.__functions.append(thunk)
 
 
 class AutomaticPoller(Poller):
@@ -531,6 +602,19 @@ class _PollerSubscription(object):
 	
 	def unsubscribe(self):
 		self._poller._remove_subscription(self._target, self)
+
+
+class _NonPollingSubscription(object):
+	def __init__(self, poller, cell, callback):
+		self._poller = poller
+		self._callback = callback
+		self._cell_subscription = cell.subscribe(self._fire)
+	
+	def unsubscribe(self):
+		self._cell_subscription.unsubscribe()
+	
+	def _fire(self):
+		self._poller.queue_function(self._callback)
 
 
 class _PollerTarget(object):
