@@ -47,7 +47,7 @@ from twisted.web import static
 
 from shinysdr.top import IHasFrequency
 from shinysdr.types import Enum, Range
-from shinysdr.values import Cell, ExportedState
+from shinysdr.values import Cell, ExportedState, LooseCell
 from shinysdr.web import ClientResourceDef
 
 
@@ -213,6 +213,9 @@ class _HamlibRig(ExportedState):
 		self.__caps = {}
 		self.__levels = []
 		
+		# keys are same as __cache, values are functions to call with new values from rig
+		self._cell_updaters = {}
+		
 		self.__protocol = protocol
 		self.__disconnect_deferred = defer.Deferred()
 		protocol._set_rig(self)
@@ -264,10 +267,15 @@ class _HamlibRig(ExportedState):
 			else:
 				write(key)
 		else:
-			self.__cache[key] = value
+			self.__update_cache_and_cells(key, value)
 	
 	def _clientReceivedLevel(self, level_name, value_str):
-		self.__cache[level_name + ' level'] = value_str
+		self.__update_cache_and_cells(level_name + ' level', value_str)
+	
+	def __update_cache_and_cells(self, key, value):
+		self.__cache[key] = value
+		if key in self._cell_updaters:
+			self._cell_updaters[key](value)
 	
 	def _clientConnectionLost(self, reason):
 		self.__poller_slow.stop()
@@ -355,25 +363,23 @@ def _install_cell(self, name, is_level, writable, callback, caps):
 	else:
 		ctor = _info[name]
 	
-	def getter():
-		# TODO: better strategy, normalize into cache
-		strval = self._ehs_get(name)
+	def updater(strval):
 		if ctor is bool:
-			return bool(int(strval))
+			value = bool(int(strval))
 		else:
-			return ctor(strval)
+			value = ctor(strval)
+		cell.set_internal(value)
 	
-	def setter(value):
+	def actually_write_value(value):
 		if ctor is bool:
 			self._ehs_set(name, str(int(value)))
 		else:
 			self._ehs_set(name, str(ctor(value)))
 	
-	# TODO: Change Cell protocol so that we don't have to setattr
-	setattr(self, 'get_' + cell_name, getter)
-	if writable:
-		setattr(self, 'set_' + cell_name, setter)
-	callback(Cell(self, cell_name, ctor=ctor, writable=writable, persists=False))
+	cell = LooseCell(key=cell_name, value='placeholder', ctor=ctor, writable=writable, persists=False, post_hook=actually_write_value)
+	self._cell_updaters[name] = updater
+	updater(self._ehs_get(name))
+	callback(cell)
 
 
 class _RigctldClientFactory(ClientFactory):

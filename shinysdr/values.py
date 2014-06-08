@@ -276,6 +276,15 @@ class LooseCell(ValueCell):
 		if self.__post_hook is not None:
 			self.__post_hook(value)
 		
+		self._fire()
+	
+	def set_internal(self, value):
+		# TODO: More cap-ish strategy to handle this
+		'''For use only by the "owner" to report updates.'''
+		self.__value = value
+		self._fire()
+	
+	def _fire(self):
 		for subscription in self.__subscriptions:
 			# TODO: in sync with Poller, add passing the value in here
 			subscription._fire()
