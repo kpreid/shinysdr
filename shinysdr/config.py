@@ -47,25 +47,44 @@ __all__ = [
 class Config(object):
 	def __init__(self, reactor):
 		# public config elements
-		self.sources = _ConfigDict()
-		self.databases = _ConfigDbs(reactor)
-		self.accessories = _ConfigAccessories()
+		self.sources = _ConfigDict(self)
+		self.databases = _ConfigDbs(self, reactor)
+		self.accessories = _ConfigAccessories(self)
 
 		# might be wanted
 		self.reactor = reactor
 		
-		# private
+		# these are to be read by main
 		self._state_filename = None
 		self._service_makers = []
+		
+		# private
+		self.__waiting = []
+		self.__finished = False
 	
-	def _validate(self):
+	@defer.inlineCallbacks
+	def _wait_and_validate(self):
+		yield defer.gatherResults(self.__waiting)
+		
+		self.__finished = True
 		if len(self._service_makers) == 0:
 			warnings.warn('No network service defined!')
 	
+	def _not_finished(self):
+		if self.__finished:
+			raise Exception('Too late to modify configuration')
+	
+	def wait_for(self, deferred):
+		'''Wait for the provided Deferred before assuming the configuration to be finished.'''
+		self._not_finished()
+		self.__waiting.append(defer.maybeDeferred(lambda: deferred))
+	
 	def persist_to_file(self, filename):
+		self._not_finished()
 		self._state_filename = str(filename)
 
 	def serve_web(self, http_endpoint, ws_endpoint, root_cap='%(root_cap)s', title=u'ShinySDR'):
+		self._not_finished()
 		# TODO: See if we're reinventing bits of Twisted service stuff here
 		
 		def make_service(top, note_dirty):
@@ -84,6 +103,7 @@ class Config(object):
 		self._service_makers.append(make_service)
 
 	def serve_ghpsdr(self):
+		self._not_finished()
 		# TODO: Alternate services should be provided using getPlugins rather than hardcoded
 		def make_service(top, note_dirty):
 			import shinysdr.plugins.ghpsdr as lazy_ghpsdr
@@ -93,10 +113,12 @@ class Config(object):
 
 
 class _ConfigDict(object):
-	def __init__(self):
+	def __init__(self, config):
 		self._values = {}
+		self._config = config
 
 	def add(self, key, value):
+		self._config._not_finished()
 		key = unicode(key)
 		if key in self._values:
 			raise KeyError('Key %r already present' % (key,))
@@ -105,6 +127,7 @@ class _ConfigDict(object):
 
 class _ConfigAccessories(_ConfigDict):
 	def add(self, key, value):
+		self._config._not_finished()
 		import shinysdr.values as lazy_values
 		
 		if key in self._values:
@@ -121,10 +144,12 @@ class _ConfigDbs(object):
 	__read_only_databases = None
 	__writable_db = None
 	
-	def __init__(self, reactor):
+	def __init__(self, config, reactor):
+		self._config = config
 		self.__reactor = reactor
 	
 	def add_directory(self, path):
+		self._config._not_finished()
 		path = str(path)
 		if self.__read_only_databases is not None:
 			raise Exception('Multiple database directories are not yet supported.')
@@ -133,6 +158,7 @@ class _ConfigDbs(object):
 			log.msg('%s: %s' % d)
 
 	def add_writable_database(self, path):
+		self._config._not_finished()
 		path = str(path)
 		if self.__writable_db is not None:
 			raise Exception('Multiple writable databases are not yet supported.')

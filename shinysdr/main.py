@@ -28,6 +28,7 @@ import sys
 import __builtin__
 
 from twisted.application.service import IService, MultiService
+from twisted.internet import defer
 from twisted.internet import reactor
 from twisted.python import log
 
@@ -35,8 +36,22 @@ from twisted.python import log
 import shinysdr  # put into config namespace
 from shinysdr.config import Config, make_default_config
 
-
 def main(argv=None, _abort_for_test=False):
+	# This is referenced by the setup.py entry point definition as well as the name=__main__ test below.
+	d = main_async(argv, _abort_for_test)
+	if _abort_for_test:
+		return d
+	else:
+		def handle_error(error):
+			log.err(error)
+			reactor.stop()
+		
+		d.addErrback(handle_error)
+		
+		reactor.run()
+
+@defer.inlineCallbacks
+def main_async(argv=None, _abort_for_test=False):
 	if argv is None:
 		argv = sys.argv
 	
@@ -71,11 +86,10 @@ def main(argv=None, _abort_for_test=False):
 		configObj = Config(reactor)
 		
 		# TODO: better ways to manage the namespaces?
-		execfile(
-			args.configFile,
-			__builtin__.__dict__,
-			{'shinysdr': shinysdr, 'config': configObj})
-		configObj._validate()
+		env = dict(__builtin__.__dict__)
+		env.update({'shinysdr': shinysdr, 'config': configObj})
+		execfile(args.configFile, env)
+		yield configObj._wait_and_validate()
 		stateFile = configObj._state_filename
 	
 	def noteDirty():
@@ -121,9 +135,7 @@ def main(argv=None, _abort_for_test=False):
 	
 	if _abort_for_test:
 		services.stopService()
-		return top, noteDirty
-	else:
-		reactor.run()
+		defer.returnValue((top, noteDirty))
 
 
 def top_defaults(top):

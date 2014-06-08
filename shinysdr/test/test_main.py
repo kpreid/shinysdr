@@ -23,6 +23,7 @@ import shutil
 import tempfile
 import textwrap
 
+from twisted.internet import defer
 from twisted.trial import unittest
 
 from shinysdr import main
@@ -53,21 +54,24 @@ class TestMain(unittest.TestCase):
 			argv=['shinysdr', self.__config_name],
 			_abort_for_test=True)
 	
+	@defer.inlineCallbacks
 	def test_main_first_run_sources(self):
 		'''Regression: first run with no state file would fail due to assumptions about the source names.'''
-		main.main(
+		yield main.main(
 			argv=['shinysdr', self.__config_name],
 			_abort_for_test=True)
 	
+	@defer.inlineCallbacks
 	def test_persistence(self):
 		'''Test that state persists.'''
-		(top, note_dirty) = self.__run_main()
+		(top, note_dirty) = yield self.__run_main()
 		self.assertEqual(top.get_unpaused(), True)  # check initial assumption
 		top.set_unpaused(False)
 		note_dirty()
-		(top, note_dirty) = self.__run_main()
+		(top, note_dirty) = yield self.__run_main()
 		self.assertEqual(top.get_unpaused(), False)  # check persistence
 
+	@defer.inlineCallbacks
 	def test_minimal(self):
 		'''Test that things function with no state file and no servers.'''
 		with open(self.__config_name, 'w') as config:
@@ -76,13 +80,14 @@ class TestMain(unittest.TestCase):
 				config.sources.add('sim_foobar', shinysdr.plugins.simulate.SimulatedSource())
 			'''))
 		
-		(top, note_dirty) = self.__run_main()
+		(top, note_dirty) = yield self.__run_main()
 		self.assertEqual(top.get_unpaused(), True)  # check initial assumption
 		top.set_unpaused(False)
 		note_dirty()
-		(top, note_dirty) = self.__run_main()
+		(top, note_dirty) = yield self.__run_main()
 		self.assertEqual(top.get_unpaused(), True)  # expect NO persistence
 	
+	@defer.inlineCallbacks
 	def test_accessories(self):
 		'''Test that accessories are configured properly.'''
 		# APPEND to config
@@ -91,8 +96,24 @@ class TestMain(unittest.TestCase):
 				config.accessories.add('foo', shinysdr.values.ExportedState())
 			'''))
 		
-		(top, note_dirty) = self.__run_main()
+		(top, note_dirty) = yield self.__run_main()
 		tas = top.accessories.state()
 		
 		self.assertEqual(tas.keys(), ['foo'])
 		# TODO: test value is as expected; tricky because deferred
+
+	@defer.inlineCallbacks
+	def test_deferred_config(self):
+		'''Test that the config can defer.'''
+		with open(self.__config_name, 'w') as config:
+			config.write(textwrap.dedent('''\
+				import shinysdr.plugins.simulate
+				from twisted.internet import reactor
+				from twisted.internet.task import deferLater
+				d = deferLater(reactor, 0.001, lambda: config.sources.add('a_source', shinysdr.plugins.simulate.SimulatedSource()))
+				config.wait_for(d)
+			'''))
+		
+		(top, note_dirty) = yield self.__run_main()
+		self.assertEqual(top.state()['sources'].getBlock().state().keys(), ['a_source'])
+		
