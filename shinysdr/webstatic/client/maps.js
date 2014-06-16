@@ -29,7 +29,7 @@ define(['./values'], function (values) {
   }
   exports.projectedPoint = projectedPoint;
 
-  function Map(element, scheduler, db, radio) {
+  function Map(element, scheduler, db, radio, index) {
     var baseLayer = new OpenLayers.Layer('Blank', {
       isBaseLayer: true,
       displayInLayerSwitcher: false,  // only one, not useful
@@ -175,6 +175,7 @@ define(['./values'], function (values) {
     }, 1000);
     
     // Receiver-derived data
+    // TODO: Either replace uses of this with addIndexLayer or make them share an implementation
     function addModeLayer(filterMode, prepare) {
       var modeLayer = new OpenLayers.Layer.Vector(filterMode);
       olm.addLayer(modeLayer);
@@ -221,9 +222,49 @@ define(['./values'], function (values) {
       updateOnReceivers();
     }
 
+    function addIndexLayer(name, interfaceName, options, prepare) {
+      var layerIndex = index.implementing(interfaceName);
+      
+      var dynamicLayer = new OpenLayers.Layer.Vector(name, options);
+      olm.addLayer(dynamicLayer);
+      
+      var cancellers = [];
+
+      function updateOnIndex() {
+        var objects = layerIndex.depend(updateOnIndex);
+        dynamicLayer.removeAllFeatures();
+        cancellers.forEach(function (f) { f(); });
+        cancellers = [];
+        objects.forEach(function (object) {
+          var objDead = false;
+          cancellers.push(function () { objDead = true; });
+          var features = [];
+          function updateOnObject() {
+            dynamicLayer.removeFeatures(features);  // clear old state
+            features.length = 0;
+            
+            prepare(object,
+              function interested() { return !objDead; },
+              function addFeature(feature) {
+                if (objDead) throw new Error('dead');
+                features.push(feature);
+                dynamicLayer.addFeatures(feature);
+              },
+              function drawFeature(feature) {
+                dynamicLayer.drawFeature(feature);  // TODO verify is in feature set
+              });
+          }
+          updateOnObject.scheduler = scheduler;
+          updateOnObject();
+        });
+      }
+      updateOnIndex.scheduler = scheduler;
+      updateOnIndex();
+    }
+
     plugins.forEach(function(pluginFunc) {
       // TODO provide an actually designed interface
-      pluginFunc(db, scheduler, addModeLayer);
+      pluginFunc(db, scheduler, addModeLayer, addIndexLayer);
     });
   }
   exports.Map = Map;

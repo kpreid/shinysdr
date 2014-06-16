@@ -193,7 +193,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
       widget.createWidgets(everything, context, document);
       
       // Map (all geographic data)
-      var map = new maps.Map(document.getElementById('map'), scheduler, freqDB, radio);
+      var map = new maps.Map(document.getElementById('map'), scheduler, freqDB, radio, index);
       
       // globals for debugging / interactive programming purposes only
       window.DfreqDB = freqDB;
