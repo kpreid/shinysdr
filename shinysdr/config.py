@@ -214,7 +214,7 @@ config.serve_web(
 	# provide any real security unless using HTTPS. The default value
 	# in this file has been automatically generated from 128 random bits.
 	# Set to None to not use any secret.
-	root_cap='%(root_cap)s'
+	root_cap='%(root_cap)s',
 	
 	# Page title / station name
 	title='ShinySDR')
