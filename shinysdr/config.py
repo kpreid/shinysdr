@@ -30,16 +30,19 @@ from __future__ import absolute_import, division
 import base64
 import os
 import warnings
+import __builtin__
 
 from twisted.internet import defer
 from twisted.python import log
 
 # Note that gnuradio-dependent modules are loaded lazily, to avoid the startup time if all we're going to do is give a usage message
+import shinysdr  # put into config namespace
 from shinysdr.db import DatabaseModel, database_from_csv, databases_from_directory
 
 
 __all__ = [
 	'Config',
+	'execute_config',
 	'make_default_config'
 ]
 
@@ -177,6 +180,16 @@ class _ConfigDbs(object):
 		if self.__read_only_databases is None:
 			self.__read_only_databases = {}
 		return self.__read_only_databases
+
+
+def execute_config(config_obj, config_file):
+	'''
+	Execute a config file with the special environment.
+	Note: does not _wait_and_validate()
+	'''
+	env = dict(__builtin__.__dict__)
+	env.update({'shinysdr': shinysdr, 'config': config_obj})
+	execfile(config_file, env)
 
 
 def make_default_config():

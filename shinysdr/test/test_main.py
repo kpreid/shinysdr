@@ -1,4 +1,4 @@
-# Copyright 2013 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -15,6 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+'''
+See also test_config.py.
+'''
+
+
 from __future__ import absolute_import, division
 
 import os
@@ -27,7 +32,6 @@ from twisted.internet import defer
 from twisted.trial import unittest
 
 from shinysdr import main
-from shinysdr.values import ExportedState
 
 
 class TestMain(unittest.TestCase):

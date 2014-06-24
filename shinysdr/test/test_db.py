@@ -157,6 +157,14 @@ class TestDirectory(unittest.TestCase):
 		self.assertEqual([], diagnostics)
 		self.assertEqual(['a.csv'], dbs.keys())
 
+	def test_no_directory(self):
+		path = self.__temp_dir + '_does_not_exist'
+		dbs, diagnostics = db.databases_from_directory(reactor, path)
+		self.assertEqual([], dbs.keys())
+		self.assertEqual(1, len(diagnostics))
+		self.assertEqual(path, diagnostics[0][0])
+		self.assertIn('Error opening database directory', str(diagnostics[0][1]))
+
 
 class TestDBWeb(unittest.TestCase):
 	test_data_json = [

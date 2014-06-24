@@ -24,7 +24,6 @@ import json
 import os
 import os.path
 import urllib
-import warnings
 
 from twisted.python import log
 from twisted.web import http
@@ -103,8 +102,7 @@ def databases_from_directory(reactor, pathname):
 	try:
 		filenames = os.listdir(pathname)
 	except OSError as e:
-		warnings.warn('Error opening database directory %r: %r' % (pathname, e))
-		return dbs
+		return dbs, [(pathname, Warning('Error opening database directory: %r' % (e,)))]
 	all_diagnostics = []
 	for name in filenames:
 		if name.endswith('.csv'):

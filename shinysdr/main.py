@@ -25,7 +25,6 @@ import logging
 import os.path
 import shutil
 import sys
-import __builtin__
 
 from twisted.application.service import IService, MultiService
 from twisted.internet import defer
@@ -33,8 +32,7 @@ from twisted.internet import reactor
 from twisted.python import log
 
 # Note that gnuradio-dependent modules are loaded later, to avoid the startup time if all we're going to do is give a usage message
-import shinysdr  # put into config namespace
-from shinysdr.config import Config, make_default_config
+from shinysdr.config import Config, make_default_config, execute_config
 
 def main(argv=None, _abort_for_test=False):
 	# This is referenced by the setup.py entry point definition as well as the name=__main__ test below.
@@ -84,12 +82,9 @@ def main_async(argv=None, _abort_for_test=False):
 			sys.exit(0)
 	else:
 		configObj = Config(reactor)
-		
-		# TODO: better ways to manage the namespaces?
-		env = dict(__builtin__.__dict__)
-		env.update({'shinysdr': shinysdr, 'config': configObj})
-		execfile(args.configFile, env)
+		execute_config(configObj, args.configFile)
 		yield configObj._wait_and_validate()
+		
 		stateFile = configObj._state_filename
 	
 	def noteDirty():
