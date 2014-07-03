@@ -108,6 +108,29 @@ class DecoratorSpecimen(DecoratorSpecimenSuper):
 		self.rw = value
 
 
+class TestBlockCell(unittest.TestCase):
+	def setUp(self):
+		self.obj_value = ExportedState()
+		self.object = BlockCellSpecimen(self.obj_value)
+	
+	def test_block_cell_value(self):
+		cell = self.object.state()['block']
+		self.assertEqual(cell.get(), self.obj_value)
+
+
+class BlockCellSpecimen(ExportedState):
+	'''Helper for TestBlockCell'''
+	block = None
+	
+	def __init__(self, block):
+		self.block = block
+	
+	def state_def(self, callback):
+		super(BlockCellSpecimen, self).state_def(callback)
+		# TODO make this possible to be decorator style
+		callback(BlockCell(self, 'block'))
+
+
 class TestStateInsert(unittest.TestCase):
 	object = None
 	

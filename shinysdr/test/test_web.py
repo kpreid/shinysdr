@@ -80,8 +80,10 @@ class TestWebSite(unittest.TestCase):
 		def callback((response, data)):
 			self.assertEqual(response.code, http.OK)
 			description_json = json.loads(data)
-			self.assertEqual(description_json['kind'], 'block')
-			self.assertEqual(description_json['children'], {})
+			self.assertEqual(description_json, {
+				u'kind': u'block',
+				u'children': {},
+			})
 		return testutil.http_get(reactor, self.url + 'radio').addCallback(callback)
 
 

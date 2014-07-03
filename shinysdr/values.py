@@ -60,19 +60,29 @@ class BaseCell(object):
 	def __hash__(self):
 		return hash(self._target) ^ hash(self._key)
 
-	def isBlock(self):
+	def isBlock(self):  # TODO underscore naming
 		raise NotImplementedError()
 	
 	def key(self):
 		return self._key
 
 	def get(self):
+		'''Return the value/object held by this cell.'''
 		raise NotImplementedError()
 	
 	def set(self, value):
+		'''Set the value held by this cell.'''
 		raise NotImplementedError()
 	
-	def isWritable(self):
+	def get_state(self):
+		'''Return the value, or state of the object, held by this cell.'''
+		raise NotImplementedError()
+	
+	def set_state(self, state):
+		'''Set the value held by this cell, or set the state of the object held by this cell, as appropriate.'''
+		raise NotImplementedError()
+	
+	def isWritable(self):  # TODO underscore naming
 		return self._writable
 	
 	def persists(self):
@@ -89,6 +99,14 @@ class ValueCell(BaseCell):
 	
 	def isBlock(self):
 		return False
+	
+	# implement abstract
+	def get_state(self):
+		return self.get()
+	
+	# implement abstract
+	def set_state(self, value):
+		return self.set(value)
 	
 	def type(self):
 		return self._ctor
@@ -202,10 +220,19 @@ class BaseBlockCell(BaseCell):
 		return True
 	
 	def get(self):
-		return self.getBlock().state_to_json()
+		# TODO middle of refactoring
+		return self.getBlock()
 	
 	def set(self, value):
-		self.getBlock().state_from_json(value)
+		# TODO middle of refactoring
+		raise Exception('BaseBlockCell is not writable.')
+	
+	def get_state(self):
+		# TODO middle of refactoring
+		return self.getBlock().state_to_json()
+	
+	def set_state(self, value):
+		return self.getBlock().state_from_json(value)
 	
 	def description(self):
 		return self.getBlock().state_description()
@@ -348,7 +375,7 @@ class ExportedState(object):
 		state = {}
 		for key, cell in self.state().iteritems():
 			if cell.persists():
-				state[key] = cell.get()
+				state[key] = cell.get_state()
 		return state
 	
 	def state_from_json(self, state):
@@ -378,10 +405,10 @@ class ExportedState(object):
 			elif not cell.isWritable():
 				err('non-writable', '')
 			else:
-				doTry(lambda: cells[key].set(state[key]))
+				doTry(lambda: cells[key].set_state(state[key]))
 		# blocks are deferred because the specific blocks may depend on other keys
 		for key in defer:
-			cells[key].set(state[key])
+			cells[key].set_state(state[key])
 
 	def state_description(self):
 		childDescs = {}
