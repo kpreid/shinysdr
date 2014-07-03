@@ -74,6 +74,15 @@ class TestWebSite(unittest.TestCase):
 			# TODO: Probably not here, add an end-to-end test for page title _default_.
 		
 		return testutil.http_get(reactor, self.url).addCallback(callback)
+	
+	def test_resource_page(self):
+		# TODO: This ought to be a separate test of block-resources
+		def callback((response, data)):
+			self.assertEqual(response.code, http.OK)
+			description_json = json.loads(data)
+			self.assertEqual(description_json['kind'], 'block')
+			self.assertEqual(description_json['children'], {})
+		return testutil.http_get(reactor, self.url + 'radio').addCallback(callback)
 
 
 def _noop():
