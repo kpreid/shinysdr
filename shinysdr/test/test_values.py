@@ -23,11 +23,61 @@ from shinysdr.types import Range
 from shinysdr.values import ExportedState, BlockCell, CollectionState, LooseCell, Poller, exported_value, setter
 
 
+class TestExportedState(unittest.TestCase):
+	def setUp(self):
+		self.object = ValueAndBlockSpecimen(ValueAndBlockSpecimen(ExportedState()))
+	
+	def test_persistence_basic(self):
+		self.assertEqual(self.object.state_to_json(), {
+			u'value': 0,
+			u'block': {
+				u'value': 0,
+				u'block': {},
+			},
+		})
+		self.object.state_from_json({
+			u'value': 1,
+			u'block': {
+				u'value': 2,
+				u'block': {},
+			},
+		})
+		self.assertEqual(self.object.state_to_json(), {
+			u'value': 1,
+			u'block': {
+				u'value': 2,
+				u'block': {},
+			},
+		})
+	
+	# TODO: test persistence error cases like unknown or wrong-typed properties
+
+
+class ValueAndBlockSpecimen(ExportedState):
+	'''Helper for TestExportedState'''
+	def __init__(self, block):
+		self.value = 0
+		self.block = block
+		
+	def state_def(self, callback):
+		super(ValueAndBlockSpecimen, self).state_def(callback)
+		# TODO make this possible to be decorator style
+		callback(BlockCell(self, 'block'))
+	
+	@exported_value(ctor=float)
+	def get_value(self):
+		return self.value
+	
+	@setter
+	def set_value(self, value):
+		self.value = value
+
+
 class TestDecorator(unittest.TestCase):
 	def setUp(self):
 		self.object = DecoratorSpecimen()
 	
-	def test_state(self):
+	def test_state_with_inheritance(self):
 		keys = self.object.state().keys()
 		keys.sort()
 		self.assertEqual(['inherited', 'rw'], keys)
