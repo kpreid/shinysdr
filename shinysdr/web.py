@@ -134,10 +134,10 @@ class BlockResource(resource.Resource):
 			if name in curstate:
 				cell = curstate[name]
 				if cell.isBlock():
-					return self.__getBlockChild(name, cell.getBlock())
+					return self.__getBlockChild(name, cell.get())
 		else:
 			if name in self._blockCells:
-				return self.__getBlockChild(name, self._blockCells[name].getBlock())
+				return self.__getBlockChild(name, self._blockCells[name].get())
 		# old-style-class super call
 		return resource.Resource.getChild(self, name, request)
 	
@@ -241,7 +241,7 @@ class _StateStreamObjectRegistration(object):
 		if isinstance(obj, StreamCell):
 			raise Exception("shouldn't happen: StreamCell here")
 		if obj.isBlock():
-			block = obj.getBlock()
+			block = obj.get()
 			self.__ssi._lookup_or_register(block, self.url)
 			self.__maybesend_reference({u'value': block}, True)
 		else:

@@ -108,7 +108,7 @@ class _DspserverProtocol(protocol.Protocol):
 	def _get_receiver(self):
 		receiver_cells = self._top.receivers.state().values()
 		if len(receiver_cells) > 0:
-			receiver = receiver_cells[0].getBlock()
+			receiver = receiver_cells[0].get()
 		else:
 			_, receiver = self._top.add_receiver('AM')
 		return receiver

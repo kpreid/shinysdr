@@ -119,5 +119,5 @@ class TestMain(unittest.TestCase):
 			'''))
 		
 		(top, note_dirty) = yield self.__run_main()
-		self.assertEqual(top.state()['sources'].getBlock().state().keys(), ['a_source'])
+		self.assertEqual(top.state()['sources'].get().state().keys(), ['a_source'])
 		

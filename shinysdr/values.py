@@ -61,6 +61,7 @@ class BaseCell(object):
 		return hash(self._target) ^ hash(self._key)
 
 	def isBlock(self):  # TODO underscore naming
+		# TODO this should be moved into the type
 		raise NotImplementedError()
 	
 	def key(self):
@@ -219,33 +220,26 @@ class BaseBlockCell(BaseCell):
 	def isBlock(self):
 		return True
 	
-	def get(self):
-		# TODO middle of refactoring
-		return self.getBlock()
+	# get() is still abstract
 	
 	def set(self, value):
-		# TODO middle of refactoring
 		raise Exception('BaseBlockCell is not writable.')
 	
 	def get_state(self):
-		# TODO middle of refactoring
-		return self.getBlock().state_to_json()
+		return self.get().state_to_json()
 	
 	def set_state(self, value):
-		return self.getBlock().state_from_json(value)
+		return self.get().state_from_json(value)
 	
 	def description(self):
-		return self.getBlock().state_description()
-
-	def getBlock(self):
-		raise NotImplementedError()
+		return self.get().state_description()
 
 
 class BlockCell(BaseBlockCell):
 	def __init__(self, target, key, persists=True):
 		BaseBlockCell.__init__(self, target, key, persists=persists)
 	
-	def getBlock(self):
+	def get(self):
 		# TODO method-based access
 		return getattr(self._target, self._key)
 
@@ -255,7 +249,7 @@ class CollectionMemberCell(BaseBlockCell):
 	def __init__(self, target, key, persists=True):
 		BaseBlockCell.__init__(self, target, key, persists=persists)
 	
-	def getBlock(self):
+	def get(self):
 		# fallback to nullExportedState so that if we become invalid in a dynamic collection we don't break
 		return self._target._collection.get(self._key, nullExportedState)
 
@@ -691,10 +685,7 @@ class _PollerValueTarget(_PollerTarget):
 		self.__previous_value = self.__get()
 
 	def __get(self):
-		if self._obj.isBlock():  # TODO kill this distinction
-			return  self._obj.getBlock()
-		else:
-			return self._obj.get()
+		return self._obj.get()
 
 	def poll(self, fire):
 		value = self.__get()
