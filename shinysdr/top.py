@@ -203,7 +203,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 			self.__source_tune_subscription = this_source.state()['freq'].subscribe(tune_hook)
 			
 			self.source = this_source
-			this_rate = this_source.get_sample_rate()
+			this_rate = this_source.get_output_type().get_sample_rate()
 			rate_changed = self.input_rate != this_rate
 			self.input_rate = this_rate
 			update_input_freqs()

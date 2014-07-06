@@ -27,6 +27,25 @@ from shinysdr.types import Range
 from shinysdr.values import ExportedState, LooseCell, exported_value
 
 
+class SignalType(object):
+	def __init__(self, sample_rate, kind):
+		self.__sample_rate = float(sample_rate)
+		self.__kind = unicode(kind)
+	
+	def get_sample_rate(self):
+		'''Sample rate in samples per second.'''
+		return self.__sample_rate
+	
+	def get_kind(self):
+		# TODO will probably want to change this
+		'''
+		One of the 'IQ', 'USB', 'LSB', 'MONO', or 'STEREO'.
+		
+		Note that due to the current implementation, USB and LSB are complex with a zero Q component.
+		'''
+		return self.__kind
+
+
 class Source(gr.hier_block2, ExportedState):
 	'''Generic wrapper for multiple source types, yielding complex samples.'''
 	def __init__(self, name, freq_range=float):
@@ -49,8 +68,14 @@ class Source(gr.hier_block2, ExportedState):
 		# TODO make this possible to be decorator style
 		callback(self.freq_cell)
 	
-	@exported_value(ctor=float)
-	def get_sample_rate(self):
+	@exported_value(ctor=SignalType)
+	def get_output_type(self):
+		'''
+		Should return an instance of SignalType describing the output signal.
+		
+		The value MUST NOT change in an incompatible way during the lifetime of the source. 
+		'''
+		# TODO: Programmatically define what 'incompatible' means
 		raise NotImplementedError()
 
 	def get_freq(self):
@@ -98,6 +123,11 @@ class AudioSource(Source):
 			self.__sample_rate_out = sample_rate / 2
 			self.__offset = sample_rate / 4
 		
+		# TODO: Eliminate the Complexifier, and the quadrature_as_stereo parameter, and just declare our output to be a user specified type (FM or USB probably).
+		self.__signal_type = SignalType(
+			kind='IQ',
+			sample_rate=self.__sample_rate_out)
+		
 		if self.__tuning_cell is not None:
 			freq_range = self.__tuning_cell.type()
 			if self.__offset != 0 and isinstance(freq_range, Range): # TODO kludge
@@ -127,9 +157,9 @@ class AudioSource(Source):
 	def __str__(self):
 		return 'Audio ' + self.__device_name
 
-	@exported_value(ctor=float)
-	def get_sample_rate(self):
-		return self.__sample_rate_out
+	@exported_value(ctor=SignalType)
+	def get_output_type(self):
+		return self.__signal_type
 
 	def __update_from_tuning_source(self):
 		freq = self.__tuning_cell.get() + self.__offset

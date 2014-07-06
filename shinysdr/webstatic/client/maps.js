@@ -55,7 +55,8 @@ define(['./values'], function (values) {
     var radioStateInfo = new DerivedCell(any, scheduler, function (dirty) {
       var source = radio.source.depend(dirty);
       var center = source.freq.depend(dirty);
-      var width = source.sample_rate.depend(dirty);
+      // TODO: Ask the "bandwidth" question directly rather than hardcoding logic here
+      var width = source.output_type.depend(dirty).sample_rate;
       var lower = center - width / 2;
       var upper = center + width / 2;
       

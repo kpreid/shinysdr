@@ -17,7 +17,7 @@
 
 from __future__ import absolute_import, division
 
-from shinysdr.source import Source
+from shinysdr.source import SignalType, Source
 from shinysdr.types import Enum, Range
 from shinysdr.values import BlockCell, Cell, ExportedState, exported_value, setter
 
@@ -119,19 +119,24 @@ class OsmoSDRSource(Source):
 		else:
 			# Note: _invert_frequency won't actually do anything useful currently because external_freq_shift and correction_ppm aren't initialized at this point; it's just the most-correct expression. And if we add ctor args for the frequency modifiers, it'll do the right thing.
 			self.freq = self._invert_frequency(hw_initial_freq)
-	
+		
+		# Misc initial state
+		self.__signal_type = SignalType(
+			kind='IQ',
+			# TODO review why cast
+			sample_rate=int(source.get_sample_rate()))
+		
 	def __str__(self):
 		return 'OsmoSDR ' + self.__osmo_device
-
+	
 	def state_def(self, callback):
 		super(OsmoSDRSource, self).state_def(callback)
 		# TODO make this possible to be decorator style
 		callback(BlockCell(self, 'gains'))
 	
-	@exported_value(ctor=float)
-	def get_sample_rate(self):
-		# TODO review why cast
-		return int(self.osmosdr_source_block.get_sample_rate())
+	@exported_value(ctor=SignalType)
+	def get_output_type(self):
+		return self.__signal_type
 	
 	# override Source
 	def _really_set_frequency(self, freq):

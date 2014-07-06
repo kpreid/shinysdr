@@ -349,7 +349,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         addWidget('correction_ppm', SmallKnob, 'Freq.corr. (PPM)');
       }
       
-      ignore('sample_rate');
+      ignore('output_type');
     });
   }
   widgets.Source = Source;

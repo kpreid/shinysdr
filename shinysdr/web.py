@@ -47,6 +47,7 @@ import weakref
 import shinysdr.top
 import shinysdr.plugins
 import shinysdr.db
+from shinysdr.source import SignalType
 from shinysdr.values import ExportedState, BaseCell, BlockCell, StreamCell, IWritableCollection, the_poller
 
 
@@ -55,13 +56,25 @@ if hasattr(txws, 'WebSocketProtocol') and not hasattr(txws.WebSocketProtocol, 's
 	raise ImportError('The installed version of txWS does not support sending binary messages and cannot be used.')
 
 
+def _json_encoder_special_cases(obj):
+	# TODO consider a more general strategy once we have a second example
+	if isinstance(obj, SignalType):
+		return {
+			u'kind': obj.get_kind(),
+			u'sample_rate': obj.get_sample_rate(),
+		}
+	else:
+		raise TypeError('Not serializable: ' + repr(obj))
+
+
 # encoder which is set up for the way we want to deliver values to clients, including in the state stream
 _json_encoder_for_values = json.JSONEncoder(
 	ensure_ascii=False,
 	check_circular=False,
 	allow_nan=True,
 	sort_keys=True,
-	separators=(',', ':'))
+	separators=(',', ':'),
+	default=_json_encoder_special_cases)
 
 
 class _SlashedResource(resource.Resource):

@@ -30,6 +30,7 @@ from twisted.internet import reactor
 from twisted.web import http
 
 from shinysdr.db import DatabaseModel
+from shinysdr.source import SignalType
 from shinysdr.values import BlockCell, ExportedState, CollectionState, NullExportedState, Poller, exported_value, nullExportedState, setter
 # TODO: StateStreamInner is an implementation detail; arrange a better interface to test
 from shinysdr.web import StateStreamInner, WebService
@@ -215,3 +216,28 @@ class DuplicateReferenceSpecimen(ExportedState):
 		# TODO make this possible to be decorator style
 		callback(BlockCell(self, 'foo'))
 		callback(BlockCell(self, 'bar'))
+
+
+class TestSerialization(StateStreamTestCase):
+	def test_signal_type(self):
+		self.setUpForObject(SerializationSpecimen())
+		self.getUpdates() # ignore initialization
+		self.object.st = SignalType(kind='USB', sample_rate=1234.0)
+		self.assertEqual(self.getUpdates(), [
+			['value', 2, {
+				u'kind': 'USB',
+				u'sample_rate': 1234.0,
+			}],
+		])
+
+
+class SerializationSpecimen(ExportedState):
+	'''Helper for TestStateStream'''
+	implements(IFoo)
+
+	def __init__(self):
+		self.st = None
+	
+	@exported_value(ctor=SignalType)
+	def get_st(self):
+		return self.st

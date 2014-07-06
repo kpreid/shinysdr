@@ -27,7 +27,7 @@ from gnuradio.filter import firdes
 import math
 
 from shinysdr.blocks import rotator_inc
-from shinysdr.source import Source
+from shinysdr.source import SignalType, Source
 from shinysdr.types import Range
 from shinysdr.values import BlockCell, CollectionState, ExportedState, exported_value, setter
 
@@ -91,6 +91,10 @@ class SimulatedSource(Source):
 		for signal in signals:
 			self.connect(signal, (self.bus, bus_input))
 			bus_input = bus_input + 1
+		
+		self.__signal_type = SignalType(
+			kind='IQ',
+			sample_rate=rf_rate)
 	
 	def __str__(self):
 		return 'Simulated RF'
@@ -100,10 +104,9 @@ class SimulatedSource(Source):
 		# TODO make this possible to be decorator style
 		callback(BlockCell(self, 'transmitters'))
 
-	@exported_value(ctor=float)
-	def get_sample_rate(self):
-		# TODO review why cast
-		return int(self.rf_rate)
+	@exported_value(ctor=SignalType)
+	def get_output_type(self):
+		return self.__signal_type
 		
 	def _really_set_frequency(self, freq):
 		pass
