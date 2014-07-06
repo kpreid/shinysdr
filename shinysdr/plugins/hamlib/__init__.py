@@ -39,6 +39,7 @@ import subprocess
 from zope.interface import implements, Interface
 
 from twisted.internet import defer
+from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.protocol import ClientFactory, Protocol
 from twisted.internet.task import LoopingCall, deferLater
 from twisted.protocols.basic import LineReceiver
@@ -164,7 +165,7 @@ def connect_to_server(reactor, host='localhost', port=4532):
 	connected = defer.Deferred()
 	reactor.connectTCP(host, port, _RigctldClientFactory(connected))
 	protocol = yield connected
-	print 'top connected ', protocol.transport
+	#print 'top connected ', protocol.transport
 	rigObj = _HamlibRig(protocol)
 	yield rigObj.sync()  # allow dump_caps round trip
 	defer.returnValue(rigObj)
@@ -185,6 +186,18 @@ def connect_to_rig(reactor, options=None, port=4532):
 		options = []
 	host = '127.0.0.1'
 	
+	# We use rigctld instead of rigctl, because rigctl will only execute one command at a time and does not have the better-structured response formats.
+	# If it were possible, we'd rather connect to rigctld over a pipe or unix-domain socket to avoid port allocation issues.
+
+	# Make sure that there isn't (as best we can check) something using the port already.
+	fake_connected = defer.Deferred()
+	reactor.connectTCP(host, port, _RigctldClientFactory(fake_connected))
+	try:
+		yield fake_connected
+		raise Exception('Something is already using port %i!' % port)
+	except ConnectionRefusedError:
+		pass
+	
 	process = subprocess.Popen(
 		args=['/usr/bin/env', 'rigctld', '-T', host, '-t', str(port)] + options,
 		stdin=None,
@@ -192,10 +205,19 @@ def connect_to_rig(reactor, options=None, port=4532):
 		stderr=None,
 		close_fds=True)
 	
-	# can't ask when the rigctld is ready, so wait a second. TODO: Try sooner and exponential backoff or something
-	yield deferLater(reactor, 1.0, lambda: None)
+	# Retry connecting with exponential backoff, because the rigctld process won't tell us when it's started listening.
+	rig = None
+	refused = None
+	for i in xrange(0, 5):
+		try:
+			rig = yield connect_to_server(reactor, host=host, port=port)
+			break
+		except ConnectionRefusedError, e:
+			refused = e
+			yield deferLater(reactor, 0.1 * (2 ** i), lambda: None)
+	else:
+		raise refused
 	
-	rig = yield connect_to_server(reactor, host=host, port=port)
 	rig.when_closed().addCallback(lambda _: process.kill())
 	
 	defer.returnValue(rig)
@@ -225,6 +247,8 @@ class _HamlibRig(ExportedState):
 		self.__poller_fast = LoopingCall(self.__poll_fast)
 		self.__poller_slow.start(2.0)
 		self.__poller_fast.start(0.2)
+		
+		protocol.rc_send('dump_caps')
 	
 	def sync(self):
 		return self.__protocol.rc_sync()
@@ -391,7 +415,6 @@ class _RigctldClientFactory(ClientFactory):
 		return p
 
 	def clientConnectionFailed(self, connector, reason):
-		print 'connectionFailed!', reason
 		self.__connected_deferred.errback(reason)
 
 
@@ -408,12 +431,11 @@ class _RigctldClientProtocol(Protocol):
 		self.__receive_arg = None
 	
 	def connectionMade(self):
-		print 'connectionMade protocol', self.transport
+		#print 'connectionMade protocol', self.transport
 		self.__connected_deferred.callback(self)
-		self.rc_send('dump_caps')
 	
 	def connectionLost(self, reason):
-		print 'connectionLost protocol'
+		#print 'connectionLost protocol'
 		if self.__rig_obj is not None:
 			self.__rig_obj._clientConnectionLost(reason)
 	
