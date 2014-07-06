@@ -306,14 +306,12 @@ def AudioDevice(
 		sample_rate=sample_rate,
 		quadrature_as_stereo=quadrature_as_stereo)
 	
-	offset = rx_driver._freq_offset
-	
 	return Device(
 		name=name,
 		vfo_cell=LooseCell(
 			key='freq',
-			value=offset,
-			ctor=Range([(offset, offset)]),
+			value=0.0,
+			ctor=Range([(0.0, 0.0)]),
 			writable=True,
 			persists=False),
 		rx_driver=rx_driver)
@@ -332,22 +330,17 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
 			quadrature_as_stereo):
 		self.__name = name
 		self.__device_name = device_name
-		self.__sample_rate_in = sample_rate
+		self.__sample_rate = sample_rate
 		self.__quadrature_as_stereo = quadrature_as_stereo
 		
 		if self.__quadrature_as_stereo:
-			self.__complex = blocks.float_to_complex(1)
-			self.__sample_rate_out = sample_rate
-			self._freq_offset = 0.0
+			self.__signal_type = SignalType(
+				kind='IQ',
+				sample_rate=self.__sample_rate)
 		else:
-			self.__complex = _Complexifier(hilbert_length=128)
-			self.__sample_rate_out = sample_rate / 2
-			self._freq_offset = sample_rate / 4
-		
-		# TODO: Eliminate the Complexifier, and the quadrature_as_stereo parameter, and just declare our output to be a user specified type (FM or USB probably).
-		self.__signal_type = SignalType(
-			kind='IQ',
-			sample_rate=self.__sample_rate_out)
+			self.__signal_type = SignalType(
+				kind='USB',  # TODO obtain correct type from config (or say hamlib)
+				sample_rate=self.__sample_rate)
 		
 		gr.hier_block2.__init__(
 			self, str(name),
@@ -356,14 +349,16 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
 		)
 		
 		self.__source = audio.source(
-			self.__sample_rate_in,
+			self.__sample_rate,
 			device_name=self.__device_name,
 			ok_to_block=True)
 		
-		self.connect(self.__source, self.__complex, self)
+		combine = blocks.float_to_complex(1)
+		self.connect(self.__source, combine, self)
 		if self.__quadrature_as_stereo:
 			# if we don't do this, the imaginary component is 0 and the spectrum is symmetric
-			self.connect((self.__source, 1), (self.__complex, 1))
+			self.connect((self.__source, 1), (combine, 1))
+		# TODO: If not quadrature, we always discard the right channel. Is there a use for it? Would summing mono input reduce noise?
 	
 	def __str__(self):
 		return self.__name
@@ -378,35 +373,3 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
 	
 	def notify_reconnecting_or_restarting(self):
 		pass
-
-
-class _Complexifier(gr.hier_block2):
-	'''
-	Turn a real signal into a complex signal of half the sample rate with the same band.
-	'''
-	
-	def __init__(self, hilbert_length):
-		gr.hier_block2.__init__(
-			self, self.__class__.__name__,
-			gr.io_signature(1, 1, gr.sizeof_float),
-			gr.io_signature(1, 1, gr.sizeof_gr_complex),
-		)
-		
-		# On window selection:
-		# http://www.trondeau.com/blog/2013/9/26/hilbert-transform-and-windowing.html
-		self.__hilbert = grfilter.hilbert_fc(
-			hilbert_length,
-			window=firdes.WIN_BLACKMAN_HARRIS)
-		self.__rotate = grfilter.freq_xlating_fir_filter_ccc(
-			2,  # decimation
-			[1],  # taps
-			0.25,  # freq shift
-			1)  # sample rate
-		
-		# TODO: We could skip the rotation step by instead passing info downstream (i.e. declaring that our band is 0..f rather than -f/2..f/2). Unclear whether the complexity is worth it. Would need to teach MonitorSink (rotate FFT output) and Receiver (validity criterion) about it.
-		
-		self.connect(
-			self,
-			self.__hilbert,
-			self.__rotate,
-			self)
