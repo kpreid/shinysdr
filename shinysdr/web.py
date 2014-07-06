@@ -55,6 +55,15 @@ if hasattr(txws, 'WebSocketProtocol') and not hasattr(txws.WebSocketProtocol, 's
 	raise ImportError('The installed version of txWS does not support sending binary messages and cannot be used.')
 
 
+# encoder which is set up for the way we want to deliver values to clients, including in the state stream
+_json_encoder_for_values = json.JSONEncoder(
+	ensure_ascii=False,
+	check_circular=False,
+	allow_nan=True,
+	sort_keys=True,
+	separators=(',', ':'))
+
+
 class _SlashedResource(resource.Resource):
 	'''Redirects /.../this to /.../this/.'''
 	
@@ -102,7 +111,7 @@ class JSONResource(CellResource):
 		return json.loads(value)
 
 	def grrender(self, value, request):
-		return json.dumps(value)
+		return _json_encoder_for_values.encode(value).encode('utf-8')
 
 
 def notDeletable():
@@ -157,7 +166,7 @@ class BlockResource(resource.Resource):
 		return BlockResource(block, self._noteDirty, deleter)
 	
 	def render_GET(self, request):
-		return json.dumps(self.resourceDescription())
+		return _json_encoder_for_values.encode(self.resourceDescription()).encode('utf-8')
 	
 	def render_POST(self, request):
 		'''currently only meaningful to create children of CollectionResources'''
@@ -172,7 +181,7 @@ class BlockResource(resource.Resource):
 		request.setResponseCode(201)  # Created
 		request.setHeader('Location', url)
 		# TODO consider a more useful response
-		return json.dumps(url)
+		return _json_encoder_for_values.encode(url).encode('utf-8')
 	
 	def render_DELETE(self, request):
 		self._deleteSelf()
@@ -376,7 +385,8 @@ class StateStreamInner(object):
 	def _flush(self):  # exposed for testing
 		self.__batch_delay = None
 		if len(self._send_batch) > 0:
-			self._send(unicode(json.dumps(self._send_batch, ensure_ascii=False)))
+			# unicode() because JSONEncoder does not reliably return a unicode rather than str object
+			self._send(unicode(_json_encoder_for_values.encode(self._send_batch)))
 			self._send_batch = []
 	
 	def _send1(self, binary, value):
@@ -638,7 +648,7 @@ class WebService(Service):
 				loadList.append('/client/plugins/' + urllib.quote(resourceDef.key, safe='') + '/' + resourceDef.loadURL)
 		
 		# Client plugin list
-		client.putChild('plugin-index.json', static.Data(json.dumps(loadList), 'application/json'))
+		client.putChild('plugin-index.json', static.Data(_json_encoder_for_values.encode(loadList).encode('utf-8'), 'application/json'))
 		
 		self.__site = server.Site(serverRoot)
 		self.__ws_port_obj = None
