@@ -53,7 +53,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 			itemsize=gr.sizeof_char)
 		
 		# Output
-		self.band_filter_block = band_filter = MultistageChannelFilter(
+		band_filter = MultistageChannelFilter(
 			input_rate=input_rate,
 			output_rate=pipe_rate,  # expected by dump1090
 			cutoff_freq=pipe_rate / 2,
@@ -70,7 +70,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 			self.dump1090)
 		
 		self.connect(
-			filter,
+			band_filter,
 			blocks.complex_to_imag(1),
 			blocks.multiply_const_ff(255.0 / 2),
 			blocks.add_const_ff(255.0 / 2),
