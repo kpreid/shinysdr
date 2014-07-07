@@ -17,6 +17,9 @@
 
 from __future__ import absolute_import, division
 
+from twisted.internet import reactor
+from twisted.internet.protocol import ProcessProtocol
+from twisted.protocols.basic import LineReceiver
 from zope.interface import implements
 
 from gnuradio import gr
@@ -26,7 +29,7 @@ from gnuradio import analog
 from shinysdr.modes import ModeDef, IDemodulator
 from shinysdr.types import Notice
 from shinysdr.values import ExportedState, exported_value
-from shinysdr.blocks import MultistageChannelFilter, SubprocessSink, test_subprocess
+from shinysdr.blocks import MultistageChannelFilter, make_sink_to_process_stdin, test_subprocess
 
 
 pipe_rate = 2000000
@@ -48,9 +51,18 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 		self.input_rate = input_rate
 		
 		# Subprocess
-		self.dump1090 = SubprocessSink(
-			args=['dump1090', '--ifile', '-'],
-			itemsize=gr.sizeof_char)
+		# TODO need to redefine this
+		process = reactor.spawnProcess(
+			_Dump1090ProcessProtocol(None),
+			'/usr/bin/env',
+			env=None,
+			args=['env', 'dump1090', '--ifile', '-'],
+			childFDs={
+				0: 'w',
+				1: 1,
+				2: 2
+			})
+		sink = make_sink_to_process_stdin(process, itemsize=gr.sizeof_char)
 		
 		# Output
 		band_filter = MultistageChannelFilter(
@@ -67,7 +79,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 			blocks.add_const_ff(255.0 / 2),
 			blocks.float_to_uchar(),
 			(interleaver, 0),
-			self.dump1090)
+			sink)
 		
 		self.connect(
 			band_filter,
@@ -100,6 +112,12 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 	@exported_value(ctor=Notice())
 	def get_notice(self):
 		return u'Properly displaying output is not yet implemented; see stdout of the server process.'
+
+
+class _Dump1090ProcessProtocol(ProcessProtocol):
+	def __init__(self, target):
+		self.__target = target
+
 
 # TODO: Arrange for a way for the user to see why it is unavailable.
 pluginDef = ModeDef('MODE-S', label='Mode S', demodClass=ModeSDemodulator,

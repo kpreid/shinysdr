@@ -21,6 +21,8 @@ import math
 import os
 import subprocess
 
+from twisted.internet.protocol import ProcessProtocol
+
 from gnuradio import gr
 from gnuradio import blocks
 from gnuradio import filter as grfilter  # don't shadow builtin
@@ -264,34 +266,19 @@ def rotator_inc(rate, shift):
 	return (2 * math.pi) * (shift / rate)
 
 
-class SubprocessSink(gr.hier_block2):
-	def __init__(self, args, itemsize=gr.sizeof_char):
-		gr.hier_block2.__init__(
-			self, 'subprocess ' + repr(args),
-			gr.io_signature(1, 1, itemsize),
-			gr.io_signature(0, 0, 0),
-		)
-		self.__p = subprocess.Popen(
-			args=args,
-			stdin=subprocess.PIPE,
-			stdout=None,
-			stderr=None,
-			close_fds=True)
-		# we dup the fd because the stdin object and file_descriptor_sink both expect to own it
-		fd_owned_by_sink = os.dup(self.__p.stdin.fileno())
-		self.__p.stdin.close()  # not going to use
-		self.connect(
-			self,
-			blocks.file_descriptor_sink(itemsize, fd_owned_by_sink))
-	
-	# we may find this needed later...
-	#def __del__(self):
-	#	self.__p.kill()
+def make_sink_to_process_stdin(process, itemsize=gr.sizeof_char):
+	'''Given a twisted Process, connect a sink to its stdin.'''
+	fd_owned_by_twisted = process.pipes[0].fileno()  # TODO: More public way to do this?
+	fd_owned_by_sink = os.dup(fd_owned_by_twisted)
+	#print fd_owned_by_twisted, fd_owned_by_sink
+	process.closeStdin()
+	return blocks.file_descriptor_sink(itemsize, fd_owned_by_sink)
 
 
 def test_subprocess(args, substring, shell=False):
 	'''Check the stdout or stderr of the specified command for a specified string.'''
 	# TODO: establish resource and output size limits
+	# TODO: Use Twisted facilities instead to avoid possible conflicts
 	try:
 		output = subprocess.check_output(
 			args=args,

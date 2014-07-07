@@ -17,6 +17,9 @@
 
 from __future__ import absolute_import, division
 
+from twisted.internet import reactor
+from twisted.internet.protocol import ProcessProtocol
+from twisted.protocols.basic import LineReceiver
 from zope.interface import implements
 
 from gnuradio import gr
@@ -24,10 +27,10 @@ from gnuradio import blocks
 
 from shinysdr.modes import ModeDef, IDemodulator
 from shinysdr.types import Notice
-from shinysdr.values import ExportedState, exported_value
-from shinysdr.blocks import SubprocessSink, test_subprocess, make_resampler
+from shinysdr.values import BlockCell, ExportedState, exported_value
+from shinysdr.blocks import make_sink_to_process_stdin, test_subprocess, make_resampler
 from shinysdr.plugins.basic_demod import NFMDemodulator
-
+from shinysdr.plugins.aprs import parse_tnc2, APRSInformation
 
 pipe_rate = 22050  # what multimon-ng expects
 _maxint32 = 2 ** 15 - 1
@@ -49,6 +52,8 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 		self.mode = mode
 		self.input_rate = input_rate
 		
+		self.information = APRSInformation()
+		
 		# FM demod
 		self.fm_demod = NFMDemodulator(
 			mode='NFM',
@@ -57,10 +62,19 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 			tau=None)  # no deemphasis
 		
 		# Subprocess
-		self.process = SubprocessSink(
-			args=['multimon-ng', '-t', 'raw', '-a', 'AFSK1200', '-A', '-v', '10', '-'],
-			#args=['python', '../play16bit.py'],
-			itemsize=gr.sizeof_short)
+		# using /usr/bin/env because twisted spawnProcess doesn't support path search
+		process = reactor.spawnProcess(
+			MultimonNGProcessProtocol(self.information.receive),
+			'/usr/bin/env',
+			env=None,  # inherit environment
+			args=['env', 'multimon-ng', '-t', 'raw', '-a', 'AFSK1200', '-A', '-v', '10', '-'],
+			#args=['env', 'python', '../play16bit.py'],
+			childFDs={
+				0: 'w',
+				1: 'r',
+				2: 2
+			})
+		sink = make_sink_to_process_stdin(process, itemsize=gr.sizeof_short)
 		
 		# Output
 		converter = blocks.float_to_short(vlen=1, scale=int_scale)
@@ -68,7 +82,7 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 			self,
 			self.fm_demod,
 			converter,
-			self.process)
+			sink)
 		# Dummy sink for useless stereo output of demod
 		self.connect((self.fm_demod, 1), blocks.null_sink(gr.sizeof_float))
 		# Audio copy output
@@ -77,7 +91,12 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 		#self.connect(self.fm_demod, resampler)
 		self.connect(resampler, (self, 0))
 		self.connect(resampler, (self, 1))
-	
+		
+	def state_def(self, callback):
+		super(MultimonNGDemodulator, self).state_def(callback)
+		# TODO make this possible to be decorator style
+		callback(BlockCell(self, 'information'))
+
 	def can_set_mode(self, mode):
 		return False
 	
@@ -87,10 +106,41 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 	@exported_value()
 	def get_band_filter_shape(self):
 		return self.fm_demod.get_band_filter_shape()
+
+
+class MultimonNGProcessProtocol(ProcessProtocol):
+	def __init__(self, target):
+		self.__target = target
+		self.__line_receiver = LineReceiver()
+		self.__line_receiver.delimiter = '\n'
+		self.__line_receiver.lineReceived = self.__lineReceived
+		self.__last_line = None
 	
-	@exported_value(ctor=Notice())
-	def get_notice(self):
-		return u'Properly displaying output is not yet implemented; see stdout of the server process.'
+	def outReceived(self, data):
+		# split lines
+		self.__line_receiver.dataReceived(data)
+		
+	def errReceived(self, data):
+		# we should inherit stderr, not pipe it
+		raise Exception('shouldn\'t happen')
+	
+	def __lineReceived(self, line):
+		if line == '':  # observed glitch in output
+			pass
+		elif line.startswith('Enabled demodulators:'):
+			pass
+		elif line.startswith('$ULTW') and self.__last_line is not None:  # observed glitch in output; need to glue to previous line, I think?
+			ll = self.__last_line
+			self.__last_line = None
+			self.__target(ll + line)
+		elif line.startswith('APRS: '):
+			line = line[len('APRS: '):]
+			self.__last_line = line
+			self.__target(line)
+		else:
+			# TODO: Log these properly
+			print 'Not APRS line: %r' % line
+
 
 # TODO: Arrange for a way for the user to see why it is unavailable.
 pluginDef_APRS = ModeDef('APRS', label='APRS', demodClass=MultimonNGDemodulator,
