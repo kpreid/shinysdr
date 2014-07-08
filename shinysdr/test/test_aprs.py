@@ -151,7 +151,7 @@ class TestAPRSParser(unittest.TestCase):
 				name='FD TCARES',
 				live=True,
 				facts=[
-					Timestamp(datetime(2014, 6, 6, 15, 8, 0, 0)),
+					Timestamp(datetime.utcnow().replace(day=6, hour=15, minute=8, second=0, microsecond=0)),
 					Position(latitude=38.052166666666665, longitude=-120.298),
 					Symbol('/r'),
 				])],
