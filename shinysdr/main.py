@@ -28,28 +28,25 @@ import sys
 
 from twisted.application.service import IService, MultiService
 from twisted.internet import defer
-from twisted.internet import reactor
+from twisted.internet import reactor as singleton_reactor
+from twisted.internet.task import react
 from twisted.python import log
 
 # Note that gnuradio-dependent modules are loaded later, to avoid the startup time if all we're going to do is give a usage message
 from shinysdr.config import Config, make_default_config, execute_config
 
 def main(argv=None, _abort_for_test=False):
-	# This is referenced by the setup.py entry point definition as well as the name=__main__ test below.
-	d = main_async(argv, _abort_for_test)
+	# This function is referenced by the setup.py entry point definition as well as the name=__main__ test below.
+	def go(reactor):
+		return _main_async(reactor, argv, _abort_for_test)
+		
 	if _abort_for_test:
-		return d
+		return go(singleton_reactor)
 	else:
-		def handle_error(error):
-			log.err(error)
-			reactor.stop()
-		
-		d.addErrback(handle_error)
-		
-		reactor.run()
+		react(go)
 
 @defer.inlineCallbacks
-def main_async(argv=None, _abort_for_test=False):
+def _main_async(reactor, argv=None, _abort_for_test=False):
 	if argv is None:
 		argv = sys.argv
 	
@@ -79,7 +76,8 @@ def main_async(argv=None, _abort_for_test=False):
 	if args.createConfig:
 		with open(args.configFile, 'w') as f:
 			f.write(make_default_config())
-			sys.exit(0)
+			log.msg('Created default configuration file at: ' + args.configFile)
+			sys.exit(0)  # TODO: Consider using a return value or something instead
 	else:
 		configObj = Config(reactor)
 		execute_config(configObj, args.configFile)
@@ -131,6 +129,8 @@ def main_async(argv=None, _abort_for_test=False):
 	if _abort_for_test:
 		services.stopService()
 		defer.returnValue((top, noteDirty))
+	else:
+		yield defer.Deferred()  # never fires
 
 
 def top_defaults(top):
