@@ -121,7 +121,8 @@ class SimulatedSource(Source):
 		self.noise_level = value
 
 	def notify_reconnecting_or_restarting(self):
-		# throttle block runs on a clock which does not stop when the flowgraph stops; resetting the sample rate restarts the clock
+		# The throttle block runs on a clock which does not stop when the flowgraph stops; resetting the sample rate restarts the clock.
+		# The necessity of this kludge has been filed as a gnuradio bug at <http://gnuradio.org/redmine/issues/649>
 		self.throttle.set_sample_rate(self.throttle.sample_rate())
 
 
