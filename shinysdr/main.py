@@ -70,7 +70,6 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
 		help='Run DSP even if no client is connected (for debugging).')
 	args = argParser.parse_args(args=argv[1:])
 
-	import shinysdr.top as lazy_top
 	# We don't actually use shinysdr.devices directly, but we want it to be guaranteed available in the context of the config file.
 	import shinysdr.devices as lazy_devices
 	import shinysdr.source as lazy_source  # legacy shim
@@ -104,8 +103,7 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
 				root.state_from_json(get_defaults(root))
 	
 	log.msg('Constructing flow graph...')
-	top = lazy_top.Top(
-		devices=configObj.devices._values)
+	top = configObj._create_top_block()
 	
 	log.msg('Restoring state...')
 	restore(top, top_defaults)

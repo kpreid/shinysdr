@@ -73,6 +73,11 @@ class Config(object):
 		if len(self._service_makers) == 0:
 			warnings.warn('No network service defined!')
 	
+	def _create_top_block(self):
+		from shinysdr import top
+		return top.Top(
+			devices=self.devices._values)
+	
 	def _not_finished(self):
 		if self.__finished:
 			raise Exception('Too late to modify configuration')
