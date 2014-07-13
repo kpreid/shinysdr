@@ -27,6 +27,7 @@ from twisted.application import strports
 from twisted.application.service import Service
 from twisted.internet import defer
 from twisted.internet import protocol
+from twisted.internet import reactor as the_reactor  # TODO fix
 from twisted.internet import task
 from twisted.plugin import IPlugin, getPlugins
 from twisted.python import log
@@ -333,6 +334,7 @@ class StateStreamInner(object):
 		root_registration = _StateStreamObjectRegistration(ssi=self, poller=self.__poller, obj=self._cell, serial=0, url=root_url, refcount=0)
 		self._registered = {self._cell: root_registration}
 		self._send_batch = []
+		self.__batch_delay = None
 		self.__root_url = root_url
 		root_registration.initial_nudge()
 	
@@ -371,21 +373,24 @@ class StateStreamInner(object):
 			registration.initial_nudge()
 			return registration
 	
-	def __flush(self):
+	def _flush(self):  # exposed for testing
+		self.__batch_delay = None
 		if len(self._send_batch) > 0:
 			self._send(unicode(json.dumps(self._send_batch, ensure_ascii=False)))
 			self._send_batch = []
 	
 	def _send1(self, binary, value):
 		if binary:
-			self.__flush()
+			# preserve order by flushing stored non-binary msgs
+			# TODO: Implement batching for binary messages.
+			self._flush()
 			self._send(value)
 		else:
+			# Messages are batched in order to increase client-side efficiency since each incoming WebSocket message is always a separate JS event.
 			self._send_batch.append(value)
-	
-	def poll(self):
-		# TODO: flushing should be done as-needed rather than constantly
-		self.__flush()
+			# TODO: Parameterize with reactor so we can test properly
+			if not (self.__batch_delay is not None and self.__batch_delay.active()):
+				self.__batch_delay = the_reactor.callLater(0, self._flush)
 
 
 class AudioStreamInner(object):
@@ -394,11 +399,16 @@ class AudioStreamInner(object):
 		self._queue = gr.msg_queue(limit=100)
 		self._block = block
 		self._block.add_audio_queue(self._queue, audio_rate)
+		# TODO: slow/stop when stream is not running. Better yet, use something that twisted can wait on like a pipe.
+		self.__poll_loop = task.LoopingCall(self.__poll)
+		self.__poll_loop.start(1.0 / 61)
 	
 	def connectionLost(self, reason):
 		self._block.remove_audio_queue(self._queue)
+		if self.__poll_loop.running:
+			self.__poll_loop.stop()
 	
-	def poll(self):
+	def __poll(self):
 		queue = self._queue
 		buf = ''
 		while not queue.empty_p():
@@ -413,7 +423,6 @@ class OurStreamProtocol(protocol.Protocol):
 	def __init__(self, block, rootCap):
 		#protocol.Protocol.__init__(self)
 		self._block = block
-		self._sendLoop = task.LoopingCall(self.__poll)
 		self._seenValues = {}
 		self._rootCap = rootCap
 		self.inner = None
@@ -440,8 +449,6 @@ class OurStreamProtocol(protocol.Protocol):
 		else:
 			# TODO: does this close connection?
 			raise Exception('Unrecognized path: ' + repr(path))
-		# TODO: slow/stop when radio not running, and determine suitable update rate based on querying objects
-		self._sendLoop.start(1.0 / 61)
 	
 	def connectionMade(self):
 		"""twisted Protocol implementation"""
@@ -450,8 +457,6 @@ class OurStreamProtocol(protocol.Protocol):
 	
 	def connectionLost(self, reason):
 		"""twisted Protocol implementation"""
-		if self._sendLoop.running:
-			self._sendLoop.stop()
 		if self.inner is not None:
 			self.inner.connectionLost(reason)
 	

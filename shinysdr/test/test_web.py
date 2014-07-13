@@ -111,7 +111,7 @@ class StateStreamTestCase(unittest.TestCase):
 	def getUpdates(self):
 		# warning: implementation poking
 		self.poller.poll()
-		self.stream.poll()
+		self.stream._flush()
 		u = self.updates
 		self.updates = []
 		return u
