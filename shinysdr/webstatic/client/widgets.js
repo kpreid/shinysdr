@@ -829,7 +829,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
           0, // level
           gl.LUMINANCE, // internalformat
           fftSize, // width (= fft size)
-          1, // height (= history size)
+          1, // height (actually a 1D texture)
           0, // border
           gl.LUMINANCE, // format
           gl.UNSIGNED_BYTE, // type
