@@ -142,7 +142,6 @@ define(['./values', './events'], function (values, events) {
   
   function SpectrumCell(url) {
     var fft = new Float32Array(0);
-    var swapbuf = new Float32Array(0);
     var VSIZE = Float32Array.BYTES_PER_ELEMENT;
     var lastValue = [[NaN, NaN], fft];
 
@@ -150,35 +149,19 @@ define(['./values', './events'], function (values, events) {
     // TODO: put this on a more general and sound framework
     var subscriptions = [];
     
-    function transform(json) {
-      var info = json[0];
-      var arrayFFT = json[1];
-
-      var halfFFTSize = arrayFFT.length / 2;
-
-      // adjust size if needed
-      if (arrayFFT.length !== fft.length) {
-        fft = new Float32Array(arrayFFT.length);
-        swapbuf = new Float32Array(arrayFFT.length);
-      }
+    // infoAndFFT is of the format [{freq:<number>, rate:<number>}, <Float32Array>]
+    function transform(infoAndFFT) {
+      lastValue = infoAndFFT;
       
-      // swap first and second halves for drawing convenience so that center frequency is at halfFFTSize rather than 0
-      swapbuf.set(arrayFFT);
-      fft.set(swapbuf.subarray(0, halfFFTSize), halfFFTSize);
-      fft.set(swapbuf.subarray(halfFFTSize, fft.length), 0);
-      
-      var bundled = [info, fft];
-      lastValue = bundled;
-      
-      // TODO replace this with something async (note that fft is mutated so we need to allocate or use a free-list/circular-buffer strategy)
+      // TODO replace this with something async
       for (var i = 0; i < subscriptions.length; i++) {
-        (0,subscriptions[i])(bundled);
+        (0,subscriptions[i])(infoAndFFT);
       }
       
-      return bundled;
+      return infoAndFFT;
     }
     
-    ReadCell.call(this, url, fft, values.any, transform);
+    ReadCell.call(this, url, lastValue, values.any, transform);
     
     this.subscribe = function(callback) {
       // TODO need to provide for unsubscribing

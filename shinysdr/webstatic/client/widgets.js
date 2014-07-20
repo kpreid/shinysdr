@@ -817,8 +817,8 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);  // doesn't matter
       gl.bindTexture(gl.TEXTURE_2D, null);
 
       function configureTexture() {
@@ -887,13 +887,14 @@ define(['./values', './events', './widget'], function (values, events, widget) {
           }
 
           // Adjust drawing region
-          var len = fftCell.get().length;
           var viewCenterFreq = view.getCenterFreq();
           var bandwidth = view.getBandwidth();
+          var halfBinWidth = bandwidth / fftSize / 2;
           var lsf = viewCenterFreq - bandwidth/2;
           var rsf = viewCenterFreq + bandwidth/2;
           var xScale = (rvf-lvf)/(rsf-lsf);
-          var xZero = (lvf-lsf)/(rsf-lsf);
+          // The half bin width correction is because OpenGL texture coordinates put (0,0) between texels, not centered on one.
+          var xZero = (lvf - viewCenterFreq + halfBinWidth)/(rsf-lsf);
           gl.uniform1f(gl.getUniformLocation(program, 'xZero'), xZero);
           gl.uniform1f(gl.getUniformLocation(program, 'xScale'), xScale);
 
@@ -918,19 +919,17 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       // Each variable is updated in draw()
       // This is done so that the functions need not be re-created
       // each frame.
-      var xZero, xScale, xAfterLast, yZero, yScale, firstPoint, afterLastPoint;
+      var xZero, xScale, xNegBandwidthCoord, xPosBandwidthCoord, yZero, yScale, firstPoint, lastPoint, fftLen;
       function freqToCoord(freq) {
         return (freq - lvf) / (rvf-lvf) * w;
       }
       function path() {
         ctx.beginPath();
-        ctx.moveTo(xZero - xScale, h + 2);
-        ctx.lineTo(xZero - xScale, yZero + averageBuffer[0] * yScale);
-        for (var i = firstPoint; i < afterLastPoint; i++) {
-          ctx.lineTo(xZero + i * xScale, yZero + averageBuffer[i] * yScale);
+        ctx.moveTo(xNegBandwidthCoord - xScale, h + 2);
+        for (var i = firstPoint; i <= lastPoint; i++) {
+          ctx.lineTo(xZero + i * xScale, yZero + averageBuffer[mod(i, fftLen)] * yScale);
         }
-        ctx.lineTo(xAfterLast, yZero + averageBuffer[afterLastPoint - 1] * yScale);
-        ctx.lineTo(xAfterLast, h + 2);
+        ctx.lineTo(xPosBandwidthCoord + xScale, h + 2);
       }
       
       return {
@@ -943,20 +942,26 @@ define(['./values', './events', './widget'], function (values, events, widget) {
             ctx.clearRect(0, 0, w, h);
           }
 
-          var len = averageBuffer.length;
+          fftLen = averageBuffer.length;
+          var halfFFTLen = Math.floor(fftLen / 2);
+          
+          if (halfFFTLen <= 0) {
+            // no data yet, don't try to draw
+            return;
+          }
 
           var viewCenterFreq = view.getCenterFreq();
           var bandwidth = view.getBandwidth();
-          var halfBinWidth = bandwidth / len / 2;
-          xZero = freqToCoord(viewCenterFreq - bandwidth/2 + halfBinWidth);
-          xAfterLast = freqToCoord(viewCenterFreq + bandwidth/2 + halfBinWidth);
-          xScale = (xAfterLast - xZero) / len;
+          xZero = freqToCoord(viewCenterFreq);
+          xNegBandwidthCoord = freqToCoord(viewCenterFreq - bandwidth/2);
+          xPosBandwidthCoord = freqToCoord(viewCenterFreq + bandwidth/2);
+          xScale = (xPosBandwidthCoord - xNegBandwidthCoord) / fftLen;
           yScale = -h / (view.maxLevel - view.minLevel);
           yZero = -view.maxLevel * yScale;
 
           // choose points to draw
-          firstPoint = Math.max(0, Math.floor(-xZero / xScale) - 1);
-          afterLastPoint = Math.min(len, Math.ceil((w - xZero) / xScale) + 1);
+          firstPoint = Math.max(-halfFFTLen, Math.floor(-xZero / xScale) - 1);
+          lastPoint = Math.min(halfFFTLen, Math.ceil((w - xZero) / xScale) + 1);
 
           // Fill is deliberately over stroke. This acts to deemphasize downward stroking of spikes, which tend to occur in noise.
           ctx.fillStyle = fillStyle;
@@ -1065,6 +1070,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         + 'varying mediump vec2 v_position;\n'
         + 'uniform highp float currentFreq;\n'
         + 'uniform mediump float freqScale;\n'
+        + 'uniform highp float textureRotation;\n'
         + 'void main(void) {\n'
         + '  highp vec2 texLookup = mod(v_position, 1.0);\n'
         + (useFloatTexture
@@ -1076,7 +1082,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         + '  if (shift.x < 0.0 || shift.x > 1.0) {\n'
         + '    gl_FragColor = ' + backgroundColorGLSL + ';\n'
         + '  } else {\n'
-        + '    mediump float data = texture2D(data, shift).r;\n'
+        + '    mediump float data = texture2D(data, shift + vec2(textureRotation, 0.0)).r;\n'
         + '    gl_FragColor = texture2D(gradient, vec2(0.5, gradientZero + gradientScale * data));\n'
         //+ '    gl_FragColor = texture2D(gradient, vec2(0.5, v_position.x));\n'
         //+ '    gl_FragColor = vec4(gradientZero + gradientScale * data * 4.0 - 0.5);\n'
@@ -1090,6 +1096,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       var u_freqScale = gl.getUniformLocation(program, 'freqScale');
       var u_gradientZero = gl.getUniformLocation(program, 'gradientZero');
       var u_gradientScale = gl.getUniformLocation(program, 'gradientScale');
+      var u_textureRotation = gl.getUniformLocation(program, 'textureRotation');
       
       var fftSize = Math.max(1, config.target.get().length);
       
@@ -1098,7 +1105,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
       var historyFreqTexture = gl.createTexture();
@@ -1158,6 +1165,11 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       gl.bindTexture(gl.TEXTURE_2D, null);
 
       function configureTexture() {
+        // dependent on fftSize so updating it here works out.
+        // Shift (with wrapping) the texture data by 1/2 minus half a bin width, to align the GL texels with the FFT bins.
+        // TODO: The 0.5 cannot actually take effect correctly, because right now we use a canvas size equal to the FFT size. Change so that (in GL mode) we resize to the viewport, like the spectrum plot does.
+        gl.uniform1f(u_textureRotation, -(0.5 - 0.5/fftSize));
+        
         if (useFloatTexture) {
           var init = new Float32Array(fftSize*historyCount);
           for (var i = 0; i < fftSize*historyCount; i++) {
@@ -1359,9 +1371,10 @@ define(['./values', './events', './widget'], function (values, events, widget) {
           buffer = dataToDraw[1];
           bufferCenterFreq = dataToDraw[0].freq;
           // rescale to discovered fft size
-          if (canvas.width !== buffer.length) {
+          var fftLength = buffer.length;
+          if (canvas.width !== fftLength) {
             // assignment clears canvas
-            canvas.width = w = buffer.length;
+            canvas.width = w = fftLength;
             cleared = true;
             // reallocate
             slices = [];
@@ -1385,14 +1398,15 @@ define(['./values', './events', './widget'], function (values, events, widget) {
           }
 
           // Generate image slice from latest FFT data.
-          var xScale = buffer.length / w;
+          var xScale = fftLength / w;
+          var xZero = fftLength / 2;
           var cScale = 1 / (view.maxLevel - view.minLevel);
           var cZero = 1 - view.maxLevel * cScale;
           var data = ibuf.data;
           for (var x = 0; x < w; x++) {
             var base = x * 4;
-            var i = Math.round(x * xScale);
-            var colorVal = buffer[i] * cScale + cZero;
+            var i = Math.round(x * xScale + xZero);
+            var colorVal = buffer[mod(i, fftLength)] * cScale + cZero;
             interpolateColor(colorVal, data, base);
           }
         }
