@@ -547,7 +547,8 @@ class _SortedMultimap(object):
 			del self.__dict[key]
 			index = bisect.bisect_left(sorted, key)
 			if sorted[index] != key:
-				raise Exception("can't happen")
+				# TODO: This has been observed to happen. Need to diagnose.
+				raise Exception("can't happen: while removing last value %r for key %r from %r, %r was found instead of the key at index %r in the sorted list" % (value, key, self, sorted[index], index))
 			sorted[index:index + 1] = []
 		return last_out
 	
