@@ -21,6 +21,8 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   var Cell = values.Cell;
   var ConstantCell = values.ConstantCell;
   var DerivedCell = values.DerivedCell;
+  var Enum = values.Enum;
+  var LocalCell = values.LocalCell;
   var Notice = values.Notice;
   var alwaysCreateReceiverFromEvent = widget.alwaysCreateReceiverFromEvent;
   var createWidgetExt = widget.createWidgetExt;
@@ -272,21 +274,71 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         addWidget('freq', Knob, 'Center frequency');
       }
       
-      if ('gain' in block && 'agc' in block) {
+      // If we have multiple gain-related controls, do a combined UI
+      // TODO: Better feature-testing strategy
+      var hasAGC = 'agc' in block;
+      var hasSingleGain = 'gain' in block;
+      var hasMultipleGain = 'gains' in block;
+      if (hasAGC + hasSingleGain + hasMultipleGain > 1) (function () {
+        var gainModes = {};
+        if (hasAGC) { gainModes['auto'] = 'AGC On'; ignore('agc'); }
+        if (hasSingleGain) { gainModes['single'] = 'Manual Gain'; }
+        if (hasMultipleGain) { gainModes['stages'] = 'Stages'; }
+        Object.freeze(gainModes);
+        var gainModeType = new Enum(gainModes);
+        var gainModeCell = new LocalCell(gainModeType, block.agc.get() ? 'auto' : 'single');
+
         var gainPanel = getAppend().appendChild(document.createElement('div'));
-        gainPanel.className = 'panel';
-        gainPanel.appendChild(document.createTextNode('Gain '));
-        var agcl = gainPanel.appendChild(document.createElement('label'));
-        var agcc = agcl.appendChild(document.createElement('input'));
-        agcc.type = 'checkbox';
-        createWidgetExt(config.context, Toggle, agcc, block.agc);
-        agcl.appendChild(document.createTextNode('Auto '));
-        var gain = gainPanel.appendChild(document.createElement('input'));
-        gain.type = 'range';
-        createWidgetExt(config.context, LinSlider, gain, block.gain);
-        ignore('agc');
-        ignore('gain');
-      }
+        //gainPanel.appendChild(document.createTextNode('Gain '));
+        var gainModeControl = gainPanel.appendChild(document.createElement('span'));
+        createWidgetExt(config.context, Radio, gainModeControl, gainModeCell);
+        
+        var singleGainPanel;
+        if (hasSingleGain) {
+          singleGainPanel = gainPanel.appendChild(document.createElement('div'));
+          createWidgetExt(config.context, LinSlider, singleGainPanel.appendChild(document.createElement('div')), block.gain);
+          ignore('gain');
+        }
+        var multipleGainPanel;
+        if (hasMultipleGain) {
+          multipleGainPanel = gainPanel.appendChild(document.createElement('div'));
+          createWidgetExt(config.context, Block, multipleGainPanel.appendChild(document.createElement('div')), block.gains);
+          ignore('gains');
+        }
+        
+        // TODO: Figure out how to break these notify loops
+        function bindGainModeSet() {
+          var mode = gainModeCell.depend(bindGainModeSet);
+          if (mode === 'auto' && !block.agc.get()) {
+            block.agc.set(true);
+          } else if (hasAGC) {
+            block.agc.set(false);
+          }
+        }
+        bindGainModeSet.scheduler = config.scheduler;
+        bindGainModeSet();
+        function bindGainModeGet() {
+          if (hasAGC && block.agc.depend(bindGainModeGet)) {
+            gainModeCell.set('auto');
+          } else if (gainModeCell.get() === 'auto') {
+            gainModeCell.set('single');
+          }
+        }
+        bindGainModeGet.scheduler = config.scheduler;
+        bindGainModeGet();
+
+        function updateUI() {
+          var mode = gainModeCell.depend(updateUI);
+          if (hasSingleGain) {
+            singleGainPanel.style.display = mode === 'single' ? 'block' : 'none';
+          }
+          if (hasMultipleGain) {
+            multipleGainPanel.style.display = mode === 'stages' ? 'block' : 'none';
+          }
+        }
+        updateUI.scheduler = config.scheduler;
+        updateUI();
+      }());
       
       setToDetails();
       
