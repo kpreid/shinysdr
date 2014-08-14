@@ -132,6 +132,10 @@ define(['./values', './events'], function (values, events) {
     var originalStash = node;
     
     var container = node.parentNode;
+    if (!container) {
+      throw new Error('createWidget: The supplied node ' + node.nodeName + ' did not have a parent node.');
+    }
+
     var currentWidgetEl = node;
     var shouldBePanel = container.classList.contains('frame') || container.nodeName === 'DETAILS';  // TODO: less DWIM, more precise
     
