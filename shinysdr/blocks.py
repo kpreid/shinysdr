@@ -17,6 +17,7 @@
 
 from __future__ import absolute_import, division
 
+from fractions import gcd
 import math
 import os
 import subprocess
@@ -28,6 +29,7 @@ from gnuradio import blocks
 from gnuradio import filter as grfilter  # don't shadow builtin
 from gnuradio.filter import pfb
 from gnuradio.filter import firdes
+from gnuradio.filter import rational_resampler
 from gnuradio.fft import logpwrfft
 
 from shinysdr.types import Range, ValueType
@@ -89,6 +91,29 @@ def _factorize(n):
 	return primes
 
 
+def _small_factor_at_least(n, limit):
+	'''
+	Find a factor of 'n' which is at least 'limit' but not too much larger.
+	
+	This is a cheap rough approximation; finding the smallest such factor is equivalent to the knapsack problem. Ref: http://mathoverflow.net/q/79322/57423 (TODO: Better ref / check claim)
+	'''
+	if n % limit == 0:
+		# a better answer in easy case; e.g. for (100, 10) we'd return 25 otherwise
+		return limit
+	factors = _factorize(n)
+	factors.reverse()
+	answer = 1
+	for factor in factors:
+		answer *= factor
+		if answer >= limit:
+			break
+	return answer
+
+
+# Use rational_resampler_ccf rather than arb_resampler_ccf. This is less efficient, but avoids the bug <http://gnuradio.org/redmine/issues/713> where the latter block will hang the flowgraph if it is reused. When that is fixed, turn this flag off and maybe ditch the code for it.
+_use_rational_resampler = True
+
+
 class MultistageChannelFilter(gr.hier_block2):
 	'''
 	Provides frequency translation, low-pass filtering, and arbitrary sample rate conversion.
@@ -122,6 +147,17 @@ class MultistageChannelFilter(gr.hier_block2):
 		self.transition_width = transition_width
 		
 		total_decimation = max(1, int(input_rate // output_rate))
+		
+		using_rational_resampler = _use_rational_resampler and input_rate % 1 == 0 and output_rate % 1 == 0
+		if using_rational_resampler:
+			# If using rational resampler, don't decimate to the point that we get a fractional rate, if possible.
+			input_rate = int(input_rate)
+			output_rate = int(output_rate)
+			if input_rate > output_rate:
+				total_decimation = input_rate // _small_factor_at_least(input_rate, output_rate)
+			#print input_rate / total_decimation, total_decimation, input_rate, output_rate, input_rate // gcd(input_rate, output_rate)
+			# TODO: Don't re-factorize unnecessarily
+		
 		stage_decimations = _factorize(total_decimation)
 		stage_decimations.reverse()
 		
@@ -172,14 +208,28 @@ class MultistageChannelFilter(gr.hier_block2):
 			# exact multiple, no fractional resampling needed
 			#print 'direct connect %s/%s' % (output_rate, stage_input_rate)
 			self.connect(prev_block, self)
+			self.__resampler_explanation = 'No final resampler stage.'
 		else:
-			# TODO: combine resampler with final filter stage
-			# TODO: cache filter computation as optfir is used and takes a noticeable time
+			# TODO: systematically combine resampler with final filter stage
+			if using_rational_resampler:
+				if stage_input_rate % 1 != 0:
+					raise Exception("shouldn't happen", stage_input_rate)
+				stage_input_rate = int(stage_input_rate)  # because of float division above
+				common = gcd(output_rate, stage_input_rate)
+				interpolation = output_rate // common
+				decimation = stage_input_rate // common
+				self.__resampler_explanation = 'rational_resampler by %s/%s (stage rates %s/%s)' % (interpolation, decimation, output_rate, stage_input_rate)
+				resampler = rational_resampler.rational_resampler_ccf(
+					interpolation=interpolation,
+					decimation=decimation)
+			else:
+				# TODO: cache filter computation as optfir is used and takes a noticeable time
+				self.__resampler_explanation = 'arb_resampler %s/%s = %s' % (output_rate, stage_input_rate, float(output_rate) / stage_input_rate)
+				resampler = pfb.arb_resampler_ccf(float(output_rate) / stage_input_rate)
 			self.connect(
 				prev_block,
-				pfb.arb_resampler_ccf(float(output_rate) / stage_input_rate),
+				resampler,
 				self)
-			#print 'resampling %s/%s = %s' % (output_rate, stage_input_rate, float(output_rate) / stage_input_rate)
 		
 		# TODO: Shouldn't be necessary since we compute the taps in the loop above...
 		self.__do_taps()
@@ -221,7 +271,7 @@ class MultistageChannelFilter(gr.hier_block2):
 				len(stage_filter.taps()),
 				stage_output_rate * len(stage_filter.taps()),
 				type(stage_filter).__name__)
-		# TODO: Explain final resampler stage if present.
+		s += '\n' + self.__resampler_explanation
 		return s
 	
 	def get_cutoff_freq(self):
@@ -246,14 +296,20 @@ class MultistageChannelFilter(gr.hier_block2):
 
 
 def make_resampler(in_rate, out_rate):
-	# magic numbers from gqrx
-	resample_ratio = float(out_rate) / in_rate
-	pfbsize = 32
-	relative_bandwidth = min(resample_ratio, 1)  # for decimating or interpolating
-	return pfb.arb_resampler_fff(
-		resample_ratio,
-		firdes.low_pass(pfbsize, pfbsize, 0.4 * relative_bandwidth, 0.2 * relative_bandwidth),
-		pfbsize)
+	if _use_rational_resampler and in_rate % 1 == 0 and out_rate % 1 == 0:
+		# will automatically take the gcd internally and use sane rates
+		return rational_resampler.rational_resampler_fff(
+			interpolation=int(out_rate),
+			decimation=int(in_rate))
+	else:
+		# magic numbers from gqrx
+		resample_ratio = float(out_rate) / in_rate
+		pfbsize = 32
+		relative_bandwidth = min(resample_ratio, 1)  # for decimating or interpolating
+		return pfb.arb_resampler_fff(
+			resample_ratio,
+			firdes.low_pass(pfbsize, pfbsize, 0.4 * relative_bandwidth, 0.2 * relative_bandwidth),
+			pfbsize)
 
 
 def rotator_inc(rate, shift):

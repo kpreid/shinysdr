@@ -66,12 +66,19 @@ class TestMultistageChannelFilter(unittest.TestCase):
 		f = MultistageChannelFilter(input_rate=8000, output_rate=21234, cutoff_freq=8000, transition_width=5000)
 		self.__run(f, 4000, 21234 / 8000)
 	
+	def test_decimating(self):
+		'''Sample problematic decimation case'''
+		# TODO: Test filter functionality more
+		f = MultistageChannelFilter(input_rate=8000000, output_rate=48000, cutoff_freq=10000, transition_width=5000)
+		self.__run(f, 400000, 48000 / 8000000)
+	
 	def test_explain(self):
 		f = MultistageChannelFilter(input_rate=10000, output_rate=1000, cutoff_freq=500, transition_width=100)
 		self.assertEqual(f.explain(), textwrap.dedent('''\
 			2 stages from 10000 to 1000
 			  decimate by 5 using  43 taps (86000) in freq_xlating_fir_filter_ccc_sptr
-			  decimate by 2 using  49 taps (49000) in fft_filter_ccc_sptr'''))
+			  decimate by 2 using  49 taps (49000) in fft_filter_ccc_sptr
+			No final resampler stage.'''))
 	
 	def __run(self, block, in_size, ratio):
 		'''check that the actual relative rate is as expected'''
