@@ -60,3 +60,6 @@ if __name__ == '__main__':
 	
 	# like WFM
 	test_one_filter(input_rate=2400000, output_rate=240000, cutoff_freq=80000, transition_width=20000)
+	
+	# requires non-decimation resampling
+	test_one_filter(input_rate=1000000, output_rate=48000, cutoff_freq=5000, transition_width=1000)
