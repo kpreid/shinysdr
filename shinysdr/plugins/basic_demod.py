@@ -223,26 +223,26 @@ class FMDemodulator(SimpleAudioDemodulator):
 			output = self.__qdemod
 		self.connect_audio_stage(output)
 	
-	def _make_resampler(self, input):
-		taps = design_lofi_audio_filter(self.demod_rate)
-		if self.audio_rate == self.demod_rate:
+	def _make_resampler(self, input, input_rate):
+		taps = design_lofi_audio_filter(input_rate)
+		if self.audio_rate == input_rate:
 			filt = grfilter.fir_filter_fff(1, taps)
 			self.connect(input, filt)
 			return filt
-		elif self.demod_rate % self.audio_rate == 0:
-			filt = grfilter.fir_filter_fff(self.demod_rate // self.audio_rate, taps)
+		elif input_rate % self.audio_rate == 0:
+			filt = grfilter.fir_filter_fff(input_rate // self.audio_rate, taps)
 			self.connect(input, filt)
 			return filt
 		else:
 			# TODO: use combined filter and resampler (need to move filter design)
 			filt = grfilter.fir_filter_fff(1, taps)
-			resampler = make_resampler(self.demod_rate, self.audio_rate)
+			resampler = make_resampler(input_rate, self.audio_rate)
 			self.connect(input, filt, resampler)
 			return resampler
 
 	def connect_audio_stage(self, input):
 		'''Override point for stereo'''
-		resampler = self._make_resampler(input)
+		resampler = self._make_resampler(input, self.demod_rate)
 		self.connect_audio_output(resampler, resampler)
 			
 
@@ -265,11 +265,11 @@ pluginDef_nfm = ModeDef('NFM', label='Narrow FM', demodClass=NFMDemodulator)
 
 
 class WFMDemodulator(FMDemodulator):
-	def __init__(self, stereo=True, audio_filter=True, **kwargs):
+	def __init__(self, stereo=True, **kwargs):
 		self.stereo = stereo
-		self.audio_filter = audio_filter
+		self.__audio_int_rate = 40000  # lower than demod rate, higher than audio filter
 		FMDemodulator.__init__(self,
-			demod_rate=180000,
+			demod_rate=200000,  # higher than deviation*2, higher than stereo pilot freq, multiple of __audio_int_rate
 			deviation=75000,
 			band_filter=80000,
 			band_filter_transition=20000,
@@ -290,16 +290,6 @@ class WFMDemodulator(FMDemodulator):
 		#self.unlock()
 		self.context.rebuild_me()
 	
-	@exported_value(ctor=bool)
-	def get_audio_filter(self):
-		return self.audio_filter
-	
-	@setter
-	def set_audio_filter(self, value):
-		if value == self.audio_filter: return
-		self.audio_filter = bool(value)
-		self.context.rebuild_me()
-
 	def connect_audio_stage(self, input):
 		stereo_rate = self.demod_rate
 		normalizer = TWO_PI / stereo_rate
@@ -309,7 +299,7 @@ class WFMDemodulator(FMDemodulator):
 
 		def make_audio_filter():
 			return grfilter.fir_filter_fff(
-				1,  # decimation
+				stereo_rate // self.__audio_int_rate,  # decimation
 				firdes.low_pass(
 					1.0,
 					stereo_rate,
@@ -338,12 +328,7 @@ class WFMDemodulator(FMDemodulator):
 		mixR = blocks.sub_ff(1)
 		
 		# connections
-		if self.audio_filter:
-			self.connect(input, mono_channel_filter)
-			mono = mono_channel_filter
-		else:
-			mono = input
-
+		self.connect(input, mono_channel_filter)
 		if self.stereo:
 			# stereo pilot tone tracker
 			self.connect(
@@ -354,21 +339,21 @@ class WFMDemodulator(FMDemodulator):
 			self.connect(stereo_pilot_pll, (stereo_pilot_doubler, 1))
 			self.connect(stereo_pilot_doubler, stereo_pilot_out)
 		
-			# pick out stereo left-right difference channel
+			# pick out stereo left-right difference channel (at stereo_rate)
 			self.connect(input, (difference_channel_mixer, 0))
 			self.connect(stereo_pilot_out, (difference_channel_mixer, 1))
 			self.connect(difference_channel_mixer, difference_channel_filter)
 		
-			# recover left/right channels
+			# recover left/right channels (at self.__audio_int_rate)
 			self.connect(difference_channel_filter, (mixL, 1))
 			self.connect(difference_channel_filter, (mixR, 1))
-			resamplerL = self._make_resampler((mixL, 0))
-			resamplerR = self._make_resampler((mixR, 0))
-			self.connect(mono, (mixL, 0))
-			self.connect(mono, (mixR, 0))
+			resamplerL = self._make_resampler((mixL, 0), self.__audio_int_rate)
+			resamplerR = self._make_resampler((mixR, 0), self.__audio_int_rate)
+			self.connect(mono_channel_filter, (mixL, 0))
+			self.connect(mono_channel_filter, (mixR, 0))
 			self.connect_audio_output(resamplerL, resamplerR)
 		else:
-			resampler = self._make_resampler(mono)
+			resampler = self._make_resampler(mono_channel_filter, self.__audio_int_rate)
 			self.connect_audio_output(resampler, resampler)
 
 
