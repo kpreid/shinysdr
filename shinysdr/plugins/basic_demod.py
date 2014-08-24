@@ -23,6 +23,7 @@ from gnuradio import gr
 from gnuradio import blocks
 from gnuradio import analog
 from gnuradio import filter as grfilter  # don't shadow builtin
+from gnuradio.analog import fm_emph
 from gnuradio.filter import firdes
 
 from shinysdr.modes import ModeDef, IDemodulator, ITunableDemodulator
@@ -31,6 +32,9 @@ from shinysdr.types import Range
 from shinysdr.values import ExportedState, exported_value, setter
 
 import math
+
+
+TWO_PI = math.pi * 2
 
 
 class Demodulator(gr.hier_block2, ExportedState):
@@ -119,21 +123,19 @@ class SimpleAudioDemodulator(Demodulator, SquelchMixin):
 		}
 
 
-def make_lofi_audio_filter(rate):
+def design_lofi_audio_filter(rate):
 	'''
 	Audio output filter for speech-type receivers.
 	
 	Original motivation was to remove CTCSS tones.
 	'''
-	return grfilter.fir_filter_fff(
-		1,  # decimation
-		firdes.band_pass(
-			1.0,
-			rate,
-			500,
-			min(10000, rate / 2),
-			1000,
-			firdes.WIN_HAMMING))
+	return firdes.band_pass(
+		1.0,
+		rate,
+		500,
+		min(10000, rate / 2),
+		1000,
+		firdes.WIN_HAMMING)
 
 
 class IQDemodulator(SimpleAudioDemodulator):
@@ -191,7 +193,7 @@ pluginDef_am = ModeDef('AM', label='AM', demodClass=AMDemodulator)
 
 
 class FMDemodulator(SimpleAudioDemodulator):
-	def __init__(self, mode, deviation=75000, demod_rate=48000, post_demod_rate=None, band_filter=None, band_filter_transition=None, tau=75e-6, **kwargs):
+	def __init__(self, mode, deviation=75000, demod_rate=48000, band_filter=None, band_filter_transition=None, tau=75e-6, **kwargs):
 		SimpleAudioDemodulator.__init__(self,
 			mode=mode,
 			demod_rate=demod_rate,
@@ -199,36 +201,50 @@ class FMDemodulator(SimpleAudioDemodulator):
 			band_filter_transition=band_filter_transition,
 			**kwargs)
 		
-		audio_decim = int(demod_rate / post_demod_rate)
-		self.post_demod_rate = demod_rate / audio_decim
-
-		self.demod_block = analog.fm_demod_cf(
-			channel_rate=demod_rate,
-			audio_decim=audio_decim,
-			deviation=deviation,
-			audio_pass=post_demod_rate * 0.5 - 1000,
-			audio_stop=post_demod_rate * 0.5,
-			tau=tau,
-		)
+		self.__qdemod = analog.quadrature_demod_cf(demod_rate / (TWO_PI * deviation))
+		if tau > 0.0:
+			self.__deemph = fm_emph.fm_deemph(demod_rate, tau)
+		else:
+			self.__deemph = None
+		
 		self.do_connect()
 	
 	def do_connect(self):
+		self.connect(self.band_filter_block, self.rf_probe_block)
 		self.connect(
 			self,
 			self.band_filter_block,
 			self.rf_squelch_block,
-			self.demod_block)
-		self.connect(self.band_filter_block, self.rf_probe_block)
-		self.connect_audio_stage()
-		
-	def _make_resampler(self):
-		return make_resampler(self.post_demod_rate, self.audio_rate)
+			self.__qdemod)
+		if self.__deemph is not None:
+			self.connect(self.__qdemod, self.__deemph)
+			output = self.__deemph
+		else:
+			output = self.__qdemod
+		self.connect_audio_stage(output)
+	
+	def _make_resampler(self, input):
+		taps = design_lofi_audio_filter(self.demod_rate)
+		if self.audio_rate == self.demod_rate:
+			filt = grfilter.fir_filter_fff(1, taps)
+			self.connect(input, filt)
+			return filt
+		elif self.demod_rate % self.audio_rate == 0:
+			filt = grfilter.fir_filter_fff(self.demod_rate // self.audio_rate, taps)
+			self.connect(input, filt)
+			return filt
+		else:
+			# TODO: use combined filter and resampler (need to move filter design)
+			filt = grfilter.fir_filter_fff(1, taps)
+			resampler = make_resampler(self.demod_rate, self.audio_rate)
+			self.connect(input, filt, resampler)
+			return resampler
 
-	def connect_audio_stage(self):
+	def connect_audio_stage(self, input):
 		'''Override point for stereo'''
-		resampler = self._make_resampler()
-		self.connect(self.demod_block, make_lofi_audio_filter(self.post_demod_rate), resampler)
+		resampler = self._make_resampler(input)
 		self.connect_audio_output(resampler, resampler)
+			
 
 
 class NFMDemodulator(FMDemodulator):
@@ -237,9 +253,8 @@ class NFMDemodulator(FMDemodulator):
 		deviation = 5000
 		transition = 1000
 		FMDemodulator.__init__(self,
-			demod_rate=48000,  # TODO justify this number
+			demod_rate=max(deviation * 3, audio_rate),  # TODO justify the 3
 			audio_rate=audio_rate,
-			post_demod_rate=audio_rate,
 			deviation=deviation,
 			band_filter=deviation + transition * 0.5,
 			band_filter_transition=transition,
@@ -254,8 +269,7 @@ class WFMDemodulator(FMDemodulator):
 		self.stereo = stereo
 		self.audio_filter = audio_filter
 		FMDemodulator.__init__(self,
-			demod_rate=240000,  # TODO justify these numbers
-			post_demod_rate=120000,
+			demod_rate=180000,
 			deviation=75000,
 			band_filter=80000,
 			band_filter_transition=20000,
@@ -286,9 +300,9 @@ class WFMDemodulator(FMDemodulator):
 		self.audio_filter = bool(value)
 		self.context.rebuild_me()
 
-	def connect_audio_stage(self):
-		stereo_rate = self.post_demod_rate
-		normalizer = 2 * math.pi / stereo_rate
+	def connect_audio_stage(self, input):
+		stereo_rate = self.demod_rate
+		normalizer = TWO_PI / stereo_rate
 		pilot_tone = 19000
 		pilot_low = pilot_tone * 0.9
 		pilot_high = pilot_tone * 1.1
@@ -320,22 +334,20 @@ class WFMDemodulator(FMDemodulator):
 		difference_channel_mixer = blocks.multiply_ff()
 		difference_channel_filter = make_audio_filter()
 		mono_channel_filter = make_audio_filter()
-		resamplerL = self._make_resampler()
-		resamplerR = self._make_resampler()
 		mixL = blocks.add_ff(1)
 		mixR = blocks.sub_ff(1)
 		
 		# connections
 		if self.audio_filter:
-			self.connect(self.demod_block, mono_channel_filter)
+			self.connect(input, mono_channel_filter)
 			mono = mono_channel_filter
 		else:
-			mono = self.demod_block
+			mono = input
 
 		if self.stereo:
 			# stereo pilot tone tracker
 			self.connect(
-				self.demod_block,
+				input,
 				stereo_pilot_filter,
 				stereo_pilot_pll)
 			self.connect(stereo_pilot_pll, (stereo_pilot_doubler, 0))
@@ -343,19 +355,21 @@ class WFMDemodulator(FMDemodulator):
 			self.connect(stereo_pilot_doubler, stereo_pilot_out)
 		
 			# pick out stereo left-right difference channel
-			self.connect(self.demod_block, (difference_channel_mixer, 0))
+			self.connect(input, (difference_channel_mixer, 0))
 			self.connect(stereo_pilot_out, (difference_channel_mixer, 1))
 			self.connect(difference_channel_mixer, difference_channel_filter)
 		
 			# recover left/right channels
 			self.connect(difference_channel_filter, (mixL, 1))
 			self.connect(difference_channel_filter, (mixR, 1))
-			self.connect(mono, (mixL, 0), resamplerL)
-			self.connect(mono, (mixR, 0), resamplerR)
+			resamplerL = self._make_resampler((mixL, 0))
+			resamplerR = self._make_resampler((mixR, 0))
+			self.connect(mono, (mixL, 0))
+			self.connect(mono, (mixR, 0))
 			self.connect_audio_output(resamplerL, resamplerR)
 		else:
-			self.connect(mono, resamplerL)
-			self.connect_audio_output(resamplerL, resamplerL)
+			resampler = self._make_resampler(mono)
+			self.connect_audio_output(resampler, resampler)
 
 
 pluginDef_wfm = ModeDef('WFM', label='Broadcast FM', demodClass=WFMDemodulator)
