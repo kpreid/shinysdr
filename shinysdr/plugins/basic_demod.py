@@ -210,6 +210,7 @@ class FMDemodulator(SimpleAudioDemodulator):
 		self.do_connect()
 	
 	def do_connect(self):
+		self.disconnect_all()
 		self.connect(self.band_filter_block, self.rf_probe_block)
 		self.connect(
 			self,
@@ -283,12 +284,9 @@ class WFMDemodulator(FMDemodulator):
 	def set_stereo(self, value):
 		if value == self.stereo: return
 		self.stereo = bool(value)
-		# TODO: Reconfiguring this way causes the flowgraph to sometimes stop (until prodded by some other change). Troubleshoot.
-		#self.lock()
-		#self.disconnect_all()
-		#self.do_connect()
-		#self.unlock()
-		self.context.rebuild_me()
+		self.context.lock()
+		self.do_connect()
+		self.context.unlock()
 	
 	def connect_audio_stage(self, input):
 		stereo_rate = self.demod_rate
