@@ -375,7 +375,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
 		else:
 			raise ValueError('Not an SSB mode: %r' % (mode,))
 		
-		demod_rate = 8000
+		demod_rate = 8000  # round number close to SSB bandwidth * 2
 		
 		SimpleAudioDemodulator.__init__(self,
 			mode=mode,
@@ -386,14 +386,14 @@ class SSBDemodulator(SimpleAudioDemodulator):
 			**kwargs)
 		
 		if cw:
-			self.__offset = 1500
+			self.__offset = 1500  # CW beat frequency
 			half_bandwidth = self.half_bandwidth = 500
 			self.band_filter_width = 120
 			band_mid = 0
 			agc_reference = 0.1
 		else:
 			self.__offset = 0
-			half_bandwidth = self.half_bandwidth = 2800 / 2
+			half_bandwidth = self.half_bandwidth = 2800 / 2  # standard SSB bandwidth
 			self.band_filter_width = half_bandwidth / 5
 			if lsb:
 				band_mid = -200 - half_bandwidth
