@@ -15,6 +15,13 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+'''
+GNU Radio flowgraph blocks for use by ShinySDR.
+
+This module is not an external API and not guaranteed to have a stable
+interface.
+'''
+
 from __future__ import absolute_import, division
 
 from fractions import gcd
@@ -32,6 +39,7 @@ from gnuradio.filter import firdes
 from gnuradio.filter import rational_resampler
 from gnuradio.fft import logpwrfft
 
+from shinysdr.math import factorize, small_factor_at_least
 from shinysdr.types import Range, ValueType
 from shinysdr.values import ExportedState, exported_value, setter, StreamCell
 
@@ -71,43 +79,6 @@ class Context(object):
 	
 	def unlock(self):
 		self.__top._recursive_unlock()
-
-
-def _factorize(n):
-	# I wish there was a nice standard library function for this...
-	# Wrote the simplest thing I could think of
-	if n <= 0:
-		raise ValueError()
-	primes = []
-	while n > 1:
-		for i in xrange(2, n // 2 + 1):
-			if n % i == 0:
-				primes.append(i)
-				n //= i
-				break
-		else:
-			primes.append(n)
-			break
-	return primes
-
-
-def _small_factor_at_least(n, limit):
-	'''
-	Find a factor of 'n' which is at least 'limit' but not too much larger.
-	
-	This is a cheap rough approximation; finding the smallest such factor is equivalent to the knapsack problem. Ref: http://mathoverflow.net/q/79322/57423 (TODO: Better ref / check claim)
-	'''
-	if n % limit == 0:
-		# a better answer in easy case; e.g. for (100, 10) we'd return 25 otherwise
-		return limit
-	factors = _factorize(n)
-	factors.reverse()
-	answer = 1
-	for factor in factors:
-		answer *= factor
-		if answer >= limit:
-			break
-	return answer
 
 
 # Use rational_resampler_ccf rather than arb_resampler_ccf. This is less efficient, but avoids the bug <http://gnuradio.org/redmine/issues/713> where the latter block will hang the flowgraph if it is reused. When that is fixed, turn this flag off and maybe ditch the code for it.
@@ -154,11 +125,11 @@ class MultistageChannelFilter(gr.hier_block2):
 			input_rate = int(input_rate)
 			output_rate = int(output_rate)
 			if input_rate > output_rate:
-				total_decimation = input_rate // _small_factor_at_least(input_rate, output_rate)
+				total_decimation = input_rate // small_factor_at_least(input_rate, output_rate)
 			#print input_rate / total_decimation, total_decimation, input_rate, output_rate, input_rate // gcd(input_rate, output_rate)
 			# TODO: Don't re-factorize unnecessarily
 		
-		stage_decimations = _factorize(total_decimation)
+		stage_decimations = factorize(total_decimation)
 		stage_decimations.reverse()
 		
 		self.stages = []
