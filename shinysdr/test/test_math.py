@@ -27,6 +27,7 @@ class TestFactorize(unittest.TestCase):
 	
 	def test_error(self):
 		self.assertRaises(ValueError, lambda: smath.factorize(0))
+	
 	def test_cases(self):
 		self.assertEqual(smath.factorize(1), [])
 		self.assertEqual(smath.factorize(2), [2])
@@ -42,7 +43,12 @@ class TestFactorize(unittest.TestCase):
 class TestSmallFactorAtLeast(unittest.TestCase):
 	longMessages = True
 	
-	def test_cases(self):
-		self.assertEqual(smath.small_factor_at_least(100, 9), 25)  # known flaw
+	def test_exact(self):
+		self.assertEqual(smath.small_factor_at_least(100, 9), 10)
 		self.assertEqual(smath.small_factor_at_least(100, 10), 10)
-		self.assertEqual(smath.small_factor_at_least(100, 11), 25)
+		self.assertEqual(smath.small_factor_at_least(100, 11), 20)
+	
+	def test_approx(self):
+		self.assertEqual(smath.small_factor_at_least(100, 9, _force_approx=True), 25)
+		self.assertEqual(smath.small_factor_at_least(100, 10, _force_approx=True), 10)
+		self.assertEqual(smath.small_factor_at_least(100, 11, _force_approx=True), 25)

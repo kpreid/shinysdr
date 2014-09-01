@@ -54,23 +54,38 @@ def factorize(n):
 __all__.append('factorize')
 
 
-def small_factor_at_least(n, limit):
+def small_factor_at_least(n, limit, _force_approx=False):
 	'''
 	Find a factor of 'n' which is at least 'limit' but not too much larger.
 
-	This is a cheap rough approximation; finding the smallest such factor is equivalent to the knapsack problem. Ref: http://mathoverflow.net/q/79322/57423 (TODO: Better ref / check claim)
+	A rough approximation is used if 'n' nas many factors; finding the smallest such factor is equivalent to the knapsack problem. Ref: http://mathoverflow.net/q/79322/57423 (TODO: Better ref / check claim)
 	'''
 	if n % limit == 0:
 		# a better answer in easy case; e.g. for (100, 10) we'd return 25 otherwise
 		return limit
 	factors = factorize(n)
-	factors.reverse()
-	answer = 1
-	for factor in factors:
-		answer *= factor
-		if answer >= limit:
-			break
-	return answer
+	if len(factors) < 12 and not _force_approx:
+		# not too many factors, use brute force exact computation
+		def product_selected(mask):
+			candidate = 1
+			for i, factor in enumerate(factors):
+				if mask & (1 << i) != 0:
+					candidate *= factor
+			if candidate >= limit:
+				return candidate
+			else:
+				return n+1  # "don't pick me"
+		
+		return min(map(product_selected, xrange(0, 1 << len(factors))))
+	else:
+		# many factors, use cheap approximation. TODO: Maybe optimize very last step
+		factors.reverse()
+		answer = 1
+		for factor in factors:
+			answer *= factor
+			if answer >= limit:
+				break
+		return answer
 
 
 __all__.append('small_factor_at_least')
