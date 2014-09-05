@@ -84,6 +84,7 @@ class Range(ValueType):
 	
 	def __call__(self, specimen):
 		specimen = float(specimen)
+		
 		if self.__integer:
 			if self.__logarithmic:
 				# We may eventually want other log base options; currently only 2
@@ -92,17 +93,25 @@ class Range(ValueType):
 				specimen = 2 ** int(round(math.log(specimen, 2)))
 			else:
 				specimen = int(round(specimen))
+		
 		if self.__strict:
 			mins = self.__mins
 			maxes = self.__maxes
-			i = bisect.bisect_right(mins, specimen)
-			if i >= len(mins): i = len(mins) - 1
-			# i is now the index of the highest subrange which is not too high to contain specimen
-			# TODO: Round to nearest range instead of lower one. For now, the client handles all user-visible rounding.
+			
+			i = bisect.bisect_right(mins, specimen) - 1
+			if i < 0: i = 0
+			# i is now the index of the subrange whose lower endpoint is closest to the specimen.
+			
+			# Round to nearest range instead of lower one.
+			if i < len(mins) - 1 and mins[i + 1] - specimen < specimen - maxes[i]:
+				i = i + 1
+			
+			# Clamp to chosen range.
 			if specimen < mins[i]:
 				specimen = mins[i]
-			if specimen > maxes[i]:
+			elif specimen > maxes[i]:
 				specimen = maxes[i]
+		
 		return specimen
 	
 	def shifted_by(self, offset):

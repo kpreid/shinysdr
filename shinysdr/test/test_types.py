@@ -26,14 +26,16 @@ def _testType(self, type_obj, good, bad):
 	for value in good:
 		if isinstance(value, tuple):
 			input, output = value
-			self.assertEqual(type_obj(input), output)
+			self.assertEqual(type_obj(input), output, msg='for input %r' % (input,))
 		else:
-			self.assertEqual(type_obj(value), value)
+			self.assertEqual(type_obj(value), value, msg='for input %r' % (input,))
 	for value in bad:
 		self.assertRaises(ValueError, lambda: type_obj(value))
 
 
 class TestTypes(unittest.TestCase):
+	longMessage = True
+	
 	def test_Enum_strict(self):
 		_testType(self,
 			Enum({u'a': u'a', u'b': u'b'}, strict=True),
@@ -44,6 +46,12 @@ class TestTypes(unittest.TestCase):
 		_testType(self,
 			Enum({u'a': u'a', u'b': u'b'}, strict=False),
 			[(u'a', u'a'), ('a', u'a'), u'c', (999, u'999')],
+			[])
+
+	def test_Range_discrete(self):
+		_testType(self,
+			Range([(1, 1), (2, 3), (5, 5)], strict=True, integer=False),
+			[(0, 1), 1, (1.49, 1), (1.50, 1), (1.51, 2), 2, 2.5, 3, (4, 3), (4.1, 5), 5, (6, 5)],
 			[])
 
 	def test_Range_log_integer(self):
