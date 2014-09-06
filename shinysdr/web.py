@@ -114,7 +114,7 @@ class CellResource(resource.Resource):
 		return self._cell.description()
 
 
-class JSONResource(CellResource):
+class ValueCellResource(CellResource):
 	defaultContentType = 'application/json'
 
 	def __init__(self, cell, noteDirty):
@@ -149,7 +149,7 @@ class BlockResource(resource.Resource):
 				if cell.isBlock():
 					self._blockCells[key] = cell
 				else:
-					self.putChild(key, JSONResource(cell, self._noteDirty))
+					self.putChild(key, ValueCellResource(cell, self._noteDirty))
 	
 	def getChild(self, name, request):
 		if self._dynamic:
