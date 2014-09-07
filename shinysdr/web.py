@@ -425,6 +425,9 @@ class StateStreamInner(object):
         for obj in self._registered.keys():
             self.__drop(obj)
     
+    def dataReceived(self, data):
+        pass
+    
     def do_delete(self, reg):
         self._send1(False, ('delete', reg.serial))
         self.__drop(reg.obj)
@@ -488,6 +491,9 @@ class AudioStreamInner(object):
         
         reactor.callInThread(_AudioStream_read_loop, reactor, self._queue, self.__deliver, self.__running)
     
+    def dataReceived(self, data):
+        pass
+    
     def connectionLost(self, reason):
         self._block.remove_audio_queue(self._queue)
         self.__running[0] = False
@@ -533,8 +539,13 @@ class OurStreamProtocol(protocol.Protocol):
     
     def dataReceived(self, data):
         """twisted Protocol implementation"""
-        if self.inner is not None:
-            return
+        if self.inner is None:
+            # To work around txWS's lack of a notification when the URL is available, all clients send a dummy first message.
+            self.__dispatch_url()
+        else:
+            self.inner.dataReceived(data)
+            
+    def __dispatch_url(self):
         loc = self.transport.location
         log.msg('Stream connection to ', loc)
         path = [urllib.unquote(x) for x in loc.split('/')]
