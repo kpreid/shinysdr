@@ -23,9 +23,16 @@ define(['./values', './events', './network'], function (values, events, network)
   var EMPTY_CHUNK = [];
   
   function connectAudio(url) {
-    // TODO portability
+    // TODO more portability
     var audio = new (typeof AudioContext !== 'undefined' ? AudioContext : webkitAudioContext)();
     var sampleRate = audio.sampleRate;
+    function delayToBufferSize(maxDelayInSeconds) {
+      var maxBufferSize = sampleRate * maxDelayInSeconds;
+      var powerOfTwoBufferSize = 1 << Math.floor(Math.log(maxBufferSize) / Math.LN2);
+      // Specification-defined limits
+      powerOfTwoBufferSize = Math.max(256, Math.min(16384, powerOfTwoBufferSize));
+      return powerOfTwoBufferSize;
+    }
     
     // Stream parameters
     var numAudioChannels = null;
@@ -140,12 +147,9 @@ define(['./values', './events', './network'], function (values, events, network)
       // Starting the audio ScriptProcessor will be taken care of by the onmessage handler
     });
     
-    // Choose max buffer size
-    var maxDelay = 0.15;
-    var maxBufferSize = sampleRate * maxDelay;
-    var bufferSize = 1 << Math.floor(Math.log(maxBufferSize) / Math.LN2);
+    var rxBufferSize = delayToBufferSize(0.15);
     
-    var ascr = audio.createScriptProcessor(bufferSize, 0, 2);
+    var ascr = audio.createScriptProcessor(rxBufferSize, 0, 2);
     ascr.onaudioprocess = function audioCallback(event) {
       var abuf = event.outputBuffer;
       outputChunkSizeSample = abuf.length;
@@ -188,7 +192,7 @@ define(['./values', './events', './network'], function (values, events, network)
         l[j] = 0;
         r[j] = 0;
       }
-      if (prevUnderrun != 0 && underrun != bufferSize) {
+      if (prevUnderrun != 0 && underrun != rxBufferSize) {
         // Report underrun, but only if it's not just due to the stream stopping
         error('Underrun by ' + prevUnderrun + ' samples.');
       }
