@@ -25,11 +25,15 @@ from twisted.internet.defer import Deferred
 from twisted.internet.protocol import Protocol
 from twisted.web import client
 from twisted.web import http
+from twisted.web.http_headers import Headers
 
 
-def http_get(reactor, url):
+def http_get(reactor, url, accept=None):
 	agent = client.Agent(reactor)
-	d = agent.request('GET', url)
+	headers = Headers()
+	if accept is not None:
+		headers.addRawHeader('Accept', str(accept))
+	d = agent.request('GET', url, headers=headers)
 	return _handle_agent_response(d)
 
 

@@ -56,6 +56,13 @@ if hasattr(txws, 'WebSocketProtocol') and not hasattr(txws.WebSocketProtocol, 's
 	raise ImportError('The installed version of txWS does not support sending binary messages and cannot be used.')
 
 
+# used externally
+staticResourcePath = os.path.join(os.path.dirname(__file__), 'webstatic')
+
+
+_templatePath = os.path.join(os.path.dirname(__file__), 'webparts')
+
+
 def _json_encoder_special_cases(obj):
 	# TODO consider a more general strategy once we have a second example
 	if isinstance(obj, SignalType):
@@ -150,6 +157,7 @@ class BlockResource(resource.Resource):
 					self._blockCells[key] = cell
 				else:
 					self.putChild(key, ValueCellResource(cell, self._noteDirty))
+		self.__element = _BlockHtmlElement()
 	
 	def getChild(self, name, request):
 		if self._dynamic:
@@ -179,7 +187,13 @@ class BlockResource(resource.Resource):
 		return BlockResource(block, self._noteDirty, deleter)
 	
 	def render_GET(self, request):
-		return _json_encoder_for_values.encode(self.resourceDescription()).encode('utf-8')
+		accept = request.getHeader('Accept')
+		if accept is not None and 'application/json' in accept:  # TODO: Implement or obtain correct Accept interpretation
+			request.setHeader('Content-Type', 'application/json')
+			return _json_encoder_for_values.encode(self.resourceDescription()).encode('utf-8')
+		else:
+			request.setHeader('Content-Type', 'text/html;charset=utf-8')
+			return renderElement(request, self.__element)
 	
 	def render_POST(self, request):
 		'''currently only meaningful to create children of CollectionResources'''
@@ -207,6 +221,17 @@ class BlockResource(resource.Resource):
 	
 	def isForBlock(self, block):
 		return self._block is block
+
+
+class _BlockHtmlElement(template.Element):
+	'''
+	Template element for HTML page for an arbitrary block.
+	'''
+	loader = template.XMLFile(os.path.join(_templatePath, 'block.template.xhtml'))
+
+	@template.renderer
+	def _block_url(self, request, tag):
+		return tag('/' + '/'.join([urllib.quote(x, safe='') for x in request.prepath]))
 
 
 def _fqn(class_):
@@ -442,6 +467,17 @@ class AudioStreamInner(object):
 			self._send(buf, safe_to_drop=True)
 
 
+def _lookup_block(block, path):
+	for i, path_elem in enumerate(path):
+		cell = block.state().get(path_elem)
+		if cell is None:
+			raise Exception('Not found: %r in %r' % (path[:i+1], path))
+		elif not cell.isBlock():
+			raise Exception('Not a block: %r in %r' % (path[:i+1], path))
+		block = cell.get()
+	return block
+
+
 class OurStreamProtocol(protocol.Protocol):
 	def __init__(self, block, rootCap):
 		#protocol.Protocol.__init__(self)
@@ -459,6 +495,7 @@ class OurStreamProtocol(protocol.Protocol):
 		path = [urllib.unquote(x) for x in loc.split('/')]
 		assert path[0] == ''
 		path[0:1] = []
+		# TODO: Better path dispatching
 		if self._rootCap is not None:
 			if path[0] != self._rootCap:
 				raise Exception('Unknown cap')
@@ -467,11 +504,12 @@ class OurStreamProtocol(protocol.Protocol):
 		if len(path) == 1 and path[0].startswith('audio?rate='):
 			rate = int(json.loads(urllib.unquote(path[0][len('audio?rate='):])))
 			self.inner = AudioStreamInner(self.__send, self._block, rate)
-		elif len(path) == 1 and path[0] == 'state':
-			self.inner = StateStreamInner(self.__send, self._block, 'radio')
+		elif len(path) >= 1 and path[0] == 'radio':
+			# note _lookup_block may throw. TODO: Better error reporting
+			block = _lookup_block(self._block, path[1:])
+			self.inner = StateStreamInner(self.__send, block, loc)  # note reuse of loc as HTTP path; probably will regret this
 		else:
-			# TODO: does this close connection?
-			raise Exception('Unrecognized path: ' + repr(path))
+			raise Exception('Unknown path: %r' % (path,))
 	
 	def connectionMade(self):
 		"""twisted Protocol implementation"""
@@ -531,12 +569,6 @@ class ClientResourceDef(object):
 		self.key = key
 		self.resource = resource
 		self.loadURL = loadURL
-
-
-# used externally
-staticResourcePath = os.path.join(os.path.dirname(__file__), 'webstatic')
-
-_templatePath = os.path.join(os.path.dirname(__file__), 'webparts')
 
 
 def _make_static(filePath):

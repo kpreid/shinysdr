@@ -62,7 +62,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
   
   function connectRadio() {
     var radio;
-    network.connect('radio', scheduler, function gotDesc(remote, remoteCell) {
+    network.connect(network.convertToWebSocketURL('radio'), scheduler, function gotDesc(remote, remoteCell) {
       // TODO always use remoteCell or change network.connect so radio is reshaped not replaced
       radio = remote;
       
@@ -203,6 +203,6 @@ define(['./values', './events', './database', './network', './maps', './widget',
       window.Dindex = index;
     }); // end gotDesc
   
-    var audioState = audio.connectAudio('/audio');  // TODO get url from server
+    var audioState = audio.connectAudio(network.convertToWebSocketURL('audio'));  // TODO get url from server
   }
 });

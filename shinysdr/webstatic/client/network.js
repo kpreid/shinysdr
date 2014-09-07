@@ -179,33 +179,39 @@ define(['./values', './events'], function (values, events) {
     })
   }
   
-  function openWebSocket(path) {
-    // TODO: Have server deliver websocket URL, remove port number requirement
-    if (!/^\//.test(path)) throw new Error('bad path');
+  // use same hostname and path as document, but WS instead of HTTP
+  function convertToWebSocketURL(path) {
+    // TODO needs to be more robust
+    var hostRelPath = /^\//.test(path) ? path : document.location.pathname.replace(/\/$/, '') + '/' + path;
     var secure = document.location.protocol === 'http:' ? '' : 's';
-    var ws = new WebSocket('ws' + secure + '://' + document.location.hostname + ':' + (parseInt(document.location.port) + 1) + document.location.pathname.replace(/\/$/, '') + path);
+    return 'ws' + secure + '://' + document.location.hostname + ':' + (parseInt(document.location.port) + 1) + hostRelPath;
+  }
+  exports.convertToWebSocketURL = convertToWebSocketURL;
+  
+  function openWebSocket(wsURL) {
+    // TODO: Have server deliver websocket URL, remove port number requirement
+    var ws = new WebSocket(wsURL);
     ws.addEventListener('open', function (event) {
       ws.send(''); // dummy required due to server limitation
     }, true);
     return ws;
   }
-  exports.openWebSocket = openWebSocket;
   
   var minRetryTime = 1000;
   var maxRetryTime = 20000;
   var backoff = 1.05;
-  function retryingConnection(path, callback) {
+  function retryingConnection(wsURL, callback) {
     var timeout = minRetryTime;
     var succeeded = false;
     function go() {
-      var ws = openWebSocket(path);
+      var ws = openWebSocket(wsURL);
       ws.addEventListener('open', function (event) {
         succeeded = true;
         timeout = minRetryTime;
       }, true);
       ws.addEventListener('close', function (event) {
         if (succeeded) {
-          console.error('Lost WebSocket connection', path, '- reason given:', event.reason);
+          console.error('Lost WebSocket connection', wsURL, '- reason given:', event.reason);
         } else {
           timeout = Math.min(maxRetryTime, timeout * backoff);
         }
@@ -262,7 +268,7 @@ define(['./values', './events'], function (values, events) {
     // TODO: URL contents are no longer actually used. URL should be used to derive state stream URL
     //externalGet(rootURL, 'text', function(text) { ... });
 
-    retryingConnection('/state', function(ws) {
+    retryingConnection(rootURL, function(ws) {
       ws.binaryType = 'arraybuffer';
 
       var idMap = Object.create(null);

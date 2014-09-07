@@ -85,7 +85,7 @@ class TestWebSite(unittest.TestCase):
 				u'kind': u'block',
 				u'children': {},
 			})
-		return testutil.http_get(reactor, self.url + 'radio').addCallback(callback)
+		return testutil.http_get(reactor, self.url + 'radio', accept='application/json').addCallback(callback)
 
 
 def _noop():
