@@ -61,10 +61,15 @@ define(['./values', './events', './database', './network', './maps', './widget',
   });
   
   function connectRadio() {
-    var radio;
-    network.connect(network.convertToWebSocketURL('radio'), scheduler, function gotDesc(remote, remoteCell) {
-      // TODO always use remoteCell or change network.connect so radio is reshaped not replaced
-      radio = remote;
+    var firstConnection = true;
+    connected.scheduler = scheduler;
+    var remoteCell = network.connect(network.convertToWebSocketURL('radio'));
+    remoteCell.n.listen(connected);
+
+    var audioState = audio.connectAudio(network.convertToWebSocketURL('audio'));  // TODO get url from server
+
+    function connected() {
+      var radio = remoteCell.depend(connected);
       
       // Takes center freq as parameter so it can be used on hypotheticals and so on.
       function frequencyInRange(candidate, centerFreq) {
@@ -169,40 +174,42 @@ define(['./values', './events', './database', './network', './maps', './widget',
         });
       };
       
-      var everything = new ConstantCell(values.block, makeBlock({
-        client: clientBlockCell,
-        radio: remoteCell,
-        audio: new ConstantCell(values.block, audioState)  // defined below
-      }));
+      if (firstConnection) {
+        firstConnection = false;
+        
+        var everything = new ConstantCell(values.block, makeBlock({
+          client: clientBlockCell,
+          radio: remoteCell,
+          audio: new ConstantCell(values.block, audioState)
+        }));
       
-      var index = new Index(scheduler, everything);
+        var index = new Index(scheduler, everything);
       
-      var context = new widget.Context({
-        // TODO all of this should be narrowed down, read-only, replaced with other means to get it to the widgets that need it, etc.
-        widgets: widgets,
-        radio: radio,
-        index: index,
-        clientState: clientState,
-        spectrumView: null,
-        freqDB: freqDB,
-        writableDB: writableDB,
-        scheduler: scheduler
-      });
+        var context = new widget.Context({
+          // TODO all of this should be narrowed down, read-only, replaced with other means to get it to the widgets that need it, etc.
+          widgets: widgets,
+          radioCell: remoteCell,
+          index: index,
+          clientState: clientState,
+          spectrumView: null,
+          freqDB: freqDB,
+          writableDB: writableDB,
+          scheduler: scheduler
+        });
       
-      // generic control UI widget tree
-      widget.createWidgets(everything, context, document);
+        // generic control UI widget tree
+        widget.createWidgets(everything, context, document);
       
-      // Map (all geographic data)
-      var map = new maps.Map(document.getElementById('map'), scheduler, freqDB, radio, index);
+        // Map (all geographic data)
+        var map = new maps.Map(document.getElementById('map'), scheduler, freqDB, remoteCell, index);
       
-      // globals for debugging / interactive programming purposes only
-      window.DfreqDB = freqDB;
-      window.DwritableDB = writableDB;
-      window.Dradio = radio;
-      window.Deverything = everything;
-      window.Dindex = index;
-    }); // end gotDesc
-  
-    var audioState = audio.connectAudio(network.convertToWebSocketURL('audio'));  // TODO get url from server
+        // globals for debugging / interactive programming purposes only
+        window.DfreqDB = freqDB;
+        window.DwritableDB = writableDB;
+        window.DradioCell = remoteCell;
+        window.Deverything = everything;
+        window.Dindex = index;
+      }
+    }
   }
 });

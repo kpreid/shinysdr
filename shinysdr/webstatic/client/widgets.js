@@ -442,9 +442,9 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       createWidgetExt(context, SpectrumPlot, makeOverlayPiece('canvas'), block.fft);
       
       // TODO this is clunky. (Note we're not just using rebuildMe because we don't want to lose waterfall history and reinit GL and and and...)
-      var sourceCell = config.radio.source;
+      var radioCell = config.radioCell;
       var freqCell = new DerivedCell(Number, config.scheduler, function (dirty) {
-        return sourceCell.depend(dirty).freq.depend(dirty);
+        return radioCell.depend(dirty).source.depend(dirty).freq.depend(dirty);
       });
       createWidgetExt(context, FreqScale, element.appendChild(document.createElement('div')), freqCell);
       
@@ -1523,7 +1523,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   function ReceiverMarks(config) {
     /* does not use config.target */
     var view = config.view;
-    var radio = config.radio;
+    var radioCell = config.radioCell;
     var others = config.index.implementing('shinysdr.top.IHasFrequency');
     
     var canvas = config.element;
@@ -1587,7 +1587,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         drawHair(object.freq.depend(draw));
       });
       
-      var receivers = radio.receivers.depend(draw);
+      var receivers = radioCell.depend(draw).receivers.depend(draw);
       receivers._reshapeNotice.listen(draw);
       for (var recKey in receivers) {
         var receiver = receivers[recKey].depend(draw);
@@ -2025,7 +2025,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   
   function FreqScale(config) {
     var tunerSource = config.target;
-    var states = config.radio;
+    var radioCell = config.radioCell;
     var dataSource = config.freqDB.groupSameFreq();
     var view = config.view;
 
@@ -2064,12 +2064,12 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       // TODO: be an <a> or <button>
       el.addEventListener('click', function(event) {
         if (alwaysCreateReceiverFromEvent(event)) {
-          states.tune({
+          radioCell.get().tune({
             record: channel,
             alwaysCreate: true
           });
         } else {
-          states.preset.set(channel);
+          radioCell.get().preset.set(channel);
         }
         event.stopPropagation();
       }, false);
@@ -2121,7 +2121,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       var centerFreq = tunerSource.depend(draw);
       view.n.listen(draw);
       
-      var bandwidth = states.input_rate.depend(draw);
+      var bandwidth = radioCell.depend(draw).input_rate.depend(draw);
       lower = centerFreq - bandwidth / 2;
       upper = centerFreq + bandwidth / 2;
       
@@ -2171,7 +2171,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   widgets.FreqScale = FreqScale;
   
   function FreqList(config) {
-    var radio = config.radio;
+    var radioCell = config.radioCell;
     var scheduler = config.scheduler;
     var configKey = 'filterString';
     
@@ -2196,12 +2196,12 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     var receiveAllButton = container.appendChild(document.createElement('button'));
     receiveAllButton.textContent = 'Receive all in search';
     receiveAllButton.addEventListener('click', function (event) {
-      var receivers = radio.recevers.get();
+      var receivers = radioCell.get().recevers.get();
       for (var key in receivers) {
         receivers.delete(key);
       }
       currentFilter.forEach(function(p) {
-        radio.tune({
+        radioCell.get().tune({
           freq: p.freq,
           mode: p.mode,
           alwaysCreate: true
@@ -2246,7 +2246,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         item.classList.add('freqlist-item-unsupported');
       }
       item.addEventListener('click', function(event) {
-        config.radio.preset.set(record);
+        radioCell.get().preset.set(record);
         event.stopPropagation();
       }, false);
       
@@ -2385,7 +2385,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   
   // Silly single-purpose widget 'till we figure out more where the UI is going
   function SaveButton(config) {
-    var radio = config.radio; // use .preset, .targetDB
+    var radioCell = config.radioCell;
     var receiver = config.target.get();
     var panel = this.element = config.element;
     panel.classList.add('panel');
@@ -2403,7 +2403,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         mode: receiver.mode.get(),
         label: 'untitled'
       };
-      radio.preset.set(config.writableDB.add(record));
+      radioCell.get().preset.set(config.writableDB.add(record));
     };
   }
   widgets.SaveButton = SaveButton;

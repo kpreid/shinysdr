@@ -89,7 +89,7 @@ define(['./values', './events'], function (values, events) {
   // TODO figure out what this does and give it a better name
   function Context(config) {
     this.widgets = config.widgets;
-    this.radio = config.radio;
+    this.radioCell = config.radioCell;
     this.index = config.index;
     this.clientState = config.clientState;
     this.scheduler = config.scheduler;
@@ -102,13 +102,13 @@ define(['./values', './events'], function (values, events) {
     var ns = new StorageNamespace(localStorage, 'shinysdr.viewState.' + element.id + '.');
     var view = new SpectrumView({
       scheduler: this.scheduler,
-      radio: this.radio,
+      radioCell: this.radioCell,
       element: element,
       storage: ns
     });
     return new Context({
       widgets: this.widgets,
-      radio: this.radio,
+      radioCell: this.radioCell,
       index: this.index,
       clientState: this.clientState,
       freqDB: this.freqDB,
@@ -172,7 +172,7 @@ define(['./values', './events'], function (values, events) {
         clientState: context.clientState,
         freqDB: context.freqDB, // TODO: remove the need for this
         writableDB: context.writableDB, // TODO: remove the need for this
-        radio: context.radio, // TODO: remove the need for this
+        radioCell: context.radioCell, // TODO: remove the need for this
         index: context.index, // TODO: remove the need for this
         storage: idPrefix ? new StorageNamespace(localStorage, 'shinysdr.widgetState.' + idPrefix) : null,
         shouldBePanel: shouldBePanel,
@@ -323,7 +323,7 @@ define(['./values', './events'], function (values, events) {
   // TODO: Revisit whether this should be in widgets.js -- it is closely tied to the spectrum widgets, but also managed by the widget framework.
   var MAX_ZOOM_BINS = 60; // Maximum zoom shows this many FFT bins
   function SpectrumView(config) {
-    var radio = config.radio;
+    var radioCell = config.radioCell;
     var container = config.element;
     var scheduler = config.scheduler;
     var storage = config.storage;
@@ -362,6 +362,7 @@ define(['./values', './events'], function (values, events) {
     
     function prepare() {
       // TODO: unbreakable notify loop here; need to be lazy
+      var radio = radioCell.depend(prepare);
       var source = radio.source.depend(prepare);
       bandwidth = radio.input_rate.depend(prepare);
       centerFreq = source.freq.depend(prepare);
@@ -427,7 +428,7 @@ define(['./values', './events'], function (values, events) {
         1,  // at least min zoom,
         Math.max(
           bandwidth / 10e3, // at least 10 kHz
-          radio.monitor.get().freq_resolution.get() / MAX_ZOOM_BINS));
+          radioCell.get().monitor.get().freq_resolution.get() / MAX_ZOOM_BINS));
       
       cursorX += fractionalScroll;
       var cursor01 = cursorX / pixelWidth;
@@ -487,7 +488,7 @@ define(['./values', './events'], function (values, events) {
           // We sent the request to create a receiver, but it doesn't exist on the client yet. Do nothing.
           // TODO: Check for the appearance of the receiver and start dragging it.
         } else {
-          dragReceiver = radio.tune({
+          dragReceiver = radioCell.get().tune({
             receiver: dragReceiver,
             freq: freq,
             alwaysCreate: firstEvent && alwaysCreateReceiverFromEvent(event)

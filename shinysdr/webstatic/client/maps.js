@@ -29,7 +29,7 @@ define(['./values'], function (values) {
   }
   exports.projectedPoint = projectedPoint;
 
-  function Map(element, scheduler, db, radio, index) {
+  function Map(element, scheduler, db, radioCell, index) {
     var baseLayer = new OpenLayers.Layer('Blank', {
       isBaseLayer: true,
       displayInLayerSwitcher: false,  // only one, not useful
@@ -53,6 +53,7 @@ define(['./values'], function (values) {
     olm.addControl(new OpenLayers.Control.LayerSwitcher());
     
     var radioStateInfo = new DerivedCell(any, scheduler, function (dirty) {
+      var radio = radioCell.depend(dirty);
       var source = radio.source.depend(dirty);
       var center = source.freq.depend(dirty);
       // TODO: Ask the "bandwidth" question directly rather than hardcoding logic here
@@ -185,6 +186,7 @@ define(['./values'], function (values) {
 
       function updateOnReceivers() {
         //console.log('updateOnReceivers');
+        var radio = radioCell.depend(updateOnReceivers);
         var receivers = radio.receivers.depend(updateOnReceivers);
         receivers._reshapeNotice.listen(updateOnReceivers);  // TODO break loop if map is dead
         modeLayer.removeAllFeatures();

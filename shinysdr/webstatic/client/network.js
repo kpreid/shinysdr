@@ -262,7 +262,7 @@ define(['./values', './events'], function (values, events) {
     return [cell, cell._update];
   }
   
-  function connect(rootURL, scheduler, callback) {
+  function connect(rootURL) {
     var rootCell = new ReadCell(null, null, values.block, identity);
     
     // TODO: URL contents are no longer actually used. URL should be used to derive state stream URL
@@ -350,11 +350,7 @@ define(['./values', './events'], function (values, events) {
       
     });
 
-    function ready() {
-      callback(rootCell.get(), rootCell);
-    }
-    ready.scheduler = scheduler;
-    rootCell.n.listen(ready);
+    return rootCell;
   }
   exports.connect = connect;
   
