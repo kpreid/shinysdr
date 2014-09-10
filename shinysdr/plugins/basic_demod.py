@@ -42,10 +42,8 @@ class Demodulator(gr.hier_block2, ExportedState):
 	
 	def __init__(self, mode,
 			input_rate=0,
-			audio_rate=0,
 			context=None):
 		assert input_rate > 0
-		assert audio_rate > 0
 		gr.hier_block2.__init__(
 			# str() because insists on non-unicode
 			self, str('%s receiver' % (mode,)),
@@ -54,7 +52,6 @@ class Demodulator(gr.hier_block2, ExportedState):
 		)
 		self.mode = mode
 		self.input_rate = input_rate
-		self.audio_rate = audio_rate
 		self.context = context
 
 	def can_set_mode(self, mode):
@@ -62,6 +59,9 @@ class Demodulator(gr.hier_block2, ExportedState):
 
 	def get_half_bandwidth(self):
 		raise NotImplementedError('Demodulator.get_half_bandwidth')
+
+	def get_audio_rate(self):
+		raise NotImplementedError('Demodulator.get_audio_rate')
 
 	# TODO: remove this indirection
 	def connect_audio_output(self, l_port, r_port):
@@ -91,13 +91,16 @@ class SquelchMixin(ExportedState):
 class SimpleAudioDemodulator(Demodulator, SquelchMixin):
 	implements(ITunableDemodulator)
 	
-	def __init__(self, demod_rate=0, band_filter=None, band_filter_transition=None, **kwargs):
+	def __init__(self, demod_rate=0, audio_rate=0, band_filter=None, band_filter_transition=None, **kwargs):
+		assert audio_rate > 0
+		
 		Demodulator.__init__(self, **kwargs)
 		SquelchMixin.__init__(self, demod_rate)
 		
 		self.band_filter = band_filter
 		self.band_filter_transition = band_filter_transition
 		self.demod_rate = demod_rate
+		self.audio_rate = audio_rate
 
 		input_rate = self.input_rate
 		
@@ -109,6 +112,9 @@ class SimpleAudioDemodulator(Demodulator, SquelchMixin):
 
 	def get_half_bandwidth(self):
 		return self.band_filter
+
+	def get_audio_rate(self):
+		return self.audio_rate
 
 	def set_rec_freq(self, freq):
 		'''for ITunableDemodulator'''
@@ -139,8 +145,8 @@ def design_lofi_audio_filter(rate):
 
 
 class IQDemodulator(SimpleAudioDemodulator):
-	def __init__(self, mode='IQ', audio_rate=0, **kwargs):
-		assert audio_rate > 0
+	def __init__(self, mode='IQ', **kwargs):
+		audio_rate = 96000  # TODO parameter / justify this
 		SimpleAudioDemodulator.__init__(self,
 			mode=mode,
 			audio_rate=audio_rate,
@@ -165,17 +171,21 @@ pluginDef_iq = ModeDef('IQ', label='Raw I/Q', demodClass=IQDemodulator)
 
 class AMDemodulator(SimpleAudioDemodulator):
 	def __init__(self, **kwargs):
-		demod_rate = 48000
+		demod_rate = 10000
 		
-		SimpleAudioDemodulator.__init__(self, demod_rate=demod_rate, band_filter=5000, band_filter_transition=5000, **kwargs)
+		SimpleAudioDemodulator.__init__(self,
+			audio_rate=demod_rate,
+			demod_rate=demod_rate,
+			band_filter=5000,
+			band_filter_transition=5000,
+			**kwargs)
 	
 		inherent_gain = 0.5  # fudge factor so that our output is similar level to narrow FM
 		self.agc_block = analog.feedforward_agc_cc(int(.02 * demod_rate), inherent_gain)
 		self.demod_block = blocks.complex_to_mag(1)
-		self.resampler_block = make_resampler(demod_rate, self.audio_rate)
 		
 		# assuming below 40Hz is not of interest
-		dc_blocker = grfilter.dc_blocker_ff(self.audio_rate // 40, False)
+		dc_blocker = grfilter.dc_blocker_ff(demod_rate // 40, False)
 		
 		self.connect(
 			self,
@@ -183,10 +193,9 @@ class AMDemodulator(SimpleAudioDemodulator):
 			self.rf_squelch_block,
 			self.agc_block,
 			self.demod_block,
-			dc_blocker,
-			self.resampler_block)
+			dc_blocker)
 		self.connect(self.band_filter_block, self.rf_probe_block)
-		self.connect_audio_output(self.resampler_block, self.resampler_block)
+		self.connect_audio_output(dc_blocker, dc_blocker)
 
 
 pluginDef_am = ModeDef('AM', label='AM', demodClass=AMDemodulator)
@@ -249,8 +258,9 @@ class FMDemodulator(SimpleAudioDemodulator):
 
 
 class NFMDemodulator(FMDemodulator):
-	def __init__(self, audio_rate, **kwargs):
+	def __init__(self, **kwargs):
 		# TODO support 2.5kHz deviation
+		audio_rate = 10000  # TODO justify
 		deviation = 5000
 		transition = 1000
 		FMDemodulator.__init__(self,
@@ -270,6 +280,7 @@ class WFMDemodulator(FMDemodulator):
 		self.stereo = stereo
 		self.__audio_int_rate = 40000  # lower than demod rate, higher than audio filter
 		FMDemodulator.__init__(self,
+			audio_rate=self.__audio_int_rate,
 			demod_rate=200000,  # higher than deviation*2, higher than stereo pilot freq, multiple of __audio_int_rate
 			deviation=75000,
 			band_filter=80000,
@@ -362,7 +373,7 @@ _ssb_max_agc = 1.5
 
 
 class SSBDemodulator(SimpleAudioDemodulator):
-	def __init__(self, mode, audio_rate=0, **kwargs):
+	def __init__(self, mode, **kwargs):
 		if mode == 'LSB':
 			lsb = True
 			cw = False
@@ -379,7 +390,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
 		
 		SimpleAudioDemodulator.__init__(self,
 			mode=mode,
-			audio_rate=audio_rate,
+			audio_rate=demod_rate,
 			demod_rate=demod_rate,
 			band_filter=demod_rate / 2,  # note narrower filter applied later
 			band_filter_transition=demod_rate / 2,
@@ -416,18 +427,15 @@ class SSBDemodulator(SimpleAudioDemodulator):
 		
 		ssb_demod_block = blocks.complex_to_real(1)
 		
-		audio_resampler = make_resampler(demod_rate, audio_rate)
-		
 		self.connect(
 			self,
 			self.band_filter_block,
 			sharp_filter_block,
 			self.rf_squelch_block,
 			self.agc_block,
-			ssb_demod_block,
-			audio_resampler)
+			ssb_demod_block)
 		self.connect(sharp_filter_block, self.rf_probe_block)
-		self.connect_audio_output(audio_resampler, audio_resampler)
+		self.connect_audio_output(ssb_demod_block, ssb_demod_block)
 
 	# override
 	# TODO: this is the interface used to determine receiver.get_is_valid, but SSB demonstrates that the interface is insufficiently expressive. Should we use get_band_filter_shape instead? Should we use a different interface designed for expressing the channel? Or are signals like SSB which are asymmetric about the "carrier" frequency uncommon enough that we should not worry about handling this case well?

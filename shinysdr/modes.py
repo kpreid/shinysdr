@@ -46,6 +46,11 @@ class IDemodulator(Interface):
 		'''
 		TODO explain
 		'''
+	
+	def get_audio_rate():
+		'''
+		Return the sample rate of the demodulator's audio output, in Hz as a float.
+		'''
 
 
 __all__.append('IDemodulator')

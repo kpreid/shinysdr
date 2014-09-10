@@ -31,6 +31,7 @@ import math
 
 from shinysdr.blocks import rotator_inc
 from shinysdr.modes import ITunableDemodulator, get_modes, lookup_mode
+from shinysdr.signals import SignalType
 from shinysdr.types import Enum, Range
 from shinysdr.values import ExportedState, BlockCell, exported_value, setter
 
@@ -54,13 +55,11 @@ class Receiver(gr.hier_block2, ExportedState):
 	def __init__(self, mode,
 			input_rate=0,
 			input_center_freq=0,
-			audio_rate=0,
 			rec_freq=100.0,
 			audio_gain=-6,
 			audio_pan=0,
 			context=None):
 		assert input_rate > 0
-		assert audio_rate > 0
 		gr.hier_block2.__init__(
 			# str() because insists on non-unicode
 			self, str('%s receiver' % (mode,)),
@@ -76,7 +75,6 @@ class Receiver(gr.hier_block2, ExportedState):
 		# Provided by caller
 		self.input_rate = input_rate
 		self.input_center_freq = input_center_freq
-		self.audio_rate = audio_rate
 		self.context = context
 		
 		# Simple state
@@ -88,10 +86,13 @@ class Receiver(gr.hier_block2, ExportedState):
 		# Blocks
 		self.__rotator = blocks.rotator_cc()
 		self.demodulator = self.__make_demodulator(mode, {})
-		self.__demod_tunable = ITunableDemodulator.providedBy(self.demodulator)
+		self.__update_demodulator_info()
 		self.audio_gain_l_block = blocks.multiply_const_ff(0.0)
 		self.audio_gain_r_block = blocks.multiply_const_ff(0.0)
-		self.probe_audio = analog.probe_avg_mag_sqrd_f(0, alpha=10.0 / audio_rate)
+		self.probe_audio = analog.probe_avg_mag_sqrd_f(0, alpha=10.0 / 44100)  # TODO adapt to output audio rate
+		
+		# Other internals
+		self.__last_output_type = None
 		
 		self.__update_rotator()  # initialize rotator, also in case of __demod_tunable
 		self.__update_audio_gain()
@@ -101,6 +102,12 @@ class Receiver(gr.hier_block2, ExportedState):
 		super(Receiver, self).state_def(callback)
 		# TODO decoratorify
 		callback(BlockCell(self, 'demodulator'))
+	
+	def __update_demodulator_info(self):
+		self.__demod_tunable = ITunableDemodulator.providedBy(self.demodulator)
+		self.__output_type = SignalType(
+			kind='STEREO',
+			sample_rate=self.demodulator.get_audio_rate())
 	
 	def __do_connect(self):
 		self.context.lock()
@@ -115,8 +122,15 @@ class Receiver(gr.hier_block2, ExportedState):
 			self.connect((self.demodulator, 1), self.audio_gain_r_block, (self, 1))
 			
 			self.connect((self.demodulator, 0), self.probe_audio)
+			
+			if self.__output_type != self.__last_output_type:
+				self.__last_output_type = self.__output_type
+				self.context.changed_output_type()
 		finally:
 			self.context.unlock()
+
+	def get_output_type(self):
+		return self.__output_type
 
 	def set_input_rate(self, value):
 		value = int(value)
@@ -208,9 +222,14 @@ class Receiver(gr.hier_block2, ExportedState):
 		if mode is None:
 			mode = self.mode
 		self.demodulator = self.__make_demodulator(mode, defaults)
-		self.__demod_tunable = ITunableDemodulator.providedBy(self.demodulator)
+		self.__update_demodulator_info()
 		self.__update_rotator()
 		self.mode = mode
+		
+		# Replace blocks downstream of the demodulator so as to flush samples that are potentially at a different sample rate and would therefore be audibly wrong. Caller will handle reconnection.
+		self.audio_gain_l_block = blocks.multiply_const_ff(0.0)
+		self.audio_gain_r_block = blocks.multiply_const_ff(0.0)
+		self.__update_audio_gain()
 
 	def __make_demodulator(self, mode, state):
 		'''Returns the demodulator.'''
@@ -236,7 +255,6 @@ class Receiver(gr.hier_block2, ExportedState):
 		demodulator = clas(
 			mode=mode,
 			input_rate=self.input_rate,
-			audio_rate=self.audio_rate,
 			context=facet,
 			**init
 		)

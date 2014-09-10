@@ -17,7 +17,8 @@
 
 from __future__ import absolute_import, division
 
-from shinysdr.source import SignalType, Source
+from shinysdr.signals import SignalType
+from shinysdr.source import Source
 from shinysdr.types import Enum, Range
 from shinysdr.values import BlockCell, Cell, ExportedState, exported_value, setter
 

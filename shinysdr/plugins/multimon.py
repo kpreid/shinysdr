@@ -37,11 +37,10 @@ _maxint32 = 2 ** 15 - 1
 audio_gain = 0.5
 int_scale = _maxint32 * audio_gain
 
-
 class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 	implements(IDemodulator)
 	
-	def __init__(self, mode, input_rate=0, audio_rate=0, context=None):
+	def __init__(self, mode, input_rate=0, context=None):
 		assert input_rate > 0
 		gr.hier_block2.__init__(
 			self, str(mode) + ' (Multimon-NG) demodulator',
@@ -58,8 +57,8 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 		self.fm_demod = NFMDemodulator(
 			mode='NFM',
 			input_rate=input_rate,
-			audio_rate=pipe_rate,
 			tau=None)  # no deemphasis
+		fm_audio_rate = self.fm_demod.get_audio_rate()
 		
 		# Subprocess
 		# using /usr/bin/env because twisted spawnProcess doesn't support path search
@@ -81,16 +80,16 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 		self.connect(
 			self,
 			self.fm_demod,
+			make_resampler(fm_audio_rate, pipe_rate),
 			converter,
 			sink)
 		# Dummy sink for useless stereo output of demod
 		self.connect((self.fm_demod, 1), blocks.null_sink(gr.sizeof_float))
 		# Audio copy output
-		resampler = make_resampler(pipe_rate, audio_rate)
-		self.connect(converter, blocks.short_to_float(vlen=1, scale=int_scale), resampler)
-		#self.connect(self.fm_demod, resampler)
-		self.connect(resampler, (self, 0))
-		self.connect(resampler, (self, 1))
+		unconverter = blocks.short_to_float(vlen=1, scale=int_scale)
+		self.connect(converter, unconverter)
+		self.connect(unconverter, (self, 0))
+		self.connect(unconverter, (self, 1))
 		
 	def state_def(self, callback):
 		super(MultimonNGDemodulator, self).state_def(callback)
@@ -102,6 +101,9 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 	
 	def get_half_bandwidth(self):
 		return self.fm_demod.get_half_bandwidth()
+	
+	def get_audio_rate(self):
+		return pipe_rate
 	
 	@exported_value()
 	def get_band_filter_shape(self):

@@ -34,12 +34,12 @@ from shinysdr.blocks import MultistageChannelFilter, make_sink_to_process_stdin,
 
 pipe_rate = 2000000
 transition_width = 500000
-
+_dummy_audio_rate = 1000
 
 class ModeSDemodulator(gr.hier_block2, ExportedState):
 	implements(IDemodulator)
 	
-	def __init__(self, mode='MODE-S', input_rate=0, audio_rate=0, context=None):
+	def __init__(self, mode='MODE-S', input_rate=0, context=None):
 		assert input_rate > 0
 		gr.hier_block2.__init__(
 			self, 'Mode S/ADS-B/1090 demodulator',
@@ -90,7 +90,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 			(interleaver, 1))
 		# Dummy audio
 		zero = analog.sig_source_f(0, analog.GR_CONST_WAVE, 0, 0, 0)
-		self.throttle = blocks.throttle(gr.sizeof_float, audio_rate)
+		self.throttle = blocks.throttle(gr.sizeof_float, _dummy_audio_rate)
 		self.connect(zero, self.throttle)
 		self.connect(self.throttle, (self, 0))
 		self.connect(self.throttle, (self, 1))
@@ -100,6 +100,9 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 
 	def get_half_bandwidth(self):
 		return pipe_rate / 2
+	
+	def get_audio_rate(self):
+		return _dummy_audio_rate
 
 	@exported_value()
 	def get_band_filter_shape(self):

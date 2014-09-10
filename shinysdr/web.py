@@ -47,7 +47,7 @@ import weakref
 import shinysdr.top
 import shinysdr.plugins
 import shinysdr.db
-from shinysdr.source import SignalType
+from shinysdr.signals import SignalType
 from shinysdr.values import ExportedState, BaseCell, BlockCell, StreamCell, IWritableCollection, the_poller
 
 

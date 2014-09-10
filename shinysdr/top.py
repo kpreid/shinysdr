@@ -69,7 +69,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 		# Configuration
 		self._sources = dict(sources)
 		self.source_name = self._sources.keys()[0]  # arbitrary valid initial value
-		self.audio_rate = 44100
+		self.__audio_bus_rate = 1  # dummy initial value, computed in _do_connect
 
 		# Blocks etc.
 		self.source = None
@@ -225,6 +225,16 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 				self.source,
 				self.monitor)
 			
+			# Determine audio bus rate.
+			# The bus obviously does not need to be higher than the rate of any receiver, because that would be extraneous data. It also does not need to be higher than the rate of any queue, because no queue has use for the information.
+			if len(self._receivers) > 0 and len(self.audio_queue_sinks) > 0:
+				max_out_rate = max((receiver.get_output_type().get_sample_rate() for receiver in self._receivers.itervalues()))
+				max_in_rate = max((queue_rate for (queue_rate, interleaver, sink) in self.audio_queue_sinks.itervalues()))
+				new_bus_rate = min(max_out_rate, max_in_rate)
+				if new_bus_rate != self.__audio_bus_rate:
+					self.__audio_bus_rate = new_bus_rate
+					self.audio_resampler_cache.clear()
+			
 			# recreated each time because reusing an add_ff w/ different
 			# input counts fails; TODO: report/fix bug
 			audio_sum_l = blocks.add_ff()
@@ -240,8 +250,24 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 						log.err('Flow graph: Refusing to connect more than 6 receivers')
 						break
 					self.connect(self.source, receiver)
-					self.connect((receiver, 0), (audio_sum_l, audio_sum_index))
-					self.connect((receiver, 1), (audio_sum_r, audio_sum_index))
+					receiver_rate = receiver.get_output_type().get_sample_rate()
+					if receiver_rate == self.__audio_bus_rate:
+						self.connect(
+							(receiver, 0),
+							(audio_sum_l, audio_sum_index))
+						self.connect(
+							(receiver, 1),
+							(audio_sum_r, audio_sum_index))
+					else:
+						self.connect(
+							(receiver, 0),
+							# TODO pool
+							make_resampler(receiver_rate, self.__audio_bus_rate),
+							(audio_sum_l, audio_sum_index))
+						self.connect(
+							(receiver, 1),
+							make_resampler(receiver_rate, self.__audio_bus_rate),
+							(audio_sum_r, audio_sum_index))
 					audio_sum_index += 1
 			
 			if audio_sum_index > 0:
@@ -249,7 +275,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 				if len(self.audio_queue_sinks) > 0:
 					used_resamplers = set()
 					for (queue_rate, interleaver, sink) in self.audio_queue_sinks.itervalues():
-						if queue_rate == self.audio_rate:
+						if queue_rate == self.__audio_bus_rate:
 							self.connect(audio_sum_l, (interleaver, 0))
 							self.connect(audio_sum_r, (interleaver, 1))
 						else:
@@ -257,8 +283,8 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 								# Moderately expensive due to the internals using optfir
 								log.msg('Flow graph: Constructing resampler for audio rate %i' % queue_rate)
 								self.audio_resampler_cache[queue_rate] = (
-									make_resampler(self.audio_rate, queue_rate),
-									make_resampler(self.audio_rate, queue_rate)
+									make_resampler(self.__audio_bus_rate, queue_rate),
+									make_resampler(self.__audio_bus_rate, queue_rate)
 								)
 							resamplers = self.audio_resampler_cache[queue_rate]
 							used_resamplers.add(resamplers)
@@ -342,7 +368,6 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 			mode=mode,
 			input_rate=self.input_rate,
 			input_center_freq=self.input_freq,
-			audio_rate=self.audio_rate,
 			context=facet,
 		)
 		receiver.state_from_json(state)
@@ -355,8 +380,11 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 		return self.input_rate
 
 	@exported_value(ctor=int)
-	def get_audio_rate(self):
-		return self.audio_rate
+	def get_audio_bus_rate(self):
+		'''
+		Not visible externally; for diagnostic purposes only.
+		'''
+		return self.__audio_bus_rate
 	
 	@exported_value(ctor=float)
 	def get_cpu_use(self):
@@ -369,6 +397,10 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 			self.last_cpu_time = cur_cpu_time
 			self.last_cpu_use = round(elapsed_cpu / elapsed_wall, 2)
 		return self.last_cpu_use
+	
+	def _trigger_reconnect(self):
+		self.__needs_reconnect = True
+		self._do_connect()
 	
 	def _recursive_lock_hook(self):
 		for source in self._sources.itervalues():
@@ -385,6 +417,10 @@ class ContextForReceiver(Context):
 	def revalidate(self):
 		if self._enabled:
 			self.__top._update_receiver_validity(self._key)
+
+	def changed_output_type(self):
+		if self._enabled:
+			self.__top._trigger_reconnect()
 
 
 class IHasFrequency(Interface):

@@ -24,27 +24,8 @@ from gnuradio import gr
 from gnuradio.filter import firdes
 
 from shinysdr.types import Range
+from shinysdr.signals import SignalType
 from shinysdr.values import ExportedState, LooseCell, exported_value
-
-
-class SignalType(object):
-	def __init__(self, sample_rate, kind):
-		self.__sample_rate = float(sample_rate)
-		self.__kind = unicode(kind)
-	
-	def get_sample_rate(self):
-		'''Sample rate in samples per second.'''
-		return self.__sample_rate
-	
-	def get_kind(self):
-		# TODO will probably want to change this
-		'''
-		One of the 'IQ', 'USB', 'LSB', 'MONO', or 'STEREO'.
-		
-		Note that due to the current implementation, USB and LSB are complex with a zero Q component.
-		'''
-		return self.__kind
-
 
 class Source(gr.hier_block2, ExportedState):
 	'''Generic wrapper for multiple source types, yielding complex samples.'''

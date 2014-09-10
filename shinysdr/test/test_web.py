@@ -30,7 +30,7 @@ from twisted.internet import reactor
 from twisted.web import http
 
 from shinysdr.db import DatabaseModel
-from shinysdr.source import SignalType
+from shinysdr.signals import SignalType
 from shinysdr.values import BlockCell, ExportedState, CollectionState, NullExportedState, Poller, exported_value, nullExportedState, setter
 # TODO: StateStreamInner is an implementation detail; arrange a better interface to test
 from shinysdr.web import StateStreamInner, WebService

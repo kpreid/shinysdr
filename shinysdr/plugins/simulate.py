@@ -27,7 +27,8 @@ from gnuradio.filter import firdes
 import math
 
 from shinysdr.blocks import rotator_inc
-from shinysdr.source import SignalType, Source
+from shinysdr.signals import SignalType
+from shinysdr.source import Source
 from shinysdr.types import Range
 from shinysdr.values import BlockCell, CollectionState, ExportedState, exported_value, setter
 

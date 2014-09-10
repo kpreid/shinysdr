@@ -53,6 +53,7 @@ class VOR(SimpleAudioDemodulator):
 		transition = 5000
 		SimpleAudioDemodulator.__init__(self,
 			mode=mode,
+			audio_rate=internal_audio_rate,
 			demod_rate=channel_rate,
 			band_filter=fm_subcarrier * 1.25 + fm_deviation + transition / 2,
 			band_filter_transition=transition,
@@ -90,7 +91,6 @@ class VOR(SimpleAudioDemodulator):
 		self.probe = blocks.probe_signal_f()
 		
 		self.audio_filter_block = grfilter.fir_filter_fff(1, design_lofi_audio_filter(internal_audio_rate))
-		self.resampler_block = make_resampler(internal_audio_rate, self.audio_rate)
 
 		##################################################
 		# Connections
@@ -109,9 +109,8 @@ class VOR(SimpleAudioDemodulator):
 		self.connect(
 			self.am_demod_block,
 			blocks.multiply_const_ff(1.0 / audio_modulation_index * 0.5),
-			self.audio_filter_block,
-			self.resampler_block)
-		self.connect_audio_output(self.resampler_block, self.resampler_block)
+			self.audio_filter_block)
+		self.connect_audio_output(self.audio_filter_block, self.audio_filter_block)
 		
 		# AM phase
 		self.connect(
