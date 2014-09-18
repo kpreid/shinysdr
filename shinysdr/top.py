@@ -151,13 +151,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 
 	def add_audio_queue(self, queue, queue_rate):
 		# TODO: place limit on maximum requested sample rate
-		sink = blocks.message_sink(
-			gr.sizeof_float * _num_audio_channels,
-			queue,
-			True)
-		interleaver = blocks.streams_to_vector(gr.sizeof_float, _num_audio_channels)
-		# TODO: bundle the interleaver and sink in a hier block so it doesn't have to be reconnected
-		self.audio_queue_sinks[queue] = (queue_rate, interleaver, sink)
+		self.audio_queue_sinks[queue] = (queue_rate, AudioQueueSink(queue))
 		
 		self.__needs_reconnect = True
 		self._do_connect()
@@ -229,7 +223,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 			# The bus obviously does not need to be higher than the rate of any receiver, because that would be extraneous data. It also does not need to be higher than the rate of any queue, because no queue has use for the information.
 			if len(self._receivers) > 0 and len(self.audio_queue_sinks) > 0:
 				max_out_rate = max((receiver.get_output_type().get_sample_rate() for receiver in self._receivers.itervalues()))
-				max_in_rate = max((queue_rate for (queue_rate, interleaver, sink) in self.audio_queue_sinks.itervalues()))
+				max_in_rate = max((queue_rate for (queue_rate, sink) in self.audio_queue_sinks.itervalues()))
 				new_bus_rate = min(max_out_rate, max_in_rate)
 				if new_bus_rate != self.__audio_bus_rate:
 					self.__audio_bus_rate = new_bus_rate
@@ -274,10 +268,10 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 				# connect audio output only if there is at least one input
 				if len(self.audio_queue_sinks) > 0:
 					used_resamplers = set()
-					for (queue_rate, interleaver, sink) in self.audio_queue_sinks.itervalues():
+					for (queue_rate, sink) in self.audio_queue_sinks.itervalues():
 						if queue_rate == self.__audio_bus_rate:
-							self.connect(audio_sum_l, (interleaver, 0))
-							self.connect(audio_sum_r, (interleaver, 1))
+							self.connect(audio_sum_l, (sink, 0))
+							self.connect(audio_sum_r, (sink, 1))
 						else:
 							if queue_rate not in self.audio_resampler_cache:
 								# Moderately expensive due to the internals using optfir
@@ -288,9 +282,8 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 								)
 							resamplers = self.audio_resampler_cache[queue_rate]
 							used_resamplers.add(resamplers)
-							self.connect(resamplers[0], (interleaver, 0))
-							self.connect(resamplers[1], (interleaver, 1))
-						self.connect(interleaver, sink)
+							self.connect(resamplers[0], (sink, 0))
+							self.connect(resamplers[1], (sink, 1))
 					for resamplers in used_resamplers:
 						self.connect(audio_sum_l, resamplers[0])
 						self.connect(audio_sum_r, resamplers[1])
@@ -427,6 +420,23 @@ class IHasFrequency(Interface):
 	# TODO: better module placement for this
 	def get_freq():
 		pass
+
+
+class AudioQueueSink(gr.hier_block2):
+	def __init__(self, queue):
+		gr.hier_block2.__init__(
+			self, 'ShinySDR AudioQueueSink',
+			gr.io_signature(2, 2, gr.sizeof_float),
+			gr.io_signature(0, 0, 0),
+		)
+		sink = blocks.message_sink(
+			gr.sizeof_float * _num_audio_channels,
+			queue,
+			True)
+		interleaver = blocks.streams_to_vector(gr.sizeof_float, _num_audio_channels)
+		self.connect((self, 0), (interleaver, 0))
+		self.connect((self, 1), (interleaver, 1))
+		self.connect(interleaver, sink)
 
 
 def base26(x):
