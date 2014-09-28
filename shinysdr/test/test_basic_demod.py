@@ -25,13 +25,13 @@ from twisted.internet import reactor
 from twisted.trial import unittest
 
 # from shinysdr.plugins import basic_demod
-from shinysdr.plugins.simulate import SimulatedSource
+from shinysdr.plugins.simulate import SimulatedDevice
 from shinysdr.top import Top
 
 class DemodulatorSmokeTest(unittest.TestCase):
 	def setUp(self):
 		# Using a top block is the simplest way to set up the proper environment for a demodulator.
-		self.__top = Top(sources={'s1': SimulatedSource()})
+		self.__top = Top(devices={'s1': SimulatedDevice()})
 	
 	def __test(self, mode):
 		self.__top.add_receiver(mode, key='a')

@@ -24,6 +24,7 @@ from __future__ import absolute_import, division
 import array
 import bisect
 import struct
+import weakref
 
 from twisted.internet import task, reactor as the_reactor
 from twisted.python import log
@@ -291,6 +292,9 @@ class LooseCell(ValueCell):
 	
 	def set(self, value):
 		value = self._ctor(value)
+		if self.__value == value:
+			return
+		
 		self.__value = value
 		
 		# triggers before the subscriptions to allow for updating related internal state
@@ -328,6 +332,32 @@ class _LooseCellSubscription(object):
 	def unsubscribe(self):
 		self.__cell._unsubscribe(self)
 
+
+def ViewCell(base, get_transform, set_transform, **kwargs):
+	'''
+	A Cell whose value is always a transformation of another.
+	
+	TODO: Stop implementing this as LooseCell.
+	'''
+	
+	def forward(view_value):
+		base_value = set_transform(view_value)
+		base.set(base_value)
+		if base_value != base.get():
+			reverse()
+	
+	def reverse():
+		self.set(get_transform(base.get()))
+	
+	self = LooseCell(
+		value=get_transform(base.get()),
+		post_hook=forward,
+		**kwargs)
+	
+	sub = base.subscribe(reverse)
+	weakref.ref(self, lambda: sub.unsubscribe())
+		
+	return self
 
 
 class ExportedState(object):
@@ -416,9 +446,13 @@ class ExportedState(object):
 		return description
 
 
+class INull(Interface):
+	'''Marker for nullExportedState.'''
+
+
 class NullExportedState(ExportedState):
 	'''An ExportedState object containing no cells, for use analogously to None.'''
-	pass
+	implements(INull)
 
 
 nullExportedState = NullExportedState()

@@ -190,6 +190,12 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   }
   widgets.PickBlock = PickBlock;
   
+  // Suppresses all visibility of null objects
+  function NullWidget(config) {
+    Block.call(this, config, function () {}, true);
+  }
+  widgets['interface:shinysdr.values.INull'] = NullWidget;
+  
   // Widget for the top block
   function Top(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
@@ -213,12 +219,12 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       if (false) { // TODO: Figure out a good way to display options for all sources
         ignore('source');
         if ('sources' in block) {
-          addWidget('sources', SourceSet);
+          addWidget('sources', DeviceSet);
         }
       } else {
         ignore('sources');
         if ('source' in block) {
-          addWidget('source', Source);
+          addWidget('source', Device);
         }
       }
       if ('receivers' in block) {
@@ -263,17 +269,28 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       }, true);
     };
   }
-  var SourceSet = widgets.SourceSet = BlockSet(Source, 'Source', false);
+  var DeviceSet = widgets.DeviceSet = BlockSet(Device, 'Device', false);
   var ReceiverSet = widgets.ReceiverSet = BlockSet(Receiver, 'Receiver', true);
   var AccessorySet = widgets.AccessorySet = BlockSet(PickBlock, 'Accessory', true);
   
-  // Widget for a source block
-  function Source(config) {
+  // Widget for a device
+  function Device(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
-      if ('freq' in block) {
+      var freqCell = block.freq;
+      if (!freqCell.type.isSingleValued()) {
         addWidget('freq', Knob, 'Center frequency');
       }
-      
+      addWidget('rx_driver', PickBlock);
+      addWidget('tx_driver', PickBlock);
+      addWidget('components', ComponentSet);
+    });
+  }
+  widgets['interface:shinysdr.devices.IDevice'] = Device;
+  var ComponentSet = BlockSet(PickBlock, 'Component', false);
+  
+  // Widget for a RX driver block -- TODO break this stuff up
+  function RXDriver(config) {
+    Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       // If we have multiple gain-related controls, do a combined UI
       // TODO: Better feature-testing strategy
       var hasAGC = 'agc' in block;
@@ -342,17 +359,15 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       
       setToDetails();
       
-      if ('external_freq_shift' in block) {
-        addWidget('external_freq_shift', SmallKnob, 'External frequency shift');
-      }
       if ('correction_ppm' in block) {
         addWidget('correction_ppm', SmallKnob, 'Freq.corr. (PPM)');
       }
       
       ignore('output_type');
-    });
+    }, true);
   }
-  widgets.Source = Source;
+  widgets.RXDriver = RXDriver;
+  widgets['interface:shinysdr.devices.IRXDriver'] = RXDriver;
   
   // Widget for a receiver block
   function Receiver(config) {

@@ -30,8 +30,8 @@ class TestHamlibRig(unittest.TestCase):
 	def setUp(self):
 		d = connect_to_rig(reactor, options=['-m', '1'], port=4530)
 		
-		def on_connect(rig):
-			self.__rig = rig
+		def on_connect(rig_device):
+			self.__rig = rig_device.get_components()['rig']
 		
 		d.addCallback(on_connect)
 		return d

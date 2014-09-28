@@ -21,9 +21,11 @@ Plugin for Hamlib hardware interfaces.
 To use this plugin, add something like this to your config file:
 
 import shinysdr.plugins.hamlib
-config.accessories.add('my-other-radio',
+config.devices.add('my-other-radio',
 	shinysdr.plugins.hamlib.connect_to_rig(config.reactor,
 		options=['-m', '<model ID>', '-r', '<device file name>']))
+
+TODO explain how to link up with soundcard devices
 '''
 
 # pylint: disable=no-init
@@ -46,6 +48,7 @@ from twisted.protocols.basic import LineReceiver
 from twisted.python import log
 from twisted.web import static
 
+from shinysdr.devices import Device
 from shinysdr.top import IHasFrequency
 from shinysdr.types import Enum, Range
 from shinysdr.values import Cell, ExportedState, LooseCell
@@ -93,7 +96,7 @@ _passbands = Range([(0, 0)])
 
 
 _info = {
-	'Frequency': (int),
+	'Frequency': (Range([(0, 9999999999)], integer=True)),
 	'Mode': (_modes),
 	'Passband': (_passbands),
 	'VFO': (_vfos),
@@ -168,7 +171,9 @@ def connect_to_server(reactor, host='localhost', port=4532):
 	#print 'top connected ', protocol.transport
 	rigObj = _HamlibRig(protocol)
 	yield rigObj.sync()  # allow dump_caps round trip
-	defer.returnValue(rigObj)
+	defer.returnValue(Device(
+		vfo_cell=rigObj.state()['freq'],
+		components={'rig': rigObj}))
 
 
 __all__.append('connect_to_server')
@@ -206,11 +211,11 @@ def connect_to_rig(reactor, options=None, port=4532):
 		close_fds=True)
 	
 	# Retry connecting with exponential backoff, because the rigctld process won't tell us when it's started listening.
-	rig = None
+	rig_device = None
 	refused = None
 	for i in xrange(0, 5):
 		try:
-			rig = yield connect_to_server(reactor, host=host, port=port)
+			rig_device = yield connect_to_server(reactor, host=host, port=port)
 			break
 		except ConnectionRefusedError, e:
 			refused = e
@@ -218,9 +223,9 @@ def connect_to_rig(reactor, options=None, port=4532):
 	else:
 		raise refused
 	
-	rig.when_closed().addCallback(lambda _: process.kill())
+	rig_device.get_components()['rig'].when_closed().addCallback(lambda _: process.kill())
 	
-	defer.returnValue(rig)
+	defer.returnValue(rig_device)
 
 
 __all__.append('connect_to_rig')

@@ -20,7 +20,16 @@ from __future__ import absolute_import, division
 from twisted.trial import unittest
 
 from osmosdr import range_t, meta_range_t
-from shinysdr.plugins.osmosdr import convert_osmosdr_range
+from shinysdr.plugins.osmosdr import OsmoSDRDevice, convert_osmosdr_range
+
+
+class TestOsmoSDRDevice(unittest.TestCase):
+	def test_initial_zero_freq(self):
+		# 100 MHz is a default we use
+		self.assertEqual(100e6, OsmoSDRDevice('file=/dev/null,rate=100000,freq=0').get_freq())
+
+	def test_initial_nonzero_freq(self):
+		self.assertEqual(21000, OsmoSDRDevice('file=/dev/null,rate=100000,freq=21000').get_freq())
 
 
 class TestOsmoSDRRange(unittest.TestCase):

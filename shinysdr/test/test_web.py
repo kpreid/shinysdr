@@ -139,7 +139,7 @@ class TestStateStream(StateStreamTestCase):
 		self.assertEqual(self.getUpdates(), [
 			[u'register_block', 1, u'urlroot', []],
 			[u'register_cell', 2, u'urlroot/foo', self.object.state()['foo'].description()],
-			[u'register_block', 3, u'urlroot/foo', []],
+			[u'register_block', 3, u'urlroot/foo', [u'shinysdr.values.INull']],
 			[u'value', 3, {}],
 			[u'value', 2, 3],
 			[u'register_cell', 4, u'urlroot/bar', self.object.state()['bar'].description()],
@@ -151,7 +151,7 @@ class TestStateStream(StateStreamTestCase):
 		# becomes distinct
 		self.object.bar = replacement
 		self.assertEqual(self.getUpdates(), [
-			[u'register_block', 5, u'urlroot/bar', []],
+			[u'register_block', 5, u'urlroot/bar', [u'shinysdr.values.INull']],
 			[u'value', 5, {}],
 			[u'value', 4, 5]
 		])

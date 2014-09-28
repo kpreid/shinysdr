@@ -50,9 +50,9 @@ __all__ = [
 class Config(object):
 	def __init__(self, reactor):
 		# public config elements
-		self.sources = _ConfigDict(self)
+		self.devices = _ConfigDevices(self)
+		self.sources = self.devices  # temporary legacy compat -- TODO remove
 		self.databases = _ConfigDbs(self, reactor)
-		self.accessories = _ConfigAccessories(self)
 
 		# might be wanted
 		self.reactor = reactor
@@ -128,20 +128,10 @@ class _ConfigDict(object):
 		self._values[key] = value
 
 
-class _ConfigAccessories(_ConfigDict):
-	def add(self, key, value):
-		self._config._not_finished()
-		import shinysdr.values as lazy_values
-		
-		if key in self._values:
-			raise KeyError('Accessory key %r already present' % (key,))
-		
-		def f(r):
-			self._values[key] = r
-			return r
-		
-		self._values[key] = lazy_values.nullExportedState
-		defer.maybeDeferred(lambda: value).addCallback(f)
+class _ConfigDevices(_ConfigDict):
+	def add(self, key, *devices):
+		from shinysdr.devices import merge_devices
+		super(_ConfigDevices, self).add(key, merge_devices(devices))
 
 
 class _ConfigDbs(object):
@@ -197,19 +187,19 @@ def make_default_config():
 import shinysdr.plugins.osmosdr
 import shinysdr.plugins.simulate
 
-# OsmoSDR generic device source; handles USRP, RTL-SDR, FunCube
+# OsmoSDR generic driver; handles USRP, RTL-SDR, FunCube
 # Dongle, HackRF, etc.
 # If desired, add sample_rate=<n> parameter.
 # Use shinysdr.plugins.osmosdr.OsmoSDRProfile to set more parameters
 # to make the best use of your specific hardware's capabilities.
-config.sources.add(u'osmo', shinysdr.plugins.osmosdr.OsmoSDRSource(''))
+config.devices.add(u'osmo', shinysdr.plugins.osmosdr.OsmoSDRDevice(''))
 
 # For hardware which uses a sound-card as its ADC or appears as an
 # audio device.
-config.sources.add(u'audio', shinysdr.source.AudioSource(''))
+config.devices.add(u'audio', shinysdr.devices.AudioDevice(''))
 
 # Locally generated RF signals for test purposes.
-config.sources.add(u'sim', shinysdr.plugins.simulate.SimulatedSource())
+config.devices.add(u'sim', shinysdr.plugins.simulate.SimulatedDevice())
 
 config.persist_to_file('state.json')
 

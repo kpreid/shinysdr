@@ -69,8 +69,9 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
 	args = argParser.parse_args(args=argv[1:])
 
 	import shinysdr.top as lazy_top
-	# We don't actually use shinysdr.source directly, but we want it to be guaranteed available in the context of the config file.
-	import shinysdr.source as lazy_source
+	# We don't actually use shinysdr.devices directly, but we want it to be guaranteed available in the context of the config file.
+	import shinysdr.devices as lazy_devices
+	import shinysdr.source as lazy_source  # legacy shim
 
 	# Load config file
 	if args.createConfig:
@@ -102,8 +103,7 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
 	
 	log.msg('Constructing flow graph...')
 	top = lazy_top.Top(
-		sources=configObj.sources._values,
-		accessories=configObj.accessories._values)
+		devices=configObj.devices._values)
 	
 	log.msg('Restoring state...')
 	restore(top, top_defaults)

@@ -29,9 +29,9 @@ class TestTop(unittest.TestCase):
 		Regression test: Switching sources was not updating receiver input frequency.
 		'''
 		freq = 1e6
-		top = Top(sources={
-			's1': simulate.SimulatedSource(freq=0),
-			's2': simulate.SimulatedSource(freq=freq),
+		top = Top(devices={
+			's1': simulate.SimulatedDevice(freq=0),
+			's2': simulate.SimulatedDevice(freq=freq),
 		})
 		top.set_source_name('s1')
 		self.assertEqual(top.monitor.get_fft_info()[0], 0)
@@ -49,6 +49,6 @@ class TestTop(unittest.TestCase):
 		'''
 		Specifying an unknown mode should not _fail_.
 		'''
-		top = Top(sources={'s1': simulate.SimulatedSource(freq=0)})
+		top = Top(devices={'s1': simulate.SimulatedDevice(freq=0)})
 		(_, receiver) = top.add_receiver('NONSENSE', key='a')
 		self.assertEqual(receiver.get_mode(), 'AM')

@@ -17,12 +17,19 @@
 
 from __future__ import absolute_import, division
 
+from zope.interface import implements  # available via Twisted
+
+from gnuradio import gr
+
+from shinysdr.devices import Device, FrequencyShift, IRXDriver, merge_devices
 from shinysdr.signals import SignalType
-from shinysdr.source import Source
 from shinysdr.types import Enum, Range
-from shinysdr.values import BlockCell, Cell, ExportedState, exported_value, setter
+from shinysdr.values import BlockCell, Cell, ExportedState, LooseCell, exported_value, setter
 
 import osmosdr
+
+
+__all__ = []
 
 
 ch = 0  # single channel number used
@@ -49,61 +56,142 @@ class OsmoSDRProfile(object):
 		self.e4000 = e4000
 
 
-class OsmoSDRSource(Source):
-	# TODO remove Source superclass overall
+class _OsmoSDRTuning(object):
+	def __init__(self, profile, correction_ppm, source):
+		self.__profile = profile
+		self.__correction_ppm = correction_ppm
+		self.__source = source
+		self.__vfo_cell = LooseCell(
+			key='freq',
+			value=0.0,
+			# TODO: Eventually we'd like to be able to make the freq range vary dynamically with the correction setting
+			ctor=convert_osmosdr_range(
+				source.get_freq_range(ch),
+				strict=False,
+				transform=self.from_hardware_freq,
+				add_zero=profile.e4000),
+			writable=True,
+			persists=True,
+			post_hook=self.__set_freq)
+	
+	def __set_freq(self, freq):
+		self.__source.set_center_freq(self.to_hardware_freq(freq))
+		
+	def to_hardware_freq(self, effective_freq):
+		if abs(effective_freq) < 1e-2 and self.__profile.e4000:
+			# Quirk: Tuning to 3686.6-3730 MHz on the E4000 causes operation effectively at 0Hz.
+			# Original report: <http://www.reddit.com/r/RTLSDR/comments/12d2wc/a_very_surprising_discovery/>
+			return 3700e6
+		else:
+			return effective_freq * (1 - 1e-6 * self.__correction_ppm)
+	
+	def from_hardware_freq(self, freq):
+		freq = freq / (1 - 1e-6 * self.__correction_ppm)
+		if 3686.6e6 <= freq <= 3730e6 and self.__profile.e4000:
+			freq = 0.0
+		return freq
+	
+	def get_vfo_cell(self):
+		return self.__vfo_cell
+
+	def get_correction_ppm(self):
+		return self.__correction_ppm
+	
+	def set_correction_ppm(self, value):
+		self.__correction_ppm = float(value)
+		# Not using the osmosdr feature because changing it at runtime produces glitches like the sample rate got changed; therefore we emulate it ourselves.
+		#self.osmosdr_source_block.set_freq_corr(value, 0)
+		self.__set_freq(self.__vfo_cell.get())
+	
+
+
+def OsmoSDRDevice(
+		osmo_device,
+		name=None,
+		profile=OsmoSDRProfile(),
+		sample_rate=None,
+		external_freq_shift=0.0,  # deprecated
+		correction_ppm=0.0):
+	'''
+	osmo_device: gr-osmosdr device string
+	name: block name (usually not specified)
+	profile: an OsmoSDRProfile (see docs)
+	sample_rate: desired sample rate, or None == guess a good rate
+	external_freq_shift: external (down|up)converter frequency (Hz) -- DEPRECATED, use shinysdr.devices.FrequencyShift
+	correction_ppm: oscillator frequency calibration (parts-per-million)
+	'''
+	# The existence of the correction_ppm parameter is a workaround for the current inability to dynamically change an exported field's type (the frequency range), allowing them to be initialized early enough, in the configuration, to take effect. (Well, it's also nice to hardcode them in the config if you want to.)
+	if name is None:
+		name = 'OsmoSDR %s' % osmo_device
+	
+	source = osmosdr.source('numchan=1 ' + osmo_device)
+	if source.get_num_channels() < 1:
+		# osmosdr.source doesn't throw an exception, allegedly because gnuradio can't handle it in a hier_block2 initializer. But we want to fail understandably, so recover by detecting it (sample rate = 0, which is otherwise nonsense)
+		raise LookupError('OsmoSDR device not found (device string = %r)' % osmo_device)
+	elif source.get_num_channels() > 1:
+		raise LookupError('Too many devices/channels; need exactly one (device string = %r)' % osmo_device)
+	
+	tuning = _OsmoSDRTuning(profile, correction_ppm, source)
+	vfo_cell = tuning.get_vfo_cell()
+	
+	if sample_rate is None:
+		# If sample_rate is unspecified, we pick the closest available rate to a reasonable value. (Reasonable in that it's within the data handling capabilities of this software and of USB 2.0 connections.) Previously, we chose the maximum sample rate, but that may be too high for the connection the RF hardware, or too high for the CPU to FFT/demodulate.
+		source.set_sample_rate(convert_osmosdr_range(source.get_sample_rates())(2.4e6))
+	else:
+		source.set_sample_rate(sample_rate)
+	
+	rx_driver = _OsmoSDRRXDriver(
+		source=source,
+		name=name,
+		sample_rate=sample_rate,
+		tuning=tuning)
+	
+	hw_initial_freq = source.get_center_freq()
+	if hw_initial_freq == 0.0:
+		# If the hardware/driver isn't providing a reasonable default (RTLs don't), do it ourselves; go to the middle of the FM broadcast band (rounded up or down to what the hardware reports it supports).
+		vfo_cell.set(100e6)
+	else:
+		print hw_initial_freq
+		vfo_cell.set(tuning.from_hardware_freq(hw_initial_freq))
+	
+	self = Device(
+		name=name,
+		vfo_cell=vfo_cell,
+		rx_driver=rx_driver)
+	
+	# implement legacy option in terms of new devices
+	if external_freq_shift == 0.0:
+		return self
+	else:
+		return merge_devices([self, FrequencyShift(-external_freq_shift)])
+
+
+__all__.append('SimulatedDevice')
+
+
+OsmoSDRSource = OsmoSDRDevice  # legacy alias
+
+
+class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
+	implements(IRXDriver)
+	
 	# Note: Docs for gr-osmosdr are in comments at gr-osmosdr/lib/source_iface.h
 	def __init__(self,
-			osmo_device,
-			name=None,
-			profile=OsmoSDRProfile(),
-			sample_rate=None,
-			external_freq_shift=0.0,
-			correction_ppm=0.0,
-			**kwargs):
-		'''
-		osmo_device: gr-osmosdr device string
-		name: block name (usually not specified)
-		profile: an OsmoSDRProfile (see docs)
-		sample_rate: desired sample rate, or None == guess a good rate
-		external_freq_shift: external (down|up)converter frequency (Hz)
-		correction_ppm: oscillator frequency calibration (parts-per-million)
-		'''
-		# The existence of the external_freq_shift and correction_ppm parameters (but not all of the others) is a workaround for the current inability to dynamically change an exported field's type (the frequency range), allowing them to be initialized early enough, in the configuration, to take effect.
+			source,
+			name,
+			sample_rate,
+			tuning):
+		gr.hier_block2.__init__(
+			self, name,
+			gr.io_signature(0, 0, 0),
+			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
+		)
+
+		self.__name = name
+		self.__tuning = tuning
+		self.__source = source
 		
-		if name is None:
-			name = 'OsmoSDR %s' % osmo_device
-		
-		# things needed early for range computation
-		self.__osmo_device = osmo_device
-		self.__profile = profile
-		self.external_freq_shift = external_freq_shift
-		self.correction_ppm = correction_ppm
-		
-		self.osmosdr_source_block = source = osmosdr.source('numchan=1 ' + osmo_device)
-		if source.get_num_channels() < 1:
-			# osmosdr.source doesn't throw an exception, allegedly because gnuradio can't handle it in a hier_block2 initializer. But we want to fail understandably, so recover by detecting it (sample rate = 0, which is otherwise nonsense)
-			raise LookupError('OsmoSDR device not found (device string = %r)' % osmo_device)
-		elif source.get_num_channels() > 1:
-			raise LookupError('Too many devices/channels; need exactly one (device string = %r)' % osmo_device)
-		
-		if sample_rate is None:
-			# If sample_rate is unspecified, we pick the closest available rate to a reasonable value. (Reasonable in that it's within the data handling capabilities of this software and of USB 2.0 connections.) Previously, we chose the maximum sample rate, but that may be too high for the connection the RF hardware, or too high for the CPU to FFT/demodulate.
-			source.set_sample_rate(convert_osmosdr_range(source.get_sample_rates())(2.4e6))
-		else:
-			source.set_sample_rate(sample_rate)
-		
-		# late init due to freq_range dependencies :(
-		Source.__init__(self,
-			name=name,
-			# TODO: Eventually we'd like to be able to make the freq range vary dynamically with the correction setting
-			freq_range=convert_osmosdr_range(
-				self.osmosdr_source_block.get_freq_range(ch),
-				strict=False,
-				transform=self._invert_frequency,
-				add_zero=self.__profile.e4000),
-			**kwargs)
-		
-		self.connect(self.osmosdr_source_block, self)
+		self.connect(self.__source, self)
 		
 		self.gains = Gains(source)
 		
@@ -113,13 +201,6 @@ class OsmoSDRSource(Source):
 		source.set_dc_offset_mode(self.dc_state, ch)  # no getter, set to known state
 		source.set_iq_balance_mode(self.iq_state, ch)  # no getter, set to known state
 
-		hw_initial_freq = source.get_center_freq()
-		if hw_initial_freq == 0.0:
-			# If the hardware/driver isn't providing a reasonable default (RTLs don't), do it ourselves; go to the middle of the FM broadcast band (rounded up or down to what the hardware reports it supports).
-			self.set_freq(100e6)
-		else:
-			# Note: _invert_frequency won't actually do anything useful currently because external_freq_shift and correction_ppm aren't initialized at this point; it's just the most-correct expression. And if we add ctor args for the frequency modifiers, it'll do the right thing.
-			self.freq = self._invert_frequency(hw_initial_freq)
 		
 		# Misc initial state
 		self.__signal_type = SignalType(
@@ -127,11 +208,8 @@ class OsmoSDRSource(Source):
 			# TODO review why cast
 			sample_rate=int(source.get_sample_rate()))
 		
-	def __str__(self):
-		return 'OsmoSDR ' + self.__osmo_device
-	
 	def state_def(self, callback):
-		super(OsmoSDRSource, self).state_def(callback)
+		super(_OsmoSDRRXDriver, self).state_def(callback)
 		# TODO make this possible to be decorator style
 		callback(BlockCell(self, 'gains'))
 	
@@ -139,83 +217,40 @@ class OsmoSDRSource(Source):
 	def get_output_type(self):
 		return self.__signal_type
 	
-	# override Source
-	def _really_set_frequency(self, freq):
-		self.freq = freq
-		self._update_frequency()
-	
-	# override Source
+	# implement IRXDriver
 	def get_tune_delay(self):
 		return 0.25  # TODO: make configurable and/or account for as many factors as we can
 	
-	@exported_value(ctor=float)
-	def get_external_freq_shift(self):
-		return self.external_freq_shift
-	
-	@setter
-	def set_external_freq_shift(self, value):
-		self.external_freq_shift = float(value)
-		self._update_frequency()
-	
+
 	@exported_value(ctor=float)
 	def get_correction_ppm(self):
-		return self.correction_ppm
+		return self.__tuning.get_correction_ppm()
 	
 	@setter
 	def set_correction_ppm(self, value):
-		self.correction_ppm = float(value)
-		# Not using the osmosdr feature because changing it at runtime produces glitches like the sample rate got changed; therefore we emulate it ourselves.
-		#self.osmosdr_source_block.set_freq_corr(value, 0)
-		self._update_frequency()
+		self.__tuning.set_correction_ppm()
 	
-	def _compute_frequency(self, effective_freq):
-		effective_freq += self.external_freq_shift
-		if abs(effective_freq) < 1e-2 and self.__profile.e4000:
-			# Quirk: Tuning to 3686.6-3730 MHz on the E4000 causes operation effectively at 0Hz.
-			# Original report: <http://www.reddit.com/r/RTLSDR/comments/12d2wc/a_very_surprising_discovery/>
-			return 3700e6
-		else:
-			return effective_freq * (1 - 1e-6 * self.correction_ppm)
-	
-	def _invert_frequency(self, freq):
-		'''hardware frequency to displayed frequency, inverse of _compute_frequency'''
-		freq = freq / (1 - 1e-6 * self.correction_ppm)
-		if 3686.6e6 <= freq <= 3730e6 and self.__profile.e4000:
-			freq = 0.0
-		freq -= self.external_freq_shift
-		return freq
-	
-	def _update_frequency(self):
-		self.osmosdr_source_block.set_center_freq(self._compute_frequency(self.freq), 0)
-		
-		# update freq to what osmosdr reported, but only if the difference is large enough that it probably isn't just FP error in the corrections
-		# TODO: This doesn't seem to be working quite right so has been disabled for now. Need to more precisely examine whether it's actually broken (osmosdr being too asynchronous?) or whether our UI is rounding wrong (or similar).
-		#tuned_freq = self._invert_frequency(self.osmosdr_source_block.get_center_freq())
-		#if abs(tuned_freq - self.freq) > 1e-10:
-		#	self.freq = tuned_freq
-
-	# TODO: Perhaps expose individual gain stages.
 	@exported_value(ctor_fn=lambda self: convert_osmosdr_range(
-			self.osmosdr_source_block.get_gain_range(ch), strict=False))
+			self.__source.get_gain_range(ch), strict=False))
 	def get_gain(self):
-		return self.osmosdr_source_block.get_gain(ch)
+		return self.__source.get_gain(ch)
 	
 	@setter
 	def set_gain(self, value):
-		self.osmosdr_source_block.set_gain(float(value), ch)
+		self.__source.set_gain(float(value), ch)
 	
 	@exported_value(ctor=bool)
 	def get_agc(self):
-		return bool(self.osmosdr_source_block.get_gain_mode(ch))
+		return bool(self.__source.get_gain_mode(ch))
 	
 	@setter
 	def set_agc(self, value):
-		self.osmosdr_source_block.set_gain_mode(bool(value), ch)
+		self.__source.set_gain_mode(bool(value), ch)
 	
 	@exported_value(ctor_fn=lambda self: Enum(
-		{unicode(name): unicode(name) for name in self.osmosdr_source_block.get_antennas()}))
+		{unicode(name): unicode(name) for name in self.__source.get_antennas()}))
 	def get_antenna(self):
-		return unicode(self.osmosdr_source_block.get_antenna(ch))
+		return unicode(self.__source.get_antenna(ch))
 		# TODO review whether set_antenna is safe to expose
 	
 	# Note: dc_cancel has a 'manual' mode we are not yet exposing
@@ -230,7 +265,7 @@ class OsmoSDRSource(Source):
 			mode = 2  # automatic mode
 		else:
 			mode = 0
-		self.osmosdr_source_block.set_dc_offset_mode(mode, ch)
+		self.__source.set_dc_offset_mode(mode, ch)
 	
 	# Note: iq_balance has a 'manual' mode we are not yet exposing
 	@exported_value(ctor=bool)
@@ -244,16 +279,19 @@ class OsmoSDRSource(Source):
 			mode = 2  # automatic mode
 		else:
 			mode = 0
-		self.osmosdr_source_block.set_iq_balance_mode(mode, ch)
+		self.__source.set_iq_balance_mode(mode, ch)
 	
 	@exported_value(ctor_fn=lambda self: convert_osmosdr_range(
-		self.osmosdr_source_block.get_bandwidth_range(ch)))
+		self.__source.get_bandwidth_range(ch)))
 	def get_bandwidth(self):
-		return self.osmosdr_source_block.get_bandwidth(ch)
+		return self.__source.get_bandwidth(ch)
 	
 	@setter
 	def set_bandwidth(self, value):
-		self.osmosdr_source_block.set_bandwidth(float(value), ch)
+		self.__source.set_bandwidth(float(value), ch)
+	
+	def notify_reconnecting_or_restarting(self):
+		pass
 
 
 class Gains(ExportedState):

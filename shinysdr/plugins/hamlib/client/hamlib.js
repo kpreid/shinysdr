@@ -26,11 +26,9 @@ define(['widgets'], function (widgets) {
   
   var exports = {};
   
-  function ExtRig(config) {  // TODO this should be handled in a plugin
+  function ExtRig(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
-      if ('freq' in block) {
-        addWidget('freq', Knob, 'Frequency');
-      }
+      ignore('freq');  // is merged into vfo
       if ('Mode' in block) {
         addWidget('Mode', Radio, 'Mode');
       }

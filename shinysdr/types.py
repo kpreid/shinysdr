@@ -122,6 +122,20 @@ class Range(ValueType):
 			strict=self.__strict,
 			logarithmic=self.__logarithmic,
 			integer=self.__integer and offset % 1 == 0)
+	
+	def get_single_point(self):
+		'''
+		If this Range contains only a single value, return it, else None.
+		'''
+		if len(self.__mins) != 1:
+			return None
+		else:
+			a = self.__mins[0]
+			b = self.__maxes[0]
+			if a == b:
+				return a
+			else:
+				return None
 
 
 class Notice(ValueType):

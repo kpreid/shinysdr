@@ -17,6 +17,8 @@
 
 from __future__ import absolute_import, division
 
+from zope.interface import implements  # available via Twisted
+
 from gnuradio import analog
 from gnuradio import blocks
 from gnuradio import channels
@@ -28,26 +30,50 @@ import math
 
 from shinysdr.blocks import rotator_inc
 from shinysdr.signals import SignalType
-from shinysdr.source import Source
+from shinysdr.devices import Device, IRXDriver
 from shinysdr.types import Range
-from shinysdr.values import BlockCell, CollectionState, ExportedState, exported_value, setter
+from shinysdr.values import BlockCell, CollectionState, ExportedState, LooseCell, exported_value, setter
 
 
-class SimulatedSource(Source):
+__all__ = []  # appended later
+
+
+def SimulatedDevice(name='Simulated RF', freq=0.0):
+	return Device(
+		name=name,
+		vfo_cell=LooseCell(
+			key='freq',
+			value=freq,
+			ctor=Range([(freq, freq)]),
+			writable=True,
+			persists=False),
+		rx_driver=_SimulatedRXDriver(name))
+
+
+__all__.append('SimulatedDevice')
+
+
+# deprecated alias
+SimulatedSource = SimulatedDevice
+
+
+class _SimulatedRXDriver(ExportedState, gr.hier_block2):
+	implements(IRXDriver)
+	
 	# TODO: be not hardcoded; for now this is convenient
 	audio_rate = 1e4
 	rf_rate = 200e3
 
-	def __init__(self, name='Simulated Source', freq=0.0):
-		Source.__init__(self,
-			name=name,
-			freq_range=Range([(freq, freq)]))
-		self.freq_cell.set(freq)
+	def __init__(self, name):
+		gr.hier_block2.__init__(
+			self, name,
+			gr.io_signature(0, 0, 0),
+			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
+		)
 		
 		rf_rate = self.rf_rate
 		audio_rate = self.audio_rate
 		
-		self.__freq = freq
 		self.noise_level = -2
 		self._transmitters = {}
 		
@@ -97,11 +123,8 @@ class SimulatedSource(Source):
 			kind='IQ',
 			sample_rate=rf_rate)
 	
-	def __str__(self):
-		return 'Simulated RF'
-
 	def state_def(self, callback):
-		super(SimulatedSource, self).state_def(callback)
+		super(_SimulatedRXDriver, self).state_def(callback)
 		# TODO make this possible to be decorator style
 		callback(BlockCell(self, 'transmitters'))
 
@@ -132,14 +155,14 @@ class SimulatedSource(Source):
 
 _interp_taps = firdes.low_pass(
 	1,  # gain
-	SimulatedSource.rf_rate,
-	SimulatedSource.audio_rate / 2,
-	SimulatedSource.audio_rate * 0.2,
+	_SimulatedRXDriver.rf_rate,
+	_SimulatedRXDriver.audio_rate / 2,
+	_SimulatedRXDriver.audio_rate * 0.2,
 	firdes.WIN_HAMMING)
 
 
 def _make_interpolator(real=False):
-	interp = int(SimulatedSource.rf_rate / SimulatedSource.audio_rate)
+	interp = int(_SimulatedRXDriver.rf_rate / _SimulatedRXDriver.audio_rate)
 	if real:
 		return grfilter.interp_fir_filter_fff(interp, _interp_taps)
 	else:
@@ -193,7 +216,7 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
 class _DSBModulator(gr.hier_block2, ExportedState):
 	def __init__(self, audio_rate, rf_rate):
 		gr.hier_block2.__init__(
-			self, 'SimulatedSource DSB modulator',
+			self, 'SimulatedDevice DSB modulator',
 			gr.io_signature(1, 1, gr.sizeof_float * 1),
 			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
 		)
@@ -208,7 +231,7 @@ class _DSBModulator(gr.hier_block2, ExportedState):
 class _AMModulator(gr.hier_block2, ExportedState):
 	def __init__(self, audio_rate, rf_rate):
 		gr.hier_block2.__init__(
-			self, 'SimulatedSource AM modulator',
+			self, 'SimulatedDevice AM modulator',
 			gr.io_signature(1, 1, gr.sizeof_float * 1),
 			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
 		)
@@ -224,7 +247,7 @@ class _AMModulator(gr.hier_block2, ExportedState):
 class _FMModulator(gr.hier_block2, ExportedState):
 	def __init__(self, audio_rate, rf_rate):
 		gr.hier_block2.__init__(
-			self, 'SimulatedSource FM modulator',
+			self, 'SimulatedDevice FM modulator',
 			gr.io_signature(1, 1, gr.sizeof_float * 1),
 			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
 		)
@@ -244,7 +267,7 @@ class _VORModulator(gr.hier_block2, ExportedState):
 
 	def __init__(self, audio_rate, rf_rate, angle):
 		gr.hier_block2.__init__(
-			self, 'SimulatedSource VOR modulator',
+			self, 'SimulatedDevice VOR modulator',
 			gr.io_signature(1, 1, gr.sizeof_float * 1),
 			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
 		)

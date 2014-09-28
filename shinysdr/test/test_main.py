@@ -42,7 +42,7 @@ class TestMain(unittest.TestCase):
 		with open(self.__config_name, 'w') as config:
 			config.write(textwrap.dedent('''\
 				import shinysdr.plugins.simulate
-				config.sources.add('sim_foobar', shinysdr.plugins.simulate.SimulatedSource())
+				config.devices.add('sim_foobar', shinysdr.plugins.simulate.SimulatedDevice())
 				config.persist_to_file(%r)
 				config.serve_web(
 					http_endpoint='tcp:0',
@@ -81,7 +81,7 @@ class TestMain(unittest.TestCase):
 		with open(self.__config_name, 'w') as config:
 			config.write(textwrap.dedent('''\
 				import shinysdr.plugins.simulate
-				config.sources.add('sim_foobar', shinysdr.plugins.simulate.SimulatedSource())
+				config.devices.add('sim_foobar', shinysdr.plugins.simulate.SimulatedDevice())
 			'''))
 		
 		(top, note_dirty) = yield self.__run_main()
@@ -92,21 +92,6 @@ class TestMain(unittest.TestCase):
 		self.assertEqual(top.get_unpaused(), True)  # expect NO persistence
 	
 	@defer.inlineCallbacks
-	def test_accessories(self):
-		'''Test that accessories are configured properly.'''
-		# APPEND to config
-		with open(self.__config_name, 'a') as config:
-			config.write(textwrap.dedent('''\
-				config.accessories.add('foo', shinysdr.values.ExportedState())
-			'''))
-		
-		(top, note_dirty) = yield self.__run_main()
-		tas = top.accessories.state()
-		
-		self.assertEqual(tas.keys(), ['foo'])
-		# TODO: test value is as expected; tricky because deferred
-
-	@defer.inlineCallbacks
 	def test_deferred_config(self):
 		'''Test that the config can defer.'''
 		with open(self.__config_name, 'w') as config:
@@ -114,7 +99,7 @@ class TestMain(unittest.TestCase):
 				import shinysdr.plugins.simulate
 				from twisted.internet import reactor
 				from twisted.internet.task import deferLater
-				d = deferLater(reactor, 0.001, lambda: config.sources.add('a_source', shinysdr.plugins.simulate.SimulatedSource()))
+				d = deferLater(reactor, 0.001, lambda: config.devices.add('a_source', shinysdr.plugins.simulate.SimulatedDevice()))
 				config.wait_for(d)
 			'''))
 		

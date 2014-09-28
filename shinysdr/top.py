@@ -61,25 +61,27 @@ class ReceiverCollection(CollectionState):
 
 class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 
-	def __init__(self, sources={}, accessories={}):
+	def __init__(self, devices={}):
 		gr.top_block.__init__(self, "SDR top block")
 		self.__unpaused = True  # user state
 		self.__running = False  # actually started
 
 		# Configuration
-		self._sources = dict(sources)
+		# TODO: device refactoring: Remove vestigial 'accessories'
+		self._sources = {k: d for k, d in devices.iteritems() if d.can_receive()}
+		accessories = {k: d for k, d in devices.iteritems() if not d.can_receive()}
 		self.source_name = self._sources.keys()[0]  # arbitrary valid initial value
 		self.__audio_bus_rate = 1  # dummy initial value, computed in _do_connect
 
 		# Blocks etc.
+		# TODO: device refactoring: remove 'source' concept (which is currently a device)
 		self.source = None
+		self.__rx_driver = None
 		self.__source_tune_subscription = None
 		self.monitor = MonitorSink(
 			sample_rate=10000,  # dummy value will be updated in _do_connect
 			complex_in=True,
 			context=Context(self))
-		
-		self._accessories = accessories  # NOT copied out of necessity -- TODO better architecture
 		
 		# Receiver blocks (multiple, eventually)
 		self._receivers = {}
@@ -88,7 +90,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 		# kludge for using collection like block - TODO: better architecture
 		self.sources = CollectionState(self._sources)
 		self.receivers = ReceiverCollection(self._receivers, self)
-		self.accessories = CollectionState(self._accessories, dynamic=True)
+		self.accessories = CollectionState(accessories)
 		
 		# Audio stream bits
 		self.audio_resampler_cache = {}
@@ -182,7 +184,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 			
 			def tune_hook():
 				# Note that in addition to the flow graph delay, the callLater is also needed in order to ensure we don't do our reconfiguration in the middle of the source's own workings.
-				reactor.callLater(self.source.get_tune_delay(), tune_hook_actual)
+				reactor.callLater(self.__rx_driver.get_tune_delay(), tune_hook_actual)
 			
 			def tune_hook_actual():
 				if self.source is not this_source:
@@ -197,7 +199,8 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 			self.__source_tune_subscription = this_source.state()['freq'].subscribe(tune_hook)
 			
 			self.source = this_source
-			this_rate = this_source.get_output_type().get_sample_rate()
+			self.__rx_driver = this_source.get_rx_driver()
+			this_rate = self.__rx_driver.get_output_type().get_sample_rate()
 			rate_changed = self.input_rate != this_rate
 			self.input_rate = this_rate
 			update_input_freqs()
@@ -216,7 +219,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 			self.disconnect_all()
 			
 			self.connect(
-				self.source,
+				self.__rx_driver,
 				self.monitor)
 			
 			# Determine audio bus rate.
@@ -243,7 +246,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 						# TODO: less arbitrary constant; communicate this restriction to client
 						log.err('Flow graph: Refusing to connect more than 6 receivers')
 						break
-					self.connect(self.source, receiver)
+					self.connect(self.__rx_driver, receiver)
 					receiver_rate = receiver.get_output_type().get_sample_rate()
 					if receiver_rate == self.__audio_bus_rate:
 						self.connect(
@@ -342,7 +345,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 				self.wait()
 
 	@exported_value(ctor_fn=lambda self:
-		Enum({k: str(v) for (k, v) in self._sources.iteritems()}))
+		Enum({k: v.get_name() or k for (k, v) in self._sources.iteritems()}))
 	def get_source_name(self):
 		return self.source_name
 	

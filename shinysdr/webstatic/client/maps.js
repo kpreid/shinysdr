@@ -57,7 +57,7 @@ define(['./values'], function (values) {
       var source = radio.source.depend(dirty);
       var center = source.freq.depend(dirty);
       // TODO: Ask the "bandwidth" question directly rather than hardcoding logic here
-      var width = source.output_type.depend(dirty).sample_rate;
+      var width = source.rx_driver.depend(dirty).output_type.depend(dirty).sample_rate;
       var lower = center - width / 2;
       var upper = center + width / 2;
       

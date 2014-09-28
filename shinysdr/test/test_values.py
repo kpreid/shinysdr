@@ -20,7 +20,7 @@ from __future__ import absolute_import, division
 import unittest
 
 from shinysdr.types import Range
-from shinysdr.values import ExportedState, BlockCell, CollectionState, LooseCell, Poller, exported_value, setter
+from shinysdr.values import ExportedState, BlockCell, CollectionState, LooseCell, Poller, ViewCell, exported_value, setter
 
 
 class TestExportedState(unittest.TestCase):
@@ -129,6 +129,36 @@ class BlockCellSpecimen(ExportedState):
 		super(BlockCellSpecimen, self).state_def(callback)
 		# TODO make this possible to be decorator style
 		callback(BlockCell(self, 'block'))
+
+
+class TestViewCell(unittest.TestCase):
+	def setUp(self):
+		self.lc = LooseCell(value=0, key='a', ctor=int)
+		self.vc = ViewCell(
+			base=self.lc,
+			get_transform=lambda x: x + 1,
+			set_transform=lambda x: x - 1,
+			key='b',
+			ctor=int)
+	
+	def test_get_set(self):
+		self.assertEqual(0, self.lc.get())
+		self.assertEqual(1, self.vc.get())
+		self.vc.set(2)
+		self.assertEqual(1, self.lc.get())
+		self.assertEqual(2, self.vc.get())
+		self.lc.set(3)
+		self.assertEqual(3, self.lc.get())
+		self.assertEqual(4, self.vc.get())
+	
+	def test_subscription(self):
+		fired = []
+		def f():
+			fired.append(self.vc.get())
+		
+		self.vc.subscribe(f)
+		self.lc.set(1)
+		self.assertEqual([2], fired)
 
 
 class TestStateInsert(unittest.TestCase):

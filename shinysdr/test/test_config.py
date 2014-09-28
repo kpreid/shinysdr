@@ -50,9 +50,9 @@ class TestDefaultConfig(unittest.TestCase):
 		conf_text = config.make_default_config()
 		
 		# Don't try to open a real device
-		DEFAULT_SOURCE = "OsmoSDRSource('')"
-		self.assertIn(DEFAULT_SOURCE, conf_text)
-		conf_text = conf_text.replace(DEFAULT_SOURCE, "OsmoSDRSource('file=/dev/null,rate=100000')")
+		DEFAULT_DEVICE = "OsmoSDRDevice('')"
+		self.assertIn(DEFAULT_DEVICE, conf_text)
+		conf_text = conf_text.replace(DEFAULT_DEVICE, "OsmoSDRDevice('file=/dev/null,rate=100000')")
 		
 		with open(self.__config_name, 'w') as f:
 			f.write(conf_text)
