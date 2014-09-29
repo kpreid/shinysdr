@@ -18,6 +18,9 @@
 from __future__ import absolute_import, division
 
 
+from gnuradio import gr
+
+
 # TODO: It is unclear whether this module is a sensible division of the program. Think about it some more.
 
 
@@ -25,6 +28,8 @@ class SignalType(object):
 	def __init__(self, sample_rate, kind):
 		self.__sample_rate = float(sample_rate)
 		self.__kind = unicode(kind)
+	
+	# TODO __eq__ and so on
 	
 	def get_sample_rate(self):
 		'''Sample rate in samples per second.'''
@@ -38,3 +43,13 @@ class SignalType(object):
 		Note that due to the current implementation, USB and LSB are complex with a zero Q component.
 		'''
 		return self.__kind
+	
+	def get_itemsize(self):
+		if self.__kind == 'MONO' or self.__kind == 'STEREO':
+			return gr.sizeof_float
+		else:
+			return gr.sizeof_gr_complex
+
+	def compatible_items(self, other):
+		assert isinstance(other, SignalType)
+		return self.get_itemsize() == other.get_itemsize()

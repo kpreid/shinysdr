@@ -38,6 +38,7 @@ from gnuradio.filter import rational_resampler
 from gnuradio.fft import logpwrfft
 
 from shinysdr.math import factorize, small_factor_at_least
+from shinysdr.signals import SignalType
 from shinysdr.types import Range, ValueType
 from shinysdr.values import ExportedState, exported_value, setter, StreamCell
 
@@ -437,22 +438,17 @@ class MonitorSink(gr.hier_block2, ExportedState):
 	The units of the FFT output are dB power/Hz (power spectral density) relative to unit amplitude (i.e. dBFS assuming the source clips at +/-1). Note this is different from the standard logpwrfft result of power _per bin_, which would be undesirably dependent on the sample rate and bin size.
 	'''
 	def __init__(self,
-			sample_rate=None,
-			complex_in=True,
+			signal_type=None,
 			enable_scope=False,
 			freq_resolution=4096,
 			time_length=2048,
 			frame_rate=30.0,
 			input_center_freq=0.0,
 			context=None):
-		assert sample_rate > 0
+		assert isinstance(signal_type, SignalType)
 		assert context is not None
-		complex_in = bool(complex_in)
-		if complex_in:
-			itemsize = gr.sizeof_gr_complex
-		else:
-			itemsize = gr.sizeof_float
 		
+		itemsize = signal_type.get_itemsize()
 		gr.hier_block2.__init__(
 			self, self.__class__.__name__,
 			gr.io_signature(1, 1, itemsize),
@@ -460,13 +456,12 @@ class MonitorSink(gr.hier_block2, ExportedState):
 		)
 		
 		# constant parameters
-		self.__complex = complex_in
 		self.__itemsize = itemsize
 		self.__context = context
 		self.__enable_scope = enable_scope
 		
 		# settable parameters
-		self.__sample_rate = float(sample_rate)
+		self.__signal_type = signal_type
 		self.__freq_resolution = int(freq_resolution)
 		self.__time_length = int(time_length)
 		self.__frame_rate = float(frame_rate)
@@ -489,7 +484,8 @@ class MonitorSink(gr.hier_block2, ExportedState):
 		callback(StreamCell(self, 'scope', ctor=SpectrumType()))  # TODO distinct type
 
 	def __rebuild(self):
-		overlap_factor = int(math.ceil(_maximum_fft_rate * self.__freq_resolution / self.__sample_rate))
+		sample_rate = self.__signal_type.get_sample_rate()
+		overlap_factor = int(math.ceil(_maximum_fft_rate * self.__freq_resolution / sample_rate))
 		# sanity limit -- OverlapGimmick is not free
 		overlap_factor = min(16, overlap_factor)
 		
@@ -503,11 +499,12 @@ class MonitorSink(gr.hier_block2, ExportedState):
 			itemsize=self.__itemsize)
 		
 		# Adjusts units so displayed level is independent of resolution and sample rate.
-		compensation = 10 * math.log10(self.__freq_resolution / self.__sample_rate)
+		compensation = 10 * math.log10(self.__freq_resolution / sample_rate)
 		# TODO: Consider not using the logpwrfft block
 		
-		self.__logpwrfft = [logpwrfft.logpwrfft_f, logpwrfft.logpwrfft_c][self.__complex](
-			sample_rate=self.__sample_rate * overlap_factor,
+		#[logpwrfft.logpwrfft_f, logpwrfft.logpwrfft_c][self.__complex]
+		self.__logpwrfft = logpwrfft.logpwrfft_c(
+			sample_rate=sample_rate * overlap_factor,
 			fft_size=self.__freq_resolution,
 			ref_scale=10.0 ** (-compensation / 20.0) * 2,  # not actually using this as a reference scale value but avoiding needing to use a separate add operation to apply the unit change -- this expression is the inverse of what logpwrfft does internally
 			frame_rate=self.__frame_rate,
@@ -520,7 +517,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
 			migrate=self.__scope_sink)
 		self.__scope_chunker = blocks.stream_to_vector_decimator(
 			item_size=gr.sizeof_gr_complex,
-			sample_rate=self.__sample_rate,
+			sample_rate=sample_rate,
 			vec_rate=self.__frame_rate,  # TODO doesn't need to be coupled
 			vec_len=self.__time_length)
 
@@ -542,8 +539,9 @@ class MonitorSink(gr.hier_block2, ExportedState):
 			self.__context.unlock()
 	
 	# non-exported
-	def set_sample_rate(self, value):
-		self.__sample_rate = float(value)
+	def set_signal_type(self, value):
+		assert self.__signal_type.compatible_items(value)
+		self.__signal_type = value
 		self.__rebuild()
 		self.__connect()
 	
@@ -582,14 +580,14 @@ class MonitorSink(gr.hier_block2, ExportedState):
 	
 	# exported via state_def
 	def get_fft_info(self):
-		return (self.__input_center_freq, self.__sample_rate)
+		return (self.__input_center_freq, self.__signal_type.get_sample_rate())
 	
 	def get_fft_distributor(self):
 		return self.__fft_sink
 	
 	# exported via state_def
 	def get_scope_info(self):
-		return (0, self.__sample_rate)  # one field not used
+		return (0, self.__signal_type.get_sample_rate())  # one field not used
 	
 	def get_scope_distributor(self):
 		return self.__scope_sink

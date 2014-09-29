@@ -34,6 +34,7 @@ from shinysdr.types import Enum
 from shinysdr.values import ExportedState, CollectionState, exported_value, setter, BlockCell, IWritableCollection
 from shinysdr.blocks import make_resampler, MonitorSink, RecursiveLockBlockMixin, Context
 from shinysdr.receiver import Receiver
+from shinysdr.signals import SignalType
 
 
 _num_audio_channels = 2
@@ -79,8 +80,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 		self.__rx_driver = None
 		self.__source_tune_subscription = None
 		self.monitor = MonitorSink(
-			sample_rate=10000,  # dummy value will be updated in _do_connect
-			complex_in=True,
+			signal_type=SignalType(sample_rate=10000,kind='IQ'),  # dummy value will be updated in _do_connect
 			context=Context(self))
 		
 		# Receiver blocks (multiple, eventually)
@@ -200,14 +200,15 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 			
 			self.source = this_source
 			self.__rx_driver = this_source.get_rx_driver()
-			this_rate = self.__rx_driver.get_output_type().get_sample_rate()
+			source_signal_type = self.__rx_driver.get_output_type()
+			this_rate = source_signal_type.get_sample_rate()
 			rate_changed = self.input_rate != this_rate
 			self.input_rate = this_rate
+			self.monitor.set_signal_type(source_signal_type)
 			update_input_freqs()
 		
 		if rate_changed:
 			log.msg('Flow graph: Changing sample rates')
-			self.monitor.set_sample_rate(self.input_rate)
 			for receiver in self._receivers.itervalues():
 				receiver.set_input_rate(self.input_rate)
 
