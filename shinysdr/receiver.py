@@ -278,8 +278,8 @@ class ContextForDemodulator(object):
 	
 	def revalidate(self):
 		raise NotImplementedError('ContextForDemodulator not done')
-		#if self._enabled:
-		#	self._receiver.context._update_receiver_validity(self._key)
+		# if self._enabled:
+		# 	self._receiver.context._update_receiver_validity(self._key)
 	
 	def rebuild_me(self):
 		assert self._enabled

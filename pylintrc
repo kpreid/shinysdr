@@ -194,7 +194,7 @@ max-attributes=20
 min-public-methods=0
 
 # Maximum number of public methods for a class (see R0904).
-max-public-methods=60
+max-public-methods=80
 # increased due to gnuradio and unittest interface introducing lots of not-really-public methods
 
 

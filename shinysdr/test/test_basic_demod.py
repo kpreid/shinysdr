@@ -17,16 +17,12 @@
 
 from __future__ import absolute_import, division
 
-import os.path
-import shutil
-import tempfile
-
-from twisted.internet import reactor
 from twisted.trial import unittest
 
 # from shinysdr.plugins import basic_demod
 from shinysdr.plugins.simulate import SimulatedDevice
 from shinysdr.top import Top
+
 
 class DemodulatorSmokeTest(unittest.TestCase):
 	def setUp(self):

@@ -39,16 +39,16 @@ class TestMergeDevices(unittest.TestCase):
 
 	def test_components_disjoint(self):
 		d = merge_devices([
-			Device(components={'a':ExportedState()}),
-			Device(components={'b':ExportedState()})
+			Device(components={'a': ExportedState()}),
+			Device(components={'b': ExportedState()})
 		])
 		self.assertEqual(d, IDevice(d))
 		self.assertEqual(sorted(d.get_components().keys()), ['a', 'b'])
 
 	def test_components_conflict(self):
 		d = merge_devices([
-			Device(components={'a':ExportedState()}),
-			Device(components={'a':ExportedState()})
+			Device(components={'a': ExportedState()}),
+			Device(components={'a': ExportedState()})
 		])
 		self.assertEqual(d, IDevice(d))
 		self.assertEqual(sorted(d.get_components().keys()), ['0-a', '1-a'])

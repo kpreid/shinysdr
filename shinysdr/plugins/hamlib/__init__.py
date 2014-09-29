@@ -51,7 +51,7 @@ from twisted.web import static
 from shinysdr.devices import Device
 from shinysdr.top import IHasFrequency
 from shinysdr.types import Enum, Range
-from shinysdr.values import Cell, ExportedState, LooseCell
+from shinysdr.values import ExportedState, LooseCell
 from shinysdr.web import ClientResourceDef
 
 
@@ -126,7 +126,7 @@ _commands = {
 	'vfo': ['VFO'],
 	'rit': ['RIT'],
 	'xit': ['XIT'],
-	#'ptt': ['PTT'], # writing disabled until when we're more confident in correct functioning
+	# 'ptt': ['PTT'], # writing disabled until when we're more confident in correct functioning
 	'rptr_shift': ['Rptr Shift'],
 	'rptr_offs': ['Rptr Offset'],
 	'ctcss_tone': ['CTCSS Tone'],
@@ -168,7 +168,6 @@ def connect_to_server(reactor, host='localhost', port=4532):
 	connected = defer.Deferred()
 	reactor.connectTCP(host, port, _RigctldClientFactory(connected))
 	protocol = yield connected
-	#print 'top connected ', protocol.transport
 	rigObj = _HamlibRig(protocol)
 	yield rigObj.sync()  # allow dump_caps round trip
 	defer.returnValue(Device(
@@ -271,8 +270,8 @@ class _HamlibRig(ExportedState):
 		else:
 			return 0.0
 	
-	#def __query(self, name_full):
-	#	self.__protocol.rc_send('get_' + _info[name_full][0])
+	# def __query(self, name_full):
+	# 	self.__protocol.rc_send('get_' + _info[name_full][0])
 	
 	def _clientReceived(self, command, key, value):
 		if command == 'dump_caps':
@@ -436,11 +435,9 @@ class _RigctldClientProtocol(Protocol):
 		self.__receive_arg = None
 	
 	def connectionMade(self):
-		#print 'connectionMade protocol', self.transport
 		self.__connected_deferred.callback(self)
 	
 	def connectionLost(self, reason):
-		#print 'connectionLost protocol'
 		if self.__rig_obj is not None:
 			self.__rig_obj._clientConnectionLost(reason)
 	

@@ -24,8 +24,6 @@ interface.
 
 from __future__ import absolute_import, division
 
-import math
-
 
 __all__ = []  # appended later
 
@@ -74,7 +72,7 @@ def small_factor_at_least(n, limit, _force_approx=False):
 			if candidate >= limit:
 				return candidate
 			else:
-				return n+1  # "don't pick me"
+				return n + 1  # "don't pick me"
 		
 		return min(map(product_selected, xrange(0, 1 << len(factors))))
 	else:

@@ -84,8 +84,8 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
 			noise_voltage=10 ** (self.noise_level / 10.0),
 			frequency_offset=0,
 			epsilon=1.01,  # TODO: expose this parameter
-			#taps=...,  # TODO: apply something here?
-			)
+			# taps=...,  # TODO: apply something here?
+		)
 		self.throttle = blocks.throttle(gr.sizeof_gr_complex, rf_rate)
 		self.connect(
 			self.bus,

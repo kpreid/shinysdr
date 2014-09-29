@@ -105,4 +105,3 @@ class TestMain(unittest.TestCase):
 		
 		(top, note_dirty) = yield self.__run_main()
 		self.assertEqual(top.state()['sources'].get().state().keys(), ['a_source'])
-		

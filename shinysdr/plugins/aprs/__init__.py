@@ -47,9 +47,6 @@ import re
 from twisted.web import static
 from zope.interface import Interface, implements  # available via Twisted
 
-from gnuradio import gr
-from gnuradio import blocks
-
 from shinysdr.values import CollectionState, ExportedState, exported_value
 from shinysdr.web import ClientResourceDef
 
@@ -128,19 +125,19 @@ APRSMessage = namedtuple('APRSMessage', [
 	'facts',  # list: of fact objects parsed from the message
 	'errors',  # list: of strings describing parse failures
 	'comment',  # APRS comment text
-	])
+])
 
 
 # fact
 Capabilities = namedtuple('Capabilities', [
 	'capabilities',  # dict with string keys (tokens) and string-or-None values
-	])
+])
 
 
 # fact
 Messaging = namedtuple('Messaging', [
 	'supported',  # boolean
-	])
+])
 
 
 # fact
@@ -149,46 +146,46 @@ ObjectItemReport = namedtuple('ObjectItemReport', [
 	'name',  # string
 	'live',  # boolean
 	'facts',  # list of facts: about this object (rather than the source address)
-	])
+])
 
 
 # fact
 Position = namedtuple('Position', [
 	'latitude',  # float: degrees north, WGS84
 	'longitude',  # float: degrees east, WGS84
-	])
+])
 
 
 # fact
 Telemetry = namedtuple('Telemetry', [
 	'channel',  # integer: channel 1-5
 	'value',  # float: value
-	])
+])
 
 
 # fact
 Status = namedtuple('Status', [
 	'text',  # string
-	])
+])
 
 
 # fact
 Symbol = namedtuple('Symbol', [
 	'id',  # string
-	])
+])
 
 
 # fact
 Timestamp = namedtuple('Timestamp', [
 	'time',  # datetime object
-	])
+])
 
 
 # fact
 Velocity = namedtuple('Velocity', [
 	'speed_knots',  # number
 	'course_degrees',  # number
-	])
+])
 
 
 def parse_tnc2(line):
@@ -424,7 +421,7 @@ def _parse_dhm_hms_timestamp(facts, errors, data):
 			absolute_time = datetime.utcnow().replace(hour=n1, minute=n2, second=n3)
 		elif kind == 'z':
 			absolute_time = datetime.utcnow().replace(day=n1, hour=n2, minute=n3, second=0, microsecond=0)
-		else: # kind == '/'
+		else:  # kind == '/'
 			absolute_time = datetime.now().replace(day=n1, hour=n2, minute=n3, second=0, microsecond=0)
 		facts.append(Timestamp(absolute_time))
 		return ''

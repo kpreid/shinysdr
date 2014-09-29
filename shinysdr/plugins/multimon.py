@@ -26,16 +26,16 @@ from gnuradio import gr
 from gnuradio import blocks
 
 from shinysdr.modes import ModeDef, IDemodulator
-from shinysdr.types import Notice
 from shinysdr.values import BlockCell, ExportedState, exported_value
 from shinysdr.blocks import make_sink_to_process_stdin, test_subprocess, make_resampler
 from shinysdr.plugins.basic_demod import NFMDemodulator
-from shinysdr.plugins.aprs import parse_tnc2, APRSInformation
+from shinysdr.plugins.aprs import APRSInformation
 
 pipe_rate = 22050  # what multimon-ng expects
 _maxint32 = 2 ** 15 - 1
 audio_gain = 0.5
 int_scale = _maxint32 * audio_gain
+
 
 class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 	implements(IDemodulator)
@@ -67,7 +67,6 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 			'/usr/bin/env',
 			env=None,  # inherit environment
 			args=['env', 'multimon-ng', '-t', 'raw', '-a', 'AFSK1200', '-A', '-v', '10', '-'],
-			#args=['env', 'python', '../play16bit.py'],
 			childFDs={
 				0: 'w',
 				1: 'r',

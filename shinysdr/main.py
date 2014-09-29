@@ -35,6 +35,7 @@ from twisted.python import log
 # Note that gnuradio-dependent modules are loaded later, to avoid the startup time if all we're going to do is give a usage message
 from shinysdr.config import Config, make_default_config, execute_config
 
+
 def main(argv=None, _abort_for_test=False):
 	# This function is referenced by the setup.py entry point definition as well as the name=__main__ test below.
 	def go(reactor):
@@ -44,6 +45,7 @@ def main(argv=None, _abort_for_test=False):
 		return go(singleton_reactor)
 	else:
 		react(go)
+
 
 @defer.inlineCallbacks
 def _main_async(reactor, argv=None, _abort_for_test=False):

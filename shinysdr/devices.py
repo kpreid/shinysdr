@@ -207,7 +207,7 @@ def merge_devices(devices):
 	if len(devices) == 1:
 		return devices[0]
 	else:
-		names = [d.get_name() for d in devices if d.get_name() != None]
+		names = [d.get_name() for d in devices if d.get_name() is not None]
 		rx_drivers = [d.get_rx_driver() for d in devices if d.can_receive()]
 		tx_drivers = [d.get_tx_driver() for d in devices if d.can_transmit()]
 		vfo_cells = [d.get_vfo_cell() for d in devices if d.can_tune()]

@@ -254,7 +254,6 @@ class FMDemodulator(SimpleAudioDemodulator):
 		'''Override point for stereo'''
 		resampler = self._make_resampler(input, self.demod_rate)
 		self.connect_audio_output(resampler, resampler)
-			
 
 
 class NFMDemodulator(FMDemodulator):

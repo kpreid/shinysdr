@@ -161,8 +161,7 @@ class TestStateStream(StateStreamTestCase):
 			[u'value', 2, 5],
 			[u'delete', 3]
 		])
-		
-
+	
 	def test_collection_delete(self):
 		d = {'a': ExportedState()}
 		self.setUpForObject(CollectionState(d, dynamic=True))
@@ -221,7 +220,7 @@ class DuplicateReferenceSpecimen(ExportedState):
 class TestSerialization(StateStreamTestCase):
 	def test_signal_type(self):
 		self.setUpForObject(SerializationSpecimen())
-		self.getUpdates() # ignore initialization
+		self.getUpdates()  # ignore initialization
 		self.object.st = SignalType(kind='USB', sample_rate=1234.0)
 		self.assertEqual(self.getUpdates(), [
 			['value', 2, {

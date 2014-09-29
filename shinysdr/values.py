@@ -761,4 +761,3 @@ class _PollerStreamTarget(_PollerTarget):
 	def unsubscribe(self):
 		self.__subscription.close()
 		super(_PollerStreamTarget, self).unsubscribe()
-

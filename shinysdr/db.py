@@ -68,7 +68,7 @@ def _atomic_open_for_write(name, mode):
 	newname = name + '.new'
 	if os.path.exists(newname):
 		raise Exception('Unexpected new file: %s' + oldname)
-		#os.remove(newname)
+		# os.remove(newname)
 	if os.path.exists(oldname):
 		if not os.path.exists(name):
 			raise Exception('Unexpected old file only: %s' % oldname)
@@ -234,7 +234,6 @@ def _parse_csv_file(csvfile):
 				# too few columns, consider harmless and OK
 				continue
 			csvrec[unicode(k, 'utf-8')] = unicode(v, 'utf-8')
-		#print csvrec
 		if 'Frequency' not in csvrec:
 			diagnostics.append(Warning(reader.line_num, 'Record contains no value for Frequency column; line discarded.'))
 			continue

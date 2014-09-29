@@ -153,6 +153,7 @@ class TestViewCell(unittest.TestCase):
 	
 	def test_subscription(self):
 		fired = []
+		
 		def f():
 			fired.append(self.vc.get())
 		
@@ -280,7 +281,6 @@ class TestPoller(unittest.TestCase):
 		self.cells.set_subscribable('b')
 		self.poller.poll()
 		self.assertEqual(1, called[0], 'no poll after unsubscribe')
-		
 
 
 class PollerCellsSpecimen(ExportedState):

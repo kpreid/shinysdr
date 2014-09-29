@@ -277,7 +277,6 @@ class _StateStreamObjectRegistration(object):
 	
 	def send_initial_value(self):
 		'''kludge to get initial state sent'''
-		
 	
 	def initial_nudge(self):
 		raise NotImplementedError()  # should be overridden in instance
@@ -350,7 +349,6 @@ class _StateStreamObjectRegistration(object):
 		self.__refcount -= 1
 		if self.__refcount == 0:
 			self.__dead = True
-			#print 'deleting', self.obj
 			self.__ssi.do_delete(self)
 			
 			# capture refs to decrement
@@ -403,7 +401,6 @@ class StateStreamInner(object):
 		else:
 			self._lastSerial += 1
 			serial = self._lastSerial
-			#print 'registering', obj, serial
 			registration = _StateStreamObjectRegistration(ssi=self, poller=self.__poller, obj=obj, serial=serial, url=url, refcount=0)
 			self._registered[obj] = registration
 			if isinstance(obj, BaseCell):
@@ -471,16 +468,15 @@ def _lookup_block(block, path):
 	for i, path_elem in enumerate(path):
 		cell = block.state().get(path_elem)
 		if cell is None:
-			raise Exception('Not found: %r in %r' % (path[:i+1], path))
+			raise Exception('Not found: %r in %r' % (path[:i + 1], path))
 		elif not cell.isBlock():
-			raise Exception('Not a block: %r in %r' % (path[:i+1], path))
+			raise Exception('Not a block: %r in %r' % (path[:i + 1], path))
 		block = cell.get()
 	return block
 
 
 class OurStreamProtocol(protocol.Protocol):
 	def __init__(self, block, rootCap):
-		#protocol.Protocol.__init__(self)
 		self._block = block
 		self._seenValues = {}
 		self._rootCap = rootCap
@@ -533,17 +529,12 @@ class OurStreamProtocol(protocol.Protocol):
 				self.transport.close(reason='Too much data buffered')
 		else:
 			self.transport.write(message)
-	
-	def __poll(self):
-		if self.inner is not None:
-			self.inner.poll()
 
 
 class OurStreamFactory(protocol.Factory):
 	protocol = OurStreamProtocol
 	
 	def __init__(self, block, rootCap):
-		#protocol.Factory.__init__(self)
 		self._block = block
 		self._rootCap = rootCap
 	

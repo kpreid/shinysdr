@@ -73,9 +73,9 @@ def _cmd_setFPS(self, argstr):
 def _cmd_setFrequency(self, argstr):
 	pass
 	# TODO: reenable this
-	#freq = int(argstr)
-	#self._get_receiver().set_rec_freq(freq)
-	#self._top.source.set_freq(freq)
+	# freq = int(argstr)
+	# self._get_receiver().set_rec_freq(freq)
+	# self._top.source.set_freq(freq)
 
 
 _dspserver_commands = {
@@ -178,7 +178,7 @@ class _DspserverProtocol(protocol.Protocol):
 				# TODO tweak
 				*[int(max(0, min(255, x * 127 + 127))) for x in unpacker.tolist()])
 			# TODO: Disabled until we fix fft messages
-			#self.transport.write(msg)
+			# self.transport.write(msg)
 
 
 class _DspserverFactory(protocol.Factory):

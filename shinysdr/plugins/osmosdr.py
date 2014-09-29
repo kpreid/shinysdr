@@ -99,10 +99,9 @@ class _OsmoSDRTuning(object):
 	
 	def set_correction_ppm(self, value):
 		self.__correction_ppm = float(value)
-		# Not using the osmosdr feature because changing it at runtime produces glitches like the sample rate got changed; therefore we emulate it ourselves.
-		#self.osmosdr_source_block.set_freq_corr(value, 0)
-		self.__set_freq(self.__vfo_cell.get())
-	
+		# Not using the osmosdr feature because changing it at runtime produces glitches like the sample rate got changed; therefore we emulate it ourselves. TODO: I am informed that using set_freq_corr can correct sample-clock error, so we ought to at least use it on init.
+		# self.osmosdr_source_block.set_freq_corr(value, 0)
+		self.__set_freq(self.__vfo_cell.get())	
 
 
 def OsmoSDRDevice(
@@ -200,7 +199,6 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
 		self.iq_state = 0
 		source.set_dc_offset_mode(self.dc_state, ch)  # no getter, set to known state
 		source.set_iq_balance_mode(self.iq_state, ch)  # no getter, set to known state
-
 		
 		# Misc initial state
 		self.__signal_type = SignalType(
@@ -221,7 +219,6 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
 	def get_tune_delay(self):
 		return 0.25  # TODO: make configurable and/or account for as many factors as we can
 	
-
 	@exported_value(ctor=float)
 	def get_correction_ppm(self):
 		return self.__tuning.get_correction_ppm()

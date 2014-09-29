@@ -19,7 +19,6 @@ from __future__ import absolute_import, division
 
 from twisted.internet import reactor
 from twisted.internet.protocol import ProcessProtocol
-from twisted.protocols.basic import LineReceiver
 from zope.interface import implements
 
 from gnuradio import gr
@@ -35,6 +34,7 @@ from shinysdr.blocks import MultistageChannelFilter, make_sink_to_process_stdin,
 pipe_rate = 2000000
 transition_width = 500000
 _dummy_audio_rate = 1000
+
 
 class ModeSDemodulator(gr.hier_block2, ExportedState):
 	implements(IDemodulator)

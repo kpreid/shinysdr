@@ -38,5 +38,3 @@ class SignalType(object):
 		Note that due to the current implementation, USB and LSB are complex with a zero Q component.
 		'''
 		return self.__kind
-
-

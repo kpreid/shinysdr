@@ -40,6 +40,7 @@ class TestFactorize(unittest.TestCase):
 		self.assertEqual(smath.factorize(9), [3, 3])
 		self.assertEqual(smath.factorize(48000), [2] * 7 + [3] + [5] * 3)
 
+
 class TestSmallFactorAtLeast(unittest.TestCase):
 	longMessages = True
 	

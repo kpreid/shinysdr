@@ -29,8 +29,6 @@ import math
 import os
 import subprocess
 
-from twisted.internet.protocol import ProcessProtocol
-
 from gnuradio import gr
 from gnuradio import blocks
 from gnuradio import filter as grfilter  # don't shadow builtin
@@ -126,7 +124,7 @@ class MultistageChannelFilter(gr.hier_block2):
 			output_rate = int(output_rate)
 			if input_rate > output_rate:
 				total_decimation = input_rate // small_factor_at_least(input_rate, output_rate)
-			#print input_rate / total_decimation, total_decimation, input_rate, output_rate, input_rate // gcd(input_rate, output_rate)
+			# print input_rate / total_decimation, total_decimation, input_rate, output_rate, input_rate // gcd(input_rate, output_rate)
 			# TODO: Don't re-factorize unnecessarily
 		
 		stage_decimations = factorize(total_decimation)
@@ -177,7 +175,6 @@ class MultistageChannelFilter(gr.hier_block2):
 		# final connection and resampling
 		if stage_input_rate == output_rate:
 			# exact multiple, no fractional resampling needed
-			#print 'direct connect %s/%s' % (output_rate, stage_input_rate)
 			self.connect(prev_block, self)
 			self.__resampler_explanation = 'No final resampler stage.'
 		else:
@@ -297,7 +294,6 @@ def make_sink_to_process_stdin(process, itemsize=gr.sizeof_char):
 	'''Given a twisted Process, connect a sink to its stdin.'''
 	fd_owned_by_twisted = process.pipes[0].fileno()  # TODO: More public way to do this?
 	fd_owned_by_sink = os.dup(fd_owned_by_twisted)
-	#print fd_owned_by_twisted, fd_owned_by_sink
 	process.closeStdin()
 	return blocks.file_descriptor_sink(itemsize, fd_owned_by_sink)
 
