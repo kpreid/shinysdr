@@ -338,7 +338,7 @@ define(['./values', './events'], function (values, events) {
     var n = this.n = new events.Notifier();
     
     // per-drawing-frame parameters
-    var bandwidth, centerFreq, leftFreq, pixelWidth, pixelsPerHertz, cacheScrollLeft;
+    var nyquist, centerFreq, leftFreq, rightFreq, pixelWidth, pixelsPerHertz, cacheScrollLeft, analytic;
     
     // Zoom state variables
     // We want the cursor point to stay fixed, but scrollLeft quantizes to integer; fractionalScroll stores a virtual fractional part.
@@ -364,11 +364,14 @@ define(['./values', './events'], function (values, events) {
       // TODO: unbreakable notify loop here; need to be lazy
       var radio = radioCell.depend(prepare);
       var source = radio.source.depend(prepare);
-      bandwidth = radio.input_rate.depend(prepare);
+      var sourceType = source.rx_driver.depend(prepare).output_type.depend(prepare);
+      analytic = sourceType.kind == 'IQ';  // TODO have glue code
+      nyquist = radio.input_rate.depend(prepare) / 2;
       centerFreq = source.freq.depend(prepare);
-      leftFreq = centerFreq - bandwidth / 2;
+      leftFreq = analytic ? centerFreq - nyquist : centerFreq;
+      rightFreq = centerFreq + nyquist;
       pixelWidth = container.offsetWidth;
-      pixelsPerHertz = pixelWidth / bandwidth * zoom;
+      pixelsPerHertz = pixelWidth / (rightFreq - leftFreq) * zoom;
       // accessing scrollLeft triggers relayout
       cacheScrollLeft = container.scrollLeft;
       n.notify();
@@ -395,6 +398,10 @@ define(['./values', './events'], function (values, events) {
     this.minLevel = -130;
     this.maxLevel = -20;
     
+    this.isRealFFT = function isRealFFT(freq) {
+      // When posible, prefer the coordinate-conversion functions to this one. But sometimes this is much more direct.
+      return !analytic;
+    };
     this.freqToCSSLeft = function freqToCSSLeft(freq) {
       return ((freq - leftFreq) * pixelsPerHertz) + 'px';
     };
@@ -403,6 +410,12 @@ define(['./values', './events'], function (values, events) {
     };
     this.freqToCSSLength = function freqToCSSLength(freq) {
       return (freq * pixelsPerHertz) + 'px';
+    };
+    this.leftFreq = function getLeftFreq() {
+      return leftFreq;
+    };
+    this.rightFreq = function getRightFreq() {
+      return rightFreq;
     };
     this.leftVisibleFreq = function leftVisibleFreq() {
       return leftFreq + cacheScrollLeft / pixelsPerHertz;
@@ -413,21 +426,18 @@ define(['./values', './events'], function (values, events) {
     this.getCenterFreq = function getCenterFreq() {
       return centerFreq;
     };
-    this.getBandwidth = function getBandwidth() {
-      return bandwidth;
-    };
     this.getVisiblePixelWidth = function getVisiblePixelWidth() {
       return pixelWidth;
     };
     this.getTotalPixelWidth = function getTotalPixelWidth() {
-      return pixelsPerHertz * bandwidth;
+      return pixelWidth * zoom;
     };
     
     this.changeZoom = function changeZoom(delta, cursorX) {
       var maxZoom = Math.max(
         1,  // at least min zoom,
         Math.max(
-          bandwidth / 10e3, // at least 10 kHz
+          nyquist / 10e3, // at least 10 kHz
           radioCell.get().monitor.get().freq_resolution.get() / MAX_ZOOM_BINS));
       
       cursorX += fractionalScroll;

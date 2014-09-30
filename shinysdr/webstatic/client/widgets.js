@@ -955,10 +955,10 @@ define(['./values', './events', './widget'], function (values, events, widget) {
 
           // Adjust drawing region
           var viewCenterFreq = view.getCenterFreq();
-          var bandwidth = view.getBandwidth();
+          var lsf = view.leftFreq();
+          var rsf = view.rightFreq();
+          var bandwidth = rsf - lsf;
           var halfBinWidth = bandwidth / fftSize / 2;
-          var lsf = viewCenterFreq - bandwidth/2;
-          var rsf = viewCenterFreq + bandwidth/2;
           var xScale = (rvf-lvf)/(rsf-lsf);
           // The half bin width correction is because OpenGL texture coordinates put (0,0) between texels, not centered on one.
           var xZero = (lvf - viewCenterFreq + halfBinWidth)/(rsf-lsf);
@@ -1018,17 +1018,16 @@ define(['./values', './events', './widget'], function (values, events, widget) {
           }
 
           var viewCenterFreq = view.getCenterFreq();
-          var bandwidth = view.getBandwidth();
           xZero = freqToCoord(viewCenterFreq);
-          xNegBandwidthCoord = freqToCoord(viewCenterFreq - bandwidth/2);
-          xPosBandwidthCoord = freqToCoord(viewCenterFreq + bandwidth/2);
+          xNegBandwidthCoord = freqToCoord(view.leftFreq());
+          xPosBandwidthCoord = freqToCoord(view.rightFreq());
           xScale = (xPosBandwidthCoord - xNegBandwidthCoord) / fftLen;
           yScale = -h / (view.maxLevel - view.minLevel);
           yZero = -view.maxLevel * yScale;
 
           // choose points to draw
-          firstPoint = Math.max(-halfFFTLen, Math.floor(-xZero / xScale) - 1);
-          lastPoint = Math.min(halfFFTLen, Math.ceil((w - xZero) / xScale) + 1);
+          firstPoint = Math.floor(-xZero / xScale) - 1;
+          lastPoint = Math.ceil((w - xZero) / xScale) + 1;
 
           // Fill is deliberately over stroke. This acts to deemphasize downward stroking of spikes, which tend to occur in noise.
           ctx.fillStyle = fillStyle;
@@ -1085,9 +1084,8 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     var cleared = true;
     function commonBeforeDraw(viewCenterFreq, draw) {
       view.n.listen(draw);
-      var bandwidth = view.getBandwidth();
-      canvas.style.marginLeft = view.freqToCSSLeft(viewCenterFreq - bandwidth/2);
-      canvas.style.width = view.freqToCSSLength(bandwidth);
+      canvas.style.marginLeft = view.freqToCSSLeft(view.leftFreq());
+      canvas.style.width = view.freqToCSSLength(view.rightFreq() - view.leftFreq());
       
       // Set vertical canvas resolution
       var newHeight = Math.floor(Math.min(canvas.offsetHeight, historyCount));
@@ -1235,7 +1233,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         // dependent on fftSize so updating it here works out.
         // Shift (with wrapping) the texture data by 1/2 minus half a bin width, to align the GL texels with the FFT bins.
         // TODO: The 0.5 cannot actually take effect correctly, because right now we use a canvas size equal to the FFT size. Change so that (in GL mode) we resize to the viewport, like the spectrum plot does.
-        gl.uniform1f(u_textureRotation, -(0.5 - 0.5/fftSize));
+        gl.uniform1f(u_textureRotation, config.view.isRealFFT() ? 0 : -(0.5 - 0.5/fftSize));
         
         if (useFloatTexture) {
           var init = new Float32Array(fftSize*historyCount);
@@ -1410,7 +1408,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
 
           gl.uniform1f(u_scroll, slicePtr / historyCount);
           gl.uniform1f(u_yScale, canvas.height / historyCount);
-          var fs = 1.0 / view.getBandwidth();
+          var fs = 1.0 / (view.rightFreq() - view.leftFreq());
           gl.uniform1f(u_freqScale, fs);
           gl.uniform1f(u_currentFreq, viewCenterFreq);
 
@@ -1466,7 +1464,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
 
           // Generate image slice from latest FFT data.
           var xScale = fftLength / w;
-          var xZero = fftLength / 2;
+          var xZero = view.isRealFFT() ? 0 : fftLength / 2;
           var cScale = 1 / (view.maxLevel - view.minLevel);
           var cZero = 1 - view.maxLevel * cScale;
           var data = ibuf.data;
@@ -1480,7 +1478,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
 
         ctx.fillStyle = backgroundColorCSS;
 
-        var offsetScale = w / view.getBandwidth();
+        var offsetScale = w / (view.rightFreq() - view.leftFreq());
         if (dataToDraw && lastDrawnCenterFreq === viewCenterFreq && !cleared) {
           // Scroll
           ctx.drawImage(ctx.canvas, 0, 0, w, h-1, 0, 1, w, h-1);
@@ -2136,16 +2134,15 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       var centerFreq = tunerSource.depend(draw);
       view.n.listen(draw);
       
-      var bandwidth = radioCell.depend(draw).input_rate.depend(draw);
-      lower = centerFreq - bandwidth / 2;
-      upper = centerFreq + bandwidth / 2;
+      lower = view.leftFreq();
+      upper = view.rightFreq();
       
       // TODO: identical to waterfall's use, refactor
-      outer.style.marginLeft = view.freqToCSSLeft(centerFreq - bandwidth/2);
-      outer.style.width = view.freqToCSSLength(bandwidth);
+      outer.style.marginLeft = view.freqToCSSLeft(lower);
+      outer.style.width = view.freqToCSSLength(upper - lower);
       
       // Minimum spacing between labels in Hz
-      var MinHzPerLabel = bandwidth * labelWidth / view.getTotalPixelWidth();
+      var MinHzPerLabel = (upper - lower) * labelWidth / view.getTotalPixelWidth();
       
       var step = 1;
       // Widen label spacing exponentially until they have sufficient separation.
