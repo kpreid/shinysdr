@@ -462,6 +462,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
 		self.__fft_sink = None
 		self.__scope_sink = None
 		self.__scope_chunker = None
+		self.__before_fft = None
 		self.__logpwrfft = None
 		self.__overlapper = None
 		
@@ -475,28 +476,37 @@ class MonitorSink(gr.hier_block2, ExportedState):
 		callback(StreamCell(self, 'scope', ctor=BulkDataType(array_format='f', info_format='d')))
 
 	def __rebuild(self):
+		if self.__signal_type.is_analytic():
+			input_length = self.__freq_resolution
+			output_length = self.__freq_resolution
+			self.__after_fft = None
+		else:
+			# use vector_to_streams to cut the output in half and discard the redundant part
+			input_length = self.__freq_resolution * 2
+			output_length = self.__freq_resolution
+			self.__after_fft = blocks.vector_to_streams(itemsize=output_length * gr.sizeof_float, nstreams=2)
+		
 		sample_rate = self.__signal_type.get_sample_rate()
-		overlap_factor = int(math.ceil(_maximum_fft_rate * self.__freq_resolution / sample_rate))
+		overlap_factor = int(math.ceil(_maximum_fft_rate * input_length / sample_rate))
 		# sanity limit -- OverlapGimmick is not free
 		overlap_factor = min(16, overlap_factor)
 		
 		self.__fft_sink = MessageDistributorSink(
-			itemsize=self.__freq_resolution * gr.sizeof_char,
+			itemsize=output_length * gr.sizeof_char,
 			context=self.__context,
 			migrate=self.__fft_sink)
 		self.__overlapper = _OverlapGimmick(
-			size=self.__freq_resolution,
+			size=input_length,
 			factor=overlap_factor,
 			itemsize=self.__itemsize)
 		
 		# Adjusts units so displayed level is independent of resolution and sample rate. Also throw in the packing offset
-		compensation = 10 * math.log10(self.__freq_resolution / sample_rate) + self.__power_offset
+		compensation = 10 * math.log10(input_length / sample_rate) + self.__power_offset
 		# TODO: Consider not using the logpwrfft block
 		
-		#[logpwrfft.logpwrfft_f, logpwrfft.logpwrfft_c][self.__complex]
 		self.__logpwrfft = logpwrfft.logpwrfft_c(
 			sample_rate=sample_rate * overlap_factor,
-			fft_size=self.__freq_resolution,
+			fft_size=input_length,
 			ref_scale=10.0 ** (-compensation / 20.0) * 2,  # not actually using this as a reference scale value but avoiding needing to use a separate add operation to apply the unit change -- this expression is the inverse of what logpwrfft does internally
 			frame_rate=self.__frame_rate,
 			avg_alpha=1.0,
@@ -521,9 +531,13 @@ class MonitorSink(gr.hier_block2, ExportedState):
 			self.connect(
 				self,
 				self.__overlapper,
-				self.__logpwrfft,
-				self.__fft_converter,
-				self.__fft_sink)
+				self.__logpwrfft)
+			if self.__after_fft is not None:
+				self.connect(self.__logpwrfft, self.__after_fft)
+				self.connect(self.__after_fft, self.__fft_converter, self.__fft_sink)
+				self.connect((self.__after_fft, 1), blocks.null_sink(gr.sizeof_float * self.__freq_resolution))
+			else:
+				self.connect(self.__logpwrfft, self.__fft_converter, self.__fft_sink)
 			if self.__enable_scope:
 				self.connect(
 					self,
@@ -534,6 +548,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
 	
 	# non-exported
 	def set_signal_type(self, value):
+		# TODO: don't rebuild if the rate did not change and the spectrum-sidedness of the type did not change
 		assert self.__signal_type.compatible_items(value)
 		self.__signal_type = value
 		self.__rebuild()

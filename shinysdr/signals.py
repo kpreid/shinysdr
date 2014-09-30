@@ -49,7 +49,11 @@ class SignalType(object):
 			return gr.sizeof_float
 		else:
 			return gr.sizeof_gr_complex
-
+	
+	def is_analytic(self):
+		'''Regardless of the signal being represented as gr_complex, does it have a two-sided spectrum?'''
+		return self.__kind == 'IQ'
+	
 	def compatible_items(self, other):
 		assert isinstance(other, SignalType)
 		return self.get_itemsize() == other.get_itemsize()
