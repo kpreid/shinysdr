@@ -16,7 +16,7 @@
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 # pylint: disable=unpacking-non-sequence, undefined-loop-variable, attribute-defined-outside-init, no-init
-# (pylint is confused by our tuple-or-None in MessageSplitter and by our only-used-immediately closures over loop variables in state_from_json)
+# (pylint is confused by our tuple-or-None in _MessageSplitter and by our only-used-immediately closures over loop variables in state_from_json)
 
 
 from __future__ import absolute_import, division
@@ -32,7 +32,7 @@ from zope.interface import Interface, implements  # available via Twisted
 
 from gnuradio import gr
 
-from shinysdr.types import type_to_json
+from shinysdr.types import BulkDataType, type_to_json
 
 
 class BaseCell(object):
@@ -142,15 +142,20 @@ class Cell(ValueCell):
 		return self._setter(self._ctor(value))
 
 
-sizeof_float = 4
-
-
-class MessageSplitter(object):
-	def __init__(self, queue, info_getter, close):
+class _MessageSplitter(object):
+	def __init__(self, queue, info_getter, close, type):
+		'''
+		info_format: format string as used by the struct module
+		array_format: type code as used by the array module
+		'''
+		# config
 		self.__queue = queue
 		self.__igetter = info_getter
-		self.__splitting = None
+		self.__type = type
 		self.close = close  # provided as method
+		
+		# state
+		self.__splitting = None
 	
 	def get(self, binary=False):
 		if self.__splitting is not None:
@@ -179,36 +184,37 @@ class MessageSplitter(object):
 		
 		# extract value
 		# TODO: this should be a separate concern, refactor
-		itemStr = string[itemsize * index:itemsize * (index + 1)]
+		item_string = string[itemsize * index:itemsize * (index + 1)]
 		if binary:
-			# TODO: for general case need to have configurable format string
-			value = struct.pack('dd', *self.__igetter()) + itemStr
+			# In binary mode, pack info with already-binary data.
+			value = struct.pack(self.__type.get_info_format(), *self.__igetter()) + item_string
 		else:
-			# TODO: allow caller to provide format info (nontrivial in case of runtime variable length)
-			unpacker = array.array('f')
-			unpacker.fromstring(itemStr)
+			# In python-value mode, unpack binary data.
+			unpacker = array.array(self.__type.get_array_format())
+			unpacker.fromstring(item_string)
 			value = (self.__igetter(), unpacker.tolist())
 		return value
 
 
 class StreamCell(ValueCell):
 	def __init__(self, target, key, ctor=None):
+		assert isinstance(ctor, BulkDataType)
 		ValueCell.__init__(self, target, key, writable=False, persists=False, ctor=ctor)
-		self._dgetter = getattr(self._target, 'get_' + key + '_distributor')
-		self._igetter = getattr(self._target, 'get_' + key + '_info')
+		self.__dgetter = getattr(self._target, 'get_' + key + '_distributor')
+		self.__igetter = getattr(self._target, 'get_' + key + '_info')
 	
 	def subscribe(self):
 		queue = gr.msg_queue()
-		self._dgetter().subscribe(queue)
+		self.__dgetter().subscribe(queue)
 		
 		def close():
-			self._dgetter().unsubscribe(queue)
+			self.__dgetter().unsubscribe(queue)
 		
-		return MessageSplitter(queue, self._igetter, close)
+		return _MessageSplitter(queue, self.__igetter, close, self.type())
 	
 	def get(self):
 		# TODO does not do proper value transformation here
-		return self._dgetter().get()
+		return self.__dgetter().get()
 	
 	def set(self, value):
 		raise Exception('StreamCell is not writable.')

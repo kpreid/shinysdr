@@ -39,7 +39,7 @@ from gnuradio.fft import logpwrfft
 
 from shinysdr.math import factorize, small_factor_at_least
 from shinysdr.signals import SignalType
-from shinysdr.types import Range, ValueType
+from shinysdr.types import BulkDataType, Range, ValueType
 from shinysdr.values import ExportedState, exported_value, setter, StreamCell
 
 
@@ -421,16 +421,6 @@ class _OverlapGimmick(gr.hier_block2):
 					(interleave, i))
 
 
-class SpectrumType(ValueType):
-	def type_to_json(self):
-		return u'spectrum'
-	
-	def __call__(self, specimen):
-		raise Exception('Coerce not implemented for SpectrumType')
-	
-	# TODO implement coerce behavior, generally make this more well-defined
-
-
 class MonitorSink(gr.hier_block2, ExportedState):
 	'''
 	Convenience wrapper around all the bits and pieces to display the signal spectrum to the client.
@@ -456,6 +446,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
 		)
 		
 		# constant parameters
+		self.__power_offset = 40  # TODO autoset or controllable
 		self.__itemsize = itemsize
 		self.__context = context
 		self.__enable_scope = enable_scope
@@ -480,8 +471,8 @@ class MonitorSink(gr.hier_block2, ExportedState):
 	def state_def(self, callback):
 		super(MonitorSink, self).state_def(callback)
 		# TODO make this possible to be decorator style
-		callback(StreamCell(self, 'fft', ctor=SpectrumType()))
-		callback(StreamCell(self, 'scope', ctor=SpectrumType()))  # TODO distinct type
+		callback(StreamCell(self, 'fft', ctor=BulkDataType(array_format='b', info_format='dff')))
+		callback(StreamCell(self, 'scope', ctor=BulkDataType(array_format='f', info_format='d')))
 
 	def __rebuild(self):
 		sample_rate = self.__signal_type.get_sample_rate()
@@ -490,7 +481,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
 		overlap_factor = min(16, overlap_factor)
 		
 		self.__fft_sink = MessageDistributorSink(
-			itemsize=self.__freq_resolution * gr.sizeof_float,
+			itemsize=self.__freq_resolution * gr.sizeof_char,
 			context=self.__context,
 			migrate=self.__fft_sink)
 		self.__overlapper = _OverlapGimmick(
@@ -498,8 +489,8 @@ class MonitorSink(gr.hier_block2, ExportedState):
 			factor=overlap_factor,
 			itemsize=self.__itemsize)
 		
-		# Adjusts units so displayed level is independent of resolution and sample rate.
-		compensation = 10 * math.log10(self.__freq_resolution / sample_rate)
+		# Adjusts units so displayed level is independent of resolution and sample rate. Also throw in the packing offset
+		compensation = 10 * math.log10(self.__freq_resolution / sample_rate) + self.__power_offset
 		# TODO: Consider not using the logpwrfft block
 		
 		#[logpwrfft.logpwrfft_f, logpwrfft.logpwrfft_c][self.__complex]
@@ -510,6 +501,8 @@ class MonitorSink(gr.hier_block2, ExportedState):
 			frame_rate=self.__frame_rate,
 			avg_alpha=1.0,
 			average=False)
+		# It would make slightly more sense to use unsigned chars, but blocks.float_to_uchar does not support vlen.
+		self.__fft_converter = blocks.float_to_char(vlen=self.__freq_resolution, scale=1.0)
 	
 		self.__scope_sink = MessageDistributorSink(
 			itemsize=self.__time_length * gr.sizeof_gr_complex,
@@ -529,6 +522,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
 				self,
 				self.__overlapper,
 				self.__logpwrfft,
+				self.__fft_converter,
 				self.__fft_sink)
 			if self.__enable_scope:
 				self.connect(
@@ -580,14 +574,14 @@ class MonitorSink(gr.hier_block2, ExportedState):
 	
 	# exported via state_def
 	def get_fft_info(self):
-		return (self.__input_center_freq, self.__signal_type.get_sample_rate())
+		return (self.__input_center_freq, self.__signal_type.get_sample_rate(), self.__power_offset)
 	
 	def get_fft_distributor(self):
 		return self.__fft_sink
 	
 	# exported via state_def
 	def get_scope_info(self):
-		return (0, self.__signal_type.get_sample_rate())  # one field not used
+		return (self.__signal_type.get_sample_rate(),)
 	
 	def get_scope_distributor(self):
 		return self.__scope_sink

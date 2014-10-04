@@ -87,6 +87,18 @@ define(['./events'], function (events) {
   }
   exports.Notice = Notice;
 
+  function BulkDataType(info_format, array_format) {
+    // TODO: redesign things so that we have the semantic info from the server
+    if (info_format == 'dff' && array_format == 'b') {
+      this.dataFormat = 'spectrum-byte';
+    } else if (info_format == 'd' && array_format == 'f') {
+      this.dataFormat = 'scope-float';
+    } else {
+      throw new Error('Unexpected bulk data format: ' + info_format + ' ' + array_format);
+    }
+  }
+  exports.BulkDataType = BulkDataType;
+
   // type for any block
   var block = Object.freeze({});
   exports.block = block;
@@ -112,6 +124,8 @@ define(['./events'], function (events) {
             return new Range(desc.subranges, desc.logarithmic, desc.integer);
           case 'notice':
             return new Notice(desc.always_visible);
+          case 'bulk_data':
+            return new BulkDataType(desc.info_format, desc.array_format);
           default:
             throw new TypeError('unknown type desc tag: ' + desc.type);
         }

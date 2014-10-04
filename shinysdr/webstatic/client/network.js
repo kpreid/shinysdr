@@ -18,6 +18,7 @@
 define(['./values', './events'], function (values, events) {
   'use strict';
   
+  var BulkDataType = values.BulkDataType;
   var Cell = values.Cell;
   var typeFromDesc = values.typeFromDesc;
   
@@ -140,7 +141,7 @@ define(['./values', './events'], function (values, events) {
   ReadCell.prototype = Object.create(Cell.prototype, {constructor: {value: ReadCell}});
   exports.ReadCell = ReadCell;
   
-  function SpectrumCell(url) {
+  function BulkDataCell(url, type) {
     var fft = new Float32Array(0);
     var VSIZE = Float32Array.BYTES_PER_ELEMENT;
     var lastValue = [[NaN, NaN], fft];
@@ -150,18 +151,43 @@ define(['./values', './events'], function (values, events) {
     var subscriptions = [];
     
     // infoAndFFT is of the format [{freq:<number>, rate:<number>}, <Float32Array>]
-    function transform(infoAndFFT) {
-      lastValue = infoAndFFT;
-      
+    function transform(buffer) {
+      var newValue;
+      var view = new DataView(buffer);
+      // starts at 4 due to cell-ID field
+      switch (type.dataFormat) {
+        case 'spectrum-byte':
+          var freq = view.getFloat64(4, true);
+          var rate = view.getFloat32(4+8, true);
+          var offset = view.getFloat32(4+8+4, true);
+          var packed_data = new Int8Array(buffer, 4+8+4+4);
+          var unpacked_data = new Float32Array(packed_data.length);
+          for (var i = packed_data.length - 1; i >= 0; i--) {
+            unpacked_data[i] = packed_data[i] - offset;
+          }
+          //console.log(id, freq, rate, data.length);
+          newValue = [{freq:freq, rate:rate}, unpacked_data];
+          break;
+        case 'scope-float':
+          var rate = view.getFloat64(4+8, true);
+          var data = new Float32Array(buffer, 4+8);
+          newValue = [{rate:rate}, data];
+          break;
+        default:
+          throw new Error('Unknown bulk data format');
+      }
+
+      // Deliver value
+      lastValue = newValue;
       // TODO replace this with something async
       for (var i = 0; i < subscriptions.length; i++) {
-        (0,subscriptions[i])(infoAndFFT);
+        (0,subscriptions[i])(newValue);
       }
       
-      return infoAndFFT;
+      return newValue;
     }
     
-    ReadCell.call(this, url, lastValue, values.any, transform);
+    ReadCell.call(this, url, lastValue, type, transform);
     
     this.subscribe = function(callback) {
       // TODO need to provide for unsubscribing
@@ -169,8 +195,8 @@ define(['./values', './events'], function (values, events) {
       callback(lastValue);
     };
   }
-  SpectrumCell.prototype = Object.create(ReadCell.prototype, {constructor: {value: SpectrumCell}});
-  exports.SpectrumCell = SpectrumCell;
+  BulkDataCell.prototype = Object.create(ReadCell.prototype, {constructor: {value: BulkDataCell}});
+  //exports.BulkDataCell = BulkDataCell;
   
   function setNonEnum(o, p, v) {
     Object.defineProperty(o, p, {
@@ -247,17 +273,18 @@ define(['./values', './events'], function (values, events) {
   
   function makeCell(url, desc, idMap) {
     var cell;
-    if (desc.type === 'spectrum') {
-      // TODO eliminate special case
-      cell = new SpectrumCell(url);
+    var type = desc.kind === 'block' ? values.block : typeFromDesc(desc.type);
+    if (type instanceof BulkDataType) {
+      // TODO can we eliminate this special case
+      cell = new BulkDataCell(url, type);
     } else if (desc.kind === 'block') {
       // TODO eliminate special case by making server block cells less special?
-      cell = new ReadCell(url, /* dummy */ makeBlock(url, []), values.block,
+      cell = new ReadCell(url, /* dummy */ makeBlock(url, []), type,
         function (id) { return idMap[id]; });
     } else if (desc.writable) {
-      cell = new ReadWriteCell(url, desc.current, typeFromDesc(desc.type));
+      cell = new ReadWriteCell(url, desc.current, type);
     } else {
-      cell = new ReadCell(url, desc.current, typeFromDesc(desc.type), identity);
+      cell = new ReadCell(url, desc.current, type, identity);
     }
     return [cell, cell._update];
   }
@@ -327,14 +354,11 @@ define(['./values', './events'], function (values, events) {
       }
       
       function oneBinaryMessage(buffer) {
-        // Currently, SpectrumCell updates are the only type of binary messages.
+        // Currently, BulkDataCell updates are the only type of binary messages.
         var view = new DataView(buffer);
         var id = view.getUint32(0, true);
-        var freq = view.getFloat64(4, true);
-        var rate = view.getFloat64(4+8, true);
-        var data = new Float32Array(buffer, 4+8+8);
-        //console.log(id, freq, rate, data.length);
-        (0, updaterMap[id])([{freq:freq, rate:rate}, data]);
+        var cell_updater = updaterMap[id];
+        cell_updater(buffer);
       }
       
       ws.onmessage = function (event) {

@@ -150,3 +150,27 @@ class Notice(ValueType):
 	
 	def __call__(self, specimen):
 		return unicode(specimen)
+
+
+class BulkDataType(ValueType):
+	def __init__(self, info_format, array_format):
+		self.__info_format = info_format
+		self.__array_format = array_format
+	
+	def type_to_json(self):
+		return {
+			u'type': u'bulk_data',
+			u'info_format': self.__info_format,
+			u'array_format': self.__array_format,
+		}
+	
+	def get_info_format(self):
+		return self.__info_format
+	
+	def get_array_format(self):
+		return self.__array_format
+	
+	def __call__(self, specimen):
+		raise Exception('Coerce not implemented for BulkDataType')
+	
+	# TODO implement coerce behavior, generally make this more well-defined
