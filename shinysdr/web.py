@@ -439,29 +439,37 @@ class StateStreamInner(object):
 
 
 class AudioStreamInner(object):
-	def __init__(self, send, block, audio_rate):
+	def __init__(self, reactor, send, block, audio_rate):
 		self._send = send
 		self._queue = gr.msg_queue(limit=100)
+		self.__running = [True]
 		self._block = block
 		self._block.add_audio_queue(self._queue, audio_rate)
-		# TODO: slow/stop when stream is not running. Better yet, use something that twisted can wait on like a pipe.
-		self.__poll_loop = task.LoopingCall(self.__poll)
-		self.__poll_loop.start(1.0 / 61)
+		reactor.callInThread(_AudioStream_read_loop, reactor, self._queue, self.__deliver, self.__running)
 	
 	def connectionLost(self, reason):
 		self._block.remove_audio_queue(self._queue)
-		if self.__poll_loop.running:
-			self.__poll_loop.stop()
+		self.__running[0] = False
+		# Insert a dummy message to ensure the loop thread unblocks; otherwise it will sit around forever, including preventing process shutdown.
+		self._queue.insert_tail(gr.message())
 	
-	def __poll(self):
-		queue = self._queue
+	def __deliver(self, data_string):
+		self._send(data_string, safe_to_drop=True)
+
+
+def _AudioStream_read_loop(reactor, queue, deliver, running):
+	# RUNS IN A SEPARATE THREAD.
+	while running[0]:
 		buf = ''
+		message = queue.delete_head()  # blocking call
+		if message.length() > 0:  # avoid crash bug
+			buf += message.to_string()
+		# Collect more queue contents to batch data
 		while not queue.empty_p():
 			message = queue.delete_head()
 			if message.length() > 0:  # avoid crash bug
 				buf += message.to_string()
-		if len(buf) > 0:
-			self._send(buf, safe_to_drop=True)
+		reactor.callFromThread(deliver, buf)
 
 
 def _lookup_block(block, path):
@@ -499,7 +507,7 @@ class OurStreamProtocol(protocol.Protocol):
 				path[0:1] = []
 		if len(path) == 1 and path[0].startswith('audio?rate='):
 			rate = int(json.loads(urllib.unquote(path[0][len('audio?rate='):])))
-			self.inner = AudioStreamInner(self.__send, self._block, rate)
+			self.inner = AudioStreamInner(the_reactor, self.__send, self._block, rate)
 		elif len(path) >= 1 and path[0] == 'radio':
 			# note _lookup_block may throw. TODO: Better error reporting
 			block = _lookup_block(self._block, path[1:])
