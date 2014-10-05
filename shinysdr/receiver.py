@@ -61,7 +61,7 @@ class Receiver(gr.hier_block2, ExportedState):
 			audio_channels=0,
 			context=None):
 		assert input_rate > 0
-		assert audio_channels == 2
+		assert audio_channels == 1 or audio_channels == 2
 		gr.hier_block2.__init__(
 			# str() because insists on non-unicode
 			self, str('%s receiver' % (mode,)),
@@ -75,9 +75,10 @@ class Receiver(gr.hier_block2, ExportedState):
 			mode = 'AM'
 		
 		# Provided by caller
+		self.context = context
 		self.input_rate = input_rate
 		self.input_center_freq = input_center_freq
-		self.context = context
+		self.__audio_channels = audio_channels
 		
 		# Simple state
 		self.mode = mode
@@ -89,8 +90,7 @@ class Receiver(gr.hier_block2, ExportedState):
 		self.__rotator = blocks.rotator_cc()
 		self.demodulator = self.__make_demodulator(mode, {})
 		self.__update_demodulator_info()
-		self.audio_gain_l_block = blocks.multiply_const_ff(0.0)
-		self.audio_gain_r_block = blocks.multiply_const_ff(0.0)
+		self.__audio_gain_blocks = [blocks.multiply_const_ff(0.0) for _ in xrange(self.__audio_channels)]
 		self.probe_audio = analog.probe_avg_mag_sqrd_f(0, alpha=10.0 / 44100)  # TODO adapt to output audio rate
 		
 		# Other internals
@@ -121,15 +121,25 @@ class Receiver(gr.hier_block2, ExportedState):
 		try:
 			self.disconnect_all()
 			
+			# Connect input of demodulator
 			if self.__demod_tunable:
 				self.connect(self, self.demodulator)
 			else:
 				self.connect(self, self.__rotator, self.demodulator)
-			self.connect((self.demodulator, 0), self.audio_gain_l_block, (self, 0))
-			if self.__demod_stereo:
-				self.connect((self.demodulator, 1), self.audio_gain_r_block, (self, 1))
+			
+			# Connect output of demodulator
+			self.connect((self.demodulator, 0), self.__audio_gain_blocks[0])  # left or mono
+			if self.__audio_channels == 2:
+				self.connect(
+					(self.demodulator, 1 if self.__demod_stereo else 0),
+					self.__audio_gain_blocks[1])
 			else:
-				self.connect((self.demodulator, 0), self.audio_gain_r_block, (self, 1))
+				if self.__demod_stereo:
+					self.connect((self.demodulator, 1), blocks.null_sink(gr.sizeof_float))
+			
+			# Connect output of receiver
+			for ch in xrange(self.__audio_channels):
+				self.connect(self.__audio_gain_blocks[ch], (self, ch))
 			
 			# TODO: should mix
 			self.connect((self.demodulator, 0), self.probe_audio)
@@ -190,7 +200,7 @@ class Receiver(gr.hier_block2, ExportedState):
 		self.audio_gain = value
 		self.__update_audio_gain()
 	
-	@exported_value(ctor=Range([(-1, 1)], strict=True))
+	@exported_value(ctor_fn=lambda self: Range([(-1, 1)] if self.__audio_channels > 1 else [(0, 0)], strict=True))
 	def get_audio_pan(self):
 		return self.audio_pan
 	
@@ -238,8 +248,7 @@ class Receiver(gr.hier_block2, ExportedState):
 		self.mode = mode
 		
 		# Replace blocks downstream of the demodulator so as to flush samples that are potentially at a different sample rate and would therefore be audibly wrong. Caller will handle reconnection.
-		self.audio_gain_l_block = blocks.multiply_const_ff(0.0)
-		self.audio_gain_r_block = blocks.multiply_const_ff(0.0)
+		self.__audio_gain_blocks = [blocks.multiply_const_ff(0.0) for _ in xrange(self.__audio_channels)]
 		self.__update_audio_gain()
 
 	def __make_demodulator(self, mode, state):
@@ -276,10 +285,13 @@ class Receiver(gr.hier_block2, ExportedState):
 
 	def __update_audio_gain(self):
 		gain_lin = 10 ** (self.audio_gain / 10)
-		pan = self.audio_pan
-		# TODO: Determine correct computation for panning. http://en.wikipedia.org/wiki/Pan_law seems relevant but was short on actual formulas. May depend on headphones vs speakers? This may be correct already for headphones -- it sounds nearly-flat to me.
-		self.audio_gain_l_block.set_k(gain_lin * (1 - pan))
-		self.audio_gain_r_block.set_k(gain_lin * (1 + pan))
+		if self.__audio_channels == 2:
+			pan = self.audio_pan
+			# TODO: Determine correct computation for panning. http://en.wikipedia.org/wiki/Pan_law seems relevant but was short on actual formulas. May depend on headphones vs speakers? This may be correct already for headphones -- it sounds nearly-flat to me.
+			self.__audio_gain_blocks[0].set_k(gain_lin * (1 - pan))
+			self.__audio_gain_blocks[1].set_k(gain_lin * (1 + pan))
+		else:
+			self.__audio_gain_blocks[0].set_k(gain_lin)
 
 
 class ContextForDemodulator(object):

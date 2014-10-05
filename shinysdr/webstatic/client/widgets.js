@@ -386,7 +386,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       if ('audio_gain' in block) {
         addWidget('audio_gain', LinSlider, 'Volume');
       }
-      if ('audio_pan' in block) {
+      if ('audio_pan' in block && !block.audio_pan.type.isSingleValued()) {
         addWidget('audio_pan', LinSlider, 'Pan');
       }
       if ('rec_freq' in block) {
