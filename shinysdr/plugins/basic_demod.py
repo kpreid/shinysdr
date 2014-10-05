@@ -28,6 +28,7 @@ from gnuradio.filter import firdes
 
 from shinysdr.modes import ModeDef, IDemodulator, ITunableDemodulator
 from shinysdr.blocks import MultistageChannelFilter, make_resampler
+from shinysdr.signals import SignalType
 from shinysdr.types import Range
 from shinysdr.values import ExportedState, exported_value, setter
 
@@ -60,8 +61,8 @@ class Demodulator(gr.hier_block2, ExportedState):
 	def get_half_bandwidth(self):
 		raise NotImplementedError('Demodulator.get_half_bandwidth')
 
-	def get_audio_rate(self):
-		raise NotImplementedError('Demodulator.get_audio_rate')
+	def get_output_type(self):
+		raise NotImplementedError('Demodulator.get_output_type')
 
 	# TODO: remove this indirection
 	def connect_audio_output(self, l_port, r_port):
@@ -101,6 +102,9 @@ class SimpleAudioDemodulator(Demodulator, SquelchMixin):
 		self.band_filter_transition = band_filter_transition
 		self.demod_rate = demod_rate
 		self.audio_rate = audio_rate
+		self.__signal_type = SignalType(
+			kind='STEREO',
+			sample_rate=audio_rate)
 
 		input_rate = self.input_rate
 		
@@ -113,8 +117,8 @@ class SimpleAudioDemodulator(Demodulator, SquelchMixin):
 	def get_half_bandwidth(self):
 		return self.band_filter
 
-	def get_audio_rate(self):
-		return self.audio_rate
+	def get_output_type(self):
+		return self.__signal_type
 
 	def set_rec_freq(self, freq):
 		'''for ITunableDemodulator'''

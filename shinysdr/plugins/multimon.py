@@ -58,7 +58,7 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 			mode='NFM',
 			input_rate=input_rate,
 			tau=None)  # no deemphasis
-		fm_audio_rate = self.fm_demod.get_audio_rate()
+		fm_audio_rate = self.fm_demod.get_output_type().get_sample_rate()
 		
 		# Subprocess
 		# using /usr/bin/env because twisted spawnProcess doesn't support path search
@@ -101,8 +101,8 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 	def get_half_bandwidth(self):
 		return self.fm_demod.get_half_bandwidth()
 	
-	def get_audio_rate(self):
-		return pipe_rate
+	def get_output_type(self):
+		return SignalType(kind='STEREO', sample_rate=pipe_rate)
 	
 	@exported_value()
 	def get_band_filter_shape(self):

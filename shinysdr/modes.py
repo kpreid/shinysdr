@@ -47,9 +47,9 @@ class IDemodulator(Interface):
 		TODO explain
 		'''
 	
-	def get_audio_rate():
+	def get_output_type():
 		'''
-		Return the sample rate of the demodulator's audio output, in Hz as a float.
+		Return the SignalType of the demodulator's output, which must currently be stereo audio at any sample rate.
 		'''
 
 

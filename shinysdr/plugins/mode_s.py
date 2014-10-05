@@ -101,8 +101,8 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 	def get_half_bandwidth(self):
 		return pipe_rate / 2
 	
-	def get_audio_rate(self):
-		return _dummy_audio_rate
+	def get_output_type(self):
+		return SignalType(kind='STEREO', sample_rate=_dummy_audio_rate)
 
 	@exported_value()
 	def get_band_filter_shape(self):

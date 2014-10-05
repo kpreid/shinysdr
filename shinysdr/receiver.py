@@ -105,9 +105,10 @@ class Receiver(gr.hier_block2, ExportedState):
 	
 	def __update_demodulator_info(self):
 		self.__demod_tunable = ITunableDemodulator.providedBy(self.demodulator)
-		self.__output_type = SignalType(
-			kind='STEREO',
-			sample_rate=self.demodulator.get_audio_rate())
+		output_type = self.demodulator.get_output_type()
+		assert isinstance(output_type, SignalType)
+		assert output_type.get_kind() == 'STEREO'
+		self.__output_type = output_type
 	
 	def __do_connect(self):
 		self.context.lock()
