@@ -480,6 +480,9 @@ class AudioStreamInner(object):
 		self.__running = [True]
 		self._block = block
 		self._block.add_audio_queue(self._queue, audio_rate)
+		
+		send(unicode(self._block.get_audio_channels()))
+		
 		reactor.callInThread(_AudioStream_read_loop, reactor, self._queue, self.__deliver, self.__running)
 	
 	def connectionLost(self, reason):

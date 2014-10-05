@@ -27,6 +27,9 @@ define(['./values', './events', './network'], function (values, events, network)
     var audio = new (typeof AudioContext !== 'undefined' ? AudioContext : webkitAudioContext)();
     var sampleRate = audio.sampleRate;
     
+    // Stream parameters
+    var numAudioChannels = null;
+    
     // Queue size management
     // The queue should be large to avoid underruns due to bursty processing/delivery.
     // The queue should be small to minimize latency.
@@ -87,6 +90,10 @@ define(['./values', './events', './network'], function (values, events, network)
     
     network.retryingConnection(url + '?rate=' + encodeURIComponent(JSON.stringify(sampleRate)), function (ws) {
       ws.binaryType = 'arraybuffer';
+      function lose(reason) {
+        console.error('audio:', reason);
+        ws.close(4000);  // first "application-specific" error code
+      }
       ws.onmessage = function(event) {
         if (queue.length > 100) {
           console.log('Extreme audio overrun.');
@@ -96,15 +103,28 @@ define(['./values', './events', './network'], function (values, events, network)
         }
         var chunk;
         if (typeof event.data === 'string') {
-          chunk = JSON.parse(event.data);
+          if (numAudioChannels !== null) {
+            console.log('audio: Got string message when already initialized');
+            return;
+          } else {
+            var info = JSON.parse(event.data);
+            if (typeof info !== 'number') {
+              lose('Message was not a number');
+            }
+            numAudioChannels = info;
+          }
+          return;
         } else if (event.data instanceof ArrayBuffer) {
           // TODO think about float format portability (endianness only...?)
           chunk = new Float32Array(event.data);
         } else {
           // TODO handle in general
-          console.error('bad WS data');
-          ws.close(1003);
+          lose('bad WS data');
           return;
+        }
+
+        if (numAudioChannels === null) {
+          lose('Missing number-of-channels message');
         }
         queue.push(chunk);
         queueSampleCount += chunk.length;
@@ -114,6 +134,7 @@ define(['./values', './events', './network'], function (values, events, network)
       };
       ws.addEventListener('close', function (event) {
         error('Disconnected.');
+        numAudioChannels = null;
         setTimeout(startStop, 0);
       });
       // Starting the audio ScriptProcessor will be taken care of by the onmessage handler
@@ -130,12 +151,13 @@ define(['./values', './events', './network'], function (values, events, network)
       outputChunkSizeSample = abuf.length;
       var l = abuf.getChannelData(0);
       var r = abuf.getChannelData(1);
+      var rightChannelIndex = numAudioChannels - 1;
       var j;
       for (j = 0;
            chunkIndex < audioStreamChunk.length && j < abuf.length;
-           chunkIndex += 2, j++) {
+           chunkIndex += numAudioChannels, j++) {
         l[j] = audioStreamChunk[chunkIndex];
-        r[j] = audioStreamChunk[chunkIndex + 1];
+        r[j] = audioStreamChunk[chunkIndex + rightChannelIndex];
       }
       while (j < abuf.length) {
         // Get next chunk
@@ -148,9 +170,9 @@ define(['./values', './events', './network'], function (values, events, network)
         }
         for (;
              chunkIndex < audioStreamChunk.length && j < abuf.length;
-             chunkIndex += 2, j++) {
+             chunkIndex += numAudioChannels, j++) {
           l[j] = audioStreamChunk[chunkIndex];
-          r[j] = audioStreamChunk[chunkIndex + 1];
+          r[j] = audioStreamChunk[chunkIndex + rightChannelIndex];
         }
         if (queueSampleCount > targetQueueSize) {
           var drop = Math.ceil((queueSampleCount - targetQueueSize) / 1024);

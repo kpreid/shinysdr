@@ -164,6 +164,12 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 		self.__start_or_stop()
 		self.__needs_reconnect = True
 		self._do_connect()
+	
+	def get_audio_channels(self):
+		'''
+		Return the number of channels (which will be 1 or 2) in audio queue outputs.
+		'''
+		return self.__audio_channels
 
 	def _do_connect(self):
 		"""Do all reconfiguration operations in the proper order."""
