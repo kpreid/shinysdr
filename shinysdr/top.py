@@ -436,10 +436,13 @@ class AudioQueueSink(gr.hier_block2):
 			gr.sizeof_float * channels,
 			queue,
 			True)
-		interleaver = blocks.streams_to_vector(gr.sizeof_float, channels)
-		for ch in xrange(channels):
-			self.connect((self, ch), (interleaver, ch))
-		self.connect(interleaver, sink)
+		if channels == 1:
+			self.connect((self, 0), sink)
+		else:
+			interleaver = blocks.streams_to_vector(gr.sizeof_float, channels)
+			for ch in xrange(channels):
+				self.connect((self, ch), (interleaver, ch))
+			self.connect(interleaver, sink)
 
 
 def base26(x):
