@@ -234,6 +234,41 @@ class _BlockHtmlElement(template.Element):
 		return tag('/' + '/'.join([urllib.quote(x, safe='') for x in request.prepath]))
 
 
+class FlowgraphVizResource(resource.Resource):
+	isLeaf = True
+	
+	def __init__(self, reactor, block):
+		self.__reactor = reactor
+		self.__block = block
+	
+	def render_GET(self, request):
+		request.setHeader('Content-Type', 'image/png')
+		process = self.__reactor.spawnProcess(
+			DotProcessProtocol(request),
+			'/usr/bin/env',
+			env=None,  # inherit environment
+			args=['env', 'dot', '-Tpng'],
+			childFDs={
+				0: 'w',
+				1: 'r',
+				2: 2
+			})
+		process.pipes[0].write(self.__block.dot_graph())
+		process.pipes[0].loseConnection()
+		return server.NOT_DONE_YET
+
+
+class DotProcessProtocol(protocol.ProcessProtocol):
+	def __init__(self, request):
+		self.__request = request
+	
+	def outReceived(self, data):
+		self.__request.write(data)
+	
+	def outConnectionLost(self):
+		self.__request.finish()
+
+
 def _fqn(class_):
 	# per http://stackoverflow.com/questions/2020014/get-fully-qualified-class-name-of-an-object-in-python
 	return class_.__module__ + '.' + class_.__name__
@@ -667,6 +702,9 @@ class WebService(Service):
 		# Frequency DB
 		appRoot.putChild('dbs', shinysdr.db.DatabasesResource(read_only_dbs))
 		appRoot.putChild('wdb', shinysdr.db.DatabaseResource(writable_db))
+		
+		# Debug graph
+		appRoot.putChild('flow-graph', FlowgraphVizResource(reactor, top))
 		
 		# Construct explicit resources for merge.
 		test = _reify(serverRoot, 'test')
