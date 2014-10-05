@@ -109,7 +109,7 @@ class VOR(SimpleAudioDemodulator):
 			self.am_demod_block,
 			blocks.multiply_const_ff(1.0 / audio_modulation_index * 0.5),
 			self.audio_filter_block)
-		self.connect_audio_output(self.audio_filter_block, self.audio_filter_block)
+		self.connect_audio_output(self.audio_filter_block)
 		
 		# AM phase
 		self.connect(

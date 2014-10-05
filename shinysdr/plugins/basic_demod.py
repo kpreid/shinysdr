@@ -45,15 +45,19 @@ class Demodulator(gr.hier_block2, ExportedState):
 			input_rate=0,
 			context=None):
 		assert input_rate > 0
+		
+		# early init because we're going to invoke get_output_type()
+		self.mode = mode
+		self.input_rate = input_rate
+		self.context = context
+		
+		self.__channels = channels = 2 if self.get_output_type().get_kind() == 'STEREO' else 1
 		gr.hier_block2.__init__(
 			# str() because insists on non-unicode
 			self, str('%s receiver' % (mode,)),
 			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
-			gr.io_signature(2, 2, gr.sizeof_float * 1),
+			gr.io_signature(channels, channels, gr.sizeof_float * 1),
 		)
-		self.mode = mode
-		self.input_rate = input_rate
-		self.context = context
 
 	def can_set_mode(self, mode):
 		return False
@@ -65,9 +69,11 @@ class Demodulator(gr.hier_block2, ExportedState):
 		raise NotImplementedError('Demodulator.get_output_type')
 
 	# TODO: remove this indirection
-	def connect_audio_output(self, l_port, r_port):
+	def connect_audio_output(self, l_port, r_port=None):
+		assert (r_port is not None) == (self.__channels == 2)
 		self.connect(l_port, (self, 0))
-		self.connect(r_port, (self, 1))
+		if r_port is not None:
+			self.connect(r_port, (self, 1))
 
 
 class SquelchMixin(ExportedState):
@@ -92,8 +98,12 @@ class SquelchMixin(ExportedState):
 class SimpleAudioDemodulator(Demodulator, SquelchMixin):
 	implements(ITunableDemodulator)
 	
-	def __init__(self, demod_rate=0, audio_rate=0, band_filter=None, band_filter_transition=None, **kwargs):
+	def __init__(self, demod_rate=0, audio_rate=0, band_filter=None, band_filter_transition=None, stereo=False, **kwargs):
 		assert audio_rate > 0
+		
+		self.__signal_type = SignalType(
+			kind='STEREO' if stereo else 'MONO',
+			sample_rate=audio_rate)
 		
 		Demodulator.__init__(self, **kwargs)
 		SquelchMixin.__init__(self, demod_rate)
@@ -102,9 +112,6 @@ class SimpleAudioDemodulator(Demodulator, SquelchMixin):
 		self.band_filter_transition = band_filter_transition
 		self.demod_rate = demod_rate
 		self.audio_rate = audio_rate
-		self.__signal_type = SignalType(
-			kind='STEREO',
-			sample_rate=audio_rate)
 
 		input_rate = self.input_rate
 		
@@ -153,6 +160,7 @@ class IQDemodulator(SimpleAudioDemodulator):
 		audio_rate = 96000  # TODO parameter / justify this
 		SimpleAudioDemodulator.__init__(self,
 			mode=mode,
+			stereo=True,
 			audio_rate=audio_rate,
 			demod_rate=audio_rate,
 			band_filter=audio_rate * 0.5,
@@ -199,7 +207,7 @@ class AMDemodulator(SimpleAudioDemodulator):
 			self.demod_block,
 			dc_blocker)
 		self.connect(self.band_filter_block, self.rf_probe_block)
-		self.connect_audio_output(dc_blocker, dc_blocker)
+		self.connect_audio_output(dc_blocker)
 
 
 pluginDef_am = ModeDef('AM', label='AM', demodClass=AMDemodulator)
@@ -257,7 +265,7 @@ class FMDemodulator(SimpleAudioDemodulator):
 	def connect_audio_stage(self, input):
 		'''Override point for stereo'''
 		resampler = self._make_resampler(input, self.demod_rate)
-		self.connect_audio_output(resampler, resampler)
+		self.connect_audio_output(resampler)
 
 
 class NFMDemodulator(FMDemodulator):
@@ -283,6 +291,7 @@ class WFMDemodulator(FMDemodulator):
 		self.stereo = stereo
 		self.__audio_int_rate = 40000  # lower than demod rate, higher than audio filter
 		FMDemodulator.__init__(self,
+			stereo=True,  # config for stereo because we can't change at runtime
 			audio_rate=self.__audio_int_rate,
 			demod_rate=200000,  # higher than deviation*2, higher than stereo pilot freq, multiple of __audio_int_rate
 			deviation=75000,
@@ -438,7 +447,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
 			self.agc_block,
 			ssb_demod_block)
 		self.connect(sharp_filter_block, self.rf_probe_block)
-		self.connect_audio_output(ssb_demod_block, ssb_demod_block)
+		self.connect_audio_output(ssb_demod_block)
 
 	# override
 	# TODO: this is the interface used to determine receiver.get_is_valid, but SSB demonstrates that the interface is insufficiently expressive. Should we use get_band_filter_shape instead? Should we use a different interface designed for expressing the channel? Or are signals like SSB which are asymmetric about the "carrier" frequency uncommon enough that we should not worry about handling this case well?
