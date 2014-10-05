@@ -109,8 +109,12 @@ class Receiver(gr.hier_block2, ExportedState):
 		self.__demod_tunable = ITunableDemodulator.providedBy(self.demodulator)
 		output_type = self.demodulator.get_output_type()
 		assert isinstance(output_type, SignalType)
-		assert output_type.get_kind() == 'STEREO'
-		self.__output_type = output_type
+		# TODO: better expression of this condition
+		assert output_type.get_kind() == 'STEREO' or output_type.get_kind() == 'MONO'
+		self.__demod_stereo = output_type.get_kind() == 'STEREO'
+		self.__output_type = SignalType(
+			kind='STEREO',
+			sample_rate=output_type.get_sample_rate())
 	
 	def __do_connect(self):
 		self.context.lock()
@@ -122,8 +126,12 @@ class Receiver(gr.hier_block2, ExportedState):
 			else:
 				self.connect(self, self.__rotator, self.demodulator)
 			self.connect((self.demodulator, 0), self.audio_gain_l_block, (self, 0))
-			self.connect((self.demodulator, 1), self.audio_gain_r_block, (self, 1))
+			if self.__demod_stereo:
+				self.connect((self.demodulator, 1), self.audio_gain_r_block, (self, 1))
+			else:
+				self.connect((self.demodulator, 0), self.audio_gain_r_block, (self, 1))
 			
+			# TODO: should mix
 			self.connect((self.demodulator, 0), self.probe_audio)
 			
 			if self.__output_type != self.__last_output_type:
