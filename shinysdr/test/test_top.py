@@ -61,3 +61,11 @@ class TestTop(unittest.TestCase):
 		top.set_unpaused(True)  # there should be an attempted start
 		top.add_audio_queue(queue, 48000)
 		top.remove_audio_queue(queue)
+	
+	def test_mono(self):
+		top = Top(devices={'s1': simulate.SimulatedDevice(freq=0)}, stereo=False)
+		queue = gr.msg_queue()
+		(_, receiver) = top.add_receiver('AM', key='a')
+		top.set_unpaused(True)  # there should be an attempted start
+		top.add_audio_queue(queue, 48000)
+		top.remove_audio_queue(queue)

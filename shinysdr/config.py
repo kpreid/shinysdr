@@ -54,14 +54,17 @@ class Config(object):
 		self.sources = self.devices  # temporary legacy compat -- TODO remove
 		self.databases = _ConfigDbs(self, reactor)
 
-		# might be wanted
+		# provided for the convenience of the config file
 		self.reactor = reactor
 		
 		# these are to be read by main
 		self._state_filename = None
 		self._service_makers = []
 		
-		# private
+		# private: config state
+		self.__stereo = True
+		
+		# private: meta
 		self.__waiting = []
 		self.__finished = False
 	
@@ -76,7 +79,8 @@ class Config(object):
 	def _create_top_block(self):
 		from shinysdr import top
 		return top.Top(
-			devices=self.devices._values)
+			devices=self.devices._values,
+			stereo=self.__stereo)
 	
 	def _not_finished(self):
 		if self.__finished:
@@ -119,6 +123,14 @@ class Config(object):
 			return lazy_ghpsdr.DspserverService(top, note_dirty, 'tcp:8000')
 		
 		self._service_makers.append(make_service)
+	
+	def set_stereo(self, value):
+		'''
+		Set whether audio output is stereo (True) or mono (False). Defaults to True.
+		
+		Disabling stereo saves CPU time and network bandwidth.
+		'''
+		self.__stereo = bool(value)
 
 
 class _ConfigDict(object):

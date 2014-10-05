@@ -59,7 +59,7 @@ class ReceiverCollection(CollectionState):
 
 class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 
-	def __init__(self, devices={}):
+	def __init__(self, devices={}, stereo=True):
 		gr.top_block.__init__(self, "SDR top block")
 		self.__unpaused = True  # user state
 		self.__running = False  # actually started
@@ -69,7 +69,6 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 		self._sources = {k: d for k, d in devices.iteritems() if d.can_receive()}
 		accessories = {k: d for k, d in devices.iteritems() if not d.can_receive()}
 		self.source_name = self._sources.keys()[0]  # arbitrary valid initial value
-		self.__audio_bus_rate = 1  # dummy initial value, computed in _do_connect
 
 		# Blocks etc.
 		# TODO: device refactoring: remove 'source' concept (which is currently a device)
@@ -90,9 +89,10 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 		self.accessories = CollectionState(accessories)
 		
 		# Audio stream bits
-		self.__audio_channels = 2  # to be made variable in the future
+		self.__audio_channels = 2 if stereo else 1
 		self.audio_resampler_cache = {}
 		self.audio_queue_sinks = {}
+		self.__audio_bus_rate = 1  # dummy initial value, computed in _do_connect
 		
 		# Flags, other state
 		self.__needs_reconnect = True
