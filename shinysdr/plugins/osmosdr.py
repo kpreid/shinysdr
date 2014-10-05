@@ -225,7 +225,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
 	
 	@setter
 	def set_correction_ppm(self, value):
-		self.__tuning.set_correction_ppm()
+		self.__tuning.set_correction_ppm(value)
 	
 	@exported_value(ctor_fn=lambda self: convert_osmosdr_range(
 			self.__source.get_gain_range(ch), strict=False))
