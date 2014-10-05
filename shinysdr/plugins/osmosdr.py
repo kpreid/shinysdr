@@ -278,8 +278,10 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
 			mode = 0
 		self.__source.set_iq_balance_mode(mode, ch)
 	
+	# add_zero because zero means automatic setting based on sample rate.
+	# TODO: Display automaticness in the UI rather than having a zero value.
 	@exported_value(ctor_fn=lambda self: convert_osmosdr_range(
-		self.__source.get_bandwidth_range(ch)))
+		self.__source.get_bandwidth_range(ch), add_zero=True))
 	def get_bandwidth(self):
 		return self.__source.get_bandwidth(ch)
 	
