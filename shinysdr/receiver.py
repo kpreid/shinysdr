@@ -58,13 +58,15 @@ class Receiver(gr.hier_block2, ExportedState):
 			rec_freq=100.0,
 			audio_gain=-6,
 			audio_pan=0,
+			audio_channels=0,
 			context=None):
 		assert input_rate > 0
+		assert audio_channels == 2
 		gr.hier_block2.__init__(
 			# str() because insists on non-unicode
 			self, str('%s receiver' % (mode,)),
 			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
-			gr.io_signature(2, 2, gr.sizeof_float * 1),
+			gr.io_signature(audio_channels, audio_channels, gr.sizeof_float * 1),
 		)
 		
 		if lookup_mode(mode) is None:

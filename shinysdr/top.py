@@ -37,9 +37,6 @@ from shinysdr.receiver import Receiver
 from shinysdr.signals import SignalType
 
 
-_num_audio_channels = 2
-
-
 class ReceiverCollection(CollectionState):
 	implements(IWritableCollection)
 	
@@ -93,6 +90,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 		self.accessories = CollectionState(accessories)
 		
 		# Audio stream bits
+		self.__audio_channels = 2  # to be made variable in the future
 		self.audio_resampler_cache = {}
 		self.audio_queue_sinks = {}
 		
@@ -153,7 +151,8 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 
 	def add_audio_queue(self, queue, queue_rate):
 		# TODO: place limit on maximum requested sample rate
-		self.audio_queue_sinks[queue] = (queue_rate, AudioQueueSink(queue))
+		self.audio_queue_sinks[queue] = (queue_rate,
+			AudioQueueSink(channels=self.__audio_channels, queue=queue))
 		
 		self.__needs_reconnect = True
 		self._do_connect()
@@ -235,8 +234,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 			
 			# recreated each time because reusing an add_ff w/ different
 			# input counts fails; TODO: report/fix bug
-			audio_sum_l = blocks.add_ff()
-			audio_sum_r = blocks.add_ff()
+			audio_sums = [blocks.add_ff() for _ in xrange(self.__audio_channels)]
 			
 			audio_sum_index = 0
 			for key, receiver in self._receivers.iteritems():
@@ -250,22 +248,17 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 					self.connect(self.__rx_driver, receiver)
 					receiver_rate = receiver.get_output_type().get_sample_rate()
 					if receiver_rate == self.__audio_bus_rate:
-						self.connect(
-							(receiver, 0),
-							(audio_sum_l, audio_sum_index))
-						self.connect(
-							(receiver, 1),
-							(audio_sum_r, audio_sum_index))
+						for ch in xrange(self.__audio_channels):
+							self.connect(
+								(receiver, ch),
+								(audio_sums[ch], audio_sum_index))
 					else:
-						self.connect(
-							(receiver, 0),
-							# TODO pool
-							make_resampler(receiver_rate, self.__audio_bus_rate),
-							(audio_sum_l, audio_sum_index))
-						self.connect(
-							(receiver, 1),
-							make_resampler(receiver_rate, self.__audio_bus_rate),
-							(audio_sum_r, audio_sum_index))
+						for ch in xrange(self.__audio_channels):
+							self.connect(
+								(receiver, ch),
+								# TODO pool these resamplers
+								make_resampler(receiver_rate, self.__audio_bus_rate),
+								(audio_sums[ch], audio_sum_index))
 					audio_sum_index += 1
 			
 			if audio_sum_index > 0:
@@ -274,27 +267,26 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 					used_resamplers = set()
 					for (queue_rate, sink) in self.audio_queue_sinks.itervalues():
 						if queue_rate == self.__audio_bus_rate:
-							self.connect(audio_sum_l, (sink, 0))
-							self.connect(audio_sum_r, (sink, 1))
+							for ch in xrange(self.__audio_channels):
+								self.connect(audio_sums[ch], (sink, ch))
 						else:
 							if queue_rate not in self.audio_resampler_cache:
 								# Moderately expensive due to the internals using optfir
 								log.msg('Flow graph: Constructing resampler for audio rate %i' % queue_rate)
-								self.audio_resampler_cache[queue_rate] = (
-									make_resampler(self.__audio_bus_rate, queue_rate),
+								self.audio_resampler_cache[queue_rate] = tuple(
 									make_resampler(self.__audio_bus_rate, queue_rate)
-								)
+									for _ in xrange(self.__audio_channels))
 							resamplers = self.audio_resampler_cache[queue_rate]
 							used_resamplers.add(resamplers)
-							self.connect(resamplers[0], (sink, 0))
-							self.connect(resamplers[1], (sink, 1))
+							for ch in xrange(self.__audio_channels):
+								self.connect(resamplers[ch], (sink, ch))
 					for resamplers in used_resamplers:
-						self.connect(audio_sum_l, resamplers[0])
-						self.connect(audio_sum_r, resamplers[1])
+						for ch in xrange(self.__audio_channels):
+							self.connect(audio_sums[ch], resamplers[ch])
 				else:
 					# no stream sinks, gnuradio requires a dummy sink
-					self.connect(audio_sum_l, blocks.null_sink(gr.sizeof_float))
-					self.connect(audio_sum_r, blocks.null_sink(gr.sizeof_float))
+					for ch in xrange(self.__audio_channels):
+						self.connect(audio_sums[ch], blocks.null_sink(gr.sizeof_float))
 		
 			self._recursive_unlock()
 			log.msg('Flow graph: ...done reconnecting.')
@@ -365,6 +357,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 			mode=mode,
 			input_rate=self.input_rate,
 			input_center_freq=self.input_freq,
+			audio_channels=self.__audio_channels,
 			context=facet,
 		)
 		receiver.state_from_json(state)
@@ -427,19 +420,19 @@ class IHasFrequency(Interface):
 
 
 class AudioQueueSink(gr.hier_block2):
-	def __init__(self, queue):
+	def __init__(self, channels, queue):
 		gr.hier_block2.__init__(
 			self, 'ShinySDR AudioQueueSink',
-			gr.io_signature(2, 2, gr.sizeof_float),
+			gr.io_signature(channels, channels, gr.sizeof_float),
 			gr.io_signature(0, 0, 0),
 		)
 		sink = blocks.message_sink(
-			gr.sizeof_float * _num_audio_channels,
+			gr.sizeof_float * channels,
 			queue,
 			True)
-		interleaver = blocks.streams_to_vector(gr.sizeof_float, _num_audio_channels)
-		self.connect((self, 0), (interleaver, 0))
-		self.connect((self, 1), (interleaver, 1))
+		interleaver = blocks.streams_to_vector(gr.sizeof_float, channels)
+		for ch in xrange(channels):
+			self.connect((self, ch), (interleaver, ch))
 		self.connect(interleaver, sink)
 
 

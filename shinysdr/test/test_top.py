@@ -19,6 +19,8 @@ from __future__ import absolute_import, division
 
 from twisted.trial import unittest
 
+from gnuradio import gr
+
 from shinysdr.top import Top
 from shinysdr.plugins import simulate
 
@@ -52,3 +54,10 @@ class TestTop(unittest.TestCase):
 		top = Top(devices={'s1': simulate.SimulatedDevice(freq=0)})
 		(_, receiver) = top.add_receiver('NONSENSE', key='a')
 		self.assertEqual(receiver.get_mode(), 'AM')
+	
+	def test_audio_queue_smoke(self):
+		top = Top(devices={'s1': simulate.SimulatedDevice(freq=0)})
+		queue = gr.msg_queue()
+		top.set_unpaused(True)  # there should be an attempted start
+		top.add_audio_queue(queue, 48000)
+		top.remove_audio_queue(queue)
