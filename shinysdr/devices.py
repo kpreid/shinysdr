@@ -287,32 +287,44 @@ __all__.append('FrequencyShift')
 
 
 def AudioDevice(
-		device_name='',  # may be used positionally, not recommented
+		rx_device='',  # may be used positionally, not recommented
+		tx_device=None,
 		name=None,
 		sample_rate=44100,
 		quadrature_as_stereo=False):
-	device_name = str(device_name)
+	rx_device = str(rx_device)
+	if tx_device is not None:
+		tx_device = str(tx_device)
 		
 	if name is None:
-		name = u'Audio ' + device_name
+		full_name = u'Audio ' + rx_device
+		if tx_device is not None:
+			full_name += '/' + tx_device
 	else:
-		name = unicode(name)
+		full_name = unicode(name)
 
 	rx_driver = _AudioRXDriver(
-		name=name,
-		device_name=device_name,
+		device_name=rx_device,
 		sample_rate=sample_rate,
 		quadrature_as_stereo=quadrature_as_stereo)
+	if tx_device is not None:
+		tx_driver = _AudioTXDriver(
+			device_name=tx_device,
+			sample_rate=sample_rate,
+			quadrature_as_stereo=quadrature_as_stereo)
+	else:
+		tx_driver = nullExportedState
 	
 	return Device(
-		name=name,
+		name=full_name,
 		vfo_cell=LooseCell(
 			key='freq',
 			value=0.0,
 			ctor=Range([(0.0, 0.0)]),
 			writable=True,
 			persists=False),
-		rx_driver=rx_driver)
+		rx_driver=rx_driver,
+		tx_driver=tx_driver)
 
 
 __all__.append('AudioDevice')
@@ -323,10 +335,8 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
 	
 	def __init__(self,
 			device_name,
-			name,
 			sample_rate,
 			quadrature_as_stereo):
-		self.__name = name
 		self.__device_name = device_name
 		self.__sample_rate = sample_rate
 		self.__quadrature_as_stereo = quadrature_as_stereo
@@ -341,7 +351,7 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
 				sample_rate=self.__sample_rate)
 		
 		gr.hier_block2.__init__(
-			self, str(name),
+			self, type(self).__name__,
 			gr.io_signature(0, 0, 0),
 			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
 		)
@@ -358,11 +368,51 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
 			self.connect((self.__source, 1), (combine, 1))
 		# TODO: If not quadrature, we always discard the right channel. Is there a use for it? Would summing mono input reduce noise?
 	
-	def __str__(self):
-		return self.__name
-
 	@exported_value(ctor=SignalType)
 	def get_output_type(self):
+		return self.__signal_type
+
+	def get_tune_delay(self):
+		# TODO: Tune delay should be associated with VFOs (or devices) too
+		return 0.0
+	
+	def notify_reconnecting_or_restarting(self):
+		pass
+
+
+class _AudioTXDriver(ExportedState, gr.hier_block2):
+	implements(ITXDriver)
+	
+	def __init__(self,
+			device_name,
+			sample_rate,
+			quadrature_as_stereo):
+		self.__device_name = device_name
+		self.__sample_rate = sample_rate
+		self.__quadrature_as_stereo = quadrature_as_stereo
+		
+		self.__signal_type = SignalType(
+			# TODO: type should be able to be LSB
+			kind='IQ' if quadrature_as_stereo else 'USB',
+			sample_rate=self.__sample_rate)
+		
+		gr.hier_block2.__init__(
+			self, type(self).__name__,
+			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
+			gr.io_signature(0, 0, 0),
+		)
+		
+		sink = audio.sink(
+			self.__sample_rate,
+			device_name=self.__device_name,
+			ok_to_block=True)
+		
+		split = blocks.complex_to_float(1)
+		self.connect(self, split, (sink, 0))
+		self.connect((split, 1), (sink, 1))
+
+	@exported_value(ctor=SignalType)
+	def get_input_type(self):
 		return self.__signal_type
 
 	def get_tune_delay(self):
