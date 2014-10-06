@@ -22,18 +22,22 @@ from __future__ import absolute_import, division
 from twisted.web import static
 from zope.interface import implements
 
-from gnuradio import blocks
 from gnuradio import analog
+from gnuradio import blocks
 from gnuradio import fft
+from gnuradio import gr
 from gnuradio import filter as grfilter  # don't shadow builtin
 from gnuradio.filter import firdes
 
 import math
 import os.path
 
-from shinysdr.modes import ModeDef, IDemodulator
+from shinysdr.blocks import make_resampler
+from shinysdr.modes import ModeDef, IDemodulator, IModulator
 from shinysdr.plugins.basic_demod import SimpleAudioDemodulator, design_lofi_audio_filter
-from shinysdr.values import exported_value, setter
+from shinysdr.signals import SignalType
+from shinysdr.types import Range
+from shinysdr.values import ExportedState, exported_value, setter
 from shinysdr.web import ClientResourceDef
 
 audio_modulation_index = 0.07
@@ -148,8 +152,89 @@ class VOR(SimpleAudioDemodulator):
 		return self.probe.level()
 
 
+class VORModulator(gr.hier_block2, ExportedState):
+	implements(IModulator)
+	
+	__vor_sig_freq = 30
+	__audio_rate = 10000
+	__rf_rate = 30000  # needs to be above fm_subcarrier * 2
+
+	def __init__(self, angle=0.0):
+		gr.hier_block2.__init__(
+			self, 'SimulatedDevice VOR modulator',
+			gr.io_signature(1, 1, gr.sizeof_float * 1),
+			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
+		)
+		
+		# TODO: My signal level parameters are probably wrong because this signal doesn't look like a real VOR signal
+		
+		vor_30 = analog.sig_source_f(self.__audio_rate, analog.GR_COS_WAVE, self.__vor_sig_freq, 1, 0)
+		vor_add = blocks.add_cc(1)
+		vor_audio = blocks.add_ff(1)
+		# Audio/AM signal
+		self.connect(
+			vor_30,
+			blocks.multiply_const_ff(0.3),  # M_n
+			(vor_audio, 0))
+		self.connect(
+			self,
+			blocks.multiply_const_ff(audio_modulation_index),  # M_i
+			(vor_audio, 1))
+		# Carrier component
+		self.connect(
+			analog.sig_source_c(0, analog.GR_CONST_WAVE, 0, 0, 1),
+			(vor_add, 0))
+		# AM component
+		self.__delay = blocks.delay(gr.sizeof_gr_complex, 0)  # configured by set_angle
+		self.connect(
+			vor_audio,
+			make_resampler(self.__audio_rate, self.__rf_rate),  # TODO make a complex version and do this last
+			blocks.float_to_complex(1),
+			self.__delay,
+			(vor_add, 1))
+		# FM component
+		vor_fm_mult = blocks.multiply_cc(1)
+		self.connect(  # carrier generation
+			analog.sig_source_f(self.__rf_rate, analog.GR_COS_WAVE, fm_subcarrier, 1, 0), 
+			blocks.float_to_complex(1),
+			(vor_fm_mult, 1))
+		self.connect(  # modulation
+			vor_30,
+			make_resampler(self.__audio_rate, self.__rf_rate),
+			analog.frequency_modulator_fc(2 * math.pi * fm_deviation / self.__rf_rate),
+			blocks.multiply_const_cc(0.3),  # M_d
+			vor_fm_mult,
+			(vor_add, 2))
+		self.connect(
+			vor_add,
+			self)
+		
+		# calculate and initialize delay
+		self.set_angle(angle)
+	
+	@exported_value(ctor=Range([(0, 2 * math.pi)], strict=False))
+	def get_angle(self):
+		return self.__angle
+	
+	@setter
+	def set_angle(self, value):
+		value = float(value)
+		compensation = math.pi / 180 * -6.5  # empirical, calibrated against VOR receiver (and therefore probably wrong)
+		value = value + compensation
+		value = value % (2 * math.pi)
+		phase_shift = int(self.__rf_rate / self.__vor_sig_freq * (value / (2 * math.pi)))
+		self.__delay.set_dly(phase_shift)
+		self.__angle = value
+	
+	def get_input_type(self):
+		return SignalType(kind='MONO', sample_rate=self.__audio_rate)
+	
+	def get_output_type(self):
+		return SignalType(kind='IQ', sample_rate=self.__rf_rate)
+
+
 # Twisted plugin exports
-pluginMode = ModeDef('VOR', label='VOR', demodClass=VOR)
+pluginMode = ModeDef('VOR', label='VOR', demod_class=VOR, mod_class=VORModulator)
 pluginClient = ClientResourceDef(
 	key=__name__,
 	resource=static.File(os.path.join(os.path.split(__file__)[0], 'client')),

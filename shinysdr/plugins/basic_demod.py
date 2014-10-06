@@ -26,7 +26,7 @@ from gnuradio import filter as grfilter  # don't shadow builtin
 from gnuradio.analog import fm_emph
 from gnuradio.filter import firdes
 
-from shinysdr.modes import ModeDef, IDemodulator, ITunableDemodulator
+from shinysdr.modes import ModeDef, IDemodulator, IModulator, ITunableDemodulator
 from shinysdr.blocks import MultistageChannelFilter, make_resampler
 from shinysdr.signals import SignalType
 from shinysdr.types import Range
@@ -178,7 +178,7 @@ class IQDemodulator(SimpleAudioDemodulator):
 		self.connect_audio_output((self.split_block, 0), (self.split_block, 1))
 
 
-pluginDef_iq = ModeDef('IQ', label='Raw I/Q', demodClass=IQDemodulator)
+pluginDef_iq = ModeDef('IQ', label='Raw I/Q', demod_class=IQDemodulator)
 
 
 class AMDemodulator(SimpleAudioDemodulator):
@@ -210,7 +210,32 @@ class AMDemodulator(SimpleAudioDemodulator):
 		self.connect_audio_output(dc_blocker)
 
 
-pluginDef_am = ModeDef('AM', label='AM', demodClass=AMDemodulator)
+class AMModulator(gr.hier_block2, ExportedState):
+	implements(IModulator)
+	
+	def __init__(self, rate=10000):
+		gr.hier_block2.__init__(
+			self, type(self).__name__,
+			gr.io_signature(1, 1, gr.sizeof_float * 1),
+			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
+		)
+		
+		self.__rate = rate
+		
+		self.connect(
+			self,
+			blocks.float_to_complex(1),
+			blocks.add_const_cc(1),
+			self)
+	
+	def get_input_type(self):
+		return SignalType(kind='MONO', sample_rate=self.__rate)
+	
+	def get_output_type(self):
+		return SignalType(kind='IQ', sample_rate=self.__rate)
+
+
+pluginDef_am = ModeDef('AM', label='AM', demod_class=AMDemodulator, mod_class=AMModulator)
 
 
 class FMDemodulator(SimpleAudioDemodulator):
@@ -283,7 +308,36 @@ class NFMDemodulator(FMDemodulator):
 			**kwargs)
 
 
-pluginDef_nfm = ModeDef('NFM', label='Narrow FM', demodClass=NFMDemodulator)
+class NFMModulator(gr.hier_block2, ExportedState):
+	implements(IModulator)
+	
+	def __init__(self, audio_rate=10000, rf_rate=20000):
+		gr.hier_block2.__init__(
+			self, type(self).__name__,
+			gr.io_signature(1, 1, gr.sizeof_float * 1),
+			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
+		)
+		
+		self.__audio_rate = audio_rate
+		self.__rf_rate = rf_rate
+		
+		self.connect(
+			self,
+			analog.nbfm_tx(
+				audio_rate=audio_rate,
+				quad_rate=rf_rate,
+				tau=75e-6,
+				max_dev=5e3),
+			self)
+	
+	def get_input_type(self):
+		return SignalType(kind='MONO', sample_rate=self.__audio_rate)
+	
+	def get_output_type(self):
+		return SignalType(kind='IQ', sample_rate=self.__rf_rate)
+
+
+pluginDef_nfm = ModeDef('NFM', label='Narrow FM', demod_class=NFMDemodulator, mod_class=NFMModulator)
 
 
 class WFMDemodulator(FMDemodulator):
@@ -378,7 +432,7 @@ class WFMDemodulator(FMDemodulator):
 			self.connect_audio_output(resampler, resampler)
 
 
-pluginDef_wfm = ModeDef('WFM', label='Broadcast FM', demodClass=WFMDemodulator)
+pluginDef_wfm = ModeDef('WFM', label='Broadcast FM', demod_class=WFMDemodulator)
 
 
 _ssb_max_agc = 1.5
@@ -472,6 +526,31 @@ class SSBDemodulator(SimpleAudioDemodulator):
 		return 10 * math.log10(self.agc_block.gain())
 
 
-pluginDef_lsb = ModeDef('LSB', label='SSB (L)', demodClass=SSBDemodulator)
-pluginDef_usb = ModeDef('USB', label='SSB (U)', demodClass=SSBDemodulator)
-pluginDef_cw = ModeDef('CW', label='CW', demodClass=SSBDemodulator)
+class DSBModulator(gr.hier_block2, ExportedState):
+	implements(IModulator)
+	
+	def __init__(self, rate=8000):
+		gr.hier_block2.__init__(
+			self, type(self).__name__,
+			gr.io_signature(1, 1, gr.sizeof_float * 1),
+			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
+		)
+		
+		self.__rate = rate
+		
+		self.connect(
+			self,
+			blocks.float_to_complex(1),
+			self)
+	
+	def get_input_type(self):
+		return SignalType(kind='MONO', sample_rate=self.__rate)
+	
+	def get_output_type(self):
+		return SignalType(kind='IQ', sample_rate=self.__rate)
+
+
+# TODO: implement SSB, not DSB, modulator
+pluginDef_lsb = ModeDef('LSB', label='SSB (L)', demod_class=SSBDemodulator, mod_class=DSBModulator)
+pluginDef_usb = ModeDef('USB', label='SSB (U)', demod_class=SSBDemodulator, mod_class=DSBModulator)
+pluginDef_cw = ModeDef('CW', label='CW', demod_class=SSBDemodulator, mod_class=DSBModulator)

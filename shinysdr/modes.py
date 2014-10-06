@@ -56,6 +56,30 @@ class IDemodulator(Interface):
 __all__.append('IDemodulator')
 
 
+class IModulator(Interface):
+	def can_set_mode(mode):
+		'''
+		Return whether this modulator can reconfigure itself to modulate the specified mode.
+		
+		If it returns False, it will typically be replaced with a newly created modulator.
+		'''
+	
+	def set_mode(mode):
+		'''
+		Per can_set_mode.
+		'''
+	
+	def get_input_type():
+		'''
+		Return the SignalType of the modulator's required input, which must currently be mono audio at any sample rate.
+		'''
+	
+	def get_output_type():
+		'''
+		Return the SignalType of the modulator's output, which must currently be IQ at any sample rate.
+		'''
+
+
 class ITunableDemodulator(IDemodulator):
 	def set_rec_freq(freq):
 		'''
@@ -78,10 +102,11 @@ class ModeDef(object):
 	implements(IPlugin, _IModeDef)
 	
 	# Twisted plugin system caches whether-a-plugin-class-was-found permanently, so we need to avoid _not_ having a ModeDef if the plugin has some sort of dependency it checks -- thus the 'available' flag can be used to hide a mode while still having an _IModeDef
-	def __init__(self, mode, label, demodClass, available=True):
+	def __init__(self, mode, label, demod_class, mod_class=None, available=True):
 		self.mode = mode
 		self.label = label
-		self.demodClass = demodClass
+		self.demod_class = demod_class
+		self.mod_class = mod_class
 		self.available = available
 
 

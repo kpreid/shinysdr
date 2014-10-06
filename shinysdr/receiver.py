@@ -257,7 +257,7 @@ class Receiver(gr.hier_block2, ExportedState):
 		mode_def = lookup_mode(mode)
 		if mode_def is None:
 			raise ValueError('Unknown mode: ' + mode)
-		clas = mode_def.demodClass
+		clas = mode_def.demod_class
 
 		# TODO: extend state_from_json so we can decide to load things with keyword args and lose the init dict/state dict distinction
 		init = {}

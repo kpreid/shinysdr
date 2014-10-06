@@ -123,5 +123,5 @@ class _Dump1090ProcessProtocol(ProcessProtocol):
 
 
 # TODO: Arrange for a way for the user to see why it is unavailable.
-pluginDef = ModeDef('MODE-S', label='Mode S', demodClass=ModeSDemodulator,
+pluginDef = ModeDef('MODE-S', label='Mode S', demod_class=ModeSDemodulator,
 	available=test_subprocess(['dump1090', '--help'], '--enable-agc'))

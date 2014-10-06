@@ -144,5 +144,5 @@ class MultimonNGProcessProtocol(ProcessProtocol):
 
 
 # TODO: Arrange for a way for the user to see why it is unavailable.
-pluginDef_APRS = ModeDef('APRS', label='APRS', demodClass=MultimonNGDemodulator,
+pluginDef_APRS = ModeDef('APRS', label='APRS', demod_class=MultimonNGDemodulator,
 	available=test_subprocess('multimon-ng -h; exit 0', 'available demodulators:', shell=True))
