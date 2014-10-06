@@ -18,17 +18,65 @@
 from __future__ import absolute_import, division
 
 from twisted.trial import unittest
+from zope.interface import implements  # available via Twisted
+
+from gnuradio import gr
 
 # Note: not testing _ConstantVFOCell, it's just a useful utility
-from shinysdr.devices import _ConstantVFOCell, Device, IDevice, merge_devices
+from shinysdr.devices import _ConstantVFOCell, Device, IDevice, IRXDriver, ITXDriver, merge_devices
 from shinysdr.types import Range
-from shinysdr.values import ExportedState, LooseCell
+from shinysdr.values import ExportedState, LooseCell, nullExportedState
 
 
 class TestDevice(unittest.TestCase):
 	def test_name(self):
 		self.assertEqual(u'x', Device(name='x').get_name())
 		self.assertEqual(None, Device().get_name())
+	
+	def test_rx_none(self):
+		d = Device()
+		self.assertEqual(False, d.can_receive())
+		self.assertEqual(nullExportedState, d.get_rx_driver())
+	
+	def test_rx_some(self):
+		rxd = _TestRXDriver()
+		d = Device(rx_driver=rxd)
+		self.assertEqual(True, d.can_receive())
+		self.assertEqual(rxd, d.get_rx_driver())
+	
+	def test_tx_none(self):
+		d = Device()
+		self.assertEqual(False, d.can_receive())
+		self.assertEqual(nullExportedState, d.get_tx_driver())
+	
+	def test_tx_some(self):
+		txd = _TestTXDriver()
+		d = Device(tx_driver=txd)
+		self.assertEqual(True, d.can_transmit())
+		self.assertEqual(txd, d.get_tx_driver())
+	
+	# TODO VFO tests
+	# TODO components tests
+
+
+class _TestRXDriver(ExportedState):
+	implements(IRXDriver)
+	
+	def get_output_type(self):
+		return SignalType('IQ', 1)
+
+	def get_tune_delay(self):
+		return 0.0
+	
+	def notify_reconnecting_or_restarting(self):
+		pass
+
+
+class _TestTXDriver(ExportedState):
+	implements(ITXDriver)
+	
+	def get_input_type(self):
+		return SignalType('IQ', 1)
 
 
 class TestMergeDevices(unittest.TestCase):

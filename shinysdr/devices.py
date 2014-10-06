@@ -145,7 +145,7 @@ class Device(ExportedState):
 		return self.rx_driver is not nullExportedState
 	
 	def can_transmit(self):
-		return self.rx_driver is not nullExportedState
+		return self.tx_driver is not nullExportedState
 	
 	def can_tune(self):
 		return self.__vfo_cell is not _stub_vfo
