@@ -154,7 +154,7 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
 
 
 _interp_taps = firdes.low_pass(
-	1,  # gain
+	_SimulatedRXDriver.rf_rate / _SimulatedRXDriver.audio_rate,  # gain
 	_SimulatedRXDriver.rf_rate,
 	_SimulatedRXDriver.audio_rate / 2,
 	_SimulatedRXDriver.audio_rate * 0.2,
