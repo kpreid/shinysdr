@@ -227,8 +227,6 @@ h2 input {
   background: #555;
   color: white;
 }
-/*
-TODO: These no longer work due to some change in Chrome's handling of clicks on the CSS-auto-hidden buttons. Disabled until we get around to fixing them, or find some other UI technique that's plausibly appropriate for touchscreens.
 .knob-spin-button-shim {
   position: absolute;
   right: 50%;
@@ -250,7 +248,7 @@ TODO: These no longer work due to some change in Chrome's handling of clicks on 
   padding: 0;
   margin: 0;
   display: block;
-}*/
+}
 
 /* widgets: frequency scale */
 .freqscale {
