@@ -54,8 +54,14 @@ define(['./values', './events', './database', './network', './maps', './widget',
   
   // TODO get url from server
   network.externalGet('/client/plugin-index.json', 'text', function gotPluginIndex(jsonstr) {
-    var names = Array.prototype.slice.call(JSON.parse(jsonstr));
-    requirejs(names, function (plugins) {
+    var pluginIndex = JSON.parse(jsonstr);
+    Array.prototype.forEach.call(pluginIndex.css, function (cssUrl) {
+      var link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = String(cssUrl);
+      document.querySelector('head').appendChild(link);
+    })
+    requirejs(Array.prototype.slice.call(pluginIndex.js), function (plugins) {
       connectRadio();
     });
   });

@@ -471,4 +471,4 @@ def _parse_telemetry_value(facts, errors, value_str, channel):
 plugin_client = ClientResourceDef(
 	key=__name__,
 	resource=static.File(os.path.join(os.path.split(__file__)[0], 'client')),
-	loadURL='aprs.js')
+	load_js_path='aprs.js')

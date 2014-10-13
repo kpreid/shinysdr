@@ -605,10 +605,11 @@ class IClientResourceDef(Interface):
 class ClientResourceDef(object):
 	implements(IPlugin, IClientResourceDef)
 	
-	def __init__(self, key, resource, loadURL=None):
+	def __init__(self, key, resource, load_css_path=None, load_js_path=None):
 		self.key = key
 		self.resource = resource
-		self.loadURL = loadURL
+		self.load_css_path = load_css_path
+		self.load_js_path = load_js_path
 
 
 def _make_static(filePath):
@@ -726,17 +727,27 @@ class WebService(Service):
 			os.path.dirname(__file__), 'deps/require.js')))
 		
 		# Plugin resources
-		loadList = []
-		pluginResources = Resource()
-		client.putChild('plugins', pluginResources)
-		for resourceDef in getPlugins(IClientResourceDef, shinysdr.plugins):
-			pluginResources.putChild(resourceDef.key, resourceDef.resource)
-			if resourceDef.loadURL is not None:
-				# TODO constrain value
-				loadList.append('/client/plugins/' + urllib.quote(resourceDef.key, safe='') + '/' + resourceDef.loadURL)
+		load_list_css = []
+		load_list_js = []
+		plugin_resources = Resource()
+		client.putChild('plugins', plugin_resources)
+		for resource_def in getPlugins(IClientResourceDef, shinysdr.plugins):
+			# Add the plugin's resource to static serving
+			plugin_resources.putChild(resource_def.key, resource_def.resource)
+			plugin_resource_url = '/client/plugins/' + urllib.quote(resource_def.key, safe='') + '/'
+			# Tell the client to load the plugins
+			# TODO constrain path values to be relative
+			if resource_def.load_css_path is not None:
+				load_list_css.append(plugin_resource_url + resource_def.load_cs_path)
+			if resource_def.load_js_path is not None:
+				# TODO constrain value to be in the directory
+				load_list_js.append(plugin_resource_url + resource_def.load_js_path)
 		
 		# Client plugin list
-		client.putChild('plugin-index.json', static.Data(_json_encoder_for_values.encode(loadList).encode('utf-8'), 'application/json'))
+		client.putChild('plugin-index.json', static.Data(_json_encoder_for_values.encode({
+			u'css': load_list_css,
+			u'js': load_list_js,
+		}).encode('utf-8'), 'application/json'))
 		
 		self.__site = server.Site(serverRoot)
 		self.__ws_port_obj = None
