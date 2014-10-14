@@ -202,6 +202,7 @@ def execute_config(config_obj, config_file):
 
 def make_default_config():
 	return '''\
+import shinysdr.devices
 import shinysdr.plugins.osmosdr
 import shinysdr.plugins.simulate
 
@@ -210,7 +211,12 @@ import shinysdr.plugins.simulate
 # If desired, add sample_rate=<n> parameter.
 # Use shinysdr.plugins.osmosdr.OsmoSDRProfile to set more parameters
 # to make the best use of your specific hardware's capabilities.
-config.devices.add(u'osmo', shinysdr.plugins.osmosdr.OsmoSDRDevice(''))
+config.devices.add(u'osmo',
+	shinysdr.plugins.osmosdr.OsmoSDRDevice(''),
+	
+	# Set the location of your station/antenna, for the map UI.
+	# PositionedDevice(latitude=45.00, longitude=45.00),
+	)
 
 # For hardware which uses a sound-card as its ADC or appears as an
 # audio device.

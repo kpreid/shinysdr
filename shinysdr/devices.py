@@ -373,3 +373,27 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
 	
 	def notify_reconnecting_or_restarting(self):
 		pass
+
+
+def PositionedDevice(latitude, longitude):
+	'''
+	Combine with other devices to specify a device's location on the Earth.
+	'''
+	return Device(components={'position': _PositionedDeviceComponent(latitude, longitude)})
+
+
+class IPositionedDevice(Interface):
+	'''
+	Client marker interface only.
+	'''
+
+
+class _PositionedDeviceComponent(ExportedState):
+	implements(IPositionedDevice)
+	
+	def __init__(self, latitude, longitude):
+		self.__position = float(latitude), float(longitude)
+
+	@exported_value()
+	def get_position(self):
+		return self.__position

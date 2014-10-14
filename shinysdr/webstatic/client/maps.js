@@ -38,8 +38,14 @@ define(['./values'], function (values) {
     var olm = new OpenLayers.Map(element, {
       projection: 'EPSG:3857',
       layers: [baseLayer],
-      center: projectedPoint(37.663576, -122.271652).getBounds().getCenterLonLat(),
-      zoom: 9
+      // Center and zoom will be updated later with station location if available.
+      center: new OpenLayers.LonLat(0, 0),
+      zoom: 1
+    });
+    
+    var positionInitialized = false;
+    olm.events.register('movestart', olm, function () {
+      positionInitialized = true;
     });
     
     // Since we don't have a data-ful base layer, add a grid to make it not bare.
@@ -264,6 +270,41 @@ define(['./values'], function (values) {
       updateOnIndex.scheduler = scheduler;
       updateOnIndex();
     }
+
+    addIndexLayer('Station Position', 'shinysdr.devices.IPositionedDevice', {
+      rendererOptions: {},
+      styleMap: new OpenLayers.StyleMap({
+        'default':new OpenLayers.Style({
+          pointRadius: 6,
+          fillColor: "#cc7777",
+          fillOpacity: 0.4, 
+          strokeColor: "#cc0000"
+        })
+      })
+    }, function(devicePositioning, interested, addFeature, drawFeature) {
+      // TODO: Because devicePositioning is a device component, we don't have the device itself in order to display the device's name. However, the Index is in a position to provide "containing object" information and arguably should.
+      var positionCell = devicePositioning.position;
+      
+      var feature = new OpenLayers.Feature.Vector();
+      addFeature(feature);
+      
+      function update() {
+        if (!interested()) return;
+        var position = positionCell.depend(update);
+        feature.geometry = projectedPoint(+position[0], +position[1]);
+        drawFeature(feature);
+        
+        // Borrow station position to set initial map view
+        if (!positionInitialized) {
+          positionInitialized = true;
+          olm.setCenter(
+            feature.geometry.getBounds().getCenterLonLat(),
+            9); // zoom level
+        }
+      }
+      update.scheduler = scheduler;
+      update();
+    });
 
     plugins.forEach(function(pluginFunc) {
       // TODO provide an actually designed interface
