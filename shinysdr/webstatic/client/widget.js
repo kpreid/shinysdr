@@ -476,8 +476,7 @@ define(['./values', './events'], function (values, events) {
     
     container.addEventListener('mousewheel', function(event) { // Portability note: Not in FF
       if (Math.abs(event.wheelDeltaY) > Math.abs(event.wheelDeltaX)) {
-        // TODO: works only because we're at the left edge
-        self.changeZoom(-event.wheelDeltaY, event.clientX);
+        self.changeZoom(-event.wheelDeltaY, event.clientX - container.getBoundingClientRect().left);
         event.preventDefault();
         event.stopPropagation();
       } else {
@@ -491,8 +490,7 @@ define(['./values', './events'], function (values, events) {
       function clickTune(event) {
         var firstEvent = event.type === 'mousedown';
         // compute frequency
-        // TODO: X calc works only because we're at the left edge
-        var freq = (event.clientX + container.scrollLeft) / pixelsPerHertz + leftFreq;
+        var freq = (event.clientX - container.getBoundingClientRect().left + container.scrollLeft) / pixelsPerHertz + leftFreq;
         
         if (!firstEvent && !dragReceiver) {
           // We sent the request to create a receiver, but it doesn't exist on the client yet. Do nothing.
