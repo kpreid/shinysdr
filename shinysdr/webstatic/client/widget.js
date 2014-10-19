@@ -433,13 +433,36 @@ define(['./values', './events'], function (values, events) {
       return pixelWidth * zoom;
     };
     
-    this.changeZoom = function changeZoom(delta, cursorX) {
+    function clampZoom(zoomValue) {
       var maxZoom = Math.max(
         1,  // at least min zoom,
         Math.max(
           nyquist / 10e3, // at least 10 kHz
           radioCell.get().monitor.get().freq_resolution.get() / MAX_ZOOM_BINS));
+      return Math.min(maxZoom, Math.max(1.0, zoomValue));
+    }
+    function clampScroll(scrollValue) {
+      return Math.max(0, Math.min(pixelWidth * (zoom - 1), scrollValue));
+    }
+    function startZoomUpdate() {
+      // Force scrollable range to update, for when zoom and scrollLeft change together.
+      var w = pixelWidth * zoom;
+      scrollStub.style.width = w + 'px';
+    }
+    function finishZoomUpdate(scrollValue) {
+      scrollValue = clampScroll(scrollValue);
       
+      container.scrollLeft = scrollValue;
+      fractionalScroll = scrollValue - container.scrollLeft;
+      
+      storage.setItem('zoom', String(zoom));
+      storage.setItem('scroll', String(scroll));
+      
+      // recompute with new scrollLeft/fractionalScroll
+      scheduler.callNow(prepare);
+    }
+    
+    this.changeZoom = function changeZoom(delta, cursorX) {
       cursorX += fractionalScroll;
       var cursor01 = cursorX / pixelWidth;
       
@@ -449,7 +472,7 @@ define(['./values', './events'], function (values, events) {
       // Adjust and clamp zoom
       var oldZoom = zoom;
       zoom *= Math.exp(-delta * 0.0005);
-      zoom = Math.min(maxZoom, Math.max(1.0, zoom));
+      zoom = clampZoom(zoom);
       
       // Recompute parameters now so we can adjust pan (scroll)
       scheduler.callNow(prepare);
@@ -457,21 +480,13 @@ define(['./values', './events'], function (values, events) {
       var unadjustedCursorFreq = this.leftVisibleFreq() * (1-cursor01) + this.rightVisibleFreq() * cursor01;
       
       // Force scrollable range to update
-      var w = pixelWidth * zoom;
-      scrollStub.style.width = w + 'px';
+      startZoomUpdate();
       // Current virtual scroll
       var scroll = container.scrollLeft + fractionalScroll;
       // Adjust
-      scroll = Math.max(0, Math.min(w - pixelWidth, scroll + (cursorFreq - unadjustedCursorFreq) * pixelsPerHertz));
+      scroll = scroll + (cursorFreq - unadjustedCursorFreq) * pixelsPerHertz;
       // Write back
-      container.scrollLeft = scroll;
-      fractionalScroll = scroll - container.scrollLeft;
-      
-      storage.setItem('zoom', String(zoom));
-      storage.setItem('scroll', String(scroll));
-      
-      // recompute with new scrollLeft/fractionalScroll
-      scheduler.callNow(prepare);
+      finishZoomUpdate(scroll);
     };
     
     // TODO: mousewheel event is allegedly nonstandard and inconsistent among browsers, notably not in Firefox (not that we're currently FF-compatible due to the socket issue).
@@ -483,8 +498,8 @@ define(['./values', './events'], function (values, events) {
         event.stopPropagation();
       } else {
         // Horizontal scrolling (or diagonal w/ useless vertical component): if hits edge, change frequency.
-        if (event.wheelDeltaX > 0 && container.scrollLeft == 0
-            || event.wheelDeltaX < 0 && container.scrollLeft == (container.scrollWidth - container.clientWidth)) {
+        if (event.wheelDeltaX > 0 && cacheScrollLeft == 0
+            || event.wheelDeltaX < 0 && cacheScrollLeft == (container.scrollWidth - container.clientWidth)) {
           var freqCell = radioCell.get().source.get().freq;
           freqCell.set(freqCell.get() + (event.wheelDeltaX * -0.12) / pixelsPerHertz);
           
@@ -494,13 +509,95 @@ define(['./values', './events'], function (values, events) {
       }
     }, true);
     
+    function clientXToViewportLeft(clientX) {
+      return clientX - container.getBoundingClientRect().left;
+    }
+    function clientXToHardLeft(clientX) {  // left in the content not the viewport
+      return clientXToViewportLeft(clientX) + cacheScrollLeft;
+    }
+    function clientXToFreq(clientX) {
+      return clientXToHardLeft(clientX) / pixelsPerHertz + leftFreq;
+    }
+    
+    var activeTouches = Object.create(null);
+    
+    container.addEventListener('touchstart', function (event) {
+      // Prevent mouse-emulation handling
+      event.preventDefault();
+      
+      // Record the frequency the user has touched
+      Array.prototype.forEach.call(event.changedTouches, function (touch) {
+        activeTouches[touch.identifier] = {
+          grabFreq: clientXToFreq(touch.clientX),
+          nowView: clientXToViewportLeft(touch.clientX)
+        };
+      });
+    }, true);
+    
+    container.addEventListener('touchmove', function (event) {
+      Array.prototype.forEach.call(event.changedTouches, function (touch) {
+        activeTouches[touch.identifier].nowView = clientXToViewportLeft(touch.clientX);
+      });
+      
+      var identifiers = Object.keys(activeTouches);
+      if (identifiers.length >= 2) {
+        // Zoom using first two touches
+        var f1 = activeTouches[0].grabFreq;
+        var f2 = activeTouches[1].grabFreq;
+        var p1 = activeTouches[0].nowView;
+        var p2 = activeTouches[1].nowView;
+        var newPixelsPerHertz = Math.abs(p2 - p1) / Math.abs(f2 - f1);
+        var unzoomedPixelsPerHertz = pixelWidth / (rightFreq - leftFreq);
+        zoom = clampZoom(newPixelsPerHertz / unzoomedPixelsPerHertz);
+        startZoomUpdate();
+      }
+      
+      // Compute scroll pos, using NEW zoom value
+      var scrolls = [];
+      for (var idString in activeTouches) {
+        var info = activeTouches[idString];
+        var grabbedFreq = info.grabFreq;
+        var touchedPixelNow = info.nowView;
+        var newScrollLeft = (grabbedFreq - leftFreq) * pixelsPerHertz - touchedPixelNow;
+        scrolls.push(newScrollLeft);
+      }
+      
+      var avgScroll = scrolls.reduce(function (a, b) { return a + b; }, 0) / scrolls.length;
+      
+      // Frequency pan
+      var clampedScroll = clampScroll(avgScroll);
+      var overrun = avgScroll - clampedScroll;
+      if (overrun != 0) {
+        // TODO repeated code -- abstract "cell to use to change freq"
+        var freqCell = radioCell.get().source.get().freq;
+        freqCell.set(freqCell.get() + overrun / pixelsPerHertz);
+      }
+      
+      finishZoomUpdate(clampedScroll);
+    }, true);
+    
+    container.addEventListener('touchend', function (event) {
+      // TODO do click-to-tune here.
+      event.preventDefault();
+      Array.prototype.forEach.call(event.changedTouches, function (touch) {
+        delete activeTouches[touch.identifier];
+      });
+    }, true);
+    
+    container.addEventListener('touchcancel', function (event) {
+      event.preventDefault();
+      Array.prototype.forEach.call(event.changedTouches, function (touch) {
+        delete activeTouches[touch.identifier];
+      });
+    }, true);
+    
     this.addClickToTune = function addClickToTune(element) {
       var dragReceiver = undefined;
       
       function clickTune(event) {
         var firstEvent = event.type === 'mousedown';
         // compute frequency
-        var freq = (event.clientX - container.getBoundingClientRect().left + container.scrollLeft) / pixelsPerHertz + leftFreq;
+        var freq = clientXToFreq(event.clientX);
         
         if (!firstEvent && !dragReceiver) {
           // We sent the request to create a receiver, but it doesn't exist on the client yet. Do nothing.
