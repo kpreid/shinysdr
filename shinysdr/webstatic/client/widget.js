@@ -520,19 +520,25 @@ define(['./values', './events'], function (values, events) {
     }
     
     var activeTouches = Object.create(null);
+    var mayTapToTune = false;
     
     container.addEventListener('touchstart', function (event) {
       // Prevent mouse-emulation handling
       event.preventDefault();
       
+      // Tap-to-tune requires exactly one touch just starting
+      mayTapToTune = Object.keys(activeTouches) == 0 && event.changedTouches.length == 1;
+      
       // Record the frequency the user has touched
       Array.prototype.forEach.call(event.changedTouches, function (touch) {
+        var x = clientXToViewportLeft(touch.clientX);
         activeTouches[touch.identifier] = {
           grabFreq: clientXToFreq(touch.clientX),
-          nowView: clientXToViewportLeft(touch.clientX)
+          grabView: x,  // fixed
+          nowView: x  // updated later
         };
       });
-    }, true);
+    }, false);
     
     container.addEventListener('touchmove', function (event) {
       Array.prototype.forEach.call(event.changedTouches, function (touch) {
@@ -576,19 +582,35 @@ define(['./values', './events'], function (values, events) {
       finishZoomUpdate(clampedScroll);
     }, true);
     
-    container.addEventListener('touchend', function (event) {
-      // TODO do click-to-tune here.
+    function touchcancel(event) {
+      // Prevent mouse-emulation handling
       event.preventDefault();
       Array.prototype.forEach.call(event.changedTouches, function (touch) {
         delete activeTouches[touch.identifier];
       });
-    }, true);
+    }
+    container.addEventListener('touchcancel', touchcancel, true);
     
-    container.addEventListener('touchcancel', function (event) {
+    container.addEventListener('touchend', function (event) {
+      // Prevent mouse-emulation handling
       event.preventDefault();
-      Array.prototype.forEach.call(event.changedTouches, function (touch) {
-        delete activeTouches[touch.identifier];
-      });
+      
+      // Tap-to-tune
+      // TODO: The overall touch event handling is disabling clicking on frequency DB labels. We need to recognize them as event targets in _this_ bunch of handlers, so that we can decide whether a gesture is pan or tap-on-label.
+      if (mayTapToTune) {
+        var touch = event.changedTouches[0];  // known to be exactly one
+        var info = activeTouches[touch.identifier];
+        var newViewX = clientXToViewportLeft(touch.clientX);
+        if (Math.abs(newViewX - info.grabView) < 20) {  // TODO justify choice of slop
+          radioCell.get().tune({
+            freq: info.grabFreq,  // use initial touch pos, not final, because I expect it to be more precise
+            alwaysCreate: alwaysCreateReceiverFromEvent(event)
+          })
+        }
+      }
+      
+      // Forget the touch
+      touchcancel(event);
     }, true);
     
     this.addClickToTune = function addClickToTune(element) {
