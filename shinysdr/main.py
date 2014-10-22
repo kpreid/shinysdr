@@ -52,11 +52,12 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
 	if argv is None:
 		argv = sys.argv
 	
-	# Configure logging. Some log messages would be discarded if we did not set up things early
-	# TODO: Consult best practices for Python and Twisted logging.
-	# TODO: Logs which are observably relevant should be sent to the client (e.g. the warning of refusing to have more receivers active)
-	logging.basicConfig(level=logging.INFO)
-	log.startLoggingWithObserver(log.PythonLoggingObserver(loggerName='shinysdr').emit, False)
+	if not _abort_for_test:
+		# Configure logging. Some log messages would be discarded if we did not set up things early
+		# TODO: Consult best practices for Python and Twisted logging.
+		# TODO: Logs which are observably relevant should be sent to the client (e.g. the warning of refusing to have more receivers active)
+		logging.basicConfig(level=logging.INFO)
+		log.startLoggingWithObserver(log.PythonLoggingObserver(loggerName='shinysdr').emit, False)
 	
 	# Option parsing is done before importing the main modules so as to avoid the cost of initializing gnuradio if we are aborting early. TODO: Make that happen for createConfig too.
 	argParser = argparse.ArgumentParser(prog=argv[0])
