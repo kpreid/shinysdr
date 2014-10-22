@@ -95,59 +95,6 @@ _vfos = Enum({'VFOA': 'VFO A', 'VFOB': 'VFO B', 'VFOC': 'VFO C', 'currVFO': 'cur
 _passbands = Range([(0, 0)])
 
 
-_info = {
-	'Frequency': (Range([(0, 9999999999)], integer=True)),
-	'Mode': (_modes),
-	'Passband': (_passbands),
-	'VFO': (_vfos),
-	'RIT': (int),
-	'XIT': (int),
-	'PTT': (bool),
-	'DCD': (bool),
-	'Rptr Shift': (Enum({'+': '+', '-': '-'})),
-	'Rptr Offset': (int),
-	'CTCSS Tone': (int),
-	'DCS Code': (str),
-	'CTCSS Sql': (int),
-	'DCS Sql': (str),
-	'TX Frequency': (int),
-	'TX Mode': (_modes),
-	'TX Passband': (_passbands),
-	'Split': (bool),
-	'TX VFO': (_vfos),
-	'Tuning Step': (int),
-	'Antenna': (int),
-}
-
-
-_commands = {
-	'freq': ['Frequency'],
-	'mode': ['Mode', 'Passband'],
-	'vfo': ['VFO'],
-	'rit': ['RIT'],
-	'xit': ['XIT'],
-	# 'ptt': ['PTT'], # writing disabled until when we're more confident in correct functioning
-	'rptr_shift': ['Rptr Shift'],
-	'rptr_offs': ['Rptr Offset'],
-	'ctcss_tone': ['CTCSS Tone'],
-	'dcs_code': ['DCS Code'],
-	'ctcss_sql': ['CTCSS Sql'],
-	'dcs_sql': ['DCS Sql'],
-	'split_freq': ['TX Frequency'],
-	'split_mode': ['TX Mode', 'TX Passband'],
-	'split_vfo': ['Split', 'TX VFO'],
-	'ts': ['Tuning Step'],
-	# TODO: describe func, level, parm
-	'ant': ['Antenna'],
-	'powerstat': ['Power Stat'],
-}
-
-
-_how_to_command = {key: command
-	for command, keys in _commands.iteritems()
-	for key in keys}
-
-
 _cap_remap = {
 	# TODO: Make this well-founded
 	'Ant': ['Antenna'],
@@ -164,28 +111,56 @@ _cap_remap = {
 
 
 @defer.inlineCallbacks
-def connect_to_server(reactor, host='localhost', port=4532):
-	connected = defer.Deferred()
-	reactor.connectTCP(host, port, _RigctldClientFactory(connected))
-	protocol = yield connected
-	rigObj = _HamlibRig(protocol)
-	yield rigObj._ready_deferred  # allow dump_caps round trip
+def connect_to_rigctld(reactor, host='localhost', port=4532):
+	'''
+	Connect to an existing rigctld process.
+	'''
+	proxy = yield _connect_to_daemon(
+		reactor=reactor,
+		host=host,
+		port=port,
+		server_name='rigctld',
+		proxy_ctor=_HamlibRig)
 	defer.returnValue(Device(
-		vfo_cell=rigObj.state()['freq'],
-		components={'rig': rigObj}))
+		vfo_cell=proxy.state()['freq'],
+		components={'rig': proxy}))
 
 
-__all__.append('connect_to_server')
+__all__.append('connect_to_rigctld')
 
 
 @defer.inlineCallbacks
+def _connect_to_daemon(reactor, host, port, server_name, proxy_ctor):
+	connected = defer.Deferred()
+	reactor.connectTCP(host, port, _HamlibClientFactory(server_name, connected))
+	protocol = yield connected
+	proxy = proxy_ctor(protocol)
+	yield proxy._ready_deferred  # wait for dump_caps round trip
+	defer.returnValue(proxy)
+
+
 def connect_to_rig(reactor, options=None, port=4532):
 	'''
 	Start a rigctld process and connect to it.
 	
 	options: list of rigctld options, e.g. ['-m', '123', '-r', '/dev/ttyUSB0'].
-	Do not specify host or port directly.
+	Do not specify host or port in the options.
+	
+	port: A free port number to use.
 	'''
+	return _connect_to_device(
+		reactor=reactor,
+		options=options,
+		port=port,
+		daemon='rigctld',
+		connect_func=connect_to_rigctld)
+
+
+__all__.append('connect_to_rig')
+
+
+@defer.inlineCallbacks
+def _connect_to_device(reactor, options, port, daemon, connect_func):
 	if options is None:
 		options = []
 	host = '127.0.0.1'
@@ -195,7 +170,7 @@ def connect_to_rig(reactor, options=None, port=4532):
 
 	# Make sure that there isn't (as best we can check) something using the port already.
 	fake_connected = defer.Deferred()
-	reactor.connectTCP(host, port, _RigctldClientFactory(fake_connected))
+	reactor.connectTCP(host, port, _HamlibClientFactory('(probe) %s' % (daemon,), fake_connected))
 	try:
 		yield fake_connected
 		raise Exception('Something is already using port %i!' % port)
@@ -203,18 +178,21 @@ def connect_to_rig(reactor, options=None, port=4532):
 		pass
 	
 	process = subprocess.Popen(
-		args=['/usr/bin/env', 'rigctld', '-T', host, '-t', str(port)] + options,
+		args=['/usr/bin/env', daemon, '-T', host, '-t', str(port)] + options,
 		stdin=None,
 		stdout=None,
 		stderr=None,
 		close_fds=True)
 	
-	# Retry connecting with exponential backoff, because the rigctld process won't tell us when it's started listening.
-	rig_device = None
+	# Retry connecting with exponential backoff, because the daemon process won't tell us when it's started listening.
+	proxy_device = None
 	refused = None
 	for i in xrange(0, 5):
 		try:
-			rig_device = yield connect_to_server(reactor, host=host, port=port)
+			proxy_device = yield connect_func(
+				reactor=reactor,
+				host=host,
+				port=port)
 			break
 		except ConnectionRefusedError, e:
 			refused = e
@@ -222,16 +200,18 @@ def connect_to_rig(reactor, options=None, port=4532):
 	else:
 		raise refused
 	
-	rig_device.get_components()['rig'].when_closed().addCallback(lambda _: process.kill())
+	# TODO: Sometimes we fail to kill the process because there was a protocol error during the connection stages. Refactor so that doesn't happen.
+	proxy = proxy_device.get_components().values()[0]
+	proxy.when_closed().addCallback(lambda _: process.kill())
 	
-	defer.returnValue(rig_device)
+	defer.returnValue(proxy_device)
 
 
-__all__.append('connect_to_rig')
-
-
-class _HamlibRig(ExportedState):
-	implements(IRig, IHasFrequency)
+class _HamlibProxy(ExportedState):
+	'''
+	Abstract class for objects which export state proxied to a hamlib daemon.
+	'''
+	implements(IProxy)
 	
 	def __init__(self, protocol):
 		# info from hamlib
@@ -239,12 +219,18 @@ class _HamlibRig(ExportedState):
 		self.__caps = {}
 		self.__levels = []
 		
+		# invert command table
+		# TODO: we only need to do this once per class, really
+		self._how_to_command = {key: command
+			for command, keys in self._commands.iteritems()
+			for key in keys}
+		
 		# keys are same as __cache, values are functions to call with new values from rig
 		self._cell_updaters = {}
 		
 		self.__protocol = protocol
 		self.__disconnect_deferred = defer.Deferred()
-		protocol._set_rig(self)
+		protocol._set_proxy(self)
 
 		# TODO: If hamlib backend supports "transceive mode", use it in lieu of polling
 		self.__poller_slow = LoopingCall(self.__poll_slow)
@@ -255,7 +241,8 @@ class _HamlibRig(ExportedState):
 		self._ready_deferred = protocol.rc_send('dump_caps')
 	
 	def sync(self):
-		d = self.__protocol.rc_send('get_freq')  # dummy command
+		# TODO: Replace 'sync' with more specifically meaningful operations
+		d = self.__protocol.rc_send(self._dummy_command)
 		d.addCallback(lambda _: None)  # ignore result
 		return d
 	
@@ -272,9 +259,6 @@ class _HamlibRig(ExportedState):
 		else:
 			return 0.0
 	
-	# def __query(self, name_full):
-	# 	self.__protocol.rc_send('get_' + _info[name_full][0])
-	
 	def _clientReceived(self, command, key, value):
 		if command == 'dump_caps':
 			def write(key):
@@ -287,7 +271,7 @@ class _HamlibRig(ExportedState):
 						if match:
 							self.__levels.append(match.group(1))
 						else:
-							log.err('Unrecognized level description from rigctld: ' + info)
+							log.err('Unrecognized level description from %s: %r' % (self._server_name, info))
 			
 			# remove irregularity
 			keymatch = re.match(r'(Can [gs]et )([\w\s,/-]+)', key)
@@ -315,23 +299,23 @@ class _HamlibRig(ExportedState):
 	def _ehs_set(self, name_full, value):
 		if not isinstance(value, str):
 			raise TypeError()
-		name_in_cmd = _how_to_command[name_full]  # raises if cannot set
+		name_in_cmd = self._how_to_command[name_full]  # raises if cannot set
 		if value != self.__cache[name_full]:
 			self.__cache[name_full] = value
 			self.__protocol.rc_send(
 				'set_' + name_in_cmd,
-				' '.join(self.__cache[arg_name] for arg_name in _commands[name_in_cmd]))
+				' '.join(self.__cache[arg_name] for arg_name in self._commands[name_in_cmd]))
 	
 	def state_def(self, callback):
-		super(_HamlibRig, self).state_def(callback)
-		for name in _info:
+		super(_HamlibProxy, self).state_def(callback)
+		for name in self._info:
 			can_get = self.__caps.get('Can get ' + name)
 			if can_get is None:
 				log.msg('No can-get information for ' + name)
 			if can_get != 'Y':
 				# TODO: Handle 'E' condition
 				continue
-			writable = name in _how_to_command and self.__caps.get('Can set ' + name) == 'Y'
+			writable = name in self._how_to_command and self.__caps.get('Can set ' + name) == 'Y'
 			_install_cell(self, name, False, writable, callback, self.__caps)
 		for level_name in self.__levels:
 			# TODO support writable levels
@@ -340,32 +324,14 @@ class _HamlibRig(ExportedState):
 	def __poll_fast(self):
 		# TODO: Stop if we're getting behind
 		p = self.__protocol
-		
-		# likely to be set by hw controls
-		p.rc_send('get_freq')
-		p.rc_send('get_mode')
-		
-		# received signal info
-		p.rc_send('get_dcd')
+		self.poll_fast(p.rc_send)
 		for level_name in self.__levels:
 			p.rc_send('get_level', level_name)
 	
 	def __poll_slow(self):
 		# TODO: Stop if we're getting behind
 		p = self.__protocol
-		
-		p.rc_send('get_vfo')
-		p.rc_send('get_rit')
-		p.rc_send('get_xit')
-		p.rc_send('get_ptt')
-		p.rc_send('get_rptr_shift')
-		p.rc_send('get_rptr_offs')
-		p.rc_send('get_ctcss_tone')
-		p.rc_send('get_dcs_code')
-		p.rc_send('get_split_freq')
-		p.rc_send('get_split_mode')
-		p.rc_send('get_split_vfo')
-		p.rc_send('get_ts')
+		self.poll_slow(p.rc_send)
 
 
 def _install_cell(self, name, is_level, writable, callback, caps):
@@ -392,7 +358,7 @@ def _install_cell(self, name, is_level, writable, callback, caps):
 	elif name == 'VFO' or name == 'TX VFO':
 		ctor = Enum({x: x for x in caps['VFO list'].strip().split(' ')})
 	else:
-		ctor = _info[name]
+		ctor = self._info[name]
 	
 	def updater(strval):
 		if ctor is bool:
@@ -413,21 +379,100 @@ def _install_cell(self, name, is_level, writable, callback, caps):
 	callback(cell)
 
 
-class _RigctldClientFactory(ClientFactory):
-	def __init__(self, connected_deferred):
+class _HamlibRig(_HamlibProxy):
+	implements(IRig, IHasFrequency)
+	
+	_server_name = 'rigctld'
+	_dummy_command = 'get_freq'
+	
+	_info = {
+		'Frequency': (Range([(0, 9999999999)], integer=True)),
+		'Mode': (_modes),
+		'Passband': (_passbands),
+		'VFO': (_vfos),
+		'RIT': (int),
+		'XIT': (int),
+		'PTT': (bool),
+		'DCD': (bool),
+		'Rptr Shift': (Enum({'+': '+', '-': '-'})),
+		'Rptr Offset': (int),
+		'CTCSS Tone': (int),
+		'DCS Code': (str),
+		'CTCSS Sql': (int),
+		'DCS Sql': (str),
+		'TX Frequency': (int),
+		'TX Mode': (_modes),
+		'TX Passband': (_passbands),
+		'Split': (bool),
+		'TX VFO': (_vfos),
+		'Tuning Step': (int),
+		'Antenna': (int),
+	}
+	
+	_commands = {
+		'freq': ['Frequency'],
+		'mode': ['Mode', 'Passband'],
+		'vfo': ['VFO'],
+		'rit': ['RIT'],
+		'xit': ['XIT'],
+		# 'ptt': ['PTT'], # writing disabled until when we're more confident in correct functioning
+		'rptr_shift': ['Rptr Shift'],
+		'rptr_offs': ['Rptr Offset'],
+		'ctcss_tone': ['CTCSS Tone'],
+		'dcs_code': ['DCS Code'],
+		'ctcss_sql': ['CTCSS Sql'],
+		'dcs_sql': ['DCS Sql'],
+		'split_freq': ['TX Frequency'],
+		'split_mode': ['TX Mode', 'TX Passband'],
+		'split_vfo': ['Split', 'TX VFO'],
+		'ts': ['Tuning Step'],
+		# TODO: describe func, level, parm
+		'ant': ['Antenna'],
+		'powerstat': ['Power Stat'],
+	}
+	
+	def poll_fast(self, send):
+		# likely to be set by hw controls
+		send('get_freq')
+		send('get_mode')
+		
+		# received signal info
+		send('get_dcd')
+	
+	def poll_slow(self, send):
+		send('get_vfo')
+		send('get_rit')
+		send('get_xit')
+		send('get_ptt')
+		send('get_rptr_shift')
+		send('get_rptr_offs')
+		send('get_ctcss_tone')
+		send('get_dcs_code')
+		send('get_split_freq')
+		send('get_split_mode')
+		send('get_split_vfo')
+		send('get_ts')
+
+
+
+
+class _HamlibClientFactory(ClientFactory):
+	def __init__(self, server_name, connected_deferred):
+		self.__server_name = server_name
 		self.__connected_deferred = connected_deferred
 	
 	def buildProtocol(self, addr):
-		p = _RigctldClientProtocol(self.__connected_deferred)
+		p = _HamlibClientProtocol(self.__server_name, self.__connected_deferred)
 		return p
 
 	def clientConnectionFailed(self, connector, reason):
 		self.__connected_deferred.errback(reason)
 
 
-class _RigctldClientProtocol(Protocol):
-	def __init__(self, connected_deferred):
-		self.__rig_obj = None
+class _HamlibClientProtocol(Protocol):
+	def __init__(self, server_name, connected_deferred):
+		self.__proxy_obj = None
+		self.__server_name = server_name
 		self.__connected_deferred = connected_deferred
 		self.__line_receiver = LineReceiver()
 		self.__line_receiver.delimiter = '\n'
@@ -440,8 +485,8 @@ class _RigctldClientProtocol(Protocol):
 		self.__connected_deferred.callback(self)
 	
 	def connectionLost(self, reason):
-		if self.__rig_obj is not None:
-			self.__rig_obj._clientConnectionLost(reason)
+		if self.__proxy_obj is not None:
+			self.__proxy_obj._clientConnectionLost(reason)
 	
 	def dataReceived(self, data):
 		self.__line_receiver.dataReceived(data)
@@ -454,7 +499,7 @@ class _RigctldClientProtocol(Protocol):
 				self.__receive_cmd = match.group(1)
 				self.__receive_arg = match.group(2)
 				return
-			log.err('Unrecognized line (no command active) from rigctld: ' + line)
+			log.err('%s client: Unrecognized line (no command active): %r' % (self.__server_name, line))
 		else:
 			match = re.match(r'^RPRT (-?\d+)$', line)
 			if match is not None:
@@ -465,7 +510,7 @@ class _RigctldClientProtocol(Protocol):
 				i = 0
 				for i, (wait_cmd, wait_deferred) in enumerate(waiting):
 					if self.__receive_cmd != wait_cmd:
-						log.err("Didn't get a response for command %r before receiving one for command %r" % (wait_cmd, self.__receive_cmd))
+						log.err("%s client: Didn't get a response for command %r before receiving one for command %r" % (self.__server_name, wait_cmd, self.__receive_cmd))
 					else:
 						# TODO: Interpret return code and consider using errback if it's significant
 						wait_deferred.callback(return_code)
@@ -479,13 +524,13 @@ class _RigctldClientProtocol(Protocol):
 				# Should be a level value
 				match = re.match(r'^-?\d+\.?\d*$', line)
 				if match:
-					self.__rig_obj._clientReceivedLevel(self.__receive_arg, line)
+					self.__proxy_obj._clientReceivedLevel(self.__receive_arg, line)
 					return
 			match = re.match(r'^([\w ,/-]+):\s*(.*)$', line)
 			if match is not None:
 				# Command response
-				if self.__rig_obj is not None:
-					self.__rig_obj._clientReceived(self.__receive_cmd, match.group(1), match.group(2))
+				if self.__proxy_obj is not None:
+					self.__proxy_obj._clientReceived(self.__receive_cmd, match.group(1), match.group(2))
 					return
 			match = re.match(r'^\t', line)
 			if match is not None and self.__receive_cmd == 'dump_caps':
@@ -498,10 +543,10 @@ class _RigctldClientProtocol(Protocol):
 			match = re.match(r'^$', line)
 			if match is not None:
 				return
-			log.err('Unrecognized line during ' + self.__receive_cmd + ' from rigctld: ' + line)
+			log.err('%s client: Unrecognized line during %s: %r' % (self.__server_name, self.__receive_cmd, line))
 	
-	def _set_rig(self, rig):
-		self.__rig_obj = rig
+	def _set_proxy(self, proxy):
+		self.__proxy_obj = proxy
 	
 	def rc_send(self, cmd, argstr=''):
 		assert re.match('^\w+$', cmd)  # no spaces (stuffing args in), no newlines (breaking the command)
