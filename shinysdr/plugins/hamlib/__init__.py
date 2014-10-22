@@ -64,10 +64,25 @@ class IProxy(Interface):
 	'''
 
 
+__all__.append('IProxy')
+
+
 class IRig(IProxy):
 	'''
 	Hamlib rig proxy (anything interfaced by rigctld).
 	'''
+
+
+__all__.append('IRig')
+
+
+class IRotator(IProxy):
+	'''
+	Hamlib rotator proxy (anything interfaced by rotctld).
+	'''
+
+
+__all__.append('IRotator')
 
 
 def _forkDeferred(d):
@@ -107,6 +122,8 @@ _cap_remap = {
 	'Split Freq': ['TX Frequency'],
 	'Split Mode': ['TX Mode', 'TX Passband'],
 	'Split VFO': ['Split', 'TX VFO'],
+	
+	'Position': ['Azimuth', 'Elevation'],
 }
 
 
@@ -127,6 +144,24 @@ def connect_to_rigctld(reactor, host='localhost', port=4532):
 
 
 __all__.append('connect_to_rigctld')
+
+
+@defer.inlineCallbacks
+def connect_to_rotctld(reactor, host='localhost', port=4533):
+	'''
+	Connect to an existing rotctld process.
+	'''
+	proxy = yield _connect_to_daemon(
+		reactor=reactor,
+		host=host,
+		port=port,
+		server_name='rotctld',
+		proxy_ctor=_HamlibRotator)
+	defer.returnValue(Device(
+		components={'rotator': proxy}))
+
+
+__all__.append('connect_to_rotctld')
 
 
 @defer.inlineCallbacks
@@ -157,6 +192,26 @@ def connect_to_rig(reactor, options=None, port=4532):
 
 
 __all__.append('connect_to_rig')
+
+
+def connect_to_rotator(reactor, options=None, port=4533):
+	'''
+	Start a rotctld process and connect to it.
+	
+	options: list of rotctld options, e.g. ['-m', '1102', '-r', '/dev/ttyUSB0'].
+	Do not specify host or port in the options.
+	
+	port: A free port number to use.
+	'''
+	return _connect_to_device(
+		reactor=reactor,
+		options=options,
+		port=port,
+		daemon='rotctld',
+		connect_func=connect_to_rotctld)
+
+
+__all__.append('connect_to_rotator')
 
 
 @defer.inlineCallbacks
@@ -453,8 +508,33 @@ class _HamlibRig(_HamlibProxy):
 		send('get_split_vfo')
 		send('get_ts')
 
+class _HamlibRotator(_HamlibProxy):
+	implements(IRotator)
 
-
+	_server_name = 'rotctld'
+	_dummy_command = 'get_pos'
+	
+	# TODO: support imperative commands:
+	# move
+	# stop
+	# park
+	# reset
+	
+	_info = {
+		# TODO: Get ranges from dump_caps
+		'Azimuth': (Range([(-180, 180)])),
+		'Elevation': (Range([(0, 90)])),
+	}
+	
+	_commands = {
+		'pos': ['Azimuth', 'Elevation'],
+	}
+	
+	def poll_fast(self, send):
+		send('get_pos')
+	
+	def poll_slow(self, send):
+		pass
 
 class _HamlibClientFactory(ClientFactory):
 	def __init__(self, server_name, connected_deferred):

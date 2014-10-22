@@ -20,10 +20,13 @@ from __future__ import absolute_import, division
 from twisted.trial import unittest
 from twisted.internet import defer, reactor
 
-from shinysdr.plugins.hamlib import connect_to_rig
+from shinysdr.plugins.hamlib import connect_to_rig, connect_to_rotator
 
 
 class TestHamlibRig(unittest.TestCase):
+	'''
+	Also contains generic proxy tests.
+	'''
 	timeout = 5
 	__rig = None
 	
@@ -59,3 +62,24 @@ class TestHamlibRig(unittest.TestCase):
 	def test_sync(self):
 		yield self.__rig.sync()
 		yield self.__rig.sync()
+
+
+class TestHamlibRotator(unittest.TestCase):
+	timeout = 5
+	__rotator = None
+	
+	def setUp(self):
+		d = connect_to_rotator(reactor, options=['-m', '1'], port=4531)
+		
+		def on_connect(rotator_device):
+			self.__rotator = rotator_device.get_components()['rotator']
+		
+		d.addCallback(on_connect)
+		return d
+	
+	def tearDown(self):
+		return self.__rotator.close()
+	
+	def test_noop(self):
+		'''basic connect and disconnect, check is clean'''
+		pass
