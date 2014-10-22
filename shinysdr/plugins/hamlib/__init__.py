@@ -169,7 +169,7 @@ def connect_to_server(reactor, host='localhost', port=4532):
 	reactor.connectTCP(host, port, _RigctldClientFactory(connected))
 	protocol = yield connected
 	rigObj = _HamlibRig(protocol)
-	yield rigObj.sync()  # allow dump_caps round trip
+	yield rigObj._ready_deferred  # allow dump_caps round trip
 	defer.returnValue(Device(
 		vfo_cell=rigObj.state()['freq'],
 		components={'rig': rigObj}))
@@ -252,10 +252,12 @@ class _HamlibRig(ExportedState):
 		self.__poller_slow.start(2.0)
 		self.__poller_fast.start(0.2)
 		
-		protocol.rc_send('dump_caps')
+		self._ready_deferred = protocol.rc_send('dump_caps')
 	
 	def sync(self):
-		return self.__protocol.rc_sync()
+		d = self.__protocol.rc_send('get_freq')  # dummy command
+		d.addCallback(lambda _: None)  # ignore result
+		return d
 	
 	def close(self):
 		self.__protocol.transport.loseConnection()
@@ -316,8 +318,9 @@ class _HamlibRig(ExportedState):
 		name_in_cmd = _how_to_command[name_full]  # raises if cannot set
 		if value != self.__cache[name_full]:
 			self.__cache[name_full] = value
-			self.__protocol.rc_send('set_' + name_in_cmd + ' ' + ' '.join(
-				[self.__cache[arg_name] for arg_name in _commands[name_in_cmd]]))
+			self.__protocol.rc_send(
+				'set_' + name_in_cmd,
+				' '.join(self.__cache[arg_name] for arg_name in _commands[name_in_cmd]))
 	
 	def state_def(self, callback):
 		super(_HamlibRig, self).state_def(callback)
@@ -345,7 +348,7 @@ class _HamlibRig(ExportedState):
 		# received signal info
 		p.rc_send('get_dcd')
 		for level_name in self.__levels:
-			p.rc_send('get_level ' + level_name)
+			p.rc_send('get_level', level_name)
 	
 	def __poll_slow(self):
 		# TODO: Stop if we're getting behind
@@ -429,8 +432,7 @@ class _RigctldClientProtocol(Protocol):
 		self.__line_receiver = LineReceiver()
 		self.__line_receiver.delimiter = '\n'
 		self.__line_receiver.lineReceived = self.__lineReceived
-		self.__sent = 0
-		self.__syncers = []
+		self.__waiting_for_responses = []
 		self.__receive_cmd = None
 		self.__receive_arg = None
 	
@@ -454,18 +456,24 @@ class _RigctldClientProtocol(Protocol):
 				return
 			log.err('Unrecognized line (no command active) from rigctld: ' + line)
 		else:
-			match = re.match(r'^RPRT (.*)$', line)
+			match = re.match(r'^RPRT (-?\d+)$', line)
 			if match is not None:
 				# command response ending line
-				# TODO: Report errors
+				return_code = int(match.group(1))
+				
+				waiting = self.__waiting_for_responses
+				i = 0
+				for i, (wait_cmd, wait_deferred) in enumerate(waiting):
+					if self.__receive_cmd != wait_cmd:
+						log.err("Didn't get a response for command %r before receiving one for command %r" % (wait_cmd, self.__receive_cmd))
+					else:
+						# TODO: Interpret return code and consider using errback if it's significant
+						wait_deferred.callback(return_code)
+						break
+				self.__waiting_for_responses = waiting[i + 1:]
+				
 				self.__receive_cmd = None
 				self.__receive_arg = None
-				self.__sent -= 1
-				# TODO: this is not a proper algorithm; we need to match send point to receive point. This can stall if commands are being sent constantly
-				if self.__sent == 0:
-					for syncer in self.__syncers:
-						syncer.callback(None)
-					self.__syncers[:] = []
 				return
 			if self.__receive_cmd == 'get_level':
 				# Should be a level value
@@ -495,16 +503,14 @@ class _RigctldClientProtocol(Protocol):
 	def _set_rig(self, rig):
 		self.__rig_obj = rig
 	
-	def rc_sync(self):
+	def rc_send(self, cmd, argstr=''):
+		assert re.match('^\w+$', cmd)  # no spaces (stuffing args in), no newlines (breaking the command)
+		assert re.match('^[^\r\n]*$', argstr)  # no newlines
+		self.transport.write('+\\' + cmd + ' ' + argstr + '\n')
 		d = defer.Deferred()
-		self.__syncers.append(d)
+		self.__waiting_for_responses.append((cmd, d))
 		return d
-	
-	def rc_send(self, cmd):
-		# TODO: assert no newlines for safety
-		self.transport.write('+\\' + cmd + '\n')
-		self.__sent += 1
-	
+
 _plugin_client = ClientResourceDef(
 	key=__name__,
 	resource=static.File(os.path.join(os.path.split(__file__)[0], 'client')),
