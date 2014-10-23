@@ -126,7 +126,8 @@ define(['./events', './network'], function (events, network) {
       }
     }
     baseEntries.forEach(function (record) {
-      if (record.lowerFreq !== lastFreqL || record.upperFreq !== lastFreqH) {
+      // TODO: not grouping bands is not on principle, it's just because FreqScale, the only user of this, doesn't want it. Revisit the design.
+      if (record.type == 'band' || record.lowerFreq !== lastFreqL || record.upperFreq !== lastFreqH) {
         flush();
         lastFreqL = record.lowerFreq;
         lastFreqH = record.upperFreq;
