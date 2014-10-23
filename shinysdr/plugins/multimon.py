@@ -26,10 +26,11 @@ from gnuradio import gr
 from gnuradio import blocks
 
 from shinysdr.modes import ModeDef, IDemodulator
-from shinysdr.values import BlockCell, ExportedState, exported_value
 from shinysdr.blocks import make_sink_to_process_stdin, test_subprocess, make_resampler
 from shinysdr.plugins.basic_demod import NFMDemodulator
 from shinysdr.plugins.aprs import APRSInformation
+from shinysdr.signals import SignalType
+from shinysdr.values import BlockCell, ExportedState, exported_value
 
 pipe_rate = 22050  # what multimon-ng expects
 _maxint32 = 2 ** 15 - 1
@@ -46,7 +47,7 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 			self, str(mode) + ' (Multimon-NG) demodulator',
 			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
 			# TODO: Add generic support for demodulators with no audio output
-			gr.io_signature(2, 2, gr.sizeof_float * 1),
+			gr.io_signature(1, 1, gr.sizeof_float * 1),
 		)
 		self.mode = mode
 		self.input_rate = input_rate
@@ -82,13 +83,10 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 			make_resampler(fm_audio_rate, pipe_rate),
 			converter,
 			sink)
-		# Dummy sink for useless stereo output of demod
-		self.connect((self.fm_demod, 1), blocks.null_sink(gr.sizeof_float))
 		# Audio copy output
 		unconverter = blocks.short_to_float(vlen=1, scale=int_scale)
 		self.connect(converter, unconverter)
-		self.connect(unconverter, (self, 0))
-		self.connect(unconverter, (self, 1))
+		self.connect(unconverter, self)
 		
 	def state_def(self, callback):
 		super(MultimonNGDemodulator, self).state_def(callback)
@@ -102,7 +100,7 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 		return self.fm_demod.get_half_bandwidth()
 	
 	def get_output_type(self):
-		return SignalType(kind='STEREO', sample_rate=pipe_rate)
+		return SignalType(kind='MONO', sample_rate=pipe_rate)
 	
 	@exported_value()
 	def get_band_filter_shape(self):
