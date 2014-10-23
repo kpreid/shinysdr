@@ -40,25 +40,28 @@
 
 <li><p>Adjust the “Center frequency” to tune your RF hardware to the band you want to observe.</p></li>
 
-<li><p>You can zoom in on the spectrum by scrolling up and down. (Bug: No way to do this without a scrolling input device, particularly not on a touchscreen.)</p></li>
+<li><p>You can zoom and pan in the spectrum view:</p><ul>
+  <li>If you have a scroll-wheel or touchpad with scrolling gestures, scroll vertically to zoom in at the cursor, or horizontally to pan across the spectrum. (Tip: If you only have a vertical scroll wheel, try holding the shift key. This is a systemwide feature at least on Macs.)</li>
+  <li>If you have a touchscreen, you can use one or two fingers in the usual way.</li>
+</ul></p></li>
 
-<li><p>Click on a signal of interest. This will create a <em>receiver</em>, which will be marked on the spectrum as well as displaying controls. Use the controls to select the appropriate mode (type of demodulation).</p>
+<li><p>Click/tap on a signal of interest. This will create a <em>receiver</em>, which will be marked on the spectrum as well as displaying controls in the “Radio Config” section. Use the controls to select the appropriate mode (type of demodulation).</p>
 
-  <p>Multiple signals can be received at once by shift-clicking in the spectrum view. To stop, click the X button by the receiver.</p></li>
+  <p>Multiple signals can be received at once by shift-clicking in the spectrum view. To stop, click the “X” button by the receiver.</p></li>
 
 </ol>
 
 <h2>Basic concepts</h2>
 
-<p>There are <em>sources</em> and <em>receivers</em>. [TODO improve this wording]</p>
+<p>There are <em>devices</em> and <em>receivers</em>. [TODO improve this wording]</p>
 
-<p>A <dfn>source</dfn> provides an RF input, and usually corresponds to a hardware device with antenna, tuner, ADC, etc. Which sources are available is set in the configuration file. The source's options, as well as a menu to select the active source if there is more than one, are displayed at the top of the <em>Radio Config</em> section.</p>
+<p>A <dfn>device</dfn> corresponds to a hardware device (or multiple devices working together) providing antenna, tuner (VFO/LO), ADC, antenna rotator, etc. Devices are set up in the configuration file. The device's options, as well as a menu to select the active device if there is more than one, are displayed at the top of the <em>Radio Config</em> section.</p>
 
-<p>A source has a <dfn>center frequency</dfn> which determines what range of the radio spectrum is digitized. It is marked by a hairline in the center of the spectrum view.</p>
+<p>A RF device has a <dfn>center frequency</dfn> which determines what range of the radio spectrum is digitized. It is marked by a hairline in the center of the spectrum view. (Note that some devices have a so-called “DC offset” which creates a spurious signal exactly at that hairline. If this is true of your device, make sure you don't set your receiver frequency exactly the same as your center frequency.)</p>
 
-<p>A <dfn>receiver</dfn> selects and demodulates a specific signal within the band received by a source. A receiver has its own <dfn>channel frequency</dfn>; whenever the channel frequency is not sufficiently close to the center frequency to be within the bandwidth of the source, it will be inactive.</p>
+<p>A <dfn>receiver</dfn> selects and demodulates a specific signal within the band received by a device. A receiver has its own <dfn>channel frequency</dfn>; whenever the channel frequency is not sufficiently close to the center frequency to be within the bandwidth of the device, it will be inactive.</p>
 
-<p>Receivers are displayed as additional hairlines in the spectrum section and below the source in the Radio Config section. Normally there is only one receiver, but additional receivers can be created and deleted. Note that additional receivers result in additional CPU load on the server.</p>
+<p>Receivers are displayed as additional hairlines in the spectrum section and below the device in the Radio Config section. Normally there is only one receiver, but additional receivers can be created and deleted. Note that additional receivers result in significant additional CPU load on the server.</p>
 
 <h2>Tricky bits</h2>
 
@@ -69,7 +72,7 @@
 
   <li><p>The UI is divided into several sections which can be hidden as desired by clicking on their headers. To show a hidden section, click on its name, which will appear on the right side of the header of the section to the left of it.</p></li>
 
-  <li><p>The large-text frequency fields can be adjusted by scrolling with the mouse cursor as well as by typing digits, and have the following keyboard functions:</p>
+  <li><p>The large-text frequency fields can be adjusted by scrolling with the mouse cursor, typing digits, or pressing the pop-up “+” and “&minus;” buttons, and have the following keyboard functions:</p>
     <table>
       <tr><td>arrow <kbd>&uarr;</kbd><td>increase selected digit
       <tr><td>arrow <kbd>&darr;</kbd><td>decrease selected digit
