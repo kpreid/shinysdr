@@ -19,6 +19,7 @@
 define(['widgets'], function (widgets) {
   'use strict';
   
+  var Banner = widgets.Banner;
   var Block = widgets.Block;
   var Knob = widgets.Knob;
   var Meter = widgets.Meter;
@@ -32,6 +33,7 @@ define(['widgets'], function (widgets) {
       if ('Mode' in block) {
         addWidget('Mode', Radio, 'Mode');
       }
+      addWidget('errors', Banner);
       if ('STRENGTH level' in block) {
         addWidget('STRENGTH level', Meter, 'S');
         ignore('RAWSTR level');

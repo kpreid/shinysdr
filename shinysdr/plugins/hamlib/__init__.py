@@ -37,6 +37,7 @@ from __future__ import absolute_import, division
 import os.path
 import re
 import subprocess
+import time
 
 from zope.interface import implements, Interface
 
@@ -50,8 +51,8 @@ from twisted.web import static
 
 from shinysdr.devices import Device
 from shinysdr.top import IHasFrequency
-from shinysdr.types import Enum, Range
-from shinysdr.values import ExportedState, LooseCell
+from shinysdr.types import Enum, Notice, Range
+from shinysdr.values import ExportedState, LooseCell, exported_value
 from shinysdr.web import ClientResourceDef
 
 
@@ -99,6 +100,27 @@ def _forkDeferred(d):
 	d2 = defer.Deferred()
 	d.addCallbacks(callback, errback)
 	return d2
+
+
+# Hamlib RPRT error codes
+RIG_OK = 0
+RIG_EINVAL = -1
+RIG_ECONF = -2
+RIG_ENOMEM = -3
+RIG_ENIMPL = -4
+RIG_ETIMEOUT = -5
+RIG_EIO = -6
+RIG_EINTERNAL = -7
+RIG_EPROTO = -7
+RIG_ERJCTED = -8
+RIG_ETRUNC = -9
+RIG_ENAVAIL = -10
+RIG_ENTARGET = -11
+RIG_BUSERROR = -12
+RIG_BUSBUSY = -13
+RIG_EARG = -14
+RIG_EVFO = -15
+RIG_EDOM = -16
 
 
 _modes = Enum({x: x for x in ['USB', 'LSB', 'CW', 'CWR', 'RTTY', 'RTTYR', 'AM', 'FM', 'WFM', 'AMS', 'PKTLSB', 'PKTUSB', 'PKTFM', 'ECSSUSB', 'ECSSLSB', 'FAX', 'SAM', 'SAL', 'SAH', 'DSB']})
@@ -283,6 +305,9 @@ class _HamlibProxy(ExportedState):
 		# keys are same as __cache, values are functions to call with new values from rig
 		self._cell_updaters = {}
 		
+		self.__communication_error = False
+		self.__last_error = (-1e9, '', 0)
+		
 		self.__protocol = protocol
 		self.__disconnect_deferred = defer.Deferred()
 		protocol._set_proxy(self)
@@ -315,6 +340,8 @@ class _HamlibProxy(ExportedState):
 			return 0.0
 	
 	def _clientReceived(self, command, key, value):
+		self.__communication_error = False
+		
 		if command == 'dump_caps':
 			def write(key):
 				self.__caps[key] = value
@@ -340,6 +367,16 @@ class _HamlibProxy(ExportedState):
 	
 	def _clientReceivedLevel(self, level_name, value_str):
 		self.__update_cache_and_cells(level_name + ' level', value_str)
+	
+	def _clientError(self, cmd, error_number):
+		if cmd.startswith('get_'):
+			# these getter failures are boring, probably us polling something not implemented
+			if error_number == RIG_ENIMPL or error_number == RIG_ENTARGET or error_number == RIG_BUSERROR:
+				return
+			elif error_number == RIG_ETIMEOUT:
+				self.__communication_error = True
+				return
+		self.__last_error = (time.time(), cmd, error_number)
 	
 	def __update_cache_and_cells(self, key, value):
 		self.__cache[key] = value
@@ -387,6 +424,17 @@ class _HamlibProxy(ExportedState):
 		# TODO: Stop if we're getting behind
 		p = self.__protocol
 		self.poll_slow(p.rc_send)
+	
+	@exported_value(ctor=Notice(always_visible=False))
+	def get_errors(self):
+		if self.__communication_error:
+			return 'Rig not responding.'
+		else:
+			(error_time, cmd, error_number) = self.__last_error
+			if error_time > time.time() - 10:
+				return u'%s: %s' % (cmd, error_number)
+			else:
+				return u''
 
 
 def _install_cell(self, name, is_level, writable, callback, caps):
@@ -592,7 +640,9 @@ class _HamlibClientProtocol(Protocol):
 					if self.__receive_cmd != wait_cmd:
 						log.err("%s client: Didn't get a response for command %r before receiving one for command %r" % (self.__server_name, wait_cmd, self.__receive_cmd))
 					else:
-						# TODO: Interpret return code and consider using errback if it's significant
+						# TODO: Consider 'parsing' return code more here.
+						if return_code != 0:
+							self.__proxy_obj._clientError(self.__receive_cmd, return_code)
 						wait_deferred.callback(return_code)
 						break
 				self.__waiting_for_responses = waiting[i + 1:]
