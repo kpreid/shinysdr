@@ -24,6 +24,7 @@ from gnuradio import gr
 
 # Note: not testing _ConstantVFOCell, it's just a useful utility
 from shinysdr.devices import _ConstantVFOCell, Device, IDevice, IRXDriver, ITXDriver, merge_devices
+from shinysdr.signals import SignalType
 from shinysdr.types import Range
 from shinysdr.values import ExportedState, LooseCell, nullExportedState
 

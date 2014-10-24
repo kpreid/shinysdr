@@ -22,9 +22,7 @@ from zope.interface import implements  # available via Twisted
 from gnuradio import analog
 from gnuradio import blocks
 from gnuradio import channels
-from gnuradio import filter as grfilter
 from gnuradio import gr
-from gnuradio.filter import firdes
 from gnuradio.filter import rational_resampler
 
 import math

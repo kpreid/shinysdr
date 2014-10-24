@@ -679,8 +679,10 @@ class _HamlibClientProtocol(Protocol):
 		self.__proxy_obj = proxy
 	
 	def rc_send(self, cmd, argstr=''):
-		assert re.match('^\w+$', cmd)  # no spaces (stuffing args in), no newlines (breaking the command)
-		assert re.match('^[^\r\n]*$', argstr)  # no newlines
+		if not re.match(r'^\w+$', cmd):  # no spaces (stuffing args in), no newlines (breaking the command)
+			raise ValueError('Syntactically invalid command name %r' % (cmd,))
+		if not re.match(r'^[^\r\n]*$', argstr):  # no newlines
+			raise ValueError('Syntactically invalid arguments string %r' % (cmd,))
 		self.transport.write('+\\' + cmd + ' ' + argstr + '\n')
 		d = defer.Deferred()
 		self.__waiting_for_responses.append((cmd, d))

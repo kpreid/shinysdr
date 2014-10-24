@@ -28,11 +28,10 @@ from twisted.internet import reactor
 from twisted.python import log
 from zope.interface import Interface, implements  # available via Twisted
 
-from gnuradio import analog
 from gnuradio import blocks
 from gnuradio import gr
 
-from shinysdr.types import Enum, Notice, Range
+from shinysdr.types import Enum, Notice
 from shinysdr.values import ExportedState, CollectionState, exported_value, setter, BlockCell, IWritableCollection
 from shinysdr.blocks import make_resampler, MonitorSink, RecursiveLockBlockMixin, Context
 from shinysdr.receiver import Receiver
@@ -78,7 +77,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 		self.__rx_driver = None
 		self.__source_tune_subscription = None
 		self.monitor = MonitorSink(
-			signal_type=SignalType(sample_rate=10000,kind='IQ'),  # dummy value will be updated in _do_connect
+			signal_type=SignalType(sample_rate=10000, kind='IQ'),  # dummy value will be updated in _do_connect
 			context=Context(self))
 		self.__clip_probe = MaxProbe()
 		

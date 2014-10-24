@@ -26,6 +26,7 @@ from gnuradio import blocks
 from gnuradio import analog
 
 from shinysdr.modes import ModeDef, IDemodulator
+from shinysdr.signals import SignalType
 from shinysdr.types import Notice
 from shinysdr.values import ExportedState, exported_value
 from shinysdr.blocks import MultistageChannelFilter, make_sink_to_process_stdin, test_subprocess

@@ -27,8 +27,6 @@ from zope.interface import Interface, implements  # available via Twisted
 from gnuradio import audio
 from gnuradio import blocks
 from gnuradio import gr
-from gnuradio import filter as grfilter
-from gnuradio.filter import firdes
 
 from shinysdr.signals import SignalType
 from shinysdr.types import Range
