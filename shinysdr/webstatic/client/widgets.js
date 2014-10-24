@@ -227,6 +227,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
           addWidget('source', Device);
         }
       }
+      addWidget('clip_warning', Banner);
       if ('receivers' in block) {
         addWidget('receivers', ReceiverSet);
       }

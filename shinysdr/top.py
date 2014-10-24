@@ -21,16 +21,18 @@
 
 from __future__ import absolute_import, division
 
+import math
 import time
 
 from twisted.internet import reactor
 from twisted.python import log
 from zope.interface import Interface, implements  # available via Twisted
 
+from gnuradio import analog
 from gnuradio import blocks
 from gnuradio import gr
 
-from shinysdr.types import Enum
+from shinysdr.types import Enum, Notice, Range
 from shinysdr.values import ExportedState, CollectionState, exported_value, setter, BlockCell, IWritableCollection
 from shinysdr.blocks import make_resampler, MonitorSink, RecursiveLockBlockMixin, Context
 from shinysdr.receiver import Receiver
@@ -78,6 +80,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 		self.monitor = MonitorSink(
 			signal_type=SignalType(sample_rate=10000,kind='IQ'),  # dummy value will be updated in _do_connect
 			context=Context(self))
+		self.__clip_probe = MaxProbe()
 		
 		# Receiver blocks (multiple, eventually)
 		self._receivers = {}
@@ -210,6 +213,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 			rate_changed = self.input_rate != this_rate
 			self.input_rate = this_rate
 			self.monitor.set_signal_type(source_signal_type)
+			self.__clip_probe.set_window_and_reconnect(0.5 * this_rate)
 			update_input_freqs()
 		
 		if rate_changed:
@@ -227,6 +231,9 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 			self.connect(
 				self.__rx_driver,
 				self.monitor)
+			self.connect(
+				self.__rx_driver,
+				self.__clip_probe)
 			
 			# Determine audio bus rate.
 			# The bus obviously does not need to be higher than the rate of any receiver, because that would be extraneous data. It also does not need to be higher than the rate of any queue, because no queue has use for the information.
@@ -370,7 +377,16 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 		# until _enabled, ignore any callbacks resulting from the state_from_json initialization
 		facet._enabled = True
 		return receiver
-
+	
+	@exported_value(ctor=Notice(always_visible=False))
+	def get_clip_warning(self):
+		level = self.__clip_probe.level()
+		# We assume that our sample source's absolute limits on I and Q values are the range -1.0 to 1.0. This is a square region; therefore the magnitude observed can be up to sqrt(2) = 1.414 above this, allowing us some opportunity to measure the amount of excess, and also to detect clipping even if the device doesn't produce exactly +-1.0 valus.
+		if level >= 1.0:
+			return u'Input amplitude too high (%.2f \u2265 1.0). Reduce gain.' % math.sqrt(level)
+		else:
+			return u''
+	
 	@exported_value(ctor=int)
 	def get_input_rate(self):
 		return self.input_rate
@@ -443,6 +459,40 @@ class AudioQueueSink(gr.hier_block2):
 			for ch in xrange(channels):
 				self.connect((self, ch), (interleaver, ch))
 			self.connect(interleaver, sink)
+
+
+class MaxProbe(gr.hier_block2):
+	'''
+	A probe whose level is the maximum magnitude-squared occurring within the specified window of samples.
+	'''
+	def __init__(self, window=10000):
+		gr.hier_block2.__init__(
+			self, 'ShinySDR MaxProbe',
+			gr.io_signature(1, 1, gr.sizeof_gr_complex),
+			gr.io_signature(0, 0, 0),
+		)
+		self.set_window_and_reconnect(window)
+	
+	def level(self):
+		raise NotImplementedError()
+	
+	def set_window_and_reconnect(self, window):
+		'''
+		Must be called while the flowgraph is locked already.
+		'''
+		window = int(window)
+		self.disconnect_all()
+		self.__sink = blocks.probe_signal_f()
+		self.connect(
+			self,
+			blocks.complex_to_mag_squared(),
+			blocks.stream_to_vector(itemsize=gr.sizeof_float, nitems_per_block=window),
+			blocks.max_ff(window),
+			self.__sink)
+		
+		# shortcut method implementation
+		self.level = self.__sink.level
+		
 
 
 def base26(x):
