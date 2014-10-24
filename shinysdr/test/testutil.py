@@ -27,6 +27,38 @@ from twisted.web import client
 from twisted.web import http
 from twisted.web.http_headers import Headers
 
+from shinysdr.plugins.simulate import SimulatedDevice
+from shinysdr.top import Top
+
+
+# --- Radio test utilities ---
+
+
+class DemodulatorTester(object):
+	'''
+	Set up an environment for testing a demodulator.
+	'''
+	def __init__(self, mode):
+		# TODO: Refactor things so that we can take the demod ctor rather than a mode string
+		# TODO: Tell the simulated device to have no modulators, or have a simpler dummy source for testing, so we don't waste time on setup
+		self.__top = Top(devices={'s1': SimulatedDevice()})
+		self.__top.add_receiver(mode, key='a')
+		self.__top.start()  # TODO overriding internals
+	
+	def close(self):
+		if self.__top is not None:
+			self.__top.stop()
+			self.__top = None
+	
+	def __enter__(self):
+		pass
+	
+	def __exit__(self, exc_type, exc_value, traceback):
+		self.close()
+
+
+# --- HTTP test utilities ---
+
 
 def http_get(reactor, url, accept=None):
 	agent = client.Agent(reactor)
