@@ -76,7 +76,7 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
 		rf_rate = self.rf_rate
 		audio_rate = self.audio_rate
 		
-		self.noise_level = -2
+		self.noise_level = -22
 		self._transmitters = {}
 		
 		self.transmitters = CollectionState(self._transmitters, dynamic=True)
@@ -179,7 +179,7 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
 			interpolation=int(rf_rate),
 			decimation=int(modulator.get_output_type().get_sample_rate()))
 		self.__rotator = blocks.rotator_cc(rotator_inc(rate=rf_rate, shift=freq))
-		self.__mult = blocks.multiply_const_cc(1.0)
+		self.__mult = blocks.multiply_const_cc(10.0 ** -1)
 		self.connect(self, audio_resampler, modulator, rf_resampler, self.__rotator, self.__mult, self)
 	
 	def state_def(self, callback):
