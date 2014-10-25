@@ -22,6 +22,7 @@
 
 from __future__ import absolute_import, division
 
+import time
 import traceback
 
 from twisted.internet import reactor  # TODO eliminate
@@ -33,7 +34,7 @@ from gnuradio import gru
 from shinysdr.modes import ModeDef, IDemodulator
 from shinysdr.signals import no_signal
 from shinysdr.types import Notice
-from shinysdr.values import ExportedState, exported_value
+from shinysdr.values import CollectionState, ExportedState, exported_value
 from shinysdr.blocks import MultistageChannelFilter
 
 try:
@@ -47,10 +48,13 @@ demod_rate = 2000000
 transition_width = 500000
 
 
+drop_unheard_timeout_seconds = 60
+
+
 class ModeSDemodulator(gr.hier_block2, ExportedState):
 	implements(IDemodulator)
 	
-	def __init__(self, mode='MODE-S', input_rate=0, context=None):
+	def __init__(self, mode='MODE-S', input_rate=0, mode_s_information=None, context=None):
 		assert input_rate > 0
 		gr.hier_block2.__init__(
 			self, 'Mode S/ADS-B/1090 demodulator',
@@ -58,6 +62,10 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 			gr.io_signature(0, 0, 0))
 		self.mode = mode
 		self.input_rate = input_rate
+		if mode_s_information is not None:
+			self.__information = mode_s_information
+		else:
+			self.__information = ModeSInformation()
 		
 		hex_msg_queue = gr.msg_queue(100)
 		
@@ -91,6 +99,12 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 				print traceback.format_exc()
 		
 		self.__msgq_runner = gru.msgq_runner(hex_msg_queue, callback)
+		
+		def parsed_callback(msg):
+			self.__information.receive(msg, cpr_decoder)
+		
+		for i in xrange(0, 2 ** 5):
+			parser_output.subscribe('type%i_dl' % i, parsed_callback)
 
 	def __del__(self):
 		self.__msgq_runner.stop()
@@ -111,14 +125,161 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 			'high': demod_rate / 2,
 			'width': transition_width
 		}
+
+
+class ModeSInformation(CollectionState):
+	'''
+	Accepts Mode-S messages and exports the accumulated information obtained from them.
+	'''
+	def __init__(self):
+		self.__aircraft = {}
+		self.__interesting_aircraft = {}
+		CollectionState.__init__(self, self.__interesting_aircraft, dynamic=True)
 	
-	@exported_value(ctor=Notice())
-	def get_notice(self):
-		return u'Properly displaying output is not yet implemented; see stdout of the server process.'
+	# not exported
+	def receive(self, message, cpr_decoder):
+		'''
+		Interpret and store the message provided, which should be in the format produced by air_modes.make_parser.
+		'''
+		# Unfortunately, gr-air-modes doesn't provide a function to implement this gunk -- imitating output_print.catch_nohandler
+		data = message.data
+		if "aa" in data.fields:
+			address_int = data["aa"]
+		else:
+			address_int = message.ecc
+		
+		# Process the message
+		aircraft = self.__ensure_aircraft(address_int)
+		aircraft.receive(message, cpr_decoder)
+		
+		# Maybe promote the aircraft
+		if aircraft.is_interesting():
+			self.__interesting_aircraft[self.__string_address(address_int)] = aircraft
+		
+		# logically independent but this is a convenient time
+		self.__flush_not_seen()
+	
+	def __ensure_aircraft(self, address_int):
+		if address_int not in self.__aircraft:
+			self.__aircraft[address_int] = ModeSAircraft(address_int)
+		return self.__aircraft[address_int]
+	
+	def __string_address(self, address_int):
+		return '%.6x' % (address_int,)
+	
+	def __flush_not_seen(self):
+		deletes = []
+		limit = time.time() - drop_unheard_timeout_seconds
+		for key, old_aircraft in self.__aircraft.iteritems():
+			if old_aircraft.get_last_heard_time() < limit:
+				deletes.append(key)
+		for key in deletes:
+			del self.__aircraft[key]
+			address_hex = self.__string_address(key)
+			if address_hex in self.__interesting_aircraft:
+				del self.__interesting_aircraft[address_hex]
+
+
+class ModeSAircraft(ExportedState):
+	def __init__(self, address_hex):
+		self.__last_heard_time = None
+		self.__call = None
+		self.__ident = None
+		self.__aircraft_type = None
+		self.__latitude = None
+		self.__longitude = None
+		# TODO: specify units
+		self.__altitude_feet = None
+		self.__vertical_speed = None
+		self.__turn_rate = None
+	
+	# not exported
+	def receive(self, message, cpr_decoder):
+		self.__last_heard_time = time.time()  # TODO: arguably should be an argument
+		# Unfortunately, gr-air-modes doesn't provide a function to implement this gunk -- imitating its output_flightgear code which
+		data = message.data
+		t = data.get_type()
+		if t == 0:
+			self.__altitude_feet = air_modes.decode_alt(data['ac'], True)
+			# TODO more info available here
+		elif t == 4:
+			self.__altitude_feet = air_modes.decode_alt(data['ac'], True)
+			# TODO more info available here
+		elif t == 5:
+			self.__ident = air_modes.decode_id(data['id'])
+			# TODO more info available here
+		elif t == 17:  # ADS-B
+			bdsreg = data['me'].get_type()
+			if bdsreg == 0x05:
+				(self.__altitude_feet, self.__latitude, self.__longitude, _range, _bearing) = air_modes.parseBDS05(data, cpr_decoder)
+			elif bdsreg == 0x06:
+				(_ground_track, self.__latitude, self.__longitude, _range, _bearing) = air_modes.parseBDS06(data, cpr_decoder)
+			elif bdsreg == 0x08:
+				(self.__call, self.__aircraft_type) = air_modes.parseBDS08(data)
+			elif bdsreg == 0x09:
+				subtype = data['bds09'].get_type()
+				if subtype == 0:
+					(self.__velocity, self.__heading, self.__vertical_speed, self.__turn_rate) = air_modes.parseBDS09_0(data)
+				elif subtype == 1:
+					(self.__velocity, self.__heading, self.__vertical_speed) = air_modes.parseBDS09_1(data)
+					self.__turn_rate = 0  # TODO: or should we keep last?
+				else:
+					# TODO report
+					pass
+			else:
+				# TODO report
+				pass
+		else:
+			# TODO report
+			pass
+	
+	def is_interesting(self):
+		'''
+		Does this aircraft have enough information to be worth mentioning?
+		'''
+		return \
+			self.__altitude_feet is not None or \
+			self.__latitude is not None or \
+			self.__longitude is not None or \
+			self.__call is not None or \
+			self.__aircraft_type is not None
+		
+	@exported_value(ctor=float)
+	def get_last_heard_time(self):
+		return self.__last_heard_time
+	
+	@exported_value(ctor=unicode)
+	def get_call(self):
+		return self.__call
+	
+	@exported_value(ctor=int)
+	def get_ident(self):
+		return self.__ident
+	
+	@exported_value(ctor=unicode)
+	def get_aircraft_type(self):
+		return self.__aircraft_type
+	
+	@exported_value()
+	def get_position(self):
+		return (self.__latitude, self.__longitude)
+	
+	@exported_value(ctor=int)
+	def get_altitude(self):
+		return self.__altitude_feet
+	
+	@exported_value(ctor=int)
+	def get_vertical_speed(self):
+		return self.__vertical_speed
+	
+	@exported_value(ctor=int)
+	def get_turn_rate(self):
+		return self.__turn_rate
 
 
 pluginDef = ModeDef(
 	mode='MODE-S',
 	label='Mode S',
 	demod_class=ModeSDemodulator,
-	available=_available)
+	available=_available,
+	shared_objects={'mode_s_information': ModeSInformation})
