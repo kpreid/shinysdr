@@ -15,13 +15,20 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+# pylint: disable=broad-except, maybe-no-member, no-member
+# (broad-except: toplevel catch)
+# (maybe-no-member: GR swig)
+# (no-member: Twisted reactor)
+
 from __future__ import absolute_import, division
 
-from twisted.internet import reactor
-from twisted.internet.protocol import ProcessProtocol
+import traceback
+
+from twisted.internet import reactor  # TODO eliminate
 from zope.interface import implements
 
 from gnuradio import gr
+from gnuradio import gru
 from gnuradio import blocks
 from gnuradio import analog
 
@@ -29,10 +36,16 @@ from shinysdr.modes import ModeDef, IDemodulator
 from shinysdr.signals import SignalType
 from shinysdr.types import Notice
 from shinysdr.values import ExportedState, exported_value
-from shinysdr.blocks import MultistageChannelFilter, make_sink_to_process_stdin, test_subprocess
+from shinysdr.blocks import MultistageChannelFilter
+
+try:
+	import air_modes
+	_available = True
+except ImportError:
+	_available = False
 
 
-pipe_rate = 2000000
+demod_rate = 2000000
 transition_width = 500000
 _dummy_audio_rate = 2000
 
@@ -51,44 +64,39 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 		self.mode = mode
 		self.input_rate = input_rate
 		
-		# Subprocess
-		# TODO need to redefine this
-		process = reactor.spawnProcess(
-			_Dump1090ProcessProtocol(None),
-			'/usr/bin/env',
-			env=None,
-			args=['env', 'dump1090', '--ifile', '-'],
-			childFDs={
-				0: 'w',
-				1: 1,
-				2: 2
-			})
-		sink = make_sink_to_process_stdin(process, itemsize=gr.sizeof_char)
+		hex_msg_queue = gr.msg_queue(100)
 		
-		# Output
 		band_filter = MultistageChannelFilter(
 			input_rate=input_rate,
-			output_rate=pipe_rate,  # expected by dump1090
-			cutoff_freq=pipe_rate / 2,
+			output_rate=demod_rate,
+			cutoff_freq=demod_rate / 2,
 			transition_width=transition_width)  # TODO optimize filter band
-		interleaver = blocks.interleave(gr.sizeof_char)
+		self.__demod = air_modes.rx_path(
+			rate=demod_rate,
+			threshold=7.0,  # default used in air-modes code but not exposed
+			queue=hex_msg_queue,
+			use_pmf=False,
+			use_dcblock=True)
 		self.connect(
 			self,
 			band_filter,
-			blocks.complex_to_real(1),
-			blocks.multiply_const_ff(255.0 / 2),
-			blocks.add_const_ff(255.0 / 2),
-			blocks.float_to_uchar(),
-			(interleaver, 0),
-			sink)
+			self.__demod)
 		
-		self.connect(
-			band_filter,
-			blocks.complex_to_imag(1),
-			blocks.multiply_const_ff(255.0 / 2),
-			blocks.add_const_ff(255.0 / 2),
-			blocks.float_to_uchar(),
-			(interleaver, 1))
+		# Parsing
+		# TODO: These bits are mimicking gr-air-modes toplevel code. Figure out if we can have less glue.
+		# Note: gr pubsub is synchronous -- subscribers are called on the publisher's thread
+		parser_output = gr.pubsub.pubsub()
+		parser = air_modes.make_parser(parser_output)
+		cpr_decoder = air_modes.cpr_decoder(my_location=None)  # TODO: get position info from device
+		air_modes.output_print(cpr_decoder, parser_output)
+		def callback(msg):  # called on msgq_runner's thrad
+			try:
+				reactor.callFromThread(parser, msg.to_string())
+			except Exception:
+				print traceback.format_exc()
+		
+		self.__msgq_runner = gru.msgq_runner(hex_msg_queue, callback)
+		
 		# Dummy audio
 		throttle = blocks.throttle(gr.sizeof_float, _dummy_audio_rate)
 		throttle.set_max_output_buffer(_dummy_audio_rate // 10)
@@ -97,11 +105,14 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 			throttle,
 			self)
 
+	def __del__(self):
+		self.__msgq_runner.stop()
+
 	def can_set_mode(self, mode):
 		return False
 
 	def get_half_bandwidth(self):
-		return pipe_rate / 2
+		return demod_rate / 2
 	
 	def get_output_type(self):
 		return SignalType(kind='MONO', sample_rate=_dummy_audio_rate)
@@ -109,8 +120,8 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 	@exported_value()
 	def get_band_filter_shape(self):
 		return {
-			'low': -pipe_rate / 2,
-			'high': pipe_rate / 2,
+			'low': -demod_rate / 2,
+			'high': demod_rate / 2,
 			'width': transition_width
 		}
 	
@@ -119,11 +130,8 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 		return u'Properly displaying output is not yet implemented; see stdout of the server process.'
 
 
-class _Dump1090ProcessProtocol(ProcessProtocol):
-	def __init__(self, target):
-		self.__target = target
-
-
-# TODO: Arrange for a way for the user to see why it is unavailable.
-pluginDef = ModeDef('MODE-S', label='Mode S', demod_class=ModeSDemodulator,
-	available=test_subprocess(['dump1090', '--help'], '--enable-agc'))
+pluginDef = ModeDef(
+	mode='MODE-S',
+	label='Mode S',
+	demod_class=ModeSDemodulator,
+	available=_available)

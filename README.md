@@ -33,6 +33,11 @@ Install the following software on the machine which has your SDR hardware attach
 * [GNU Radio](http://gnuradio.org/) 3.7.1 or later.
 * [`gr-osmosdr`](http://sdr.osmocom.org/trac/wiki/GrOsmoSDR), and any applicable hardware drivers such as `librtlsdr`. (Plugins may be written to use other RF sources, but the only built-in support is for `gr-osmosdr`.)
 
+The following may be installed to enable support for additional modes:
+
+* [`gr-air-modes`](https://github.com/bistromath/gr-air-modes) (for aircraft transponders).
+* [`multimon-ng`](https://github.com/EliasOenal/multimon-ng) (for APRS).
+
 Then either run the script `fetch-js-deps.sh`, or copy or symlink the following items into the `shinysdr/deps/` directory:
 
 * `jasmine/` ([Jasmine](https://github.com/pivotal/jasmine/) 1.3.1 or later)
