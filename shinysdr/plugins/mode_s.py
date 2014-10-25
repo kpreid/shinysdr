@@ -34,7 +34,7 @@ from shinysdr.blocks import MultistageChannelFilter, make_sink_to_process_stdin,
 
 pipe_rate = 2000000
 transition_width = 500000
-_dummy_audio_rate = 1000
+_dummy_audio_rate = 2000
 
 
 class ModeSDemodulator(gr.hier_block2, ExportedState):
@@ -46,7 +46,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 			self, 'Mode S/ADS-B/1090 demodulator',
 			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
 			# TODO: Add generic support for demodulators with no audio output
-			gr.io_signature(2, 2, gr.sizeof_float * 1),
+			gr.io_signature(1, 1, gr.sizeof_float * 1),
 		)
 		self.mode = mode
 		self.input_rate = input_rate
@@ -90,11 +90,12 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 			blocks.float_to_uchar(),
 			(interleaver, 1))
 		# Dummy audio
-		zero = analog.sig_source_f(0, analog.GR_CONST_WAVE, 0, 0, 0)
-		self.throttle = blocks.throttle(gr.sizeof_float, _dummy_audio_rate)
-		self.connect(zero, self.throttle)
-		self.connect(self.throttle, (self, 0))
-		self.connect(self.throttle, (self, 1))
+		throttle = blocks.throttle(gr.sizeof_float, _dummy_audio_rate)
+		throttle.set_max_output_buffer(_dummy_audio_rate // 10)
+		self.connect(
+			analog.sig_source_f(0, analog.GR_CONST_WAVE, 0, 0, 0),
+			throttle,
+			self)
 
 	def can_set_mode(self, mode):
 		return False
@@ -103,8 +104,8 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 		return pipe_rate / 2
 	
 	def get_output_type(self):
-		return SignalType(kind='STEREO', sample_rate=_dummy_audio_rate)
-
+		return SignalType(kind='MONO', sample_rate=_dummy_audio_rate)
+	
 	@exported_value()
 	def get_band_filter_shape(self):
 		return {
