@@ -102,7 +102,20 @@ class ModeDef(object):
 	implements(IPlugin, _IModeDef)
 	
 	# Twisted plugin system caches whether-a-plugin-class-was-found permanently, so we need to avoid _not_ having a ModeDef if the plugin has some sort of dependency it checks -- thus the 'available' flag can be used to hide a mode while still having an _IModeDef
-	def __init__(self, mode, label, demod_class, mod_class=None, available=True):
+	def __init__(self,
+			mode,
+			label,
+			demod_class,
+			mod_class=None,
+			available=True):
+		'''
+		mode: String uniquely identifying this mode, typically a standard abbreviation written in uppercase letters (e.g. "USB").
+		label: String displayed to the user to identify this mode (e.g. "Broadcast FM").
+		demod_class: Class to instantiate to create a demodulator for this mode.
+		mod_class: Class to instantiate to create a modulator for this mode.
+		(TODO: cite demodulator and modulator interface docs)
+		available: If false, this mode definition will be ignored.
+		'''
 		self.mode = mode
 		self.label = label
 		self.demod_class = demod_class
