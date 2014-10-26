@@ -36,12 +36,16 @@ define(['./values', './events', './network', './widget', './widgets'], function 
       scheduler: scheduler
     });
     
-    network.connect(network.convertToWebSocketURL(url), scheduler, function (remote, remoteCell) {
+    var remoteCell = network.connect(network.convertToWebSocketURL(url));
+    
+    function connected() {
       widget.createWidgets(remoteCell, context, document);
       
       // globals for debugging / interactive programming purposes only
       window.Dcell = remoteCell;
-    });
+    }
+    connected.scheduler = scheduler;
+    remoteCell.n.listen(connected);
   }
   exports.run = run;
   
