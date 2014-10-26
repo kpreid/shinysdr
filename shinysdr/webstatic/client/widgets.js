@@ -240,20 +240,57 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   }
   widgets.Top = Top;
   
-  function BlockSet(widgetCtor, buildHeader) {
+  function BlockSet(widgetCtor, buildEntry) {
     return function TypeSetInst(config) {
-      Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
+      // We do not inherit from Block, because we don't want the rebuild-on-reshape behavior (so we can do something more efficient) and we don't need the rest of it.
+      var block = config.target.depend(config.rebuildMe);
+      var childContainer = this.element = config.element;
+
+      // Keys are block keys
+      var childWidgetElements = Object.create(null);
+
+      var createChild = function (name) {
+        var toolbar;
+        var widgetContainer = childContainer;
+        function setInsertion(element) {
+          widgetContainer = element;
+        }
+        // buildContainer must append exactly one child. TODO: cleaner
+        var widgetPlaceholder = buildEntry(childContainer, block, name);
+        var widgetContainer = childContainer.lastChild;
+        var widgetHandle = createWidgetExt(config.context, widgetCtor, widgetPlaceholder, block[name]);
+        return {
+          toolbar: toolbar,
+          widgetHandle: widgetHandle,
+          element: widgetContainer
+        };
+      }.bind(this);
+
+      function handleReshape() {
+        block._reshapeNotice.listen(handleReshape);
         Object.keys(block).forEach(function (name) {
-          buildHeader(this.element, block, name, setInsertion);
-          addWidget(name, widgetCtor);
-        }, this);
-      }, true);
+          if (!childWidgetElements[name]) {
+            childWidgetElements[name] = createChild(name);
+          }
+        });
+        for (var oldName in childWidgetElements) {
+          if (!(oldName in block)) {
+            childWidgetElements[oldName].widgetHandle.destroy();
+            childContainer.removeChild(childWidgetElements[oldName].element);
+            delete childWidgetElements[oldName];
+          }
+        }
+      }
+      handleReshape.scheduler = config.scheduler;
+      handleReshape();
     };
   }
   
-  function BlockSetInFrameHeaderBuilder(userTypeName) {
-    return function blockSetInFrameHeaderBuilder(container, block, name, setInsertion) {
-      var toolbar = document.createElement('div');
+  function BlockSetInFrameEntryBuilder(userTypeName) {
+    return function blockSetInFrameEntryBuilder(setElement, block, name) {
+      var container = setElement.appendChild(document.createElement('div'));
+      container.className = 'frame';
+      var toolbar = container.appendChild(document.createElement('div'));
       toolbar.className = 'panel frame-controls';
       
       if (block['_implements_shinysdr.values.IWritableCollection']) {
@@ -272,11 +309,11 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       label.textContent = name;
       toolbar.appendChild(label);
       
-      container.appendChild(toolbar);
+      return container.appendChild(document.createElement('div'));
     };
   }
   
-  function windowHeaderBuilder(container, block, name, setInsertion) {
+  function windowEntryBuilder(setElement, block, name, setInsertion) {
     var subwindow = document.createElement('shinysdr-subwindow');
     var header = subwindow.appendChild(document.createElement('h2'));
     header.appendChild(document.createTextNode(name));  // TODO formatting
@@ -284,20 +321,18 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     body.classList.add('sidebar');  // TODO not quite right class -- we want main-ness but scrolling
     body.classList.add('frame');
     
-    container.classList.remove('frame');  // TODO kludge, overriding Block
-    
-    container.appendChild(subwindow);
-    setInsertion(body);
+    setElement.appendChild(subwindow);
+    return body.appendChild(document.createElement('div'));
   }
   
-  function blockSetNoHeader(container, block, name, setInsertion) {
-    // nothing to do
+  function blockSetNoHeader(setElement, block, name, setInsertion) {
+    return setElement.appendChild(document.createElement('div'));
   }
   
-  var DeviceSet = widgets.DeviceSet = BlockSet(Device, BlockSetInFrameHeaderBuilder('Device'));
-  var ReceiverSet = widgets.ReceiverSet = BlockSet(Receiver, BlockSetInFrameHeaderBuilder('Receiver'));
-  var AccessorySet = widgets.AccessorySet = BlockSet(PickBlock, BlockSetInFrameHeaderBuilder('Accessory'));
-  widgets.WindowBlocks = BlockSet(PickBlock, windowHeaderBuilder);
+  var DeviceSet = widgets.DeviceSet = BlockSet(Device, BlockSetInFrameEntryBuilder('Device'));
+  var ReceiverSet = widgets.ReceiverSet = BlockSet(Receiver, BlockSetInFrameEntryBuilder('Receiver'));
+  var AccessorySet = widgets.AccessorySet = BlockSet(PickBlock, BlockSetInFrameEntryBuilder('Accessory'));
+  widgets.WindowBlocks = BlockSet(PickBlock, windowEntryBuilder);
   
   // Widget for a device
   function Device(config) {
