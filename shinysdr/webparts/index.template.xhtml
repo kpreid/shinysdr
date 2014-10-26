@@ -20,28 +20,28 @@
     xmlns="http://www.w3.org/1999/xhtml/"
     xmlns:t="http://twistedmatrix.com/ns/twisted.web.template/0.1"
     lang="en"
-    class="full-page-sections"><head>
+    class="subwindowed-page"><head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <title t:render="title"></title>
   <link rel="stylesheet" href="/client/ui.css" />
   <link rel="stylesheet" href="/client/theme.css" />
   <meta name="viewport" content="width=device-width" />
-</head><body class="ui-sections">
+</head><body class="subwindowed">
 
-<section id="section-spectrum" class="stretchy" data-visible="true">
+<shinysdr-subwindow id="section-spectrum" class="stretchy" visible="true">
   <h2>Spectrum <span data-target="radio"><span data-target="monitor" data-widget="MonitorParameters"></span></span></h2>
   <div data-widget="Monitor" data-target="radio.monitor"></div>
-</section>
+</shinysdr-subwindow>
 
-<section id="section-map" class="stretchy" data-visible="false">
+<shinysdr-subwindow id="section-map" class="stretchy" visible="false">
   <h2>Map</h2>
   <!-- This pair of position: wrappers allows OpenLayers' internal height: 100%; use to work inside of our flexbox layout. -->
   <div style="position: relative; height: 100%; width: 100%; overflow: hidden;">
     <div id="map" style="position: absolute; height: 100%; width: 100%;"></div>
   </div>
-</section>
+</shinysdr-subwindow>
 
-<section id="section-radio" data-visible="true">
+<shinysdr-subwindow id="section-radio" visible="true">
   <h2>Radio Config</h2>
   <div class="sidebar">
     <div data-widget="Top" data-target="radio" id="_radio"></div>
@@ -60,15 +60,15 @@
     <p><a href="/manual/">ShinySDR Manual</a></p>
     <p><a href="flow-graph">Debug: flow graph</a></p>
   </div>
-</section>
+</shinysdr-subwindow>
 
-<section id="section-db" data-visible="true">
+<shinysdr-subwindow id="section-db" visible="true">
   <h2>Frequency DB</h2>
   <div class="sidebar frame" data-target="radio">
     <div class="panel" data-widget="RecordDetails" data-target="preset"></div>
     <div class="panel" data-widget="FreqList" id="freqlist"></div>
   </div>
-</section>
+</shinysdr-subwindow>
 
 <script src="/client/openlayers/OpenLayers.debug.js"></script>
 <script src="/client/require.js" data-main="/client/main.js"></script>

@@ -1,4 +1,4 @@
-// Copyright 2013 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -15,83 +15,95 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-// Manages collapsing of top-level UI sections (which are not <details> because those interact poorly with flexbox on Chrome)
+// Manages hideable tiling subwindows in the ShinySDR UI.
 
 define(['./values'], function (values) {
   'use strict';
 
   var StorageNamespace = values.StorageNamespace;
+  
+  var ELEMENT = 'shinysdr-subwindow';
+  var VISIBLE_ATTRIBUTE = 'visible';
 
-  var allSections = [];
+  var allWindows = [];
   var visibleCount = NaN;
-  Array.prototype.forEach.call(document.querySelectorAll('section'), function (section) {
-    var header = section.querySelector('h2');
-    if (!header) return;
+  
+  function enroll(/* this = element */) {
+    var header = this.querySelector('h2');
+    if (!header) {
+      console.warn(ELEMENT + ' inserted without h2');
+      return;
+    }
 
     header.tabIndex = 0;
 
     var buttonsSlot = header.appendChild(document.createElement('span'));
-    buttonsSlot.classList.add('ui-section-show-buttons');
+    buttonsSlot.classList.add('subwindow-show-buttons');
 
     var showButton = document.createElement('a');
     showButton.tabIndex = 0;
-    showButton.classList.add('ui-section-show-button');
+    showButton.classList.add('subwindow-show-button');
     showButton.textContent = '\u25B8\u00A0' + header.textContent;
 
-    var visible = section.hasAttribute('data-visible') ? JSON.parse(section.getAttribute('data-visible')) : true;
+    var visible = this.hasAttribute(VISIBLE_ATTRIBUTE) ? JSON.parse(this.getAttribute(VISIBLE_ATTRIBUTE)) : true;
 
-    if (section.id) {
+    if (this.id) {
       // same protocol as we install on <details>
-      var ns = new StorageNamespace(localStorage, 'shinysdr.elementState.' + section.id + '.');
+      var ns = new StorageNamespace(localStorage, 'shinysdr.elementState.' + this.id + '.');
       var stored = ns.getItem('detailsOpen');
       if (stored !== null) visible = JSON.parse(stored);
     }
 
-    function update() {
+    var update = function () {
       if (visible) {
-        section.style.removeProperty('display');
+        this.style.removeProperty('display');
       } else {
-        section.style.display = 'none';
+        this.style.display = 'none';
       }
-      distributeButtons();
       if (ns) ns.setItem('detailsOpen', JSON.stringify(visible));
-      
-      // kludge to trigger relayout on other elements that need it
-      // This kludge is needed because there's no way for an element to be notified on relayout.
-      var resize = document.createEvent('Event');
-      resize.initEvent('resize', false, false);
-      window.dispatchEvent(resize);
-    }
+    }.bind(this);
     function toggle(event) {
       // Don't grab events from controls in headers
       // There doesn't seem to be a better more composable way to handle this --
       // http://stackoverflow.com/questions/15657776/detect-default-event-handling
       if (event.target.tagName === 'INPUT') return;
-      
+
       if (visible && visibleCount <= 1) return;
       visible = !visible;
       update();
+      globalUpdate();
       event.stopPropagation();
     }
     // TODO look into how to accomplish automatic keyboard accessibility
     header.addEventListener('click', toggle, false);
     showButton.addEventListener('click', toggle, false);
-    
-    allSections.push({
+
+    allWindows.push({
+      element: this,
       visible: function() { return visible; },
       slot: buttonsSlot,
       button: showButton,
       update: update
     });
-  });
-  function distributeButtons() {
-    var lastVisibleSection = null;
+    allWindows.sort(function(a, b) {
+      var comparison = a.element.compareDocumentPosition(b.element);
+      return comparison & Node.DOCUMENT_POSITION_PRECEDING ? 1 :
+             comparison & Node.DOCUMENT_POSITION_FOLLOWING ? -1 :
+             0;  // shouldn't happen, bad answer
+    });
+    
+    update();
+  }
+  
+  function globalUpdate() {
+    // Distribute show-buttons of hidden windows among headers of available visible windows.
+    var lastVisibleWindow = null;
     var queued = [];
     visibleCount = 0;
-    allSections.forEach(function (r) {
+    allWindows.forEach(function (r) {
       if (r.visible()) {
         visibleCount++;
-        lastVisibleSection = r;
+        lastVisibleWindow = r;
         if (r.button.parentNode) r.button.parentNode.removeChild(r.button);
         
         queued.forEach(function (q) {
@@ -99,15 +111,34 @@ define(['./values'], function (values) {
         });
         queued.length = 0;
       } else {
-        if (lastVisibleSection) {
-          lastVisibleSection.slot.appendChild(r.button);
+        if (lastVisibleWindow) {
+          lastVisibleWindow.slot.appendChild(r.button);
         } else {
           queued.push(r);
         }
       }
     });
+    
+    // kludge to trigger relayout on other elements that need it
+    // This kludge is needed because there's no way for an element to be notified on relayout.
+    var resize = document.createEvent('Event');
+    resize.initEvent('resize', false, false);
+    window.dispatchEvent(resize);
   }
-  allSections.forEach(function (r) { r.update(); });
   
-  // TODO make this have exports rather than a side effect
+  // Using a custom element allows us to hook insertion/removal.
+  var Subwindow_prototype = Object.create(HTMLElement.prototype);
+  Subwindow_prototype.attachedCallback = enroll;
+  Subwindow_prototype.detachedCallback = function() {
+    allWindows = allWindows.filter(function (record) {
+      return record.element != this;
+    }.bind(this));
+    globalUpdate();
+  };
+  var Subwindow = document.registerElement(ELEMENT, {
+    prototype: Subwindow_prototype
+    // extends: 'section'   // for some reason doing this breaks callbacks
+  });
+  
+  globalUpdate();
 });

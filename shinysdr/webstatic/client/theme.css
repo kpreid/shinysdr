@@ -21,10 +21,10 @@ body {
   color: black;
 }
 
-section {
+shinysdr-subwindow {
   background: linear-gradient(to right, #BCBCBC 0%,#B5B5B5 100%);
 }
-section > h2 {
+shinysdr-subwindow > h2 {
   border: #EEE outset;
   border-width: 0 1px;
   background: linear-gradient(to bottom, #FFF 0%,#CCC 100%);

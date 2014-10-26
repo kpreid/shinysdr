@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./values', './events', './database', './network', './maps', './widget', './widgets', './audio', './sections'], function (values, events, database, network, maps, widget, widgets, audio, sections) {
+define(['./values', './events', './database', './network', './maps', './widget', './widgets', './audio', './window-manager'], function (values, events, database, network, maps, widget, widgets, audio, windowManager) {
   'use strict';
   
   var any = values.any;
