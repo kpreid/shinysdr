@@ -199,9 +199,11 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   // Widget for the top block
   function Top(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
+      // TODO: It's a lousy design to require widgets to know what not to show. We should have a generic system for multiple widgets to decide "OK, you'll display this and I won't".
       ignore('preset');  // displayed separately, not real state
       ignore('targetDB');  // not real state
       ignore('monitor');  // displayed separately
+      ignore('shared_objects');  // displayed separately
       
       if ('unpaused' in block) {
         addWidget('unpaused', Toggle, 'Run');
@@ -238,41 +240,64 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   }
   widgets.Top = Top;
   
-  function BlockSet(widgetCtor, userName, dynamic) {
+  function BlockSet(widgetCtor, buildHeader) {
     return function TypeSetInst(config) {
       Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
         Object.keys(block).forEach(function (name) {
-          if (dynamic) {
-            var toolbar = document.createElement('div');
-            toolbar.className = 'panel frame-controls';
-            
-            if (block['_implements_shinysdr.values.IWritableCollection']) {
-              var del = document.createElement('button');
-              del.textContent = '\u2573';
-              del.className = 'frame-delete-button';
-              toolbar.appendChild(del);
-              del.addEventListener('click', function(event) {
-                block.delete(name);
-              });
-            }
-            
-            toolbar.appendChild(document.createTextNode(' ' + userName + ' '));
-            
-            var label = document.createElement('span');
-            label.textContent = name;
-            toolbar.appendChild(label);
-            
-            this.element.appendChild(toolbar);
-          }
-          
+          buildHeader(this.element, block, name, setInsertion);
           addWidget(name, widgetCtor);
         }, this);
       }, true);
     };
   }
-  var DeviceSet = widgets.DeviceSet = BlockSet(Device, 'Device', false);
-  var ReceiverSet = widgets.ReceiverSet = BlockSet(Receiver, 'Receiver', true);
-  var AccessorySet = widgets.AccessorySet = BlockSet(PickBlock, 'Accessory', true);
+  
+  function BlockSetInFrameHeaderBuilder(userTypeName) {
+    return function blockSetInFrameHeaderBuilder(container, block, name, setInsertion) {
+      var toolbar = document.createElement('div');
+      toolbar.className = 'panel frame-controls';
+      
+      if (block['_implements_shinysdr.values.IWritableCollection']) {
+        var del = document.createElement('button');
+        del.textContent = '\u2573';
+        del.className = 'frame-delete-button';
+        toolbar.appendChild(del);
+        del.addEventListener('click', function(event) {
+          block.delete(name);
+        });
+      }
+      
+      toolbar.appendChild(document.createTextNode(' ' + userTypeName + ' '));
+      
+      var label = document.createElement('span');
+      label.textContent = name;
+      toolbar.appendChild(label);
+      
+      container.appendChild(toolbar);
+    };
+  }
+  
+  function windowHeaderBuilder(container, block, name, setInsertion) {
+    var subwindow = document.createElement('shinysdr-subwindow');
+    var header = subwindow.appendChild(document.createElement('h2'));
+    header.appendChild(document.createTextNode(name));  // TODO formatting
+    var body = subwindow.appendChild(document.createElement('div'));
+    body.classList.add('sidebar');  // TODO not quite right class -- we want main-ness but scrolling
+    body.classList.add('frame');
+    
+    container.classList.remove('frame');  // TODO kludge, overriding Block
+    
+    container.appendChild(subwindow);
+    setInsertion(body);
+  }
+  
+  function blockSetNoHeader(container, block, name, setInsertion) {
+    // nothing to do
+  }
+  
+  var DeviceSet = widgets.DeviceSet = BlockSet(Device, BlockSetInFrameHeaderBuilder('Device'));
+  var ReceiverSet = widgets.ReceiverSet = BlockSet(Receiver, BlockSetInFrameHeaderBuilder('Receiver'));
+  var AccessorySet = widgets.AccessorySet = BlockSet(PickBlock, BlockSetInFrameHeaderBuilder('Accessory'));
+  widgets.WindowBlocks = BlockSet(PickBlock, windowHeaderBuilder);
   
   // Widget for a device
   function Device(config) {
@@ -287,7 +312,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     });
   }
   widgets['interface:shinysdr.devices.IDevice'] = Device;
-  var ComponentSet = BlockSet(PickBlock, 'Component', false);
+  var ComponentSet = BlockSet(PickBlock, blockSetNoHeader);
   
   // Widget for a RX driver block -- TODO break this stuff up
   function RXDriver(config) {

@@ -41,7 +41,7 @@ int_scale = _maxint32 * audio_gain
 class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 	implements(IDemodulator)
 	
-	def __init__(self, mode, input_rate=0, context=None):
+	def __init__(self, mode, input_rate=0, aprs_information=None, context=None):
 		assert input_rate > 0
 		gr.hier_block2.__init__(
 			self, str(mode) + ' (Multimon-NG) demodulator',
@@ -52,7 +52,10 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 		self.mode = mode
 		self.input_rate = input_rate
 		
-		self.information = APRSInformation()
+		if aprs_information is not None:
+			self.__information = aprs_information
+		else:
+			self.__information = APRSInformation()
 		
 		# FM demod
 		self.fm_demod = NFMDemodulator(
@@ -64,7 +67,7 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 		# Subprocess
 		# using /usr/bin/env because twisted spawnProcess doesn't support path search
 		process = reactor.spawnProcess(
-			MultimonNGProcessProtocol(self.information.receive),
+			MultimonNGProcessProtocol(self.__information.receive),
 			'/usr/bin/env',
 			env=None,  # inherit environment
 			args=['env', 'multimon-ng', '-t', 'raw', '-a', 'AFSK1200', '-A', '-v', '10', '-'],
@@ -88,11 +91,6 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 		self.connect(converter, unconverter)
 		self.connect(unconverter, self)
 		
-	def state_def(self, callback):
-		super(MultimonNGDemodulator, self).state_def(callback)
-		# TODO make this possible to be decorator style
-		callback(BlockCell(self, 'information'))
-
 	def can_set_mode(self, mode):
 		return False
 	
@@ -142,5 +140,9 @@ class MultimonNGProcessProtocol(ProcessProtocol):
 
 
 # TODO: Arrange for a way for the user to see why it is unavailable.
-pluginDef_APRS = ModeDef('APRS', label='APRS', demod_class=MultimonNGDemodulator,
+pluginDef_APRS = ModeDef(
+	mode='APRS',
+	label='APRS',
+	demod_class=MultimonNGDemodulator,
+	shared_objects={'aprs_information': APRSInformation},
 	available=test_subprocess('multimon-ng -h; exit 0', 'available demodulators:', shell=True))

@@ -263,7 +263,10 @@ class Receiver(gr.hier_block2, ExportedState):
 		init = {}
 		state = state.copy()  # don't modify arg
 		if 'mode' in state: del state['mode']  # prevent conflict
-
+		
+		for sh_key, sh_ctor in mode_def.shared_objects.iteritems():
+			init[sh_key] = self.context.get_shared_object(sh_ctor)
+		
 		# TODO generalize this special case for WFM demodulator
 		if mode == 'WFM':
 			if 'stereo' in state:

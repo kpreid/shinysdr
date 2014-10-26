@@ -84,11 +84,15 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 		# Receiver blocks (multiple, eventually)
 		self._receivers = {}
 		self._receiver_valid = {}
-
+		
+		self.__shared_objects = {}
+		
 		# kludge for using collection like block - TODO: better architecture
 		self.sources = CollectionState(self._sources)
 		self.receivers = ReceiverCollection(self._receivers, self)
 		self.accessories = CollectionState(accessories)
+		# TODO: better name than "shared objects"
+		self.shared_objects = CollectionState(self.__shared_objects, dynamic=True)
 		
 		# Audio stream bits
 		self.__audio_channels = 2 if stereo else 1
@@ -317,6 +321,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 		callback(BlockCell(self, 'source', persists=False))
 		callback(BlockCell(self, 'receivers'))
 		callback(BlockCell(self, 'accessories', persists=False))
+		callback(BlockCell(self, 'shared_objects'))
 
 	def start(self, **kwargs):
 		# trigger reconnect/restart notification
@@ -409,6 +414,14 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 			self.last_cpu_use = round(elapsed_cpu / elapsed_wall, 2)
 		return self.last_cpu_use
 	
+	def get_shared_object(self, ctor):
+		# TODO: Make shared objects able to persist. This will probably require some kind of up-front registry.
+		# TODO: __name__ is a lousy strategy
+		key = ctor.__name__
+		if key not in self.__shared_objects:
+			 self.__shared_objects[key] = ctor()
+		return self.__shared_objects[key]
+	
 	def _trigger_reconnect(self):
 		self.__needs_reconnect = True
 		self._do_connect()
@@ -432,6 +445,9 @@ class ContextForReceiver(Context):
 	def changed_output_type(self):
 		if self._enabled:
 			self.__top._trigger_reconnect()
+	
+	def get_shared_object(self, ctor):
+		return self.__top.get_shared_object(ctor)
 
 
 class IHasFrequency(Interface):
