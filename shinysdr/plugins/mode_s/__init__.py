@@ -22,11 +22,13 @@
 
 from __future__ import absolute_import, division
 
+import os.path
 import time
 import traceback
 
 from twisted.internet import reactor  # TODO eliminate
-from zope.interface import implements
+from twisted.web import static
+from zope.interface import Interface, implements
 
 from gnuradio import gr
 from gnuradio import gru
@@ -36,6 +38,7 @@ from shinysdr.signals import no_signal
 from shinysdr.types import Notice
 from shinysdr.values import CollectionState, ExportedState, exported_value
 from shinysdr.blocks import MultistageChannelFilter
+from shinysdr.web import ClientResourceDef
 
 try:
 	import air_modes
@@ -127,10 +130,17 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 		}
 
 
+class IModeSInformation(Interface):
+	'''marker interface for client'''
+	pass
+
+
 class ModeSInformation(CollectionState):
 	'''
 	Accepts Mode-S messages and exports the accumulated information obtained from them.
 	'''
+	implements(IModeSInformation)
+	
 	def __init__(self):
 		self.__aircraft = {}
 		self.__interesting_aircraft = {}
@@ -161,7 +171,7 @@ class ModeSInformation(CollectionState):
 	
 	def __ensure_aircraft(self, address_int):
 		if address_int not in self.__aircraft:
-			self.__aircraft[address_int] = ModeSAircraft(address_int)
+			self.__aircraft[address_int] = Aircraft(address_int)
 		return self.__aircraft[address_int]
 	
 	def __string_address(self, address_int):
@@ -180,7 +190,14 @@ class ModeSInformation(CollectionState):
 				del self.__interesting_aircraft[address_hex]
 
 
-class ModeSAircraft(ExportedState):
+class IAircraft(Interface):
+	'''marker interface for client'''
+	pass
+
+
+class Aircraft(ExportedState):
+	implements(IAircraft)
+	
 	def __init__(self, address_hex):
 		self.__last_heard_time = None
 		self.__call = None
@@ -277,9 +294,13 @@ class ModeSAircraft(ExportedState):
 		return self.__turn_rate
 
 
-pluginDef = ModeDef(
+plugin_mode = ModeDef(
 	mode='MODE-S',
 	label='Mode S',
 	demod_class=ModeSDemodulator,
 	available=_available,
 	shared_objects={'mode_s_information': ModeSInformation})
+plugin_client = ClientResourceDef(
+	key=__name__,
+	resource=static.File(os.path.join(os.path.split(__file__)[0], 'client')),
+	load_js_path='mode_s.js')
