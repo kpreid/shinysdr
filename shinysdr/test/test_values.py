@@ -20,14 +20,12 @@ from __future__ import absolute_import, division
 import unittest
 
 from shinysdr.types import Range
-from shinysdr.values import ExportedState, BlockCell, CollectionState, LooseCell, Poller, ViewCell, exported_value, setter
+from shinysdr.values import ExportedState, BlockCell, CollectionState, LooseCell, Poller, ViewCell, exported_value, setter, unserialize_exported_state
 
 
 class TestExportedState(unittest.TestCase):
-	def setUp(self):
-		self.object = ValueAndBlockSpecimen(ValueAndBlockSpecimen(ExportedState()))
-	
 	def test_persistence_basic(self):
+		self.object = ValueAndBlockSpecimen(ValueAndBlockSpecimen(ExportedState()))
 		self.assertEqual(self.object.state_to_json(), {
 			u'value': 0,
 			u'block': {
@@ -51,12 +49,27 @@ class TestExportedState(unittest.TestCase):
 		})
 	
 	# TODO: test persistence error cases like unknown or wrong-typed properties
+	
+	def test_persistence_args(self):
+		self.object = unserialize_exported_state(
+			ctor=ValueAndBlockSpecimen,
+			kwargs={u'block': ValueAndBlockSpecimen(ExportedState())},
+			state={
+				u'value': 1,
+			})
+		self.assertEqual(self.object.state_to_json(), {
+			u'value': 1,
+			u'block': {
+				u'value': 0,
+				u'block': {},
+			},
+		})
 
 
 class ValueAndBlockSpecimen(ExportedState):
 	'''Helper for TestExportedState'''
-	def __init__(self, block):
-		self.value = 0
+	def __init__(self, block, value=0):
+		self.value = value
 		self.block = block
 		
 	def state_def(self, callback):
@@ -64,7 +77,7 @@ class ValueAndBlockSpecimen(ExportedState):
 		# TODO make this possible to be decorator style
 		callback(BlockCell(self, 'block'))
 	
-	@exported_value(ctor=float)
+	@exported_value(ctor=float, parameter='value')
 	def get_value(self):
 		return self.value
 	
@@ -73,9 +86,9 @@ class ValueAndBlockSpecimen(ExportedState):
 		self.value = value
 
 
-class TestDecorator(unittest.TestCase):
+class TestDecoratorInheritance(unittest.TestCase):
 	def setUp(self):
-		self.object = DecoratorSpecimen()
+		self.object = DecoratorInheritanceSpecimen()
 	
 	def test_state_with_inheritance(self):
 		keys = self.object.state().keys()
@@ -87,14 +100,14 @@ class TestDecorator(unittest.TestCase):
 		self.assertEqual(rw_cell.get(), 1.0)
 
 
-class DecoratorSpecimenSuper(ExportedState):
+class DecoratorInheritanceSpecimenSuper(ExportedState):
 	'''Helper for TestDecorator'''
 	@exported_value(ctor=float)
 	def get_inherited(self):
 		return 9
 
 
-class DecoratorSpecimen(DecoratorSpecimenSuper):
+class DecoratorInheritanceSpecimen(DecoratorInheritanceSpecimenSuper):
 	'''Helper for TestDecorator'''
 	def __init__(self):
 		self.rw = 0.0

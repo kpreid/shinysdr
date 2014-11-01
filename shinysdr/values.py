@@ -452,6 +452,29 @@ class ExportedState(object):
 		return description
 
 
+def unserialize_exported_state(ctor, kwargs=None, state=None):
+	all_kwargs = {}
+	if kwargs is not None:
+		# note that persistence overrides provided kwargs
+		all_kwargs.update(kwargs)
+	not_yet_set_state = {}
+	if state is not None:
+		not_yet_set_state.update(state)
+	for key, value in not_yet_set_state.items():
+		getter_name = 'get_' + key  # TODO centralize or eliminate naming scheme
+		if not hasattr(ctor, getter_name): continue
+		getter = getattr(ctor, getter_name)
+		if not isinstance(getter, ExportedGetter): continue
+		this_kwargs = getter.state_to_kwargs(value)
+		if this_kwargs is None: continue
+		all_kwargs.update(this_kwargs)
+		del not_yet_set_state[key]
+	obj = ctor(**all_kwargs)
+	if len(not_yet_set_state) > 0:
+		obj.state_from_json(not_yet_set_state)
+	return obj
+
+
 class INull(Interface):
 	'''Marker for nullExportedState.'''
 
@@ -489,10 +512,10 @@ class IWritableCollection(Interface):
 	'''
 
 
-def exported_value(**cell_kwargs):
+def exported_value(parameter=None, **cell_kwargs):
 	'''Decorator for exported state; takes Cell's kwargs.'''
 	def decorator(f):
-		return ExportedGetter(f, cell_kwargs)
+		return ExportedGetter(f, parameter, cell_kwargs)
 	return decorator
 
 
@@ -503,9 +526,10 @@ def setter(f):
 
 class ExportedGetter(object):
 	'''Descriptor for a getter exported using @exported_value.'''
-	def __init__(self, f, cell_kwargs):
+	def __init__(self, f, parameter, cell_kwargs):
 		self.__function = f
-		self._cell_kwargs = cell_kwargs
+		self.__parameter = parameter
+		self.__cell_kwargs = cell_kwargs
 	
 	def __get__(self, obj, type=None):
 		'''implements method binding'''
@@ -515,7 +539,7 @@ class ExportedGetter(object):
 			return self.__function.__get__(obj, type)
 	
 	def make_cell(self, obj, attr):
-		kwargs = self._cell_kwargs
+		kwargs = self.__cell_kwargs
 		if 'ctor_fn' in kwargs:
 			if 'ctor' in kwargs:
 				raise ValueError('cannot specify both ctor and ctor_fn')
@@ -525,6 +549,10 @@ class ExportedGetter(object):
 		# TODO kludgy introspection, figure out what is better
 		writable = hasattr(obj, 'set_' + attr) and isinstance(getattr(type(obj), 'set_' + attr), ExportedSetter)
 		return Cell(obj, attr, writable=writable, **kwargs)
+	
+	def state_to_kwargs(self, value):
+		if self.__parameter is not None:
+			return {self.__parameter: self.__cell_kwargs['ctor'](value)}
 
 
 class ExportedSetter(object):
