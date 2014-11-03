@@ -12,7 +12,7 @@ For example, the earliest technical feature of note is its **persistent waterfal
 
 Some other notable features:
 
-* **Browser-based UI:** The receiver can be listened to and remotely controlled over a network or the Internet, as well as from the same machine the actual hardware is connected to. (Required bandwidth: 3 Mb/s to 11 Mb/s, depending on selected spectrum frame rate. This may be improved in future versions by using more compact data formats.)
+* **Browser-based UI:** The receiver can be listened to and remotely controlled over a network or the Internet, as well as from the same machine the actual hardware is connected to. (Required network bandwidth: 3 Mb/s to 8 Mb/s, depending on settings.)
 
 * **Modularity**: plugin system allows adding support for new modes (types of modulation) and hardware devices.
 
@@ -29,7 +29,7 @@ Install the following software on the machine which has your SDR hardware attach
 
 * [Python](http://www.python.org/) 2.7 or later compatible version.
 * [Twisted](http://twistedmatrix.com/) 12.0.0 or later. (If you use `setup.py`, this will be automatic.)
-* [txWS](https://github.com/MostAwesomeDude/txWS) 0.8 or later.
+* [txWS](https://github.com/MostAwesomeDude/txWS) 0.8 or later. (Ditto.)
 * [GNU Radio](http://gnuradio.org/) 3.7.1 or later.
 * [`gr-osmosdr`](http://sdr.osmocom.org/trac/wiki/GrOsmoSDR), and any applicable hardware drivers such as `librtlsdr`. (Plugins may be written to use other RF sources, but the only built-in support is for `gr-osmosdr`.)
 
@@ -63,7 +63,7 @@ Run this command to create an example file:
 
 <pre>python -m shinysdr.main --create <var>filename</var></pre>
 
-(If you have installed ShinySDR via `setup.py` then you can write `shinysdr` instead of `python -m shinysdr.main`.)
+(If you have installed ShinySDR via `setup.py` then you can, and may need to, write `shinysdr` instead of `python -m shinysdr.main`. The former command will use the libraries downloaded by `setup.py`; the latter requires that they are installed systemwide.)
 
 Edit it to specify your available hardware and other desired configuration (such as a HTTPS server certificate and the location of the state persistence file); instructions are provided in the comments in the example file.
 
@@ -90,7 +90,7 @@ A very brief summary of basic operation:
 
 2. Adjust the “Center frequency” to tune your RF hardware to the band you want to observe.
 
-   You can zoom in on the spectrum by scrolling up and down. (Bug: No way to do this without a scrolling input device, particularly not on a touchscreen.)
+   You can zoom in on the spectrum by using either a scroll-wheel or two-finger touch (whichever you have; there is unfortunately not yet support for zooming without either function).
 
 3. Click on a signal of interest. This will create a *receiver*, which will be marked on the spectrum as well as displaying controls. Use the controls to select the appropriate mode (type of demodulation).
 
@@ -99,7 +99,7 @@ A very brief summary of basic operation:
 Copyright and License
 ---------------------
 
-Copyright 2013 Kevin Reid &lt;<kpreid@switchb.org>&gt;
+Copyright 2013, 2014 Kevin Reid &lt;<kpreid@switchb.org>&gt;
 
 ShinySDR is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
