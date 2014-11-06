@@ -17,17 +17,20 @@
 
 from __future__ import absolute_import, division
 
-
 from gnuradio import gr
 
 
 # TODO: It is unclear whether this module is a sensible division of the program. Think about it some more.
 
 
+__all__ = []  # appended later
+
+
 class SignalType(object):
 	def __init__(self, sample_rate, kind):
 		self.__sample_rate = float(sample_rate)
 		self.__kind = unicode(kind)
+		# TODO: validate args
 	
 	# TODO __eq__ and so on
 	
@@ -38,14 +41,16 @@ class SignalType(object):
 	def get_kind(self):
 		# TODO will probably want to change this
 		'''
-		One of the 'IQ', 'USB', 'LSB', 'MONO', or 'STEREO'.
+		One of 'NONE', 'IQ', 'USB', 'LSB', 'MONO', or 'STEREO'.
 		
 		Note that due to the current implementation, USB and LSB are complex with a zero Q component.
 		'''
 		return self.__kind
 	
 	def get_itemsize(self):
-		if self.__kind == 'MONO' or self.__kind == 'STEREO':
+		if self.__kind == 'NONE':
+			return 0
+		elif self.__kind == 'MONO' or self.__kind == 'STEREO':
 			return gr.sizeof_float
 		else:
 			return gr.sizeof_gr_complex
@@ -57,3 +62,12 @@ class SignalType(object):
 	def compatible_items(self, other):
 		assert isinstance(other, SignalType)
 		return self.get_itemsize() == other.get_itemsize()
+
+
+__all__.append('SignalType')
+
+
+__all__.append('no_signal')
+
+
+no_signal = SignalType(kind='NONE', sample_rate=0.0)

@@ -41,6 +41,9 @@ _audio_power_minimum_dB = -60
 _audio_power_minimum_amplitude = 10 ** (_audio_power_minimum_dB / 10)
 
 
+_dummy_audio_rate = 2000
+
+
 class IReceiver(Interface):
 	'''
 	Marker interface for receivers.
@@ -110,11 +113,12 @@ class Receiver(gr.hier_block2, ExportedState):
 		output_type = self.demodulator.get_output_type()
 		assert isinstance(output_type, SignalType)
 		# TODO: better expression of this condition
-		assert output_type.get_kind() == 'STEREO' or output_type.get_kind() == 'MONO'
+		assert output_type.get_kind() == 'STEREO' or output_type.get_kind() == 'MONO' or output_type.get_kind() == 'NONE'
+		self.__demod_output = output_type.get_kind() != 'NONE'
 		self.__demod_stereo = output_type.get_kind() == 'STEREO'
 		self.__output_type = SignalType(
 			kind='STEREO',
-			sample_rate=output_type.get_sample_rate())
+			sample_rate=output_type.get_sample_rate() if self.__demod_output else _dummy_audio_rate)
 	
 	def __do_connect(self):
 		self.context.lock()
@@ -127,22 +131,34 @@ class Receiver(gr.hier_block2, ExportedState):
 			else:
 				self.connect(self, self.__rotator, self.demodulator)
 			
-			# Connect output of demodulator
-			self.connect((self.demodulator, 0), self.__audio_gain_blocks[0])  # left or mono
-			if self.__audio_channels == 2:
-				self.connect(
-					(self.demodulator, 1 if self.__demod_stereo else 0),
-					self.__audio_gain_blocks[1])
+			if self.__demod_output:
+				# Connect output of demodulator
+				self.connect((self.demodulator, 0), self.__audio_gain_blocks[0])  # left or mono
+				if self.__audio_channels == 2:
+					self.connect(
+						(self.demodulator, 1 if self.__demod_stereo else 0),
+						self.__audio_gain_blocks[1])
+				else:
+					if self.__demod_stereo:
+						self.connect((self.demodulator, 1), blocks.null_sink(gr.sizeof_float))
+				
+				# Connect output of receiver
+				for ch in xrange(self.__audio_channels):
+					self.connect(self.__audio_gain_blocks[ch], (self, ch))
+				
+				# Level meter
+				# TODO: should mix left and right or something
+				self.connect((self.demodulator, 0), self.probe_audio)
 			else:
-				if self.__demod_stereo:
-					self.connect((self.demodulator, 1), blocks.null_sink(gr.sizeof_float))
-			
-			# Connect output of receiver
-			for ch in xrange(self.__audio_channels):
-				self.connect(self.__audio_gain_blocks[ch], (self, ch))
-			
-			# TODO: should mix
-			self.connect((self.demodulator, 0), self.probe_audio)
+				# Dummy output.
+				# TODO: Teach top block about no-audio so we don't have to have a dummy output.
+				throttle = blocks.throttle(gr.sizeof_float, _dummy_audio_rate)
+				throttle.set_max_output_buffer(_dummy_audio_rate // 10)  # ensure smooth output
+				self.connect(
+					analog.sig_source_f(0, analog.GR_CONST_WAVE, 0, 0, 0),
+					throttle)
+				for ch in xrange(self.__audio_channels):
+					self.connect(throttle, (self, ch))
 			
 			if self.__output_type != self.__last_output_type:
 				self.__last_output_type = self.__output_type
