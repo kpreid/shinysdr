@@ -33,7 +33,7 @@ from gnuradio import blocks
 from gnuradio import analog
 
 from shinysdr.modes import ModeDef, IDemodulator
-from shinysdr.signals import SignalType
+from shinysdr.signals import no_signal
 from shinysdr.types import Notice
 from shinysdr.values import ExportedState, exported_value
 from shinysdr.blocks import MultistageChannelFilter
@@ -47,7 +47,6 @@ except ImportError:
 
 demod_rate = 2000000
 transition_width = 500000
-_dummy_audio_rate = 2000
 
 
 class ModeSDemodulator(gr.hier_block2, ExportedState):
@@ -58,9 +57,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 		gr.hier_block2.__init__(
 			self, 'Mode S/ADS-B/1090 demodulator',
 			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
-			# TODO: Add generic support for demodulators with no audio output
-			gr.io_signature(1, 1, gr.sizeof_float * 1),
-		)
+			gr.io_signature(0, 0, 0))
 		self.mode = mode
 		self.input_rate = input_rate
 		
@@ -96,14 +93,6 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 				print traceback.format_exc()
 		
 		self.__msgq_runner = gru.msgq_runner(hex_msg_queue, callback)
-		
-		# Dummy audio
-		throttle = blocks.throttle(gr.sizeof_float, _dummy_audio_rate)
-		throttle.set_max_output_buffer(_dummy_audio_rate // 10)
-		self.connect(
-			analog.sig_source_f(0, analog.GR_CONST_WAVE, 0, 0, 0),
-			throttle,
-			self)
 
 	def __del__(self):
 		self.__msgq_runner.stop()
@@ -115,7 +104,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 		return demod_rate / 2
 	
 	def get_output_type(self):
-		return SignalType(kind='MONO', sample_rate=_dummy_audio_rate)
+		return no_signal
 	
 	@exported_value()
 	def get_band_filter_shape(self):
