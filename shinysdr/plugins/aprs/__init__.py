@@ -82,6 +82,7 @@ class APRSStation(ExportedState):
 		self.__address = address
 		self.__position_timestamp = None
 		self.__position = None
+		self.__velocity = None
 		self.__status = u''
 		self.__symbol = None
 
@@ -89,6 +90,8 @@ class APRSStation(ExportedState):
 		for fact in message.facts:
 			if isinstance(fact, Position):
 				self.__position = (fact.latitude, fact.longitude, message.receive_time)
+			if isinstance(fact, Velocity):
+				self.__velocity = (fact.course_degrees, fact.speed_knots)
 			elif isinstance(fact, Status):
 				# TODO: Empirically, not always ASCII. Move this implicit decoding off into parse stages.
 				self.__status = unicode(fact.text)  # always ASCII
@@ -106,6 +109,11 @@ class APRSStation(ExportedState):
 	def get_position(self):
 		'''None or WGS84 (lat, lon) in degrees.'''
 		return self.__position
+
+	@exported_value()
+	def get_velocity(self):
+		'''None or (course in degrees, speed in knots)'''
+		return self.__velocity
 
 	@exported_value(ctor=unicode)
 	def get_symbol(self):
