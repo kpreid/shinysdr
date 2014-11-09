@@ -27,12 +27,17 @@ from twisted.trial import unittest
 from shinysdr.plugins.aprs import APRSInformation, APRSStation, APRSMessage, Capabilities, ObjectItemReport, Messaging, Position, Status, Symbol, Telemetry, Timestamp, Velocity, parse_tnc2
 
 
+# January 2, 2000, 12:30:30 + 1 microsecond
+_dummy_receive_datetime = datetime(2000, 1, 2, 12, 30, 30, 1, None)
+_dummy_receive_time = (_dummy_receive_datetime - datetime(1970, 1, 1)).total_seconds()
+
+
 class TestAPRSParser(unittest.TestCase):
 	def __check(self, line, parsed):
-		self.assertEqual(parse_tnc2(line), parsed)
+		self.assertEqual(parse_tnc2(line, _dummy_receive_time), parsed)
 	
 	def __check_parsed(self, line, facts, errors, comment=''):
-		parsed = parse_tnc2(line)
+		parsed = parse_tnc2(line, _dummy_receive_time)
 		# Check errors first so if we fail to parse we report the errors and not only missing facts
 		self.assertEqual(parsed.errors, errors)
 		self.assertEqual(parsed.facts, facts)
@@ -42,6 +47,7 @@ class TestAPRSParser(unittest.TestCase):
 		self.__check(
 			'BOOM',
 			APRSMessage(
+				receive_time=_dummy_receive_time,
 				source='',
 				destination='',
 				via='',
@@ -66,6 +72,7 @@ class TestAPRSParser(unittest.TestCase):
 		self.__check(
 			'N6WKZ-3>APU25N,WB6TMS-3*,N6ZX-3*,WIDE2*:=3746.42N112226.00W# {UIV32N}',
 			APRSMessage(
+				receive_time=_dummy_receive_time,
 				source='N6WKZ-3',
 				destination='APU25N',
 				via=',WB6TMS-3*,N6ZX-3*,WIDE2*',
@@ -101,7 +108,7 @@ class TestAPRSParser(unittest.TestCase):
 			'KA6UPU-1>APRS,N6ZX-3*,WIDE1*:@160256z3755.50N/12205.43W_204/003g012t059r000p000P000h74b10084.DsVP',
 			facts=[
 				Messaging(True),
-				Timestamp(datetime.utcnow().replace(day=16, hour=2, minute=56, second=0, microsecond=0)),
+				Timestamp(_dummy_receive_datetime.replace(day=16, hour=2, minute=56, second=0, microsecond=0)),
 				Position((37 + 55.50 / 60), -(122 + 05.43 / 60)),
 				Symbol('/_'),
 			],
@@ -114,7 +121,7 @@ class TestAPRSParser(unittest.TestCase):
 			'KMEP1>APT311,N6ZX-3*,WIDE1*,WIDE2-1:/160257z3726.79N\\12220.18Wv077/000/A=001955/N6ZX, Kings Mt. Eme',
 			facts=[
 				Messaging(False),
-				Timestamp(datetime.utcnow().replace(day=16, hour=2, minute=57, second=0, microsecond=0)),
+				Timestamp(_dummy_receive_datetime.replace(day=16, hour=2, minute=57, second=0, microsecond=0)),
 				Position((37 + 26.79 / 60), -(122 + 20.18 / 60)),
 				Symbol('\\v'),
 			],
@@ -151,7 +158,7 @@ class TestAPRSParser(unittest.TestCase):
 				name='FD TCARES',
 				live=True,
 				facts=[
-					Timestamp(datetime.utcnow().replace(day=6, hour=15, minute=8, second=0, microsecond=0)),
+					Timestamp(_dummy_receive_datetime.replace(day=6, hour=15, minute=8, second=0, microsecond=0)),
 					Position(latitude=38.052166666666665, longitude=-120.298),
 					Symbol('/r'),
 				])],
@@ -195,7 +202,7 @@ class TestAPRSInformation(unittest.TestCase):
 	
 	def test_new_station(self):
 		self.assertEqual([], self.i.state().keys())
-		self.i.receive('N6WKZ-3>APU25N,WB6TMS-3*,N6ZX-3*,WIDE2*:=3746.42N112226.00W# {UIV32N}')
+		self.i.receive('N6WKZ-3>APU25N,WB6TMS-3*,N6ZX-3*,WIDE2*:=3746.42N112226.00W# {UIV32N}', _dummy_receive_time)
 		self.assertEqual(['N6WKZ-3'], self.i.state().keys())
 
 
@@ -205,6 +212,7 @@ class TestAPRSStation(unittest.TestCase):
 		
 	def __message(self, facts):
 		return APRSMessage(
+			receive_time=_dummy_receive_time,
 			source='',
 			destination='',
 			via='',
@@ -221,7 +229,7 @@ class TestAPRSStation(unittest.TestCase):
 		self.s.receive(self.__message([
 			Position(31, -42)
 		]))
-		self.assertEqual((31, -42), self.s.get_position())
+		self.assertEqual((31, -42, _dummy_receive_time), self.s.get_position())
 		
 	def test_symbol(self):
 		self.assertEqual(None, self.s.get_symbol())

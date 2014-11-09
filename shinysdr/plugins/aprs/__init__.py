@@ -60,9 +60,9 @@ class APRSInformation(CollectionState):
 		CollectionState.__init__(self, self.__stations, dynamic=True)
 	
 	# not exported
-	def receive(self, line):
+	def receive(self, line, receive_time):
 		'''Parse and store the message provided in TNC2 format (str, no trailing newline).'''
-		message = parse_tnc2(line)
+		message = parse_tnc2(line, receive_time)
 		self.__ensure_station(message.source).receive(message)
 	
 	def __ensure_station(self, address):
@@ -81,6 +81,7 @@ class APRSStation(ExportedState):
 	
 	def __init__(self, address):
 		self.__address = address
+		self.__position_timestamp = None
 		self.__position = None
 		self.__status = u''
 		self.__symbol = None
@@ -88,7 +89,7 @@ class APRSStation(ExportedState):
 	def receive(self, message):
 		for fact in message.facts:
 			if isinstance(fact, Position):
-				self.__position = (fact.latitude, fact.longitude)
+				self.__position = (fact.latitude, fact.longitude, message.receive_time)
 			elif isinstance(fact, Status):
 				self.__status = unicode(fact.text)  # always ASCII
 			elif isinstance(fact, Symbol):
@@ -118,6 +119,7 @@ class APRSStation(ExportedState):
 
 
 APRSMessage = namedtuple('APRSMessage', [
+	'receive_time',  # unix time: when the message was received
 	'source',  # string: AX.25 address
 	'destination',  # string: AX.25 address
 	'via',  # string: comma-separated addresses
@@ -188,21 +190,21 @@ Velocity = namedtuple('Velocity', [
 ])
 
 
-def parse_tnc2(line):
+def parse_tnc2(line, receive_time):
 	'''Parse "TNC2 text format" APRS messages.'''
 	facts = []
 	errors = []
 	match = re.match(r'^([^:>,]+?)>([^:>,]+)((?:,[^:>]+)*):(.*?)$', line)
 	if not match:
 		errors.append('Could not parse TNC2')
-		return APRSMessage('', '', '', line, facts, errors, line)
+		return APRSMessage(receive_time, '', '', '', line, facts, errors, line)
 	else:
 		source, destination, via, payload = match.groups()
-		comment = _parse_payload(facts, errors, source, destination, payload)
-		return APRSMessage(source, destination, via, payload, facts, errors, comment)
+		comment = _parse_payload(facts, errors, source, destination, payload, receive_time)
+		return APRSMessage(receive_time, source, destination, via, payload, facts, errors, comment)
 
 
-def _parse_payload(facts, errors, source, destination, payload):
+def _parse_payload(facts, errors, source, destination, payload, receive_time):
 	if len(payload) < 1:
 		errors.append('zero length information')
 		return payload
@@ -220,7 +222,7 @@ def _parse_payload(facts, errors, source, destination, payload):
 			return payload
 		else:
 			time_str, position_str = match.groups()
-			_parse_dhm_hms_timestamp(facts, errors, time_str)
+			_parse_dhm_hms_timestamp(facts, errors, time_str, receive_time)
 			return _parse_position_and_symbol(facts, errors, position_str)
 	
 	elif data_type == '<':  # Capabilities
@@ -305,7 +307,7 @@ def _parse_payload(facts, errors, source, destination, payload):
 			name, live_str, time_str, position_str, ext_and_comment = match.groups()
 			obj_facts = []
 			
-			_parse_dhm_hms_timestamp(obj_facts, errors, time_str)
+			_parse_dhm_hms_timestamp(obj_facts, errors, time_str, receive_time)
 			_parse_position_and_symbol(obj_facts, errors, position_str)
 			
 			facts.append(ObjectItemReport(
@@ -406,7 +408,7 @@ def _parse_position_and_symbol(facts, errors, data):
 		return comment
 
 
-def _parse_dhm_hms_timestamp(facts, errors, data):
+def _parse_dhm_hms_timestamp(facts, errors, data, receive_time):
 	match = re.match(r'^(\d\d)(\d\d)(\d\d)([zh/])$', data)
 	if not match:
 		errors.append('DHM/HMS timestamp does not parse')
@@ -418,11 +420,11 @@ def _parse_dhm_hms_timestamp(facts, errors, data):
 		# TODO: This logic has not been completely tested.
 		# TODO: We should probably take larger-than-current day numbers as the previous month, and similar for hours just before midnight in 'h' format
 		if kind == 'h':
-			absolute_time = datetime.utcnow().replace(hour=n1, minute=n2, second=n3)
+			absolute_time = datetime.utcfromtimestamp(receive_time).replace(hour=n1, minute=n2, second=n3)
 		elif kind == 'z':
-			absolute_time = datetime.utcnow().replace(day=n1, hour=n2, minute=n3, second=0, microsecond=0)
+			absolute_time = datetime.utcfromtimestamp(receive_time).replace(day=n1, hour=n2, minute=n3, second=0, microsecond=0)
 		else:  # kind == '/'
-			absolute_time = datetime.now().replace(day=n1, hour=n2, minute=n3, second=0, microsecond=0)
+			absolute_time = datetime.fromtimestamp(receive_time).replace(day=n1, hour=n2, minute=n3, second=0, microsecond=0)
 		facts.append(Timestamp(absolute_time))
 		return ''
 

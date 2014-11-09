@@ -1,4 +1,4 @@
-# Copyright 2013 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -16,6 +16,8 @@
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division
+
+import time
 
 from twisted.internet import reactor
 from twisted.internet.protocol import ProcessProtocol
@@ -57,6 +59,9 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 		else:
 			self.__information = APRSInformation()
 		
+		def receive(line):
+			self.__information.receive(line, time.time())
+		
 		# FM demod
 		self.fm_demod = NFMDemodulator(
 			mode='NFM',
@@ -67,7 +72,7 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 		# Subprocess
 		# using /usr/bin/env because twisted spawnProcess doesn't support path search
 		process = reactor.spawnProcess(
-			MultimonNGProcessProtocol(self.__information.receive),
+			MultimonNGProcessProtocol(receive),
 			'/usr/bin/env',
 			env=None,  # inherit environment
 			args=['env', 'multimon-ng', '-t', 'raw', '-a', 'AFSK1200', '-A', '-v', '10', '-'],

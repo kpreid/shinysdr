@@ -25,6 +25,7 @@ from __future__ import absolute_import, division
 
 import string
 import sys
+import time
 
 from shinysdr.plugins import aprs
 
@@ -32,7 +33,7 @@ from shinysdr.plugins import aprs
 if __name__ == '__main__':
 	for line in sys.stdin:
 		print string.rstrip(line, '\n')
-		parsed = aprs.parse_tnc2(line)
+		parsed = aprs.parse_tnc2(line, time.time())
 		for error in parsed.errors:
 			print '--!--', error
 		for fact in parsed.facts:
