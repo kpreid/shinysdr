@@ -507,8 +507,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       var element = this.element = document.createElement('div');
       element.classList.add('hscalegroup');
-      // TODO evil global special case
-      element.id = '_spectrum-container';
+      element.id = config.element.id;
       var context = config.context.withSpectrumView(element);
       
       var overlayContainer = element.appendChild(document.createElement('div'));
