@@ -265,19 +265,40 @@ class MultistageChannelFilter(gr.hier_block2):
 
 
 def make_resampler(in_rate, out_rate):
+	fractional_cutoff = 0.4
+	fractional_transition_width = 0.2
+	
+	# The rate relative to in_rate for which to design the anti-aliasing filter.
+	in_relative_max_rate = min(out_rate, in_rate) / in_rate
+	
+	in_relative_cutoff = in_relative_max_rate * fractional_cutoff
+	in_relative_transition_width = in_relative_max_rate * fractional_transition_width
+	
 	if _use_rational_resampler and in_rate % 1 == 0 and out_rate % 1 == 0:
-		# will automatically take the gcd internally and use sane rates
+		# Note: rational_resampler has this logic built in, but it does not correctly design the filter when decimating <http://gnuradio.org/redmine/issues/745>, so we do it ourselves; but this also allows sharing the calculation details for pfb_ and rational_.
+		in_rate = int(in_rate)
+		out_rate = int(out_rate)
+		common = gcd(in_rate, out_rate)
+		interpolation = out_rate // common
+		decimation = in_rate // common
 		return rational_resampler.rational_resampler_fff(
-			interpolation=int(out_rate),
-			decimation=int(in_rate))
+			interpolation=interpolation,
+			decimation=decimation,
+			taps=firdes.low_pass(
+				interpolation,  # gain compensates for interpolation
+				interpolation,  # rational resampler filter runs at the interpolated rate
+				in_relative_cutoff,
+				in_relative_transition_width))
 	else:
-		# magic numbers from gqrx
-		resample_ratio = float(out_rate) / in_rate
-		pfbsize = 32
-		relative_bandwidth = min(resample_ratio, 1)  # for decimating or interpolating
+		resample_ratio = out_rate / in_rate
+		pfbsize = 32  # TODO: justify magic number (taken from gqrx)
 		return pfb.arb_resampler_fff(
 			resample_ratio,
-			firdes.low_pass(pfbsize, pfbsize, 0.4 * relative_bandwidth, 0.2 * relative_bandwidth),
+			firdes.low_pass(
+				pfbsize,
+				pfbsize,
+				in_relative_cutoff,
+				in_relative_transition_width),
 			pfbsize)
 
 
