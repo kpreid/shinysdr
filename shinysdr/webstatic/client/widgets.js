@@ -508,7 +508,10 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       var element = this.element = document.createElement('div');
       element.classList.add('hscalegroup');
       element.id = config.element.id;
-      var context = config.context.withSpectrumView(element);
+      
+      // TODO: shouldn't need to have this declared, should be implied by context
+      var isRFSpectrum = config.element.hasAttribute('data-is-rf-spectrum');
+      var context = config.context.withSpectrumView(element, block, isRFSpectrum);
       
       var overlayContainer = element.appendChild(document.createElement('div'));
       overlayContainer.classList.add('hscale');
@@ -517,7 +520,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         el.classList.add('overlay');
         return el;
       }
-      createWidgetExt(context, ReceiverMarks, makeOverlayPiece('div'), block.fft);
+      if (isRFSpectrum) createWidgetExt(context, ReceiverMarks, makeOverlayPiece('div'), block.fft);
       createWidgetExt(context, SpectrumPlot, makeOverlayPiece('canvas'), block.fft);
       
       // TODO this is clunky. (Note we're not just using rebuildMe because we don't want to lose waterfall history and reinit GL and and and...)
@@ -531,8 +534,9 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       
       // TODO should logically be doing this -- need to support "widget with possibly multiple target elements"
       //addWidget(null, MonitorParameters);
+      ignore('signal_type');
       ignore('frame_rate');
-      ignore('freq_resolution')
+      ignore('freq_resolution');
       
       // kludge to trigger SpectrumView layout computations after it's added to the DOM :(
       setTimeout(function() {
@@ -547,6 +551,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   // Widget for incidental controls for a monitor block
   function MonitorParameters(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
+      ignore('signal_type');
       ignore('fft');
       ignore('scope');
       if ('frame_rate' in block) {

@@ -546,6 +546,10 @@ class MonitorSink(gr.hier_block2, ExportedState):
 		finally:
 			self.__context.unlock()
 	
+	@exported_value()
+	def get_signal_type(self):
+		return self.__signal_type
+	
 	# non-exported
 	def set_signal_type(self, value):
 		# TODO: don't rebuild if the rate did not change and the spectrum-sidedness of the type did not change

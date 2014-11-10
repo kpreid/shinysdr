@@ -97,14 +97,16 @@ define(['./values', './events'], function (values, events) {
     this.writableDB = config.writableDB;
     this.spectrumView = config.spectrumView;
   }
-  Context.prototype.withSpectrumView = function (element) {
+  Context.prototype.withSpectrumView = function (element, monitor, isRFSpectrum) {
     if (!element.id) throw new Error('spectrum view element must have an id for persistence');
     var ns = new StorageNamespace(localStorage, 'shinysdr.viewState.' + element.id + '.');
     var view = new SpectrumView({
       scheduler: this.scheduler,
       radioCell: this.radioCell,
       element: element,
-      storage: ns
+      storage: ns,
+      isRFSpectrum: isRFSpectrum,
+      signalTypeCell: monitor.signal_type
     });
     return new Context({
       widgets: this.widgets,
@@ -323,10 +325,13 @@ define(['./values', './events'], function (values, events) {
   // TODO: Revisit whether this should be in widgets.js -- it is closely tied to the spectrum widgets, but also managed by the widget framework.
   var MAX_ZOOM_BINS = 60; // Maximum zoom shows this many FFT bins
   function SpectrumView(config) {
+    // TODO: It should be the case that radioCell is used only if isRFSpectrum is true. This is not quite true.
     var radioCell = config.radioCell;
     var container = config.element;
     var scheduler = config.scheduler;
     var storage = config.storage;
+    var isRFSpectrum = config.isRFSpectrum;
+    var signalTypeCell = config.signalTypeCell;
     var self = this;
 
     // used to force the container's scroll range to widen immediately
@@ -362,12 +367,14 @@ define(['./values', './events'], function (values, events) {
     
     function prepare() {
       // TODO: unbreakable notify loop here; need to be lazy
-      var radio = radioCell.depend(prepare);
-      var source = radio.source.depend(prepare);
-      var sourceType = source.rx_driver.depend(prepare).output_type.depend(prepare);
+      var sourceType = signalTypeCell.depend(prepare);
+      if (isRFSpectrum) {
+        centerFreq = radioCell.depend(prepare).source.depend(prepare).freq.depend(prepare);
+      } else {
+        centerFreq = 0;
+      }
+      nyquist = sourceType.sample_rate / 2;
       analytic = sourceType.kind == 'IQ';  // TODO have glue code
-      nyquist = radio.input_rate.depend(prepare) / 2;
-      centerFreq = source.freq.depend(prepare);
       leftFreq = analytic ? centerFreq - nyquist : centerFreq;
       rightFreq = centerFreq + nyquist;
       pixelWidth = container.offsetWidth;
@@ -500,8 +507,10 @@ define(['./values', './events'], function (values, events) {
         // Horizontal scrolling (or diagonal w/ useless vertical component): if hits edge, change frequency.
         if (event.wheelDeltaX > 0 && cacheScrollLeft == 0
             || event.wheelDeltaX < 0 && cacheScrollLeft == (container.scrollWidth - container.clientWidth)) {
-          var freqCell = radioCell.get().source.get().freq;
-          freqCell.set(freqCell.get() + (event.wheelDeltaX * -0.12) / pixelsPerHertz);
+          if (isRFSpectrum) {
+            var freqCell = radioCell.get().source.get().freq;
+            freqCell.set(freqCell.get() + (event.wheelDeltaX * -0.12) / pixelsPerHertz);
+          }
           
           // This shouldn't be necessary, but Chrome treats horizontal scroll events from touchpad as a back/forward gesture.
           event.preventDefault();
@@ -573,7 +582,7 @@ define(['./values', './events'], function (values, events) {
       // Frequency pan
       var clampedScroll = clampScroll(avgScroll);
       var overrun = avgScroll - clampedScroll;
-      if (overrun != 0) {
+      if (overrun != 0 && isRFSpectrum) {
         // TODO repeated code -- abstract "cell to use to change freq"
         var freqCell = radioCell.get().source.get().freq;
         freqCell.set(freqCell.get() + overrun / pixelsPerHertz);
@@ -597,7 +606,7 @@ define(['./values', './events'], function (values, events) {
       
       // Tap-to-tune
       // TODO: The overall touch event handling is disabling clicking on frequency DB labels. We need to recognize them as event targets in _this_ bunch of handlers, so that we can decide whether a gesture is pan or tap-on-label.
-      if (mayTapToTune) {
+      if (mayTapToTune && isRFSpectrum) {
         var touch = event.changedTouches[0];  // known to be exactly one
         var info = activeTouches[touch.identifier];
         var newViewX = clientXToViewportLeft(touch.clientX);
@@ -614,6 +623,8 @@ define(['./values', './events'], function (values, events) {
     }, true);
     
     this.addClickToTune = function addClickToTune(element) {
+      if (!isRFSpectrum) return;
+      
       var dragReceiver = undefined;
       
       function clickTune(event) {
