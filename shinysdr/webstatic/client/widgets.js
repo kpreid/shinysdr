@@ -244,6 +244,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     return function TypeSetInst(config) {
       // We do not inherit from Block, because we don't want the rebuild-on-reshape behavior (so we can do something more efficient) and we don't need the rest of it.
       var block = config.target.depend(config.rebuildMe);
+      var idPrefix = config.idPrefix;
       var childContainer = this.element = config.element;
 
       // Keys are block keys
@@ -257,6 +258,9 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         }
         // buildContainer must append exactly one child. TODO: cleaner
         var widgetPlaceholder = buildEntry(childContainer, block, name);
+        if (idPrefix) {
+          widgetPlaceholder.id = idPrefix + name;
+        }
         var widgetContainer = childContainer.lastChild;
         var widgetHandle = createWidgetExt(config.context, widgetCtor, widgetPlaceholder, block[name]);
         return {
