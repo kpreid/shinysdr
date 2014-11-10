@@ -289,6 +289,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       handleReshape();
     };
   }
+  widgets.BlockSet = BlockSet;
   
   function BlockSetInFrameEntryBuilder(userTypeName) {
     return function blockSetInFrameEntryBuilder(setElement, block, name) {

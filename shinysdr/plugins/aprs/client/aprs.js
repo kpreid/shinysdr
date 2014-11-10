@@ -16,12 +16,42 @@
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 // TODO: May be using the wrong relative module id -- otherwise this should have ..s
-define(['maps'], function (maps) {
+define(['widgets', 'maps'], function (widgets, maps) {
   'use strict';
   
+  var Block = widgets.Block;
+  var BlockSet = widgets.BlockSet;
   var projectedPoint = maps.projectedPoint;
   
   var exports = {};
+  
+  function entryBuilder(setElement, block, name) {
+    var container = setElement.appendChild(document.createElement('div'));
+    container.className = 'frame';
+    var toolbar = container.appendChild(document.createElement('div'));
+    toolbar.className = 'panel frame-controls';
+    
+    // toolbar.appendChild(document.createTextNode('Station '));
+    
+    var label = document.createElement('span');
+    label.textContent = name;
+    toolbar.appendChild(label);
+    
+    return container.appendChild(document.createElement('div'));
+  };
+  var APRSInformationWidget = BlockSet(APRSStationWidget, entryBuilder);
+  
+  // TODO: Better widget-plugin system so we're not modifying should-be-static tables
+  widgets['interface:shinysdr.plugins.aprs.IAPRSInformation'] = APRSInformationWidget;
+  
+  function APRSStationWidget(config) {
+    Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
+      ignore('address'); // in header
+    }, false);
+  }
+  
+  // TODO: Better widget-plugin system so we're not modifying should-be-static tables
+  widgets['interface:shinysdr.plugins.aprs.IAPRSStation'] = APRSStationWidget;
   
   function addAPRSMapLayer(db, scheduler, addModeLayer, addIndexLayer) {
     addIndexLayer('APRS', 'shinysdr.plugins.aprs.IAPRSStation', {

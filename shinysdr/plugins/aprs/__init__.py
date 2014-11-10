@@ -51,10 +51,17 @@ from shinysdr.values import CollectionState, ExportedState, exported_value
 from shinysdr.web import ClientResourceDef
 
 
+class IAPRSInformation(Interface):
+	'''marker interface for client'''
+	pass
+
+
 class APRSInformation(CollectionState):
 	'''
 	Accepts APRS messages and exports the accumulated information obtained from them.
 	'''
+	implements(IAPRSInformation)
+	
 	def __init__(self):
 		self.__stations = {}
 		CollectionState.__init__(self, self.__stations, dynamic=True)
