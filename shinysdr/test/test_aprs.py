@@ -202,7 +202,9 @@ class TestAPRSInformation(unittest.TestCase):
 	
 	def test_new_station(self):
 		self.assertEqual([], self.i.state().keys())
-		self.i.receive('N6WKZ-3>APU25N,WB6TMS-3*,N6ZX-3*,WIDE2*:=3746.42N112226.00W# {UIV32N}', _dummy_receive_time)
+		self.i.receive(parse_tnc2(
+			'N6WKZ-3>APU25N,WB6TMS-3*,N6ZX-3*,WIDE2*:=3746.42N112226.00W# {UIV32N}',
+			_dummy_receive_time))
 		self.assertEqual(['N6WKZ-3'], self.i.state().keys())
 
 

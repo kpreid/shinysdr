@@ -22,6 +22,7 @@ import time
 from twisted.internet import reactor
 from twisted.internet.protocol import ProcessProtocol
 from twisted.protocols.basic import LineReceiver
+from twisted.python import log
 from zope.interface import implements
 
 from gnuradio import gr
@@ -30,7 +31,7 @@ from gnuradio import blocks
 from shinysdr.modes import ModeDef, IDemodulator
 from shinysdr.blocks import make_sink_to_process_stdin, test_subprocess, make_resampler
 from shinysdr.plugins.basic_demod import NFMDemodulator
-from shinysdr.plugins.aprs import APRSInformation
+from shinysdr.plugins.aprs import APRSInformation, parse_tnc2
 from shinysdr.signals import SignalType
 from shinysdr.values import BlockCell, ExportedState, exported_value
 
@@ -60,7 +61,10 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 			self.__information = APRSInformation()
 		
 		def receive(line):
-			self.__information.receive(line, time.time())
+			log.msg(u'APRS: %s' % (line,))
+			message = parse_tnc2(line, time.time())
+			log.msg(u'   -> %s' % (message,))
+			self.__information.receive(message)
 		
 		# FM demod
 		self.fm_demod = NFMDemodulator(

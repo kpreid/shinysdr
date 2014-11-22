@@ -60,9 +60,8 @@ class APRSInformation(CollectionState):
 		CollectionState.__init__(self, self.__stations, dynamic=True)
 	
 	# not exported
-	def receive(self, line, receive_time):
-		'''Parse and store the message provided in TNC2 format (str, no trailing newline).'''
-		message = parse_tnc2(line, receive_time)
+	def receive(self, message):
+		'''Store the supplied APRSMessage object.'''
 		self.__ensure_station(message.source).receive(message)
 	
 	def __ensure_station(self, address):
@@ -91,6 +90,7 @@ class APRSStation(ExportedState):
 			if isinstance(fact, Position):
 				self.__position = (fact.latitude, fact.longitude, message.receive_time)
 			elif isinstance(fact, Status):
+				# TODO: Empirically, not always ASCII. Move this implicit decoding off into parse stages.
 				self.__status = unicode(fact.text)  # always ASCII
 			elif isinstance(fact, Symbol):
 				self.__symbol = unicode(fact.id)  # always ASCII
