@@ -25,6 +25,7 @@ from twisted.protocols.basic import LineReceiver
 from twisted.python import log
 from zope.interface import implements
 
+from gnuradio import analog
 from gnuradio import gr
 from gnuradio import blocks
 
@@ -33,7 +34,8 @@ from shinysdr.modes import ModeDef, IDemodulator
 from shinysdr.plugins.basic_demod import NFMDemodulator
 from shinysdr.plugins.aprs import APRSInformation, parse_tnc2
 from shinysdr.signals import SignalType
-from shinysdr.values import BlockCell, ExportedState, exported_value
+from shinysdr.types import Enum
+from shinysdr.values import BlockCell, ExportedState, exported_value, setter
 
 pipe_rate = 22050  # what multimon-ng expects
 _maxint32 = 2 ** 15 - 1
@@ -84,6 +86,12 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 		return SignalType(kind='MONO', sample_rate=pipe_rate)
 
 
+_aprs_squelch_type = Enum({
+	u'mute': u'Muted',
+	u'ctcss': 'Voice Alert',
+	u'monitor': u'Monitor'}, strict=True)
+
+
 class APRSDemodulator(gr.hier_block2, ExportedState):
 	'''
 	Demod APRS and feed into an APRSInformation object.
@@ -111,16 +119,50 @@ class APRSDemodulator(gr.hier_block2, ExportedState):
 			protocol=APRSProcessProtocol(receive),
 			context=context)
 		
+		# APRS Voice Alert squelch -- see http://www.aprs.org/VoiceAlert3.html
+		self.__squelch_mode = None
+		self.__squelch_block = analog.ctcss_squelch_ff(
+			rate=int(self.__mm_demod.get_output_type().get_sample_rate()),
+			freq=100.0,  # TODO: should allow the other Voice Alert tones
+			level=0.05,  # amplitude of tone -- TODO: sometimes opens for noise, needs adjustment
+			len=0,  # use default
+			ramp=0,  # no ramping
+			gate=False)
+		self.__router = blocks.multiply_matrix_ff([[0, 0]])
+		self.set_squelch(u'ctcss')
+		
 		self.connect(
 			self,
 			self.__mm_demod,
+			self.__squelch_block,
+			self.__router,
 			self)
+		self.connect(self.__mm_demod, (self.__router, 1))
 	
 	def get_input_type(self):
 		return self.__mm_demod.get_input_type()
 	
 	def get_output_type(self):
 		return self.__mm_demod.get_output_type()
+	
+	@exported_value(ctor=_aprs_squelch_type)
+	def get_squelch(self):
+		return self.__squelch_mode
+	
+	@setter
+	def set_squelch(self, value):
+		value = _aprs_squelch_type(value)
+		if value == self.__squelch_mode: return
+		self.__squelch_mode = value
+		if value == u'mute':
+			self.__router.set_A([[0, 0]])
+		elif value == u'monitor':
+			self.__router.set_A([[0, 1]])
+		elif value == u'ctcss':
+			self.__router.set_A([[1, 0]])
+		else:
+			warnings.warn('can\'t happen: bad squelch value: %r' % (value,))
+			# and leave level at what it was
 
 
 # TODO: Eliminate this class and replace it with adapters available to any demodulator
@@ -142,6 +184,7 @@ class FMAPRSDemodulator(gr.hier_block2, ExportedState):
 		self.fm_demod = NFMDemodulator(
 			mode='NFM',
 			input_rate=input_rate,
+			no_audio_filter=True,  # don't remove CTCSS tone
 			tau=None)  # no deemphasis
 		assert self.fm_demod.get_output_type().get_kind() == 'MONO'
 		fm_audio_rate = self.fm_demod.get_output_type().get_sample_rate()

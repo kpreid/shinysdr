@@ -140,19 +140,29 @@ class SimpleAudioDemodulator(Demodulator, SquelchMixin):
 		}
 
 
-def design_lofi_audio_filter(rate):
+def design_lofi_audio_filter(rate, lowpass):
 	'''
 	Audio output filter for speech-type receivers.
 	
 	Original motivation was to remove CTCSS tones.
 	'''
-	return firdes.band_pass(
-		1.0,
-		rate,
-		500,
-		min(10000, rate / 2),
-		1000,
-		firdes.WIN_HAMMING)
+	upper = min(10000, rate / 2)
+	transition = 1000
+	if lowpass:
+		return firdes.low_pass(
+			1.0,
+			rate,
+			upper,
+			transition,
+			firdes.WIN_HAMMING)
+	else:
+		return firdes.band_pass(
+			1.0,
+			rate,
+			500,
+			upper,
+			transition,
+			firdes.WIN_HAMMING)
 
 
 class IQDemodulator(SimpleAudioDemodulator):
@@ -239,13 +249,23 @@ pluginDef_am = ModeDef('AM', label='AM', demod_class=AMDemodulator, mod_class=AM
 
 
 class FMDemodulator(SimpleAudioDemodulator):
-	def __init__(self, mode, deviation=75000, demod_rate=48000, band_filter=None, band_filter_transition=None, tau=75e-6, **kwargs):
+	def __init__(self,
+			mode,
+			deviation=75000,
+			demod_rate=48000,
+			band_filter=None,
+			band_filter_transition=None,
+			tau=75e-6,
+			no_audio_filter=False,  # TODO kludge to support APRS demod looking for tones
+			**kwargs):
 		SimpleAudioDemodulator.__init__(self,
 			mode=mode,
 			demod_rate=demod_rate,
 			band_filter=band_filter,
 			band_filter_transition=band_filter_transition,
 			**kwargs)
+		
+		self.__no_audio_filter = no_audio_filter
 		
 		self.__qdemod = analog.quadrature_demod_cf(demod_rate / (TWO_PI * deviation))
 		if tau > 0.0:
@@ -271,7 +291,7 @@ class FMDemodulator(SimpleAudioDemodulator):
 		self.connect_audio_stage(output)
 	
 	def _make_resampler(self, input, input_rate):
-		taps = design_lofi_audio_filter(input_rate)
+		taps = design_lofi_audio_filter(input_rate, self.__no_audio_filter)
 		if self.audio_rate == input_rate:
 			filt = grfilter.fir_filter_fff(1, taps)
 			self.connect(input, filt)
