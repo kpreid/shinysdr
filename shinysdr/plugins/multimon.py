@@ -44,33 +44,20 @@ int_scale = _maxint32 * audio_gain
 class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 	# This is not an IDemodulator; it takes float input, requires a fixed input rate and lacks other characteristics.
 	
-	def __init__(self, mode, aprs_information=None, context=None):
+	def __init__(self, protocol, context, multimon_demod_args):
 		gr.hier_block2.__init__(
-			self, str(mode) + ' (Multimon-NG) demodulator',
+			self, '%s(%r, %r)' % (self.__class__.__name__, multimon_demod_args, protocol),
 			gr.io_signature(1, 1, gr.sizeof_float * 1),
-			# TODO: Add generic support for demodulators with no audio output
 			gr.io_signature(1, 1, gr.sizeof_float * 1),
 		)
-		self.mode = mode
-		
-		if aprs_information is not None:
-			self.__information = aprs_information
-		else:
-			self.__information = APRSInformation()
-		
-		def receive(line):
-			log.msg(u'APRS: %s' % (line,))
-			message = parse_tnc2(line, time.time())
-			log.msg(u'   -> %s' % (message,))
-			self.__information.receive(message)
 		
 		# Subprocess
 		# using /usr/bin/env because twisted spawnProcess doesn't support path search
 		process = reactor.spawnProcess(
-			MultimonNGProcessProtocol(receive),
+			protocol,
 			'/usr/bin/env',
 			env=None,  # inherit environment
-			args=['env', 'multimon-ng', '-t', 'raw', '-a', 'AFSK1200', '-A', '-v', '10', '-'],
+			args=['env', 'multimon-ng', '-t', 'raw'] + multimon_demod_args + ['-v', '10', '-'],
 			childFDs={
 				0: 'w',
 				1: 'r',
@@ -90,21 +77,54 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
 		self.connect(to_short, unconverter)
 		self.connect(unconverter, self)
 		
-	def can_set_mode(self, mode):
-		return False
-	
 	def get_input_type(self):
 		return SignalType(kind='MONO', sample_rate=pipe_rate)
 	
 	def get_output_type(self):
 		return SignalType(kind='MONO', sample_rate=pipe_rate)
+
+
+class APRSDemodulator(gr.hier_block2, ExportedState):
+	'''
+	Demod APRS and feed into an APRSInformation object.
+	'''
+	def __init__(self, aprs_information=None, context=None):
+		gr.hier_block2.__init__(
+			self, self.__class__.__name__,
+			gr.io_signature(1, 1, gr.sizeof_float * 1),
+			gr.io_signature(1, 1, gr.sizeof_float * 1),
+		)
+		
+		if aprs_information is not None:
+			self.__information = aprs_information
+		else:
+			self.__information = APRSInformation()
+		
+		def receive(line):
+			log.msg(u'APRS: %s' % (line,))
+			message = parse_tnc2(line, time.time())
+			log.msg(u'   -> %s' % (message,))
+			self.__information.receive(message)
+		
+		self.__mm_demod = MultimonNGDemodulator(
+			multimon_demod_args=['-A'],
+			protocol=APRSProcessProtocol(receive),
+			context=context)
+		
+		self.connect(
+			self,
+			self.__mm_demod,
+			self)
 	
-	def get_half_bandwidth(self):
-		return pipe_rate / 2
+	def get_input_type(self):
+		return self.__mm_demod.get_input_type()
+	
+	def get_output_type(self):
+		return self.__mm_demod.get_output_type()
 
 
 # TODO: Eliminate this class and replace it with adapters available to any demodulator
-class FMMultimonNGDemodulator(gr.hier_block2, ExportedState):
+class FMAPRSDemodulator(gr.hier_block2, ExportedState):
 	implements(IDemodulator)
 	
 	def __init__(self, mode, input_rate=0, aprs_information=None, context=None):
@@ -127,8 +147,7 @@ class FMMultimonNGDemodulator(gr.hier_block2, ExportedState):
 		fm_audio_rate = self.fm_demod.get_output_type().get_sample_rate()
 		
 		# Subprocess
-		self.mm_demod = MultimonNGDemodulator(
-			mode='APRS',
+		self.mm_demod = APRSDemodulator(
 			aprs_information=aprs_information)
 		mm_audio_rate = self.mm_demod.get_input_type().get_sample_rate()
 		
@@ -141,7 +160,7 @@ class FMMultimonNGDemodulator(gr.hier_block2, ExportedState):
 			self)
 	
 	def state_def(self, callback):
-		super(FMMultimonNGDemodulator, self).state_def(callback)
+		super(FMAPRSDemodulator, self).state_def(callback)
 		# TODO make this possible to be decorator style
 		callback(BlockCell(self, 'mm_demod'))
 	
@@ -159,7 +178,7 @@ class FMMultimonNGDemodulator(gr.hier_block2, ExportedState):
 		return self.fm_demod.get_band_filter_shape()
 
 
-class MultimonNGProcessProtocol(ProcessProtocol):
+class APRSProcessProtocol(ProcessProtocol):
 	def __init__(self, target):
 		self.__target = target
 		self.__line_receiver = LineReceiver()
@@ -200,6 +219,6 @@ _multimon_available = test_subprocess('multimon-ng -h; exit 0', 'available demod
 pluginDef_APRS = ModeDef(
 	mode='APRS',  # TODO: Rename mode to be more accurate
 	label='APRS',
-	demod_class=FMMultimonNGDemodulator,
+	demod_class=FMAPRSDemodulator,
 	shared_objects={'aprs_information': APRSInformation},
 	available=_multimon_available)
