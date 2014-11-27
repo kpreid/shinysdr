@@ -15,8 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-# pylint: disable=no-init
-# (pylint is confused by interfaces)
+# pylint: disable=no-init, attribute-defined-outside-init, maybe-no-member
+# (no-init: pylint is confused by interfaces)
+# (attribute-defined-outside-init: doing it carefully)
+# (maybe-no-member: pylint is confused by set_max_output_buffer)
 
 from __future__ import absolute_import, division
 
@@ -317,11 +319,6 @@ class ContextForDemodulator(object):
 	def __init__(self, receiver):
 		self._receiver = receiver
 		self._enabled = False  # assigned outside
-	
-	def revalidate(self):
-		raise NotImplementedError('ContextForDemodulator not done')
-		# if self._enabled:
-		# 	self._receiver.context._update_receiver_validity(self._key)
 	
 	def rebuild_me(self):
 		assert self._enabled

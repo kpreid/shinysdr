@@ -28,8 +28,11 @@ config.devices.add('my-other-radio',
 TODO explain how to link up with soundcard devices
 '''
 
-# pylint: disable=no-init
-# (no-init is pylint being confused by interfaces)
+# pylint: disable=no-init, no-member, signature-differs, raising-bad-type
+# (no-init: pylint confused by interfaces)
+# (no-member: pylint confused by abstract non-methods)
+# (signature-differs: twisted is inconsistent about connectionMade/connectionLost)
+# (raising-bad-type: pylint static analysis failure)
 
 
 from __future__ import absolute_import, division

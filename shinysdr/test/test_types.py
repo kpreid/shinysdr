@@ -23,12 +23,13 @@ from shinysdr.types import Enum, Range
 
 
 def _testType(self, type_obj, good, bad):
-	for value in good:
-		if isinstance(value, tuple):
-			input, output = value
-			self.assertEqual(type_obj(input), output, msg='for input %r' % (input,))
+	for case in good:
+		if isinstance(case, tuple):
+			input_value, output_value = case
 		else:
-			self.assertEqual(type_obj(value), value, msg='for input %r' % (input,))
+			input_value = case
+			output_value = case
+		self.assertEqual(type_obj(input_value), output_value, msg='for input %r' % (input_value,))
 	for value in bad:
 		self.assertRaises(ValueError, lambda: type_obj(value))
 

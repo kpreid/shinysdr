@@ -1,4 +1,4 @@
-# Copyright 2013 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -38,7 +38,7 @@ class TestTop(unittest.TestCase):
 		top.set_source_name('s1')
 		self.assertEqual(top.monitor.get_fft_info()[0], 0)
 		
-		(_, receiver) = top.add_receiver('AM', key='a')
+		(_key, receiver) = top.add_receiver('AM', key='a')
 		receiver.set_rec_freq(freq)
 		self.assertFalse(receiver.get_is_valid())
 		
@@ -52,7 +52,7 @@ class TestTop(unittest.TestCase):
 		Specifying an unknown mode should not _fail_.
 		'''
 		top = Top(devices={'s1': simulate.SimulatedDevice(freq=0)})
-		(_, receiver) = top.add_receiver('NONSENSE', key='a')
+		(_key, receiver) = top.add_receiver('NONSENSE', key='a')
 		self.assertEqual(receiver.get_mode(), 'AM')
 	
 	def test_audio_queue_smoke(self):
@@ -65,7 +65,7 @@ class TestTop(unittest.TestCase):
 	def test_mono(self):
 		top = Top(devices={'s1': simulate.SimulatedDevice(freq=0)}, stereo=False)
 		queue = gr.msg_queue()
-		(_, receiver) = top.add_receiver('AM', key='a')
+		(_key, _receiver) = top.add_receiver('AM', key='a')
 		top.set_unpaused(True)  # there should be an attempted start
 		top.add_audio_queue(queue, 48000)
 		top.remove_audio_queue(queue)

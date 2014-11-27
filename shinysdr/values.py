@@ -15,9 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-# pylint: disable=unpacking-non-sequence, undefined-loop-variable, attribute-defined-outside-init, no-init
-# (pylint is confused by our tuple-or-None in _MessageSplitter and by our only-used-immediately closures over loop variables in state_from_json)
 
+# pylint: disable=unpacking-non-sequence, undefined-loop-variable, attribute-defined-outside-init, no-init, abstract-method, unnecessary-lambda, redefined-builtin, arguments-differ
+# (pylint is confused by our tuple-or-None in _MessageSplitter and by our only-used-immediately closures over loop variables in state_from_json)
+# (abstract-method: pylint is confused by the cell type hierarchy)
+# (redefined-builtin: we want named args named "type")
+# (arguments-differ: pylint is confused, don't know why)
 
 from __future__ import absolute_import, division
 
@@ -611,13 +614,13 @@ class _SortedMultimap(object):
 		self.__value_count -= 1
 		last_out = len(values) == 0
 		if last_out:
-			sorted = self.__sorted
+			sorted_list = self.__sorted
 			del self.__dict[key]
-			index = bisect.bisect_left(sorted, key)
-			if sorted[index] != key:
+			index = bisect.bisect_left(sorted_list, key)
+			if sorted_list[index] != key:
 				# TODO: This has been observed to happen. Need to diagnose.
-				raise Exception("can't happen: while removing last value %r for key %r from %r, %r was found instead of the key at index %r in the sorted list" % (value, key, self, sorted[index], index))
-			sorted[index:index + 1] = []
+				raise Exception("can't happen: while removing last value %r for key %r from %r, %r was found instead of the key at index %r in the sorted list" % (value, key, self, sorted_list[index], index))
+			sorted_list[index:index + 1] = []
 		return last_out
 	
 	def count_keys(self):

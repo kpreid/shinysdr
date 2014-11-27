@@ -1,4 +1,4 @@
-# Copyright 2013 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -22,6 +22,9 @@ This module is not an external API and not guaranteed to have a stable
 interface.
 '''
 
+# pylint: disable=attribute-defined-outside-init
+# (attribute-defined-outside-init: doing it carefully)
+
 from __future__ import absolute_import, division
 
 from fractions import gcd
@@ -39,7 +42,7 @@ from gnuradio.fft import logpwrfft
 
 from shinysdr.math import factorize, small_factor_at_least
 from shinysdr.signals import SignalType
-from shinysdr.types import BulkDataType, Range, ValueType
+from shinysdr.types import BulkDataType, Range
 from shinysdr.values import ExportedState, exported_value, setter, StreamCell
 
 

@@ -1,4 +1,4 @@
-# Copyright 2013 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -51,5 +51,5 @@ class TestOsmoSDRRange(unittest.TestCase):
 			orange.push_back(range_t(*range_args))
 		myrange = convert_osmosdr_range(orange)
 		self.assertEqual(
-			[(min, max) for (min, max, _) in range_argses],
+			[(min_val, max_val) for (min_val, max_val, _) in range_argses],
 			myrange.type_to_json()['subranges'])

@@ -103,5 +103,5 @@ class TestMain(unittest.TestCase):
 				config.wait_for(d)
 			'''))
 		
-		(top, note_dirty) = yield self.__run_main()
+		(top, _note_dirty) = yield self.__run_main()
 		self.assertEqual(top.state()['sources'].get().state().keys(), ['a_source'])

@@ -17,6 +17,11 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+
+# pylint: disable=unused-variable
+# (unused-variable: placeholder imports)
+
+
 from __future__ import absolute_import, division
 
 import argparse

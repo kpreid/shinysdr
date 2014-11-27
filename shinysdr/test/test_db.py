@@ -1,4 +1,4 @@
-# Copyright 2013 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -54,10 +54,10 @@ class TestCSV(unittest.TestCase):
 		self.__assertDiag(diagnostics, expect_diagnostics)
 	
 	def __roundtrip(self, records, expect_diagnostics):
-		buffer = StringIO.StringIO()
-		db._write_csv_file(buffer, records)
-		buffer.seek(0)
-		read_records, diagnostics = db._parse_csv_file(buffer)
+		file_obj = StringIO.StringIO()
+		db._write_csv_file(file_obj, records)
+		file_obj.seek(0)
+		read_records, diagnostics = db._parse_csv_file(file_obj)
 		self.assertEqual(records, read_records)
 		self.__assertDiag(diagnostics, expect_diagnostics)
 	

@@ -15,9 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-# pylint: disable=dangerous-default-value, no-method-argument, no-init
+# pylint: disable=dangerous-default-value, no-method-argument, no-init, method-hidden
 # (the default values in question are not mutated)
 # (pylint is confused by interfaces)
+# (method-hidden: done on purpose)
 
 from __future__ import absolute_import, division
 
@@ -419,7 +420,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 		# TODO: __name__ is a lousy strategy
 		key = ctor.__name__
 		if key not in self.__shared_objects:
-			 self.__shared_objects[key] = ctor()
+			self.__shared_objects[key] = ctor()
 		return self.__shared_objects[key]
 	
 	def _trigger_reconnect(self):
@@ -486,10 +487,12 @@ class MaxProbe(gr.hier_block2):
 			gr.io_signature(1, 1, gr.sizeof_gr_complex),
 			gr.io_signature(0, 0, 0),
 		)
+		self.__sink = None  # quiet pylint
 		self.set_window_and_reconnect(window)
 	
 	def level(self):
-		raise NotImplementedError()
+		# overridden in instances
+		raise Exception('This placeholder should never get called')
 	
 	def set_window_and_reconnect(self, window):
 		'''

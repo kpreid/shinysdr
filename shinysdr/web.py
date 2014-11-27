@@ -15,10 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-# pylint: disable=maybe-no-member, attribute-defined-outside-init, no-init
+# pylint: disable=maybe-no-member, attribute-defined-outside-init, no-init, method-hidden, signature-differs
 # (maybe-no-member is incorrect)
 # (attribute-defined-outside-init is a Twisted convention for protocol objects)
 # (no-init is pylint being confused by interfaces)
+# (method-hidden: done on purpose)
+# (signature-differs: twisted is inconsistent about connectionMade/connectionLost)
 
 
 from __future__ import absolute_import, division
@@ -28,10 +30,10 @@ from twisted.application.service import Service
 from twisted.internet import defer
 from twisted.internet import protocol
 from twisted.internet import reactor as the_reactor  # TODO fix
-from twisted.internet import task
 from twisted.plugin import IPlugin, getPlugins
 from twisted.python import log
-from twisted.web import http, static, server, resource, template
+from twisted.web import http, static, server, template
+from twisted.web.resource import Resource
 from zope.interface import Interface, implements, providedBy  # available via Twisted
 
 from gnuradio import gr
@@ -84,7 +86,7 @@ _json_encoder_for_values = json.JSONEncoder(
 	default=_json_encoder_special_cases)
 
 
-class _SlashedResource(resource.Resource):
+class _SlashedResource(Resource):
 	'''Redirects /.../this to /.../this/.'''
 	
 	def render(self, request):
@@ -93,7 +95,7 @@ class _SlashedResource(resource.Resource):
 		return ''
 
 
-class CellResource(resource.Resource):
+class CellResource(Resource):
 	isLeaf = True
 
 	def __init__(self, cell, noteDirty):
@@ -138,12 +140,12 @@ def notDeletable():
 	raise Exception('Attempt to delete top block')
 
 
-class BlockResource(resource.Resource):
+class BlockResource(Resource):
 	defaultContentType = 'application/json'
 	isLeaf = False
 
 	def __init__(self, block, noteDirty, deleteSelf):
-		resource.Resource.__init__(self)
+		Resource.__init__(self)
 		self._block = block
 		self._noteDirty = noteDirty
 		self._deleteSelf = deleteSelf
@@ -170,7 +172,7 @@ class BlockResource(resource.Resource):
 			if name in self._blockCells:
 				return self.__getBlockChild(name, self._blockCells[name].get())
 		# old-style-class super call
-		return resource.Resource.getChild(self, name, request)
+		return Resource.getChild(self, name, request)
 	
 	def __getBlockChild(self, name, block):
 		r = self._blockResourceCache.get(block)
@@ -234,7 +236,7 @@ class _BlockHtmlElement(template.Element):
 		return tag('/' + '/'.join([urllib.quote(x, safe='') for x in request.prepath]))
 
 
-class FlowgraphVizResource(resource.Resource):
+class FlowgraphVizResource(Resource):
 	isLeaf = True
 	
 	def __init__(self, reactor, block):
@@ -314,7 +316,8 @@ class _StateStreamObjectRegistration(object):
 		'''kludge to get initial state sent'''
 	
 	def initial_nudge(self):
-		raise NotImplementedError()  # should be overridden in instance
+		# should be overridden in instance
+		raise Exception('This placeholder should never get called')
 	
 	def __listen_cell(self):
 		if self.__dead:
@@ -652,7 +655,7 @@ class _RadioIndexHtmlElement(template.Element):
 		return tag(self.__title)
 
 
-class _RadioIndexHtmlResource(resource.Resource):
+class _RadioIndexHtmlResource(Resource):
 	isLeaf = True
 
 	def __init__(self, title):
@@ -724,7 +727,7 @@ class WebService(Service):
 		
 		# Plugin resources
 		loadList = []
-		pluginResources = resource.Resource()
+		pluginResources = Resource()
 		client.putChild('plugins', pluginResources)
 		for resourceDef in getPlugins(IClientResourceDef, shinysdr.plugins):
 			pluginResources.putChild(resourceDef.key, resourceDef.resource)

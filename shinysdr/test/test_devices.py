@@ -15,12 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+
 from __future__ import absolute_import, division
 
 from twisted.trial import unittest
 from zope.interface import implements  # available via Twisted
-
-from gnuradio import gr
 
 # Note: not testing _ConstantVFOCell, it's just a useful utility
 from shinysdr.devices import _ConstantVFOCell, Device, IDevice, IRXDriver, ITXDriver, merge_devices

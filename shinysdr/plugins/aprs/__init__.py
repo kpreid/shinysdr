@@ -32,9 +32,10 @@ If APRSInformation is exported to the web client its data will appear on the map
 # <http://www.aprs.org/aprs12.html>
 
 
-# pylint: disable=bad-whitespace, too-many-locals, too-many-return-statements, too-many-branches
+# pylint: disable=bad-whitespace, too-many-locals, too-many-return-statements, too-many-branches, unused-variable
 # (bad-whitespace: we have a column-aligned data table)
 # (too-many-*: parsers are hairy)
+# (unused-variable: parser tuples)
 
 
 from __future__ import absolute_import, division

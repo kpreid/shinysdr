@@ -1,4 +1,4 @@
-# Copyright 2013 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -29,8 +29,6 @@ from zope.interface import implements
 
 from gnuradio import gr
 from gnuradio import gru
-from gnuradio import blocks
-from gnuradio import analog
 
 from shinysdr.modes import ModeDef, IDemodulator
 from shinysdr.signals import no_signal

@@ -1,4 +1,4 @@
-# Copyright 2013 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -15,8 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-# pylint: disable=no-method-argument, no-init
-# (pylint is confused by interfaces)
+# pylint: disable=no-method-argument, no-init, attribute-defined-outside-init
+# (no-method-argument, no-init: pylint is confused by interfaces)
+# (attribute-defined-outside-init: on purpose)
 
 from __future__ import absolute_import, division
 

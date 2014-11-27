@@ -93,7 +93,7 @@ class VOR(SimpleAudioDemodulator):
 		
 		self.probe = blocks.probe_signal_f()
 		
-		self.audio_filter_block = grfilter.fir_filter_fff(1, design_lofi_audio_filter(internal_audio_rate))
+		self.audio_filter_block = grfilter.fir_filter_fff(1, design_lofi_audio_filter(internal_audio_rate, False))
 
 		##################################################
 		# Connections
@@ -165,6 +165,8 @@ class VORModulator(gr.hier_block2, ExportedState):
 			gr.io_signature(1, 1, gr.sizeof_float * 1),
 			gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
 		)
+		
+		self.__angle = 0.0  # dummy statically visible value will be overwritten
 		
 		# TODO: My signal level parameters are probably wrong because this signal doesn't look like a real VOR signal
 		

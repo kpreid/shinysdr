@@ -68,8 +68,8 @@ class Enum(ValueType):
 class Range(ValueType):
 	def __init__(self, subranges, strict=True, logarithmic=False, integer=False):
 		# TODO validate subranges are sorted
-		self.__mins = [min for (min, max) in subranges]
-		self.__maxes = [max for (min, max) in subranges]
+		self.__mins = [min_value for (min_value, max_value) in subranges]
+		self.__maxes = [max_value for (min_value, max_value) in subranges]
 		self.__strict = strict
 		self.__logarithmic = logarithmic
 		self.__integer = integer

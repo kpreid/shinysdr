@@ -1,4 +1,4 @@
-# Copyright 2013 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -305,25 +305,26 @@ class Gains(ExportedState):
 
 
 def _install_gain_cell(self, source, name, callback):
-	def getter():
+	def gain_getter():
 		return source.get_gain(name, ch)
 	
-	def setter(value):
+	def gain_setter(value):
 		source.set_gain(float(value), name, ch)
 	
 	gain_range = convert_osmosdr_range(source.get_gain_range(name, ch))
 	
 	# TODO: There should be a type of Cell such that we don't have to setattr
-	setattr(self, 'get_' + name, getter)
-	setattr(self, 'set_' + name, setter)
+	setattr(self, 'get_' + name, gain_getter)
+	setattr(self, 'set_' + name, gain_setter)
 	callback(Cell(self, name, ctor=gain_range, writable=True, persists=True))
 
 
 def convert_osmosdr_range(meta_range, add_zero=False, transform=lambda f: f, **kwargs):
+	# TODO: Recognize step values from osmosdr
 	subranges = []
 	for i in xrange(0, meta_range.size()):
-		range = meta_range[i]
-		subranges.append((transform(range.start()), transform(range.stop())))
+		single_range = meta_range[i]
+		subranges.append((transform(single_range.start()), transform(single_range.stop())))
 	if add_zero:
 		subranges[0:0] = [(0, 0)]
 	return Range(subranges, **kwargs)

@@ -17,9 +17,9 @@
 
 from __future__ import absolute_import, division
 
-from twisted.trial import unittest
-
-from shinysdr.test.testutil import DemodulatorTester
+#from twisted.trial import unittest
+#
+#from shinysdr.test.testutil import DemodulatorTester
 
 # TODO: This test fails with an unclean reactor, <twisted.internet.process.ProcessReader object>. Fix the cleanup and enable this test
 
@@ -28,4 +28,3 @@ from shinysdr.test.testutil import DemodulatorTester
 #	def test_1(self):
 #		with DemodulatorTester('APRS'):
 #			pass
-#

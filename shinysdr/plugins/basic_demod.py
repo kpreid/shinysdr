@@ -1,4 +1,4 @@
-# Copyright 2013 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -290,26 +290,26 @@ class FMDemodulator(SimpleAudioDemodulator):
 			output = self.__qdemod
 		self.connect_audio_stage(output)
 	
-	def _make_resampler(self, input, input_rate):
+	def _make_resampler(self, input_port, input_rate):
 		taps = design_lofi_audio_filter(input_rate, self.__no_audio_filter)
 		if self.audio_rate == input_rate:
 			filt = grfilter.fir_filter_fff(1, taps)
-			self.connect(input, filt)
+			self.connect(input_port, filt)
 			return filt
 		elif input_rate % self.audio_rate == 0:
 			filt = grfilter.fir_filter_fff(input_rate // self.audio_rate, taps)
-			self.connect(input, filt)
+			self.connect(input_port, filt)
 			return filt
 		else:
 			# TODO: use combined filter and resampler (need to move filter design)
 			filt = grfilter.fir_filter_fff(1, taps)
 			resampler = make_resampler(input_rate, self.audio_rate)
-			self.connect(input, filt, resampler)
+			self.connect(input_port, filt, resampler)
 			return resampler
 
-	def connect_audio_stage(self, input):
+	def connect_audio_stage(self, input_port):
 		'''Override point for stereo'''
-		resampler = self._make_resampler(input, self.demod_rate)
+		resampler = self._make_resampler(input_port, self.demod_rate)
 		self.connect_audio_output(resampler)
 
 
@@ -385,7 +385,7 @@ class WFMDemodulator(FMDemodulator):
 		self.do_connect()
 		self.context.unlock()
 	
-	def connect_audio_stage(self, input):
+	def connect_audio_stage(self, input_port):
 		stereo_rate = self.demod_rate
 		normalizer = TWO_PI / stereo_rate
 		pilot_tone = 19000
@@ -423,11 +423,11 @@ class WFMDemodulator(FMDemodulator):
 		mixR = blocks.sub_ff(1)
 		
 		# connections
-		self.connect(input, mono_channel_filter)
+		self.connect(input_port, mono_channel_filter)
 		if self.stereo:
 			# stereo pilot tone tracker
 			self.connect(
-				input,
+				input_port,
 				stereo_pilot_filter,
 				stereo_pilot_pll)
 			self.connect(stereo_pilot_pll, (stereo_pilot_doubler, 0))
@@ -435,7 +435,7 @@ class WFMDemodulator(FMDemodulator):
 			self.connect(stereo_pilot_doubler, stereo_pilot_out)
 		
 			# pick out stereo left-right difference channel (at stereo_rate)
-			self.connect(input, (difference_channel_mixer, 0))
+			self.connect(input_port, (difference_channel_mixer, 0))
 			self.connect(stereo_pilot_out, (difference_channel_mixer, 1))
 			self.connect(difference_channel_mixer, difference_channel_filter)
 		
