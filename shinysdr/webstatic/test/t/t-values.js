@@ -193,6 +193,26 @@ describe('values', function () {
         expect(resultsCell.get().length).toBe(0);
       })
     });
+    
+    it('should forget an old cell', function () {
+      var dynamic = {
+        foo: structure.get().foo
+      };
+      Object.defineProperty(dynamic, '_reshapeNotice', {value: new shinysdr.events.Notifier()});
+      
+      var index = new values.Index(s, new values.LocalCell(values.block, dynamic));
+      var resultsCell = index.implementing('Foo');
+      var l = createListenerSpy();
+      resultsCell.n.listen(l);
+      
+      delete dynamic['foo'];
+      dynamic._reshapeNotice.notify();
+      
+      expectNotification(l);
+      runs(function () {
+        expect(resultsCell.get().length).toBe(0);
+      })
+    });
   });
 });
 
