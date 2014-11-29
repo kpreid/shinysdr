@@ -206,17 +206,41 @@ define(['./events'], function (events) {
   
   function DerivedCell(type, scheduler, compute) {
     Cell.call(this, type);
+    
     this._compute = compute;
-    this._dirty = function derivedCellDirtyCallback() {
+    this._needsCompute = false;
+    
+    var dirtyCallback = this._dirty = function derivedCellDirtyCallback() {
       this.n.notify();
     }.bind(this);
-    this._dirty.scheduler = scheduler;
-    this.get();  // TODO kludge to register initial notifications -- this would not be necessary if .depend() were the only interface instead of .n.listen(), so we should consider that
+    var cell = this;
+    this._dirty.scheduler = {
+      // This scheduler-like object is a kludge so that we can get a prompt dirty flag.
+      // I suspect that there are other use cases for this, in which case it should be extracted into a full scheduler implementation (or a part of the base Scheduler) but I'm waiting to see what the other cases look like first.
+      toString: function () { return '[DerivedCell gimmick scheduler]'; },
+      enqueue: function (f) {
+        if (f !== dirtyCallback) {
+          throw new Error('f !== dirtyCallback');
+        }
+        if (!cell._needsCompute) {
+          cell._needsCompute = true;
+          cell.n.notify();
+        }
+      }
+    };
+    
+    // Register initial notifications by computing once.
+    // Note: this would not be necessary if .depend() were the only interface instead of .n.listen(), so it is perhaps worth considering that.
+    this._value = (1,this._compute)(this._dirty);
   }
   DerivedCell.prototype = Object.create(Cell.prototype, {constructor: {value: DerivedCell}});
   DerivedCell.prototype.get = function () {
-    // TODO: Cache computation. Doing so will require that we have a way to notice if we are synchronously dirty (that is, someone has done scheduler.enqueue(this._dirty)). This seems like a reasonable feature to add explicitly to schedulers.
-    return (1,this._compute)(this._dirty);
+    if (this._needsCompute) {
+      // Note that this._compute could throw. The behavior we have chosen here is to throw on every get call. Other possible behaviors would be to catch and log (or throw-async) the exception and return either a stale value or a pumpkin value.
+      this._value = (1,this._compute)(this._dirty);
+      this._needsCompute = false;
+    }
+    return this._value;
   }
   exports.DerivedCell = DerivedCell;
   

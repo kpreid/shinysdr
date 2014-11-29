@@ -104,10 +104,12 @@ describe('values', function () {
   });
   
   describe('DerivedCell', function () {
-    var base, f;
+    var base, f, calls;
     beforeEach(function () {
       base = new values.LocalCell(values.any, 1);
+      calls = 0;
       f = new values.DerivedCell(values.any, s, function (dirty) {
+        calls++;
         return base.depend(dirty) + 1;
       });
     })
@@ -129,6 +131,16 @@ describe('values', function () {
       runs(function () {
         expect(f.get()).toEqual(11);
       });
+    });
+    
+    it('should not recompute more than necessary', function () {
+      expect(f.get()).toEqual(2);
+      expect(f.get()).toEqual(2);
+      expect(calls).toEqual(1);
+      base.set(10);
+      expect(f.get()).toEqual(11);
+      expect(f.get()).toEqual(11);
+      expect(calls).toEqual(2);
     });
   });
   
