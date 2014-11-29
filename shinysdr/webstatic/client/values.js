@@ -374,13 +374,17 @@ define(['./events'], function (events) {
         
         nu.forEach(function (interfaceName) {
           var objectsCell = gobi(interfaceName);
-          objectsCell._update(Object.freeze(objectsCell.get().concat([cell])));
+          var existingObjects = objectsCell.get();
+          if (existingObjects.indexOf(cell) < 0) {
+            // TODO: fix O(n^2) behavior
+            objectsCell._update(Object.freeze(existingObjects.concat([cell])));
+          }
         });
         
+        // remember which interfaces' object lists to flush when this cell changes in case it no longer implements the interfaces. TODO: Take a delta to minimize work
         interfaces = nu;
         
         // Add all cells found in this object
-        // TODO removal, reshapeNotice
         for (var key in object) {
           var childCell = object[key];
           if (!(childCell !== null && typeof childCell == 'object' && 'get' in childCell)) {

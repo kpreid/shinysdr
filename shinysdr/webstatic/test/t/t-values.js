@@ -176,8 +176,11 @@ describe('values', function () {
       
       expectNotification(l);
       runs(function () {
+        expect(resultsCell.get().length).toBe(1);
         expect(resultsCell.get()).toContain(newObj);
-      })
+
+        expect(index.implementing('Foo').get().length).toBe(1);
+      });
     });
     
     it('should forget an old block', function () {
