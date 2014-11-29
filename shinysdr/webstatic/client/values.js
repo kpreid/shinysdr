@@ -413,7 +413,10 @@ define(['./events'], function (events) {
       return new DerivedCell(any, scheduler, function (dirty) {
         return cellsCell.depend(dirty).map(function (cell) {
           return cell.depend(dirty);
-        })
+        }).filter(function (block) {
+          // filter out stale propcells that didn't happen to be removed in the right order. or something. TODO see if the need for this is actually a bug.
+          return !!block;
+        });
       });
     };
   }
