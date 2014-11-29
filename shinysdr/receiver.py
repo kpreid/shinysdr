@@ -35,7 +35,7 @@ from shinysdr.blocks import rotator_inc
 from shinysdr.modes import ITunableDemodulator, get_modes, lookup_mode
 from shinysdr.signals import SignalType
 from shinysdr.types import Enum, Range
-from shinysdr.values import ExportedState, BlockCell, exported_value, setter
+from shinysdr.values import ExportedState, BlockCell, exported_value, setter, unserialize_exported_state
 
 
 # arbitrary non-infinite limit
@@ -274,33 +274,27 @@ class Receiver(gr.hier_block2, ExportedState):
 
 		mode_def = lookup_mode(mode)
 		if mode_def is None:
+			# TODO: Better handling, like maybe a dummy demod
 			raise ValueError('Unknown mode: ' + mode)
 		clas = mode_def.demod_class
 
-		# TODO: extend state_from_json so we can decide to load things with keyword args and lose the init dict/state dict distinction
-		init = {}
 		state = state.copy()  # don't modify arg
-		if 'mode' in state: del state['mode']  # prevent conflict
+		if 'mode' in state: del state['mode']  # don't switch back to the mode we just switched from
 		
-		for sh_key, sh_ctor in mode_def.shared_objects.iteritems():
-			init[sh_key] = self.context.get_shared_object(sh_ctor)
-		
-		# TODO generalize this special case for WFM demodulator
-		if mode == 'WFM':
-			if 'stereo' in state:
-				init['stereo'] = state['stereo']
-			if 'audio_filter' in state:
-				init['audio_filter'] = state['audio_filter']
-
 		facet = ContextForDemodulator(self)
-		demodulator = clas(
+		
+		init_kwargs = dict(
 			mode=mode,
 			input_rate=self.input_rate,
-			context=facet,
-			**init
-		)
-		demodulator.state_from_json(state)
-		# until _enabled, ignore any callbacks resulting from the state_from_json initialization
+			context=facet)
+		for sh_key, sh_ctor in mode_def.shared_objects.iteritems():
+			init_kwargs[sh_key] = self.context.get_shared_object(sh_ctor)
+		demodulator = unserialize_exported_state(
+			ctor=clas,
+			state=state,
+			kwargs=init_kwargs)
+		
+		# until _enabled, ignore any callbacks resulting from unserialization calling setters
 		facet._enabled = True
 		return demodulator
 
