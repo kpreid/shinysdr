@@ -26,7 +26,14 @@
   <link rel="stylesheet" href="/client/ui.css" />
   <link rel="stylesheet" href="/client/theme.css" />
   <meta name="viewport" content="width=device-width" />
-</head><body class="subwindowed">
+</head><body class="subwindowed main-not-yet-run">
+
+<dialog open="" id="loading-information-dialog">
+  <pre id="loading-information-text">JS not loaded</pre>
+</dialog>
+<script>
+  document.getElementById('loading-information-text').textContent = 'Loading client…';
+</script>
 
 <shinysdr-subwindow id="section-spectrum" class="stretchy" visible="true">
   <h2>Spectrum <span data-target="radio"><span data-target="monitor" data-widget="MonitorParameters"></span></span></h2>

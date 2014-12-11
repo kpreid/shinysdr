@@ -18,6 +18,12 @@
 define(['./values', './events', './database', './network', './maps', './widget', './widgets', './audio', './window-manager'], function (values, events, database, network, maps, widget, widgets, audio, windowManager) {
   'use strict';
   
+  function log(msg) {
+    console.log(msg);
+    document.getElementById('loading-information-text')
+        .appendChild(document.createTextNode('\n' + msg));
+  }
+  
   var any = values.any;
   var ConstantCell = values.ConstantCell;
   var LocalCell = values.LocalCell;
@@ -53,6 +59,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
   var clientBlockCell = new ConstantCell(values.block, clientState);
   
   // TODO get url from server
+  log('Loading plugins…');
   network.externalGet('/client/plugin-index.json', 'text', function gotPluginIndex(jsonstr) {
     var pluginIndex = JSON.parse(jsonstr);
     Array.prototype.forEach.call(pluginIndex.css, function (cssUrl) {
@@ -67,6 +74,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
   });
   
   function connectRadio() {
+    log('Connecting to server…');
     var firstConnection = true;
     connected.scheduler = scheduler;
     var remoteCell = network.connect(network.convertToWebSocketURL('radio'));
@@ -205,6 +213,9 @@ define(['./values', './events', './database', './network', './maps', './widget',
       
         // generic control UI widget tree
         widget.createWidgets(everything, context, document);
+        
+        // Now that the widgets are live, show them
+        document.body.classList.remove('main-not-yet-run');
       
         // Map (all geographic data)
         var map = new maps.Map(document.getElementById('map'), scheduler, freqDB, remoteCell, index);
