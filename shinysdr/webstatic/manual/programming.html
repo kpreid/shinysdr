@@ -93,11 +93,13 @@
 
   <li><p>Follow <a href="http://www.python.org/dev/peps/pep-0008/">PEP 8</a> except as noted. Existing violations (most notably, camel-cased identifiers) are not to be imitated.</p></li>
 
-  <li><p>Whitespace rules: One tab, of unspecified display width, is one indent level. Blank lines shall match the indentation of their neighbors. (I am thinking of dropping this as so many things default to disagreeing with it.)</p></li>
+  <li><p>Blank lines shall match the indentation of their neighbors.</p></li>
+
+  <li><p>Every file shall declare:</p><pre>from __future__ import absolute_import, division</pre></li>
 
 </ul>
 
-<p>Configuration files are provided for the linting tools <i>flake8</i> (which subsumes <i>pep8</i>) and <i>Pylint</i>. Note that Pylint has many false positives from misinterpreting code in the <code>twisted</code> or <code>gnuradio</code> packages.</p>
+<p>Configuration files are provided for the linting tools <i>flake8</i> (which subsumes <i>pep8</i>) and <i>Pylint</i>. Any false reports from Pylint should be suppressed using the comments pylint recognizes.</p>
 
 <h3>JavaScript</h3>
 
