@@ -24,62 +24,62 @@ from shinysdr.plugins.hamlib import connect_to_rig, connect_to_rotator
 
 
 class TestHamlibRig(unittest.TestCase):
-	'''
-	Also contains generic proxy tests.
-	'''
-	timeout = 5
-	__rig = None
-	
-	def setUp(self):
-		d = connect_to_rig(reactor, options=['-m', '1'], port=4530)
-		
-		def on_connect(rig_device):
-			self.__rig = rig_device.get_components()['rig']
-		
-		d.addCallback(on_connect)
-		return d
-	
-	def tearDown(self):
-		return self.__rig.close()
-	
-	def test_noop(self):
-		'''basic connect and disconnect, check is clean'''
-		pass
+    '''
+    Also contains generic proxy tests.
+    '''
+    timeout = 5
+    __rig = None
+    
+    def setUp(self):
+        d = connect_to_rig(reactor, options=['-m', '1'], port=4530)
+        
+        def on_connect(rig_device):
+            self.__rig = rig_device.get_components()['rig']
+        
+        d.addCallback(on_connect)
+        return d
+    
+    def tearDown(self):
+        return self.__rig.close()
+    
+    def test_noop(self):
+        '''basic connect and disconnect, check is clean'''
+        pass
 
-	@defer.inlineCallbacks
-	def test_getter(self):
-		yield self.__rig.sync()
-		self.assertEqual(self.__rig.state()['freq'].get(), 145e6)
+    @defer.inlineCallbacks
+    def test_getter(self):
+        yield self.__rig.sync()
+        self.assertEqual(self.__rig.state()['freq'].get(), 145e6)
 
-	@defer.inlineCallbacks
-	def test_setter(self):
-		yield self.__rig.sync()
-		self.__rig.state()['freq'].set(123e6)
-		yield self.__rig.sync()
-		self.assertEqual(self.__rig.state()['freq'].get(), 123e6)
+    @defer.inlineCallbacks
+    def test_setter(self):
+        yield self.__rig.sync()
+        self.__rig.state()['freq'].set(123e6)
+        yield self.__rig.sync()
+        self.assertEqual(self.__rig.state()['freq'].get(), 123e6)
 
-	@defer.inlineCallbacks
-	def test_sync(self):
-		yield self.__rig.sync()
-		yield self.__rig.sync()
+    @defer.inlineCallbacks
+    def test_sync(self):
+        yield self.__rig.sync()
+        yield self.__rig.sync()
 
 
 class TestHamlibRotator(unittest.TestCase):
-	timeout = 5
-	__rotator = None
-	
-	def setUp(self):
-		d = connect_to_rotator(reactor, options=['-m', '1'], port=4531)
-		
-		def on_connect(rotator_device):
-			self.__rotator = rotator_device.get_components()['rotator']
-		
-		d.addCallback(on_connect)
-		return d
-	
-	def tearDown(self):
-		return self.__rotator.close()
-	
-	def test_noop(self):
-		'''basic connect and disconnect, check is clean'''
-		pass
+    timeout = 5
+    __rotator = None
+    
+    def setUp(self):
+        d = connect_to_rotator(reactor, options=['-m', '1'], port=4531)
+        
+        def on_connect(rotator_device):
+            self.__rotator = rotator_device.get_components()['rotator']
+        
+        d.addCallback(on_connect)
+        return d
+    
+    def tearDown(self):
+        return self.__rotator.close()
+    
+    def test_noop(self):
+        '''basic connect and disconnect, check is clean'''
+        pass

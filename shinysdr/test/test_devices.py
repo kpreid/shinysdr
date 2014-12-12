@@ -29,82 +29,82 @@ from shinysdr.values import ExportedState, LooseCell, nullExportedState
 
 
 class TestDevice(unittest.TestCase):
-	def test_name(self):
-		self.assertEqual(u'x', Device(name='x').get_name())
-		self.assertEqual(None, Device().get_name())
-	
-	def test_rx_none(self):
-		d = Device()
-		self.assertEqual(False, d.can_receive())
-		self.assertEqual(nullExportedState, d.get_rx_driver())
-	
-	def test_rx_some(self):
-		rxd = _TestRXDriver()
-		d = Device(rx_driver=rxd)
-		self.assertEqual(True, d.can_receive())
-		self.assertEqual(rxd, d.get_rx_driver())
-	
-	def test_tx_none(self):
-		d = Device()
-		self.assertEqual(False, d.can_receive())
-		self.assertEqual(nullExportedState, d.get_tx_driver())
-	
-	def test_tx_some(self):
-		txd = _TestTXDriver()
-		d = Device(tx_driver=txd)
-		self.assertEqual(True, d.can_transmit())
-		self.assertEqual(txd, d.get_tx_driver())
-	
-	# TODO VFO tests
-	# TODO components tests
+    def test_name(self):
+        self.assertEqual(u'x', Device(name='x').get_name())
+        self.assertEqual(None, Device().get_name())
+    
+    def test_rx_none(self):
+        d = Device()
+        self.assertEqual(False, d.can_receive())
+        self.assertEqual(nullExportedState, d.get_rx_driver())
+    
+    def test_rx_some(self):
+        rxd = _TestRXDriver()
+        d = Device(rx_driver=rxd)
+        self.assertEqual(True, d.can_receive())
+        self.assertEqual(rxd, d.get_rx_driver())
+    
+    def test_tx_none(self):
+        d = Device()
+        self.assertEqual(False, d.can_receive())
+        self.assertEqual(nullExportedState, d.get_tx_driver())
+    
+    def test_tx_some(self):
+        txd = _TestTXDriver()
+        d = Device(tx_driver=txd)
+        self.assertEqual(True, d.can_transmit())
+        self.assertEqual(txd, d.get_tx_driver())
+    
+    # TODO VFO tests
+    # TODO components tests
 
 
 class _TestRXDriver(ExportedState):
-	implements(IRXDriver)
-	
-	def get_output_type(self):
-		return SignalType('IQ', 1)
+    implements(IRXDriver)
+    
+    def get_output_type(self):
+        return SignalType('IQ', 1)
 
-	def get_tune_delay(self):
-		return 0.0
-	
-	def notify_reconnecting_or_restarting(self):
-		pass
+    def get_tune_delay(self):
+        return 0.0
+    
+    def notify_reconnecting_or_restarting(self):
+        pass
 
 
 class _TestTXDriver(ExportedState):
-	implements(ITXDriver)
-	
-	def get_input_type(self):
-		return SignalType('IQ', 1)
+    implements(ITXDriver)
+    
+    def get_input_type(self):
+        return SignalType('IQ', 1)
 
 
 class TestMergeDevices(unittest.TestCase):
-	def test_name(self):
-		self.assertEqual('a', merge_devices([Device(), Device(name='a')]).get_name())
-		self.assertEqual('a', merge_devices([Device(name='a'), Device()]).get_name())
-		self.assertEqual('a+b', merge_devices([Device(name='a'), Device(name='b')]).get_name())
+    def test_name(self):
+        self.assertEqual('a', merge_devices([Device(), Device(name='a')]).get_name())
+        self.assertEqual('a', merge_devices([Device(name='a'), Device()]).get_name())
+        self.assertEqual('a+b', merge_devices([Device(name='a'), Device(name='b')]).get_name())
 
-	def test_components_disjoint(self):
-		d = merge_devices([
-			Device(components={'a': ExportedState()}),
-			Device(components={'b': ExportedState()})
-		])
-		self.assertEqual(d, IDevice(d))
-		self.assertEqual(sorted(d.get_components().keys()), ['a', 'b'])
+    def test_components_disjoint(self):
+        d = merge_devices([
+            Device(components={'a': ExportedState()}),
+            Device(components={'b': ExportedState()})
+        ])
+        self.assertEqual(d, IDevice(d))
+        self.assertEqual(sorted(d.get_components().keys()), ['a', 'b'])
 
-	def test_components_conflict(self):
-		d = merge_devices([
-			Device(components={'a': ExportedState()}),
-			Device(components={'a': ExportedState()})
-		])
-		self.assertEqual(d, IDevice(d))
-		self.assertEqual(sorted(d.get_components().keys()), ['0-a', '1-a'])
+    def test_components_conflict(self):
+        d = merge_devices([
+            Device(components={'a': ExportedState()}),
+            Device(components={'a': ExportedState()})
+        ])
+        self.assertEqual(d, IDevice(d))
+        self.assertEqual(sorted(d.get_components().keys()), ['0-a', '1-a'])
 
-	def test_vfos(self):
-		d = merge_devices([
-			Device(vfo_cell=_ConstantVFOCell(1)),
-			Device(vfo_cell=LooseCell(key='freq', value=0, ctor=Range([(10, 20)]), writable=True))
-		])
-		self.assertTrue(d.get_vfo_cell().isWritable())
-		# TODO more testing
+    def test_vfos(self):
+        d = merge_devices([
+            Device(vfo_cell=_ConstantVFOCell(1)),
+            Device(vfo_cell=LooseCell(key='freq', value=0, ctor=Range([(10, 20)]), writable=True))
+        ])
+        self.assertTrue(d.get_vfo_cell().isWritable())
+        # TODO more testing

@@ -23,27 +23,27 @@ from shinysdr.test.testutil import DemodulatorTester
 
 
 class DemodulatorSmokeTest(unittest.TestCase):
-	def __test(self, mode):
-		with DemodulatorTester(mode):
-			pass
-	
-	def test_iq(self):
-		self.__test('IQ')
-	
-	def test_am(self):
-		self.__test('AM')
-	
-	def test_nfm(self):
-		self.__test('NFM')
-	
-	def test_wfm(self):
-		self.__test('WFM')
-	
-	def test_lsb(self):
-		self.__test('LSB')
-	
-	def test_usb(self):
-		self.__test('USB')
-	
-	def test_cw(self):
-		self.__test('CW')
+    def __test(self, mode):
+        with DemodulatorTester(mode):
+            pass
+    
+    def test_iq(self):
+        self.__test('IQ')
+    
+    def test_am(self):
+        self.__test('AM')
+    
+    def test_nfm(self):
+        self.__test('NFM')
+    
+    def test_wfm(self):
+        self.__test('WFM')
+    
+    def test_lsb(self):
+        self.__test('LSB')
+    
+    def test_usb(self):
+        self.__test('USB')
+    
+    def test_cw(self):
+        self.__test('CW')

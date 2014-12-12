@@ -31,11 +31,11 @@ from shinysdr.plugins import aprs
 
 
 if __name__ == '__main__':
-	for line in sys.stdin:
-		print string.rstrip(line, '\n')
-		parsed = aprs.parse_tnc2(line, time.time())
-		for error in parsed.errors:
-			print '--!--', error
-		for fact in parsed.facts:
-			print '     ', fact
-		print
+    for line in sys.stdin:
+        print string.rstrip(line, '\n')
+        parsed = aprs.parse_tnc2(line, time.time())
+        for error in parsed.errors:
+            print '--!--', error
+        for fact in parsed.facts:
+            print '     ', fact
+        print

@@ -27,41 +27,41 @@ __all__ = []  # appended later
 
 
 class SignalType(object):
-	def __init__(self, sample_rate, kind):
-		self.__sample_rate = float(sample_rate)
-		self.__kind = unicode(kind)
-		# TODO: validate args
-	
-	# TODO __eq__ and so on
-	
-	def get_sample_rate(self):
-		'''Sample rate in samples per second.'''
-		return self.__sample_rate
-	
-	def get_kind(self):
-		# TODO will probably want to change this
-		'''
-		One of 'NONE', 'IQ', 'USB', 'LSB', 'MONO', or 'STEREO'.
-		
-		Note that due to the current implementation, USB and LSB are complex with a zero Q component.
-		'''
-		return self.__kind
-	
-	def get_itemsize(self):
-		if self.__kind == 'NONE':
-			return 0
-		elif self.__kind == 'MONO' or self.__kind == 'STEREO':
-			return gr.sizeof_float
-		else:
-			return gr.sizeof_gr_complex
-	
-	def is_analytic(self):
-		'''Regardless of the signal being represented as gr_complex, does it have a two-sided spectrum?'''
-		return self.__kind == 'IQ'
-	
-	def compatible_items(self, other):
-		assert isinstance(other, SignalType)
-		return self.get_itemsize() == other.get_itemsize()
+    def __init__(self, sample_rate, kind):
+        self.__sample_rate = float(sample_rate)
+        self.__kind = unicode(kind)
+        # TODO: validate args
+    
+    # TODO __eq__ and so on
+    
+    def get_sample_rate(self):
+        '''Sample rate in samples per second.'''
+        return self.__sample_rate
+    
+    def get_kind(self):
+        # TODO will probably want to change this
+        '''
+        One of 'NONE', 'IQ', 'USB', 'LSB', 'MONO', or 'STEREO'.
+        
+        Note that due to the current implementation, USB and LSB are complex with a zero Q component.
+        '''
+        return self.__kind
+    
+    def get_itemsize(self):
+        if self.__kind == 'NONE':
+            return 0
+        elif self.__kind == 'MONO' or self.__kind == 'STEREO':
+            return gr.sizeof_float
+        else:
+            return gr.sizeof_gr_complex
+    
+    def is_analytic(self):
+        '''Regardless of the signal being represented as gr_complex, does it have a two-sided spectrum?'''
+        return self.__kind == 'IQ'
+    
+    def compatible_items(self, other):
+        assert isinstance(other, SignalType)
+        return self.get_itemsize() == other.get_itemsize()
 
 
 __all__.append('SignalType')

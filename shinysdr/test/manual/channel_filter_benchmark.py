@@ -32,34 +32,34 @@ from shinysdr.blocks import MultistageChannelFilter
 
 
 def test_one_filter(**kwargs):
-	print '------ %s -------' % (kwargs,)
-	f = MultistageChannelFilter(**kwargs)
-	
-	size = 10000000
-	
-	top = gr.top_block()
-	top.connect(
-		blocks.vector_source_c([5] * size),
-		f,
-		blocks.null_sink(gr.sizeof_gr_complex))
-		
-	print f.explain()
-	
-	t0 = time.clock()
-	top.start()
-	top.wait()
-	top.stop()
-	t1 = time.clock()
+    print '------ %s -------' % (kwargs,)
+    f = MultistageChannelFilter(**kwargs)
+    
+    size = 10000000
+    
+    top = gr.top_block()
+    top.connect(
+        blocks.vector_source_c([5] * size),
+        f,
+        blocks.null_sink(gr.sizeof_gr_complex))
+        
+    print f.explain()
+    
+    t0 = time.clock()
+    top.start()
+    top.wait()
+    top.stop()
+    t1 = time.clock()
 
-	print size, 'samples processed in', t1 - t0, 'CPU-seconds'
+    print size, 'samples processed in', t1 - t0, 'CPU-seconds'
 
 
 if __name__ == '__main__':
-	# like SSB
-	test_one_filter(input_rate=3200000, output_rate=8000, cutoff_freq=3000, transition_width=1200)
-	
-	# like WFM
-	test_one_filter(input_rate=2400000, output_rate=240000, cutoff_freq=80000, transition_width=20000)
-	
-	# requires non-decimation resampling
-	test_one_filter(input_rate=1000000, output_rate=48000, cutoff_freq=5000, transition_width=1000)
+    # like SSB
+    test_one_filter(input_rate=3200000, output_rate=8000, cutoff_freq=3000, transition_width=1200)
+    
+    # like WFM
+    test_one_filter(input_rate=2400000, output_rate=240000, cutoff_freq=80000, transition_width=20000)
+    
+    # requires non-decimation resampling
+    test_one_filter(input_rate=1000000, output_rate=48000, cutoff_freq=5000, transition_width=1000)

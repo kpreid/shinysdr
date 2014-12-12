@@ -42,120 +42,120 @@ from shinysdr.config import Config, make_default_config, execute_config
 
 
 def main(argv=None, _abort_for_test=False):
-	# This function is referenced by the setup.py entry point definition as well as the name=__main__ test below.
-	def go(reactor):
-		return _main_async(reactor, argv, _abort_for_test)
-		
-	if _abort_for_test:
-		return go(singleton_reactor)
-	else:
-		react(go)
+    # This function is referenced by the setup.py entry point definition as well as the name=__main__ test below.
+    def go(reactor):
+        return _main_async(reactor, argv, _abort_for_test)
+        
+    if _abort_for_test:
+        return go(singleton_reactor)
+    else:
+        react(go)
 
 
 @defer.inlineCallbacks
 def _main_async(reactor, argv=None, _abort_for_test=False):
-	if argv is None:
-		argv = sys.argv
-	
-	if not _abort_for_test:
-		# Configure logging. Some log messages would be discarded if we did not set up things early
-		# TODO: Consult best practices for Python and Twisted logging.
-		# TODO: Logs which are observably relevant should be sent to the client (e.g. the warning of refusing to have more receivers active)
-		logging.basicConfig(level=logging.INFO)
-		log.startLoggingWithObserver(log.PythonLoggingObserver(loggerName='shinysdr').emit, False)
-	
-	# Option parsing is done before importing the main modules so as to avoid the cost of initializing gnuradio if we are aborting early. TODO: Make that happen for createConfig too.
-	argParser = argparse.ArgumentParser(prog=argv[0])
-	argParser.add_argument('configFile', metavar='CONFIG',
-		help='path of configuration file')
-	argParser.add_argument('--create', dest='createConfig', action='store_true',
-		help='write template configuration file to CONFIG and exit')
-	argParser.add_argument('-g, --go', dest='openBrowser', action='store_true',
-		help='open the UI in a web browser')
-	argParser.add_argument('--force-run', dest='force_run', action='store_true',
-		help='Run DSP even if no client is connected (for debugging).')
-	args = argParser.parse_args(args=argv[1:])
+    if argv is None:
+        argv = sys.argv
+    
+    if not _abort_for_test:
+        # Configure logging. Some log messages would be discarded if we did not set up things early
+        # TODO: Consult best practices for Python and Twisted logging.
+        # TODO: Logs which are observably relevant should be sent to the client (e.g. the warning of refusing to have more receivers active)
+        logging.basicConfig(level=logging.INFO)
+        log.startLoggingWithObserver(log.PythonLoggingObserver(loggerName='shinysdr').emit, False)
+    
+    # Option parsing is done before importing the main modules so as to avoid the cost of initializing gnuradio if we are aborting early. TODO: Make that happen for createConfig too.
+    argParser = argparse.ArgumentParser(prog=argv[0])
+    argParser.add_argument('configFile', metavar='CONFIG',
+        help='path of configuration file')
+    argParser.add_argument('--create', dest='createConfig', action='store_true',
+        help='write template configuration file to CONFIG and exit')
+    argParser.add_argument('-g, --go', dest='openBrowser', action='store_true',
+        help='open the UI in a web browser')
+    argParser.add_argument('--force-run', dest='force_run', action='store_true',
+        help='Run DSP even if no client is connected (for debugging).')
+    args = argParser.parse_args(args=argv[1:])
 
-	# We don't actually use shinysdr.devices directly, but we want it to be guaranteed available in the context of the config file.
-	import shinysdr.devices as lazy_devices
-	import shinysdr.source as lazy_source  # legacy shim
+    # We don't actually use shinysdr.devices directly, but we want it to be guaranteed available in the context of the config file.
+    import shinysdr.devices as lazy_devices
+    import shinysdr.source as lazy_source  # legacy shim
 
-	# Load config file
-	if args.createConfig:
-		with open(args.configFile, 'w') as f:
-			f.write(make_default_config())
-			log.msg('Created default configuration file at: ' + args.configFile)
-			sys.exit(0)  # TODO: Consider using a return value or something instead
-	else:
-		configObj = Config(reactor)
-		execute_config(configObj, args.configFile)
-		yield configObj._wait_and_validate()
-		
-		stateFile = configObj._state_filename
-	
-	def noteDirty():
-		if stateFile is not None:
-			# just immediately write (revisit this when more performance is needed)
-			with open(stateFile, 'w') as f:
-				json.dump(top.state_to_json(), f)
-	
-	def restore(root, get_defaults):
-		if stateFile is not None:
-			if os.path.isfile(stateFile):
-				root.state_from_json(json.load(open(stateFile, 'r')))
-				# make a backup in case this code version misreads the state and loses things on save (but only if the load succeeded, in case the file but not its backup is bad)
-				shutil.copyfile(stateFile, stateFile + '~')
-			else:
-				root.state_from_json(get_defaults(root))
-	
-	log.msg('Constructing flow graph...')
-	top = configObj._create_top_block()
-	
-	log.msg('Restoring state...')
-	restore(top, top_defaults)
-	
-	log.msg('Starting web server...')
-	services = MultiService()
-	for maker in configObj._service_makers:
-		IService(maker(top, noteDirty)).setServiceParent(services)
-	services.startService()
-	
-	log.msg('ShinySDR is ready.')
-	
-	for service in services:
-		# TODO: should have an interface (currently no proper module to put it in)
-		service.announce(args.openBrowser)
-	
-	if args.force_run:
-		log.msg('force_run')
-		from gnuradio.gr import msg_queue
-		top.add_audio_queue(msg_queue(limit=2), 44100)
-		top.set_unpaused(True)
-	
-	if _abort_for_test:
-		services.stopService()
-		defer.returnValue((top, noteDirty))
-	else:
-		yield defer.Deferred()  # never fires
+    # Load config file
+    if args.createConfig:
+        with open(args.configFile, 'w') as f:
+            f.write(make_default_config())
+            log.msg('Created default configuration file at: ' + args.configFile)
+            sys.exit(0)  # TODO: Consider using a return value or something instead
+    else:
+        configObj = Config(reactor)
+        execute_config(configObj, args.configFile)
+        yield configObj._wait_and_validate()
+        
+        stateFile = configObj._state_filename
+    
+    def noteDirty():
+        if stateFile is not None:
+            # just immediately write (revisit this when more performance is needed)
+            with open(stateFile, 'w') as f:
+                json.dump(top.state_to_json(), f)
+    
+    def restore(root, get_defaults):
+        if stateFile is not None:
+            if os.path.isfile(stateFile):
+                root.state_from_json(json.load(open(stateFile, 'r')))
+                # make a backup in case this code version misreads the state and loses things on save (but only if the load succeeded, in case the file but not its backup is bad)
+                shutil.copyfile(stateFile, stateFile + '~')
+            else:
+                root.state_from_json(get_defaults(root))
+    
+    log.msg('Constructing flow graph...')
+    top = configObj._create_top_block()
+    
+    log.msg('Restoring state...')
+    restore(top, top_defaults)
+    
+    log.msg('Starting web server...')
+    services = MultiService()
+    for maker in configObj._service_makers:
+        IService(maker(top, noteDirty)).setServiceParent(services)
+    services.startService()
+    
+    log.msg('ShinySDR is ready.')
+    
+    for service in services:
+        # TODO: should have an interface (currently no proper module to put it in)
+        service.announce(args.openBrowser)
+    
+    if args.force_run:
+        log.msg('force_run')
+        from gnuradio.gr import msg_queue
+        top.add_audio_queue(msg_queue(limit=2), 44100)
+        top.set_unpaused(True)
+    
+    if _abort_for_test:
+        services.stopService()
+        defer.returnValue((top, noteDirty))
+    else:
+        yield defer.Deferred()  # never fires
 
 
 def top_defaults(top):
-	'''Return a friendly initial state for the top block using knowledge of the default config file.'''
-	state = {}
-	
-	# TODO: fix fragility of assumptions
-	sources = top.state()['source_name'].type().values()
-	restricted = dict(sources)
-	if 'audio' in restricted: del restricted['audio']  # typically not RF
-	if 'sim' in restricted: del restricted['sim']  # would prefer the real thing
-	if 'osmo' in restricted:
-		state['source_name'] = 'osmo'
-	elif len(restricted.keys()) > 0:
-		state['source_name'] = restricted.keys()[0]
-	# else out of ideas, let top block pick
-	
-	return state
+    '''Return a friendly initial state for the top block using knowledge of the default config file.'''
+    state = {}
+    
+    # TODO: fix fragility of assumptions
+    sources = top.state()['source_name'].type().values()
+    restricted = dict(sources)
+    if 'audio' in restricted: del restricted['audio']  # typically not RF
+    if 'sim' in restricted: del restricted['sim']  # would prefer the real thing
+    if 'osmo' in restricted:
+        state['source_name'] = 'osmo'
+    elif len(restricted.keys()) > 0:
+        state['source_name'] = restricted.keys()[0]
+    # else out of ideas, let top block pick
+    
+    return state
 
 
 if __name__ == '__main__':
-	main()
+    main()

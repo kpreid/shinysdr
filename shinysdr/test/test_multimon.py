@@ -25,6 +25,6 @@ from __future__ import absolute_import, division
 
 
 #class DemodulatorSmokeTest(unittest.TestCase):
-#	def test_1(self):
-#		with DemodulatorTester('APRS'):
-#			pass
+#    def test_1(self):
+#        with DemodulatorTester('APRS'):
+#            pass

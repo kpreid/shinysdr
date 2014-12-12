@@ -23,6 +23,6 @@ from shinysdr.test.testutil import DemodulatorTester
 
 
 class DemodulatorSmokeTest(unittest.TestCase):
-	def test_1(self):
-		with DemodulatorTester('VOR'):
-			pass
+    def test_1(self):
+        with DemodulatorTester('VOR'):
+            pass

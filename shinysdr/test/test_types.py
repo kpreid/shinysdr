@@ -23,52 +23,52 @@ from shinysdr.types import Enum, Range
 
 
 def _testType(self, type_obj, good, bad):
-	for case in good:
-		if isinstance(case, tuple):
-			input_value, output_value = case
-		else:
-			input_value = case
-			output_value = case
-		self.assertEqual(type_obj(input_value), output_value, msg='for input %r' % (input_value,))
-	for value in bad:
-		self.assertRaises(ValueError, lambda: type_obj(value))
+    for case in good:
+        if isinstance(case, tuple):
+            input_value, output_value = case
+        else:
+            input_value = case
+            output_value = case
+        self.assertEqual(type_obj(input_value), output_value, msg='for input %r' % (input_value,))
+    for value in bad:
+        self.assertRaises(ValueError, lambda: type_obj(value))
 
 
 class TestTypes(unittest.TestCase):
-	longMessage = True
-	
-	def test_Enum_strict(self):
-		_testType(self,
-			Enum({u'a': u'a', u'b': u'b'}, strict=True),
-			[(u'a', u'a'), ('a', u'a')],
-			[u'c', 999])
+    longMessage = True
+    
+    def test_Enum_strict(self):
+        _testType(self,
+            Enum({u'a': u'a', u'b': u'b'}, strict=True),
+            [(u'a', u'a'), ('a', u'a')],
+            [u'c', 999])
 
-	def test_Enum_lenient(self):
-		_testType(self,
-			Enum({u'a': u'a', u'b': u'b'}, strict=False),
-			[(u'a', u'a'), ('a', u'a'), u'c', (999, u'999')],
-			[])
+    def test_Enum_lenient(self):
+        _testType(self,
+            Enum({u'a': u'a', u'b': u'b'}, strict=False),
+            [(u'a', u'a'), ('a', u'a'), u'c', (999, u'999')],
+            [])
 
-	def test_Range_discrete(self):
-		_testType(self,
-			Range([(1, 1), (2, 3), (5, 5)], strict=True, integer=False),
-			[(0, 1), 1, (1.49, 1), (1.50, 1), (1.51, 2), 2, 2.5, 3, (4, 3), (4.1, 5), 5, (6, 5)],
-			[])
+    def test_Range_discrete(self):
+        _testType(self,
+            Range([(1, 1), (2, 3), (5, 5)], strict=True, integer=False),
+            [(0, 1), 1, (1.49, 1), (1.50, 1), (1.51, 2), 2, 2.5, 3, (4, 3), (4.1, 5), 5, (6, 5)],
+            [])
 
-	def test_Range_log_integer(self):
-		_testType(self,
-			Range([(1, 32)], strict=True, logarithmic=True, integer=True),
-			[(0, 1), 1, 2, 4, 32, (2.0, 2), (2.5, 2), (3.5, 4), (33, 32)],
-			[])
+    def test_Range_log_integer(self):
+        _testType(self,
+            Range([(1, 32)], strict=True, logarithmic=True, integer=True),
+            [(0, 1), 1, 2, 4, 32, (2.0, 2), (2.5, 2), (3.5, 4), (33, 32)],
+            [])
 
-	def test_Range_shifted_float(self):
-		_testType(self,
-			Range([(3, 4)], strict=True, logarithmic=False, integer=False).shifted_by(-3),
-			[(-0.5, 0), 0, 0.25, 1, (1.5, 1)],
-			[])
+    def test_Range_shifted_float(self):
+        _testType(self,
+            Range([(3, 4)], strict=True, logarithmic=False, integer=False).shifted_by(-3),
+            [(-0.5, 0), 0, 0.25, 1, (1.5, 1)],
+            [])
 
-	def test_Range_shifted_integer(self):
-		_testType(self,
-			Range([(3, 4)], strict=True, logarithmic=False, integer=True).shifted_by(-3),
-			[(-0.5, 0), 0, (0.25, 0), 1, (1.5, 1)],
-			[])
+    def test_Range_shifted_integer(self):
+        _testType(self,
+            Range([(3, 4)], strict=True, logarithmic=False, integer=True).shifted_by(-3),
+            [(-0.5, 0), 0, (0.25, 0), 1, (1.5, 1)],
+            [])

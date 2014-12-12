@@ -41,167 +41,167 @@ from shinysdr.db import DatabaseModel, database_from_csv, databases_from_directo
 
 
 __all__ = [
-	'Config',
-	'execute_config',
-	'make_default_config'
+    'Config',
+    'execute_config',
+    'make_default_config'
 ]
 
 
 class Config(object):
-	def __init__(self, reactor):
-		# public config elements
-		self.devices = _ConfigDevices(self)
-		self.sources = self.devices  # temporary legacy compat -- TODO remove
-		self.databases = _ConfigDbs(self, reactor)
+    def __init__(self, reactor):
+        # public config elements
+        self.devices = _ConfigDevices(self)
+        self.sources = self.devices  # temporary legacy compat -- TODO remove
+        self.databases = _ConfigDbs(self, reactor)
 
-		# provided for the convenience of the config file
-		self.reactor = reactor
-		
-		# these are to be read by main
-		self._state_filename = None
-		self._service_makers = []
-		
-		# private: config state
-		self.__stereo = True
-		
-		# private: meta
-		self.__waiting = []
-		self.__finished = False
-	
-	@defer.inlineCallbacks
-	def _wait_and_validate(self):
-		yield defer.gatherResults(self.__waiting)
-		
-		self.__finished = True
-		if len(self._service_makers) == 0:
-			warnings.warn('No network service defined!')
-	
-	def _create_top_block(self):
-		from shinysdr import top
-		return top.Top(
-			devices=self.devices._values,
-			stereo=self.__stereo)
-	
-	def _not_finished(self):
-		if self.__finished:
-			raise Exception('Too late to modify configuration')
-	
-	def wait_for(self, deferred):
-		'''Wait for the provided Deferred before assuming the configuration to be finished.'''
-		self._not_finished()
-		self.__waiting.append(defer.maybeDeferred(lambda: deferred))
-	
-	def persist_to_file(self, filename):
-		self._not_finished()
-		self._state_filename = str(filename)
+        # provided for the convenience of the config file
+        self.reactor = reactor
+        
+        # these are to be read by main
+        self._state_filename = None
+        self._service_makers = []
+        
+        # private: config state
+        self.__stereo = True
+        
+        # private: meta
+        self.__waiting = []
+        self.__finished = False
+    
+    @defer.inlineCallbacks
+    def _wait_and_validate(self):
+        yield defer.gatherResults(self.__waiting)
+        
+        self.__finished = True
+        if len(self._service_makers) == 0:
+            warnings.warn('No network service defined!')
+    
+    def _create_top_block(self):
+        from shinysdr import top
+        return top.Top(
+            devices=self.devices._values,
+            stereo=self.__stereo)
+    
+    def _not_finished(self):
+        if self.__finished:
+            raise Exception('Too late to modify configuration')
+    
+    def wait_for(self, deferred):
+        '''Wait for the provided Deferred before assuming the configuration to be finished.'''
+        self._not_finished()
+        self.__waiting.append(defer.maybeDeferred(lambda: deferred))
+    
+    def persist_to_file(self, filename):
+        self._not_finished()
+        self._state_filename = str(filename)
 
-	def serve_web(self, http_endpoint, ws_endpoint, root_cap='%(root_cap)s', title=u'ShinySDR'):
-		self._not_finished()
-		# TODO: See if we're reinventing bits of Twisted service stuff here
-		
-		def make_service(top, note_dirty):
-			import shinysdr.web as lazy_web
-			return lazy_web.WebService(
-				reactor=self.reactor,
-				top=top,
-				note_dirty=note_dirty,
-				read_only_dbs=self.databases._get_read_only_databases(),
-				writable_db=self.databases._get_writable_database(),
-				http_endpoint=http_endpoint,
-				ws_endpoint=ws_endpoint,
-				root_cap=root_cap,
-				title=title)
-		
-		self._service_makers.append(make_service)
+    def serve_web(self, http_endpoint, ws_endpoint, root_cap='%(root_cap)s', title=u'ShinySDR'):
+        self._not_finished()
+        # TODO: See if we're reinventing bits of Twisted service stuff here
+        
+        def make_service(top, note_dirty):
+            import shinysdr.web as lazy_web
+            return lazy_web.WebService(
+                reactor=self.reactor,
+                top=top,
+                note_dirty=note_dirty,
+                read_only_dbs=self.databases._get_read_only_databases(),
+                writable_db=self.databases._get_writable_database(),
+                http_endpoint=http_endpoint,
+                ws_endpoint=ws_endpoint,
+                root_cap=root_cap,
+                title=title)
+        
+        self._service_makers.append(make_service)
 
-	def serve_ghpsdr(self):
-		self._not_finished()
-		# TODO: Alternate services should be provided using getPlugins rather than hardcoded
-		
-		def make_service(top, note_dirty):
-			import shinysdr.plugins.ghpsdr as lazy_ghpsdr
-			return lazy_ghpsdr.DspserverService(top, note_dirty, 'tcp:8000')
-		
-		self._service_makers.append(make_service)
-	
-	def set_stereo(self, value):
-		'''
-		Set whether audio output is stereo (True) or mono (False). Defaults to True.
-		
-		Disabling stereo saves CPU time and network bandwidth.
-		'''
-		self.__stereo = bool(value)
+    def serve_ghpsdr(self):
+        self._not_finished()
+        # TODO: Alternate services should be provided using getPlugins rather than hardcoded
+        
+        def make_service(top, note_dirty):
+            import shinysdr.plugins.ghpsdr as lazy_ghpsdr
+            return lazy_ghpsdr.DspserverService(top, note_dirty, 'tcp:8000')
+        
+        self._service_makers.append(make_service)
+    
+    def set_stereo(self, value):
+        '''
+        Set whether audio output is stereo (True) or mono (False). Defaults to True.
+        
+        Disabling stereo saves CPU time and network bandwidth.
+        '''
+        self.__stereo = bool(value)
 
 
 class _ConfigDict(object):
-	def __init__(self, config):
-		self._values = {}
-		self._config = config
+    def __init__(self, config):
+        self._values = {}
+        self._config = config
 
-	def add(self, key, value):
-		self._config._not_finished()
-		key = unicode(key)
-		if key in self._values:
-			raise KeyError('Key %r already present' % (key,))
-		self._values[key] = value
+    def add(self, key, value):
+        self._config._not_finished()
+        key = unicode(key)
+        if key in self._values:
+            raise KeyError('Key %r already present' % (key,))
+        self._values[key] = value
 
 
 class _ConfigDevices(_ConfigDict):
-	def add(self, key, *devices):
-		from shinysdr.devices import merge_devices
-		super(_ConfigDevices, self).add(key, merge_devices(devices))
+    def add(self, key, *devices):
+        from shinysdr.devices import merge_devices
+        super(_ConfigDevices, self).add(key, merge_devices(devices))
 
 
 class _ConfigDbs(object):
-	__read_only_databases = None
-	__writable_db = None
-	
-	def __init__(self, config, reactor):
-		self._config = config
-		self.__reactor = reactor
-	
-	def add_directory(self, path):
-		self._config._not_finished()
-		path = str(path)
-		if self.__read_only_databases is not None:
-			raise Exception('Multiple database directories are not yet supported.')
-		self.__read_only_databases, path_diagnostics = databases_from_directory(self.__reactor, path)
-		for d in path_diagnostics:
-			log.msg('%s: %s' % d)
+    __read_only_databases = None
+    __writable_db = None
+    
+    def __init__(self, config, reactor):
+        self._config = config
+        self.__reactor = reactor
+    
+    def add_directory(self, path):
+        self._config._not_finished()
+        path = str(path)
+        if self.__read_only_databases is not None:
+            raise Exception('Multiple database directories are not yet supported.')
+        self.__read_only_databases, path_diagnostics = databases_from_directory(self.__reactor, path)
+        for d in path_diagnostics:
+            log.msg('%s: %s' % d)
 
-	def add_writable_database(self, path):
-		self._config._not_finished()
-		path = str(path)
-		if self.__writable_db is not None:
-			raise Exception('Multiple writable databases are not yet supported.')
-		self.__writable_db, diagnostics = database_from_csv(self.__reactor, path, writable=True)
-		for d in diagnostics:
-			log.msg('%s: %s' % (path, d))
-	
-	def _get_writable_database(self):
-		if self.__writable_db is None:
-			# TODO temporary stub till the client takes more configurability -- we should omit the writable db rather than having an unbacked one
-			self.__writable_db = DatabaseModel(None, [], writable=True)
-		return self.__writable_db
-	
-	def _get_read_only_databases(self):
-		if self.__read_only_databases is None:
-			self.__read_only_databases = {}
-		return self.__read_only_databases
+    def add_writable_database(self, path):
+        self._config._not_finished()
+        path = str(path)
+        if self.__writable_db is not None:
+            raise Exception('Multiple writable databases are not yet supported.')
+        self.__writable_db, diagnostics = database_from_csv(self.__reactor, path, writable=True)
+        for d in diagnostics:
+            log.msg('%s: %s' % (path, d))
+    
+    def _get_writable_database(self):
+        if self.__writable_db is None:
+            # TODO temporary stub till the client takes more configurability -- we should omit the writable db rather than having an unbacked one
+            self.__writable_db = DatabaseModel(None, [], writable=True)
+        return self.__writable_db
+    
+    def _get_read_only_databases(self):
+        if self.__read_only_databases is None:
+            self.__read_only_databases = {}
+        return self.__read_only_databases
 
 
 def execute_config(config_obj, config_file):
-	'''
-	Execute a config file with the special environment.
-	Note: does not _wait_and_validate()
-	'''
-	env = dict(__builtin__.__dict__)
-	env.update({'shinysdr': shinysdr, 'config': config_obj})
-	execfile(config_file, env)
+    '''
+    Execute a config file with the special environment.
+    Note: does not _wait_and_validate()
+    '''
+    env = dict(__builtin__.__dict__)
+    env.update({'shinysdr': shinysdr, 'config': config_obj})
+    execfile(config_file, env)
 
 
 def make_default_config():
-	return '''\
+    return '''\
 import shinysdr.devices
 import shinysdr.plugins.osmosdr
 import shinysdr.plugins.simulate
@@ -212,11 +212,11 @@ import shinysdr.plugins.simulate
 # Use shinysdr.plugins.osmosdr.OsmoSDRProfile to set more parameters
 # to make the best use of your specific hardware's capabilities.
 config.devices.add(u'osmo',
-	shinysdr.plugins.osmosdr.OsmoSDRDevice(''),
-	
-	# Set the location of your station/antenna, for the map UI.
-	# PositionedDevice(latitude=45.00, longitude=45.00),
-	)
+    shinysdr.plugins.osmosdr.OsmoSDRDevice(''),
+    
+    # Set the location of your station/antenna, for the map UI.
+    # PositionedDevice(latitude=45.00, longitude=45.00),
+    )
 
 # For hardware which uses a sound-card as its ADC or appears as an
 # audio device.
@@ -230,19 +230,19 @@ config.persist_to_file('state.json')
 config.databases.add_directory('dbs/')
 
 config.serve_web(
-	# These are in Twisted endpoint description syntax:
-	# <http://twistedmatrix.com/documents/current/api/twisted.internet.endpoints.html#serverFromString>
-	# Note: ws_endpoint must currently be 1 greater than http_endpoint; if one
-	# is SSL then both must be. These restrictions will be relaxed later.
-	http_endpoint='tcp:8100',
-	ws_endpoint='tcp:8101',
+    # These are in Twisted endpoint description syntax:
+    # <http://twistedmatrix.com/documents/current/api/twisted.internet.endpoints.html#serverFromString>
+    # Note: ws_endpoint must currently be 1 greater than http_endpoint; if one
+    # is SSL then both must be. These restrictions will be relaxed later.
+    http_endpoint='tcp:8100',
+    ws_endpoint='tcp:8101',
 
-	# A secret placed in the URL as simple access control. Does not
-	# provide any real security unless using HTTPS. The default value
-	# in this file has been automatically generated from 128 random bits.
-	# Set to None to not use any secret.
-	root_cap='%(root_cap)s',
-	
-	# Page title / station name
-	title='ShinySDR')
+    # A secret placed in the URL as simple access control. Does not
+    # provide any real security unless using HTTPS. The default value
+    # in this file has been automatically generated from 128 random bits.
+    # Set to None to not use any secret.
+    root_cap='%(root_cap)s',
+    
+    # Page title / station name
+    title='ShinySDR')
 ''' % {'root_cap': base64.urlsafe_b64encode(os.urandom(128 // 8)).replace('=', '')}

@@ -24,32 +24,32 @@ from shinysdr.plugins.osmosdr import OsmoSDRDevice, convert_osmosdr_range
 
 
 class TestOsmoSDRDevice(unittest.TestCase):
-	def test_initial_zero_freq(self):
-		# 100 MHz is a default we use
-		self.assertEqual(100e6, OsmoSDRDevice('file=/dev/null,rate=100000,freq=0').get_freq())
+    def test_initial_zero_freq(self):
+        # 100 MHz is a default we use
+        self.assertEqual(100e6, OsmoSDRDevice('file=/dev/null,rate=100000,freq=0').get_freq())
 
-	def test_initial_nonzero_freq(self):
-		self.assertEqual(21000, OsmoSDRDevice('file=/dev/null,rate=100000,freq=21000').get_freq())
+    def test_initial_nonzero_freq(self):
+        self.assertEqual(21000, OsmoSDRDevice('file=/dev/null,rate=100000,freq=21000').get_freq())
 
 
 class TestOsmoSDRRange(unittest.TestCase):
-	def test_convert_simple(self):
-		self.do_convert_test([(1, 2, 0)])
+    def test_convert_simple(self):
+        self.do_convert_test([(1, 2, 0)])
 
-	def test_convert_stepped(self):
-		self.do_convert_test([(1, 2, 1)])
+    def test_convert_stepped(self):
+        self.do_convert_test([(1, 2, 1)])
 
-	def test_convert_point(self):
-		self.do_convert_test([(1, 1, 0)])
-	
-	def test_convert_gapped(self):
-		self.do_convert_test([(0, 0, 0), (1, 2, 0)])
-	
-	def do_convert_test(self, range_argses):
-		orange = meta_range_t()
-		for range_args in range_argses:
-			orange.push_back(range_t(*range_args))
-		myrange = convert_osmosdr_range(orange)
-		self.assertEqual(
-			[(min_val, max_val) for (min_val, max_val, _) in range_argses],
-			myrange.type_to_json()['subranges'])
+    def test_convert_point(self):
+        self.do_convert_test([(1, 1, 0)])
+    
+    def test_convert_gapped(self):
+        self.do_convert_test([(0, 0, 0), (1, 2, 0)])
+    
+    def do_convert_test(self, range_argses):
+        orange = meta_range_t()
+        for range_args in range_argses:
+            orange.push_back(range_t(*range_args))
+        myrange = convert_osmosdr_range(orange)
+        self.assertEqual(
+            [(min_val, max_val) for (min_val, max_val, _) in range_argses],
+            myrange.type_to_json()['subranges'])

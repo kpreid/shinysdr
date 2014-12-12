@@ -32,30 +32,30 @@ from shinysdr import config
 
 
 class TestConfigObject(unittest.TestCase):
-	def setUp(self):
-		self.config = config.Config(reactor)
-	
-	# TODO write some tests
+    def setUp(self):
+        self.config = config.Config(reactor)
+    
+    # TODO write some tests
 
 
 class TestDefaultConfig(unittest.TestCase):
-	def setUp(self):
-		self.__temp_dir = tempfile.mkdtemp(prefix='shinysdr_test_config_tmp')
-		self.__config_name = os.path.join(self.__temp_dir, 'config')
-	
-	def tearDown(self):
-		shutil.rmtree(self.__temp_dir)
-	
-	def test_default_config(self):
-		conf_text = config.make_default_config()
-		
-		# Don't try to open a real device
-		DEFAULT_DEVICE = "OsmoSDRDevice('')"
-		self.assertIn(DEFAULT_DEVICE, conf_text)
-		conf_text = conf_text.replace(DEFAULT_DEVICE, "OsmoSDRDevice('file=/dev/null,rate=100000')")
-		
-		with open(self.__config_name, 'w') as f:
-			f.write(conf_text)
-		config_obj = config.Config(reactor)
-		config.execute_config(config_obj, self.__config_name)
-		return config_obj._wait_and_validate()
+    def setUp(self):
+        self.__temp_dir = tempfile.mkdtemp(prefix='shinysdr_test_config_tmp')
+        self.__config_name = os.path.join(self.__temp_dir, 'config')
+    
+    def tearDown(self):
+        shutil.rmtree(self.__temp_dir)
+    
+    def test_default_config(self):
+        conf_text = config.make_default_config()
+        
+        # Don't try to open a real device
+        DEFAULT_DEVICE = "OsmoSDRDevice('')"
+        self.assertIn(DEFAULT_DEVICE, conf_text)
+        conf_text = conf_text.replace(DEFAULT_DEVICE, "OsmoSDRDevice('file=/dev/null,rate=100000')")
+        
+        with open(self.__config_name, 'w') as f:
+            f.write(conf_text)
+        config_obj = config.Config(reactor)
+        config.execute_config(config_obj, self.__config_name)
+        return config_obj._wait_and_validate()
