@@ -29,6 +29,7 @@ import json
 import urllib
 import os.path
 import struct
+import time
 import weakref
 
 from twisted.application import strports
@@ -302,21 +303,26 @@ class _StateStreamObjectRegistration(object):
         self.value_is_references = False
         self.__dead = False
         if isinstance(obj, BaseCell):
+            self.__obj_is_cell = True
             if isinstance(obj, StreamCell):  # TODO kludge
                 self.__poller_registration = poller.subscribe(obj, self.__listen_binary_stream)
-                self.initial_nudge = lambda: None
+                self.send_now_if_needed = lambda: None
             else:
                 self.__poller_registration = poller.subscribe(obj, self.__listen_cell)
-                self.initial_nudge = self.__listen_cell
+                self.send_now_if_needed = self.__listen_cell
         else:
+            self.__obj_is_cell = False
             self.__poller_registration = poller.subscribe_state(obj, self.__listen_state)
-            self.initial_nudge = lambda: self.__listen_state(self.obj.state())
+            self.send_now_if_needed = lambda: self.__listen_state(self.obj.state())
         self.__refcount = refcount
+    
+    def __str__(self):
+        return self.url
     
     def set_previous(self, value, is_references):
         if is_references:
             for obj in value.itervalues():
-                if obj not in self.__ssi._registered:
+                if obj not in self.__ssi._registered_objs:
                     raise Exception("shouldn't happen: previous value not registered", obj)
         self.has_previous_value = True
         self.previous_value = value
@@ -325,9 +331,14 @@ class _StateStreamObjectRegistration(object):
     def send_initial_value(self):
         '''kludge to get initial state sent'''
     
-    def initial_nudge(self):
+    def send_now_if_needed(self):
         # should be overridden in instance
         raise Exception('This placeholder should never get called')
+    
+    def get_object_which_is_cell(self):
+        if not self.__obj_is_cell:
+            raise Exception('This object is not a cell')
+        return self.obj
     
     def __listen_cell(self):
         if self.__dead:
@@ -376,9 +387,9 @@ class _StateStreamObjectRegistration(object):
                 refs = self.previous_value.values()
                 refs.sort()  # ensure determinism
                 for obj in refs:
-                    if obj not in self.__ssi._registered:
+                    if obj not in self.__ssi._registered_objs:
                         raise Exception("Shouldn't happen: previous value not registered", obj)
-                    self.__ssi._registered[obj].dec_refcount_and_maybe_notify()
+                    self.__ssi._registered_objs[obj].dec_refcount_and_maybe_notify()
             self.set_previous(objs, True)
     
     def drop(self):
@@ -413,30 +424,49 @@ class _StateStreamObjectRegistration(object):
             
             # decrement refs
             for obj in refs:
-                self.__ssi._registered[obj].dec_refcount_and_maybe_notify()
+                self.__ssi._registered_objs[obj].dec_refcount_and_maybe_notify()
 
 
 # TODO: Better name for this category of object
 class StateStreamInner(object):
-    def __init__(self, send, root_object, root_url, poller=the_poller):
+    def __init__(self, send, root_object, root_url, noteDirty, poller=the_poller):
         self.__poller = poller
         self._send = send
         self.__root_object = root_object
         self._cell = BlockCell(self, '_root_object')
         self._lastSerial = 0
         root_registration = _StateStreamObjectRegistration(ssi=self, poller=self.__poller, obj=self._cell, serial=0, url=root_url, refcount=0)
-        self._registered = {self._cell: root_registration}
+        self._registered_objs = {self._cell: root_registration}
+        self.__registered_serials = {root_registration.serial: root_registration}
         self._send_batch = []
         self.__batch_delay = None
         self.__root_url = root_url
-        root_registration.initial_nudge()
+        self.__noteDirty = noteDirty
+        root_registration.send_now_if_needed()
     
     def connectionLost(self, reason):
-        for obj in self._registered.keys():
+        for obj in self._registered_objs.keys():
             self.__drop(obj)
     
     def dataReceived(self, data):
-        pass
+        # TODO: handle json parse failure or other failures meaningfully
+        command = json.loads(data)
+        op = command[0]
+        if op == 'set':
+            op, serial, value, message_id = command
+            registration = self.__registered_serials[serial]
+            cell = registration.get_object_which_is_cell()
+            t0 = time.time()
+            cell.set(value)
+            registration.send_now_if_needed()
+            self._send1(False, ['done', message_id])
+            t1 = time.time()
+            # TODO: Define self.__str__ or similar such that we can easily log which client is sending the command
+            log.msg('set %s to %r (%1.2fs)' % (registration, value, t1 - t0))
+            self.__noteDirty()  # TODO fix things so noteDirty is not needed
+        else:
+            log.msg('Unrecognized state stream op received: %r' % (self, command))
+            
     
     def get__root_object(self):
         '''Accessor for implementing self._cell.'''
@@ -447,17 +477,20 @@ class StateStreamInner(object):
         self.__drop(reg.obj)
     
     def __drop(self, obj):
-        self._registered[obj].drop()
-        del self._registered[obj]
+        registration = self._registered_objs[obj]
+        registration.drop()
+        del self.__registered_serials[registration.serial]
+        del self._registered_objs[obj]
     
     def _lookup_or_register(self, obj, url):
-        if obj in self._registered:
-            return self._registered[obj]
+        if obj in self._registered_objs:
+            return self._registered_objs[obj]
         else:
             self._lastSerial += 1
             serial = self._lastSerial
             registration = _StateStreamObjectRegistration(ssi=self, poller=self.__poller, obj=obj, serial=serial, url=url, refcount=0)
-            self._registered[obj] = registration
+            self._registered_objs[obj] = registration
+            self.__registered_serials[serial] = registration
             if isinstance(obj, BaseCell):
                 self._send1(False, ('register_cell', serial, url, obj.description()))
                 if isinstance(obj, StreamCell):  # TODO kludge
@@ -469,7 +502,7 @@ class StateStreamInner(object):
             else:
                 # TODO: not implemented on client (but shouldn't happen)
                 self._send1(False, ('register', serial, url))
-            registration.initial_nudge()
+            registration.send_now_if_needed()
             return registration
     
     def _flush(self):  # exposed for testing
@@ -545,10 +578,11 @@ def _lookup_block(block, path):
 
 
 class OurStreamProtocol(protocol.Protocol):
-    def __init__(self, caps):
+    def __init__(self, caps, noteDirty):
         self._caps = caps
         self._seenValues = {}
         self.inner = None
+        self.__noteDirty = noteDirty
     
     def dataReceived(self, data):
         """Twisted Protocol implementation.
@@ -582,7 +616,7 @@ class OurStreamProtocol(protocol.Protocol):
         elif len(path) >= 1 and path[0] == 'radio':
             # note _lookup_block may throw. TODO: Better error reporting
             root_object = _lookup_block(root_object, path[1:])
-            self.inner = StateStreamInner(self.__send, root_object, loc)  # note reuse of loc as HTTP path; probably will regret this
+            self.inner = StateStreamInner(self.__send, root_object, loc, self.__noteDirty)  # note reuse of loc as HTTP path; probably will regret this
         else:
             raise Exception('Unknown path: %r' % (path,))
     
@@ -613,12 +647,13 @@ class OurStreamProtocol(protocol.Protocol):
 class OurStreamFactory(protocol.Factory):
     protocol = OurStreamProtocol
     
-    def __init__(self, caps):
+    def __init__(self, caps, noteDirty):
         self.__caps = caps
+        self.__noteDirty = noteDirty
     
     def buildProtocol(self, addr):
         """twisted Factory implementation"""
-        p = self.protocol(self.__caps)
+        p = self.protocol(self.__caps, self.__noteDirty)
         p.factory = self
         return p
 
@@ -733,7 +768,7 @@ class WebService(Service):
             self.__visit_path = '/' + urllib.quote(root_cap, safe='') + '/'
             ws_caps = {root_cap: root_object}
         
-        self.__ws_protocol = txws.WebSocketFactory(OurStreamFactory(ws_caps))
+        self.__ws_protocol = txws.WebSocketFactory(OurStreamFactory(ws_caps, note_dirty))
         
         # UI entry point
         appRoot.putChild('', _RadioIndexHtmlResource(title))

@@ -121,7 +121,12 @@ class StateStreamTestCase(unittest.TestCase):
         def send(value):
             self.updates.extend(json.loads(value))
         
-        self.stream = StateStreamInner(send, self.object, 'urlroot', poller=self.poller)
+        self.stream = StateStreamInner(
+            send,
+            self.object,
+            'urlroot',
+            lambda: None,  # TODO test noteDirty or make it unnecessary
+            poller=self.poller)
     
     def getUpdates(self):
         # warning: implementation poking
@@ -196,6 +201,42 @@ class TestStateStream(StateStreamTestCase):
             ['delete', 2],
             ['delete', 3],
         ])
+    
+    def test_send_set_normal(self):
+        self.setUpForObject(StateSpecimen())
+        self.assertIn(
+            ['register_cell', 2, 'urlroot/rw', self.object.state()['rw'].description()],
+            self.getUpdates())
+        self.stream.dataReceived(json.dumps(['set', 2, 100.0, 1234]))
+        self.assertEqual(self.getUpdates(), [
+            ['value', 2, 100.0],
+            ['done', 1234],
+        ])
+        self.stream.dataReceived(json.dumps(['set', 2, 100.0, 1234]))
+        self.assertEqual(self.getUpdates(), [
+            # don't see any value message
+            ['done', 1234],
+        ])
+    
+    def test_send_set_wrong_target(self):
+        # Raised exception will be logged safely by the wrappper.
+        # TODO: Instead of raising, report the error associated with the connection somehow
+        self.setUpForObject(StateSpecimen())
+        self.assertIn(
+            ['register_block', 1, 'urlroot', ['shinysdr.test.test_web.IFoo']],
+            self.getUpdates())
+        self.assertRaises(Exception, lambda:  # TODO more specific error
+            self.stream.dataReceived(json.dumps(['set', 1, 100.0, 1234])))
+        self.assertEqual(self.getUpdates(), [])
+    
+    def test_send_set_unknown_target(self):
+        # Raised exception will be logged safely by the wrappper.
+        # TODO: Instead of raising, report the error associated with the connection somehow
+        self.setUpForObject(StateSpecimen())
+        self.getUpdates()
+        self.assertRaises(KeyError, lambda:
+            self.stream.dataReceived(json.dumps(['set', 99999, 100.0, 1234])))
+        self.assertEqual(self.getUpdates(), [])
 
 
 class IFoo(Interface):
