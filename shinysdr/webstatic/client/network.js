@@ -94,31 +94,35 @@ define(['./values', './events'], function (values, events) {
   }
   exports.externalGet = externalGet;
   
-  function ReadWriteCell(name, assumed, type) {
+  function ReadWriteCell(setter, assumed, type) {
     Cell.call(this, type);
     var value = assumed;
     var remoteValue = assumed;
-    var inhibit = 0;
+    var inhibitTime = 0;
+    var inhibitCount = 0;
     var resetTimeout = undefined;
     this.get = function() { return value; },
     this.set = function(newValue) {
       value = newValue;
       this.n.notify();
-      inhibit = Date.now() + 1000;  // TODO adjust value to observed latency
-      xhrput(name, JSON.stringify(newValue), function(r) {
-        if (statusCategory(r.status) !== 2) {
-          // some error or something other than success; revert
-          inhibit = 0;
-          this._update(remoteValue);
-        }
-      }.bind(this));
+      inhibitTime = Date.now() + 1000;  // TODO adjust value to observed latency
+      setter(newValue, decAndAccept);
+      inhibitCount++;
     };
-    this._update = function(newValue) {
+    this._update = function _update(newValue) {
       remoteValue = newValue;
+      // If we don't receive a response promptly from the server, then the old value is more accurate than the value we've sent.
       if (resetTimeout) clearTimeout(resetTimeout);
-      resetTimeout = setTimeout(acceptFromNetwork, Math.max(0, inhibit - Date.now()));
+      resetTimeout = setTimeout(acceptFromNetwork, Math.max(0, inhibitTime - Date.now()));
     };
-    var acceptFromNetwork = function() {
+    var decAndAccept = function decAndAccept() {
+      // If there are now no outstanding set requests, then the last value we got is the correct valu.
+      inhibitCount--;
+      if (inhibitCount == 0) {
+        acceptFromNetwork();
+      }
+    };
+    var acceptFromNetwork = function acceptFromNetwork() {
       value = remoteValue;
       this.n.notify();
     }.bind(this);
@@ -126,7 +130,7 @@ define(['./values', './events'], function (values, events) {
   ReadWriteCell.prototype = Object.create(Cell.prototype, {constructor: {value: ReadWriteCell}});
   exports.ReadWriteCell = ReadWriteCell;
   
-  function ReadCell(name, /* initial */ value, type, transform) {
+  function ReadCell(setter, /* initial */ value, type, transform) {
     Cell.call(this, type);
     
     this._update = function(data) {
@@ -141,7 +145,7 @@ define(['./values', './events'], function (values, events) {
   ReadCell.prototype = Object.create(Cell.prototype, {constructor: {value: ReadCell}});
   exports.ReadCell = ReadCell;
   
-  function BulkDataCell(url, type) {
+  function BulkDataCell(setter, type) {
     var fft = new Float32Array(1);
     fft[0] = -1e50;
     var VSIZE = Float32Array.BYTES_PER_ELEMENT;
@@ -188,7 +192,7 @@ define(['./values', './events'], function (values, events) {
       return newValue;
     }
     
-    ReadCell.call(this, url, lastValue, type, transform);
+    ReadCell.call(this, setter, lastValue, type, transform);
     
     this.subscribe = function(callback) {
       // TODO need to provide for unsubscribing
@@ -257,6 +261,7 @@ define(['./values', './events'], function (values, events) {
   exports.retryingConnection = retryingConnection;
   
   function makeBlock(url, interfaces) {
+    // TODO convert block operations to use state stream too
     var block = {};
     // TODO kludges, should be properly facetized and separately namespaced somehow
     setNonEnum(block, '_url', url);
@@ -277,20 +282,22 @@ define(['./values', './events'], function (values, events) {
     return block;
   }
   
-  function makeCell(url, desc, idMap) {
+  // TODO: too many args, figure out an object that is a sensible bundle
+  function makeCell(url, setter, id, desc, idMap) {
     var cell;
     var type = desc.kind === 'block' ? values.block : typeFromDesc(desc.type);
     if (type instanceof BulkDataType) {
       // TODO can we eliminate this special case
-      cell = new BulkDataCell(url, type);
+      cell = new BulkDataCell(setter, type);
     } else if (desc.kind === 'block') {
       // TODO eliminate special case by making server block cells less special?
-      cell = new ReadCell(url, /* dummy */ makeBlock(url, []), type,
+      // TODO blocks should not need urls (switch http op to websocket)
+      cell = new ReadCell(setter, /* dummy */ makeBlock(url, []), type,
         function (id) { return idMap[id]; });
     } else if (desc.writable) {
-      cell = new ReadWriteCell(url, desc.current, type);
+      cell = new ReadWriteCell(setter, desc.current, type);
     } else {
-      cell = new ReadCell(url, desc.current, type, identity);
+      cell = new ReadCell(setter, desc.current, type, identity);
     }
     return [cell, cell._update];
   }
@@ -307,9 +314,13 @@ define(['./values', './events'], function (values, events) {
     retryingConnection(rootURL, connectionStateCallback, function(ws) {
       ws.binaryType = 'arraybuffer';
 
+      // indexed by object ids chosen by server
       var idMap = Object.create(null);
       var updaterMap = Object.create(null);
       var isCellMap = Object.create(null);
+      
+      var callbackMap = Object.create(null);
+      var nextCallbackId = 0;
       
       idMap[0] = rootCell;
       updaterMap[0] = function (id) { rootCell._update(idMap[id]); };
@@ -328,7 +339,14 @@ define(['./values', './events'], function (values, events) {
           case 'register_cell':
             var url = message[2];
             var desc = message[3];
-            var pair = makeCell(url, desc, idMap);
+            var pair = (function () {
+              function setter(value, callback) {
+                var cbid = nextCallbackId++;
+                callbackMap[cbid] = callback;
+                ws.send(JSON.stringify(['set', id, value, cbid]));
+              }
+              return makeCell(url, setter, id, desc, idMap);
+            }());
             idMap[id] = pair[0];
             updaterMap[id] = pair[1];
             isCellMap[id] = true;
@@ -356,6 +374,10 @@ define(['./values', './events'], function (values, events) {
             delete idMap[id];
             delete updaterMap[id];
             delete isCellMap[id];
+            break;
+          case 'done':
+            callbackMap[id]();
+            delete callbackMap[id];
             break;
           default:
             console.error('unknown state stream message', message);
