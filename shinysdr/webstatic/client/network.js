@@ -39,19 +39,6 @@ define(['./values', './events'], function (values, events) {
     };
   }
   
-  function xhrput(url, data, opt_callback) {
-    var r = new XMLHttpRequest();
-    r.open('PUT', url, true);
-    r.setRequestHeader('Content-Type', 'application/json');
-    r.onreadystatechange = makeXhrStateCallback(r,
-      function putDone(r) {
-        if (opt_callback) opt_callback(r);
-      });
-    r.send(data);
-    console.log(url, data);
-  }
-  exports.xhrput = xhrput;
-  
   function xhrpost(url, data, opt_callback) {
     var r = new XMLHttpRequest();
     r.open('POST', url, true);
