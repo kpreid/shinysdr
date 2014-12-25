@@ -371,6 +371,7 @@ class WFMDemodulator(FMDemodulator):
             deviation=75000,
             band_filter=80000,
             band_filter_transition=20000,
+            no_audio_filter=True,  # disable highpass
             **kwargs)
 
     @exported_value(ctor=bool)
