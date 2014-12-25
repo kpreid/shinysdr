@@ -61,12 +61,14 @@ class Receiver(gr.hier_block2, ExportedState):
             input_rate=0,
             input_center_freq=0,
             rec_freq=100.0,
+            audio_destination=None,
             audio_gain=-6,
             audio_pan=0,
             audio_channels=0,
             context=None):
         assert input_rate > 0
         assert audio_channels == 1 or audio_channels == 2
+        assert audio_destination is not None
         gr.hier_block2.__init__(
             # str() because insists on non-unicode
             self, str('%s receiver' % (mode,)),
@@ -90,6 +92,7 @@ class Receiver(gr.hier_block2, ExportedState):
         self.rec_freq = rec_freq
         self.audio_gain = audio_gain
         self.audio_pan = min(1, max(-1, audio_pan))
+        self.__audio_destination = audio_destination
         
         # Blocks
         self.__rotator = blocks.rotator_cc()
@@ -164,7 +167,7 @@ class Receiver(gr.hier_block2, ExportedState):
             
             if self.__output_type != self.__last_output_type:
                 self.__last_output_type = self.__output_type
-                self.context.changed_output_type()
+                self.context.changed_output_type_or_destination()
         finally:
             self.context.unlock()
 
@@ -226,6 +229,16 @@ class Receiver(gr.hier_block2, ExportedState):
     def set_audio_pan(self, value):
         self.audio_pan = value
         self.__update_audio_gain()
+    
+    @exported_value(parameter='audio_destination', ctor_fn=lambda self: self.context.get_audio_destination_type())
+    def get_audio_destination(self):
+        return self.__audio_destination
+    
+    @setter
+    def set_audio_destination(self, value):
+        if self.__audio_destination != value:
+            self.__audio_destination = value
+            self.context.changed_output_type_or_destination()
     
     @exported_value(ctor=bool)
     def get_is_valid(self):

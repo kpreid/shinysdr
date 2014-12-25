@@ -22,6 +22,7 @@
 
 from __future__ import absolute_import, division
 
+from collections import defaultdict
 import math
 import time
 
@@ -29,6 +30,7 @@ from twisted.internet import reactor
 from twisted.python import log
 from zope.interface import Interface, implements  # available via Twisted
 
+from gnuradio import audio
 from gnuradio import blocks
 from gnuradio import gr
 
@@ -37,6 +39,9 @@ from shinysdr.values import ExportedState, CollectionState, exported_value, sett
 from shinysdr.blocks import make_resampler, MonitorSink, RecursiveLockBlockMixin, Context
 from shinysdr.receiver import Receiver
 from shinysdr.signals import SignalType
+
+
+CLIENT_AUDIO_DEVICE = 'client'
 
 
 class ReceiverCollection(CollectionState):
@@ -61,7 +66,21 @@ class ReceiverCollection(CollectionState):
 
 class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 
-    def __init__(self, devices={}, stereo=True):
+    def __init__(self, devices={}, audio_config=None, stereo=True):
+        if not len(devices) > 0:
+            raise ValueError('Must have at least one RF device')
+        #for key, audio_device in audio_devices.iteritems():
+        #    if key == CLIENT_AUDIO_DEVICE:
+        #        raise ValueError('The name %r for an audio device is reserved' % (key,))
+        #    if not audio_device.can_transmit():
+        #        raise ValueError('Audio device %r is not an output' % (key,))
+        if audio_config is not None:
+            # quick kludge placeholder -- currently a Device-device can't be stereo so we have a placeholder thing
+            audio_device_name, audio_sample_rate = audio_config
+            audio_devices = {'server': (audio_sample_rate, audio.sink(audio_sample_rate, audio_device_name, False))}
+        else:
+            audio_devices = {}
+        
         gr.top_block.__init__(self, "SDR top block")
         self.__unpaused = True  # user state
         self.__running = False  # actually started
@@ -71,6 +90,9 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self._sources = {k: d for k, d in devices.iteritems() if d.can_receive()}
         accessories = {k: d for k, d in devices.iteritems() if not d.can_receive()}
         self.source_name = self._sources.keys()[0]  # arbitrary valid initial value
+        
+        # Audio early setup
+        self.__audio_devices = audio_devices  # must be before contexts
 
         # Blocks etc.
         # TODO: device refactoring: remove 'source' concept (which is currently a device)
@@ -96,9 +118,12 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.shared_objects = CollectionState(self.__shared_objects, dynamic=True)
         
         # Audio stream bits
+        audio_destination_dict = {key: 'Server' or key for key, device in audio_devices.iteritems()}  # temp name till we have proper device objects
+        audio_destination_dict[CLIENT_AUDIO_DEVICE] = 'Client'  # TODO reconsider name
+        self.__audio_destination_type = Enum(audio_destination_dict, strict=True)
         self.__audio_channels = 2 if stereo else 1
         self.audio_queue_sinks = {}
-        self.__audio_bus = BusPlumber(self, self.__audio_channels)
+        self.__audio_buses = {key: BusPlumber(self, self.__audio_channels) for key in audio_destination_dict}
         
         # Flags, other state
         self.__needs_reconnect = True
@@ -239,12 +264,14 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
                 self.__clip_probe)
 
             # Filter receivers
-            bus_inputs = []
+            bus_inputs = defaultdict(lambda: [])
             n_valid_receivers = 0
             for key, receiver in self._receivers.iteritems():
                 self._receiver_valid[key] = receiver.get_is_valid()
                 if not self._receiver_valid[key]:
                     continue
+                if receiver.get_audio_destination() not in self.__audio_buses:
+                    log.err('Flow graph: receiver audio destination %r is not available' % (receiver.get_audio_destination(),))
                 n_valid_receivers += 1
                 if n_valid_receivers > 6:
                     # Sanity-check to avoid burning arbitrary resources
@@ -252,12 +279,18 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
                     log.err('Flow graph: Refusing to connect more than 6 receivers')
                     break
                 self.connect(self.__rx_driver, receiver)
-                bus_inputs.append((receiver.get_output_type().get_sample_rate(), receiver))
+                rrate = receiver.get_output_type().get_sample_rate()
+                bus_inputs[receiver.get_audio_destination()].append((rrate, receiver))
 
-            self.__audio_bus.connect(
-                inputs=bus_inputs,
-                outputs=self.audio_queue_sinks.itervalues())
-        
+            for key, bus in self.__audio_buses.iteritems():
+                if key == CLIENT_AUDIO_DEVICE:
+                    outputs = self.audio_queue_sinks.itervalues()
+                else:
+                    outputs = [self.__audio_devices[key]]
+                bus.connect(
+                    inputs=bus_inputs[key],
+                    outputs=outputs)
+            
             self._recursive_unlock()
             log.msg('Flow graph: ...done reconnecting.')
 
@@ -329,6 +362,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
             input_rate=self.input_rate,
             input_center_freq=self.input_freq,
             audio_channels=self.__audio_channels,
+            audio_destination=CLIENT_AUDIO_DEVICE,  # TODO match others
             context=facet,
         )
         receiver.state_from_json(state)
@@ -349,12 +383,12 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
     def get_input_rate(self):
         return self.input_rate
 
-    @exported_value(ctor=int)
+    @exported_value()
     def get_audio_bus_rate(self):
         '''
         Not visible externally; for diagnostic purposes only.
         '''
-        return self.__audio_bus.get_current_rate()
+        return [b.get_current_rate() for b in self.__audio_buses.itervalues()]
     
     @exported_value(ctor=float)
     def get_cpu_use(self):
@@ -376,6 +410,10 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
             self.__shared_objects[key] = ctor()
         return self.__shared_objects[key]
     
+    def _get_audio_destination_type(self):
+        '''for ContextForReceiver only'''
+        return self.__audio_destination_type
+    
     def _trigger_reconnect(self):
         self.__needs_reconnect = True
         self._do_connect()
@@ -383,6 +421,8 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
     def _recursive_lock_hook(self):
         for source in self._sources.itervalues():
             source.notify_reconnecting_or_restarting()
+        #for audio_device in self.__audio_devices.itervalues():
+        #    audio_device.notify_reconnecting_or_restarting()
 
 
 class ContextForReceiver(Context):
@@ -392,11 +432,14 @@ class ContextForReceiver(Context):
         self._key = key
         self._enabled = False  # assigned outside
 
+    def get_audio_destination_type(self):
+        return self.__top._get_audio_destination_type()
+
     def revalidate(self):
         if self._enabled:
             self.__top._update_receiver_validity(self._key)
 
-    def changed_output_type(self):
+    def changed_output_type_or_destination(self):
         if self._enabled:
             self.__top._trigger_reconnect()
     

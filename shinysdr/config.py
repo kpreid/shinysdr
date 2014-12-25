@@ -38,6 +38,7 @@ from twisted.python import log
 # Note that gnuradio-dependent modules are loaded lazily, to avoid the startup time if all we're going to do is give a usage message
 import shinysdr  # put into config namespace
 from shinysdr.db import DatabaseModel, database_from_csv, databases_from_directory
+from shinysdr.devices import Device
 
 
 __all__ = [
@@ -51,7 +52,7 @@ class Config(object):
     def __init__(self, reactor):
         # public config elements
         self.devices = _ConfigDevices(self)
-        self.sources = self.devices  # temporary legacy compat -- TODO remove
+        self.sources = self.devices  # temporary legacy compat -- TODO emit deprecation warnings or something, then remove
         self.databases = _ConfigDbs(self, reactor)
 
         # provided for the convenience of the config file
@@ -63,6 +64,7 @@ class Config(object):
         
         # private: config state
         self.__stereo = True
+        self.__server_audio = None
         
         # private: meta
         self.__waiting = []
@@ -80,6 +82,7 @@ class Config(object):
         from shinysdr import top
         return top.Top(
             devices=self.devices._values,
+            audio_config=self.__server_audio,
             stereo=self.__stereo)
     
     def _not_finished(self):
@@ -123,6 +126,15 @@ class Config(object):
             return lazy_ghpsdr.DspserverService(top, note_dirty, 'tcp:8000')
         
         self._service_makers.append(make_service)
+    
+    def set_server_audio_allowed(self, allowed, device_name='', sample_rate=44100):
+        '''
+        Set whether clients are allowed to send output to the server audio device.
+        '''
+        if allowed:
+            self.__server_audio = (str(device_name), int(sample_rate))
+        else:
+            self.__server_audio = None
     
     def set_stereo(self, value):
         '''
