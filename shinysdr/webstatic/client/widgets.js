@@ -1328,7 +1328,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
 
           var init = new Float32Array(historyCount);
           for (var i = 0; i < historyCount; i++) {
-            init[i] = -1000000;
+            init[i] = -1e20;  // dummy value which we hope will not land within the viewport
           }
           gl.bindTexture(gl.TEXTURE_2D, historyFreqTexture);
           gl.texImage2D(
@@ -1409,7 +1409,6 @@ define(['./values', './events', './widget'], function (values, events, widget) {
             cleared = true;
           }
           // height managed by commonBeforeDraw
-          gl.viewport(0, 0, canvas.width, canvas.height);
 
           if (useFloatTexture) {
             gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
@@ -1480,6 +1479,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
           var viewCenterFreq = view.getCenterFreq();
           commonBeforeDraw(viewCenterFreq, draw);
 
+          gl.viewport(0, 0, canvas.width, canvas.height);
           gl.uniform1f(u_scroll, slicePtr / historyCount);
           gl.uniform1f(u_yScale, canvas.height / historyCount);
           var fs = 1.0 / (view.rightFreq() - view.leftFreq());

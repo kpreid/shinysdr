@@ -143,6 +143,7 @@ define(['./values', './events'], function (values, events) {
   
   function BulkDataCell(url, type) {
     var fft = new Float32Array(1);
+    fft[0] = -1e50;
     var VSIZE = Float32Array.BYTES_PER_ELEMENT;
     var lastValue = [{freq:0, rate:1}, fft];
 
