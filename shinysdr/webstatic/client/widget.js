@@ -156,7 +156,7 @@ define(['./values', './events'], function (values, events) {
       var boundedFnEnabled = true;
       function boundedFn(f) {
         return function boundedFnWrapper() {
-          if (boundedFnEnabled) f();
+          if (boundedFnEnabled) f.apply(undefined, arguments);
         }
       }
 

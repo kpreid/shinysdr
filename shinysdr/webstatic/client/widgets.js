@@ -660,7 +660,24 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     var dataHook = function () {}, drawOuter = function () {};
     
     var draw = config.boundedFn(function drawOuterTrampoline() {
-      drawOuter();
+      view.n.listen(draw);
+      
+      // Update canvas position and dimensions.
+      var cleared = false;
+      var lvf = view.leftVisibleFreq();
+      var rvf = view.rightVisibleFreq();
+      canvas.style.marginLeft = view.freqToCSSLeft(lvf);
+      canvas.style.width = view.freqToCSSLength(view.rightVisibleFreq() - view.leftVisibleFreq());
+      var w = canvas.offsetWidth;
+      var h = canvas.offsetHeight;
+      if (canvas.width !== w || canvas.height !== h) {
+        // implicitly clears
+        canvas.width = w;
+        canvas.height = h;
+        cleared = true;
+      }
+      
+      drawOuter(cleared);
     });
     draw.scheduler = config.scheduler;
     
@@ -689,7 +706,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         var drawImpl = buildGL(gl, buildProgram, draw);
         dataHook = drawImpl.newData.bind(drawImpl);
         
-        drawOuter = function () {
+        drawOuter = function (resized) {
           gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
           gl.vertexAttribPointer(
             att_position,
@@ -699,7 +716,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
             0,
             0);
           gl.bindBuffer(gl.ARRAY_BUFFER, null);
-          drawImpl.beforeDraw();
+          drawImpl.beforeDraw(resized);
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);  // 4 vertices
         };
       }
@@ -917,17 +934,8 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       view.n.listen(scheduledDraw);
       lvf = view.leftVisibleFreq();
       rvf = view.rightVisibleFreq();
-
-      // Fit current layout
-      canvas.style.marginLeft = view.freqToCSSLeft(lvf);
-      w = canvas.offsetWidth;
-      h = canvas.offsetHeight;
-      if (canvas.width !== w || canvas.height !== h) {
-        // implicitly clears
-        canvas.width = w;
-        canvas.height = h;
-        return true;
-      }
+      w = canvas.width;
+      h = canvas.height;
     }
     
     CanvasSpectrumWidget.call(this, config, buildGL, build2D);
@@ -1056,8 +1064,8 @@ define(['./values', './events', './widget'], function (values, events, widget) {
               intConversionOut);
           gl.bindTexture(gl.TEXTURE_2D, null);
         },
-        beforeDraw: function () {
-          var didResize = commonBeforeDraw(draw);
+        beforeDraw: function (didResize) {
+          commonBeforeDraw(draw);
           if (didResize) {
             setScale();
           }
@@ -1112,8 +1120,8 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         newData: function (fftBundle) {
           commonNewData(fftBundle);
         },
-        performDraw: function () {
-          var didClear = commonBeforeDraw(draw);
+        performDraw: function (didClear) {
+          commonBeforeDraw(draw);
           if (!didClear) {
             ctx.clearRect(0, 0, w, h);
           }
@@ -1191,18 +1199,6 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     
     var canvas;
     var cleared = true;
-    function commonBeforeDraw(viewCenterFreq, draw) {
-      view.n.listen(draw);
-      canvas.style.marginLeft = view.freqToCSSLeft(view.leftFreq());
-      canvas.style.width = view.freqToCSSLength(view.rightFreq() - view.leftFreq());
-      
-      // Set vertical canvas resolution
-      var newHeight = Math.floor(Math.min(canvas.offsetHeight, historyCount));
-      if (newHeight !== canvas.height) {
-        canvas.height = newHeight;
-        cleared = true;
-      }
-    }
     
     CanvasSpectrumWidget.call(this, config, buildGL, build2D);
     
@@ -1222,18 +1218,23 @@ define(['./values', './events', './widget'], function (values, events, widget) {
 
       var useFloatTexture =
         config.clientState.opengl_float.depend(config.rebuildMe) &&
-        !!gl.getExtension('OES_texture_float');
+        !!gl.getExtension('OES_texture_float') &&
+        !!gl.getExtension('OES_texture_float_linear');
 
       var vertexShaderSource = ''
         + 'attribute vec4 position;\n'
         + 'varying highp vec2 v_position;\n'
         + 'uniform highp float scroll;\n'
+        + 'uniform highp float xTranslate, xScale;\n'
         + 'uniform highp float yScale;\n'
         + 'void main(void) {\n'
+        // TODO use a single input matrix instead of this
+        + '  mat3 viewToTexture = mat3(0.5, 0.0, 0.0, 0.0, 0.5, 0.0, 0.5, 0.5, 1.0);\n'
+        + '  mat3 zoom = mat3(xScale, 0.0, 0.0, 0.0, 1.0, 0.0, xTranslate, 0.0, 1.0);\n'
+        + '  mat3 applyYScale = mat3(1.0, 0.0, 0.0, 0.0, yScale, 0.0, 0.0, -yScale, 1.0);\n'
+        + '  mat3 viewMatrix = applyYScale * zoom * viewToTexture;\n'
         + '  gl_Position = position;\n'
-        + '  highp vec2 unitPos = (position.xy + vec2(1.0)) / 2.0;\n'
-        + '  highp vec2 scalePos = 1.0 - (1.0 - unitPos) * vec2(1.0, yScale);\n'
-        + '  v_position = scalePos + vec2(0.0, scroll);\n'
+        + '  v_position = (viewMatrix * position.xyw).xy + vec2(0.0, scroll);\n'
         + '}\n';
       var fragmentShaderSource = ''
         + 'uniform sampler2D data;\n'
@@ -1265,6 +1266,8 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       var program = buildProgram(vertexShaderSource, fragmentShaderSource);
       
       var u_scroll = gl.getUniformLocation(program, 'scroll');
+      var u_xTranslate = gl.getUniformLocation(program, 'xTranslate');
+      var u_xScale = gl.getUniformLocation(program, 'xScale');
       var u_yScale = gl.getUniformLocation(program, 'yScale');
       var u_currentFreq = gl.getUniformLocation(program, 'currentFreq');
       var u_freqScale = gl.getUniformLocation(program, 'freqScale');
@@ -1277,8 +1280,8 @@ define(['./values', './events', './widget'], function (values, events, widget) {
 
       var bufferTexture = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
@@ -1341,7 +1344,6 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       function configureTexture() {
         // dependent on fftSize so updating it here works out.
         // Shift (with wrapping) the texture data by 1/2 minus half a bin width, to align the GL texels with the FFT bins.
-        // TODO: The 0.5 cannot actually take effect correctly, because right now we use a canvas size equal to the FFT size. Change so that (in GL mode) we resize to the viewport, like the spectrum plot does.
         gl.uniform1f(u_textureRotation, config.view.isRealFFT() ? 0 : -(0.5 - 0.5/fftSize));
         
         if (useFloatTexture) {
@@ -1439,11 +1441,6 @@ define(['./values', './events', './widget'], function (values, events, widget) {
             intConversionBuffer = useFloatTexture ? null : new Uint8ClampedArray(fftSize);
             intConversionOut = useFloatTexture ? null : new Uint8Array(intConversionBuffer.buffer);
           }
-          if (canvas.width !== fftSize) {
-            canvas.width = fftSize;
-            cleared = true;
-          }
-          // height managed by commonBeforeDraw
 
           if (useFloatTexture) {
             gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
@@ -1512,7 +1509,6 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         beforeDraw: function () {
           view.n.listen(draw);
           var viewCenterFreq = view.getCenterFreq();
-          commonBeforeDraw(viewCenterFreq, draw);
 
           gl.viewport(0, 0, canvas.width, canvas.height);
           gl.uniform1f(u_scroll, slicePtr / historyCount);
@@ -1520,6 +1516,9 @@ define(['./values', './events', './widget'], function (values, events, widget) {
           var fs = 1.0 / (view.rightFreq() - view.leftFreq());
           gl.uniform1f(u_freqScale, fs);
           gl.uniform1f(u_currentFreq, viewCenterFreq);
+          var xScale = (view.rightVisibleFreq() - view.leftVisibleFreq()) * fs;
+          gl.uniform1f(u_xTranslate, (view.leftVisibleFreq() - view.leftFreq()) * fs);
+          gl.uniform1f(u_xScale, xScale);
 
           cleared = false;
         }
@@ -1529,66 +1528,86 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     function build2D(ctx, draw) {
       canvas = self.element;
       
+      // secondary canvas to use for image scaling
+      var scaler = document.createElement('canvas');
+      scaler.height = 1;
+      scaler.width = 4096;  // typical maximum supported width -- TODO use minimum
+      var scalerCtx = scaler.getContext('2d');
+      if (!scalerCtx) { throw new Error('failed to get headless canvas context'); }
+      
+      // view parameters recomputed on draw
+      var freqToCanvasPixelFactor;
+      var xTranslateFreq;
+      var pixelWidthOfFFT;
+      
+      function paintSlice(imageData, freqOffset, y) {
+        // TODO deal with left/right edge interpolation fringes
+        scalerCtx.putImageData(imageData, 0, 0);
+        ctx.drawImage(
+          scaler,
+          0, 0, imageData.width, 1,  // source rect
+          freqToCanvasPixelFactor * (freqOffset - xTranslateFreq), y, pixelWidthOfFFT, 1);  // destination rect
+      }
+      
       // circular buffer of ImageData objects
       var slices = [];
       var slicePtr = 0;
-      var lastDrawnCenterFreq = NaN;
+      var lastDrawnLeftVisibleFreq = NaN;
+      var lastDrawnRightVisibleFreq = NaN;
 
-      var performDraw = config.boundedFn(function performDrawImpl() {
+      var performDraw = config.boundedFn(function performDrawImpl(clearedIn) {
+        cleared = cleared || clearedIn;
         var h = canvas.height;
         var w = canvas.width;
+        var viewLVF = view.leftVisibleFreq();
+        var viewRVF = view.rightVisibleFreq();
         var viewCenterFreq = view.getCenterFreq();
-        commonBeforeDraw(viewCenterFreq, draw);
+        freqToCanvasPixelFactor = w / (viewRVF - viewLVF);
+        xTranslateFreq = viewLVF - view.leftFreq();
+        pixelWidthOfFFT = view.getTotalPixelWidth();
 
         var buffer, bufferCenterFreq;
         if (dataToDraw) {
           buffer = dataToDraw[1];
           bufferCenterFreq = dataToDraw[0].freq;
-          // rescale to discovered fft size
           var fftLength = buffer.length;
-          if (canvas.width !== fftLength) {
-            // assignment clears canvas
-            canvas.width = w = fftLength;
-            cleared = true;
-            // reallocate
-            slices = [];
-            slicePtr = 0;
-          }
 
           // can't draw with w=0
-          if (w === 0) {
+          if (w === 0 || fftLength === 0) {
             return;
           }
 
           // Find slice to write into
           var ibuf;
           if (slices.length < historyCount) {
-            slices.push([ibuf = ctx.createImageData(w, 1), bufferCenterFreq]);
+            slices.push([ibuf = ctx.createImageData(fftLength, 1), bufferCenterFreq]);
           } else {
             var record = slices[slicePtr];
             slicePtr = mod(slicePtr + 1, historyCount);
             ibuf = record[0];
+            if (ibuf.width != fftLength) {
+              ibuf = record[0] = ctx.createImageData(fftLength, 1);
+            }
             record[1] = bufferCenterFreq;
           }
 
           // Generate image slice from latest FFT data.
-          var xScale = fftLength / w;
-          var xZero = view.isRealFFT() ? 0 : fftLength / 2;
+          // TODO get half-pixel alignment right elsewhere, and supply wraparound on both ends in this data
+          var xZero = view.isRealFFT() ? 0 : Math.floor(fftLength / 2);
           var cScale = 1 / (view.maxLevel - view.minLevel);
           var cZero = 1 - view.maxLevel * cScale;
           var data = ibuf.data;
-          for (var x = 0; x < w; x++) {
+          for (var x = 0; x < fftLength; x++) {
             var base = x * 4;
-            var i = Math.round(x * xScale + xZero);
-            var colorVal = buffer[mod(i, fftLength)] * cScale + cZero;
+            var colorVal = buffer[mod(x + xZero, fftLength)] * cScale + cZero;
             interpolateColor(colorVal, data, base);
           }
         }
 
         ctx.fillStyle = backgroundColorCSS;
 
-        var offsetScale = w / (view.rightFreq() - view.leftFreq());
-        if (dataToDraw && lastDrawnCenterFreq === viewCenterFreq && !cleared) {
+        var sameView = lastDrawnLeftVisibleFreq === viewLVF && lastDrawnRightVisibleFreq === viewRVF;
+        if (dataToDraw && sameView && !cleared) {
           // Scroll
           ctx.drawImage(ctx.canvas, 0, 0, w, h-1, 0, 1, w, h-1);
 
@@ -1598,24 +1617,23 @@ define(['./values', './events', './widget'], function (values, events, widget) {
           }
 
           // Paint newest slice
-          var offset = bufferCenterFreq - viewCenterFreq;
-          ctx.putImageData(ibuf, Math.round(offset * offsetScale), 0);
-        } else if (cleared || lastDrawnCenterFreq !== viewCenterFreq) {
+          paintSlice(ibuf, bufferCenterFreq - viewCenterFreq, 0);
+        } else if (cleared || !sameView) {
           // Horizontal position changed, paint all slices onto canvas
           
-          lastDrawnCenterFreq = viewCenterFreq;
+          lastDrawnLeftVisibleFreq = viewLVF;
+          lastDrawnRightVisibleFreq = viewRVF;
           // fill background so scrolling is of an opaque image
           ctx.fillRect(0, 0, w, h);
           
           var sliceCount = slices.length;
           for (var i = sliceCount - 1; i >= 0; i--) {
             var slice = slices[mod(i + slicePtr, sliceCount)];
-            var offset = slice[1] - viewCenterFreq;
             var y = sliceCount - i - 1;
             if (y >= canvas.height) break;
 
             // paint slice
-            ctx.putImageData(slice[0], Math.round(offset * offsetScale), y);
+            paintSlice(slice[0], slice[1] - viewCenterFreq, y);
           }
           ctx.fillRect(0, y+1, w, h);
         }
@@ -1630,7 +1648,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
           dataToDraw = fftBundle;
           // The storage/scrolling logic is in performDraw, and we call it immediately to ensure every frame gets painted.
           // TODO: It would be more efficient to queue things so that if we _do_ have multiple frames to draw, we don't do multiple one-pixel scrolling steps
-          performDraw();
+          performDraw(false);
         },
         performDraw: performDraw
       };
