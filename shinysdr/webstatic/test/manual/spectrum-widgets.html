@@ -1,0 +1,48 @@
+<!doctype html>
+<!--
+  Copyright 2014 Kevin Reid <kpreid@switchb.org>
+  
+  This file is part of ShinySDR.
+  
+  ShinySDR is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+  
+  ShinySDR is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public License
+  along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
+-->
+
+<html lang="en" class="subwindowed-page"><head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>Spectrum widgets tester</title>
+  <link rel="stylesheet" href="/client/ui.css">
+  <link rel="stylesheet" href="/client/theme.css">
+  <meta name="viewport" content="width=device-width">
+</head><body class="subwindowed">
+
+<shinysdr-subwindow class="stretchy" visible="true">
+<h2>Spectrum Test</h2>
+<div id="monitor" data-widget="Monitor" data-target="monitor" style="height: 100%; display: flex;"></div>
+</shinysdr-subwindow>
+
+<shinysdr-subwindow visible="true">
+  <h2>Config</h2>
+  <div class="sidebar panel frame">
+    <div data-target="unpaused" data-widget="Toggle" title="Run"></div>
+    <div data-target="client" class="frame">
+      <div data-target="opengl" data-widget="Toggle" title="Use OpenGL spectrum displays"></div>
+      <div data-target="opengl_float" data-widget="Toggle" title="...with float textures"></div>
+      <div data-target="spectrum_split" data-widget="LinSlider" title="Spectrum layout"></div>
+      <div data-target="spectrum_average" data-widget="LogSlider" title="Spectrum averaging"></div>
+    </div>
+  </div>
+</shinysdr-subwindow>
+
+<script src="/client/require.js" data-main="spectrum-widgets-main.js"></script>
+</body></html>
