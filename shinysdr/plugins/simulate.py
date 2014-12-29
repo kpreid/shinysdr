@@ -31,7 +31,7 @@ from shinysdr.blocks import rotator_inc
 from shinysdr.filters import make_resampler
 from shinysdr.math import dB, todB
 from shinysdr.modes import IModulator, lookup_mode
-from shinysdr.signals import SignalType
+from shinysdr.signals import SignalType, no_signal
 from shinysdr.devices import Device, IRXDriver
 from shinysdr.types import Range
 from shinysdr.values import BlockCell, CollectionState, ExportedState, LooseCell, exported_value, setter
@@ -96,12 +96,18 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
             self)
         signals = []
         
-        def add_modulator(freq, key, mode, **kwargs):
-            mode_def = lookup_mode(mode)
-            if mode_def is None:  # missing plugin, say
-                return
+        def add_modulator(freq, key, mode_or_modulator_ctor, **kwargs):
+            if isinstance(mode_or_modulator_ctor, type):
+                mode = None
+                ctor = mode_or_modulator_ctor
+            else:
+                mode = mode_or_modulator_ctor
+                mode_def = lookup_mode(mode)
+                if mode_def is None:  # missing plugin, say
+                    return
+                ctor = mode_def.mod_class
             context = None  # TODO implement context
-            modulator = mode_def.mod_class(context=context, mode=mode, **kwargs)
+            modulator = ctor(context=context, mode=mode, **kwargs)
             tx = _SimulatedTransmitter(modulator, audio_rate, rf_rate, freq)
             
             self.connect(audio_signal, tx)
@@ -120,6 +126,7 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
         add_modulator(-30e3, 'vor1', 'VOR', angle=0)
         add_modulator(-60e3, 'vor2', 'VOR', angle=math.pi / 2)
         add_modulator(50e3, 'rtty', 'RTTY', message='The quick brown fox jumped over the lazy dog.\n')
+        add_modulator(80e3, 'chirp', ChirpModulator)
         
         bus_input = 0
         for signal in signals:
@@ -225,3 +232,39 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
     @setter
     def set_gain(self, value):
         self.__mult.set_k(dB(value))
+
+
+class ChirpModulator(gr.hier_block2, ExportedState):
+    implements(IModulator)
+    
+    def __init__(self, context, mode, chirp_rate=0.1, output_rate=10000):
+        gr.hier_block2.__init__(
+            self, type(self).__name__,
+            gr.io_signature(0, 0, 0),
+            gr.io_signature(1, 1, gr.sizeof_gr_complex))
+        
+        self.__output_rate = output_rate
+        self.__chirp_rate = chirp_rate
+        
+        self.__control = analog.sig_source_f(output_rate, analog.GR_SAW_WAVE, chirp_rate, output_rate * 2 * math.pi, 0)
+        chirp_vco = blocks.vco_c(output_rate, 1, 1)
+        
+        self.connect(
+            self.__control,
+            chirp_vco,
+            self)
+    
+    def get_input_type(self):
+        return no_signal
+    
+    def get_output_type(self):
+        return SignalType(kind='IQ', sample_rate=self.__output_rate)
+    
+    @exported_value(parameter='chirp_rate', type=Range([(-10.0, 10.0)], strict=False))
+    def get_chirp_rate(self):
+        return self.__chirp_rate
+    
+    @setter
+    def set_chirp_rate(self, value):
+        self.__chirp_rate = value
+        self.__control.set_frequency(value)
