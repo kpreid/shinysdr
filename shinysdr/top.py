@@ -362,6 +362,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         else:
             return u''
     
+    # TODO: This becomes useless w/ Session fix
     @exported_value(type=float)
     def get_cpu_use(self):
         return round(self.__cpu_calculator.get(), 2)

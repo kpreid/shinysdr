@@ -1,4 +1,4 @@
-# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -46,9 +46,9 @@ import os.path
 import struct
 import weakref
 
-import shinysdr.top
 import shinysdr.plugins
 import shinysdr.db
+from shinysdr.session import Session
 from shinysdr.signals import SignalType
 from shinysdr.values import ExportedState, BaseCell, BlockCell, StreamCell, IWritableCollection, the_poller
 
@@ -420,11 +420,11 @@ class _StateStreamObjectRegistration(object):
 
 # TODO: Better name for this category of object
 class StateStreamInner(object):
-    def __init__(self, send, block, root_url, poller=the_poller):
+    def __init__(self, send, root_object, root_url, poller=the_poller):
         self.__poller = poller
         self._send = send
-        self._block = block
-        self._cell = BlockCell(self, '_block')
+        self._root_object = root_object
+        self._cell = BlockCell(self, '_root_object')
         self._lastSerial = 0
         root_registration = _StateStreamObjectRegistration(ssi=self, poller=self.__poller, obj=self._cell, serial=0, url=root_url, refcount=0)
         self._registered = {self._cell: root_registration}
@@ -543,10 +543,9 @@ def _lookup_block(block, path):
 
 
 class OurStreamProtocol(protocol.Protocol):
-    def __init__(self, block, rootCap):
-        self._block = block
+    def __init__(self, caps):
+        self._caps = caps
         self._seenValues = {}
-        self._rootCap = rootCap
         self.inner = None
     
     def dataReceived(self, data):
@@ -563,19 +562,20 @@ class OurStreamProtocol(protocol.Protocol):
         path = [urllib.unquote(x) for x in loc.split('/')]
         assert path[0] == ''
         path[0:1] = []
-        # TODO: Better path dispatching
-        if self._rootCap is not None:
-            if path[0] != self._rootCap:
-                raise Exception('Unknown cap')
-            else:
-                path[0:1] = []
+        if path[0] in self._caps:
+            root_object = self._caps[path[0]]
+            path[0:1] = []
+        elif None in self._caps:
+            root_object = self._caps[None]
+        else:
+            raise Exception('Unknown cap')  # TODO better error reporting
         if len(path) == 1 and path[0].startswith('audio?rate='):
             rate = int(json.loads(urllib.unquote(path[0][len('audio?rate='):])))
-            self.inner = AudioStreamInner(the_reactor, self.__send, self._block, rate)
+            self.inner = AudioStreamInner(the_reactor, self.__send, root_object, rate)
         elif len(path) >= 1 and path[0] == 'radio':
             # note _lookup_block may throw. TODO: Better error reporting
-            block = _lookup_block(self._block, path[1:])
-            self.inner = StateStreamInner(self.__send, block, loc)  # note reuse of loc as HTTP path; probably will regret this
+            root_object = _lookup_block(root_object, path[1:])
+            self.inner = StateStreamInner(self.__send, root_object, loc)  # note reuse of loc as HTTP path; probably will regret this
         else:
             raise Exception('Unknown path: %r' % (path,))
     
@@ -606,13 +606,12 @@ class OurStreamProtocol(protocol.Protocol):
 class OurStreamFactory(protocol.Factory):
     protocol = OurStreamProtocol
     
-    def __init__(self, block, rootCap):
-        self._block = block
-        self._rootCap = rootCap
+    def __init__(self, caps):
+        self.__caps = caps
     
     def buildProtocol(self, addr):
         """twisted Factory implementation"""
-        p = self.protocol(self._block, self._rootCap)
+        p = self.protocol(self.__caps)
         p.factory = self
         return p
 
@@ -712,7 +711,7 @@ class WebService(Service):
         self.__http_port = http_endpoint
         self.__ws_port = ws_endpoint
         
-        self.__ws_protocol = txws.WebSocketFactory(OurStreamFactory(top, root_cap))
+        root_object = Session(top)
         
         # Roots of resource trees
         # - appRoot is everything stateful/authority-bearing
@@ -721,17 +720,21 @@ class WebService(Service):
         if root_cap is None:
             appRoot = serverRoot
             self.__visit_path = '/'
+            ws_caps = {None: root_object}
         else:
             serverRoot = _make_static(staticResourcePath)
             appRoot = _SlashedResource()
             serverRoot.putChild(root_cap, appRoot)
             self.__visit_path = '/' + urllib.quote(root_cap, safe='') + '/'
+            ws_caps = {root_cap: root_object}
+        
+        self.__ws_protocol = txws.WebSocketFactory(OurStreamFactory(ws_caps))
         
         # UI entry point
         appRoot.putChild('', _RadioIndexHtmlResource(title))
         
         # Exported radio control objects
-        appRoot.putChild('radio', BlockResource(top, note_dirty, notDeletable))
+        appRoot.putChild('radio', BlockResource(root_object, note_dirty, notDeletable))
         
         # Frequency DB
         appRoot.putChild('dbs', shinysdr.db.DatabasesResource(read_only_dbs))
