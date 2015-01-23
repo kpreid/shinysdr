@@ -97,9 +97,8 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         
         # Audio stream bits
         self.__audio_channels = 2 if stereo else 1
-        self.audio_resampler_cache = {}
         self.audio_queue_sinks = {}
-        self.__audio_bus_rate = 1  # dummy initial value, computed in _do_connect
+        self.__audio_bus = BusPlumber(self, self.__audio_channels)
         
         # Flags, other state
         self.__needs_reconnect = True
@@ -238,72 +237,26 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
             self.connect(
                 self.__rx_driver,
                 self.__clip_probe)
-            
-            # Determine audio bus rate.
-            # The bus obviously does not need to be higher than the rate of any receiver, because that would be extraneous data. It also does not need to be higher than the rate of any queue, because no queue has use for the information.
-            if len(self._receivers) > 0 and len(self.audio_queue_sinks) > 0:
-                max_out_rate = max((receiver.get_output_type().get_sample_rate() for receiver in self._receivers.itervalues()))
-                max_in_rate = max((queue_rate for (queue_rate, sink) in self.audio_queue_sinks.itervalues()))
-                new_bus_rate = min(max_out_rate, max_in_rate)
-                if new_bus_rate != self.__audio_bus_rate:
-                    self.__audio_bus_rate = new_bus_rate
-                    self.audio_resampler_cache.clear()
-            
-            # recreated each time because reusing an add_ff w/ different
-            # input counts fails; TODO: report/fix bug
-            audio_sums = [blocks.add_ff() for _ in xrange(self.__audio_channels)]
-            
-            audio_sum_index = 0
+
+            # Filter receivers
+            bus_inputs = []
+            n_valid_receivers = 0
             for key, receiver in self._receivers.iteritems():
                 self._receiver_valid[key] = receiver.get_is_valid()
-                if self._receiver_valid[key]:
-                    if audio_sum_index >= 6:
-                        # Sanity-check to avoid burning arbitrary resources
-                        # TODO: less arbitrary constant; communicate this restriction to client
-                        log.err('Flow graph: Refusing to connect more than 6 receivers')
-                        break
-                    self.connect(self.__rx_driver, receiver)
-                    receiver_rate = receiver.get_output_type().get_sample_rate()
-                    if receiver_rate == self.__audio_bus_rate:
-                        for ch in xrange(self.__audio_channels):
-                            self.connect(
-                                (receiver, ch),
-                                (audio_sums[ch], audio_sum_index))
-                    else:
-                        for ch in xrange(self.__audio_channels):
-                            self.connect(
-                                (receiver, ch),
-                                # TODO pool these resamplers
-                                make_resampler(receiver_rate, self.__audio_bus_rate),
-                                (audio_sums[ch], audio_sum_index))
-                    audio_sum_index += 1
-            
-            if audio_sum_index > 0:
-                # connect audio output only if there is at least one input
-                if len(self.audio_queue_sinks) > 0:
-                    used_resamplers = set()
-                    for (queue_rate, sink) in self.audio_queue_sinks.itervalues():
-                        if queue_rate == self.__audio_bus_rate:
-                            for ch in xrange(self.__audio_channels):
-                                self.connect(audio_sums[ch], (sink, ch))
-                        else:
-                            if queue_rate not in self.audio_resampler_cache:
-                                # Moderately expensive due to the internals using optfir
-                                log.msg('Flow graph: Constructing resampler for audio rate %i' % queue_rate)
-                                self.audio_resampler_cache[queue_rate] = tuple(
-                                    make_resampler(self.__audio_bus_rate, queue_rate)
-                                    for _ in xrange(self.__audio_channels))
-                            resamplers = self.audio_resampler_cache[queue_rate]
-                            used_resamplers.add(resamplers)
-                            for ch in xrange(self.__audio_channels):
-                                self.connect(resamplers[ch], (sink, ch))
-                    for resamplers in used_resamplers:
-                        for ch in xrange(self.__audio_channels):
-                            self.connect(audio_sums[ch], resamplers[ch])
-                else:
-                    # no stream sinks, gnuradio requires a dummy sink
-                    for ch in xrange(self.__audio_channels):
-                        self.connect(audio_sums[ch], blocks.null_sink(gr.sizeof_float))
+                if not self._receiver_valid[key]:
+                    continue
+                n_valid_receivers += 1
+                if n_valid_receivers > 6:
+                    # Sanity-check to avoid burning arbitrary resources
+                    # TODO: less arbitrary constant; communicate this restriction to client
+                    log.err('Flow graph: Refusing to connect more than 6 receivers')
+                    break
+                self.connect(self.__rx_driver, receiver)
+                bus_inputs.append((receiver.get_output_type().get_sample_rate(), receiver))
+
+            self.__audio_bus.connect(
+                inputs=bus_inputs,
+                outputs=self.audio_queue_sinks.itervalues())
         
             self._recursive_unlock()
             log.msg('Flow graph: ...done reconnecting.')
@@ -401,7 +354,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         '''
         Not visible externally; for diagnostic purposes only.
         '''
-        return self.__audio_bus_rate
+        return self.__audio_bus.get_current_rate()
     
     @exported_value(ctor=float)
     def get_cpu_use(self):
@@ -475,6 +428,90 @@ class AudioQueueSink(gr.hier_block2):
             for ch in xrange(channels):
                 self.connect((self, ch), (interleaver, ch))
             self.connect(interleaver, sink)
+
+
+class BusPlumber(object):
+    '''
+    Takes an arbitrary number of blocks' float outputs (bus inputs), sums and resamples them, and connects them to an arbitrary number of blocks' inputs (bus outputs).
+    
+    If there are no outputs, the inputs will go to a null sink. If there are no inputs, the outputs will remain unconnected.
+    
+    (This cannot be a hierarchical block, because hierarchical blocks cannot currently have variable numbers of ports.)
+    '''
+    def __init__(self, graph, nchannels):
+        self.__graph = graph
+        self.__channels = xrange(nchannels)
+        self.__bus_rate = 1.0
+        self.__resampler_cache = {}
+    
+    def get_current_rate(self):
+        return self.__bus_rate
+    
+    def connect(self, inputs, outputs):
+        '''
+        Make all new connections (graph.disconnect_all() must have been done) between inputs and outputs.
+        
+        inputs and outputs must be iterables of (sample_rate, block) tuples.
+        '''
+        inputs = list(inputs)
+        outputs = list(outputs)
+        
+        # Determine bus rate.
+        # The bus obviously does not need to be higher than the rate of any bus input, because that would be extraneous data. It also does not need to be higher than the rate of any bus output, because no output has use for the information.
+        if len(inputs) > 0 and len(outputs) > 0:
+            max_in_rate  = max((rate for rate, _ in inputs))
+            max_out_rate = max((rate for rate, _ in outputs))
+            new_bus_rate = min(max_out_rate, max_in_rate)
+            if new_bus_rate != self.__bus_rate:
+                self.__bus_rate = new_bus_rate
+                self.__resampler_cache.clear()
+        
+        # recreated each time because reusing an add_ff w/ different
+        # input counts fails; TODO: report/fix bug
+        bus_sums = [blocks.add_ff() for _ in self.__channels]
+        
+        in_index = 0
+        for in_rate, in_block in inputs:
+            if in_rate == self.__bus_rate:
+                for ch in self.__channels:
+                    self.__graph.connect(
+                        (in_block, ch),
+                        (bus_sums[ch], in_index))
+            else:
+                for ch in self.__channels:
+                    self.__graph.connect(
+                        (in_block, ch),
+                        # TODO pool these resamplers
+                        make_resampler(in_rate, self.__bus_rate),
+                        (bus_sums[ch], in_index))
+            in_index += 1
+        
+        if in_index > 0:
+            # connect output only if there is at least one input
+            if len(outputs) > 0:
+                used_resamplers = set()
+                for out_rate, out_block in outputs:
+                    if out_rate == self.__bus_rate:
+                        for ch in self.__channels:
+                            self.__graph.connect(bus_sums[ch], (out_block, ch))
+                    else:
+                        if out_rate not in self.__resampler_cache:
+                            # Moderately expensive due to the internals using optfir
+                            log.msg('Flow graph: Constructing resampler for audio rate %i' % out_rate)
+                            self.__resampler_cache[out_rate] = tuple(
+                                make_resampler(self.__bus_rate, out_rate)
+                                for _ in self.__channels)
+                        resamplers = self.__resampler_cache[out_rate]
+                        used_resamplers.add(resamplers)
+                        for ch in self.__channels:
+                            self.__graph.connect(resamplers[ch], (out_block, ch))
+                for resamplers in used_resamplers:
+                    for ch in self.__channels:
+                        self.__graph.connect(bus_sums[ch], resamplers[ch])
+            else:
+                # gnuradio requires at least one connected output
+                for ch in self.__channels:
+                    self.__graph.connect(bus_sums[ch], blocks.null_sink(gr.sizeof_float))
 
 
 class MaxProbe(gr.hier_block2):
