@@ -40,7 +40,7 @@ from gnuradio.filter import firdes
 from gnuradio.filter import rational_resampler
 from gnuradio.fft import logpwrfft
 
-from shinysdr.math import factorize, small_factor_at_least
+from shinysdr.math import factorize, small_factor_at_least, todB
 from shinysdr.signals import SignalType
 from shinysdr.types import BulkDataType, Range
 from shinysdr.values import ExportedState, exported_value, setter, StreamCell
@@ -525,7 +525,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
             itemsize=self.__itemsize)
         
         # Adjusts units so displayed level is independent of resolution and sample rate. Also throw in the packing offset
-        compensation = 10 * math.log10(input_length / sample_rate) + self.__power_offset
+        compensation = todB(input_length / sample_rate) + self.__power_offset
         # TODO: Consider not using the logpwrfft block
         
         self.__logpwrfft = logpwrfft.logpwrfft_c(

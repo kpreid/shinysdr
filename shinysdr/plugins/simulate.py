@@ -28,6 +28,7 @@ from gnuradio.filter import rational_resampler
 import math
 
 from shinysdr.blocks import rotator_inc, make_resampler
+from shinysdr.math import dB, todB
 from shinysdr.modes import IModulator, lookup_mode
 from shinysdr.signals import SignalType
 from shinysdr.devices import Device, IRXDriver
@@ -81,7 +82,7 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
         
         self.bus = blocks.add_vcc(1)
         self.channel_model = channels.channel_model(
-            noise_voltage=10 ** (self.noise_level / 10.0),
+            noise_voltage=dB(self.noise_level),
             frequency_offset=0,
             epsilon=1.01,  # TODO: expose this parameter
             # taps=...,  # TODO: apply something here?
@@ -148,7 +149,7 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
     
     @setter
     def set_noise_level(self, value):
-        self.channel_model.set_noise_voltage(10.0 ** (value / 10))
+        self.channel_model.set_noise_voltage(dB(value))
         self.noise_level = value
 
     def notify_reconnecting_or_restarting(self):
@@ -186,7 +187,7 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
             interpolation=int(rf_rate),
             decimation=int(modulator.get_output_type().get_sample_rate()))
         self.__rotator = blocks.rotator_cc(rotator_inc(rate=rf_rate, shift=freq))
-        self.__mult = blocks.multiply_const_cc(10.0 ** -1)
+        self.__mult = blocks.multiply_const_cc(dB(-10))
         self.connect(modulator, rf_resampler, self.__rotator, self.__mult, self)
     
     def state_def(self, callback):
@@ -205,8 +206,8 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
     
     @exported_value(ctor=Range([(-50.0, 0.0)], strict=False))
     def get_gain(self):
-        return 10 * math.log10(self.__mult.k().real)
+        return todB(self.__mult.k().real)
     
     @setter
     def set_gain(self, value):
-        self.__mult.set_k(10.0 ** (float(value) / 10))
+        self.__mult.set_k(dB(value))

@@ -29,9 +29,8 @@ from gnuradio import analog
 from gnuradio import gr
 from gnuradio import blocks
 
-import math
-
 from shinysdr.blocks import rotator_inc
+from shinysdr.math import dB, todB
 from shinysdr.modes import ITunableDemodulator, get_modes, lookup_mode
 from shinysdr.signals import SignalType
 from shinysdr.types import Enum, Range
@@ -40,7 +39,7 @@ from shinysdr.values import ExportedState, BlockCell, exported_value, setter, un
 
 # arbitrary non-infinite limit
 _audio_power_minimum_dB = -60
-_audio_power_minimum_amplitude = 10 ** (_audio_power_minimum_dB / 10)
+_audio_power_minimum_amplitude = dB(_audio_power_minimum_dB)
 
 
 _dummy_audio_rate = 2000
@@ -249,7 +248,7 @@ class Receiver(gr.hier_block2, ExportedState):
     @exported_value(ctor=Range([(_audio_power_minimum_dB, 0)], strict=False))
     def get_audio_power(self):
         if self.get_is_valid():
-            return 10 * math.log10(max(_audio_power_minimum_amplitude, self.probe_audio.level()))
+            return todB(max(_audio_power_minimum_amplitude, self.probe_audio.level()))
         else:
             # will not be receiving samples, so probe's value will be meaningless
             return _audio_power_minimum_dB
@@ -312,7 +311,7 @@ class Receiver(gr.hier_block2, ExportedState):
         return demodulator
 
     def __update_audio_gain(self):
-        gain_lin = 10 ** (self.audio_gain / 10)
+        gain_lin = dB(self.audio_gain)
         if self.__audio_channels == 2:
             pan = self.audio_pan
             # TODO: Determine correct computation for panning. http://en.wikipedia.org/wiki/Pan_law seems relevant but was short on actual formulas. May depend on headphones vs speakers? This may be correct already for headphones -- it sounds nearly-flat to me.

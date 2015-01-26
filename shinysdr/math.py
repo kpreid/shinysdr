@@ -24,6 +24,8 @@ interface.
 
 from __future__ import absolute_import, division
 
+from math import log10
+
 
 __all__ = []  # appended later
 
@@ -87,3 +89,19 @@ def small_factor_at_least(n, limit, _force_approx=False):
 
 
 __all__.append('small_factor_at_least')
+
+
+def dB(x):
+    '''Convert dB value to multiplicative value.'''
+    return 10 ** (0.1 * x)
+
+
+__all__.append('dB')
+
+
+def todB(x):
+    '''Convert multiplicative value to dB value.'''
+    return 10 * log10(x)
+
+
+__all__.append('todB')
