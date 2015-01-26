@@ -446,15 +446,50 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         addWidget('mode', Radio);
       }
       addWidget('demodulator', Demodulator);
-      if ('audio_power' in block) {
-        addWidget('audio_power', Meter, 'Audio');
+      
+      var saveInsert = getAppend();
+      var audioPanel = saveInsert.appendChild(document.createElement('table'));
+      audioPanel.classList.add('panel');
+      audioPanel.classList.add('aligned-controls-table');
+      setInsertion(audioPanel);
+
+      // TODO pick some cleaner way to produce all this html
+      ignore('audio_power');
+      var powerRow = audioPanel.appendChild(document.createElement('tr'));
+      powerRow.appendChild(document.createElement('th')).appendChild(document.createTextNode('Audio'));
+      var meter = powerRow.appendChild(document.createElement('td')).appendChild(document.createElement('meter'));
+      createWidgetExt(config.context, Meter, meter, block.audio_power);
+      var meterNumber = powerRow.appendChild(document.createElement('td')).appendChild(document.createElement('tt'));
+      createWidgetExt(config.context, NumberWidget, meterNumber, block.audio_power);
+
+      ignore('audio_gain');
+      var gainRow = audioPanel.appendChild(document.createElement('tr'));
+      gainRow.appendChild(document.createElement('th')).appendChild(document.createTextNode('Vol'));
+      var gainSlider = gainRow.appendChild(document.createElement('td')).appendChild(document.createElement('input'));
+      gainSlider.type = 'range';
+      createWidgetExt(config.context, LinSlider, gainSlider, block.audio_gain);
+      var gainNumber = gainRow.appendChild(document.createElement('td')).appendChild(document.createElement('tt'));
+      createWidgetExt(config.context, NumberWidget, gainNumber, block.audio_gain);
+      
+      var otherRow = audioPanel.appendChild(document.createElement('tr'));
+      otherRow.appendChild(document.createElement('th')).appendChild(document.createTextNode('Dest'));
+      var otherCell = otherRow.appendChild(document.createElement('td'));
+      otherCell.colSpan = 2;
+      var otherBox = otherCell.appendChild(document.createElement('span'));
+      ignore('audio_destination');
+      var dest = otherBox.appendChild(document.createElement('select'));
+      createWidgetExt(config.context, Select, dest, block.audio_destination);
+      if (!block.audio_pan.type.isSingleValued()) {
+        ignore('audio_pan');
+        otherBox.appendChild(document.createTextNode('L'));
+        var panSlider = otherBox.appendChild(document.createElement('input'));
+        panSlider.type = 'range';
+        createWidgetExt(config.context, LinSlider, panSlider, block.audio_pan);
+        otherBox.appendChild(document.createTextNode('R'));
       }
-      if ('audio_gain' in block) {
-        addWidget('audio_gain', LinSlider, 'Volume');
-      }
-      if ('audio_pan' in block && !block.audio_pan.type.isSingleValued()) {
-        addWidget('audio_pan', LinSlider, 'Pan');
-      }
+      
+      setInsertion(saveInsert);
+      
       if ('rec_freq' in block) {
         addWidget(null, SaveButton);
       }
@@ -469,7 +504,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       if ('rf_power' in block && 'squelch_threshold' in block) (function() {
         var squelchAndPowerPanel = this.element.appendChild(document.createElement('table'));
         squelchAndPowerPanel.classList.add('panel');
-        squelchAndPowerPanel.classList.add('widget-Demodulator-squelch-and-power');
+        squelchAndPowerPanel.classList.add('aligned-controls-table');
         function addRow(label, wtarget, wclass, wel) {
           ignore(wtarget);
           var row = squelchAndPowerPanel.appendChild(document.createElement('tr'));

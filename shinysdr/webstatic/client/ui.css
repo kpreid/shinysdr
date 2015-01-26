@@ -431,26 +431,31 @@ label.panel {
   display: block;
 }
 
-table.widget-Demodulator-squelch-and-power {
+table.aligned-controls-table {
   margin: 0;
   box-sizing: border-box;
   width: 100%;
 
   border-spacing: 0;
 }
-.widget-Demodulator-squelch-and-power th {
+.aligned-controls-table th {
   width: 10%;
-  text-align: left;
+  text-align: right;
   font: inherit;
+  padding: 0 .2em 0 0;
+  vertical-align: baseline;
 }
-.widget-Demodulator-squelch-and-power th,
-.widget-Demodulator-squelch-and-power td {
+.aligned-controls-table :first-child > th {
+  font-weight: bold;
+}
+.aligned-controls-table td {
   padding: 0;
+  vertical-align: baseline;
 }
-.widget-Demodulator-squelch-and-power td:nth-child(2) > * {
+.aligned-controls-table td:nth-child(2) > * {
   width: 100%;
 }
-.widget-Demodulator-squelch-and-power td:nth-child(3) {
+.aligned-controls-table td:nth-child(3) {
   width: 8ex;
   text-align: right;
 }
