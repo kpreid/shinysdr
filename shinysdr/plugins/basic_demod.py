@@ -26,7 +26,7 @@ from gnuradio import filter as grfilter  # don't shadow builtin
 from gnuradio.analog import fm_emph
 from gnuradio.filter import firdes
 
-from shinysdr.math import todB
+from shinysdr.math import dB, todB
 from shinysdr.modes import ModeDef, IDemodulator, IModulator, ITunableDemodulator
 from shinysdr.blocks import MultistageChannelFilter, make_resampler
 from shinysdr.signals import SignalType
@@ -457,7 +457,7 @@ class WFMDemodulator(FMDemodulator):
 pluginDef_wfm = ModeDef('WFM', label='Broadcast FM', demod_class=WFMDemodulator)
 
 
-_ssb_max_agc = 1.5
+_ssb_max_agc = 40
 
 
 class SSBDemodulator(SimpleAudioDemodulator):
@@ -489,7 +489,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
             half_bandwidth = self.half_bandwidth = 500
             self.band_filter_width = 120
             band_mid = 0
-            agc_reference = 0.1
+            agc_reference = dB(-13)
         else:
             self.__offset = 0
             half_bandwidth = self.half_bandwidth = 2800 / 2  # standard SSB bandwidth
@@ -498,7 +498,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
                 band_mid = -200 - half_bandwidth
             else:
                 band_mid = 200 + half_bandwidth
-            agc_reference = 0.25
+            agc_reference = dB(-8)
         
         self.band_filter_low = band_mid - half_bandwidth
         self.band_filter_high = band_mid + half_bandwidth
@@ -511,7 +511,9 @@ class SSBDemodulator(SimpleAudioDemodulator):
                 firdes.WIN_HAMMING))
         
         self.agc_block = analog.agc2_cc(reference=agc_reference)
-        self.agc_block.set_max_gain(_ssb_max_agc)
+        self.agc_block.set_attack_rate(1e-1)
+        self.agc_block.set_decay_rate(1e-1)
+        self.agc_block.set_max_gain(dB(_ssb_max_agc))
         
         ssb_demod_block = blocks.complex_to_real(1)
         
@@ -543,7 +545,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
             'width': self.band_filter_width
         }
     
-    @exported_value(ctor=Range([(-100, todB(_ssb_max_agc))]))
+    @exported_value(ctor=Range([(-20, _ssb_max_agc)]))
     def get_agc_gain(self):
         return todB(self.agc_block.gain())
 
