@@ -32,13 +32,18 @@ from gnuradio.filter import firdes
 from gnuradio import gr
 import numpy
 
-import rtty  # gr-rtty
-
 from shinysdr.blocks import MultistageChannelFilter
 from shinysdr.modes import ModeDef, IDemodulator, IModulator
 from shinysdr.signals import SignalType, no_signal
 from shinysdr.types import Range
 from shinysdr.values import BlockCell, ExportedState, exported_value
+
+
+try:
+    import rtty  # gr-rtty
+    _available = True
+except ImportError:
+    _available = False
 
 
 # note: this string is ordered so that the first bit (on the air) is the least significant bit of the index in the string
@@ -294,4 +299,4 @@ pluginMode = ModeDef(
     label='RTTY',
     demod_class=RTTYDemodulator,
     mod_class=RTTYModulator,
-    available=False)  # disabled until it works better
+    available=_available and False)  # disabled until it works better
