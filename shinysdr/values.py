@@ -46,20 +46,17 @@ class BaseCell(object):
         self._persists = persists
         self._writable = writable
     
-    def __eq__(self, other):
+    def __cmp__(self, other):
         if not isinstance(other, BaseCell):
-            return NotImplemented
+            return cmp(id(self), id(other))  # dummy
         elif self._target == other._target and self._key == other._key:
             if type(self) != type(other):
                 # No two cells should have the same target and key but different details.
                 # This is not a perfect test
                 raise Exception("Shouldn't happen")
-            return True
+            return 0
         else:
-            return False
-    
-    def __ne__(self, other):
-        return not self.__eq__(other)
+            return cmp(self._key, other._key) or cmp(self._target, other._target)
     
     def __hash__(self):
         return hash(self._target) ^ hash(self._key)
@@ -258,10 +255,13 @@ class BlockCell(BaseBlockCell):
 class CollectionMemberCell(BaseBlockCell):
     def __init__(self, target, key, persists=True):
         BaseBlockCell.__init__(self, target, key, persists=persists)
+        self.__last_seen = nullExportedState
     
     def get(self):
-        # fallback to nullExportedState so that if we become invalid in a dynamic collection we don't break
-        return self._target._collection.get(self._key, nullExportedState)
+        # fallback to old value so that if we become invalid in a dynamic collection we don't break
+        value = self._target._collection.get(self._key, self.__last_seen)
+        self.__last_seen = value
+        return value
 
 
 class ISubscribableCell(Interface):
@@ -737,8 +737,8 @@ class _PollerTarget(object):
         self._obj = obj
         self._subscriptions = []
     
-    def __eq__(self, other):
-        return type(self) == type(other) and self._obj == other._obj
+    def __cmp__(self, other):
+        return cmp(type(self), type(other)) or cmp(self._obj, other._obj)
     
     def __hash__(self):
         return hash(self._obj)
