@@ -147,6 +147,7 @@ details[open].frame summary {
 h2 .frame {
   display: inline-flex;
   flex-direction: row;
+  flex-wrap: wrap;
   margin: 0 .5em;
   
   /* override heading styling */
