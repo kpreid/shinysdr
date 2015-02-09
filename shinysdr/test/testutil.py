@@ -1,4 +1,4 @@
-# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -23,15 +23,50 @@ import StringIO
 
 from twisted.internet.defer import Deferred
 from twisted.internet.protocol import Protocol
+from twisted.trial import unittest
 from twisted.web import client
 from twisted.web import http
 from twisted.web.http_headers import Headers
 
+from shinysdr.devices import Device
 from shinysdr.plugins.simulate import SimulatedDevice
 from shinysdr.top import Top
+from shinysdr.values import nullExportedState
 
 
 # --- Radio test utilities ---
+
+
+class DeviceTestCase(unittest.TestCase):
+    def setUp(self, device=None):
+        self.__noop = type(self) is DeviceTestCase
+        if device is None and not self.__noop:
+            raise Exception('No device specified for DeviceTestCase')
+        self.device = device
+    
+    def tearDown(self):
+        if self.__noop: return
+        self.device.close()
+    
+    def test_smoke(self):
+        if self.__noop: return
+        self.assertIsInstance(self.device, Device)
+    
+    def test_rx_close(self):
+        if self.__noop: return
+        if self.device.get_rx_driver() is nullExportedState:
+            return
+        # No specific expectations, but it shouldn't throw.
+        self.device.get_rx_driver().close()
+    
+    def test_tx_close(self):
+        if self.__noop: return
+        if self.device.get_tx_driver() is nullExportedState:
+            return
+        # No specific expectations, but it shouldn't throw.
+        self.device.get_tx_driver().close()
+    
+    # TODO more tests
 
 
 class DemodulatorTester(object):

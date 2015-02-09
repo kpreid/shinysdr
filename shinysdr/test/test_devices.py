@@ -1,4 +1,4 @@
-# Copyright 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2014, 2015 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -22,8 +22,9 @@ from twisted.trial import unittest
 from zope.interface import implements  # available via Twisted
 
 # Note: not testing _ConstantVFOCell, it's just a useful utility
-from shinysdr.devices import _ConstantVFOCell, Device, IDevice, IRXDriver, ITXDriver, merge_devices
+from shinysdr.devices import _ConstantVFOCell, AudioDevice, Device, FrequencyShift, IDevice, IRXDriver, ITXDriver, PositionedDevice, merge_devices
 from shinysdr.signals import SignalType
+from shinysdr.test.testutil import DeviceTestCase
 from shinysdr.types import Range
 from shinysdr.values import ExportedState, LooseCell, nullExportedState
 
@@ -57,6 +58,7 @@ class TestDevice(unittest.TestCase):
     
     # TODO VFO tests
     # TODO components tests
+    # close() is tested in test_top
 
 
 class _TestRXDriver(ExportedState):
@@ -108,3 +110,28 @@ class TestMergeDevices(unittest.TestCase):
         ])
         self.assertTrue(d.get_vfo_cell().isWritable())
         # TODO more testing
+
+
+class TestAudioDevice(DeviceTestCase):
+    def setUp(self):
+        super(TestAudioDevice, self).setUp(
+            device=AudioDevice(''))
+
+    # Test methods provided by DeviceTestCase
+
+
+class TestFrequencyShift(DeviceTestCase):
+    def setUp(self):
+        super(TestFrequencyShift, self).setUp(
+            device=FrequencyShift(100.0))
+
+    # Test methods provided by DeviceTestCase
+
+
+class TestPositionedDevice(DeviceTestCase):
+    def setUp(self):
+        super(TestPositionedDevice, self).setUp(
+            device=PositionedDevice(10.0, 20.0))
+
+    # Test methods provided by DeviceTestCase
+

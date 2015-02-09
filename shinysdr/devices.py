@@ -1,4 +1,4 @@
-# Copyright 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2014, 2015 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -65,7 +65,14 @@ class IRXDriver(Interface):
         
         TODO: With the device refactoring, tune delays should come from VFOs not rx drivers.
         '''
-
+    
+    def close():
+        '''
+        Perform a clean shutdown.
+        
+        This may or may not leave the driver in an unusable state.
+        '''
+    
     def notify_reconnecting_or_restarting():
         pass
 
@@ -86,7 +93,14 @@ class ITXDriver(Interface):
         
         The value MUST NOT change in an incompatible way during the lifetime of the source. 
         '''
-
+    
+    def close():
+        '''
+        Perform a clean shutdown.
+        
+        This may or may not leave the driver in an unusable state.
+        '''
+    
     def notify_reconnecting_or_restarting():
         pass
 
@@ -172,6 +186,18 @@ class Device(ExportedState):
         (Convenience/consistency equivalent to self.state()['freq'].set.)
         '''
         return self.__vfo_cell.set(value)
+    
+    def close(self):
+        '''
+        Instruct the drivers to perform a clean shutdown, and discard them.
+        '''
+        if self.rx_driver is not nullExportedState:
+            self.rx_driver.close()
+            self.rx_driver = nullExportedState
+        if self.tx_driver is not nullExportedState:
+            self.tx_driver.close()
+            self.tx_driver = nullExportedState
+        # TODO: Components should probably get close() as well, but that's a whole new interface.
     
     def notify_reconnecting_or_restarting(self):
         if self.rx_driver is not nullExportedState:
@@ -376,6 +402,11 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
         # TODO: Tune delay should be associated with VFOs (or devices) too
         return 0.0
     
+    def close(self):
+        self.disconnect_all()
+        self.__source = None
+        pass
+    
     def notify_reconnecting_or_restarting(self):
         pass
 
@@ -418,6 +449,11 @@ class _AudioTXDriver(ExportedState, gr.hier_block2):
     def get_tune_delay(self):
         # TODO: Tune delay should be associated with VFOs (or devices) too
         return 0.0
+    
+    def close(self):
+        self.disconnect_all()
+        self.__source = None
+        pass
     
     def notify_reconnecting_or_restarting(self):
         pass

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -110,6 +110,8 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
     
     log.msg('Constructing flow graph...')
     top = configObj._create_top_block()
+    
+    singleton_reactor.addSystemEventTrigger('during', 'shutdown', top.close_all_devices)
     
     log.msg('Restoring state...')
     restore(top, top_defaults)

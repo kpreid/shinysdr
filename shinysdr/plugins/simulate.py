@@ -1,4 +1,4 @@
-# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -133,6 +133,7 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
         # TODO make this possible to be decorator style
         callback(BlockCell(self, 'transmitters'))
 
+    # implement IRXDriver
     @exported_value(ctor=SignalType)
     def get_output_type(self):
         return self.__signal_type
@@ -140,8 +141,13 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
     def _really_set_frequency(self, freq):
         pass
     
+    # implement IRXDriver
     def get_tune_delay(self):
         return 0.0
+    
+    # implement IRXDriver
+    def close(self):
+        pass
     
     @exported_value(ctor=Range([(-50, 0)]))
     def get_noise_level(self):

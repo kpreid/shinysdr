@@ -1,4 +1,4 @@
-# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -89,7 +89,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         # Configuration
         # TODO: device refactoring: Remove vestigial 'accessories'
         self._sources = {k: d for k, d in devices.iteritems() if d.can_receive()}
-        accessories = {k: d for k, d in devices.iteritems() if not d.can_receive()}
+        self._accessories = accessories = {k: d for k, d in devices.iteritems() if not d.can_receive()}
         self.source_name = self._sources.keys()[0]  # arbitrary valid initial value
         
         # Audio early setup
@@ -350,6 +350,17 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 
     def __start_or_stop_later(self):
         reactor.callLater(0, self.__start_or_stop)
+
+    def close_all_devices(self):
+        '''Close all devices in preparation for a clean shutdown.
+        
+        Makes this top block unusable'''
+        for device in self._sources.itervalues():
+            device.close()
+        for device in self._accessories.itervalues():
+            device.close()
+        self.stop()
+        self.wait()
 
     @exported_value(ctor_fn=lambda self:
         Enum({k: v.get_name() or k for (k, v) in self._sources.iteritems()}))

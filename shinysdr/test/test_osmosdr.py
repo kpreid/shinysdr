@@ -1,4 +1,4 @@
-# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -21,9 +21,17 @@ from twisted.trial import unittest
 
 from osmosdr import range_t, meta_range_t
 from shinysdr.plugins.osmosdr import OsmoSDRDevice, convert_osmosdr_range
+from shinysdr.test.testutil import DeviceTestCase
 
 
-class TestOsmoSDRDevice(unittest.TestCase):
+class TestOsmoSDRDeviceCore(DeviceTestCase):
+    def setUp(self):
+        super(TestOsmoSDRDeviceCore, self).setUp(
+            device=OsmoSDRDevice('file=/dev/null,rate=100000,freq=0'))
+
+    # Test methods provided by DeviceTestCase
+
+class TestOsmoSDRDeviceMisc(unittest.TestCase):
     def test_initial_zero_freq(self):
         # 100 MHz is a default we use
         self.assertEqual(100e6, OsmoSDRDevice('file=/dev/null,rate=100000,freq=0').get_freq())

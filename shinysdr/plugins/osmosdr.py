@@ -1,4 +1,4 @@
-# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -218,6 +218,12 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     # implement IRXDriver
     def get_tune_delay(self):
         return 0.25  # TODO: make configurable and/or account for as many factors as we can
+    
+    # implement IRXDriver
+    def close(self):
+        # Not found to be strictly necessary, because Device will drop this driver, but hey.
+        self.__source = None
+        self.disconnect_all()
     
     @exported_value(ctor=float)
     def get_correction_ppm(self):
