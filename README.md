@@ -129,7 +129,7 @@ A very brief summary of basic operation:
 Copyright and License
 ---------------------
 
-Copyright 2013, 2014 Kevin Reid &lt;<kpreid@switchb.org>&gt;
+Copyright 2013, 2014, 2015 Kevin Reid &lt;<kpreid@switchb.org>&gt;
 
 ShinySDR is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
