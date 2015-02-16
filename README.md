@@ -8,19 +8,32 @@ What's shiny about it?
 
 I (Kevin Reid) created ShinySDR out of dissatisfaction with the user interface of other SDR applications that were available to me. The overall goal is to make, not necessarily the most capable or efficient SDR application, but rather one which is, shall we say, *not clunky*.
 
-For example, the earliest technical feature of note is its **persistent waterfall display**: You can zoom, pan, and retune without losing any of the displayed history, whereas many other programs will discard anything which is temporarily offscreen, or the whole thing if the window is resized. This isn't especially hard to implement, but it's a far better user interface; your action is reversible. If you zoom in to get a look at one signal, you can zoom out again.
+Here's some reasons for you to use ShinySDR:
 
-Some other notable features:
+* **Remote operation via browser-based UI:** The receiver can be listened to and remotely controlled over a LAN or the Internet, as well as from the same machine the actual hardware is connected to. Required network bandwidth: 3 Mb/s to 8 Mb/s, depending on settings.
 
-* **Browser-based UI:** The receiver can be listened to and remotely controlled over a network or the Internet, as well as from the same machine the actual hardware is connected to. (Required network bandwidth: 3 Mb/s to 8 Mb/s, depending on settings.)
+  Phone/tablet compatible (though not pretty yet). Internet access is not required for local or LAN operation.
 
-* **Modularity**: plugin system allows adding support for new modes (types of modulation) and hardware devices.
-
-* **“Hackability”**: All server code is Python, and has no mandatory build or install step. Demodulators prototyped in GNU Radio Companion can be turned into plugins with very little additional code. Control UI can be automatically generated or customized and is based on a generic networking layer.
+* **Persistent waterfall display**: You can zoom, pan, and retune without losing any of the displayed history, whereas many other programs will discard anything which is temporarily offscreen, or the whole thing if the window is resized. If you zoom in to get a look at one signal, you can zoom out again.
 
 * **Frequency database**: Jump to favorite stations; catalog signals you hear; import published tables of band, channel, and station info; take notes. (Note: Saving changes to disk is not yet well-tested.)
 
-On the other hand, you may find that the shiny thing is lacking substance: if you're looking for functional features, we do not have the most modes, the best filters, or the lowest CPU usage. There's probably lots of code that will make a real DSP expert cringe.
+* **Map**: Plot station locations from the frequency database, position data from APRS and ADS-B, and mark your own location on the map. (Caveat: No basemap, i.e. streets and borders, is currently present.)
+
+Supported modes:
+
+* Audio: AM, FM, WFM, SSB, CW.
+* Other: APRS, Mode S/ADS-B, VOR.
+
+If you're a developer, here's why you should consider working on ShinySDR (or: here's why I wrote my own rather than contributing to another application):
+
+* **All server code is Python**, and has **no mandatory build or install step**.
+
+* **Plugin system** allows adding support for new modes (types of modulation) and hardware devices.
+
+* **Demodulators** prototyped in GNU Radio Companion can be turned into plugins with very little additional code. Control UI can be automatically generated or customized and is based on a generic networking layer.
+
+On the other hand, you may find that the shiny thing is lacking substance: if you're looking for functional features, we do not have the most modes, the best filters, or the lowest CPU usage. Many features are half-implemented (though I try not to have things that blatantly don't work). There's probably lots of code that will make a real DSP expert cringe.
 
 Requirements and Installation
 -----------------------------
