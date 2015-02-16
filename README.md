@@ -38,35 +38,57 @@ On the other hand, you may find that the shiny thing is lacking substance: if yo
 Requirements and Installation
 -----------------------------
 
-Install the following software on the machine which has your SDR hardware attached and will run the ShinySDR server:
+ShinySDR operates as a specialized web server, running on the machine which has your SDR hardware attached. ShinySDR is known to be compatible with Mac OS X and Linux; in principle, anything which can also run GNU Radio and Python is suitable.
 
-* [Python](http://www.python.org/) 2.7 or later compatible version.
-* [Twisted](http://twistedmatrix.com/) 12.3.0 or later. (If you use `setup.py`, this will be automatic.)
-* [txWS](https://github.com/MostAwesomeDude/txWS) 0.8 or later. (Ditto.)
-* [GNU Radio](http://gnuradio.org/) 3.7.1 or later.
-* [`gr-osmosdr`](http://sdr.osmocom.org/trac/wiki/GrOsmoSDR), and any applicable hardware drivers such as `librtlsdr`. (Plugins may be written to use other RF sources, but the only built-in support is for `gr-osmosdr`.)
-
-The following may be installed to enable support for additional modes:
-
-* [`gr-air-modes`](https://github.com/bistromath/gr-air-modes) (for aircraft transponders).
-* [`multimon-ng`](https://github.com/EliasOenal/multimon-ng) (for APRS).
-
-Then either run the script `fetch-js-deps.sh`, or copy or symlink the following items into the `shinysdr/deps/` directory:
-
-* `jasmine/` ([Jasmine](https://github.com/pivotal/jasmine/) 1.3.1 or later)
-* `openlayers/` ([OpenLayers](http://openlayers.org/) 2.13.1 or later)
-* `require.js` ([RequireJS](http://requirejs.org/) 2.1.8 or later)
-
-[TODO: Integrate fetch-js-deps or equivalent effects into setup.py.]
-
-After the above dependencies have been installed, you may use the Python `setup.py` to install ShinySDR, or simply run it from this directory — installation is entirely optional.
-
-The only web browser currently supported is [Google Chrome](https://www.google.com/chrome/) (excluding Chrome for iPhone or iPad).
+The only web browser currently supported as a ShinySDR client is [Google Chrome](https://www.google.com/chrome/) (excluding Chrome for iPhone or iPad).
 While it is not *intended* to be Chrome-only, no attempt has been made to avoid using facilities which are *not yet* implemented in other browsers.
 Safari (Mac, 7.0.4) is known to work functionally but with broken flexbox UI layout, and Firefox (29) doesn't work at all (WebSocket fails to connect).
 
 Currently, the client must have the same endianness and floating-point format as the server.
 This may be fixed in the future (if I ever hear of this actually being a problem, or if the data in question is switched to fixed-point to reduce data rate).
+
+Installation procedure:
+
+1. Install the following software on the server machine:
+
+    * [Python](http://www.python.org/) 2.7 or later compatible version.
+    * [GNU Radio](http://gnuradio.org/) 3.7.1 or later.
+    * [`gr-osmosdr`](http://sdr.osmocom.org/trac/wiki/GrOsmoSDR), and any applicable hardware drivers such as `librtlsdr`. (Plugins may be written to use other RF sources, but the only built-in support is for `gr-osmosdr`.)
+
+2. Optionally install these:
+
+    * [`gr-air-modes`](https://github.com/bistromath/gr-air-modes) (for receiving ADS-B, aircraft transponders).
+    * [`multimon-ng`](https://github.com/EliasOenal/multimon-ng) (for receiving APRS).
+
+    <!-- TODO: Mention hamlib once that is better-supported -->
+
+3. There are two different ways you can go about installing and running ShinySDR, and now you need to know which ones you are planning to use.
+The first way is to use the standard Python module/application install process, `setup.py`; this will copy it to an appropriate location on your system and add a command-line program `shinysdr`.
+The second way is to run it directly from the source tree, skipping the install step; this is convenient for development because changes take effect immediately.
+You can do both, if you want.
+
+    If you are planning to run from source, you must install the following Python libraries:
+
+    * [Twisted](http://twistedmatrix.com/) 12.3.0 or later.
+    * [txWS](https://github.com/MostAwesomeDude/txWS) 0.8 or later.
+
+4. Either run the script `fetch-js-deps.sh`, or copy or symlink the following items into the `shinysdr/deps/` directory:
+
+    * `jasmine/` ([Jasmine](https://github.com/pivotal/jasmine/) 1.3.1 or later)
+    * `openlayers/` ([OpenLayers](http://openlayers.org/) 2.13.1 or later, excluding OpenLayers 3 which is not backward compatible)
+    * `require.js` ([RequireJS](http://requirejs.org/) 2.1.8 or later)
+
+    [TODO: Integrate fetch-js-deps or equivalent effects into setup.py.]
+
+5. If you wish to _install_ ShinySDR on your system, run `python setup.py install`.
+   (There are options to control the installation prefix and such; please read a guide on installing Python libraries for more information.)
+
+6. To run ShinySDR as installed, use the command `shinysdr ...`
+
+    To run ShinySDR from the source tree, use the command `python -m shinysdr.main ...` while the current directory is the source tree.
+   
+    In either case, you must specify a configuration file, as described below.
+    The examples show `shinysdr`; substitute `python -m shinysdr.main` if appropriate.
 
 Setup
 -----
@@ -74,23 +96,18 @@ Setup
 The server uses a configuration file, which is Python code.
 Run this command to create an example file:
 
-<pre>python -m shinysdr.main --create <var>filename</var></pre>
-
-(If you have installed ShinySDR via `setup.py` then you can, and may need to, write `shinysdr` instead of `python -m shinysdr.main`. The former command will use the libraries downloaded by `setup.py`; the latter requires that they are installed systemwide.)
+<pre>shinysdr --create <var>filename</var></pre>
 
 Edit it to specify your available hardware and other desired configuration (such as a HTTPS server certificate and the location of the state persistence file); instructions are provided in the comments in the example file.
-
 
 Running the server
 ------------------
 
 Once you have prepared a configuration file, you can run the server using
 
-<pre>python -m shinysdr.main <var>filename</var></pre>
+<pre>shinysdr <var>filename</var></pre>
 
 and access it using your browser at the displayed URL. (The `--go` option will attempt to open it in your default browser, but this is unlikely to be helpful if said browser is not Chrome.)
-
-(If you have installed ShinySDR via `setup.py` then you can write `shinysdr` instead of `python -m shinysdr.main`.)
 
 Usage
 -----
