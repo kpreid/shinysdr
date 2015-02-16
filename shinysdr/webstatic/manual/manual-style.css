@@ -20,3 +20,16 @@
 @import url(/client/theme.css);
 
 html { max-width: 60em; margin: auto; }
+
+dt {
+  margin: 0.7em 0 0 0;
+  border: 1px solid;
+  border-bottom-color: transparent;
+  padding: 0 0.5em 0 1em;
+}
+dd {
+  margin: 0 0 0.7em 0;
+  border: 1px solid;
+  border-top-color: transparent;
+  padding: 0 0 0 2em;
+}
