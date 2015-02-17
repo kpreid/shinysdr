@@ -214,21 +214,17 @@ def execute_config(config_obj, config_file):
 
 def make_default_config():
     return '''\
+# This is a ShinySDR configuration file. For more information about what can
+# be put here, read the manual section on it, available from the running
+# ShinySDR server at: /manual/configuration (or the link at the bottom right).
+
 import shinysdr.devices
 import shinysdr.plugins.osmosdr
 import shinysdr.plugins.simulate
 
-# OsmoSDR generic driver; handles USRP, RTL-SDR, FunCube
-# Dongle, HackRF, etc.
-# If desired, add sample_rate=<n> parameter.
-# Use shinysdr.plugins.osmosdr.OsmoSDRProfile to set more parameters
-# to make the best use of your specific hardware's capabilities.
-config.devices.add(u'osmo',
-    shinysdr.plugins.osmosdr.OsmoSDRDevice(''),
-    
-    # Set the location of your station/antenna, for the map UI.
-    # PositionedDevice(latitude=45.00, longitude=45.00),
-    )
+# OsmoSDR generic driver; handles USRP, RTL-SDR, FunCube Dongle, HackRF, etc.
+# To select a specific device, replace '' with 'rtl=0' etc.
+config.devices.add(u'osmo', shinysdr.plugins.osmosdr.OsmoSDRDevice(''))
 
 # For hardware which uses a sound-card as its ADC or appears as an
 # audio device.
@@ -239,6 +235,7 @@ config.devices.add(u'sim', shinysdr.plugins.simulate.SimulatedDevice())
 
 config.persist_to_file('state.json')
 
+# Put CHIRP-style frequency list .csv files in here.
 config.databases.add_directory('dbs/')
 
 config.serve_web(

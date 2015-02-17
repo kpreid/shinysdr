@@ -100,6 +100,8 @@ Run this command to create an example file:
 
 Edit it to specify your available hardware and other desired configuration (such as a HTTPS server certificate and the location of the state persistence file); instructions are provided in the comments in the example file.
 
+For further documentation on the configuration file, see the manual, which can be accessed at `/manual/configuration` on the running server (there is a link in the UI); or open the file directly at `shinysdr/webstatic/client/manual/configuration.html`.
+
 Running the server
 ------------------
 
