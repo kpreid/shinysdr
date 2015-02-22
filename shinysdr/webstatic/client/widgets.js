@@ -363,7 +363,10 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         var gainModes = {};
         if (hasAGC) { gainModes['auto'] = 'AGC On'; ignore('agc'); }
         if (hasSingleGain) { gainModes['single'] = 'Manual Gain'; }
-        if (hasMultipleGain) { gainModes['stages'] = 'Stages'; }
+        if (hasMultipleGain && !(hasSingleGain && Object.keys(block.gains.depend(config.rebuildMe)).length == 1)) {
+          // show gain stages UI only if there's more than one
+          gainModes['stages'] = 'Stages';
+        }
         Object.freeze(gainModes);
         var gainModeType = new Enum(gainModes);
         var gainModeCell = new LocalCell(gainModeType, block.agc.get() ? 'auto' : 'single');
