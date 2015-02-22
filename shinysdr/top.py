@@ -85,6 +85,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         gr.top_block.__init__(self, "SDR top block")
         self.__unpaused = True  # user state
         self.__running = False  # actually started
+        self.__at_least_one_valid_receiver = False
 
         # Configuration
         # TODO: device refactoring: Remove vestigial 'accessories'
@@ -283,7 +284,9 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
                 self.connect(self.__rx_driver, receiver)
                 rrate = receiver.get_output_type().get_sample_rate()
                 bus_inputs[receiver.get_audio_destination()].append((rrate, receiver))
-
+            
+            self.__at_least_one_valid_receiver = n_valid_receivers > 0
+            
             for key, bus in self.__audio_buses.iteritems():
                 if key == CLIENT_AUDIO_DEVICE:
                     outputs = self.audio_queue_sinks.itervalues()
@@ -295,6 +298,8 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
             
             self._recursive_unlock()
             log.msg('Flow graph: ...done reconnecting.')
+            
+            self.__start_or_stop()
 
     def _update_receiver_validity(self, key):
         receiver = self._receivers[key]
@@ -335,7 +340,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
     
     def __start_or_stop(self):
         # TODO: We should also run if at least one client is watching demodulators' cell-based outputs, but there's no good way to recognize that yet.
-        should_run = self.__unpaused and (len(self.audio_queue_sinks) > 0 or self.monitor.get_interested_cell().get())
+        should_run = self.__unpaused and (self.__at_least_one_valid_receiver and len(self.audio_queue_sinks) > 0 or self.monitor.get_interested_cell().get())
         if should_run != self.__running:
             if should_run:
                 self.start()
