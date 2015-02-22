@@ -84,7 +84,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         
         gr.top_block.__init__(self, "SDR top block")
         self.__running = False  # duplicate of GR state we can't reach, see __start_or_stop
-        self.__at_least_one_valid_receiver = False
+        self.__has_a_useful_receiver = False
 
         # Configuration
         # TODO: device refactoring: Remove vestigial 'accessories'
@@ -284,15 +284,19 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
                 rrate = receiver.get_output_type().get_sample_rate()
                 bus_inputs[receiver.get_audio_destination()].append((rrate, receiver))
             
-            self.__at_least_one_valid_receiver = n_valid_receivers > 0
-            
+            self.__has_a_useful_receiver = False
             for key, bus in self.__audio_buses.iteritems():
+                inputs = bus_inputs[key]
                 if key == CLIENT_AUDIO_DEVICE:
                     outputs = self.audio_queue_sinks.itervalues()
+                    noutputs = len(self.audio_queue_sinks)
                 else:
                     outputs = [self.__audio_devices[key]]
+                    noutputs = 1
+                if len(inputs) > 0 and noutputs > 0:
+                    self.__has_a_useful_receiver = True
                 bus.connect(
-                    inputs=bus_inputs[key],
+                    inputs=inputs,
                     outputs=outputs)
             
             self._recursive_unlock()
@@ -329,9 +333,13 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.__running = False
 
     def __start_or_stop(self):
-        # TODO: We should also run if at least one client is watching demodulators' cell-based outputs, but there's no good way to recognize that yet.
+        # TODO: We should also run if any of:
+        #   there are any data-logging receivers (e.g. APRS, ADS-B)
+        #       (requires becoming aware of no-audio receivers)
+        #   a client is watching a receiver's cell-based outputs (e.g. VOR)
+        #       (requires becoming aware of cell subscriptions)
         should_run = (
-            self.__at_least_one_valid_receiver and len(self.audio_queue_sinks) > 0
+            self.__has_a_useful_receiver
             or self.monitor.get_interested_cell().get())
         if should_run != self.__running:
             if should_run:
