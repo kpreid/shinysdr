@@ -58,7 +58,7 @@ class TestTop(unittest.TestCase):
     def test_audio_queue_smoke(self):
         top = Top(devices={'s1': simulate.SimulatedDevice(freq=0)})
         queue = gr.msg_queue()
-        top.set_unpaused(True)  # there should be an attempted start
+        (_key, _receiver) = top.add_receiver('AM', key='a')
         top.add_audio_queue(queue, 48000)
         top.remove_audio_queue(queue)
     
@@ -66,6 +66,5 @@ class TestTop(unittest.TestCase):
         top = Top(devices={'s1': simulate.SimulatedDevice(freq=0)}, stereo=False)
         queue = gr.msg_queue()
         (_key, _receiver) = top.add_receiver('AM', key='a')
-        top.set_unpaused(True)  # there should be an attempted start
         top.add_audio_queue(queue, 48000)
         top.remove_audio_queue(queue)

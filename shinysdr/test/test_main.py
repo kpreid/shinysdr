@@ -42,7 +42,8 @@ class TestMain(unittest.TestCase):
         with open(self.__config_name, 'w') as config:
             config.write(textwrap.dedent('''\
                 import shinysdr.plugins.simulate
-                config.devices.add('sim_foobar', shinysdr.plugins.simulate.SimulatedDevice())
+                config.devices.add('sim_foo', shinysdr.plugins.simulate.SimulatedDevice())
+                config.devices.add('sim_bar', shinysdr.plugins.simulate.SimulatedDevice())
                 config.persist_to_file(%r)
                 config.serve_web(
                     http_endpoint='tcp:0',
@@ -69,11 +70,11 @@ class TestMain(unittest.TestCase):
     def test_persistence(self):
         '''Test that state persists.'''
         (top, note_dirty) = yield self.__run_main()
-        self.assertEqual(top.get_unpaused(), True)  # check initial assumption
-        top.set_unpaused(False)
+        self.assertEqual(top.get_source_name(), 'sim_bar')  # check initial assumption
+        top.set_source_name('sim_foo')
         note_dirty()
         (top, note_dirty) = yield self.__run_main()
-        self.assertEqual(top.get_unpaused(), False)  # check persistence
+        self.assertEqual(top.get_source_name(), 'sim_foo')  # check persistence
 
     @defer.inlineCallbacks
     def test_minimal(self):
@@ -81,15 +82,16 @@ class TestMain(unittest.TestCase):
         with open(self.__config_name, 'w') as config:
             config.write(textwrap.dedent('''\
                 import shinysdr.plugins.simulate
-                config.devices.add('sim_foobar', shinysdr.plugins.simulate.SimulatedDevice())
+                config.devices.add('sim_foo', shinysdr.plugins.simulate.SimulatedDevice())
+                config.devices.add('sim_bar', shinysdr.plugins.simulate.SimulatedDevice())
             '''))
         
         (top, note_dirty) = yield self.__run_main()
-        self.assertEqual(top.get_unpaused(), True)  # check initial assumption
-        top.set_unpaused(False)
+        self.assertEqual(top.get_source_name(), 'sim_bar')  # check initial assumption
+        top.set_source_name('sim_foo')
         note_dirty()
         (top, note_dirty) = yield self.__run_main()
-        self.assertEqual(top.get_unpaused(), True)  # expect NO persistence
+        self.assertEqual(top.get_source_name(), 'sim_bar')  # expect NO persistence
     
     @defer.inlineCallbacks
     def test_deferred_config(self):

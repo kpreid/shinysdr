@@ -83,8 +83,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
             audio_devices = {}
         
         gr.top_block.__init__(self, "SDR top block")
-        self.__unpaused = True  # user state
-        self.__running = False  # actually started
+        self.__running = False  # duplicate of GR state we can't reach, see __start_or_stop
         self.__at_least_one_valid_receiver = False
 
         # Configuration
@@ -329,18 +328,11 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         super(Top, self).stop()
         self.__running = False
 
-    @exported_value(ctor=bool)
-    def get_unpaused(self):
-        return self.__unpaused
-    
-    @setter
-    def set_unpaused(self, value):
-        self.__unpaused = bool(value)
-        self.__start_or_stop()
-    
     def __start_or_stop(self):
         # TODO: We should also run if at least one client is watching demodulators' cell-based outputs, but there's no good way to recognize that yet.
-        should_run = self.__unpaused and (self.__at_least_one_valid_receiver and len(self.audio_queue_sinks) > 0 or self.monitor.get_interested_cell().get())
+        should_run = (
+            self.__at_least_one_valid_receiver and len(self.audio_queue_sinks) > 0
+            or self.monitor.get_interested_cell().get())
         if should_run != self.__running:
             if should_run:
                 self.start()

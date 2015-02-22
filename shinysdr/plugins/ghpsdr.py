@@ -67,7 +67,7 @@ def _cmd_setFPS(self, argstr):
     self._top.monitor.set_freq_resolution(width)
     self._top.monitor.set_frame_rate(rate)
     self._poller.start(1.0 / (rate * 2.0))
-    self._top.set_unpaused(True)
+    self._top.monitor.set_paused(False)
 
 
 def _cmd_setFrequency(self, argstr):

@@ -205,10 +205,6 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       ignore('monitor');  // displayed separately
       ignore('shared_objects');  // displayed separately
       
-      if ('unpaused' in block) {
-        addWidget('unpaused', Toggle, 'Run');
-      }
-      
       var sourceToolbar = this.element.appendChild(document.createElement('div'));
       sourceToolbar.className = 'panel frame-controls';
       sourceToolbar.appendChild(document.createTextNode('RF source '));

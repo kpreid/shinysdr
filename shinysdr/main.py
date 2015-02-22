@@ -129,8 +129,7 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
     if args.force_run:
         log.msg('force_run')
         from gnuradio.gr import msg_queue
-        top.add_audio_queue(msg_queue(limit=2), 44100)
-        top.set_unpaused(True)
+        top.monitor.get_fft_distributor().subscribe(msg_queue(limit=2))
     
     if _abort_for_test:
         services.stopService()

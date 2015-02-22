@@ -118,13 +118,11 @@ For information on using and programming ShinySDR, see the manual, which can be 
 
 A very brief summary of basic operation:
 
-1. Make sure the “Run” checkbox is checked.
-
-2. Adjust the “Center frequency” to tune your RF hardware to the band you want to observe.
+1. Adjust the “Center frequency” to tune your RF hardware to the band you want to observe.
 
    You can zoom in on the spectrum by using either a scroll-wheel or two-finger touch (whichever you have; there is unfortunately not yet support for zooming without either function).
 
-3. Click on a signal of interest. This will create a *receiver*, which will be marked on the spectrum as well as displaying controls. Use the controls to select the appropriate mode (type of demodulation).
+2. Click on a signal of interest. This will create a *receiver*, which will be marked on the spectrum as well as displaying controls. Use the controls to select the appropriate mode (type of demodulation).
 
    Multiple signals can be received at once by shift-clicking in the spectrum view. To stop, click the X button by the receiver.
 
