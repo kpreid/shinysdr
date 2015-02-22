@@ -320,6 +320,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   
   function windowEntryBuilder(setElement, block, name, setInsertion) {
     var subwindow = document.createElement('shinysdr-subwindow');
+    subwindow.id = 'section-' + name;  // TODO match block id system instead of this (need context)
     var header = subwindow.appendChild(document.createElement('h2'));
     header.appendChild(document.createTextNode(name));  // TODO formatting
     var body = subwindow.appendChild(document.createElement('div'));

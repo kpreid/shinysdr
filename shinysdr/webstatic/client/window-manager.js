@@ -27,6 +27,7 @@ define(['./values'], function (values) {
 
   var allWindows = [];
   var visibleCount = NaN;
+  var firstUpdateDone = false;
   
   function enroll(/* this = element */) {
     var header = this.querySelector('h2');
@@ -61,6 +62,10 @@ define(['./values'], function (values) {
         this.style.display = 'none';
       }
       if (ns) ns.setItem('detailsOpen', JSON.stringify(visible));
+      
+      if (firstUpdateDone) {  // don't do n^2 work on page load
+        globalUpdate();
+      }
     }.bind(this);
     function toggle(event) {
       // Don't grab events from controls in headers
@@ -141,4 +146,5 @@ define(['./values'], function (values) {
   });
   
   globalUpdate();
+  firstUpdateDone = true;
 });
