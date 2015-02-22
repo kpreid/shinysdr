@@ -71,7 +71,11 @@ define(['./values'], function (values) {
       // Don't grab events from controls in headers
       // There doesn't seem to be a better more composable way to handle this --
       // http://stackoverflow.com/questions/15657776/detect-default-event-handling
-      if (event.target.tagName === 'INPUT') return;
+      if (event.target.tagName === 'INPUT'
+          || event.target.tagName === 'LABEL'
+          || event.target.tagName === 'BUTTON') {
+        return;
+      }
 
       if (visible && visibleCount <= 1) return;
       visible = !visible;

@@ -458,6 +458,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
             time_length=2048,
             frame_rate=30.0,
             input_center_freq=0.0,
+            paused=False,
             context=None):
         assert isinstance(signal_type, SignalType)
         assert context is not None
@@ -481,8 +482,10 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__time_length = int(time_length)
         self.__frame_rate = float(frame_rate)
         self.__input_center_freq = float(input_center_freq)
+        self.__paused = bool(paused)
         
         # blocks
+        self.__gate = None
         self.__fft_sink = None
         self.__scope_sink = None
         self.__scope_chunker = None
@@ -514,6 +517,9 @@ class MonitorSink(gr.hier_block2, ExportedState):
         overlap_factor = int(math.ceil(_maximum_fft_rate * input_length / sample_rate))
         # sanity limit -- OverlapGimmick is not free
         overlap_factor = min(16, overlap_factor)
+        
+        self.__gate = blocks.copy(gr.sizeof_gr_complex)
+        self.__gate.set_enabled(not self.__paused)
         
         self.__fft_sink = MessageDistributorSink(
             itemsize=output_length * gr.sizeof_char,
@@ -554,6 +560,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
             self.disconnect_all()
             self.connect(
                 self,
+                self.__gate,
                 self.__overlapper,
                 self.__logpwrfft)
             if self.__after_fft is not None:
@@ -564,7 +571,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
                 self.connect(self.__logpwrfft, self.__fft_converter, self.__fft_sink)
             if self.__enable_scope:
                 self.connect(
-                    self,
+                    self.__gate,
                     self.__scope_chunker,
                     self.__scope_sink)
         finally:
@@ -615,6 +622,15 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__frame_rate = value
         self.__logpwrfft.set_vec_rate(value)
     
+    @exported_value(ctor=bool)
+    def get_paused(self):
+        return self.__paused
+
+    @setter
+    def set_paused(self, value):
+        self.__paused = value
+        self.__gate.set_enabled(not value)
+
     # exported via state_def
     def get_fft_info(self):
         return (self.__input_center_freq, self.__signal_type.get_sample_rate(), self.__power_offset)

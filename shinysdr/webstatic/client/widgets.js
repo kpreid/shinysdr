@@ -578,6 +578,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       ignore('signal_type');
       ignore('frame_rate');
       ignore('freq_resolution');
+      ignore('paused');
       
       // kludge to trigger SpectrumView layout computations after it's added to the DOM :(
       setTimeout(function() {
@@ -600,6 +601,9 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       }
       if ('freq_resolution' in block) {
         addWidget('freq_resolution', LogSlider, 'Resolution');
+      }
+      if ('paused' in block) {
+        addWidget('paused', Toggle, 'Pause');
       }
       ignore('time_length');
     });
