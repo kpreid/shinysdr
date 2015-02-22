@@ -31,6 +31,7 @@ def _testType(self, type_obj, good, bad):
             output_value = case
         self.assertEqual(type_obj(input_value), output_value, msg='for input %r' % (input_value,))
     for value in bad:
+        # pylint: disable=cell-var-from-loop
         self.assertRaises(ValueError, lambda: type_obj(value))
 
 

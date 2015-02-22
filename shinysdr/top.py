@@ -76,6 +76,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         #        raise ValueError('Audio device %r is not an output' % (key,))
         if audio_config is not None:
             # quick kludge placeholder -- currently a Device-device can't be stereo so we have a placeholder thing
+            # pylint: disable=unpacking-non-sequence
             audio_device_name, audio_sample_rate = audio_config
             audio_devices = {'server': (audio_sample_rate, audio.sink(audio_sample_rate, audio_device_name, False))}
         else:
@@ -502,7 +503,7 @@ class BusPlumber(object):
         # Determine bus rate.
         # The bus obviously does not need to be higher than the rate of any bus input, because that would be extraneous data. It also does not need to be higher than the rate of any bus output, because no output has use for the information.
         if len(inputs) > 0 and len(outputs) > 0:
-            max_in_rate  = max((rate for rate, _ in inputs))
+            max_in_rate = max((rate for rate, _ in inputs))
             max_out_rate = max((rate for rate, _ in outputs))
             new_bus_rate = min(max_out_rate, max_in_rate)
             if new_bus_rate != self.__bus_rate:

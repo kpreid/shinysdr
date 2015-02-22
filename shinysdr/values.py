@@ -416,6 +416,7 @@ class ExportedState(object):
         dynamic = self.state_is_dynamic()
         defer = []
         for key in state:
+            # pylint: disable=cell-var-from-loop
             def err(adjective, suffix):
                 # TODO ship to client
                 log.msg('Warning: Discarding ' + adjective + ' state', str(self) + '.' + key, '=', state[key], suffix)
@@ -668,6 +669,7 @@ class Poller(object):
     
     def poll(self):
         for target, subscriptions in self.__targets.iter_snapshot():
+            # pylint: disable=cell-var-from-loop
             def fire(*args, **kwargs):
                 for s in subscriptions:
                     s._fire(*args, **kwargs)

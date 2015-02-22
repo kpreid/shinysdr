@@ -15,8 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-# pylint: disable=broad-except, maybe-no-member, no-member
-# (broad-except: toplevel catch)
+# pylint: disable=maybe-no-member, no-member
 # (maybe-no-member: GR swig)
 # (no-member: Twisted reactor)
 
@@ -96,6 +95,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
         cpr_decoder = air_modes.cpr_decoder(my_location=None)  # TODO: get position info from device
         air_modes.output_print(cpr_decoder, parser_output)
         def callback(msg):  # called on msgq_runner's thrad
+            # pylint: disable=broad-except
             try:
                 reactor.callFromThread(parser, msg.to_string())
             except Exception:
@@ -207,6 +207,8 @@ class Aircraft(ExportedState):
         self.__longitude = None
         # TODO: specify units
         self.__altitude_feet = None
+        self.__velocity = None
+        self.__heading = None
         self.__vertical_speed = None
         self.__turn_rate = None
     

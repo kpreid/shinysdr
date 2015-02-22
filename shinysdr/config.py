@@ -38,7 +38,6 @@ from twisted.python import log
 # Note that gnuradio-dependent modules are loaded lazily, to avoid the startup time if all we're going to do is give a usage message
 import shinysdr  # put into config namespace
 from shinysdr.db import DatabaseModel, database_from_csv, databases_from_directory
-from shinysdr.devices import Device
 
 
 __all__ = [
