@@ -103,6 +103,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.monitor = MonitorSink(
             signal_type=SignalType(sample_rate=10000, kind='IQ'),  # dummy value will be updated in _do_connect
             context=Context(self))
+        self.monitor.get_interested_cell().subscribe(self.__start_or_stop_later)
         self.__clip_probe = MaxProbe()
         
         # Receiver blocks (multiple, eventually)
@@ -333,14 +334,17 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.__start_or_stop()
     
     def __start_or_stop(self):
-        # TODO: We should also run if at least one client is watching the spectrum or demodulators' cell-based outputs, but there's no good way to recognize that yet.
-        should_run = self.__unpaused and len(self.audio_queue_sinks) > 0
+        # TODO: We should also run if at least one client is watching demodulators' cell-based outputs, but there's no good way to recognize that yet.
+        should_run = self.__unpaused and (len(self.audio_queue_sinks) > 0 or self.monitor.get_interested_cell().get())
         if should_run != self.__running:
             if should_run:
                 self.start()
             else:
                 self.stop()
                 self.wait()
+
+    def __start_or_stop_later(self):
+        reactor.callLater(0, self.__start_or_stop)
 
     @exported_value(ctor_fn=lambda self:
         Enum({k: v.get_name() or k for (k, v) in self._sources.iteritems()}))

@@ -43,7 +43,7 @@ from gnuradio.fft import logpwrfft
 from shinysdr.math import factorize, small_factor_at_least, todB
 from shinysdr.signals import SignalType
 from shinysdr.types import BulkDataType, Range
-from shinysdr.values import ExportedState, exported_value, setter, StreamCell
+from shinysdr.values import ExportedState, LooseCell, StreamCell, exported_value, setter
 
 
 class RecursiveLockBlockMixin(object):
@@ -351,7 +351,7 @@ class MessageDistributorSink(gr.hier_block2):
     '''Like gnuradio.blocks.message_sink, but copies its messages to a dynamic set of queues and saves the most recent item.
     
     Never blocks.'''
-    def __init__(self, itemsize, context, migrate=None):
+    def __init__(self, itemsize, context, migrate=None, notify=None):
         gr.hier_block2.__init__(
             self, self.__class__.__name__,
             gr.io_signature(1, 1, itemsize),
@@ -361,6 +361,7 @@ class MessageDistributorSink(gr.hier_block2):
         self.__context = _NoContext()
         self.__peek = blocks.probe_signal_vb(itemsize)
         self.__subscriptions = {}
+        self.__notify = None
         
         self.connect(self, self.__peek)
         
@@ -370,11 +371,15 @@ class MessageDistributorSink(gr.hier_block2):
                 migrate.unsubscribe(queue)
                 self.subscribe(queue)
         
-        # set context now, not earlier, so as not to call it while migrating
+        # set now, not earlier, so as not to trigger anything while migrating
         self.__context = context
+        self.__notify = notify
 
     def get(self):
         return self.__peek.level()
+    
+    def get_subscription_count(self):
+        return len(self.__subscriptions)
     
     def subscribe(self, queue):
         assert queue not in self.__subscriptions
@@ -385,6 +390,8 @@ class MessageDistributorSink(gr.hier_block2):
             self.connect(self, sink)
         finally:
             self.__context.unlock()
+        if self.__notify:
+            self.__notify()
     
     def unsubscribe(self, queue):
         sink = self.__subscriptions[queue]
@@ -394,6 +401,8 @@ class MessageDistributorSink(gr.hier_block2):
             self.disconnect(self, sink)
         finally:
             self.__context.unlock()
+        if self.__notify:
+            self.__notify()
 
 
 _maximum_fft_rate = 120
@@ -484,6 +493,8 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__input_center_freq = float(input_center_freq)
         self.__paused = bool(paused)
         
+        self.__interested_cell = LooseCell(key='interested', ctor=bool, value=False, writable=False, persists=False)
+        
         # blocks
         self.__gate = None
         self.__fft_sink = None
@@ -524,7 +535,8 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__fft_sink = MessageDistributorSink(
             itemsize=output_length * gr.sizeof_char,
             context=self.__context,
-            migrate=self.__fft_sink)
+            migrate=self.__fft_sink,
+            notify=self.__update_interested)
         self.__overlapper = _OverlapGimmick(
             size=input_length,
             factor=overlap_factor,
@@ -547,7 +559,8 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__scope_sink = MessageDistributorSink(
             itemsize=self.__time_length * gr.sizeof_gr_complex,
             context=self.__context,
-            migrate=self.__scope_sink)
+            migrate=self.__scope_sink,
+            notify=self.__update_interested)
         self.__scope_chunker = blocks.stream_to_vector_decimator(
             item_size=gr.sizeof_gr_complex,
             sample_rate=sample_rate,
@@ -576,6 +589,15 @@ class MonitorSink(gr.hier_block2, ExportedState):
                     self.__scope_sink)
         finally:
             self.__context.unlock()
+    
+    # non-exported
+    def get_interested_cell(self):
+        return self.__interested_cell
+    
+    def __update_interested(self):
+        self.__interested_cell.set_internal(not self.__paused and (
+            self.__fft_sink.get_subscription_count() > 0 or
+            self.__scope_sink.get_subscription_count() > 0))
     
     @exported_value()
     def get_signal_type(self):
@@ -630,6 +652,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
     def set_paused(self, value):
         self.__paused = value
         self.__gate.set_enabled(not value)
+        self.__update_interested()
 
     # exported via state_def
     def get_fft_info(self):
