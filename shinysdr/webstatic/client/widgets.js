@@ -602,7 +602,12 @@ define(['./values', './events', './widget'], function (values, events, widget) {
         addWidget('freq_resolution', LogSlider, 'Resolution');
       }
       if ('paused' in block) {
-        addWidget('paused', Toggle, 'Pause');
+        var pausedLabel = getAppend().appendChild(document.createElement('label'));
+        var pausedEl = pausedLabel.appendChild(document.createElement('input'));
+        pausedEl.type = 'checkbox';
+        pausedLabel.appendChild(document.createTextNode('Pause'));
+        createWidgetExt(config.context, Toggle, pausedEl, block.paused);
+        ignore('paused');
       }
       ignore('time_length');
     });
