@@ -494,7 +494,8 @@ class BusPlumber(object):
     def __init__(self, graph, nchannels):
         self.__graph = graph
         self.__channels = xrange(nchannels)
-        self.__bus_rate = 1.0
+        self.__bus_rate = 0.0
+        # TODO: Stop using a cache of resamplers unless we use them in exactly-corresponding fashion; instead use a cache of resampling _filter taps_.
         self.__resampler_cache = {}
     
     def get_current_rate(self):
@@ -511,13 +512,18 @@ class BusPlumber(object):
         
         # Determine bus rate.
         # The bus obviously does not need to be higher than the rate of any bus input, because that would be extraneous data. It also does not need to be higher than the rate of any bus output, because no output has use for the information.
-        if len(inputs) > 0 and len(outputs) > 0:
-            max_in_rate = max((rate for rate, _ in inputs))
-            max_out_rate = max((rate for rate, _ in outputs))
-            new_bus_rate = min(max_out_rate, max_in_rate)
-            if new_bus_rate != self.__bus_rate:
-                self.__bus_rate = new_bus_rate
-                self.__resampler_cache.clear()
+        max_in_rate = max((rate for rate, _ in inputs)) if len(inputs) > 0 else 0.0
+        max_out_rate = max((rate for rate, _ in outputs)) if len(outputs) > 0 else 0.0
+        new_bus_rate = min(max_out_rate, max_in_rate)
+        if new_bus_rate == 0.0:
+            # There are either no inputs or no outputs. Use the other side's rate so we have a well-defined value.
+            new_bus_rate = max(max_out_rate, max_in_rate)
+        if new_bus_rate == 0.0:
+            # There are both no inputs and no outputs. No point in not keeping the old rate (and its resampler cache).
+            new_bus_rate = self.__bus_rate
+        elif new_bus_rate != self.__bus_rate:
+            self.__bus_rate = new_bus_rate
+            self.__resampler_cache.clear()
         
         # recreated each time because reusing an add_ff w/ different
         # input counts fails; TODO: report/fix bug
