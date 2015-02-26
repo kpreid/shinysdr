@@ -97,7 +97,7 @@ class Config(object):
         self._not_finished()
         self._state_filename = str(filename)
 
-    def serve_web(self, http_endpoint, ws_endpoint, root_cap='%(root_cap)s', title=u'ShinySDR'):
+    def serve_web(self, http_endpoint, ws_endpoint, root_cap=None, title=u'ShinySDR'):
         self._not_finished()
         # TODO: See if we're reinventing bits of Twisted service stuff here
         
