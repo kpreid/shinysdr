@@ -65,25 +65,37 @@ staticResourcePath = os.path.join(os.path.dirname(__file__), 'webstatic')
 _templatePath = os.path.join(os.path.dirname(__file__), 'webparts')
 
 
-def _json_encoder_special_cases(obj):
-    # TODO consider a more general strategy once we have a second example
+# Do not use this directly in general; use _serialize.
+_json_encoder_for_serial = json.JSONEncoder(
+    ensure_ascii=False,
+    check_circular=False,
+    allow_nan=True,
+    sort_keys=True,
+    separators=(',', ':'))
+
+
+def _transform_for_json(obj):
+    # Cannot implement this using the default hook in JSONEncoder because we want to override the behavior for namedtuples, which cannot be done otherwise.
+    
     if isinstance(obj, SignalType):
         return {
             u'kind': obj.get_kind(),
             u'sample_rate': obj.get_sample_rate(),
         }
+    elif isinstance(obj, tuple) and hasattr(obj, '_asdict'):  # namedtuple -- TODO better recognition?
+        return {k: _transform_for_json(v) for k, v in obj._asdict().iteritems()}
+    elif isinstance(obj, dict):
+        return {k: _transform_for_json(v) for k, v in obj.iteritems()}
+    elif isinstance(obj, (list, tuple)):
+        return map(_transform_for_json, obj)
     else:
-        raise TypeError('Not serializable: ' + repr(obj))
+        return obj
 
 
-# encoder which is set up for the way we want to deliver values to clients, including in the state stream
-_json_encoder_for_values = json.JSONEncoder(
-    ensure_ascii=False,
-    check_circular=False,
-    allow_nan=True,
-    sort_keys=True,
-    separators=(',', ':'),
-    default=_json_encoder_special_cases)
+# JSON-encode values for clients, including in the state stream
+def _serialize(obj):
+    structure = _transform_for_json(obj)
+    return _json_encoder_for_serial.encode(structure)
 
 
 class _SlashedResource(Resource):
@@ -133,7 +145,7 @@ class ValueCellResource(CellResource):
         return json.loads(value)
 
     def grrender(self, value, request):
-        return _json_encoder_for_values.encode(value).encode('utf-8')
+        return _serialize(value).encode('utf-8')
 
 
 def notDeletable():
@@ -192,7 +204,7 @@ class BlockResource(Resource):
         accept = request.getHeader('Accept')
         if accept is not None and 'application/json' in accept:  # TODO: Implement or obtain correct Accept interpretation
             request.setHeader('Content-Type', 'application/json')
-            return _json_encoder_for_values.encode(self.resourceDescription()).encode('utf-8')
+            return _serialize(self.resourceDescription()).encode('utf-8')
         else:
             request.setHeader('Content-Type', 'text/html;charset=utf-8')
             return renderElement(request, self.__element)
@@ -210,7 +222,7 @@ class BlockResource(Resource):
         request.setResponseCode(201)  # Created
         request.setHeader('Location', url)
         # TODO consider a more useful response
-        return _json_encoder_for_values.encode(url).encode('utf-8')
+        return _serialize(url).encode('utf-8')
     
     def render_DELETE(self, request):
         self._deleteSelf()
@@ -462,7 +474,7 @@ class StateStreamInner(object):
         self.__batch_delay = None
         if len(self._send_batch) > 0:
             # unicode() because JSONEncoder does not reliably return a unicode rather than str object
-            self._send(unicode(_json_encoder_for_values.encode(self._send_batch)))
+            self._send(unicode(_serialize(self._send_batch)))
             self._send_batch = []
     
     def _send1(self, binary, value):
@@ -755,7 +767,7 @@ class WebService(Service):
                 load_list_js.append(plugin_resource_url + resource_def.load_js_path)
         
         # Client plugin list
-        client.putChild('plugin-index.json', static.Data(_json_encoder_for_values.encode({
+        client.putChild('plugin-index.json', static.Data(_serialize({
             u'css': load_list_css,
             u'js': load_list_js,
         }).encode('utf-8'), 'application/json'))
