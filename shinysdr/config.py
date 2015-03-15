@@ -48,6 +48,8 @@ __all__ = [
 
 
 class Config(object):
+    # pylint: disable=unnecessary-lambda
+    
     def __init__(self, reactor):
         # public config elements
         self.devices = _ConfigDevices(self)
@@ -95,13 +97,15 @@ class Config(object):
     
     def persist_to_file(self, filename):
         self._not_finished()
+        if self._state_filename is not None:
+            raise ValueError('config.persist_to_file has already been done once')
         self._state_filename = str(filename)
 
     def serve_web(self, http_endpoint, ws_endpoint, root_cap=None, title=u'ShinySDR'):
         self._not_finished()
         # TODO: See if we're reinventing bits of Twisted service stuff here
         
-        root_cap=unicode(root_cap)
+        root_cap = unicode(root_cap)
         if not len(root_cap) > 0:
             raise ValueError('config.serve_web: root_cap must be None or a nonempty string')
         
@@ -134,6 +138,8 @@ class Config(object):
         '''
         Set whether clients are allowed to send output to the server audio device.
         '''
+        self._not_finished()
+        
         if allowed:
             self.__server_audio = (str(device_name), int(sample_rate))
         else:
@@ -145,6 +151,8 @@ class Config(object):
         
         Disabling stereo saves CPU time and network bandwidth.
         '''
+        self._not_finished()
+        
         self.__stereo = bool(value)
 
 

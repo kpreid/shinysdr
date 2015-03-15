@@ -25,11 +25,12 @@ import os.path
 import shutil
 import tempfile
 
-from twisted.internet import reactor
+from twisted.internet import reactor as the_reactor
+from twisted.internet import defer
 from twisted.trial import unittest
 
-from shinysdr import config
 from shinysdr import devices
+from shinysdr.config import Config, execute_config, make_default_config
 from shinysdr.values import nullExportedState
 
 
@@ -40,9 +41,55 @@ def StubDevice():
 
 class TestConfigObject(unittest.TestCase):
     def setUp(self):
-        self.config = config.Config(reactor)
+        self.config = Config(the_reactor)
     
     # TODO: In type error tests, also check message once we've cleaned them up.
+    
+    # --- General functionality ---
+    
+    def test_reactor(self):
+        self.assertEqual(self.config.reactor, the_reactor)
+    
+    # TODO def test_wait_for(self):
+    
+    @defer.inlineCallbacks
+    def test_validate_succeed(self):
+        self.config.devices.add(u'foo', StubDevice())
+        d = self.config._wait_and_validate()
+        self.assertIsInstance(d, defer.Deferred)  # don't succeed trivially
+        yield d
+    
+    # TODO: Test "No network service defined"; is a warning not an error
+
+    # --- Persistence ---
+    
+    @defer.inlineCallbacks
+    def test_persist_too_late(self):
+        yield self.config._wait_and_validate()
+        self.assertRaises(Exception, lambda:
+            self.config.persist_to_file('foo'))
+        self.assertEqual({}, self.config.devices._values)
+    
+    def test_persist_none(self):
+        self.assertEqual(None, self.config._state_filename)
+
+    def test_persist_ok(self):
+        self.config.persist_to_file('foo')
+        self.assertEqual('foo', self.config._state_filename)
+
+    def test_persist_duplication(self):
+        self.config.persist_to_file('foo')
+        self.assertRaises(ValueError, lambda: self.config.persist_to_file('bar'))
+        self.assertEqual('foo', self.config._state_filename)
+
+    # --- Devices ---
+    
+    @defer.inlineCallbacks
+    def test_device_too_late(self):
+        yield self.config._wait_and_validate()
+        self.assertRaises(Exception, lambda:
+            self.config.devices.add(u'foo', StubDevice()))
+        self.assertEqual({}, self.config.devices._values)
     
     def test_device_key_ok(self):
         dev = StubDevice()
@@ -73,12 +120,62 @@ class TestConfigObject(unittest.TestCase):
             self.config.devices.add(u'foo'))
         self.assertEqual({}, self.config.devices._values)
     
+    # --- serve_web ---
+    
+    @defer.inlineCallbacks
+    def test_web_too_late(self):
+        yield self.config._wait_and_validate()
+        self.assertRaises(Exception, lambda:
+            self.config.serve_web(http_endpoint='tcp:8100', ws_endpoint='tcp:8101'))
+        self.assertEqual({}, self.config.devices._values)
+    
+    def test_web_ok(self):
+        self.config.serve_web(http_endpoint='tcp:8100', ws_endpoint='tcp:8101')
+        self.assertEqual(1, len(self.config._service_makers))
+    
     def test_web_root_cap_empty(self):
         self.assertRaises(ValueError, lambda:
             self.config.serve_web(http_endpoint='tcp:8100', ws_endpoint='tcp:8101', root_cap=''))
         self.assertEqual([], self.config._service_makers)
     
+    # --- serve_ghpsdr ---
+    
+    @defer.inlineCallbacks
+    def test_ghpsdr_too_late(self):
+        yield self.config._wait_and_validate()
+        self.assertRaises(Exception, lambda:
+            self.config.serve_ghpsdr())
+        self.assertEqual({}, self.config.devices._values)
+    
+    def test_ghpsdr_ok(self):
+        self.config.serve_ghpsdr()
+        self.assertEqual(1, len(self.config._service_makers))
+    
+    # --- Misc options ---
+    
+    @defer.inlineCallbacks
+    def test_server_audio_too_late(self):
+        yield self.config._wait_and_validate()
+        self.assertRaises(Exception, lambda:
+            self.config.set_server_audio_allowed(True))
+        self.assertEqual({}, self.config.devices._values)
+    
+    # TODO test rest of config.set_server_audio_allowed
 
+    @defer.inlineCallbacks
+    def test_stereo_too_late(self):
+        yield self.config._wait_and_validate()
+        self.assertRaises(Exception, lambda:
+            self.config.set_stereo(True))
+        self.assertEqual({}, self.config.devices._values)
+    
+    # TODO test rest of config.set_stereo
+    
+    # --- Databases ---
+    
+    # TODO test config.databases.add_directory
+    # TODO test config.databases.add_writable_database
+    
 
 class TestDefaultConfig(unittest.TestCase):
     def setUp(self):
@@ -89,7 +186,7 @@ class TestDefaultConfig(unittest.TestCase):
         shutil.rmtree(self.__temp_dir)
     
     def test_default_config(self):
-        conf_text = config.make_default_config()
+        conf_text = make_default_config()
         
         # Don't try to open a real device
         DEFAULT_DEVICE = "OsmoSDRDevice('')"
@@ -98,6 +195,6 @@ class TestDefaultConfig(unittest.TestCase):
         
         with open(self.__config_name, 'w') as f:
             f.write(conf_text)
-        config_obj = config.Config(reactor)
-        config.execute_config(config_obj, self.__config_name)
+        config_obj = Config(the_reactor)
+        execute_config(config_obj, self.__config_name)
         return config_obj._wait_and_validate()
