@@ -1,4 +1,4 @@
-# Copyright 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2014, 2015 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -48,8 +48,14 @@ import re
 from twisted.web import static
 from zope.interface import Interface, implements  # available via Twisted
 
+from shinysdr.telemetry import TelemetryItem, Track, empty_track
 from shinysdr.values import CollectionState, ExportedState, exported_value
 from shinysdr.web import ClientResourceDef
+
+
+_SECONDS_PER_HOUR = 60 * 60
+_METERS_PER_NAUTICAL_MILE = 1852
+_KNOTS_TO_METERS_PER_SECOND = _METERS_PER_NAUTICAL_MILE / _SECONDS_PER_HOUR
 
 
 class IAPRSInformation(Interface):
@@ -105,18 +111,22 @@ class APRSStation(ExportedState):
     
     def __init__(self, address):
         self.__address = address
-        self.__position_timestamp = None
-        self.__position = None
-        self.__velocity = None
+        self.__track = empty_track
         self.__status = u''
         self.__symbol = None
 
     def receive(self, message):
         for fact in message.facts:
             if isinstance(fact, Position):
-                self.__position = (fact.latitude, fact.longitude, message.receive_time)
+                self.__track = self.__track._replace(
+                    latitude=TelemetryItem(fact.latitude, message.receive_time),
+                    longitude=TelemetryItem(fact.longitude, message.receive_time),
+                )
             if isinstance(fact, Velocity):
-                self.__velocity = (fact.course_degrees, fact.speed_knots)
+                self.__track = self.__track._replace(
+                    h_speed=TelemetryItem(fact.speed_knots * _KNOTS_TO_METERS_PER_SECOND, message.receive_time),
+                    track_angle=TelemetryItem(fact.course_degrees, message.receive_time),
+                )
             elif isinstance(fact, Status):
                 # TODO: Empirically, not always ASCII. Move this implicit decoding off into parse stages.
                 self.__status = unicode(fact.text)  # always ASCII
@@ -130,15 +140,9 @@ class APRSStation(ExportedState):
     def get_address(self):
         return self.__address
 
-    @exported_value()
-    def get_position(self):
-        '''None or WGS84 (lat, lon) in degrees.'''
-        return self.__position
-
-    @exported_value()
-    def get_velocity(self):
-        '''None or (course in degrees, speed in knots)'''
-        return self.__velocity
+    @exported_value(ctor=Track)
+    def get_track(self):
+        return self.__track
 
     @exported_value(ctor=unicode)
     def get_symbol(self):

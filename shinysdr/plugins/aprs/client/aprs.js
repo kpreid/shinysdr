@@ -1,4 +1,4 @@
-// Copyright 2014 Kevin Reid <kpreid@switchb.org>
+// Copyright 2014, 2014 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -47,6 +47,7 @@ define(['widgets', 'maps'], function (widgets, maps) {
   function APRSStationWidget(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       ignore('address'); // in header
+      addWidget('track', widgets.TrackWidget);  // TODO: Should be handled by type information instead
     }, false);
   }
   
@@ -75,7 +76,7 @@ define(['widgets', 'maps'], function (widgets, maps) {
         })
       })
     }, function(station, layer) {
-      var positionCell = station.position;
+      var trackCell = station.track;
       
       var address = station.address.get();
       var feature = new OpenLayers.Feature.Vector(new OpenLayers.Geometry.Point(0, 0), {
@@ -85,12 +86,10 @@ define(['widgets', 'maps'], function (widgets, maps) {
       
       function update() {
         if (!layer.interested()) return;
-        var position = positionCell.depend(update);
-        var lat, lon;
-        if (position) {
-          lat = position[0];
-          lon = position[1];
-        } else {
+        var track = trackCell.depend(update);
+        var lat = track.latitude.value;
+        var lon = track.longitude.value;
+        if (!(isFinite(lat) && isFinite(lon))) {
           lat = lon = 0; // TODO bad handling
         }
         var posProj = projectedPoint(lat, lon);
