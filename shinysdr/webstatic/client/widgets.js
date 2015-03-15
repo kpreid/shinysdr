@@ -2917,6 +2917,98 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   }
   widgets.Radio = Radio;
   
+  // widget for the shinysdr.telemetry.Track type
+  function TrackWidget(config) {
+    // TODO not _really_ a SimpleElementWidget
+    SimpleElementWidget.call(this, config, 'TABLE',
+      function buildPanelForTrack(container) {
+        if (container.hasAttribute('title')) {
+          var labelEl = container.appendChild(document.createElement('div'));
+          labelEl.appendChild(document.createTextNode(container.getAttribute('title')));
+          container.removeAttribute('title');
+        }
+        
+        var valueEl = container.appendChild(document.createElement('TABLE'));
+        
+        return valueEl;
+      },
+      function initEl(valueEl, target) {
+        function addRow(label) {
+          var rowEl = valueEl.appendChild(document.createElement('tr'));
+          rowEl.appendChild(document.createElement('th'))
+            .appendChild(document.createTextNode(label));
+          var textNode = document.createTextNode('');
+          var textEl = rowEl.appendChild(document.createElement('td'))
+            .appendChild(document.createElement('tt'))  // fixed width formatting
+            .appendChild(textNode);
+          return {
+            row: rowEl,
+            text: textNode
+          };
+        }
+        var posRow = addRow('Position');
+        var velRow = addRow('Velocity');
+        var vertRow = addRow('Vertical');
+        
+        function formatitude(value, p, n) {
+          value = +value;
+          if (value < 0) {
+            value = -value;
+            p = n;
+          }
+          // TODO: Arrange to get precision data and choose digits based on it
+          return value.toFixed(4) + p;
+        }
+        function formatAngle(value) {
+          return Math.round(value) + '\u00B0';
+        }
+        function formatSigned(value, digits) {
+          var text = (+value).toFixed(digits);
+          if (/^0-9/.test(text[0])) {
+            text = '+' + text;
+          }
+          return text;
+        }
+        function formatGroup(row, f) {
+          var out = [];
+          f(function write(telemetryItem, text) {
+            if (telemetryItem.timestamp !== null) out.push(text);
+          });
+          if (out.length > 0) {
+            row.row.style.removeProperty('display');
+            row.text.data = out.join(' ');
+          } else {
+            row.row.style.display = 'none';
+          }
+        }
+        
+        return function updateEl(track) {
+          // TODO: Rewrite this to comply with some kind of existing convention for position reporting formatting.
+          // TODO: Display the timestamp.
+          
+          // horizontal position/orientation
+          formatGroup(posRow, function(write) {
+            write(track.latitude, formatitude(track.latitude.value, 'N', 'S'));
+            write(track.longitude, formatitude(track.longitude.value, 'E', 'W'));
+            write(track.heading, formatAngle(track.heading.value));
+          });
+          
+          // horizontal velocity
+          formatGroup(velRow, function(write) {
+            write(track.h_speed, (+track.h_speed.value).toFixed(1) + ' m/s');
+            write(track.track_angle, formatAngle(track.track_angle.value));
+          });
+          
+          // vertical pos/vel
+          formatGroup(vertRow, function(write) {
+            write(track.altitude, (+track.altitude.value).toFixed(1) + ' m');
+            write(track.v_speed, formatSigned(track.track_angle.value, 1) + ' m/s\u00B2');
+          });
+        };
+      });
+  }
+  widgets.TrackWidget = TrackWidget;
+  
   // TODO: This is currently used by plugins to extend the widget namespace. Create a non-single-namespace widget type lookup and then freeze this.
   return widgets;
 });
