@@ -29,13 +29,55 @@ from twisted.internet import reactor
 from twisted.trial import unittest
 
 from shinysdr import config
+from shinysdr import devices
+from shinysdr.values import nullExportedState
+
+
+def StubDevice():
+    '''Return a valid trivial device.'''
+    return devices.Device(components={u'c': nullExportedState})
 
 
 class TestConfigObject(unittest.TestCase):
     def setUp(self):
         self.config = config.Config(reactor)
     
-    # TODO write some tests
+    # TODO: In type error tests, also check message once we've cleaned them up.
+    
+    def test_device_key_ok(self):
+        dev = StubDevice()
+        self.config.devices.add(u'foo', dev)
+        self.assertEqual({u'foo': dev}, self.config.devices._values)
+        self.assertEqual(unicode, type(self.config.devices._values.keys()[0]))
+    
+    def test_device_key_string_ok(self):
+        dev = StubDevice()
+        self.config.devices.add('foo', dev)
+        self.assertEqual({u'foo': dev}, self.config.devices._values)
+        self.assertEqual(unicode, type(self.config.devices._values.keys()[0]))
+    
+    def test_device_key_type(self):
+        self.assertRaises(TypeError, lambda:
+            self.config.devices.add(StubDevice(), StubDevice()))
+        self.assertEqual({}, self.config.devices._values)
+    
+    def test_device_key_duplication(self):
+        dev = StubDevice()
+        self.config.devices.add(u'foo', dev)
+        self.assertRaises(KeyError, lambda:
+            self.config.devices.add(u'foo', StubDevice()))
+        self.assertEqual({u'foo': dev}, self.config.devices._values)
+    
+    def test_device_empty(self):
+        self.assertRaises(ValueError, lambda:
+            self.config.devices.add(u'foo'))
+        self.assertEqual({}, self.config.devices._values)
+    
+    def test_web_root_cap_empty(self):
+        self.assertRaises(ValueError, lambda:
+            self.config.serve_web(http_endpoint='tcp:8100', ws_endpoint='tcp:8101', root_cap=''))
+        self.assertEqual([], self.config._service_makers)
+    
 
 
 class TestDefaultConfig(unittest.TestCase):

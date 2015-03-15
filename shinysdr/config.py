@@ -101,6 +101,10 @@ class Config(object):
         self._not_finished()
         # TODO: See if we're reinventing bits of Twisted service stuff here
         
+        root_cap=unicode(root_cap)
+        if not len(root_cap) > 0:
+            raise ValueError('config.serve_web: root_cap must be None or a nonempty string')
+        
         def make_service(top, note_dirty):
             import shinysdr.web as lazy_web
             return lazy_web.WebService(
@@ -151,6 +155,9 @@ class _ConfigDict(object):
 
     def add(self, key, value):
         self._config._not_finished()
+        if not (isinstance(key, unicode) or isinstance(key, str)):
+            # Used to just coerce, but I saw a user error where they did "config.devices.add(device)", so I figured an error is better
+            raise TypeError('Key must be a string, not a %s: %r' % (type(key), key))
         key = unicode(key)
         if key in self._values:
             raise KeyError('Key %r already present' % (key,))
@@ -159,6 +166,8 @@ class _ConfigDict(object):
 
 class _ConfigDevices(_ConfigDict):
     def add(self, key, *devices):
+        if not len(devices) > 0:
+            raise ValueError('config.devices: no device(s) specified')
         from shinysdr.devices import merge_devices
         super(_ConfigDevices, self).add(key, merge_devices(devices))
 
