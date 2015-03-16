@@ -86,7 +86,7 @@ define(['maps', 'widgets'], function (maps, widgets) {
   widgets.VOR$Angle = Angle;
   
   function addVORMapLayer(db, scheduler, addModeLayer) {
-    addModeLayer('VOR', function(receiver, interested, addFeature, drawFeature) {
+    addModeLayer('VOR', function(receiver, layer) {
       var angleCell = receiver.demodulator.get().angle;  // demodulator change will be handled by addModeLayer
       if (!angleCell) {
         console.warn('addVORMapLayer saw a non-VOR demodulator');
@@ -116,11 +116,11 @@ define(['maps', 'widgets'], function (maps, widgets) {
       var rayFeature = new OpenLayers.Feature.Vector(ray, {}, {
         strokeDashstyle: 'dot'
       });
-      addFeature(rayFeature);
+      layer.addFeatures(rayFeature);
       
       var prevEndPoint;
       function update() {
-        if (!interested()) return;
+        if (!layer.interested()) return;
         var angle = angleCell.depend(update);
         // TODO: Need to apply an offset of the VOR station's difference from geographic north (which we need to put in the DB)
         var sin = Math.sin(angle);
@@ -133,7 +133,7 @@ define(['maps', 'widgets'], function (maps, widgets) {
           ray.removePoint(prevEndPoint);
         }
         prevEndPoint = end;
-        drawFeature(rayFeature);
+        layer.drawFeature(rayFeature);
       }
       update.scheduler = scheduler;
       update();

@@ -71,14 +71,14 @@ define(['maps', 'widgets'], function (maps, widgets) {
           strokeColor: "#00ee99"
         })
       })
-    }, function(aircraft, interested, addFeature, drawFeature) {
+    }, function(aircraft, layer) {
       var positionCell = aircraft.position;
       
       var feature = new OpenLayers.Feature.Vector();
-      addFeature(feature);
+      layer.addFeatures(feature);
       
       function update() {
-        if (!interested()) return;
+        if (!layer.interested()) return;
         var position = positionCell.depend(update);
         var lat, lon;
         if (position) {
@@ -89,11 +89,12 @@ define(['maps', 'widgets'], function (maps, widgets) {
         }
         var posProj = projectedPoint(lat, lon);
         // TODO: add dead reckoning from velocity
+        layer.removeFeatures(feature);  // OL leaves ghosts behind if we merely drawFeature :(
         feature.geometry = posProj;
         feature.attributes.call = aircraft.call.depend(update);
         feature.attributes.ident = aircraft.ident.depend(update);
         feature.attributes.altitude = aircraft.altitude.depend(update);
-        drawFeature(feature);
+        layer.addFeatures(feature);
       }
       update.scheduler = scheduler;
       update();

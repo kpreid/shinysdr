@@ -182,12 +182,35 @@ define(['./values'], function (values) {
       olm.updateSize();
     }, 1000);
     
+    function makeLayerFacet(layer) {
+      var dead = false;
+      return {
+        facet: {
+          interested: function interested() { return !dead; },
+          addFeatures: function addFeatures(features) {
+            if (dead) throw new Error('dead');
+            layer.addFeatures(features);
+          },
+          drawFeature: function drawFeature(feature) {
+            if (dead) throw new Error('dead');
+            layer.drawFeature(feature);
+          },
+          removeFeatures: function removeFeatures(features) {
+            if (dead) throw new Error('dead');
+            layer.removeFeatures(features);
+          }
+        },
+        kill: function () { dead = true; }
+      };
+    }
+    
     // Receiver-derived data
     // TODO: Either replace uses of this with addIndexLayer or make them share an implementation
     function addModeLayer(filterMode, prepare) {
       var modeLayer = new OpenLayers.Layer.Vector(filterMode);
       olm.addLayer(modeLayer);
       
+      var currentRun = {};
       var cancellers = [];
 
       function updateOnReceivers() {
@@ -198,30 +221,25 @@ define(['./values'], function (values) {
         modeLayer.removeAllFeatures();
         cancellers.forEach(function (f) { f(); });
         cancellers = [];
+        var runToken = currentRun = {};
         for (var key in receivers) (function(receiver) {
-          var rDead = false;
-          cancellers.push(function () { rDead = true; });
-          var features = [];
+          var layerFacetPair = makeLayerFacet(modeLayer);
+          cancellers.push(layerFacetPair.kill);
           function updateOnReceiver() {
-            var rMode = receiver.mode.depend(updateOnReceiver);  // TODO break loop if map is dead
+            if (currentRun !== runToken) return;
+            
+            // note this calls updateOnReceivers so we clear out features if the receiver switches away from the mode
+            var rMode = receiver.mode.depend(updateOnReceivers);  // TODO break loop if map is dead
             receiver.demodulator.n.listen(updateOnReceiver);  // not necessary, but useful for our clients
             
-            if (rMode !== filterMode) return;
+            if (rMode !== filterMode) {
+              return;
+            }
             
             //console.log('clearing to rebuild');
-            modeLayer.removeFeatures(features);  // clear old state
-            features.length = 0;
+            modeLayer.removeAllFeatures();  // clear old state
             
-            prepare(receiver,
-              function interested() { return !rDead; },
-              function addFeature(feature) {
-                if (rDead) throw new Error('dead');
-                features.push(feature);
-                modeLayer.addFeatures(feature);
-              },
-              function drawFeature(feature) {
-                modeLayer.drawFeature(feature);  // TODO verify is in feature set
-              });
+            prepare(receiver, layerFacetPair.facet);
           }
           updateOnReceiver.scheduler = scheduler;
           updateOnReceiver();
@@ -245,23 +263,14 @@ define(['./values'], function (values) {
         cancellers.forEach(function (f) { f(); });
         cancellers = [];
         objects.forEach(function (object) {
-          var objDead = false;
-          cancellers.push(function () { objDead = true; });
+          var layerFacetPair = makeLayerFacet(dynamicLayer);
+          cancellers.push(layerFacetPair.kill);
           var features = [];
           function updateOnObject() {
             dynamicLayer.removeFeatures(features);  // clear old state
             features.length = 0;
             
-            prepare(object,
-              function interested() { return !objDead; },
-              function addFeature(feature) {
-                if (objDead) throw new Error('dead');
-                features.push(feature);
-                dynamicLayer.addFeatures(feature);
-              },
-              function drawFeature(feature) {
-                dynamicLayer.drawFeature(feature);  // TODO verify is in feature set
-              });
+            prepare(object, layerFacetPair.facet);
           }
           updateOnObject.scheduler = scheduler;
           updateOnObject();
@@ -281,18 +290,18 @@ define(['./values'], function (values) {
           strokeColor: "#cc0000"
         })
       })
-    }, function(devicePositioning, interested, addFeature, drawFeature) {
+    }, function(devicePositioning, layer) {
       // TODO: Because devicePositioning is a device component, we don't have the device itself in order to display the device's name. However, the Index is in a position to provide "containing object" information and arguably should.
       var positionCell = devicePositioning.position;
       
       var feature = new OpenLayers.Feature.Vector();
-      addFeature(feature);
+      layer.addFeatures(feature);
       
       function update() {
-        if (!interested()) return;
+        if (!layer.interested()) return;
         var position = positionCell.depend(update);
         feature.geometry = projectedPoint(+position[0], +position[1]);
-        drawFeature(feature);
+        layer.drawFeature(feature);
         
         // Borrow station position to set initial map view
         if (!positionInitialized) {

@@ -74,17 +74,17 @@ define(['widgets', 'maps'], function (widgets, maps) {
           strokeColor: "#0099ee"
         })
       })
-    }, function(station, interested, addFeature, drawFeature) {
+    }, function(station, layer) {
       var positionCell = station.position;
       
       var address = station.address.get();
       var feature = new OpenLayers.Feature.Vector(new OpenLayers.Geometry.Point(0, 0), {
         label: address
       });
-      addFeature(feature);
+      layer.addFeatures(feature);
       
       function update() {
-        if (!interested()) return;
+        if (!layer.interested()) return;
         var position = positionCell.depend(update);
         var lat, lon;
         if (position) {
@@ -95,10 +95,11 @@ define(['widgets', 'maps'], function (widgets, maps) {
         }
         var posProj = projectedPoint(lat, lon);
         // TODO: add dead reckoning computed positions as recommended
+        layer.removeFeatures(feature);  // OL leaves ghosts behind if we merely drawFeature :(
         feature.geometry = posProj;
         feature.attributes.status = station.status.depend(update);
         feature.attributes.symbol = station.symbol.depend(update);
-        drawFeature(feature);
+        layer.addFeatures(feature);
       }
       update.scheduler = scheduler;
       update();
