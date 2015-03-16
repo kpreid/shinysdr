@@ -208,6 +208,13 @@ class TestAPRSInformation(unittest.TestCase):
             _dummy_receive_time))
         self.assertEqual(['N6WKZ-3'], self.i.state().keys())
 
+    def test_object_item_report(self):
+        self.i.receive(parse_tnc2(
+            'KE6AFE-2>APU25N,WR6ABD*,NCA1:;TFCSCRUZ *160323z3655.94N\12200.92W?70 In 10 Minutes',
+            _dummy_receive_time))
+        self.assertEqual(['KE6AFE-2', 'TFCSCRUZ '], self.i.state().keys())
+        # TODO test value
+
 
 class TestAPRSStation(unittest.TestCase):
     def setUp(self):

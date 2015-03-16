@@ -71,6 +71,23 @@ class APRSInformation(CollectionState):
     def receive(self, message):
         '''Store the supplied APRSMessage object.'''
         self.__ensure_station(message.source).receive(message)
+        for fact in message.facts:
+            if isinstance(fact, ObjectItemReport):
+                if fact.live:
+                    # TODO kludgy. review for correctness.
+                    # consider defining an 'object' instead of 'station' type, which can then be given a 'reported by' field.
+                    self.__ensure_station(fact.name).receive(APRSMessage(
+                        receive_time=message.receive_time,
+                        source=fact.name,
+                        destination=None,
+                        via=None,
+                        payload=None,
+                        facts=fact.facts,
+                        errors=message.errors,
+                        comment=message.comment))
+                else:
+                    if fact.name in self.__stations:
+                        del self.__stations[fact.name]
     
     def __ensure_station(self, address):
         if address not in self.__stations:
