@@ -44,6 +44,7 @@ define(['maps', 'widgets'], function (maps, widgets) {
   
   function AircraftWidget(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
+      addWidget('track', widgets.TrackWidget);  // TODO: Should be handled by type information instead
     }, false);
   }
   
@@ -72,19 +73,17 @@ define(['maps', 'widgets'], function (maps, widgets) {
         })
       })
     }, function(aircraft, layer) {
-      var positionCell = aircraft.position;
+      var trackCell = aircraft.track;
       
       var feature = new OpenLayers.Feature.Vector();
       layer.addFeatures(feature);
       
       function update() {
         if (!layer.interested()) return;
-        var position = positionCell.depend(update);
-        var lat, lon;
-        if (position) {
-          lat = position[0];
-          lon = position[1];
-        } else {
+        var track = trackCell.depend(update);
+        var lat = track.latitude.value;
+        var lon = track.longitude.value;
+        if (!(isFinite(lat) && isFinite(lon))) {
           lat = lon = 0; // TODO bad handling
         }
         var posProj = projectedPoint(lat, lon);
@@ -93,7 +92,7 @@ define(['maps', 'widgets'], function (maps, widgets) {
         feature.geometry = posProj;
         feature.attributes.call = aircraft.call.depend(update);
         feature.attributes.ident = aircraft.ident.depend(update);
-        feature.attributes.altitude = aircraft.altitude.depend(update);
+        feature.attributes.altitude = track.altitude.value;
         layer.addFeatures(feature);
       }
       update.scheduler = scheduler;

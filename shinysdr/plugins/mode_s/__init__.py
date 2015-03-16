@@ -1,4 +1,4 @@
-# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -32,11 +32,12 @@ from zope.interface import Interface, implements
 from gnuradio import gr
 from gnuradio import gru
 
+from shinysdr.blocks import MultistageChannelFilter
 from shinysdr.modes import ModeDef, IDemodulator
 from shinysdr.signals import no_signal
+from shinysdr.telemetry import TelemetryItem, Track, empty_track
 from shinysdr.types import Notice
 from shinysdr.values import CollectionState, ExportedState, exported_value
-from shinysdr.blocks import MultistageChannelFilter
 from shinysdr.web import ClientResourceDef
 
 try:
@@ -52,6 +53,13 @@ transition_width = 500000
 
 drop_unheard_timeout_seconds = 60
 
+
+_SECONDS_PER_HOUR = 60 * 60
+_METERS_PER_NAUTICAL_MILE = 1852
+_KNOTS_TO_METERS_PER_SECOND = _METERS_PER_NAUTICAL_MILE / _SECONDS_PER_HOUR
+_CM_PER_INCH = 2.54
+_INCH_PER_FOOT = 12
+_METERS_PER_FEET = (_CM_PER_INCH * _INCH_PER_FOOT) / 100
 
 class ModeSDemodulator(gr.hier_block2, ExportedState):
     implements(IDemodulator)
@@ -200,29 +208,25 @@ class Aircraft(ExportedState):
     
     def __init__(self, address_hex):
         self.__last_heard_time = None
+        self.__track = empty_track
         self.__call = None
         self.__ident = None
         self.__aircraft_type = None
-        self.__latitude = None
-        self.__longitude = None
-        # TODO: specify units
-        self.__altitude_feet = None
-        self.__velocity = None
-        self.__heading = None
-        self.__vertical_speed = None
-        self.__turn_rate = None
     
     # not exported
     def receive(self, message, cpr_decoder):
-        self.__last_heard_time = time.time()  # TODO: arguably should be an argument
+        receive_time = time.time()  # TODO: arguably should be an argument
+        self.__last_heard_time = receive_time
         # Unfortunately, gr-air-modes doesn't provide a function to implement this gunk -- imitating its output_flightgear code which
         data = message.data
         t = data.get_type()
         if t == 0:
-            self.__altitude_feet = air_modes.decode_alt(data['ac'], True)
+            self.__track = self.__track._replace(
+                altitude=TelemetryItem(air_modes.decode_alt(data['ac'], True) * _METERS_PER_FEET, receive_time))
             # TODO more info available here
         elif t == 4:
-            self.__altitude_feet = air_modes.decode_alt(data['ac'], True)
+            self.__track = self.__track._replace(
+                altitude=TelemetryItem(air_modes.decode_alt(data['ac'], True) * _METERS_PER_FEET, receive_time))
             # TODO more info available here
         elif t == 5:
             self.__ident = air_modes.decode_id(data['id'])
@@ -230,18 +234,40 @@ class Aircraft(ExportedState):
         elif t == 17:  # ADS-B
             bdsreg = data['me'].get_type()
             if bdsreg == 0x05:
-                (self.__altitude_feet, self.__latitude, self.__longitude, _range, _bearing) = air_modes.parseBDS05(data, cpr_decoder)
+                # TODO use unused info
+                (altitude_feet, latitude, longitude, _range, _bearing) = air_modes.parseBDS05(data, cpr_decoder)
+                self.__track = self.__track._replace(
+                    altitude=TelemetryItem(altitude_feet * _METERS_PER_FEET, receive_time),
+                    latitude=TelemetryItem(latitude, receive_time),
+                    longitude=TelemetryItem(longitude, receive_time),
+                )
             elif bdsreg == 0x06:
-                (_ground_track, self.__latitude, self.__longitude, _range, _bearing) = air_modes.parseBDS06(data, cpr_decoder)
+                # TODO use unused info
+                (_ground_track, latitude, longitude, _range, _bearing) = air_modes.parseBDS06(data, cpr_decoder)
+                self.__track = self.__track._replace(
+                    latitude=TelemetryItem(latitude, receive_time),
+                    longitude=TelemetryItem(longitude, receive_time),
+                )
             elif bdsreg == 0x08:
                 (self.__call, self.__aircraft_type) = air_modes.parseBDS08(data)
             elif bdsreg == 0x09:
                 subtype = data['bds09'].get_type()
                 if subtype == 0:
-                    (self.__velocity, self.__heading, self.__vertical_speed, self.__turn_rate) = air_modes.parseBDS09_0(data)
+                    (velocity, heading, vertical_speed, _turn_rate) = air_modes.parseBDS09_0(data)
+                    self.__track = self.__track._replace(
+                        h_speed=TelemetryItem(velocity * _KNOTS_TO_METERS_PER_SECOND, receive_time),
+                        heading=TelemetryItem(heading, receive_time),
+                        v_speed=TelemetryItem(vertical_speed, receive_time),
+                        # TODO add turn rate
+                    )
                 elif subtype == 1:
-                    (self.__velocity, self.__heading, self.__vertical_speed) = air_modes.parseBDS09_1(data)
-                    self.__turn_rate = 0  # TODO: or should we keep last?
+                    (velocity, heading, vertical_speed) = air_modes.parseBDS09_1(data)
+                    self.__track = self.__track._replace(
+                        h_speed=TelemetryItem(velocity * _KNOTS_TO_METERS_PER_SECOND, receive_time),
+                        heading=TelemetryItem(heading, receive_time),
+                        v_speed=TelemetryItem(vertical_speed, receive_time),
+                        # TODO reset turn rate?
+                    )
                 else:
                     # TODO report
                     pass
@@ -257,9 +283,9 @@ class Aircraft(ExportedState):
         Does this aircraft have enough information to be worth mentioning?
         '''
         return \
-            self.__altitude_feet is not None or \
-            self.__latitude is not None or \
-            self.__longitude is not None or \
+            self.__track.altitude.value is not None or \
+            self.__track.latitude.value is not None or \
+            self.__track.longitude.value is not None or \
             self.__call is not None or \
             self.__aircraft_type is not None
         
@@ -279,21 +305,9 @@ class Aircraft(ExportedState):
     def get_aircraft_type(self):
         return self.__aircraft_type
     
-    @exported_value()
-    def get_position(self):
-        return (self.__latitude, self.__longitude)
-    
-    @exported_value(ctor=int)
-    def get_altitude(self):
-        return self.__altitude_feet
-    
-    @exported_value(ctor=int)
-    def get_vertical_speed(self):
-        return self.__vertical_speed
-    
-    @exported_value(ctor=int)
-    def get_turn_rate(self):
-        return self.__turn_rate
+    @exported_value(ctor=Track)
+    def get_track(self):
+        return self.__track
 
 
 plugin_mode = ModeDef(
