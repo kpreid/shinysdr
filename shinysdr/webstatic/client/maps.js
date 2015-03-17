@@ -328,6 +328,7 @@ define(['./values'], function (values) {
   };
   
   function addTrackFeaturesToLayer(scheduler, layer, trackCell, markFeatures) {
+    // TODO either the history needs to be more persistent than this, or we need to stop doing removeAllFeatures in addIndexLayer and addModeLayer; as it is history is cleared whenever something is added or removed
     var trackHistory = new OpenLayers.Geometry.LineString([]);
     var trackFeature = new OpenLayers.Feature.Vector(trackHistory, {}, {
       // TODO set some styles
