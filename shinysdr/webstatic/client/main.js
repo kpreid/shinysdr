@@ -164,8 +164,9 @@ define(['./values', './events', './database', './network', './maps', './widget',
             // recognize tuning for 0Hz gimmick
             source.freq.set(0);
           } else {
-            // left side, just inside of frequencyInRange's test
-            source.freq.set(freq + radio.input_rate.get() * 0.374);
+            // centered, just outside of frequencyInRange's DC-offset test
+            // TODO: Take into account (1) whether the device HAS a DC offset, and the receiver's bandwidth (unfortunately not synchronously available, but this logic really should move to the server)
+            source.freq.set(freq + radio.input_rate.get() * 0.03);
           }
         }
       
