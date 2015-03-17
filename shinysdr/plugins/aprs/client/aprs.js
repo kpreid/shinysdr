@@ -82,41 +82,17 @@ define(['widgets', 'maps'], function (widgets, maps) {
       var markFeature = new OpenLayers.Feature.Vector(new OpenLayers.Geometry.Point(0, 0), {
         label: address
       });
-      var trackHistory = new OpenLayers.Geometry.LineString([]);
-      var trackFeature = new OpenLayers.Feature.Vector(trackHistory, {}, {
-        // TODO set some styles
-      });
-      layer.addFeatures(trackFeature);
-      layer.addFeatures(markFeature);
       
-      function updatePos() {
-        if (!layer.interested()) return;
-        var track = trackCell.depend(updatePos);
-        var lat = track.latitude.value;
-        var lon = track.longitude.value;
-        if (!(isFinite(lat) && isFinite(lon))) {
-          lat = lon = 0; // TODO bad handling
-        }
-        var posProj = projectedPoint(lat, lon);
-        // TODO: add dead reckoning computed positions as recommended
-
-        layer.removeFeatures(markFeature);  // OL leaves ghosts behind if we merely drawFeature :(          
-        markFeature.geometry = posProj;
-        trackHistory.addPoint(posProj);
-        layer.addFeatures(markFeature);
-        layer.drawFeature(trackFeature);
-      }
-      updatePos.scheduler = scheduler;
-      updatePos();
+      maps.addTrackFeaturesToLayer(scheduler, layer, trackCell, [markFeature]);
       
-      function update() {
+      function updateMark() {
         if (!layer.interested()) return;
-        markFeature.attributes.status = station.status.depend(update);
-        markFeature.attributes.symbol = station.symbol.depend(update);
+        markFeature.attributes.status = station.status.depend(updateMark);
+        markFeature.attributes.symbol = station.symbol.depend(updateMark);
         layer.drawFeature(markFeature);
       }
-      update.scheduler = scheduler;
-      update();
+      updateMark.scheduler = scheduler;
+      updateMark();
     });
   }
   

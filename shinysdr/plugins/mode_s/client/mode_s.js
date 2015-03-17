@@ -75,28 +75,18 @@ define(['maps', 'widgets'], function (maps, widgets) {
     }, function(aircraft, layer) {
       var trackCell = aircraft.track;
       
-      var feature = new OpenLayers.Feature.Vector();
-      layer.addFeatures(feature);
+      var markFeature = new OpenLayers.Feature.Vector();
+      maps.addTrackFeaturesToLayer(scheduler, layer, trackCell, [markFeature]);
       
-      function update() {
+      function updateMark() {
         if (!layer.interested()) return;
-        var track = trackCell.depend(update);
-        var lat = track.latitude.value;
-        var lon = track.longitude.value;
-        if (!(isFinite(lat) && isFinite(lon))) {
-          lat = lon = 0; // TODO bad handling
-        }
-        var posProj = projectedPoint(lat, lon);
-        // TODO: add dead reckoning from velocity
-        layer.removeFeatures(feature);  // OL leaves ghosts behind if we merely drawFeature :(
-        feature.geometry = posProj;
-        feature.attributes.call = aircraft.call.depend(update);
-        feature.attributes.ident = aircraft.ident.depend(update);
-        feature.attributes.altitude = track.altitude.value;
-        layer.addFeatures(feature);
+        markFeature.attributes.call = aircraft.call.depend(updateMark);
+        markFeature.attributes.ident = aircraft.ident.depend(updateMark);
+        markFeature.attributes.altitude = trackCell.depend(updateMark).altitude.value;
+        layer.drawFeature(markFeature);
       }
-      update.scheduler = scheduler;
-      update();
+      updateMark.scheduler = scheduler;
+      updateMark();
     });
   }
   

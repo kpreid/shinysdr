@@ -327,5 +327,37 @@ define(['./values'], function (values) {
     plugins.push(pluginFunc);
   };
   
+  function addTrackFeaturesToLayer(scheduler, layer, trackCell, markFeatures) {
+    var trackHistory = new OpenLayers.Geometry.LineString([]);
+    var trackFeature = new OpenLayers.Feature.Vector(trackHistory, {}, {
+      // TODO set some styles
+    });
+    layer.addFeatures(trackFeature);
+    layer.addFeatures(markFeatures);
+    
+    function updatePos() {
+      if (!layer.interested()) return;
+      var track = trackCell.depend(updatePos);
+      var lat = track.latitude.value;
+      var lon = track.longitude.value;
+      if (!(isFinite(lat) && isFinite(lon))) {
+        lat = lon = 0; // TODO bad handling
+      }
+      var posProj = projectedPoint(lat, lon);
+      // TODO: add dead reckoning computed positions as recommended
+
+      layer.removeFeatures(markFeatures);  // OL leaves ghosts behind if we merely drawFeature a moved point feature :(
+      markFeatures.forEach(function (markFeature) {
+        markFeature.geometry = posProj;
+      });
+      trackHistory.addPoint(posProj);
+      layer.addFeatures(markFeatures);
+      layer.drawFeature(trackFeature);
+    }
+    updatePos.scheduler = scheduler;
+    updatePos();
+  }
+  exports.addTrackFeaturesToLayer = addTrackFeaturesToLayer;
+  
   return Object.freeze(exports);
 });
