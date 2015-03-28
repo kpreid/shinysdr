@@ -136,8 +136,7 @@ define(['./values'], function (values) {
       }),
       eventListeners: {
         featureclick: function (event) {
-          console.log('click');
-          radio.preset.set(event.feature.attributes.record);
+          radioCell.get().preset.set(event.feature.attributes.record);
         }
       }
     });
