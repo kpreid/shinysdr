@@ -85,18 +85,6 @@ define(['./values', './events', './database', './network', './maps', './widget',
     function connected() {
       var radio = remoteCell.depend(connected);
       
-      // Takes center freq as parameter so it can be used on hypotheticals and so on.
-      function frequencyInRange(candidate, centerFreq) {
-        var halfBandwidth = radio.input_rate.get() / 2;
-        if (candidate < halfBandwidth && centerFreq === 0) {
-          // recognize tuning for 0Hz gimmick
-          return true;
-        }
-        var fromCenter = Math.abs(candidate - centerFreq) / halfBandwidth;
-        return fromCenter > 0.01 && // DC peak
-               fromCenter < 0.85;  // loss at edges
-      }
-      
       // Get mode from frequency DB
       function bandMode(freq) {
         var foundWidth = Infinity;
@@ -118,7 +106,6 @@ define(['./values', './events', './database', './network', './maps', './widget',
       //   alwaysCreate: optional boolean (false)
       //   freq: float Hz
       //   mode: optional string
-      //   moveCenter: optional boolean (false)
       function tune(options) {
         var alwaysCreate = options.alwaysCreate;
         var record = options.record;
@@ -158,18 +145,6 @@ define(['./values', './events', './database', './network', './maps', './widget',
           // TODO: should return stub for receiver or have a callback or something
         }
         
-        var source = radio.source.get();
-        if (options.moveCenter && !frequencyInRange(freq, source.freq.get())) {
-          if (freq < radio.input_rate.get() / 2) {
-            // recognize tuning for 0Hz gimmick
-            source.freq.set(0);
-          } else {
-            // centered, just outside of frequencyInRange's DC-offset test
-            // TODO: Take into account (1) whether the device HAS a DC offset, and the receiver's bandwidth (unfortunately not synchronously available, but this logic really should move to the server)
-            source.freq.set(freq + radio.input_rate.get() * 0.03);
-          }
-        }
-      
         return receiver;
       }
       Object.defineProperty(radio, 'tune', {
@@ -184,8 +159,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
       radio.preset.set = function(freqRecord) {
         LocalCell.prototype.set.call(this, freqRecord);
         tune({
-          record: freqRecord,
-          moveCenter: true
+          record: freqRecord
         });
       };
       

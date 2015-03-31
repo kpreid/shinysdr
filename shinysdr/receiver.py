@@ -208,7 +208,7 @@ class Receiver(gr.hier_block2, ExportedState):
     def set_rec_freq(self, rec_freq):
         self.rec_freq = float(rec_freq)
         self.__update_rotator()
-        self.context.revalidate()
+        self.context.revalidate(tuning=True)
     
     # TODO: support non-audio demodulators at which point these controls should be optional
     @exported_value(ctor=Range([(-30, 20)], strict=False))
@@ -264,6 +264,8 @@ class Receiver(gr.hier_block2, ExportedState):
     def _rebuild_demodulator(self, mode=None):
         self.__rebuild_demodulator_nodirty(mode)
         self.__do_connect()
+        # TODO write a test for this!
+        #self.context.revalidaate(tuning=False)  # in case our bandwidth changed
 
     def __rebuild_demodulator_nodirty(self, mode=None):
         if self.demodulator is None:

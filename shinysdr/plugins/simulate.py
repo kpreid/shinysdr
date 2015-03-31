@@ -39,13 +39,13 @@ from shinysdr.values import BlockCell, CollectionState, ExportedState, LooseCell
 __all__ = []  # appended later
 
 
-def SimulatedDevice(name='Simulated RF', freq=0.0):
+def SimulatedDevice(name='Simulated RF', freq=0.0, allow_tuning=False):
     return Device(
         name=name,
         vfo_cell=LooseCell(
             key='freq',
             value=freq,
-            ctor=Range([(freq, freq)]),
+            ctor=Range([(-1e9, 1e9)]) if allow_tuning else Range([(freq, freq)]),  # TODO kludge magic numbers
             writable=True,
             persists=False),
         rx_driver=_SimulatedRXDriver(name))

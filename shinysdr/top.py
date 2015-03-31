@@ -388,6 +388,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         )
         receiver.state_from_json(state)
         # until _enabled, ignore any callbacks resulting from the state_from_json initialization
+        facet._receiver = receiver
         facet._enabled = True
         return receiver
     
@@ -452,12 +453,52 @@ class ContextForReceiver(Context):
         self.__top = top
         self._key = key
         self._enabled = False  # assigned outside
+        self._receiver = None  # assigned outside
 
     def get_audio_destination_type(self):
         return self.__top._get_audio_destination_type()
 
-    def revalidate(self):
-        if self._enabled:
+    def revalidate(self, tuning):
+        if not self._enabled: return
+
+        # TODO: Lots of the below logic probably ought to replace the current receiver.get_is_valid.
+        # TODO: Be aware of receiver bandwidth.
+
+        device = self.__top.source
+        receiver = self._receiver
+        usable_bandwidth_range = device.get_rx_driver().get_usable_bandwidth()
+        needed_freq = receiver.get_rec_freq()
+        current_device_freq = device.get_freq()
+
+        def validate_by_range(rec_freq, dev_freq):
+            rel_freq = rec_freq - dev_freq
+            return usable_bandwidth_range(rel_freq) == rel_freq
+
+        # TODO: can't do this because it horribly breaks drag-tuning
+        #if tuning and not validate_by_range(needed_freq, current_device_freq):
+        # we need to check the range as well as receiver.get_is_valid because receiver.get_is_valid uses the tune_delay delayed frequency which may not be up to date
+        if tuning and not receiver.get_is_valid() and not validate_by_range(needed_freq, current_device_freq):
+            # TODO need 0Hz-gimmick logic
+            direction = 1 if needed_freq > current_device_freq else -1
+            usable_bandwidth_step = usable_bandwidth_range.get_max() - usable_bandwidth_range.get_min()
+
+            page_size = usable_bandwidth_step
+            paged_freq = device.get_freq() + direction * page_size
+            if validate_by_range(needed_freq, paged_freq):
+                freq = paged_freq
+                print '--- page', device.get_freq(), direction * page_size, freq
+            else:
+                # need a long step
+                # TODO need avoid-DC-offset logic
+                freq = needed_freq
+                print '--- jump', device.get_freq(), freq
+
+            # TODO write justification here that this won't be dangerously reentrant
+            device.set_freq(freq)
+            # TODO: It would also make sense to switch sources here, if the receiver is more-in-range for the other source.
+            
+            # No need to _update_receiver_validity here because tuning will do that with fewer reconnects.
+        else:
             self.__top._update_receiver_validity(self._key)
 
     def changed_output_type_or_destination(self):

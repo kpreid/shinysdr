@@ -17,6 +17,9 @@
 
 from __future__ import absolute_import, division
 
+from twisted.internet import defer
+from twisted.internet import reactor as the_reactor
+from twisted.internet.task import deferLater
 from twisted.trial import unittest
 from zope.interface import implements  # available via Twisted
 
@@ -83,6 +86,39 @@ class TestTop(unittest.TestCase):
         top.close_all_devices()
         # TODO: Add support for closing non-driver components (making this set [rx,tx,c]).
         self.assertEqual(l, set(['rx', 'tx']))
+    
+    @defer.inlineCallbacks
+    def test_auto_retune(self):
+        f1 = 50e6  # avoid 100e6 because that's a default a couple of places
+        dev = simulate.SimulatedDevice(freq=f1, allow_tuning=True)
+        bandwidth = dev.get_rx_driver().get_output_type().get_sample_rate()
+        top = Top(devices={'s1': dev})
+        (_key, receiver) = top.add_receiver('AM', key='a')
+        
+        # initial state check
+        receiver.set_rec_freq(f1)
+        self.assertEqual(dev.get_freq(), f1)
+        
+        # one "page" up
+        f2 = f1 + bandwidth * 3/4
+        receiver.set_rec_freq(f2)
+        self.assertEqual(dev.get_freq(), f1 + bandwidth)
+        
+        # must wait for tune_delay, which is 0 for simulated source, or it will look still-valid
+        yield deferLater(the_reactor, 0.1, lambda: None)
+        
+        # one "page" down
+        receiver.set_rec_freq(f1)
+        self.assertEqual(dev.get_freq(), f1)
+        
+        yield deferLater(the_reactor, 0.1, lambda: None)
+        
+        # long hop
+        receiver.set_rec_freq(200e6)
+        self.assertEqual(dev.get_freq(), 200e6)
+        
+        # TODO test DC offset gap handling
+        # TODO test "set to value it already has" behavior
 
 
 class ShutdownMockDriver(gr.hier_block2, ExportedState):

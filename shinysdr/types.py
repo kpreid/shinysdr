@@ -142,6 +142,12 @@ class Range(ValueType):
             logarithmic=self.__logarithmic,
             integer=self.__integer and offset % 1 == 0)
     
+    def get_min(self):
+        return self.__mins[0]
+    
+    def get_max(self):
+        return self.__maxes[-1]
+    
     def get_single_point(self):
         '''
         If this Range contains only a single value, return it, else None.
