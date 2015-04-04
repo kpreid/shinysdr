@@ -1,4 +1,4 @@
-# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -35,41 +35,69 @@ def _testType(self, type_obj, good, bad):
         self.assertRaises(ValueError, lambda: type_obj(value))
 
 
-class TestTypes(unittest.TestCase):
+class TestEnum(unittest.TestCase):
     longMessage = True
     
-    def test_Enum_strict(self):
+    def test_strict(self):
         _testType(self,
             Enum({u'a': u'a', u'b': u'b'}, strict=True),
             [(u'a', u'a'), ('a', u'a')],
             [u'c', 999])
 
-    def test_Enum_lenient(self):
+    def test_lenient(self):
         _testType(self,
             Enum({u'a': u'a', u'b': u'b'}, strict=False),
             [(u'a', u'a'), ('a', u'a'), u'c', (999, u'999')],
             [])
 
-    def test_Range_discrete(self):
+class TestRange(unittest.TestCase):
+    longMessage = True
+    
+    def test_discrete(self):
         _testType(self,
             Range([(1, 1), (2, 3), (5, 5)], strict=True, integer=False),
             [(0, 1), 1, (1.49, 1), (1.50, 1), (1.51, 2), 2, 2.5, 3, (4, 3), (4.1, 5), 5, (6, 5)],
             [])
 
-    def test_Range_log_integer(self):
+    def test_log_integer(self):
         _testType(self,
             Range([(1, 32)], strict=True, logarithmic=True, integer=True),
             [(0, 1), 1, 2, 4, 32, (2.0, 2), (2.5, 2), (3.5, 4), (33, 32)],
             [])
 
-    def test_Range_shifted_float(self):
+    def test_shifted_float(self):
         _testType(self,
             Range([(3, 4)], strict=True, logarithmic=False, integer=False).shifted_by(-3),
             [(-0.5, 0), 0, 0.25, 1, (1.5, 1)],
             [])
 
-    def test_Range_shifted_integer(self):
+    def test_shifted_integer(self):
         _testType(self,
             Range([(3, 4)], strict=True, logarithmic=False, integer=True).shifted_by(-3),
             [(-0.5, 0), 0, (0.25, 0), 1, (1.5, 1)],
             [])
+
+    def test_repr(self):
+        self.assertEqual('Range([(1, 2), (3, 4)], strict=True, logarithmic=False, integer=False)',
+                         repr(Range([(1, 2), (3, 4)])))
+        self.assertEqual('Range([(1, 2), (3, 4)], strict=False, logarithmic=False, integer=False)',
+                         repr(Range([(1, 2), (3, 4)], strict=False)))
+        self.assertEqual('Range([(1, 2), (3, 4)], strict=True, logarithmic=True, integer=False)',
+                         repr(Range([(1, 2), (3, 4)], logarithmic=True)))
+        self.assertEqual('Range([(1, 2), (3, 4)], strict=True, logarithmic=False, integer=True)',
+                         repr(Range([(1, 2), (3, 4)], integer=True)))
+
+    def test_equal(self):
+        self.assertEqual(Range([(1, 2), (3, 4)]),
+                         Range([(1, 2), (3, 4)]))
+        self.assertEqual(Range([(1, 2), (3, 4)], integer=True, logarithmic=True),
+                         Range([(1, 2), (3, 4)], integer=True, logarithmic=True))
+        self.assertNotEqual(Range([(1, 2), (3, 4)]),
+                            Range([(0, 2), (3, 4)]))
+        self.assertNotEqual(Range([(1, 2)]),
+                            Range([(1, 2)], integer=True))
+        self.assertNotEqual(Range([(1, 2)]),
+                            Range([(1, 2)], logarithmic=True))
+        self.assertNotEqual(Range([(1, 2)]),
+                            Range([(1, 2)], strict=False))
+        

@@ -1,4 +1,4 @@
-# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -113,6 +113,25 @@ class Range(ValueType):
                 specimen = maxes[i]
         
         return specimen
+    
+    def __repr__(self):
+        return '%s(%r, strict=%r, logarithmic=%r, integer=%r)' % (self.__class__.__name__, zip(self.__mins, self.__maxes), self.__strict, self.__logarithmic, self.__integer)
+    
+    def __eq__(self, other):
+        # pylint: disable=unidiomatic-typecheck
+        return (
+            type(self) == type(other) and
+            self.__mins == other.__mins and
+            self.__maxes == other.__maxes and
+            self.__strict == other.__strict and
+            self.__logarithmic == other.__logarithmic and
+            self.__integer == other.__integer
+        )
+    
+    def __ne__(self, other):
+        return not self.__eq__(other)
+    
+    __hash__ = None
     
     def shifted_by(self, offset):
         mins = self.__mins
