@@ -1,7 +1,7 @@
 # This is a truncated and customized version of the default pylint configuration. The sections pertaining to reporting and other execution behavior have been removed entirely, leaving only the configuration of code style.
 
 [MESSAGES CONTROL]
-disable=locally-disabled,trailing-whitespace,fixme,missing-docstring,protected-access,invalid-name,bad-builtin,super-init-not-called,star-args,no-self-argument,inherit-non-class,no-self-use,unused-argument,too-many-return-statements,too-many-branches,too-many-function-args,too-many-instance-attributes,too-many-locals,bad-continuation
+disable=locally-disabled,trailing-whitespace,fixme,missing-docstring,protected-access,invalid-name,bad-builtin,super-init-not-called,star-args,no-self-argument,inherit-non-class,no-self-use,unused-argument,too-many-return-statements,too-many-branches,too-many-function-args,too-many-instance-attributes,too-many-locals,bad-continuation,unnecessary-lambda
 # why super-init-not-called: false positives
 # why bad-builtin: I reject the premise
 # why star-args: I reject the premise
@@ -13,6 +13,7 @@ disable=locally-disabled,trailing-whitespace,fixme,missing-docstring,protected-a
 # why too-many-return-statements and too-many-branches: useful for parsers
 # why too-many-function-args, too-many-instance-attributes, too-many-locals: we're doing things that just have lots of knobs
 # why bad-continuation: I don't want to do aligned indentation
+# why unnecessary-lambda: false positives, I don't make this mistake
 # TODO: turn on missing-docstring, invalid-name
 
 [BASIC]

@@ -18,8 +18,6 @@
 
 from __future__ import absolute_import, division
 
-from gnuradio import gr
-
 from twisted.trial import unittest
 from zope.interface import implements  # available via Twisted
 
@@ -119,7 +117,7 @@ class TestMergeDevices(unittest.TestCase):
 
 class TestAudioDevice(DeviceTestCase):
     def setUp(self):
-        super(TestAudioDevice, self).setUp(
+        super(TestAudioDevice, self).setUpFor(
             device=AudioDevice(''))
 
     # Test methods provided by DeviceTestCase
@@ -127,7 +125,7 @@ class TestAudioDevice(DeviceTestCase):
 
 class TestFrequencyShift(DeviceTestCase):
     def setUp(self):
-        super(TestFrequencyShift, self).setUp(
+        super(TestFrequencyShift, self).setUpFor(
             device=FrequencyShift(100.0))
 
     # Test methods provided by DeviceTestCase
@@ -135,7 +133,7 @@ class TestFrequencyShift(DeviceTestCase):
 
 class TestPositionedDevice(DeviceTestCase):
     def setUp(self):
-        super(TestPositionedDevice, self).setUp(
+        super(TestPositionedDevice, self).setUpFor(
             device=PositionedDevice(10.0, 20.0))
 
     # Test methods provided by DeviceTestCase

@@ -40,7 +40,6 @@ class IDevice(Interface):
     '''
     The only implementation of IDevice is Device; it is used only as an explicit type.
     '''
-    pass
 
 
 class IRXDriver(Interface):
@@ -126,6 +125,8 @@ class Device(ExportedState):
     For example, if one is using a sound card-based transceiver, then there would be an audio-source, an audio-sink, and a separate interface to the VFO and other hardware controls. These are completely unrelated as far as the operating system and GNU Radio are concerned, but the Device object aggregates all of those so that the user interface can display them as properly related and control them in sync.
     '''
     implements(IDevice)
+    # pylint: disable=no-member
+    # (confused by nullExportedState)
 
     def __init__(self,
             name=None,
@@ -422,7 +423,6 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
     def close(self):
         self.disconnect_all()
         self.__source = None
-        pass
     
     # implement IRXDriver
     def notify_reconnecting_or_restarting(self):
@@ -470,8 +470,6 @@ class _AudioTXDriver(ExportedState, gr.hier_block2):
     
     def close(self):
         self.disconnect_all()
-        self.__source = None
-        pass
     
     def notify_reconnecting_or_restarting(self):
         pass

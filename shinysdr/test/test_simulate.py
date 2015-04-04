@@ -17,15 +17,13 @@
 
 from __future__ import absolute_import, division
 
-from twisted.trial import unittest
-
 from shinysdr.plugins.simulate import SimulatedDevice
 from shinysdr.test.testutil import DeviceTestCase
 
 
 class TestSimulatedDevice(DeviceTestCase):
     def setUp(self):
-        super(TestSimulatedDevice, self).setUp(
+        super(TestSimulatedDevice, self).setUpFor(
             device=SimulatedDevice())
 
     # Test methods provided by DeviceTestCase

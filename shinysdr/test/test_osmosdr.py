@@ -28,7 +28,7 @@ from shinysdr.types import Range
 
 class TestOsmoSDRDeviceCore(DeviceTestCase):
     def setUp(self):
-        super(TestOsmoSDRDeviceCore, self).setUp(
+        super(TestOsmoSDRDeviceCore, self).setUpFor(
             device=OsmoSDRDevice('file=/dev/null,rate=100000,freq=0'))
 
     # Test methods provided by DeviceTestCase

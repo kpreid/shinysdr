@@ -19,7 +19,9 @@
 
 
 # pylint: disable=unused-variable
+# pylint: disable=no-member
 # (unused-variable: placeholder imports)
+# (no-member: pylint is confused by reactor)
 
 
 from __future__ import absolute_import, division

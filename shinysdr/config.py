@@ -48,8 +48,6 @@ __all__ = [
 
 
 class Config(object):
-    # pylint: disable=unnecessary-lambda
-    
     def __init__(self, reactor):
         # public config elements
         self.devices = _ConfigDevices(self)

@@ -42,11 +42,16 @@ from shinysdr.values import nullExportedState
 
 
 class DeviceTestCase(unittest.TestCase):
-    def setUp(self, device=None):
+    def setUp(self):
+        # pylint: disable=unidiomatic-typecheck
         self.__noop = type(self) is DeviceTestCase
-        if device is None and not self.__noop:
+        if not hasattr(self, 'device') and not self.__noop:
             raise Exception('No device specified for DeviceTestCase')
+        
+    def setUpFor(self, device):
+        # pylint: disable=attribute-defined-outside-init
         self.device = device
+        DeviceTestCase.setUp(self)  # neither super nor self call
     
     def tearDown(self):
         if self.__noop: return
