@@ -101,7 +101,15 @@ class _OsmoSDRTuning(object):
         self.__correction_ppm = float(value)
         # Not using the osmosdr feature because changing it at runtime produces glitches like the sample rate got changed; therefore we emulate it ourselves. TODO: I am informed that using set_freq_corr can correct sample-clock error, so we ought to at least use it on init.
         # self.osmosdr_source_block.set_freq_corr(value, 0)
-        self.__set_freq(self.__vfo_cell.get())  
+        self.__set_freq(self.__vfo_cell.get())
+    
+    def calc_usable_bandwidth(self, sample_rate):
+        passband = sample_rate * (3/8)  # 3/4 of + and - halves
+        if self.__profile.dc_offset:
+            epsilon = 1.0  # Range has only inclusive bounds, so we need a nonzero value.
+            return Range([(-passband, -epsilon), (epsilon, passband)])
+        else:
+            return Range([(-passband, passband)])
 
 
 def OsmoSDRDevice(
@@ -200,11 +208,12 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         source.set_dc_offset_mode(self.dc_state, ch)  # no getter, set to known state
         source.set_iq_balance_mode(self.iq_state, ch)  # no getter, set to known state
         
-        # Misc initial state
+        sample_rate = float(source.get_sample_rate())
         self.__signal_type = SignalType(
             kind='IQ',
-            # TODO review why cast
-            sample_rate=int(source.get_sample_rate()))
+            sample_rate=sample_rate)
+        self.__usable_bandwidth = tuning.calc_usable_bandwidth(sample_rate)
+        
         
     def state_def(self, callback):
         super(_OsmoSDRRXDriver, self).state_def(callback)
@@ -218,6 +227,10 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     # implement IRXDriver
     def get_tune_delay(self):
         return 0.25  # TODO: make configurable and/or account for as many factors as we can
+
+    # implement IRXDriver
+    def get_usable_bandwidth(self):
+        return self.__usable_bandwidth
     
     # implement IRXDriver
     def close(self):

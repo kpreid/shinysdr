@@ -20,8 +20,10 @@ from __future__ import absolute_import, division
 from twisted.trial import unittest
 
 from osmosdr import range_t, meta_range_t
-from shinysdr.plugins.osmosdr import OsmoSDRDevice, convert_osmosdr_range
+
+from shinysdr.plugins.osmosdr import OsmoSDRDevice, OsmoSDRProfile, convert_osmosdr_range
 from shinysdr.test.testutil import DeviceTestCase
+from shinysdr.types import Range
 
 
 class TestOsmoSDRDeviceCore(DeviceTestCase):
@@ -34,11 +36,32 @@ class TestOsmoSDRDeviceCore(DeviceTestCase):
 class TestOsmoSDRDeviceMisc(unittest.TestCase):
     def test_initial_zero_freq(self):
         # 100 MHz is a default we use
-        self.assertEqual(100e6, OsmoSDRDevice('file=/dev/null,rate=100000,freq=0').get_freq())
+        self.assertEqual(100e6,
+            OsmoSDRDevice('file=/dev/null,rate=100000,freq=0')
+            .get_freq())
 
     def test_initial_nonzero_freq(self):
-        self.assertEqual(21000, OsmoSDRDevice('file=/dev/null,rate=100000,freq=21000').get_freq())
+        self.assertEqual(21000,
+            OsmoSDRDevice('file=/dev/null,rate=100000,freq=21000')
+            .get_freq())
 
+    def test_bandwidth_contiguous(self):
+        self.assertEqual(Range([(-30000.0, 30000.0)]),
+            OsmoSDRDevice('file=/dev/null,rate=80000', profile=OsmoSDRProfile(
+                dc_offset=False))
+            .get_rx_driver().get_usable_bandwidth())
+
+    def test_bandwidth_discontiguous(self):
+        self.assertEqual(Range([(-30000.0, -1.0), (1.0, 30000.0)]),
+            OsmoSDRDevice('file=/dev/null,rate=80000', profile=OsmoSDRProfile(
+                dc_offset=True))
+            .get_rx_driver().get_usable_bandwidth())
+
+    def test_bandwidth_default(self):
+        self.assertEqual(Range([(-30000.0, 30000.0)]),
+            OsmoSDRDevice('file=/dev/null,rate=80000')
+            .get_rx_driver().get_usable_bandwidth())
+        
 
 class TestOsmoSDRRange(unittest.TestCase):
     def test_convert_simple(self):

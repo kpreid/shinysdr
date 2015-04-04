@@ -26,6 +26,7 @@ from shinysdr.devices import Device, IRXDriver, ITXDriver
 from shinysdr.top import Top
 from shinysdr.plugins import simulate
 from shinysdr.signals import SignalType
+from shinysdr.types import Range
 from shinysdr.values import ExportedState
 
 
@@ -94,15 +95,21 @@ class ShutdownMockDriver(gr.hier_block2, ExportedState):
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1))
         self.__dest = dest
         self.__key = key
-
-    def notify_reconnecting_or_restarting(self):
-        pass
     
     def get_output_type(self):
         return SignalType(kind='IQ', sample_rate=10000)
     
     def get_input_type(self):
         return SignalType(kind='IQ', sample_rate=10000)
-
+    
+    def get_tune_delay(self):
+        return 0.0
+    
+    def get_usable_bandwidth(self):
+        return Range([(-1, 1)])
+    
     def close(self):
         self.__dest.add(self.__key)
+    
+    def notify_reconnecting_or_restarting(self):
+        pass

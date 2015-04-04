@@ -18,6 +18,8 @@
 
 from __future__ import absolute_import, division
 
+from gnuradio import gr
+
 from twisted.trial import unittest
 from zope.interface import implements  # available via Twisted
 
@@ -69,6 +71,9 @@ class _TestRXDriver(ExportedState):
 
     def get_tune_delay(self):
         return 0.0
+
+    def get_usable_bandwidth(self):
+        return Range([(-1, 1)])
     
     def notify_reconnecting_or_restarting(self):
         pass

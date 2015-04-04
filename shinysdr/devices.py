@@ -66,6 +66,13 @@ class IRXDriver(Interface):
         TODO: With the device refactoring, tune delays should come from VFOs not rx drivers.
         '''
     
+    def get_usable_bandwidth():
+        '''
+        Return a Range object which specifies what portion of the bandwidth of the output signal should be conidered usable, in baseband Hz.
+        
+        Usable here means that it is within the filter passband and does not contain spurs (in particular, a DC offset).
+        '''
+    
     def close():
         '''
         Perform a clean shutdown.
@@ -371,10 +378,13 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
             self.__signal_type = SignalType(
                 kind='IQ',
                 sample_rate=self.__sample_rate)
+            # TODO should be configurable
+            self.__usable_bandwidth = Range([(-self.__sample_rate / 2, self.__sample_rate / 2)])
         else:
             self.__signal_type = SignalType(
                 kind='USB',  # TODO obtain correct type from config (or say hamlib)
                 sample_rate=self.__sample_rate)
+            self.__usable_bandwidth = Range([(500, 2500)])
         
         gr.hier_block2.__init__(
             self, type(self).__name__,
@@ -394,19 +404,27 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
             self.connect((self.__source, 1), (combine, 1))
         # TODO: If not quadrature, we always discard the right channel. Is there a use for it? Would summing mono input reduce noise?
     
+    # implement IRXDriver
     @exported_value(ctor=SignalType)
     def get_output_type(self):
         return self.__signal_type
 
+    # implement IRXDriver
     def get_tune_delay(self):
         # TODO: Tune delay should be associated with VFOs (or devices) too
         return 0.0
     
+    # implement IRXDriver
+    def get_usable_bandwidth(self):
+        return self.__usable_bandwidth
+    
+    # implement IRXDriver
     def close(self):
         self.disconnect_all()
         self.__source = None
         pass
     
+    # implement IRXDriver
     def notify_reconnecting_or_restarting(self):
         pass
 

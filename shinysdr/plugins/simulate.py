@@ -127,6 +127,8 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
         self.__signal_type = SignalType(
             kind='IQ',
             sample_rate=rf_rate)
+        self.__usable_bandwidth = Range([(-rf_rate / 2, self.rf_rate / 2)])
+        
     
     def state_def(self, callback):
         super(_SimulatedRXDriver, self).state_def(callback)
@@ -144,6 +146,10 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
     # implement IRXDriver
     def get_tune_delay(self):
         return 0.0
+    
+    # implement IRXDriver
+    def get_usable_bandwidth(self):
+        return self.__usable_bandwidth
     
     # implement IRXDriver
     def close(self):
