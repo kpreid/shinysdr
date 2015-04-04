@@ -21,6 +21,8 @@
 import json
 import StringIO
 
+from gnuradio import gr
+
 from twisted.internet.defer import Deferred
 from twisted.internet.protocol import Protocol
 from twisted.trial import unittest
@@ -30,7 +32,9 @@ from twisted.web.http_headers import Headers
 
 from shinysdr.devices import Device
 from shinysdr.plugins.simulate import SimulatedDevice
+from shinysdr.signals import SignalType
 from shinysdr.top import Top
+from shinysdr.types import Range
 from shinysdr.values import nullExportedState
 
 
@@ -52,21 +56,63 @@ class DeviceTestCase(unittest.TestCase):
         if self.__noop: return
         self.assertIsInstance(self.device, Device)
     
+    def test_rx_output_type(self):
+        if self.__noop: return
+        rx_driver = self.device.get_rx_driver()
+        if rx_driver is nullExportedState: return
+        t = rx_driver.get_output_type()
+        self.assertIsInstance(t, SignalType)
+        self.assertTrue(t.get_sample_rate() > 0)
+        self.assertEquals(t.get_itemsize(), gr.sizeof_gr_complex)  # float not supported yet
+    
+    def test_rx_tune_delay(self):
+        if self.__noop: return
+        rx_driver = self.device.get_rx_driver()
+        if rx_driver is nullExportedState: return
+        self.assertIsInstance(rx_driver.get_tune_delay(), float)
+    
+    def test_rx_usable_bandwidth(self):
+        if self.__noop: return
+        rx_driver = self.device.get_rx_driver()
+        if rx_driver is nullExportedState: return
+        self.assertIsInstance(rx_driver.get_usable_bandwidth(), Range)
+    
     def test_rx_close(self):
         if self.__noop: return
-        if self.device.get_rx_driver() is nullExportedState:
-            return
+        rx_driver = self.device.get_rx_driver()
+        if rx_driver is nullExportedState: return
         # No specific expectations, but it shouldn't throw.
         self.device.get_rx_driver().close()
     
+    def test_rx_notify(self):
+        if self.__noop: return
+        rx_driver = self.device.get_rx_driver()
+        if rx_driver is nullExportedState: return
+        # No specific expectations, but it shouldn't throw.
+        rx_driver.notify_reconnecting_or_restarting()
+    
+    def test_tx_input_type(self):
+        if self.__noop: return
+        tx_driver = self.device.get_tx_driver()
+        if tx_driver is nullExportedState: return
+        t = tx_driver.get_input_type()
+        self.assertIsInstance(t, SignalType)
+        self.assertTrue(t.get_sample_rate() > 0)
+        self.assertEquals(t.get_itemsize(), gr.sizeof_gr_complex)  # float not supported yet
+    
     def test_tx_close(self):
         if self.__noop: return
-        if self.device.get_tx_driver() is nullExportedState:
-            return
+        tx_driver = self.device.get_tx_driver()
+        if tx_driver is nullExportedState: return
         # No specific expectations, but it shouldn't throw.
-        self.device.get_tx_driver().close()
+        tx_driver.close()
     
-    # TODO more tests
+    def test_tx_notify(self):
+        if self.__noop: return
+        tx_driver = self.device.get_tx_driver()
+        if tx_driver is nullExportedState: return
+        # No specific expectations, but it shouldn't throw.
+        tx_driver.notify_reconnecting_or_restarting()
 
 
 class DemodulatorTester(object):
