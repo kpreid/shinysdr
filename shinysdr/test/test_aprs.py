@@ -26,6 +26,7 @@ from datetime import datetime
 from twisted.trial import unittest
 
 from shinysdr.plugins.aprs import APRSInformation, APRSStation, APRSMessage, Capabilities, ObjectItemReport, Messaging, Position, Status, Symbol, Telemetry, Timestamp, Velocity, parse_tnc2
+from shinysdr.telemetry import TelemetryItem, empty_track
 
 
 # January 2, 2000, 12:30:30 + 1 microsecond
@@ -234,12 +235,15 @@ class TestAPRSStation(unittest.TestCase):
     def test_address(self):
         self.assertEqual(self.s.get_address(), 'TEST')
     
-    def test_position(self):
-        self.assertEqual(None, self.s.get_position())
+    def test_track(self):
+        self.assertEqual(empty_track, self.s.get_track())
         self.s.receive(self.__message([
             Position(31, -42)
         ]))
-        self.assertEqual((31, -42, _dummy_receive_time), self.s.get_position())
+        self.assertEqual(empty_track._replace(
+            latitude=TelemetryItem(31, _dummy_receive_time),
+            longitude=TelemetryItem(-42, _dummy_receive_time),
+        ), self.s.get_track())
         
     def test_symbol(self):
         self.assertEqual(None, self.s.get_symbol())
