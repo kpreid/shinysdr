@@ -40,8 +40,9 @@ define(['./values', './events', './network'], function (values, events, network)
     // Queue size management
     // The queue should be large to avoid underruns due to bursty processing/delivery.
     // The queue should be small to minimize latency.
-    var targetQueueSize = Math.round(0.2 * sampleRate);
-    var queueHistory = new Int32Array(20);
+    var targetQueueSize = Math.round(0.2 * sampleRate);  // units: sample count
+    // Circular buffer of queue fullness history.
+    var queueHistory = new Int32Array(200);
     var queueHistoryPtr = 0;
     
     // Size of data chunks we get from network and the audio context wants, used for tuning our margins
@@ -61,6 +62,17 @@ define(['./values', './events', './network'], function (values, events, network)
     var started = false;
     var startStopTickle = false;
     
+    //var averageSkew = 0;
+    
+    // local synth for debugging glitches
+    //var fakePhase = 0;
+    //function fake(arr) {
+    //  for (var i = 0; i < arr.length; i++) {
+    //    arr[i] = Math.sin(fakePhase) * 0.1;
+    //    fakePhase += (Math.PI * 2) * (600 / sampleRate);
+    //  }
+    //}
+    
     // User-facing status display
     // TODO should be faceted read-only when exported
     var errorTime = 0;
@@ -72,12 +84,14 @@ define(['./values', './events', './network'], function (values, events, network)
       buffered: new values.LocalReadCell(new values.Range([[0, 2]], false, false), 0),
       target: new values.LocalReadCell(String, ''),  // TODO should be numeric w/ unit
       error: new values.LocalReadCell(new values.Notice(true), ''),
+      //averageSkew: new values.LocalReadCell(Number, 0),
     });
     function updateStatus() {
       var buffered = (queueSampleCount + audioStreamChunk.length - chunkIndex) / sampleRate;
       var target = targetQueueSize / sampleRate;
       info.buffered._update(buffered / target);
       info.target._update(target.toFixed(2) + ' s');
+      //info.averageSkew._update(averageSkew);
       if (errorTime < Date.now()) {
         info.error._update('');
       }
@@ -129,7 +143,7 @@ define(['./values', './events', './network'], function (values, events, network)
           lose('bad WS data');
           return;
         }
-
+        
         if (numAudioChannels === null) {
           lose('Missing number-of-channels message');
         }
@@ -156,6 +170,9 @@ define(['./values', './events', './network'], function (values, events, network)
       var l = abuf.getChannelData(0);
       var r = abuf.getChannelData(1);
       var rightChannelIndex = numAudioChannels - 1;
+      
+      var totalOverrun = 0;
+      
       var j;
       for (j = 0;
            chunkIndex < audioStreamChunk.length && j < abuf.length;
@@ -180,10 +197,8 @@ define(['./values', './events', './network'], function (values, events, network)
         }
         if (queueSampleCount > targetQueueSize) {
           var drop = Math.ceil((queueSampleCount - targetQueueSize) / 1024);
-          if (drop > 12) {  // ignore small clock-skew-ish amounts of overrun
-            error('Overrun; dropping ' + drop + ' samples.');
-          }
           j = Math.max(0, j - drop);
+          totalOverrun += drop;
         }
       }
       var underrun = abuf.length - j;
@@ -197,6 +212,12 @@ define(['./values', './events', './network'], function (values, events, network)
         error('Underrun by ' + prevUnderrun + ' samples.');
       }
       prevUnderrun = underrun;
+
+      if (totalOverrun > 50) {  // ignore small clock-skew-ish amounts of overrun
+        error('Overrun; dropping ' + totalOverrun + ' samples.');
+      }
+      //var totalSkew = totalOverrun - underrun;
+      //averageSkew = averageSkew * 15/16 + totalSkew * 1/16;
 
       if (underrun > 0 && !startStopTickle) {
         // Consider stopping the audio callback
