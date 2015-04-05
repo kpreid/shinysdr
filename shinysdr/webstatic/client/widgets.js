@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./values', './events', './widget'], function (values, events, widget) {
+define(['./values', './events', './widget', './gltools'], function (values, events, widget, gltools) {
   'use strict';
   
   var Cell = values.Cell;
@@ -614,35 +614,6 @@ define(['./values', './events', './widget'], function (values, events, widget) {
   }
   widgets.MonitorParameters = MonitorParameters;
 
-  var GLtools = {
-    getGL: function getGL(config, canvas, options) {
-      var useWebGL = config.clientState.opengl.depend(config.rebuildMe);
-      return !useWebGL ? null : canvas.getContext('webgl', options) || canvas.getContext('experimental-webgl', options);
-    },
-    buildProgram: function buildProgram(gl, vertexShaderSource, fragmentShaderSource) {
-      function compileShader(type, source) {
-        var shader = gl.createShader(type);
-        gl.shaderSource(shader, source);
-        gl.compileShader(shader);
-        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-          throw new Error(gl.getShaderInfoLog(shader));
-        }
-        return shader;
-      }
-      var vertexShader = compileShader(gl.VERTEX_SHADER, vertexShaderSource);
-      var fragmentShader = compileShader(gl.FRAGMENT_SHADER, fragmentShaderSource);
-      var program = gl.createProgram();
-      gl.attachShader(program, vertexShader);
-      gl.attachShader(program, fragmentShader);
-      gl.linkProgram(program);
-      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        throw new Error(gl.getProgramInfoLog(program));
-      }
-      gl.useProgram(program);
-      return program;
-    }
-  }
-  
   // Abstract
   function CanvasSpectrumWidget(config, buildGL, build2D) {
     var self = this;
@@ -663,7 +634,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       antialias: false,
       preserveDrawingBuffer: false
     };
-    var gl = GLtools.getGL(config, canvas, glOptions);
+    var gl = gltools.getGL(config, canvas, glOptions);
     var ctx2d = canvas.getContext('2d');
     
     var dataHook = function () {}, drawOuter = function () {};
@@ -694,7 +665,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       function initContext() {
         var att_position;
         function buildProgram(vertexShaderSource, fragmentShaderSource) {
-          var program = GLtools.buildProgram(gl, vertexShaderSource, fragmentShaderSource);
+          var program = gltools.buildProgram(gl, vertexShaderSource, fragmentShaderSource);
           att_position = gl.getAttribLocation(program, 'position');
           gl.enableVertexAttribArray(att_position);
           return program;
@@ -768,7 +739,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
     var bufferToDraw = null;
     var lastLength = NaN;
     
-    var gl = GLtools.getGL(config, canvas, {
+    var gl = gltools.getGL(config, canvas, {
       alpha: false,
       depth: true,
       stencil: false,
@@ -803,7 +774,7 @@ define(['./values', './events', './widget'], function (values, events, widget) {
       + 'void main(void) {\n'
       + '  gl_FragColor = vec4(v_time, 1.0 - v_time, 0.0, 1.0);\n'
       + '}\n';
-    var program = GLtools.buildProgram(gl, vertexShaderSource, fragmentShaderSource);
+    var program = gltools.buildProgram(gl, vertexShaderSource, fragmentShaderSource);
     var att_time = gl.getAttribLocation(program, 'time');
     var att_signal = gl.getAttribLocation(program, 'signal');
     gl.enableVertexAttribArray(att_time);
