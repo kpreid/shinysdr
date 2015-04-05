@@ -18,11 +18,11 @@
 'use strict';
 
 describe('maps', function () {
-  describe('Map', function () {
+  describe('GeoMap', function () {
     // TODO more tests
     it('exists', function () {
       expect(typeof shinysdr.maps).toBe('object');
-      expect(typeof shinysdr.maps.Map).toBe('function');
+      expect(typeof shinysdr.maps.GeoMap).toBe('function');
     });
   });
 });

@@ -29,7 +29,7 @@ define(['./values'], function (values) {
   }
   exports.projectedPoint = projectedPoint;
 
-  function Map(element, scheduler, db, radioCell, index) {
+  function GeoMap(element, scheduler, db, radioCell, index) {
     var baseLayer = new OpenLayers.Layer('Blank', {
       isBaseLayer: true,
       displayInLayerSwitcher: false,  // only one, not useful
@@ -319,7 +319,7 @@ define(['./values'], function (values) {
       pluginFunc(db, scheduler, addModeLayer, addIndexLayer);
     });
   }
-  exports.Map = Map;
+  exports.GeoMap = GeoMap;
   
   var plugins = [];
   exports.register = function(pluginFunc) {

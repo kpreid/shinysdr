@@ -193,7 +193,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
         document.body.classList.remove('main-not-yet-run');
       
         // Map (all geographic data)
-        var map = new maps.Map(document.getElementById('map'), scheduler, freqDB, remoteCell, index);
+        var map = new maps.GeoMap(document.getElementById('map'), scheduler, freqDB, remoteCell, index);
       
         // globals for debugging / interactive programming purposes only
         window.DfreqDB = freqDB;
