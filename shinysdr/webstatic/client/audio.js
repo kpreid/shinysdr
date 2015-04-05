@@ -58,6 +58,10 @@ define(['./values', './events', './network'], function (values, events, network)
     var chunkIndex = 0;
     var prevUnderrun = 0;
     
+    // Placeholder sample value
+    var fillL = 0;
+    var fillR = 0;
+    
     // Flags for start/stop handling
     var started = false;
     var startStopTickle = false;
@@ -201,11 +205,17 @@ define(['./values', './events', './network'], function (values, events, network)
           totalOverrun += drop;
         }
       }
+      if (j > 0) {
+        fillL = l[j-1];
+        fillR = r[j-1];
+      }
       var underrun = outputChunkSize - j;
-      for (; j < outputChunkSize; j++) {
+      if (underrun > 0) {
         // Fill any underrun
-        l[j] = 0;
-        r[j] = 0;
+        for (; j < outputChunkSize; j++) {
+          l[j] = fillL;
+          r[j] = fillR;
+        }
       }
       if (prevUnderrun != 0 && underrun != rxBufferSize) {
         // Report underrun, but only if it's not just due to the stream stopping
@@ -236,7 +246,9 @@ define(['./values', './events', './network'], function (values, events, network)
       startStopTickle = false;
       if (queue.length > 0 || audioStreamChunk !== EMPTY_CHUNK) {
         if (!started) {
-          // Note: empirically, it's not actually _necessary_ to avoid redundant connect or disconnect operations, but I want to avoid possibly causing extra work (e.g. if the implementation prepares for a flow graph change even if it doesn't do anything).
+          // Avoid unnecessary click because previous fill value is not being played.
+          fillL = fillR = 0;
+          
           started = true;
           ascr.connect(audio.destination);
         }
