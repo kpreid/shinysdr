@@ -166,7 +166,7 @@ define(['./values', './events', './network'], function (values, events, network)
     var ascr = audio.createScriptProcessor(rxBufferSize, 0, 2);
     ascr.onaudioprocess = function audioCallback(event) {
       var abuf = event.outputBuffer;
-      outputChunkSizeSample = abuf.length;
+      var outputChunkSize = outputChunkSizeSample = abuf.length;
       var l = abuf.getChannelData(0);
       var r = abuf.getChannelData(1);
       var rightChannelIndex = numAudioChannels - 1;
@@ -175,12 +175,12 @@ define(['./values', './events', './network'], function (values, events, network)
       
       var j;
       for (j = 0;
-           chunkIndex < audioStreamChunk.length && j < abuf.length;
+           chunkIndex < audioStreamChunk.length && j < outputChunkSize;
            chunkIndex += numAudioChannels, j++) {
         l[j] = audioStreamChunk[chunkIndex];
         r[j] = audioStreamChunk[chunkIndex + rightChannelIndex];
       }
-      while (j < abuf.length) {
+      while (j < outputChunkSize) {
         // Get next chunk
         // TODO: shift() is expensive
         audioStreamChunk = queue.shift() || EMPTY_CHUNK;
@@ -190,7 +190,7 @@ define(['./values', './events', './network'], function (values, events, network)
           break;
         }
         for (;
-             chunkIndex < audioStreamChunk.length && j < abuf.length;
+             chunkIndex < audioStreamChunk.length && j < outputChunkSize;
              chunkIndex += numAudioChannels, j++) {
           l[j] = audioStreamChunk[chunkIndex];
           r[j] = audioStreamChunk[chunkIndex + rightChannelIndex];
@@ -201,8 +201,8 @@ define(['./values', './events', './network'], function (values, events, network)
           totalOverrun += drop;
         }
       }
-      var underrun = abuf.length - j;
-      for (; j < abuf.length; j++) {
+      var underrun = outputChunkSize - j;
+      for (; j < outputChunkSize; j++) {
         // Fill any underrun
         l[j] = 0;
         r[j] = 0;
