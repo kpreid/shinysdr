@@ -26,6 +26,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
   
   var any = values.any;
   var ConstantCell = values.ConstantCell;
+  var createWidgetExt = widget.createWidgetExt;
   var LocalCell = values.LocalCell;
   var makeBlock = values.makeBlock;
   var StorageCell = values.StorageCell;
@@ -189,12 +190,12 @@ define(['./values', './events', './database', './network', './maps', './widget',
         // generic control UI widget tree
         widget.createWidgets(everything, context, document);
         
+        // Map (all geographic data)
+        widget.createWidgetExt(context, maps.GeoMap, document.getElementById('map'), remoteCell);
+      
         // Now that the widgets are live, show them
         document.body.classList.remove('main-not-yet-run');
-      
-        // Map (all geographic data)
-        var map = new maps.GeoMap(document.getElementById('map'), scheduler, freqDB, remoteCell, index);
-      
+        
         // globals for debugging / interactive programming purposes only
         window.DfreqDB = freqDB;
         window.DwritableDB = writableDB;

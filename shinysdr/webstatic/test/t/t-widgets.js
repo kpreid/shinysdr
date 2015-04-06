@@ -1,4 +1,4 @@
-// Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -18,10 +18,14 @@
 'use strict';
 
 describe('widgets', function () {
+  var ConstantCell = shinysdr.values.ConstantCell;
+  var makeBlock = shinysdr.values.makeBlock;
+  
   var scheduler, widget;
   beforeEach(function () {
     scheduler = new shinysdr.events.Scheduler(window);
     widget = undefined;
+    sessionStorage.clear();
   });
   afterEach(function () {
     if (widget && widget.element && widget.element.parentNode) {
@@ -45,10 +49,14 @@ describe('widgets', function () {
   }
   
   function mockWidgetConfig(element, cell) {
-    var element = document.createElement('div');
+    if (!element) element = document.createElement('div');
+    document.body.appendChild(element);
     function rebuildMe() { throw new Error('mock rebuildMe not implemented'); }
     rebuildMe.scheduler = scheduler;
+    var index = new shinysdr.values.Index(scheduler, cell);
     return {
+      storage: new shinysdr.values.StorageNamespace(sessionStorage, Math.random() + '.'),
+      freqDB: new shinysdr.database.Table('foo', false),
       element: element,
       target: cell,
       scheduler: scheduler,
@@ -59,8 +67,11 @@ describe('widgets', function () {
       }),
       boundedFn: function(f) { return f; },
       rebuildMe: rebuildMe,
+      index: index,
       context: {
-        widgets: {}
+        widgets: {},
+        scheduler: scheduler,
+        index: index
       }
     };
   }
@@ -115,6 +126,39 @@ describe('widgets', function () {
       widget = new shinysdr.widgets.PickBlock(config);
       expect(Object.getPrototypeOf(widget)).toBe(TestWidget.prototype);
     });
+  });
+  
+  // TODO: This is in a different module and arguably ought to be in a separate test file. It's here because it's a widget and has use for the widget test glue.
+  describe('GeoMap', function () {
+    function makeStubTarget() {
+      // TODO stop needing this boilerplate, somehow.
+      return new ConstantCell(shinysdr.values.block, makeBlock({
+        source: new ConstantCell(shinysdr.values.block, makeBlock({
+          freq: new ConstantCell(Number, 0),
+          rx_driver: new ConstantCell(shinysdr.values.block, makeBlock({
+            output_type: new ConstantCell(shinysdr.values.any, {sample_rate: 1})
+          }))
+        })),
+        receivers: new ConstantCell(shinysdr.values.block, makeBlock({
+        }))
+      }));
+    }
+    
+    it('exists', function () {
+      expect(typeof shinysdr.maps).toBe('object');
+      expect(typeof shinysdr.maps.GeoMap).toBe('function');
+    });
+    
+    it('should be successfully created', function () {
+      var cell = makeStubTarget();
+      var config = mockWidgetConfig(null, cell);
+      widget = new shinysdr.maps.GeoMap(config);
+      expect(config.storage.getItem('viewCenterLat')).toBe('0');  // TODO: test against public interface -- of some sort -- rather than storage
+      expect(config.storage.getItem('viewCenterLon')).toBe('0');
+      expect(config.storage.getItem('viewZoom')).toBe('1');
+    });
+    
+    // TODO Check reading initial position from PositionedDevice
   });
 });
 

@@ -21,7 +21,6 @@ define(['maps', 'widgets'], function (maps, widgets) {
   
   var BlockSet = widgets.BlockSet;
   var Block = widgets.Block;
-  var projectedPoint = maps.projectedPoint;
   
   var exports = {};
   
@@ -51,42 +50,15 @@ define(['maps', 'widgets'], function (maps, widgets) {
   // TODO: Better widget-plugin system so we're not modifying should-be-static tables
   widgets['interface:shinysdr.plugins.mode_s.IAircraft'] = AircraftWidget;
   
-  function addAircraftMapLayer(db, scheduler, addModeLayer, addIndexLayer) {
-    addIndexLayer('Aircraft', 'shinysdr.plugins.mode_s.IAircraft', {
-      rendererOptions: {yOrdering: true, zIndexing: true},
-      styleMap: new OpenLayers.StyleMap({
-        'default':new OpenLayers.Style({
-          label: '${call}\n${ident}\n${altitude}',
-
-          // TODO: Get some of these pieces from maps module to have a common style
-          fontColor: 'black',
-          fontSize: '.8em',
-          fontFamily: 'sans-serif',
-          labelYOffset: 14,
-          labelOutlineColor: 'white',
-          labelOutlineWidth: 3,
-
-          pointRadius: 6,
-          fillColor: "#00ee99",
-          fillOpacity: 0.4, 
-          strokeColor: "#00ee99"
-        })
-      })
-    }, function(aircraft, layer) {
-      var trackCell = aircraft.track;
-      
-      var markFeature = new OpenLayers.Feature.Vector();
-      maps.addTrackFeaturesToLayer(scheduler, layer, trackCell, [markFeature]);
-      
-      function updateMark() {
-        if (!layer.interested()) return;
-        markFeature.attributes.call = aircraft.call.depend(updateMark);
-        markFeature.attributes.ident = aircraft.ident.depend(updateMark);
-        markFeature.attributes.altitude = trackCell.depend(updateMark).altitude.value;
-        layer.drawFeature(markFeature);
+  function addAircraftMapLayer(db, scheduler, index, addLayer, addModeLayer) {
+    addLayer('Aircraft', {
+      featuresCell: index.implementing('shinysdr.plugins.mode_s.IAircraft'),
+      featureRenderer: function renderAircraft(aircraft, dirty) {
+        return maps.renderTrackFeature(dirty, aircraft.track,
+          'c=' + aircraft.call.depend(dirty) +
+          ' id=' + aircraft.ident.depend(dirty) +
+          ' alt=' + trackCell.depend(dirty).altitude.value);
       }
-      updateMark.scheduler = scheduler;
-      updateMark();
     });
   }
   

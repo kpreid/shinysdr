@@ -268,6 +268,7 @@ define(['./events'], function (events) {
   
   // Presents a Storage (localStorage) entry as a cell
   // Warning: Only one cell should exist per unique key, or notifications may not occur; also, creating cells repeatedly will leak.
+  // TODO: Fix that by interning cells.
   function StorageCell(storage, type, key) {
     key = String(key);
 

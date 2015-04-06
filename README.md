@@ -75,7 +75,6 @@ You can do both, if you want.
 4. Either run the script `fetch-js-deps.sh`, or copy or symlink the following items into the `shinysdr/deps/` directory:
 
     * `jasmine/` ([Jasmine](https://github.com/pivotal/jasmine/) 1.3.1 or later)
-    * `openlayers/` ([OpenLayers](http://openlayers.org/) 2.13.1 or later, excluding OpenLayers 3 which is not backward compatible)
     * `require.js` ([RequireJS](http://requirejs.org/) 2.1.8 or later)
 
     [TODO: Integrate fetch-js-deps or equivalent effects into setup.py.]

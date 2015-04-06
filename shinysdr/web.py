@@ -744,8 +744,6 @@ class WebService(Service):
                     os.path.dirname(__file__), 'deps/jasmine/lib/jasmine-core/', name)))
         
         client = _reify(serverRoot, 'client')
-        client.putChild('openlayers', static.File(os.path.join(
-            os.path.dirname(__file__), 'deps/openlayers')))
         client.putChild('require.js', static.File(os.path.join(
             os.path.dirname(__file__), 'deps/require.js')))
         

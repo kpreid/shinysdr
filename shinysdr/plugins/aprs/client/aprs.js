@@ -21,7 +21,6 @@ define(['widgets', 'maps'], function (widgets, maps) {
   
   var Block = widgets.Block;
   var BlockSet = widgets.BlockSet;
-  var projectedPoint = maps.projectedPoint;
   
   var exports = {};
   
@@ -54,45 +53,15 @@ define(['widgets', 'maps'], function (widgets, maps) {
   // TODO: Better widget-plugin system so we're not modifying should-be-static tables
   widgets['interface:shinysdr.plugins.aprs.IAPRSStation'] = APRSStationWidget;
   
-  function addAPRSMapLayer(db, scheduler, addModeLayer, addIndexLayer) {
-    addIndexLayer('APRS', 'shinysdr.plugins.aprs.IAPRSStation', {
-      rendererOptions: {yOrdering: true, zIndexing: true},
-      styleMap: new OpenLayers.StyleMap({
-        'default':new OpenLayers.Style({
-          label: '${label}\n${status}\n${symbol}',
-
-          // TODO: Get some of these pieces from maps module to have a common style
-          fontColor: 'black',
-          fontSize: '.8em',
-          fontFamily: 'sans-serif',
-          labelYOffset: 14,
-          labelOutlineColor: 'white',
-          labelOutlineWidth: 3,
-
-          pointRadius: 6,
-          fillColor: "#0099ee",
-          fillOpacity: 0.4, 
-          strokeColor: "#0099ee"
-        })
-      })
-    }, function(station, layer) {
-      var trackCell = station.track;
-      
-      var address = station.address.get();
-      var markFeature = new OpenLayers.Feature.Vector(new OpenLayers.Geometry.Point(0, 0), {
-        label: address
-      });
-      
-      maps.addTrackFeaturesToLayer(scheduler, layer, trackCell, [markFeature]);
-      
-      function updateMark() {
-        if (!layer.interested()) return;
-        markFeature.attributes.status = station.status.depend(updateMark);
-        markFeature.attributes.symbol = station.symbol.depend(updateMark);
-        layer.drawFeature(markFeature);
+  function addAPRSMapLayer(db, scheduler, index, addLayer, addModeLayer) {
+    addLayer('APRS', {
+      featuresCell: index.implementing('shinysdr.plugins.aprs.IAPRSStation'),
+      featureRenderer: function renderStation(station, dirty) {
+        return maps.renderTrackFeature(dirty, station.track,
+          'a=' + station.address.depend(dirty) +
+          ' st=' + station.status.depend(dirty) +
+          ' sy=' + station.symbol.depend(dirty));
       }
-      updateMark.scheduler = scheduler;
-      updateMark();
     });
   }
   

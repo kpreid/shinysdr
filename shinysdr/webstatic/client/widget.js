@@ -187,6 +187,7 @@ define(['./values', './events'], function (values, events) {
         widget = new widgetCtor(config);
       } catch (error) {
         console.error('Error creating widget: ', error);
+        console.log(error.stack);
         widget = new ErrorWidget(config, widgetCtor, error);
       }
       

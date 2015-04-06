@@ -702,10 +702,7 @@ define(['./values', './events', './widget', './gltools'], function (values, even
       }
       
       initContext();
-      canvas.addEventListener('webglcontextlost', function (event) {
-        event.preventDefault();
-      }, false);
-      canvas.addEventListener('webglcontextrestored', initContext, false);
+      gltools.handleContextLoss(canvas, initContext);
     }.call(this)); else if (ctx2d) (function () {
       var drawImpl = build2D(ctx2d, draw);
       dataHook = drawImpl.newData.bind(drawImpl);
@@ -797,10 +794,7 @@ define(['./values', './events', './widget', './gltools'], function (values, even
       0);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     
-    canvas.addEventListener('webglcontextlost', function (event) {
-      event.preventDefault();
-    }, false);
-    canvas.addEventListener('webglcontextrestored', config.rebuildMe, false);
+    gltools.handleContextLoss(canvas, config.rebuildMe);
     
     // dragging
     function drag(event) {
@@ -2647,7 +2641,7 @@ define(['./values', './events', './widget', './gltools'], function (values, even
           input.step = (type.integer && !type.logarithmic) ? 1 : 'any';
         }
 
-        input.addEventListener('change', function(event) {
+        input.addEventListener('input', function(event) {
           if (type instanceof values.Range) {
             target.set(type.round(input.valueAsNumber, 0));
           } else {

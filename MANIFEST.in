@@ -8,6 +8,3 @@ graft shinysdr/plugins
 # Tight includes to avoid packaging cruft. Don't forget to update!
 include shinysdr/deps/*.js
 include shinysdr/deps/jasmine/lib/jasmine-core/jasmine*
-include shinysdr/deps/openlayers/*.js
-graft   shinysdr/deps/openlayers/img
-graft   shinysdr/deps/openlayers/theme

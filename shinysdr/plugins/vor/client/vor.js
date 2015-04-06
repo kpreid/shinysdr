@@ -19,8 +19,6 @@
 define(['maps', 'widgets'], function (maps, widgets) {
   'use strict';
   
-  var projectedPoint = maps.projectedPoint;
-  
   var exports = {};
   
   var TAU = Math.PI * 2;
@@ -85,58 +83,43 @@ define(['maps', 'widgets'], function (maps, widgets) {
   // TODO: Better widget-plugin system so we're not modifying should-be-static tables
   widgets.VOR$Angle = Angle;
   
-  function addVORMapLayer(db, scheduler, addModeLayer) {
-    addModeLayer('VOR', function(receiver, layer) {
-      var angleCell = receiver.demodulator.get().angle;  // demodulator change will be handled by addModeLayer
+  function addVORMapLayer(db, scheduler, index, addLayer, addModeLayer) {
+    var lengthInDegrees = 0.5;
+    
+    addModeLayer('VOR', function(receiver, dirty) {
+      var angleCell = receiver.demodulator.depend(dirty).angle;  // demodulator change will be handled by addModeLayer
       if (!angleCell) {
         console.warn('addVORMapLayer saw a non-VOR demodulator');
-        return;  // TODO not-yet-investigated bug
+        return {};  // TODO not-yet-investigated bug
       }
-      var freqCell = receiver.rec_freq;
-      var lengthInDegrees = 0.5;
+      var freq = receiver.rec_freq.depend(dirty);
       
-      var records = db.inBand(freqCell.get(), freqCell.get()).type('channel').getAll();
+      var records = db.inBand(freq, freq).type('channel').getAll();
       var record = records[0];
       if (!record) {
-        console.log('VOR map: No record match', freqCell.get());
-        return;
+        console.log('VOR map: No record match', freq);
+        return {};
       }
       if (!record.location) {
         console.log('VOR map: Record has no location', record.label);
-        return;
+        return {};
       }
       var lat = record.location[0];
       var lon = record.location[1];
       // TODO update location if db/record/freq changes
-      
-      var origin = projectedPoint(lat, lon);
-      var lengthProjected = projectedPoint(lat + lengthInDegrees, lon).y - origin.y;
-      
-      var ray = new OpenLayers.Geometry.LineString([origin]);
-      var rayFeature = new OpenLayers.Feature.Vector(ray, {}, {
-        strokeDashstyle: 'dot'
-      });
-      layer.addFeatures(rayFeature);
-      
-      var prevEndPoint;
-      function update() {
-        if (!layer.interested()) return;
-        var angle = angleCell.depend(update);
-        // TODO: Need to apply an offset of the VOR station's difference from geographic north (which we need to put in the DB)
-        var sin = Math.sin(angle);
+
+      var angle = angleCell.depend(dirty);
+      return {
+        label: '',
+        // TODO: better "blank" approach
+        iconURL: 'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22/%3E',
+        position: [lat, lon],
         // The following assumes that the projection in use is conformal, and that the length is small compared to the curvature.
-        var end = new OpenLayers.Geometry.Point(
-          origin.x + Math.sin(angle) * lengthProjected,
-          origin.y + Math.cos(angle) * lengthProjected);
-        ray.addPoint(end);
-        if (prevEndPoint) {
-          ray.removePoint(prevEndPoint);
-        }
-        prevEndPoint = end;
-        layer.drawFeature(rayFeature);
+        line: [[
+          lat + Math.cos(angle) * lengthInDegrees,
+          lon + Math.sin(angle) * lengthInDegrees
+        ]]
       }
-      update.scheduler = scheduler;
-      update();
     });
   }
   

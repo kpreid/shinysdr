@@ -190,6 +190,42 @@ h2 input {
   height: 100%;
 }
 
+/* map */
+.map-container {
+  display: flex;
+  flex-direction: column;
+  position: relative;  /* abs position root */
+}
+.map-canvas {
+  flex: 1 1;
+  height: 100%;
+}
+.map-coordinate-control {
+  position: absolute;
+  left: 1em;
+  top: 1em;
+  display: table;
+}
+.map-coordinate-control input:not(:focus):not(:hover) {
+  border-color: transparent;
+  background: none;
+  text-shadow: 1px 1px 0px white, -1px 1px 0px white, 1px -1px 0px white, -1px -1px 0px white;
+}
+.map-layer-switcher {
+  position: absolute;
+  right: 1em;
+  top: 1em;
+  display: table;
+  padding: .2em;
+  text-shadow: 1px 1px 0px white, -1px 1px 0px white, 1px -1px 0px white, -1px -1px 0px white;
+}
+.map-layer-switcher[open], .map-layer-switcher summary:hover, .map-layer-switcher summary:focus {
+  background: white;
+}
+.map-layer-switcher label {
+  display: block;
+}
+
 .widget-ErrorWidget {
   margin: 0;
   border: .3em solid red;

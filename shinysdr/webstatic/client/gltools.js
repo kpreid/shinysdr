@@ -48,5 +48,65 @@ define(function () {
     return program;
   };
   
+  exports.handleContextLoss = function handleContextLoss(canvas, callback) {
+    canvas.addEventListener('webglcontextlost', function (event) {
+      event.preventDefault();
+    }, false);
+    canvas.addEventListener('webglcontextrestored', callback, false);
+  };
+  
+  // Manage a float vertex attribute array and compute the indices.
+  // layoutEntries is an array of { name: <shader's attribute name>, components: <integer> }.
+  function AttributeLayout(gl, program, layoutEntries) {
+    this._gl = gl;
+    this._BPE = Float32Array.BYTES_PER_ELEMENT;
+    this._elementsPerVertex = 0;
+    this.offsets = Object.create(null);
+    this._complete = [];
+    layoutEntries.forEach(function (entry) {
+      var attribLocation = gl.getAttribLocation(program, entry.name);
+      if (attribLocation === -1) {
+        throw new Error('attribute ' + JSON.stringify(entry.name) + ' is not defined or otherwise invalid');
+      }
+      
+      var offset = this._elementsPerVertex;
+      this._elementsPerVertex += entry.components;
+
+      this.offsets[entry.name] = offset;
+      this._complete.push({
+        attrib: attribLocation,
+        components: entry.components,
+        byteOffset: offset * this._BPE
+      });
+    }, this);
+    Object.freeze(this.offsets);
+    Object.freeze(this);
+  };
+  AttributeLayout.prototype.elementsPerVertex = function () {
+    return this._elementsPerVertex;
+  };
+  // the relevant buffer should be already bound
+  AttributeLayout.prototype.attrib = function () {
+    var gl = this._gl;
+    var stride = this._elementsPerVertex * this._BPE;
+    this._complete.forEach(function (layoutItem) {
+      gl.enableVertexAttribArray(layoutItem.attrib);
+      gl.vertexAttribPointer(
+        layoutItem.attrib,
+        layoutItem.components,
+        gl.FLOAT,
+        false,
+        stride,
+        layoutItem.byteOffset);
+    });
+  };
+  AttributeLayout.prototype.unattrib = function () {
+    var gl = this._gl;
+    this._complete.forEach(function (layoutItem) {
+      gl.disableVertexAttribArray(layoutItem.attrib);
+    }, this);
+  };
+  exports.AttributeLayout = AttributeLayout;
+  
   return Object.freeze(exports);
 });
