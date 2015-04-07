@@ -52,7 +52,7 @@ Installation procedure:
 1. Install the following software on the server machine:
 
     * [Python](http://www.python.org/) 2.7 or later compatible version.
-    * [GNU Radio](http://gnuradio.org/) 3.7.1 or later.
+    * [GNU Radio](http://gnuradio.org/) 3.7.4 or later.
     * [`gr-osmosdr`](http://sdr.osmocom.org/trac/wiki/GrOsmoSDR), and any applicable hardware drivers such as `librtlsdr`. (Plugins may be written to use other RF sources, but the only built-in support is for `gr-osmosdr`.)
 
 2. Optionally install these:
