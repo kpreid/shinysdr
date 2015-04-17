@@ -113,7 +113,8 @@ class APRSDemodulator(gr.hier_block2, ExportedState):
             self.__information = APRSInformation()
         
         def receive(line):
-            log.msg(u'APRS: %s' % (line,))
+            # %r here provides robustness against arbitrary bytes.
+            log.msg(u'APRS: %r' % (line,))
             message = parse_tnc2(line, time.time())
             log.msg(u'   -> %s' % (message,))
             self.__information.receive(message)

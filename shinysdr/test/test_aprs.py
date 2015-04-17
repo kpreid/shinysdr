@@ -58,6 +58,14 @@ class TestAPRSParser(unittest.TestCase):
                 errors=['Could not parse TNC2'],
                 comment='BOOM'))
     
+    def test_not_ascii(self):
+        # TODO: Obtain an actual sample non-ASCII APRS message for testing. This one is just made up because previous code crashed without logging the problematic message.
+        self.__check_parsed(
+            'FOO>BAR:>a\xB0b',
+            facts=[Status(u'a\uFFFDb')],
+            errors=[],
+            comment='')
+    
     def test_capabilities(self):
         self.__check_parsed(
             'KW0RCA-2>APJI40,N6ACK-10*,WIDE2-1:<IGATE,MSG_CNT=1,LOC_CNT=47',
@@ -184,7 +192,7 @@ class TestAPRSParser(unittest.TestCase):
         self.__check_parsed(
             'FOO>BAR:T#001,002',
             facts=[],
-            errors=["Telemetry did not parse: 'T#001,002'"],
+            errors=["Telemetry did not parse: u'T#001,002'"],
             comment='')
     
     def test_telemetry_value_format_error(self):
@@ -194,7 +202,7 @@ class TestAPRSParser(unittest.TestCase):
             Telemetry(channel=2, value=2),
             Telemetry(channel=4, value=4),
             Telemetry(channel=5, value=5)],
-            errors=["Telemetry channel 3 did not parse: 'bang'"],
+            errors=["Telemetry channel 3 did not parse: u'bang'"],
             comment='')
 
 

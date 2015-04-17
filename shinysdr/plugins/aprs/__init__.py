@@ -129,9 +129,9 @@ class APRSStation(ExportedState):
                 )
             elif isinstance(fact, Status):
                 # TODO: Empirically, not always ASCII. Move this implicit decoding off into parse stages.
-                self.__status = unicode(fact.text)  # always ASCII
+                self.__status = unicode(fact.text)
             elif isinstance(fact, Symbol):
-                self.__symbol = unicode(fact.id)  # always ASCII
+                self.__symbol = unicode(fact.id)
             else:
                 # TODO: Warn somewhere in this case (recognized by parser but not here)
                 pass
@@ -229,6 +229,9 @@ Velocity = namedtuple('Velocity', [
 
 def parse_tnc2(line, receive_time):
     '''Parse "TNC2 text format" APRS messages.'''
+    if not isinstance(line, unicode):
+        # TODO: Is there a more-often-than-not used encoding beyond ASCII, that we should use here?
+        line = unicode(line, 'ascii', 'replace')
     facts = []
     errors = []
     match = re.match(r'^([^:>,]+?)>([^:>,]+)((?:,[^:>]+)*):(.*?)$', line)
