@@ -1,4 +1,4 @@
-// Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -227,7 +227,9 @@ define(['./values', './events'], function (values, events) {
   var minRetryTime = 1000;
   var maxRetryTime = 20000;
   var backoff = 1.05;
-  function retryingConnection(wsURL, callback) {
+  function retryingConnection(wsURL, connectionStateCallback, callback) {
+    if (!connectionStateCallback) connectionStateCallback = function () {};
+
     var timeout = minRetryTime;
     var succeeded = false;
     function go() {
@@ -235,12 +237,15 @@ define(['./values', './events'], function (values, events) {
       ws.addEventListener('open', function (event) {
         succeeded = true;
         timeout = minRetryTime;
+        connectionStateCallback('connected');
       }, true);
       ws.addEventListener('close', function (event) {
         if (succeeded) {
           console.error('Lost WebSocket connection', wsURL, '- reason given:', event.reason);
+          connectionStateCallback('disconnected');
         } else {
           timeout = Math.min(maxRetryTime, timeout * backoff);
+          connectionStateCallback('failed-connect');
         }
         succeeded = false;
         setTimeout(go, timeout);
@@ -290,13 +295,16 @@ define(['./values', './events'], function (values, events) {
     return [cell, cell._update];
   }
   
-  function connect(rootURL) {
+  // connectionStateCallback is an optional function of 2 arguments, the first being a enum-ish string identifying the state/problem/notice and the second being details.
+  function connect(rootURL, connectionStateCallback) {
+    if (!connectionStateCallback) connectionStateCallback = function () {};
+    
     var rootCell = new ReadCell(null, null, values.block, identity);
     
     // TODO: URL contents are no longer actually used. URL should be used to derive state stream URL
     //externalGet(rootURL, 'text', function(text) { ... });
 
-    retryingConnection(rootURL, function(ws) {
+    retryingConnection(rootURL, connectionStateCallback, function(ws) {
       ws.binaryType = 'arraybuffer';
 
       var idMap = Object.create(null);

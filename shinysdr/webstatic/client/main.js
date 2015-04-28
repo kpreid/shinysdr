@@ -82,14 +82,33 @@ define(['./values', './events', './database', './network', './maps', './widget',
   function connectRadio() {
     log(0.5, 'Connecting to server…');
     var firstConnection = true;
-    connected.scheduler = scheduler;
-    var remoteCell = network.connect(network.convertToWebSocketURL('radio'));
-    remoteCell.n.listen(connected);
+    var firstFailure = true;
+    initialStateReady.scheduler = scheduler;
+    var remoteCell = network.connect(network.convertToWebSocketURL('radio'), connectionCallback);
+    remoteCell.n.listen(initialStateReady);
 
     var audioState = audio.connectAudio(network.convertToWebSocketURL('audio'));  // TODO get url from server
 
-    function connected() {
-      var radio = remoteCell.depend(connected);
+    function connectionCallback(state) {
+      switch (state) {
+        case 'connected':
+        if (firstConnection) {
+          log(0.25, 'Downloading state…');
+        }
+          break;
+        case 'disconnected':
+          break;
+        case 'failed-connect':
+          if (firstConnection && firstFailure) {
+            firstFailure = false;
+            log(0, 'WebSocket connection failed (retrying).\nIf this persists, you may have a firewall/proxy problem.');
+          }
+          break;
+      }
+    }
+
+    function initialStateReady() {
+      var radio = remoteCell.depend(initialStateReady);
       
       // Get mode from frequency DB
       function bandMode(freq) {
