@@ -73,6 +73,9 @@ define(['./values', './events', './database', './network', './maps', './widget',
     })
     requirejs(Array.prototype.slice.call(pluginIndex.js), function (plugins) {
       connectRadio();
+    }, function (err) {
+      log(0, 'Failed to load plugins.\n  ' + err.requireModules + '\n  ' + err.requireType);
+      // TODO: There's no reason we can't continue without the plugin. The problem is that right now there's no good way to report the failure, and silent failures are bad.
     });
   });
   
