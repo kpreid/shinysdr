@@ -40,6 +40,11 @@ html.subwindowed-page, .subwindowed-page body {
   
   overflow: auto;
 }
+#loading-information-dialog progress {
+  margin: 0;
+  box-sizing: border-box;
+  width: 100%;
+}
 .main-not-yet-run.subwindowed > shinysdr-subwindow {
   display: none;
 }

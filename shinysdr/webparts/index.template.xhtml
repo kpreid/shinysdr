@@ -1,5 +1,5 @@
 <!--
-  Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+  Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
   
   This file is part of ShinySDR.
   
@@ -29,10 +29,12 @@
 </head><body class="subwindowed main-not-yet-run">
 
 <dialog open="" id="loading-information-dialog">
+  <progress id="loading-information-progress" value="0"></progress>
   <pre id="loading-information-text">JS not loaded</pre>
 </dialog>
 <script>
   document.getElementById('loading-information-text').textContent = 'Loading client…';
+  document.getElementById('loading-information-progress').value = 0.01;
 </script>
 
 <shinysdr-subwindow id="section-spectrum" class="stretchy" visible="true">

@@ -1,4 +1,4 @@
-// Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -18,10 +18,12 @@
 define(['./values', './events', './database', './network', './maps', './widget', './widgets', './audio', './window-manager'], function (values, events, database, network, maps, widget, widgets, audio, windowManager) {
   'use strict';
   
-  function log(msg) {
+  function log(progressAmount, msg) {
     console.log(msg);
     document.getElementById('loading-information-text')
         .appendChild(document.createTextNode('\n' + msg));
+    var progress = document.getElementById('loading-information-progress');
+    progress.value += (1 - progress.value) * progressAmount;
   }
   
   var any = values.any;
@@ -60,7 +62,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
   var clientBlockCell = new ConstantCell(values.block, clientState);
   
   // TODO get url from server
-  log('Loading plugins…');
+  log(0.4, 'Loading plugins…');
   network.externalGet('/client/plugin-index.json', 'text', function gotPluginIndex(jsonstr) {
     var pluginIndex = JSON.parse(jsonstr);
     Array.prototype.forEach.call(pluginIndex.css, function (cssUrl) {
@@ -75,7 +77,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
   });
   
   function connectRadio() {
-    log('Connecting to server…');
+    log(0.5, 'Connecting to server…');
     var firstConnection = true;
     connected.scheduler = scheduler;
     var remoteCell = network.connect(network.convertToWebSocketURL('radio'));
@@ -193,8 +195,16 @@ define(['./values', './events', './database', './network', './maps', './widget',
         // Map (all geographic data)
         widget.createWidgetExt(context, maps.GeoMap, document.getElementById('map'), remoteCell);
       
-        // Now that the widgets are live, show them
-        document.body.classList.remove('main-not-yet-run');
+        // Now that the widgets are live, show the full UI, with a tiny pause for progress display completion and in case of last-minute jank
+        log(1.0, 'Ready.');
+        setTimeout(function () {
+          document.body.classList.remove('main-not-yet-run');
+          
+          // kludge to trigger js relayout effects. Needed here because main-not-yet-run hides ui.
+          var resize = document.createEvent('Event');
+          resize.initEvent('resize', false, false);
+          window.dispatchEvent(resize);
+        }, 100);
         
         // globals for debugging / interactive programming purposes only
         window.DfreqDB = freqDB;
