@@ -135,6 +135,11 @@ define(['./values'], function (values) {
     window.dispatchEvent(resize);
   }
   
+  if (!document.registerElement) {
+    console.warn('document.registerElement not supported; window management unavailable');
+    return;
+  }
+  
   // Using a custom element allows us to hook insertion/removal.
   var Subwindow_prototype = Object.create(HTMLElement.prototype);
   Subwindow_prototype.attachedCallback = enroll;
