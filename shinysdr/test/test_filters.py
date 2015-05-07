@@ -27,7 +27,7 @@ from twisted.trial import unittest
 from gnuradio import blocks
 from gnuradio import gr
 
-from shinysdr.blocks import MultistageChannelFilter
+from shinysdr.filters import MultistageChannelFilter
 
 
 class TestMultistageChannelFilter(unittest.TestCase):

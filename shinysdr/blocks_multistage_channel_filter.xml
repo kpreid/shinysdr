@@ -3,8 +3,8 @@
     <name>Multistage Channel Filter</name>
     <key>shinysdr_MultistageChannelFilter</key>
     <category>Filters</category>
-    <import>import shinysdr.blocks</import>
-    <make>shinysdr.blocks.MultistageChannelFilter(input_rate=$input_rate, output_rate=$output_rate, cutoff_freq=$cutoff_freq, transition_width=$transition_width, center_freq=$center_freq)</make>
+    <import>import shinysdr.filters</import>
+    <make>shinysdr.filters.MultistageChannelFilter(input_rate=$input_rate, output_rate=$output_rate, cutoff_freq=$cutoff_freq, transition_width=$transition_width, center_freq=$center_freq)</make>
     <callback>set_cutoff_freq($cutoff_freq)</callback>
     <callback>set_transition_width($transition_width)</callback>
     <callback>set_center_freq($center_freq)</callback>

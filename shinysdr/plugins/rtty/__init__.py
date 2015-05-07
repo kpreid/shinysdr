@@ -32,7 +32,7 @@ from gnuradio.filter import firdes
 from gnuradio import gr
 import numpy
 
-from shinysdr.blocks import MultistageChannelFilter
+from shinysdr.filters import MultistageChannelFilter
 from shinysdr.modes import ModeDef, IDemodulator, IModulator
 from shinysdr.signals import SignalType, no_signal
 from shinysdr.types import Range

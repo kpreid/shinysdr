@@ -33,7 +33,8 @@ from gnuradio import analog
 from gnuradio import gr
 from gnuradio import blocks
 
-from shinysdr.blocks import make_sink_to_process_stdin, test_subprocess, make_resampler
+from shinysdr.blocks import make_sink_to_process_stdin, test_subprocess
+from shinysdr.filters import make_resampler
 from shinysdr.modes import ModeDef, IDemodulator
 from shinysdr.plugins.basic_demod import NFMDemodulator
 from shinysdr.plugins.aprs import APRSInformation, parse_tnc2

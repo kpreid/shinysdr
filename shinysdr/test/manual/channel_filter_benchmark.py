@@ -28,7 +28,7 @@ import time
 from gnuradio import blocks
 from gnuradio import gr
 
-from shinysdr.blocks import MultistageChannelFilter
+from shinysdr.filters import MultistageChannelFilter
 
 
 def test_one_filter(**kwargs):

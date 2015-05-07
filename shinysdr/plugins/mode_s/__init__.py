@@ -32,7 +32,7 @@ from zope.interface import Interface, implements
 from gnuradio import gr
 from gnuradio import gru
 
-from shinysdr.blocks import MultistageChannelFilter
+from shinysdr.filters import MultistageChannelFilter
 from shinysdr.modes import ModeDef, IDemodulator
 from shinysdr.signals import no_signal
 from shinysdr.telemetry import TelemetryItem, Track, empty_track

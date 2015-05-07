@@ -27,7 +27,8 @@ from gnuradio.filter import rational_resampler
 
 import math
 
-from shinysdr.blocks import rotator_inc, make_resampler
+from shinysdr.blocks import rotator_inc
+from shinysdr.filters import make_resampler
 from shinysdr.math import dB, todB
 from shinysdr.modes import IModulator, lookup_mode
 from shinysdr.signals import SignalType

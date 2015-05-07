@@ -34,11 +34,12 @@ from gnuradio import audio
 from gnuradio import blocks
 from gnuradio import gr
 
-from shinysdr.types import Enum, Notice
-from shinysdr.values import ExportedState, CollectionState, exported_value, setter, BlockCell, IWritableCollection
-from shinysdr.blocks import make_resampler, MonitorSink, RecursiveLockBlockMixin, Context
+from shinysdr.blocks import MonitorSink, RecursiveLockBlockMixin, Context
+from shinysdr.filters import make_resampler
 from shinysdr.receiver import Receiver
 from shinysdr.signals import SignalType
+from shinysdr.types import Enum, Notice
+from shinysdr.values import ExportedState, CollectionState, exported_value, setter, BlockCell, IWritableCollection
 
 
 CLIENT_AUDIO_DEVICE = 'client'

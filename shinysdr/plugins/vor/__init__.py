@@ -32,7 +32,7 @@ from gnuradio.filter import firdes
 import math
 import os.path
 
-from shinysdr.blocks import make_resampler
+from shinysdr.filters import make_resampler
 from shinysdr.modes import ModeDef, IDemodulator, IModulator
 from shinysdr.plugins.basic_demod import SimpleAudioDemodulator, design_lofi_audio_filter
 from shinysdr.signals import SignalType
