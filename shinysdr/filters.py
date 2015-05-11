@@ -21,6 +21,7 @@ GNU Radio blocks which automatically compute appropriate filter designs.
 
 from __future__ import absolute_import, division
 
+from collections import namedtuple
 from fractions import gcd
 
 from gnuradio import gr
@@ -38,6 +39,278 @@ __all__ = []  # appended later
 _use_rational_resampler = True
 
 
+class _MultistageChannelFilterPlan(object):
+    '''
+    Description of a MultistageChannelFilter without any instantiation. The analogue of
+    an array of taps for a single-stage filter.
+    '''
+    
+    def __init__(self, stage_designs, freq_xlate_stage, cutoff_freq, transition_width, taps=None):
+        self.__stage_designs = stage_designs
+        self.__taps = taps if taps is not None else [None for _ in stage_designs]
+        self.__freq_xlate_stage = freq_xlate_stage
+        self.__cutoff_freq = float(cutoff_freq)
+        self.__transition_width = float(transition_width)
+    
+    def get_stage_designs(self):
+        return self.__stage_designs
+    
+    def get_stage_designs_and_taps(self):
+        return zip(self.__stage_designs, self.__taps)
+    
+    def get_freq_xlate_stage(self):
+        return self.__freq_xlate_stage
+
+    def get_cutoff_freq(self):
+        return self.__cutoff_freq
+    
+    def get_transition_width(self):
+        return self.__transition_width
+    
+    def replace(self, cutoff_freq=None, transition_width=None):
+        if cutoff_freq is None:
+            cutoff_freq = self.__cutoff_freq
+        if transition_width is None:
+            transition_width = self.__transition_width
+        assert cutoff_freq > 0
+        assert transition_width > 0
+        return _MultistageChannelFilterPlan(
+            stage_designs=self.__stage_designs,
+            taps=[
+                design.calculate_taps(
+                    final_cutoff=cutoff_freq,
+                    final_transition=transition_width)
+                for design in self.__stage_designs],
+            freq_xlate_stage=self.__freq_xlate_stage,
+            cutoff_freq=cutoff_freq,
+            transition_width=transition_width)
+
+
+class _FilterPlanStage(object):
+    def __init__(self, input_rate, output_rate):
+        self.input_rate = input_rate
+        self.output_rate = output_rate
+
+
+class _FilterPlanCommentStage(_FilterPlanStage):
+    def __init__(self, comment, rate):
+        self.comment = comment
+        _FilterPlanStage.__init__(self,
+            input_rate=rate,
+            output_rate=rate)
+    
+    def create_block(self, taps):
+        return None
+    
+    def calculate_taps(self, final_cutoff, final_transition):
+        return None
+    
+    def explain(self):
+        return self.comment
+
+
+class _FilterPlanXlateStage(_FilterPlanStage):
+    def __init__(self, rate, **kwargs):
+        _FilterPlanStage.__init__(self,
+            input_rate=rate,
+            output_rate=rate,
+            **kwargs)
+    
+    def create_block(self, taps):
+        return grfilter.freq_xlating_fir_filter_ccc(
+            1,
+            taps,
+            0,
+            self.input_rate)
+    
+    def calculate_taps(self, final_cutoff, final_transition):
+        return [1]
+    
+    def explain(self):
+        return 'freq xlation only'
+
+
+class _FilterPlanDecimatingStage(_FilterPlanStage):
+    def __init__(self, freq_xlating, decimation, **kwargs):
+        self.freq_xlating = freq_xlating
+        self.decimation = decimation
+        _FilterPlanStage.__init__(self,
+            **kwargs)
+    
+    def create_block(self, taps):
+        assert taps is not None
+        if self.freq_xlating:
+            return grfilter.freq_xlating_fir_filter_ccc(
+                self.decimation,
+                taps,
+                0,
+                self.input_rate)
+        else:
+            if len(taps) > 10:
+                return grfilter.fft_filter_ccc(self.decimation, taps, 1)
+            else:
+                return grfilter.fir_filter_ccc(self.decimation, taps)
+    
+    def calculate_taps(self, final_cutoff, final_transition):
+        # TODO check for collision with user filter
+        user_inner = final_cutoff - final_transition / 2
+        limit = self.output_rate / 2
+        return firdes.low_pass(
+            1.0,
+            self.input_rate,
+            (user_inner + limit) / 2,
+            limit - user_inner,
+            firdes.WIN_HAMMING)
+    
+    def explain(self):
+        fx = 'freq xlate and ' if self.freq_xlating else ''
+        return '%sdecimate by %i' % (fx, self.decimation,)
+
+
+class _FilterPlanFinalDecimatingStage(_FilterPlanDecimatingStage):
+    def __init__(self, **kwargs):
+        _FilterPlanDecimatingStage.__init__(self, **kwargs)
+
+    def calculate_taps(self, final_cutoff, final_transition):
+        return firdes.low_pass(
+            1.0,
+            self.input_rate,
+            final_cutoff,
+            final_transition,
+            firdes.WIN_HAMMING)
+    
+    def explain(self):
+        return 'final filter and ' + super(_FilterPlanFinalDecimatingStage, self).explain()
+
+
+class _FilterPlanRationalResamplerStage(_FilterPlanStage):
+    def __init__(self, decimation, interpolation, **kwargs):
+        self.decimation = decimation
+        self.interpolation = interpolation
+        _FilterPlanStage.__init__(self,
+            **kwargs)
+
+    def create_block(self, taps):
+        assert taps is not None
+        return grfilter.rational_resampler_base_ccf(
+            interpolation=self.interpolation,
+            decimation=self.decimation,
+            taps=taps)
+    
+    def calculate_taps(self, final_cutoff, final_transition):
+        # TODO: This might be internal, and we eventually want to integrate it in the plan anyway
+        return rational_resampler.design_filter(
+            interpolation=self.interpolation,
+            decimation=self.decimation,
+            fractional_bw=0.4)
+    
+    def explain(self):
+        return 'rational_resampler by %s/%s (stage rates %s/%s)' % (self.interpolation, self.decimation, self.output_rate, self.input_rate)
+
+
+class _FilterPlanPfbResamplerStage(_FilterPlanStage):
+    def __init__(self, resample_rate, **kwargs):
+        self.resample_rate = resample_rate
+        _FilterPlanStage.__init__(self,
+            **kwargs)
+    
+    def create_block(self, taps):
+        return pfb.arb_resampler_ccf(self.resample_rate)  # TODO explicitly compute taps
+    
+    def calculate_taps(self, final_cutoff, final_transition):
+        return None
+    
+    def explain(self):
+        return 'arb_resampler %s/%s = %s' % (self.output_rate, self.input_rate, float(self.output_rate) / self.input_rate)
+
+
+def _make_filter_plan_1(input_rate, output_rate):
+    assert input_rate > 0
+    assert output_rate > 0
+    
+    total_decimation = max(1, int(input_rate // output_rate))
+    
+    using_rational_resampler = _use_rational_resampler and input_rate % 1 == 0 and output_rate % 1 == 0
+    if using_rational_resampler:
+        # If using rational resampler, don't decimate to the point that we get a fractional rate, if possible.
+        input_rate = int(input_rate)
+        output_rate = int(output_rate)
+        if input_rate > output_rate:
+            total_decimation = input_rate // small_factor_at_least(input_rate, output_rate)
+        # print input_rate / total_decimation, total_decimation, input_rate, output_rate, input_rate // gcd(input_rate, output_rate)
+        # TODO: Don't re-factorize unnecessarily
+    
+    stage_decimations = factorize(total_decimation)
+    stage_decimations.reverse()
+    
+    # loop variables
+    stage_designs = []
+    stage_input_rate = input_rate
+    last_index = len(stage_decimations) - 1
+    
+    if len(stage_decimations) == 0:
+        # interpolation or nothing -- don't put it in the stages
+        freq_xlate_stage = len(stage_designs)
+        stage_designs.append(_FilterPlanXlateStage(
+            rate=stage_input_rate))
+    else:
+        # decimation
+        for i, stage_decimation in enumerate(stage_decimations):
+            next_rate = stage_input_rate / stage_decimation
+        
+            stage_type = _FilterPlanFinalDecimatingStage if i == last_index else _FilterPlanDecimatingStage
+            if i == 0:
+                freq_xlate_stage = len(stage_designs)
+                stage_designs.append(stage_type(
+                    freq_xlating=True,
+                    decimation=stage_decimation,
+                    input_rate=stage_input_rate,
+                    output_rate=next_rate))
+            else:
+                stage_designs.append(stage_type(
+                    freq_xlating=False,
+                    decimation=stage_decimation,
+                    input_rate=stage_input_rate,
+                    output_rate=next_rate))
+        
+            stage_input_rate = next_rate
+    
+    # final connection and resampling
+    if stage_input_rate == output_rate:
+        # exact multiple, no fractional resampling needed
+        stage_designs.append(_FilterPlanCommentStage(
+            comment='No final resampler stage.',
+            rate=output_rate))
+    else:
+        # TODO: systematically combine resampler with final filter stage
+        if using_rational_resampler:
+            if stage_input_rate % 1 != 0:
+                raise Exception("shouldn't happen", stage_input_rate)
+            stage_input_rate = int(stage_input_rate)  # because of float division above
+            common = gcd(output_rate, stage_input_rate)
+            interpolation = output_rate // common
+            decimation = stage_input_rate // common
+            stage_designs.append(_FilterPlanRationalResamplerStage(
+                interpolation=interpolation,
+                decimation=decimation,
+                input_rate=stage_input_rate,
+                output_rate=output_rate))
+        else:
+            # TODO: cache filter computation as optfir is used and takes a noticeable time
+            stage_designs.append(_FilterPlanPfbResamplerStage(
+                resample_rate=float(output_rate) / stage_input_rate,
+                input_rate=stage_input_rate,
+                output_rate=output_rate))
+    
+    plan = _MultistageChannelFilterPlan(
+        stage_designs=stage_designs,
+        freq_xlate_stage=freq_xlate_stage,
+        cutoff_freq=-1,
+        transition_width=-1)
+    
+    return plan
+
+
 class MultistageChannelFilter(gr.hier_block2):
     '''
     Provides frequency translation, low-pass filtering, and arbitrary sample rate conversion.
@@ -51,15 +324,21 @@ class MultistageChannelFilter(gr.hier_block2):
             cutoff_freq=0,
             transition_width=0,
             center_freq=0):
-        assert input_rate > 0
-        assert output_rate > 0
-        assert cutoff_freq > 0
-        assert transition_width > 0
         # cf. firdes.sanity_check_1f (which is private)
         # TODO better errors for other cases
+        cutoff_freq = float(cutoff_freq)
+        # TODO coerce output_rate to integer-or-float
         if cutoff_freq > output_rate / 2:
             # early check for better errors since our cascaded filters might be cryptically nonsense
             raise ValueError('cutoff_freq (%s) is too high for output_rate (%s)' % (cutoff_freq, output_rate))
+    
+        plan = _make_filter_plan_1(
+            input_rate=input_rate,
+            output_rate=output_rate)
+        plan = plan.replace(
+            cutoff_freq=cutoff_freq,
+            transition_width=transition_width)
+        self.__plan = plan
         
         gr.hier_block2.__init__(
             self, name,
@@ -67,151 +346,74 @@ class MultistageChannelFilter(gr.hier_block2):
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
         )
         
-        self.cutoff_freq = cutoff_freq
-        self.transition_width = transition_width
-        
-        total_decimation = max(1, int(input_rate // output_rate))
-        
-        using_rational_resampler = _use_rational_resampler and input_rate % 1 == 0 and output_rate % 1 == 0
-        if using_rational_resampler:
-            # If using rational resampler, don't decimate to the point that we get a fractional rate, if possible.
-            input_rate = int(input_rate)
-            output_rate = int(output_rate)
-            if input_rate > output_rate:
-                total_decimation = input_rate // small_factor_at_least(input_rate, output_rate)
-            # print input_rate / total_decimation, total_decimation, input_rate, output_rate, input_rate // gcd(input_rate, output_rate)
-            # TODO: Don't re-factorize unnecessarily
-        
-        stage_decimations = factorize(total_decimation)
-        stage_decimations.reverse()
-        
         self.stages = []
         
-        # loop variables
         prev_block = self
-        stage_input_rate = input_rate
-        last_index = len(stage_decimations) - 1
-        
-        if len(stage_decimations) == 0:
-            # interpolation or nothing -- don't put it in the stages
-            # TODO: consider using rotator block instead (has different API)
-            self.freq_filter_block = grfilter.freq_xlating_fir_filter_ccc(
-                1,
-                [1],
-                center_freq,
-                stage_input_rate)
-            self.connect(prev_block, self.freq_filter_block)
-            prev_block = self.freq_filter_block
-        else:
-            # decimation
-            for i, stage_decimation in enumerate(stage_decimations):
-                next_rate = stage_input_rate / stage_decimation
+        for stage_design, taps in plan.get_stage_designs_and_taps():
+            stage_filter = stage_design.create_block(taps)
             
-                if i == 0:
-                    stage_filter = grfilter.freq_xlating_fir_filter_ccc(
-                        stage_decimation,
-                        [0],  # placeholder
-                        center_freq,
-                        stage_input_rate)
-                    self.freq_filter_block = stage_filter
-                else:
-                    taps = self.__stage_taps(i == last_index, stage_input_rate, next_rate)
-                    if len(taps) > 10:
-                        stage_filter = grfilter.fft_filter_ccc(stage_decimation, taps, 1)
-                    else:
-                        stage_filter = grfilter.fir_filter_ccc(stage_decimation, taps)
-            
-                self.stages.append((stage_filter, stage_input_rate, next_rate))
-            
+            self.stages.append(stage_filter)
+            if stage_filter is not None:
                 self.connect(prev_block, stage_filter)
                 prev_block = stage_filter
-                stage_input_rate = next_rate
+
+        # loop takes care of all connections but the n+1th
+        self.connect(prev_block, self)
         
-        # final connection and resampling
-        if stage_input_rate == output_rate:
-            # exact multiple, no fractional resampling needed
-            self.connect(prev_block, self)
-            self.__resampler_explanation = 'No final resampler stage.'
-        else:
-            # TODO: systematically combine resampler with final filter stage
-            if using_rational_resampler:
-                if stage_input_rate % 1 != 0:
-                    raise Exception("shouldn't happen", stage_input_rate)
-                stage_input_rate = int(stage_input_rate)  # because of float division above
-                common = gcd(output_rate, stage_input_rate)
-                interpolation = output_rate // common
-                decimation = stage_input_rate // common
-                self.__resampler_explanation = 'rational_resampler by %s/%s (stage rates %s/%s)' % (interpolation, decimation, output_rate, stage_input_rate)
-                resampler = rational_resampler.rational_resampler_ccf(
-                    interpolation=interpolation,
-                    decimation=decimation)
-            else:
-                # TODO: cache filter computation as optfir is used and takes a noticeable time
-                self.__resampler_explanation = 'arb_resampler %s/%s = %s' % (output_rate, stage_input_rate, float(output_rate) / stage_input_rate)
-                resampler = pfb.arb_resampler_ccf(float(output_rate) / stage_input_rate)
-            self.connect(
-                prev_block,
-                resampler,
-                self)
-        
-        # TODO: Shouldn't be necessary since we compute the taps in the loop above...
-        self.__do_taps()
+        self.freq_filter_block = self.stages[plan.get_freq_xlate_stage()]
+        assert self.freq_filter_block is not None
+        self.freq_filter_block.set_center_freq(center_freq)
     
     def __do_taps(self):
         '''Re-assign taps for all stages.'''
-        last_index = len(self.stages) - 1
-        for i, (stage_filter, stage_input_rate, stage_output_rate) in enumerate(self.stages):
-            stage_filter.set_taps(self.__stage_taps(i == last_index, stage_input_rate, stage_output_rate))
-    
-    def __stage_taps(self, is_last, stage_input_rate, stage_output_rate):
-        '''Compute taps for one stage.'''
-        cutoff_freq = self.cutoff_freq
-        transition_width = self.transition_width
-        if is_last:
-            return firdes.low_pass(
-                1.0,
-                stage_input_rate,
-                cutoff_freq,
-                transition_width,
-                firdes.WIN_HAMMING)
-        else:
-            # TODO check for collision with user filter
-            user_inner = cutoff_freq - transition_width / 2
-            limit = stage_output_rate / 2
-            return firdes.low_pass(
-                1.0,
-                stage_input_rate,
-                (user_inner + limit) / 2,
-                limit - user_inner,
-                firdes.WIN_HAMMING)
+        # TODO: sanity check types:
+        #   plan has matching stage types
+        #   plan has same decimations
+        for stage_filter, (stage_design, taps) in zip(self.stages, self.__plan.get_stage_designs_and_taps()):
+            if hasattr(stage_filter, 'set_taps'):
+                stage_filter.set_taps(taps)
     
     def explain(self):
         '''Return a description of the filter design.'''
-        if len(self.stages) > 0:
-            s = '%s stages from %i to %i' % (len(self.stages), self.stages[0][1], self.stages[-1][2])
-        else:
-            s = 'interpolation only'
-        for stage_filter, stage_input_rate, stage_output_rate in self.stages:
-            s += '\n  decimate by %i using %3i taps (%i) in %s' % (
-                stage_input_rate // stage_output_rate,
-                len(stage_filter.taps()),
-                stage_output_rate * len(stage_filter.taps()),
-                type(stage_filter).__name__)
-        s += '\n' + self.__resampler_explanation
+        stages = self.stages
+        stage_designs = self.__plan.get_stage_designs()
+        s = '%s stages from %i to %i' % (
+            # TODO use polymorphism instead
+            sum(1 for stage_design in stage_designs if not isinstance(stage_design, _FilterPlanCommentStage)),
+            stage_designs[0].input_rate,
+            stage_designs[-1].output_rate)
+        for (stage_filter, stage_design) in zip(stages, stage_designs):
+            # TODO once we have pfb converted, stop introspecting on the filter objects and start just using the data from the design
+            if hasattr(stage_filter, 'taps'):
+                ntaps = len(stage_filter.taps()) if hasattr(stage_filter, 'taps') else 0
+                s += '\n  %s using %3i taps (%i) in %s' % (
+                    stage_design.explain(),
+                    ntaps,
+                    stage_design.output_rate * ntaps,
+                    type(stage_filter).__name__,)
+            elif stage_filter is not None:
+                s += '\n  %s using %s' % (
+                    stage_design.explain(),
+                    type(stage_filter).__name__,)
+            else:
+                s += '\n  %s' % (
+                    stage_design.explain(),)
         return s
     
     def get_cutoff_freq(self):
-        return self.cutoff_freq
+        return self.__plan.get_cutoff_freq()
     
     def set_cutoff_freq(self, value):
-        self.cutoff_freq = float(value)
+        value = float(value)
+        self.__plan = self.__plan.replace(cutoff_freq=value)
         self.__do_taps()
     
     def get_transition_width(self):
-        return self.transition_width
+        return self.__plan.get_transition_width()
     
     def set_transition_width(self, value):
-        self.transition_width = float(value)
+        value = float(value)
+        self.__plan = self.__plan.replace(transition_width=value)
         self.__do_taps()
     
     def get_center_freq(self):
