@@ -187,7 +187,10 @@ class MultistageChannelFilter(gr.hier_block2):
     
     def explain(self):
         '''Return a description of the filter design.'''
-        s = '%s stages from %i to %i' % (len(self.stages), self.stages[0][1], self.stages[-1][2])
+        if len(self.stages) > 0:
+            s = '%s stages from %i to %i' % (len(self.stages), self.stages[0][1], self.stages[-1][2])
+        else:
+            s = 'interpolation only'
         for stage_filter, stage_input_rate, stage_output_rate in self.stages:
             s += '\n  decimate by %i using %3i taps (%i) in %s' % (
                 stage_input_rate // stage_output_rate,
