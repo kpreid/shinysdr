@@ -1,4 +1,4 @@
-# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -112,6 +112,18 @@ class TestMultistageChannelFilter(unittest.TestCase):
               decimate by 2 using  11 taps (1375000) in fft_filter_ccc_sptr
               decimate by 2 using  61 taps (3812500) in fft_filter_ccc_sptr
             rational_resampler by 96/125 (stage rates 48000/62500)''')
+    
+    def test_center_freq_decimating(self):
+        f = MultistageChannelFilter(input_rate=10000, output_rate=1000, cutoff_freq=400, transition_width=200, center_freq=1)
+        self.assertEqual(f.get_center_freq(), 1)
+        f.set_center_freq(2)
+        self.assertEqual(f.get_center_freq(), 2)
+    
+    def test_center_freq_interpolating(self):
+        f = MultistageChannelFilter(input_rate=1000, output_rate=10000, cutoff_freq=400, transition_width=200, center_freq=1)
+        self.assertEqual(f.get_center_freq(), 1)
+        f.set_center_freq(2)
+        self.assertEqual(f.get_center_freq(), 2)
     
     def test_explain(self):
         # this test was written before __run checke everything; kept around for just another example
