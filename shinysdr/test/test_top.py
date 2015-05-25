@@ -34,26 +34,64 @@ from shinysdr.values import ExportedState
 
 
 class TestTop(unittest.TestCase):
-    def test_source_switch_update(self):
+    def test_monitor_source_switch(self):
+        freq1 = 1e6
+        freq2 = 2e6
+        # TODO: Also test signal type switching (not yet supported by SimulatedDevice)
+        top = Top(devices={
+            's1': simulate.SimulatedDevice(freq=freq1),
+            's2': simulate.SimulatedDevice(freq=freq2),
+        })
+        top.set_source_name('s1')
+        self.assertEqual(top.state()['monitor'].get().get_fft_info()[0], freq1)
+        top.set_source_name('s2')
+        self.assertEqual(top.state()['monitor'].get().get_fft_info()[0], freq2)
+
+    @defer.inlineCallbacks
+    def test_monitor_vfo_change(self):
+        freq1 = 1e6
+        freq2 = 2e6
+        dev = simulate.SimulatedDevice(freq=freq1, allow_tuning=True)
+        top = Top(devices={'s1': dev})
+        self.assertEqual(top.state()['monitor'].get().get_fft_info()[0], freq1)
+        dev.set_freq(freq2)
+        yield deferLater(the_reactor, 0.1, lambda: None)  # wait for tune delay
+        self.assertEqual(top.state()['monitor'].get().get_fft_info()[0], freq2)
+        # TODO: Also test value found in data stream
+
+    def test_receiver_source_switch(self):
         '''
         Regression test: Switching sources was not updating receiver input frequency.
         '''
-        freq = 1e6
+        freq1 = 1e6
+        freq2 = 2e6
         top = Top(devices={
-            's1': simulate.SimulatedDevice(freq=0),
-            's2': simulate.SimulatedDevice(freq=freq),
+            's1': simulate.SimulatedDevice(freq=freq1),
+            's2': simulate.SimulatedDevice(freq=freq2),
         })
-        top.set_source_name('s1')
-        self.assertEqual(top.monitor.get_fft_info()[0], 0)
         
         (_key, receiver) = top.add_receiver('AM', key='a')
-        receiver.set_rec_freq(freq)
-        self.assertFalse(receiver.get_is_valid())
+        receiver.set_rec_freq(freq2)
+        receiver.set_device_name('s1')
+        self.assertFalse(receiver.get_is_valid(), 'receiver initially invalid')
+        receiver.set_device_name('s2')
+        self.assertTrue(receiver.get_is_valid(), 'receiver now valid')
+
+    def test_receiver_device_default(self):
+        '''
+        Receiver should default to the monitor device, not other receiver's device.
+        '''
+        top = Top(devices={
+            's1': simulate.SimulatedDevice(),
+            's2': simulate.SimulatedDevice(),
+        })
         
+        (_key, receiver1) = top.add_receiver('AM', key='a')
         top.set_source_name('s2')
-        # TODO: instead of top.monitor, should go through state interface
-        self.assertEqual(top.monitor.get_fft_info()[0], freq)
-        self.assertTrue(receiver.get_is_valid())
+        receiver1.set_device_name('s1')
+        (_key, receiver2) = top.add_receiver('AM', key='b')
+        self.assertEquals(receiver2.get_device_name(), 's2')
+        self.assertEquals(receiver1.get_device_name(), 's1')
 
     def test_add_unknown_mode(self):
         '''

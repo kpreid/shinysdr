@@ -92,6 +92,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self._sources = {k: d for k, d in devices.iteritems() if d.can_receive()}
         self._accessories = accessories = {k: d for k, d in devices.iteritems() if not d.can_receive()}
         self.source_name = self._sources.keys()[0]  # arbitrary valid initial value
+        self.__rx_device_type = Enum({k: v.get_name() or k for (k, v) in self._sources.iteritems()})
         
         # Audio early setup
         self.__audio_devices = audio_devices  # must be before contexts
@@ -99,8 +100,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         # Blocks etc.
         # TODO: device refactoring: remove 'source' concept (which is currently a device)
         self.source = None
-        self.__rx_driver = None
-        self.__source_tune_subscription = None
+        self.__monitor_rx_driver = None
         self.monitor = MonitorSink(
             signal_type=SignalType(sample_rate=10000, kind='IQ'),  # dummy value will be updated in _do_connect
             context=Context(self))
@@ -130,13 +130,19 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         
         # Flags, other state
         self.__needs_reconnect = [u'initialization']
-        self.input_rate = None
-        self.input_freq = None
+        self.__in_reconnect = False
         self.receiver_key_counter = 0
         self.receiver_default_state = {}
         self.last_wall_time = time.time()
         self.last_cpu_time = time.clock()
         self.last_cpu_use = 0
+        
+        # Initialization
+        
+        def hookup_vfo_callback(k, d):  # function so as to not close over loop variable
+            d.get_vfo_cell().subscribe(lambda: self.__device_vfo_callback(k))
+        
+        for k, d in devices.iteritems(): hookup_vfo_callback(k, d)
         
         self._do_connect()
 
@@ -206,6 +212,10 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         return self.__audio_channels
 
     def _do_connect(self):
+        if self.__in_reconnect:
+            raise Exception('reentrant reconnect or _do_connect crashed')
+        self.__in_reconnect = True
+        
         """Do all reconfiguration operations in the proper order."""
         t0 = time.time()
         rate_changed = False
@@ -215,44 +225,13 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 
             this_source = self._sources[self.source_name]
             
-            def update_input_freqs():
-                freq = this_source.get_freq()
-                self.input_freq = freq
-                self.monitor.set_input_center_freq(freq)
-                for receiver in self._receivers.itervalues():
-                    receiver.set_input_center_freq(freq)
-            
-            def tune_hook():
-                # Note that in addition to the flow graph delay, the callLater is also needed in order to ensure we don't do our reconfiguration in the middle of the source's own workings.
-                reactor.callLater(self.__rx_driver.get_tune_delay(), tune_hook_actual)
-            
-            def tune_hook_actual():
-                if self.source is not this_source:
-                    return
-                update_input_freqs()
-                for key in self._receivers:
-                    self._update_receiver_validity(key)
-                    # TODO: If multiple receivers change validity we'll do redundant reconnects in this loop; avoid that.
-            
-            if self.__source_tune_subscription is not None:
-                self.__source_tune_subscription.unsubscribe()
-            self.__source_tune_subscription = this_source.state()['freq'].subscribe(tune_hook)
-            
             self.source = this_source
-            self.__rx_driver = this_source.get_rx_driver()
-            source_signal_type = self.__rx_driver.get_output_type()
-            this_rate = source_signal_type.get_sample_rate()
-            rate_changed = self.input_rate != this_rate
-            self.input_rate = this_rate
-            self.monitor.set_signal_type(source_signal_type)
-            self.__clip_probe.set_window_and_reconnect(0.5 * this_rate)
-            update_input_freqs()
+            self.__monitor_rx_driver = this_source.get_rx_driver()
+            monitor_signal_type = self.__monitor_rx_driver.get_output_type()
+            self.monitor.set_signal_type(monitor_signal_type)
+            self.monitor.set_input_center_freq(this_source.get_freq())
+            self.__clip_probe.set_window_and_reconnect(0.5 * monitor_signal_type.get_sample_rate())
         
-        if rate_changed:
-            log.msg('Flow graph: Changing sample rates')
-            for receiver in self._receivers.itervalues():
-                receiver.set_input_rate(self.input_rate)
-
         if self.__needs_reconnect:
             log.msg(u'Flow graph: Rebuilding connections because: %s' % (', '.join(self.__needs_reconnect),))
             self.__needs_reconnect = []
@@ -261,10 +240,10 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
             self.disconnect_all()
             
             self.connect(
-                self.__rx_driver,
+                self.__monitor_rx_driver,
                 self.monitor)
             self.connect(
-                self.__rx_driver,
+                self.__monitor_rx_driver,
                 self.__clip_probe)
 
             # Filter receivers
@@ -282,7 +261,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
                     # TODO: less arbitrary constant; communicate this restriction to client
                     log.err('Flow graph: Refusing to connect more than 6 receivers')
                     break
-                self.connect(self.__rx_driver, receiver)
+                self.connect(self._sources[receiver.get_device_name()].get_rx_driver(), receiver)
                 rrate = receiver.get_output_type().get_sample_rate()
                 bus_inputs[receiver.get_audio_destination()].append((rrate, receiver))
             
@@ -305,7 +284,27 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
             # (this is in an if block but it can't not execute if anything else did)
             log.msg('Flow graph: ...done reconnecting (%i ms).' % ((time.time() - t0) * 1000,))
             
-            self.__start_or_stop()
+            self.__start_or_stop_later()
+        
+        self.__in_reconnect = False
+
+    def __device_vfo_callback(self, device_key):
+        # Note that in addition to the flow graph delay, the callLater is also needed in order to ensure we don't do our reconfiguration in the middle of the source's own workings.
+        reactor.callLater(
+            self._sources[device_key].get_rx_driver().get_tune_delay(),
+            self.__device_vfo_changed,
+            device_key)
+
+    def __device_vfo_changed(self, device_key):
+        device = self._sources[device_key]
+        freq = device.get_freq()
+        if self.source is device:
+            self.monitor.set_input_center_freq(freq)
+        for rec_key, receiver in self._receivers.iteritems():
+            if receiver.get_device_name() == device_key:
+                receiver.changed_device_freq()
+                self._update_receiver_validity(rec_key)
+            # TODO: If multiple receivers change validity we'll do redundant reconnects in this loop; avoid that.
 
     def _update_receiver_validity(self, key):
         receiver = self._receivers[key]
@@ -365,8 +364,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.stop()
         self.wait()
 
-    @exported_value(ctor_fn=lambda self:
-        Enum({k: v.get_name() or k for (k, v) in self._sources.iteritems()}))
+    @exported_value(ctor_fn=lambda self: self.__rx_device_type)
     def get_source_name(self):
         return self.source_name
     
@@ -379,17 +377,21 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.source_name = value
         self._do_connect()
 
-    def _make_receiver(self, mode, state, key):
+    def _make_receiver(self, mode, defaults, key):
+        # Remove state that should not be overridden
+        defaults = defaults.copy()
+        if 'device_name' in defaults: del defaults['device_name']
+        
         facet = ContextForReceiver(self, key)
+        device = self._sources[self.source_name]
         receiver = Receiver(
             mode=mode,
-            input_rate=self.input_rate,
-            input_center_freq=self.input_freq,
             audio_channels=self.__audio_channels,
+            device_name=self.source_name,
             audio_destination=CLIENT_AUDIO_DEVICE,  # TODO match others
             context=facet,
         )
-        receiver.state_from_json(state)
+        receiver.state_from_json(defaults)  # TODO: Use unserialize_exported_state
         # until _enabled, ignore any callbacks resulting from the state_from_json initialization
         facet._receiver = receiver
         facet._enabled = True
@@ -404,10 +406,6 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         else:
             return u''
     
-    @exported_value(ctor=int)
-    def get_input_rate(self):
-        return self.input_rate
-
     @exported_value()
     def get_audio_bus_rate(self):
         '''
@@ -435,6 +433,10 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
             self.__shared_objects[key] = ctor()
         return self.__shared_objects[key]
     
+    def _get_rx_device_type(self):
+        '''for ContextForReceiver only'''
+        return self.__rx_device_type
+    
     def _get_audio_destination_type(self):
         '''for ContextForReceiver only'''
         return self.__audio_destination_type
@@ -458,6 +460,12 @@ class ContextForReceiver(Context):
         self._enabled = False  # assigned outside
         self._receiver = None  # assigned outside
 
+    def get_device(self, device_key):
+        return self.__top._sources[device_key]
+
+    def get_rx_device_type(self):
+        return self.__top._get_rx_device_type()
+
     def get_audio_destination_type(self):
         return self.__top._get_audio_destination_type()
 
@@ -467,8 +475,8 @@ class ContextForReceiver(Context):
         # TODO: Lots of the below logic probably ought to replace the current receiver.get_is_valid.
         # TODO: Be aware of receiver bandwidth.
 
-        device = self.__top.source
         receiver = self._receiver
+        device = self.__top._sources[receiver.get_device_name()]
         usable_bandwidth_range = device.get_rx_driver().get_usable_bandwidth()
         needed_freq = receiver.get_rec_freq()
         current_device_freq = device.get_freq()

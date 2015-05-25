@@ -441,12 +441,13 @@ define(['./values', './events', './widget', './gltools'], function (values, even
   function Receiver(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       ignore('is_valid');
-      if ('rec_freq' in block) {
-        addWidget('rec_freq', Knob, 'Channel frequency');
+      if (!block.device_name.type.isSingleValued()) {
+        addWidget('device_name', Select, 'RF source');
+      } else {
+        ignore('device_name');
       }
-      if ('mode' in block) {
-        addWidget('mode', Radio);
-      }
+      addWidget('rec_freq', Knob, 'Channel frequency');
+      addWidget('mode', Radio);
       addWidget('demodulator', Demodulator);
       
       var saveInsert = getAppend();
@@ -1679,6 +1680,7 @@ define(['./values', './events', './widget', './gltools'], function (values, even
     
     var draw = config.boundedFn(function drawImpl() {
       view.n.listen(draw);
+      var visibleDevice = radioCell.depend(draw).source_name.depend(draw);
       lvf = view.leftVisibleFreq();
       rvf = view.rightVisibleFreq();
       var yScale = -h / (view.maxLevel - view.minLevel);
@@ -1707,8 +1709,13 @@ define(['./values', './events', './widget', './gltools'], function (values, even
       receivers._reshapeNotice.listen(draw);
       for (var recKey in receivers) {
         var receiver = receivers[recKey].depend(draw);
-        var rec_freq_cell = receiver.rec_freq;
-        var rec_freq_now = rec_freq_cell.depend(draw);
+        var device_name_now = receiver.device_name.depend(draw);
+        var rec_freq_now = receiver.rec_freq.depend(draw);
+        
+        if (!(lvf <= rec_freq_now && rec_freq_now <= rvf && device_name_now == visibleDevice)) {
+          continue;
+        }
+        
         var band_filter_cell = receiver.demodulator.depend(draw).band_filter_shape;
         if (band_filter_cell) {
           var band_filter_now = band_filter_cell.depend(draw);

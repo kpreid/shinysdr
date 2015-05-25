@@ -57,17 +57,16 @@ class Receiver(gr.hier_block2, ExportedState):
     implements(IReceiver)
     
     def __init__(self, mode,
-            input_rate=0,
-            input_center_freq=0,
             rec_freq=100.0,
             audio_destination=None,
+            device_name=None,
             audio_gain=-6,
             audio_pan=0,
             audio_channels=0,
             context=None):
-        assert input_rate > 0
         assert audio_channels == 1 or audio_channels == 2
         assert audio_destination is not None
+        assert device_name is not None
         gr.hier_block2.__init__(
             # str() because insists on non-unicode
             self, str('%s receiver' % (mode,)),
@@ -82,9 +81,10 @@ class Receiver(gr.hier_block2, ExportedState):
         
         # Provided by caller
         self.context = context
-        self.input_rate = input_rate
-        self.input_center_freq = input_center_freq
         self.__audio_channels = audio_channels
+
+        # cached info from device
+        self.__device_name = device_name
         
         # Simple state
         self.mode = mode
@@ -173,18 +173,23 @@ class Receiver(gr.hier_block2, ExportedState):
     def get_output_type(self):
         return self.__output_type
 
-    def set_input_rate(self, value):
-        value = int(value)
-        if self.input_rate == value:
-            return
-        self.input_rate = value
-        self._rebuild_demodulator()
-
-    def set_input_center_freq(self, value):
-        self.input_center_freq = value
+    def changed_device_freq(self):
         self.__update_rotator()
         # note does not revalidate() because the caller will handle that
 
+    @exported_value(parameter='device_name', ctor_fn=lambda self: self.context.get_rx_device_type())
+    def get_device_name(self):
+        return self.__device_name
+    
+    @setter
+    def set_device_name(self, value):
+        value = unicode(value)
+        if self.__device_name != value:
+            self.__device_name = value
+            self.__update_rotator()  # freq
+            self._rebuild_demodulator()  # rate
+            self.context.changed_needed_connections(u'changed device')
+    
     # type construction is deferred because we don't want loading this file to trigger loading plugins
     @exported_value(ctor_fn=lambda self: Enum({d.mode: d.label for d in get_modes()}))
     def get_mode(self):
@@ -241,7 +246,9 @@ class Receiver(gr.hier_block2, ExportedState):
     
     @exported_value(ctor=bool)
     def get_is_valid(self):
-        valid_bandwidth = self.input_rate / 2 - abs(self.rec_freq - self.input_center_freq)
+        device = self.__get_device()
+        sample_rate = device.get_rx_driver().get_output_type().get_sample_rate()
+        valid_bandwidth = sample_rate / 2 - abs(self.rec_freq - device.get_freq())
         return self.demodulator is not None and valid_bandwidth >= self.demodulator.get_half_bandwidth()
     
     # Note that the receiver cannot measure RF power because we don't know what the channel bandwidth is; we have to leave that to the demodulator.
@@ -254,11 +261,16 @@ class Receiver(gr.hier_block2, ExportedState):
             return _audio_power_minimum_dB
     
     def __update_rotator(self):
-        offset = self.rec_freq - self.input_center_freq
+        device = self.__get_device()
+        sample_rate = device.get_rx_driver().get_output_type().get_sample_rate()
+        offset = self.rec_freq - self.__get_device().get_freq()
         if self.__demod_tunable:
             self.demodulator.set_rec_freq(offset)
         else:
-            self.__rotator.set_phase_inc(rotator_inc(rate=self.input_rate, shift=-offset))
+            self.__rotator.set_phase_inc(rotator_inc(rate=sample_rate, shift=-offset))
+    
+    def __get_device(self):
+        return self.context.get_device(self.__device_name)
     
     # called from facet
     def _rebuild_demodulator(self, mode=None):
@@ -299,7 +311,7 @@ class Receiver(gr.hier_block2, ExportedState):
         
         init_kwargs = dict(
             mode=mode,
-            input_rate=self.input_rate,
+            input_rate=self.__get_device().get_rx_driver().get_output_type().get_sample_rate(),
             context=facet)
         for sh_key, sh_ctor in mode_def.shared_objects.iteritems():
             init_kwargs[sh_key] = self.context.get_shared_object(sh_ctor)

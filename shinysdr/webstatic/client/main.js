@@ -161,6 +161,10 @@ define(['./values', './events', './database', './network', './maps', './widget',
           if (mode && receiver.mode.get() !== mode) {
             receiver.mode.set(mode);
           }
+          if (receiver.device_name.get() !== radio.source_name.get()) {
+            // TODO: In principle this ought to be specified by parameter rather than fixed here. But this behavior is appropriate for all current use cases and we'll probably have to overhaul the whole thing anyway.
+            receiver.device_name.set(radio.source_name.get());
+          }
         } else {
           // TODO less ambiguous-naming api
           receivers.create({
