@@ -1214,6 +1214,16 @@ define(['./values', './gltools', './widget', './widgets'], function (values, glt
       return totalMat;
     };
     
+    // account for aspect ratio
+    this.getEffectiveXZoom = function getEffectiveXZoom() {
+      var aspect = w / h;
+      return viewZoom / (aspect > 1 ? aspect : 1);
+    };
+    this.getEffectiveYZoom = function getEffectiveYZoom() {
+      var aspect = w / h;
+      return viewZoom * (aspect < 1 ? aspect : 1);
+    };
+    
     changedView();
   }
 
@@ -1505,19 +1515,83 @@ define(['./values', './gltools', './widget', './widgets'], function (values, glt
       var blank = 'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22/%3E';
       // TODO: Instead of using a blank icon, skip the geometry entirely
       
-      var spacingStep = 10;
       var smoothStep = 1;
+      
+      function dasinClamp(x) {
+        var deg = Math.asin(x) / RADIANS_PER_DEGREE;
+        return isFinite(deg) ? deg : 90;
+      }
+      function floorTo(x, step) {
+        return Math.floor(x / step) * step;
+      }
+      function roundLabel(x, logStep) {
+        return x.toFixed(Math.max(0, -logStep));
+      }
+      function computeLabelPosition(lowBound, highBound, logStep) {
+        var spacingStep = Math.pow(10, logStep);
+        
+        var margin = spacingStep * 0.15;  // TODO better definition
+        lowBound += margin;
+        highBound -= margin;
+        
+        var coord = Math.max(lowBound, Math.min(highBound, 0));
+        coord = floorTo(coord, spacingStep);
+        if (coord <= lowBound) coord += spacingStep;
+        return coord;
+      }
+      function addLinesAndMarks(features, axis, otherCoord, lowBound, highBound, logStep) {
+        var spacingStep = Math.pow(10, logStep);
+        for (var x = floorTo(lowBound, spacingStep); x < highBound + spacingStep; x += spacingStep) {
+          features.push(axis + 'Line,' + x);
+          features.push(axis + 'Label,' + x + ',' + logStep + ',' + otherCoord);
+        }
+      }
       
       addLayer('Graticule', {
         featuresCell: new DerivedCell(any, scheduler, function(dirty) {
-          // TODO: Make labels fit into view area when zoomed in
+          // TODO: Don't rerun this calc on every movement — have a thing which takes an 'error' window (eep computing that) and dirties if out of bounds
+          var zoom = mapCamera.zoomCell.depend(dirty);
+          var centerLat = mapCamera.latitudeCell.depend(dirty);
+          var centerLon = mapCamera.longitudeCell.depend(dirty);
+          
+          // TODO: Does not account for sphericality (visible with wide aspect ratios)
+          var visibleRadiusLatDeg = dasinClamp(1 / mapCamera.getEffectiveYZoom());
+          
+          var visLatMin = Math.max(-90, centerLat - visibleRadiusLatDeg);
+          var visLatMax = Math.min(90, centerLat + visibleRadiusLatDeg);
+          
+          var invXZoom = 1 / mapCamera.getEffectiveXZoom();
+          var contraction = Math.max(0, Math.min(
+            dcos(centerLat - visibleRadiusLatDeg),
+            dcos(centerLat + visibleRadiusLatDeg)));
+          var expansion = Math.max(0,
+            dcos(centerLat - visibleRadiusLatDeg),
+            dcos(centerLat + visibleRadiusLatDeg));
+          // The visible longitudes at the smallest-scale part of the viewport (what lines must be drawn)
+          var visibleRadiusLonDeg = dasinClamp(invXZoom / contraction);
+          // The visible longitudes at the largest-scale part of the viewport (where to put the labels)
+          var visibleRadiusLonDegInner = dasinClamp(invXZoom / expansion);
+          
+          // this condition both avoids overdrawing and handles looking past the poles
+          var fullSphere = visibleRadiusLonDeg >= 90;
+          var visLonMin = fullSphere ? -180 : Math.max(centerLon - visibleRadiusLonDeg);
+          var visLonMax = fullSphere ? 180 : Math.min(centerLon + visibleRadiusLonDeg);
+          var visLonInnerMin = Math.max(centerLon - visibleRadiusLonDegInner);
+          var visLonInnerMax = Math.min(centerLon + visibleRadiusLonDegInner);
+          
           var features = [];
-          for (var lon = 0; lon < 360; lon += spacingStep) {
-            features.push('lonLine,' + lon);
-          }
-          for (var lat = -90 + spacingStep; lat < 90; lat += spacingStep) {
-            features.push('latLine,' + lat);
-          }
+          
+          var latLogStep = Math.ceil(Math.log(10 / zoom) / Math.LN10);
+          // don't draw lots of longitude lines when zoomed on a pole
+          var lonStepLimit = Math.ceil(Math.log(visibleRadiusLonDeg / 20) / Math.LN10);
+          var lonLogStep = Math.max(lonStepLimit, latLogStep);
+
+          var latLabelLon = computeLabelPosition(visLonInnerMin, visLonInnerMax, lonLogStep);
+          addLinesAndMarks(features, 'lat', latLabelLon, visLatMin, visLatMax, latLogStep);
+
+          var lonLabelLat = computeLabelPosition(visLatMin, visLatMax, latLogStep);
+          addLinesAndMarks(features, 'lon', lonLabelLat, visLonMin, visLonMax, lonLogStep);
+          
           return features;
         }), 
         featureRenderer: function graticuleLineRenderer(spec, dirty) {
@@ -1528,14 +1602,13 @@ define(['./values', './gltools', './widget', './widgets'], function (values, glt
             case 'lonLine':
               var lon = parseFloat(parts[1]);
               var line = [];
-              // TODO: This draws back-side lines, wasting geometry. In order to not do so, we need to be able to position the label at the midpoint of the overall line rather than at one end.
-              for (var lat = 0; lat < 360 + smoothStep/2; lat += smoothStep) {
+              for (var lat = -90; lat < 90 + smoothStep/2; lat += smoothStep) {
                 line.push([lat, lon]);
               }
               return Object.freeze({
-                position: Object.freeze([0, lon]),
+                position: Object.freeze([90, lon]),
                 iconURL: blank,
-                label: lon,
+                label: '',
                 line: Object.freeze(line)
               });
             case 'latLine':
@@ -1547,12 +1620,30 @@ define(['./values', './gltools', './widget', './widgets'], function (values, glt
               return Object.freeze({
                 position: Object.freeze([lat, 0]),
                 iconURL: blank,
-                label: lat > 0 ? lat + 'N' : -lat + 'S',
+                label: '',
                 line: Object.freeze(line)
+              });
+            case 'lonLabel':
+              var lon = parseFloat(parts[1]);
+              var logStep = parseFloat(parts[2]);
+              var lat = parseFloat(parts[3]);
+              return Object.freeze({
+                position: Object.freeze([lat, lon]),
+                iconURL: blank,
+                label: roundLabel(lon, logStep)
+              });
+            case 'latLabel':
+              var lat = parseFloat(parts[1]);
+              var logStep = parseFloat(parts[2]);
+              var lon = parseFloat(parts[3]);
+              return Object.freeze({
+                position: Object.freeze([lat, lon]),
+                iconURL: blank,
+                label: lat > 0 ? roundLabel(lat, logStep) + 'N' : roundLabel(-lat, logStep) + 'S'
               });
             default:
               console.error('Unexpected type in graticule renderer: ' + type);
-              return;
+              return {};
           }
         }
       });
