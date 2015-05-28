@@ -1501,44 +1501,62 @@ define(['./values', './gltools', './widget', './widgets'], function (values, glt
       }
     });
     
-    addLayer('Graticule', {
-      featuresCell: new DerivedCell(any, scheduler, function(dirty) {
-        var blank = 'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22/%3E';
-        // TODO: Instead of using a blank icon, skip the geometry entirely
-        // TODO: Make labels fit into view area when zoomed in
-        var spacingStep = 10;
-        var smoothStep = 1;
-        var features = [];
-        for (var lon = 0; lon < 360; lon += spacingStep) {
-          var line = [];
-          for (var lat = 0; lat < 360; lat += smoothStep) {
-            line.push([lat, lon]);
+    (function() {
+      var blank = 'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22/%3E';
+      // TODO: Instead of using a blank icon, skip the geometry entirely
+      
+      var spacingStep = 10;
+      var smoothStep = 1;
+      
+      addLayer('Graticule', {
+        featuresCell: new DerivedCell(any, scheduler, function(dirty) {
+          // TODO: Make labels fit into view area when zoomed in
+          var features = [];
+          for (var lon = 0; lon < 360; lon += spacingStep) {
+            features.push('lonLine,' + lon);
           }
-          features.push(Object.freeze({
-            position: Object.freeze([0, lon]),
-            iconURL: blank,
-            label: lon,
-            line: Object.freeze(line)
-          }));
-        }
-        for (var lat = -90 + spacingStep; lat < 90; lat += spacingStep) {
-          var line = [];
-          for (var lon = 0; lon < 360; lon += smoothStep) {
-            line.push([lat, lon]);
+          for (var lat = -90 + spacingStep; lat < 90; lat += spacingStep) {
+            features.push('latLine,' + lat);
           }
-          features.push(Object.freeze({
-            position: Object.freeze([lat, 0]),
-            iconURL: blank,
-            label: lat > 0 ? lat + 'N' : -lat + 'S',
-            line: Object.freeze(line)
-          }));
+          return features;
+        }), 
+        featureRenderer: function graticuleLineRenderer(spec, dirty) {
+          var parts = spec.split(',');
+          var type = parts[0];
+
+          switch (type) {
+            case 'lonLine':
+              var lon = parseFloat(parts[1]);
+              var line = [];
+              // TODO: This draws back-side lines, wasting geometry. In order to not do so, we need to be able to position the label at the midpoint of the overall line rather than at one end.
+              for (var lat = 0; lat < 360 + smoothStep/2; lat += smoothStep) {
+                line.push([lat, lon]);
+              }
+              return Object.freeze({
+                position: Object.freeze([0, lon]),
+                iconURL: blank,
+                label: lon,
+                line: Object.freeze(line)
+              });
+            case 'latLine':
+              var lat = parseFloat(parts[1]);
+              var line = [];
+              for (var lon = 0; lon < 360 + smoothStep/2; lon += smoothStep) {
+                line.push([lat, lon]);
+              }
+              return Object.freeze({
+                position: Object.freeze([lat, 0]),
+                iconURL: blank,
+                label: lat > 0 ? lat + 'N' : -lat + 'S',
+                line: Object.freeze(line)
+              });
+            default:
+              console.error('Unexpected type in graticule renderer: ' + type);
+              return;
+          }
         }
-        return features;
-      }), 
-      featureRenderer: function dummyRenderer(x, dirty) {
-        return x;
-      }
-    });
+      });
+    })();
     
     // TODO make this test layer more cleaned up and enableable
     var emptyItem = {value: null, timestamp: null};
