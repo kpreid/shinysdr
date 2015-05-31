@@ -28,6 +28,7 @@ define(['./values', './gltools', './widget', './widgets'], function (values, glt
   var ConstantCell = values.ConstantCell;
   var createWidgetExt = widget.createWidgetExt;
   var DerivedCell = values.DerivedCell;
+  var Enum = values.Enum;
   var LocalReadCell = values.LocalReadCell;
   var makeBlock = values.makeBlock;
   var PickBlock = widgets.PickBlock;
@@ -44,6 +45,9 @@ define(['./values', './gltools', './widget', './widgets'], function (values, glt
   function dcos(x) { return cos(RADIANS_PER_DEGREE * x); }
   function dsin(x) { return sin(RADIANS_PER_DEGREE * x); }
   
+  function mod(a, b) {
+    return ((a % b) + b) % b;
+  }
   function mean(array) {
     return array.reduce(function (a, b) { return a + b; }, 0) / array.length;
   }
@@ -1534,6 +1538,14 @@ define(['./values', './gltools', './widget', './widgets'], function (values, glt
       var blank = 'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22/%3E';
       // TODO: Instead of using a blank icon, skip the geometry entirely
       
+      var graticuleTypeCell = new StorageCell(storage, new Enum({
+        'degrees': 'Degrees',
+        'maidenhead': 'Maidenhead'
+      }), 'graticuleType');
+      if (graticuleTypeCell.get() == null) {
+        graticuleTypeCell.set('degrees');
+      }
+      
       var smoothStep = 1;
       
       function dasinClamp(x) {
@@ -1566,7 +1578,47 @@ define(['./values', './gltools', './widget', './widgets'], function (values, glt
         }
       }
       
+      // Maidenhead encoding tables
+      var symbolSets = [
+        'ABCDEFGHIJKLMNOPQR',       // field
+        '0123456789',               // squre
+        'abcdefghijklmnopqrstuvwx', // subsquare
+        '0123456789'                // extended square
+      ];
+      var granularities = [1];
+      symbolSets.forEach(function (symbols) {
+        granularities.push(granularities[granularities.length - 1] * symbols.length);
+      });
+      Object.freeze(granularities);
+      function encodeMaidenhead(lon, lat, lonDepth, latDepth) {
+        // The 'm' variables are scaled so that [0, 1) maps to {first symbol, ..., last symbol} circularly
+        var mlon = (lon + 180) / 360;
+        var mlat = (lat + 90) / 180;
+        var code = '';
+        for (var i = 0; i < lonDepth || i < latDepth; i++) {
+          var table = symbolSets[i];
+          var n = table.length;
+          mlon *= n;
+          mlat *= n;
+          code += (i < lonDepth ? table[Math.floor(mod(mlon, n))] : '_')
+                + (i < latDepth ? table[Math.floor(mod(mlat, n))] : '_');
+        }
+        return code;
+      }
+      var MAX_LINES_IN_VIEW = 10;
+      function maidenheadDepth(x) {
+        for (var i = granularities.length - 1; i >= 0; i--) {
+          if (granularities[i] * x <= MAX_LINES_IN_VIEW) {
+            return i;
+          }
+        }
+        return 1;
+      }
+      
       addLayer('Graticule', {
+        controls: makeBlock({
+          type: graticuleTypeCell
+        }),
         featuresCell: new DerivedCell(any, scheduler, function(dirty) {
           // TODO: Don't rerun this calc on every movement — have a thing which takes an 'error' window (eep computing that) and dirties if out of bounds
           var zoom = mapCamera.zoomCell.depend(dirty);
@@ -1600,16 +1652,33 @@ define(['./values', './gltools', './widget', './widgets'], function (values, glt
           
           var features = [];
           
-          var latLogStep = Math.ceil(Math.log(10 / zoom) / Math.LN10);
-          // don't draw lots of longitude lines when zoomed on a pole
-          var lonStepLimit = Math.ceil(Math.log(visibleRadiusLonDeg / 20) / Math.LN10);
-          var lonLogStep = Math.max(lonStepLimit, latLogStep);
+          var graticuleType = graticuleTypeCell.depend(dirty);
+          if (graticuleType === 'degrees') {
+            var latLogStep = Math.ceil(Math.log(10 / zoom) / Math.LN10);
+            // don't draw lots of longitude lines when zoomed on a pole
+            var lonStepLimit = Math.ceil(Math.log(visibleRadiusLonDeg / 20) / Math.LN10);
+            var lonLogStep = Math.max(lonStepLimit, latLogStep);
 
-          var latLabelLon = computeLabelPosition(visLonInnerMin, visLonInnerMax, lonLogStep);
-          addLinesAndMarks(features, 'lat', latLabelLon, visLatMin, visLatMax, latLogStep);
+            var latLabelLon = computeLabelPosition(visLonInnerMin, visLonInnerMax, lonLogStep);
+            addLinesAndMarks(features, 'lat', latLabelLon, visLatMin, visLatMax, latLogStep);
 
-          var lonLabelLat = computeLabelPosition(visLatMin, visLatMax, latLogStep);
-          addLinesAndMarks(features, 'lon', lonLabelLat, visLonMin, visLonMax, lonLogStep);
+            var lonLabelLat = computeLabelPosition(visLatMin, visLatMax, latLogStep);
+            addLinesAndMarks(features, 'lon', lonLabelLat, visLonMin, visLonMax, lonLogStep);
+          } else if (graticuleType === 'maidenhead') {
+            var lonDepth = maidenheadDepth(visibleRadiusLonDeg / 360);
+            var latDepth = maidenheadDepth(visibleRadiusLatDeg / 180);
+            latDepth = lonDepth = Math.min(latDepth, lonDepth);  // TODO do better
+            var lonStep = 360 / granularities[lonDepth];
+            var latStep = 180 / granularities[latDepth];
+            var depthStr = ',' + lonDepth + ',' + latDepth;
+            for (var lon = floorTo(visLonMin, lonStep); lon < visLonMax + lonStep*0.5; lon += lonStep) {
+              features.push('lonLine,' + lon);
+              for (var lat = floorTo(visLatMin + 90, latStep) - 90; lat < visLatMax + latStep*0.5; lat += latStep) {
+                features.push('latLine,' + lat);  // duplicates will be coalesced
+                features.push('maidenhead,' + (lon + lonStep*0.5) + ',' + (lat + latStep*0.5) + depthStr);
+              }
+            }
+          }
           
           return features;
         }), 
@@ -1659,6 +1728,16 @@ define(['./values', './gltools', './widget', './widgets'], function (values, glt
                 position: Object.freeze([lat, lon]),
                 iconURL: blank,
                 label: lat > 0 ? roundLabel(lat, logStep) + 'N' : roundLabel(-lat, logStep) + 'S'
+              });
+            case 'maidenhead':
+              var lon = parseFloat(parts[1]);
+              var lat = parseFloat(parts[2]);
+              var lonDepth = parseInt(parts[3]);
+              var latDepth = parseInt(parts[4]);
+              return Object.freeze({
+                position: Object.freeze([lat, lon]),
+                iconURL: blank,
+                label: encodeMaidenhead(lon, lat, lonDepth, latDepth)
               });
             default:
               console.error('Unexpected type in graticule renderer: ' + type);
