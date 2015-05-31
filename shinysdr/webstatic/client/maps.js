@@ -22,12 +22,15 @@ define(['./values', './gltools', './widget', './widgets'], function (values, glt
   var cos = Math.cos;
   
   var any = values.any;
-  var createWidgetExt = widget.createWidgetExt;
+  var block = values.block;
   var Banner = widgets.Banner;
   var Cell = values.Cell;
   var ConstantCell = values.ConstantCell;
+  var createWidgetExt = widget.createWidgetExt;
   var DerivedCell = values.DerivedCell;
   var LocalReadCell = values.LocalReadCell;
+  var makeBlock = values.makeBlock;
+  var PickBlock = widgets.PickBlock;
   var SmallKnob = widgets.SmallKnob;
   var StorageCell = values.StorageCell;
   var Toggle = widgets.Toggle;
@@ -1422,6 +1425,7 @@ define(['./values', './gltools', './widget', './widgets'], function (values, glt
       var featureRenderer = lconfig.featureRenderer;
       var clickHandler = lconfig.onclick || function noClick() {};
       // TODO: Instead of a "clickHandler" we should have a more general presentation-style system
+      var controlsCell = new ConstantCell(block, lconfig.controls || makeBlock({}));
       
       var visibilityCell = new StorageCell(storage, Boolean, 'layer-visible.' + label);
       if (visibilityCell.get() === null) {  // set up default value
@@ -1448,6 +1452,15 @@ define(['./values', './gltools', './widget', './widgets'], function (values, glt
       checkbox.type = 'checkbox';
       checkboxOuter.appendChild(document.createTextNode(label));
       createWidgetExt(config.context, Toggle, checkbox, visibilityCell);
+      var controlsOuter = layerSwitcherContainer.appendChild(document.createElement('div'));
+      var controlsInner = controlsOuter.appendChild(document.createElement('div'));
+      createWidgetExt(config.context, PickBlock, controlsInner, controlsCell);
+      
+      function layerControlsVisibilityHook() {
+        controlsOuter.style.display = visibilityCell.depend(layerControlsVisibilityHook) ? 'block' : 'none';
+      }
+      layerControlsVisibilityHook.scheduler = scheduler;
+      layerControlsVisibilityHook();
       
       scheduler.enqueue(draw);
       return layerExt;
@@ -1488,28 +1501,34 @@ define(['./values', './gltools', './widget', './widgets'], function (values, glt
       };
     });
     
-    addLayer('Database', {
-      featuresCell: new DerivedCell(any, scheduler, function(dirty) {
-        db.n.listen(dirty);
-        return db.getAll();
-      }), 
-      featureRenderer: function dbRenderer(record, dirty) {
-        var info = radioStateInfo.depend(dirty);
-        var inSourceBand = info.lower < record.freq && record.freq < info.upper;
-        var isReceiving = info.receiving.indexOf(record.freq) !== -1;
+    (function() {
+      var searchCell = new StorageCell(storage, String, 'databaseFilterString');
+      addLayer('Database', {
+        featuresCell: new DerivedCell(any, scheduler, function(dirty) {
+          db.n.listen(dirty);
+          return db.string(searchCell.depend(dirty)).getAll();
+        }), 
+        featureRenderer: function dbRenderer(record, dirty) {
+          var info = radioStateInfo.depend(dirty);
+          var inSourceBand = info.lower < record.freq && record.freq < info.upper;
+          var isReceiving = info.receiving.indexOf(record.freq) !== -1;
       
-        // TODO: style for isReceiving
-        return {
-          iconURL: '/client/map-icons/station-generic.svg',
-          position: record.location,
-          label: record.label,
-          opacity: inSourceBand ? 1.0 : 0.25
-        };
-      },
-      onclick: function clickOnDbFeature(feature) {
-        radioCell.get().preset.set(feature);
-      }
-    });
+          // TODO: style for isReceiving
+          return {
+            iconURL: '/client/map-icons/station-generic.svg',
+            position: record.location,
+            label: record.label,
+            opacity: inSourceBand ? 1.0 : 0.25
+          };
+        },
+        onclick: function clickOnDbFeature(feature) {
+          radioCell.get().preset.set(feature);
+        },
+        controls: makeBlock({
+          search: searchCell
+        })
+      });
+    }());
     
     (function() {
       var blank = 'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22/%3E';

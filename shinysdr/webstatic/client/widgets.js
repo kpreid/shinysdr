@@ -143,6 +143,8 @@ define(['./values', './events', './widget', './gltools'], function (values, even
           addWidget(name, Radio, name);
         } else if (member.type === Boolean) {
           addWidget(name, Toggle, name);
+        } else if (member.type === String && member.set) {
+          addWidget(name, TextBox, name);
         } else if (member.type instanceof Notice) {
           addWidget(name, Banner, name);
         } else if (member.type === values.block) {  // TODO colliding name
@@ -2594,6 +2596,35 @@ define(['./values', './events', './widget', './gltools'], function (values, even
       });
   }
   widgets.Banner = Banner;
+  
+  function TextBox(config) {
+    SimpleElementWidget.call(this, config, 'INPUT',
+      function buildPanelForTextBox(container) {
+        container.classList.add('widget-TextBox-panel');
+        
+        if (container.hasAttribute('title')) {
+          var labelEl = container.appendChild(document.createElement('span'));
+          labelEl.classList.add('widget-TextBox-label');
+          labelEl.appendChild(document.createTextNode(container.getAttribute('title')));
+          container.removeAttribute('title');
+        }
+        
+        var input = container.appendChild(document.createElement('input'));
+        input.type = 'text';
+        
+        return input;
+      },
+      function initTextBox(input, target) {
+        input.addEventListener('input', function(event) {
+          target.set(input.value);
+        }, false);
+        
+        return function updateTextBox(value) {
+          input.value = value;
+        };
+      });
+  }
+  widgets.TextBox = TextBox;
   
   function NumberWidget(config) {
     SimpleElementWidget.call(this, config, 'TT',
