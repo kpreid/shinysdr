@@ -129,7 +129,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.__audio_buses = {key: BusPlumber(self, self.__audio_channels) for key in audio_destination_dict}
         
         # Flags, other state
-        self.__needs_reconnect = True
+        self.__needs_reconnect = [u'initialization']
         self.input_rate = None
         self.input_freq = None
         self.receiver_key_counter = 0
@@ -165,7 +165,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self._receivers[key] = receiver
         self._receiver_valid[key] = False
         
-        self.__needs_reconnect = True
+        self.__needs_reconnect.append(u'added receiver ' + key)
         self._do_connect()
         
         return (key, receiver)
@@ -180,7 +180,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         
         del self._receivers[key]
         del self._receiver_valid[key]
-        self.__needs_reconnect = True
+        self.__needs_reconnect.append(u'removed receiver ' + key)
         self._do_connect()
 
     def add_audio_queue(self, queue, queue_rate):
@@ -188,7 +188,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.audio_queue_sinks[queue] = (queue_rate,
             AudioQueueSink(channels=self.__audio_channels, queue=queue))
         
-        self.__needs_reconnect = True
+        self.__needs_reconnect.append(u'added audio queue')
         self._do_connect()
         self.__start_or_stop()
     
@@ -196,7 +196,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         del self.audio_queue_sinks[queue]
         
         self.__start_or_stop()
-        self.__needs_reconnect = True
+        self.__needs_reconnect.append(u'removed audio queue')
         self._do_connect()
     
     def get_audio_channels(self):
@@ -207,10 +207,11 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 
     def _do_connect(self):
         """Do all reconfiguration operations in the proper order."""
+        t0 = time.time()
         rate_changed = False
         if self.source is not self._sources[self.source_name]:
-            log.msg('Flow graph: Switching RF source')
-            self.__needs_reconnect = True
+            log.msg('Flow graph: Switching RF device to %s' % (self.source_name))
+            self.__needs_reconnect.append(u'switched device')
 
             this_source = self._sources[self.source_name]
             
@@ -253,8 +254,8 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
                 receiver.set_input_rate(self.input_rate)
 
         if self.__needs_reconnect:
-            log.msg('Flow graph: Rebuilding connections')
-            self.__needs_reconnect = False
+            log.msg(u'Flow graph: Rebuilding connections because: %s' % (', '.join(self.__needs_reconnect),))
+            self.__needs_reconnect = []
             
             self._recursive_lock()
             self.disconnect_all()
@@ -301,14 +302,15 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
                     outputs=outputs)
             
             self._recursive_unlock()
-            log.msg('Flow graph: ...done reconnecting.')
+            # (this is in an if block but it can't not execute if anything else did)
+            log.msg('Flow graph: ...done reconnecting (%i ms).' % ((time.time() - t0) * 1000,))
             
             self.__start_or_stop()
 
     def _update_receiver_validity(self, key):
         receiver = self._receivers[key]
         if receiver.get_is_valid() != self._receiver_valid[key]:
-            self.__needs_reconnect = True
+            self.__needs_reconnect.append(u'receiver %s validity changed' % (key,))
             self._do_connect()
 
     def state_def(self, callback):
@@ -437,8 +439,8 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         '''for ContextForReceiver only'''
         return self.__audio_destination_type
     
-    def _trigger_reconnect(self):
-        self.__needs_reconnect = True
+    def _trigger_reconnect(self, reason):
+        self.__needs_reconnect.append(reason)
         self._do_connect()
     
     def _recursive_lock_hook(self):
@@ -502,9 +504,9 @@ class ContextForReceiver(Context):
         else:
             self.__top._update_receiver_validity(self._key)
 
-    def changed_output_type_or_destination(self):
+    def changed_needed_connections(self, reason):
         if self._enabled:
-            self.__top._trigger_reconnect()
+            self.__top._trigger_reconnect(u'receiver %s: %s' % (self._key, reason))
     
     def get_shared_object(self, ctor):
         return self.__top.get_shared_object(ctor)

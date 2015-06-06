@@ -166,7 +166,7 @@ class Receiver(gr.hier_block2, ExportedState):
             
             if self.__output_type != self.__last_output_type:
                 self.__last_output_type = self.__output_type
-                self.context.changed_output_type_or_destination()
+                self.context.changed_needed_connections(u'changed output type')
         finally:
             self.context.unlock()
 
@@ -237,7 +237,7 @@ class Receiver(gr.hier_block2, ExportedState):
     def set_audio_destination(self, value):
         if self.__audio_destination != value:
             self.__audio_destination = value
-            self.context.changed_output_type_or_destination()
+            self.context.changed_needed_connections(u'changed destination')
     
     @exported_value(ctor=bool)
     def get_is_valid(self):
