@@ -370,8 +370,8 @@ h2 input {
   margin: .1em 0;
   box-sizing: border-box;
 }
-.widget-FreqList input {
-  /*flex: 0 0;*/
+.widget-FreqList > * {
+  flex: 0 0;
 }
 .widget-FreqList .freqlist-box {
   flex: 1 1;
