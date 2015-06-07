@@ -53,8 +53,7 @@ class ReceiverCollection(CollectionState):
         self.__top = top
     
     def state_insert(self, key, desc):
-        (key, receiver) = self.__top.add_receiver(desc['mode'], key=key)
-        receiver.state_from_json(desc)
+        (key, receiver) = self.__top.add_receiver(mode=desc['mode'], key=key, state=desc)
     
     def create_child(self, desc):
         (key, receiver) = self.__top.add_receiver(desc['mode'])
@@ -146,7 +145,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         
         self._do_connect()
 
-    def add_receiver(self, mode, key=None):
+    def add_receiver(self, mode, key=None, state=None):
         if len(self._receivers) >= 100:
             # Prevent storage-usage DoS attack
             raise Exception('Refusing to create more than 100 receivers')
@@ -165,14 +164,29 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
             defaults = arbitrary.state_to_json()
         else:
             defaults = self.receiver_default_state
+            
+        combined_state = defaults.copy()
+        if 'device_name' in combined_state: del combined_state['device_name']  # should not be overridden
+        if state is not None: combined_state.update(state)
         
-        receiver = self._make_receiver(mode, defaults, key)
-        
+        facet = ContextForReceiver(self, key)
+        receiver = Receiver(
+            mode=mode,
+            audio_channels=self.__audio_channels,
+            device_name=self.source_name,
+            audio_destination=CLIENT_AUDIO_DEVICE,  # TODO match others
+            context=facet,
+        )
+        receiver.state_from_json(combined_state)  # TODO: Use unserialize_exported_state
+        facet._receiver = receiver
         self._receivers[key] = receiver
         self._receiver_valid[key] = False
         
         self.__needs_reconnect.append(u'added receiver ' + key)
         self._do_connect()
+
+        # until _enabled, the facet ignores any reconnect/rebuild-triggering callbacks
+        facet._enabled = True
         
         return (key, receiver)
 
@@ -376,26 +390,6 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
             raise ValueError('Source %r does not exist' % (value,))
         self.source_name = value
         self._do_connect()
-
-    def _make_receiver(self, mode, defaults, key):
-        # Remove state that should not be overridden
-        defaults = defaults.copy()
-        if 'device_name' in defaults: del defaults['device_name']
-        
-        facet = ContextForReceiver(self, key)
-        device = self._sources[self.source_name]
-        receiver = Receiver(
-            mode=mode,
-            audio_channels=self.__audio_channels,
-            device_name=self.source_name,
-            audio_destination=CLIENT_AUDIO_DEVICE,  # TODO match others
-            context=facet,
-        )
-        receiver.state_from_json(defaults)  # TODO: Use unserialize_exported_state
-        # until _enabled, ignore any callbacks resulting from the state_from_json initialization
-        facet._receiver = receiver
-        facet._enabled = True
-        return receiver
     
     @exported_value(ctor=Notice(always_visible=False))
     def get_clip_warning(self):

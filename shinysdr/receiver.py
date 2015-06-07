@@ -22,6 +22,8 @@
 
 from __future__ import absolute_import, division
 
+import time
+
 from twisted.python import log
 from zope.interface import Interface, implements  # available via Twisted
 
@@ -105,7 +107,7 @@ class Receiver(gr.hier_block2, ExportedState):
         
         self.__update_rotator()  # initialize rotator, also in case of __demod_tunable
         self.__update_audio_gain()
-        self.__do_connect()
+        self.__do_connect(reason=u'initialization')
     
     def state_def(self, callback):
         super(Receiver, self).state_def(callback)
@@ -124,7 +126,8 @@ class Receiver(gr.hier_block2, ExportedState):
             kind='STEREO',
             sample_rate=output_type.get_sample_rate() if self.__demod_output else _dummy_audio_rate)
     
-    def __do_connect(self):
+    def __do_connect(self, reason):
+        #log.msg(u'receiver do_connect: %s' % (reason,))
         self.context.lock()
         try:
             self.disconnect_all()
@@ -187,7 +190,7 @@ class Receiver(gr.hier_block2, ExportedState):
         if self.__device_name != value:
             self.__device_name = value
             self.__update_rotator()  # freq
-            self._rebuild_demodulator()  # rate
+            self._rebuild_demodulator(reason=u'changed device, thus maybe sample rate')  # rate
             self.context.changed_needed_connections(u'changed device')
     
     # type construction is deferred because we don't want loading this file to trigger loading plugins
@@ -198,11 +201,12 @@ class Receiver(gr.hier_block2, ExportedState):
     @setter
     def set_mode(self, mode):
         mode = unicode(mode)
+        if mode == self.mode: return
         if self.demodulator and self.demodulator.can_set_mode(mode):
             self.demodulator.set_mode(mode)
             self.mode = mode
         else:
-            self._rebuild_demodulator(mode=mode)
+            self._rebuild_demodulator(mode=mode, reason=u'changed mode')
 
     # TODO: rename rec_freq to just freq
     @exported_value(ctor=float)
@@ -273,9 +277,9 @@ class Receiver(gr.hier_block2, ExportedState):
         return self.context.get_device(self.__device_name)
     
     # called from facet
-    def _rebuild_demodulator(self, mode=None):
+    def _rebuild_demodulator(self, mode=None, reason='<unspecified>'):
         self.__rebuild_demodulator_nodirty(mode)
-        self.__do_connect()
+        self.__do_connect(reason=u'demodulator rebuilt: %s' % (reason,))
         # TODO write a test for this!
         #self.context.revalidaate(tuning=False)  # in case our bandwidth changed
 
@@ -298,6 +302,8 @@ class Receiver(gr.hier_block2, ExportedState):
     def __make_demodulator(self, mode, state):
         '''Returns the demodulator.'''
 
+        t0 = time.time()
+        
         mode_def = lookup_mode(mode)
         if mode_def is None:
             # TODO: Better handling, like maybe a dummy demod
@@ -322,6 +328,7 @@ class Receiver(gr.hier_block2, ExportedState):
         
         # until _enabled, ignore any callbacks resulting from unserialization calling setters
         facet._enabled = True
+        log.msg('Constructed %s demodulator: %i ms.' % (mode, (time.time() - t0) * 1000))
         return demodulator
 
     def __update_audio_gain(self):
@@ -342,7 +349,7 @@ class ContextForDemodulator(object):
     
     def rebuild_me(self):
         assert self._enabled
-        self._receiver._rebuild_demodulator()
+        self._receiver._rebuild_demodulator(reason=u'rebuild_me')
 
     def lock(self):
         self._receiver.context.lock()
