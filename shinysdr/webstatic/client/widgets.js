@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./values', './events', './widget', './gltools'], function (values, events, widget, gltools) {
+define(['./values', './events', './widget', './gltools', './database'], function (values, events, widget, gltools, database) {
   'use strict';
   
   var Cell = values.Cell;
@@ -24,6 +24,7 @@ define(['./values', './events', './widget', './gltools'], function (values, even
   var Enum = values.Enum;
   var LocalCell = values.LocalCell;
   var Notice = values.Notice;
+  var Union = database.Union;
   var alwaysCreateReceiverFromEvent = widget.alwaysCreateReceiverFromEvent;
   var createWidgetExt = widget.createWidgetExt;
   var addLifecycleListener = widget.addLifecycleListener;
@@ -2493,6 +2494,24 @@ define(['./values', './events', './widget', './gltools'], function (values, even
     textarea(cell('notes'));
   }
   widgets.RecordDetails = RecordDetails;
+  
+  function DatabasePickerWidget(config) {
+    Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
+      var list = getAppend(); // TODO should be a <ul> with styling
+      for (var key in block) {
+        var match = /^enabled_(.*)$/.exec(key);
+        if (match) {
+          var label = list.appendChild(document.createElement('div')).appendChild(document.createElement('label'));
+          var input = label.appendChild(document.createElement('input'));
+          input.type = 'checkbox';
+          label.appendChild(document.createTextNode(match[1]))
+          createWidgetExt(config.context, Toggle, input, block[key]);
+          ignore(key);
+        }
+      }
+    });
+  }
+  widgets['interface:shinysdr.client.database.DatabasePicker'] = DatabasePickerWidget;
   
   // Silly single-purpose widget 'till we figure out more where the UI is going
   function SaveButton(config) {

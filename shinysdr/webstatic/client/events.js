@@ -170,5 +170,35 @@ define(function () {
   }
   exports.Clock = Clock;
   
+  // Utility for turning "this list was updated" into "these items were added and removed".
+  // TODO: Doesn't really fit with the rest of this module.
+  function AddKeepDrop(addCallback, removeCallback) {
+    var have = new Map();
+    var keep = new Set();
+    return {
+      begin: function() {
+        keep.clear();
+      },
+      add: function(key) {
+        keep.add(key);
+      },
+      end: function() {
+        have.forEach(function (value, key) {
+          if (!keep.has(key)) {
+            removeCallback(key, value);
+            have.delete(key);
+          }
+        });
+        keep.forEach(function (key) {
+          if (!have.has(key)) {
+            have.set(key, addCallback(key));
+          }
+        });
+        keep.clear();
+      }
+    }
+  }
+  exports.AddKeepDrop = AddKeepDrop;
+
   return Object.freeze(exports);
 });

@@ -36,16 +36,23 @@ define(['./values', './events', './database', './network', './maps', './widget',
   var Index = values.Index;
   
   var scheduler = new events.Scheduler();
+
+  var clientStateStorage = new StorageNamespace(localStorage, 'shinysdr.client.');
   
-  var freqDB = new database.Union();
-  freqDB.add(database.allSystematic);
-  freqDB.add(database.fromCatalog('dbs/')); // TODO get url from server
-  // kludge till we have proper UI for selection of write targets
   var writableDB = database.fromURL('wdb/');
-  freqDB.add(writableDB);
+  var databasesCell = new LocalCell(any, database.systematics.concat([
+    writableDB,  // kludge till we have proper UI for selection of write targets
+  ]));
+  database.arrayFromCatalog('dbs/', function (dbs) {   // TODO get url from server
+    databasesCell.set(databasesCell.get().concat(dbs));
+  })
+  var databasePicker = new database.DatabasePicker(
+    scheduler,
+    databasesCell,
+    new StorageNamespace(clientStateStorage, 'databases.'));
+  var freqDB = databasePicker.getUnion();
   
   // TODO(kpreid): Client state should be more closely associated with the components that use it.
-  var clientStateStorage = new StorageNamespace(localStorage, 'shinysdr.client.');
   function cc(key, type, value) {
     var cell = new StorageCell(clientStateStorage, type, key);
     if (cell.get() === null) {
@@ -57,7 +64,8 @@ define(['./values', './events', './database', './network', './maps', './widget',
     opengl: cc('opengl', Boolean, true),
     opengl_float: cc('opengl_float', Boolean, true),
     spectrum_split: cc('spectrum_split', new values.Range([[0, 1]], false, false), 0.5),
-    spectrum_average: cc('spectrum_average', new values.Range([[0.05, 1]], true, false), 0.25)
+    spectrum_average: cc('spectrum_average', new values.Range([[0.05, 1]], true, false), 0.25),
+    databases: new ConstantCell(values.block, databasePicker)
   });
   var clientBlockCell = new ConstantCell(values.block, clientState);
   

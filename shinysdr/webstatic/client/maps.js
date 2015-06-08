@@ -21,6 +21,7 @@ define(['./values', './gltools', './widget', './widgets', './events'], function 
   var sin = Math.sin;
   var cos = Math.cos;
   
+  var AddKeepDrop = events.AddKeepDrop;
   var any = values.any;
   var block = values.block;
   var Banner = widgets.Banner;
@@ -55,34 +56,6 @@ define(['./values', './gltools', './widget', './widgets', './events'], function 
 
   // Clock for position animations
   var clock = new Clock(0.1);
-
-  // Utility for turning "this list was updated" into "these items were added and removed".
-  function AddKeepDrop(addCallback, removeCallback) {
-    var have = new Map();
-    var keep = new Set();
-    return {
-      begin: function() {
-        keep.clear();
-      },
-      add: function(key) {
-        keep.add(key);
-      },
-      end: function() {
-        have.forEach(function (value, key) {
-          if (!keep.has(key)) {
-            removeCallback(key, value);
-            have.delete(key);
-          }
-        });
-        keep.forEach(function (key) {
-          if (!have.has(key)) {
-            have.set(key, addCallback(key));
-          }
-        });
-        keep.clear();
-      }
-    }
-  }
 
   // Process touch events to implement one- and two-finger pan/zoom gestures
   // Moves as if the space is linear but can tolerate it not actually being.

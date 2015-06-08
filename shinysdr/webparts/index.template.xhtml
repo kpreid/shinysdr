@@ -73,9 +73,15 @@
 
 <shinysdr-subwindow id="section-db" visible="true">
   <h2>Frequency DB</h2>
-  <div class="sidebar frame" data-target="radio">
-    <div class="panel" data-widget="RecordDetails" data-target="preset"></div>
+  <div class="sidebar frame">
+    <div class="panel" data-widget="RecordDetails" data-target="radio.preset"></div>
     <div class="panel" data-widget="FreqList" id="freqlist"></div>
+    <div class="panel">
+      <details class="frame" id="choose-databases">
+        <summary>Choose databases</summary>
+        <div data-widget="PickBlock" data-target="client.databases"></div>
+      </details>
+    </div>
   </div>
 </shinysdr-subwindow>
 

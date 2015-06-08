@@ -15,11 +15,18 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./events', './network'], function (events, network) {
+define(['./events', './network', './values'], function (events, network, values) {
   'use strict';
   
-  var xhrpost = network.xhrpost;
+  var AddKeepDrop = events.AddKeepDrop;
+  var DerivedCell = values.DerivedCell;
+  var Neverfier = events.Neverfier;
+  var Notifier = events.Notifier;
+  var StorageCell = values.StorageCell;
+  var any = values.any;
+  var externalGet = network.externalGet;
   var statusCategory = network.statusCategory;
+  var xhrpost = network.xhrpost;
   
   var exports = {};
   
@@ -138,15 +145,17 @@ define(['./events', './network'], function (events, network) {
     return out;
   };
   
+  // TODO: Consider switching Union to use a cell as its source. For that matter, consider switching the entire DB system to use DerivedCell — I think it has all the needed properties now. Though db sources don't need a scheduler baked in and DerivedCell does ...
   function Union() {
     this._unionSources = [];
     this._sourceGenerations = [];
+    this._shrinking = false;
     this._entries = [];
     this._viewGeneration = 0;
     this._listeners = [];
     this._chainedListening = false;
     
-    var notifier = new events.Notifier();
+    var notifier = new Notifier();
     function forward() {
       //console.log(this + ' forwarding');
       this._chainedListening = false;
@@ -176,10 +185,21 @@ define(['./events', './network'], function (events, network) {
     return '[shinysdr.database.Union ' + this._unionSources + ']';
   };
   Union.prototype.add = function (source) {
+    if (this._unionSources.indexOf(source) !== -1) return;
     this._unionSources.push(source);
     //console.log(this + ' firing notify for adding ' + source);
     this._chainedListening = false;  // no longer complete list
     this.n.notify();
+  };
+  Union.prototype.remove = function (source) {
+    if (this._unionSources.indexOf(source) === -1) return;
+    this._unionSources = this._unionSources.filter(function (x) { return x !== source; });
+    this._sourceGenerations = [];  // clear obsolete info, will be fully rebuilt regardless
+    this._shrinking = true;  // TODO kludge, can we not need this extra flag?
+    this.n.notify();
+  };
+  Union.prototype.getSources = function () {  // used for db selection tree. TODO better interface
+    return this._unionSources.slice();
   };
   Union.prototype.getAll = function () {
     if (!this._isUpToDate()) {
@@ -191,6 +211,7 @@ define(['./events', './network'], function (events, network) {
       entries.sort(compareRecord);
       this._entries = Object.freeze(entries);
       this._viewGeneration++;
+      this._shrinking = false;
     }
     return this._entries;
   };
@@ -198,7 +219,7 @@ define(['./events', './network'], function (events, network) {
     return this._viewGeneration;
   };
   Union.prototype._isUpToDate = function () {
-    return this._unionSources.every(function (source, i) {
+    return !this._shrinking && this._unionSources.every(function (source, i) {
       return source.getGeneration() === this._sourceGenerations[i] && source._isUpToDate();
     }.bind(this));
   };
@@ -206,7 +227,7 @@ define(['./events', './network'], function (events, network) {
   
   function Table(label, writable, initializer, addURL) {
     writable = !!writable;
-    this.n = new events.Notifier();
+    this.n = new Notifier();
     View.call(this, this);
     this._viewGeneration = 0;
     this._label = label;
@@ -221,6 +242,9 @@ define(['./events', './network'], function (events, network) {
   }
   // TODO: Make Table inherit only Source, not View, as it's not obvious what the resulting requirements for how View works are
   Table.prototype = Object.create(View.prototype, {constructor: {value: Table}});
+  Table.prototype.getTableLabel = function () {  // TODO kludge, reconsider interface
+    return this._label;
+  };
   Table.prototype.toString = function () {
     return '[shinysdr.database.Table ' + this._label + ']';
   };
@@ -250,27 +274,28 @@ define(['./events', './network'], function (events, network) {
   };
   exports.Table = Table;
   
-  function fromCatalog(url) {
-    var union = new Union();
-    network.externalGet(url, 'document', function(indexDoc) {
+  function arrayFromCatalog(url, callback) {
+    //var union = new Union();
+    var out = [];
+    externalGet(url, 'document', function(indexDoc) {
       var anchors = indexDoc.querySelectorAll('a[href]');
       //console.log('Fetched database index with ' + anchors.length + ' links.');
       Array.prototype.forEach.call(anchors, function (anchor) {
         // Conveniently, the browser resolves URLs for us here
-        union.add(fromURL(anchor.href));
+        out.push(fromURL(anchor.href));
       });
+      callback(out);
     });
-    return union;
   };
-  exports.fromCatalog = fromCatalog;
+  exports.arrayFromCatalog = arrayFromCatalog;
   
   function fromURL(url) {
     return new Table(
-      decodeURIComponent(url.replace(/^.*\//, '')),
+      decodeURIComponent(url.replace(/^.*\/(?=.)/, '').replace(/(.csv)?(\/)?$/, '')),
       true,
       function (internalAdd) {
         // TODO (implicitly) check mime type
-        network.externalGet(url, 'text', function(jsonString) {
+        externalGet(url, 'text', function(jsonString) {
           JSON.parse(jsonString).forEach(function (record, i) {
             internalAdd(record, url + i);  // TODO: proper url resolution, urls from server.
           });
@@ -371,7 +396,7 @@ define(['./events', './network'], function (events, network) {
       this._hook = null;
     }
     Object.defineProperties(this, {
-      n: { enumerable: false, value: new events.Notifier() },
+      n: { enumerable: false, value: new Notifier() },
       _initializing: { enumerable: false, writable: true, value: true }
     });
     for (var name in recordProps) {
@@ -426,10 +451,61 @@ define(['./events', './network'], function (events, network) {
     }}
   });
   
+  function DatabasePicker(scheduler, sourcesCell, storage) {
+    var self = this;
+    var result = new Union();
+    
+    this._reshapeNotice = new Notifier();
+    Object.defineProperty(this, '_reshapeNotice', {enumerable: false});
+    this['_implements_shinysdr.client.database.DatabasePicker'] = true;
+    Object.defineProperty(this, '_implements_shinysdr.client.database.DatabasePicker', {enumerable: false});
+    this.getUnion = function () { return result; };    // TODO facet instead of giving add/remove access
+    Object.defineProperty(this, 'getUnion', {enumerable: false});
+    
+    var i = 0;
+    var sourceAKD = new AddKeepDrop(function addSource(source) {
+      // TODO get clean stable unique names from the sources
+      var label = source.getTableLabel ? source.getTableLabel() : (i++);
+      var key = 'enabled_' + label; 
+      var cell = new StorageCell(storage, Boolean, key);
+      if (cell.get() === null) {
+        cell.set(true);
+      }
+      self[key] = cell;
+      // TODO unbreakable notify loop. consider switching Union to work like, or to take a, DerivedCell.
+      function updateUnionFromCell() {
+        if (cell.depend(updateUnionFromCell)) {
+          result.add(source);
+        } else {
+          result.remove(source);
+        }
+      }
+      updateUnionFromCell.scheduler = scheduler;
+      updateUnionFromCell();
+      
+      self._reshapeNotice.notify();
+    }, function removeSource() {
+      throw new Error('Removal not implemented');
+    });
+    
+    // TODO generic glue copied from maps.js
+    function dumpArray() {
+      sourceAKD.begin();
+      var array = sourcesCell.depend(dumpArray);
+      array.forEach(function (feature) {
+        sourceAKD.add(feature);
+      });
+      sourceAKD.end();
+    }
+    dumpArray.scheduler = scheduler;
+    dumpArray();
+  }
+  exports.DatabasePicker = DatabasePicker;
+  
   // Generic FM broadcast channels
   exports.fm = (function () {
     // Wikipedia currently says FM channels are numbered like so, but no one uses the numbers. Well, I'll use the numbers, just to start from integers. http://en.wikipedia.org/wiki/FM_broadcasting_in_the_USA
-    return new Table('builtin FM', false, function (internalAdd) {
+    return new Table('US FM broadcast', false, function (internalAdd) {
       for (var channel = 200; channel <= 300; channel++) {
         // not computing in MHz because that leads to roundoff error
         var freq = (channel - 200) * 2e5 + 879e5;
@@ -446,7 +522,7 @@ define(['./events', './network'], function (events, network) {
   // Aircraft band channels
   exports.air = (function () {
     // http://en.wikipedia.org/wiki/Airband
-    return new Table('builtin air', false, function (internalAdd) {
+    return new Table('US airband', false, function (internalAdd) {
       for (var freq = 108e6; freq <= 117.96e6; freq += 50e3) {
         internalAdd({
           type: 'channel',
@@ -466,10 +542,11 @@ define(['./events', './network'], function (events, network) {
     });
   }());
   
-  exports.allSystematic = new Union();
-  exports.allSystematic.add(exports.fm);
-  // TODO: This is currently too much clutter. Re-add this sort of info once we have ways to deemphasize repetitive information.
-  //exports.allSystematic.add(exports.air);
+  exports.systematics = Object.freeze([
+    exports.fm,
+    // TODO: This is currently too much clutter. Re-add this sort of info once we have ways to deemphasize repetitive information.
+    //exports.air
+  ])
   
   return Object.freeze(exports);
 });

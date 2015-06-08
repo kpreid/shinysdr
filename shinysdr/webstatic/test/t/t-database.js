@@ -216,6 +216,7 @@ describe('database', function () {
       t.add(dummyRecord);
       expectNotification(l);
     });
+    // TODO test remove()
   });
 });
 
