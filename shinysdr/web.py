@@ -499,7 +499,7 @@ class AudioStreamInner(object):
         self._block = block
         self._block.add_audio_queue(self._queue, audio_rate)
         
-        send(unicode(self._block.get_audio_channels()))
+        send(unicode(self._block.get_audio_queue_channels()))
         
         reactor.callInThread(_AudioStream_read_loop, reactor, self._queue, self.__deliver, self.__running)
     

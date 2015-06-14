@@ -22,7 +22,6 @@
 
 from __future__ import absolute_import, division
 
-from collections import defaultdict
 import math
 import time
 
@@ -30,19 +29,15 @@ from twisted.internet import reactor
 from twisted.python import log
 from zope.interface import Interface, implements  # available via Twisted
 
-from gnuradio import audio
 from gnuradio import blocks
 from gnuradio import gr
 
 from shinysdr.blocks import MonitorSink, RecursiveLockBlockMixin, Context
-from shinysdr.filters import make_resampler
+from shinysdr.audiomux import AudioManager
 from shinysdr.receiver import Receiver
 from shinysdr.signals import SignalType
 from shinysdr.types import Enum, Notice
 from shinysdr.values import ExportedState, CollectionState, exported_value, setter, BlockCell, IWritableCollection
-
-
-CLIENT_AUDIO_DEVICE = 'client'
 
 
 class ReceiverCollection(CollectionState):
@@ -69,18 +64,6 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
     def __init__(self, devices={}, audio_config=None, stereo=True):
         if not len(devices) > 0:
             raise ValueError('Must have at least one RF device')
-        #for key, audio_device in audio_devices.iteritems():
-        #    if key == CLIENT_AUDIO_DEVICE:
-        #        raise ValueError('The name %r for an audio device is reserved' % (key,))
-        #    if not audio_device.can_transmit():
-        #        raise ValueError('Audio device %r is not an output' % (key,))
-        if audio_config is not None:
-            # quick kludge placeholder -- currently a Device-device can't be stereo so we have a placeholder thing
-            # pylint: disable=unpacking-non-sequence
-            audio_device_name, audio_sample_rate = audio_config
-            audio_devices = {'server': (audio_sample_rate, audio.sink(audio_sample_rate, audio_device_name, False))}
-        else:
-            audio_devices = {}
         
         gr.top_block.__init__(self, "SDR top block")
         self.__running = False  # duplicate of GR state we can't reach, see __start_or_stop
@@ -94,7 +77,10 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.__rx_device_type = Enum({k: v.get_name() or k for (k, v) in self._sources.iteritems()})
         
         # Audio early setup
-        self.__audio_devices = audio_devices  # must be before contexts
+        self.__audio_manager = AudioManager(  # must be before contexts
+            graph=self,
+            audio_config=audio_config,
+            stereo=stereo)
 
         # Blocks etc.
         # TODO: device refactoring: remove 'source' concept (which is currently a device)
@@ -118,14 +104,6 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.accessories = CollectionState(accessories)
         # TODO: better name than "shared objects"
         self.shared_objects = CollectionState(self.__shared_objects, dynamic=True)
-        
-        # Audio stream bits
-        audio_destination_dict = {key: 'Server' or key for key, device in audio_devices.iteritems()}  # temp name till we have proper device objects
-        audio_destination_dict[CLIENT_AUDIO_DEVICE] = 'Client'  # TODO reconsider name
-        self.__audio_destination_type = Enum(audio_destination_dict, strict=True)
-        self.__audio_channels = 2 if stereo else 1
-        self.audio_queue_sinks = {}
-        self.__audio_buses = {key: BusPlumber(self, self.__audio_channels) for key in audio_destination_dict}
         
         # Flags, other state
         self.__needs_reconnect = [u'initialization']
@@ -172,9 +150,9 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         facet = ContextForReceiver(self, key)
         receiver = Receiver(
             mode=mode,
-            audio_channels=self.__audio_channels,
+            audio_channels=self.__audio_manager.get_channels(),
             device_name=self.source_name,
-            audio_destination=CLIENT_AUDIO_DEVICE,  # TODO match others
+            audio_destination=self.__audio_manager.get_default_destination(),  # TODO match others
             context=facet,
         )
         receiver.state_from_json(combined_state)  # TODO: Use unserialize_exported_state
@@ -203,36 +181,33 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.__needs_reconnect.append(u'removed receiver ' + key)
         self._do_connect()
 
+    # TODO move these methods to a facet of AudioManager
     def add_audio_queue(self, queue, queue_rate):
-        # TODO: place limit on maximum requested sample rate
-        self.audio_queue_sinks[queue] = (queue_rate,
-            AudioQueueSink(channels=self.__audio_channels, queue=queue))
-        
+        self.__audio_manager.add_audio_queue(queue, queue_rate)
         self.__needs_reconnect.append(u'added audio queue')
         self._do_connect()
         self.__start_or_stop()
     
     def remove_audio_queue(self, queue):
-        del self.audio_queue_sinks[queue]
-        
+        self.__audio_manager.remove_audio_queue(queue)
         self.__start_or_stop()
         self.__needs_reconnect.append(u'removed audio queue')
         self._do_connect()
     
-    def get_audio_channels(self):
+    def get_audio_queue_channels(self):
         '''
         Return the number of channels (which will be 1 or 2) in audio queue outputs.
         '''
-        return self.__audio_channels
+        return self.__audio_manager.get_channels()
 
     def _do_connect(self):
+        """Do all reconfiguration operations in the proper order."""
+
         if self.__in_reconnect:
             raise Exception('reentrant reconnect or _do_connect crashed')
         self.__in_reconnect = True
         
-        """Do all reconfiguration operations in the proper order."""
         t0 = time.time()
-        rate_changed = False
         if self.source is not self._sources[self.source_name]:
             log.msg('Flow graph: Switching RF device to %s' % (self.source_name))
             self.__needs_reconnect.append(u'switched device')
@@ -261,14 +236,15 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
                 self.__clip_probe)
 
             # Filter receivers
-            bus_inputs = defaultdict(lambda: [])
+            audio_rs = self.__audio_manager.reconnecting()
             n_valid_receivers = 0
             for key, receiver in self._receivers.iteritems():
                 self._receiver_valid[key] = receiver.get_is_valid()
                 if not self._receiver_valid[key]:
                     continue
-                if receiver.get_audio_destination() not in self.__audio_buses:
+                if not self.__audio_manager.validate_destination(receiver.get_audio_destination()):
                     log.err('Flow graph: receiver audio destination %r is not available' % (receiver.get_audio_destination(),))
+                    continue
                 n_valid_receivers += 1
                 if n_valid_receivers > 6:
                     # Sanity-check to avoid burning arbitrary resources
@@ -276,23 +252,9 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
                     log.err('Flow graph: Refusing to connect more than 6 receivers')
                     break
                 self.connect(self._sources[receiver.get_device_name()].get_rx_driver(), receiver)
-                rrate = receiver.get_output_type().get_sample_rate()
-                bus_inputs[receiver.get_audio_destination()].append((rrate, receiver))
+                audio_rs.input(receiver, receiver.get_output_type().get_sample_rate(), receiver.get_audio_destination())
             
-            self.__has_a_useful_receiver = False
-            for key, bus in self.__audio_buses.iteritems():
-                inputs = bus_inputs[key]
-                if key == CLIENT_AUDIO_DEVICE:
-                    outputs = self.audio_queue_sinks.itervalues()
-                    noutputs = len(self.audio_queue_sinks)
-                else:
-                    outputs = [self.__audio_devices[key]]
-                    noutputs = 1
-                if len(inputs) > 0 and noutputs > 0:
-                    self.__has_a_useful_receiver = True
-                bus.connect(
-                    inputs=inputs,
-                    outputs=outputs)
+            self.__has_a_useful_receiver = audio_rs.finish_bus_connections()
             
             self._recursive_unlock()
             # (this is in an if block but it can't not execute if anything else did)
@@ -400,13 +362,6 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         else:
             return u''
     
-    @exported_value()
-    def get_audio_bus_rate(self):
-        '''
-        Not visible externally; for diagnostic purposes only.
-        '''
-        return [b.get_current_rate() for b in self.__audio_buses.itervalues()]
-    
     @exported_value(ctor=float)
     def get_cpu_use(self):
         cur_wall_time = time.time()
@@ -433,7 +388,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
     
     def _get_audio_destination_type(self):
         '''for ContextForReceiver only'''
-        return self.__audio_destination_type
+        return self.__audio_manager.get_destination_type()
     
     def _trigger_reconnect(self, reason):
         self.__needs_reconnect.append(reason)
@@ -442,8 +397,6 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
     def _recursive_lock_hook(self):
         for source in self._sources.itervalues():
             source.notify_reconnecting_or_restarting()
-        #for audio_device in self.__audio_devices.itervalues():
-        #    audio_device.notify_reconnecting_or_restarting()
 
 
 class ContextForReceiver(Context):
@@ -518,116 +471,6 @@ class IHasFrequency(Interface):
     # TODO: better module placement for this
     def get_freq():
         pass
-
-
-class AudioQueueSink(gr.hier_block2):
-    def __init__(self, channels, queue):
-        gr.hier_block2.__init__(
-            self, 'ShinySDR AudioQueueSink',
-            gr.io_signature(channels, channels, gr.sizeof_float),
-            gr.io_signature(0, 0, 0),
-        )
-        sink = blocks.message_sink(
-            gr.sizeof_float * channels,
-            queue,
-            True)
-        if channels == 1:
-            self.connect((self, 0), sink)
-        else:
-            interleaver = blocks.streams_to_vector(gr.sizeof_float, channels)
-            for ch in xrange(channels):
-                self.connect((self, ch), (interleaver, ch))
-            self.connect(interleaver, sink)
-
-
-class BusPlumber(object):
-    '''
-    Takes an arbitrary number of blocks' float outputs (bus inputs), sums and resamples them, and connects them to an arbitrary number of blocks' inputs (bus outputs).
-    
-    If there are no outputs, the inputs will go to a null sink. If there are no inputs, the outputs will remain unconnected.
-    
-    (This cannot be a hierarchical block, because hierarchical blocks cannot currently have variable numbers of ports.)
-    '''
-    def __init__(self, graph, nchannels):
-        self.__graph = graph
-        self.__channels = xrange(nchannels)
-        self.__bus_rate = 0.0
-        # TODO: Stop using a cache of resamplers unless we use them in exactly-corresponding fashion; instead use a cache of resampling _filter taps_.
-        self.__resampler_cache = {}
-    
-    def get_current_rate(self):
-        return self.__bus_rate
-    
-    def connect(self, inputs, outputs):
-        '''
-        Make all new connections (graph.disconnect_all() must have been done) between inputs and outputs.
-        
-        inputs and outputs must be iterables of (sample_rate, block) tuples.
-        '''
-        inputs = list(inputs)
-        outputs = list(outputs)
-        
-        # Determine bus rate.
-        # The bus obviously does not need to be higher than the rate of any bus input, because that would be extraneous data. It also does not need to be higher than the rate of any bus output, because no output has use for the information.
-        max_in_rate = max((rate for rate, _ in inputs)) if len(inputs) > 0 else 0.0
-        max_out_rate = max((rate for rate, _ in outputs)) if len(outputs) > 0 else 0.0
-        new_bus_rate = min(max_out_rate, max_in_rate)
-        if new_bus_rate == 0.0:
-            # There are either no inputs or no outputs. Use the other side's rate so we have a well-defined value.
-            new_bus_rate = max(max_out_rate, max_in_rate)
-        if new_bus_rate == 0.0:
-            # There are both no inputs and no outputs. No point in not keeping the old rate (and its resampler cache).
-            new_bus_rate = self.__bus_rate
-        elif new_bus_rate != self.__bus_rate:
-            self.__bus_rate = new_bus_rate
-            self.__resampler_cache.clear()
-        
-        # recreated each time because reusing an add_ff w/ different
-        # input counts fails; TODO: report/fix bug
-        bus_sums = [blocks.add_ff() for _ in self.__channels]
-        
-        in_index = 0
-        for in_rate, in_block in inputs:
-            if in_rate == self.__bus_rate:
-                for ch in self.__channels:
-                    self.__graph.connect(
-                        (in_block, ch),
-                        (bus_sums[ch], in_index))
-            else:
-                for ch in self.__channels:
-                    self.__graph.connect(
-                        (in_block, ch),
-                        # TODO pool these resamplers
-                        make_resampler(in_rate, self.__bus_rate),
-                        (bus_sums[ch], in_index))
-            in_index += 1
-        
-        if in_index > 0:
-            # connect output only if there is at least one input
-            if len(outputs) > 0:
-                used_resamplers = set()
-                for out_rate, out_block in outputs:
-                    if out_rate == self.__bus_rate:
-                        for ch in self.__channels:
-                            self.__graph.connect(bus_sums[ch], (out_block, ch))
-                    else:
-                        if out_rate not in self.__resampler_cache:
-                            # Moderately expensive due to the internals using optfir
-                            log.msg('Flow graph: Constructing resampler for audio rate %i' % out_rate)
-                            self.__resampler_cache[out_rate] = tuple(
-                                make_resampler(self.__bus_rate, out_rate)
-                                for _ in self.__channels)
-                        resamplers = self.__resampler_cache[out_rate]
-                        used_resamplers.add(resamplers)
-                        for ch in self.__channels:
-                            self.__graph.connect(resamplers[ch], (out_block, ch))
-                for resamplers in used_resamplers:
-                    for ch in self.__channels:
-                        self.__graph.connect(bus_sums[ch], resamplers[ch])
-            else:
-                # gnuradio requires at least one connected output
-                for ch in self.__channels:
-                    self.__graph.connect(bus_sums[ch], blocks.null_sink(gr.sizeof_float))
 
 
 class MaxProbe(gr.hier_block2):
