@@ -526,7 +526,7 @@ define(['./values', './events', './widget', './gltools'], function (values, even
       ignore('zero_point');
     }, true);
   }
-  widgets.Demodulator = Demodulator;
+  widgets['interface:shinysdr.modes.IDemodulator'] = Demodulator;
   
   // Widget for a monitor block
   function Monitor(config) {
