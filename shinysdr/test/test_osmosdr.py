@@ -21,7 +21,7 @@ from twisted.trial import unittest
 
 from osmosdr import range_t, meta_range_t
 
-from shinysdr.plugins.osmosdr import OsmoSDRDevice, OsmoSDRProfile, convert_osmosdr_range
+from shinysdr.plugins.osmosdr import OsmoSDRDevice, OsmoSDRProfile, convert_osmosdr_range, profile_from_device_string
 from shinysdr.test.testutil import DeviceTestCase
 from shinysdr.types import Range
 
@@ -63,6 +63,28 @@ class TestOsmoSDRDeviceMisc(unittest.TestCase):
         self.assertEqual(Range([(-30000.0, 30000.0)]),
             OsmoSDRDevice('file=/dev/null,rate=80000')
             .get_rx_driver().get_usable_bandwidth())
+
+
+class TestOsmoSDRProfile(unittest.TestCase):
+    def test_inference(self):
+        self.assertEqual(
+            OsmoSDRProfile(e4000=False, dc_offset=False),
+            profile_from_device_string(''))
+        # Strictly speaking, RTL devices may have DC offsets, but current production uses the R820T or similar tuners, which do not, so this is a reasonable default.
+        self.assertEqual(
+            OsmoSDRProfile(e4000=False, dc_offset=False),
+            profile_from_device_string('rtl=0'))
+        self.assertEqual(
+            OsmoSDRProfile(e4000=False, dc_offset=True),
+            profile_from_device_string('hackrf=0'))
+        self.assertEqual(
+            OsmoSDRProfile(e4000=False, dc_offset=False),
+            profile_from_device_string('file=foo.bin'))
+    
+    def test_parser(self):
+        self.assertEqual(
+            OsmoSDRProfile(e4000=False, dc_offset=True),
+            profile_from_device_string('testarg=\',file\',hackrf'))
 
 
 class TestOsmoSDRRange(unittest.TestCase):

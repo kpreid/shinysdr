@@ -51,9 +51,58 @@ class OsmoSDRProfile(object):
         e4000: The device is an RTL2832U + E4000 tuner and can be
             confused into tuning to 0 Hz.
         '''
-        # TODO: Propagate DC offset info to client tune() -- currently unused
+        
+        # TODO: If the user specifies an OsmoSDRProfile without a full set of explicit args, derive the rest from the device string.
+        
         self.dc_offset = dc_offset
         self.e4000 = e4000
+    
+    # TODO: Is there a good way to not have to write all this "implementation of a data structure" boilerplate, that isn't "inherit namedtuple" which imposes further constraints?
+    
+    def __eq__(self, other):
+        # pylint: disable=unidiomatic-typecheck
+        return type(self) == type(other) and self.__dict__ == other.__dict__
+    
+    def __ne__(self, other):
+        return not self.__eq__(other)
+    
+    __hash__ = None
+    
+    def __repr__(self):
+        return 'OsmoSDRProfile(%s)' % (', '.join('%s=%s' % kv for kv in self.__dict__.iteritems()))
+
+
+__all__.append('OsmoSDRProfile')
+
+
+def profile_from_device_string(device_string):
+    # TODO: The input is actually an "args" string, which contains multiple devices space-separated. We should support this, but it is hard because osmosdr does not export the internal args_to_vector function and parsing it ourselves would need to be escaping-aware.
+    params = {k: v for k, v in osmosdr.device_t(device_string).items()}
+    for param_key in params.iterkeys():
+        if param_key in _default_profiles:
+            # is a device of this type
+            return _default_profiles[param_key]
+    # no match / unknown
+    return OsmoSDRProfile()
+
+
+_default_profiles = {
+    'file':    OsmoSDRProfile(dc_offset=False),
+    'osmosdr': OsmoSDRProfile(dc_offset=True),  # TODO confirm
+    'fcd':     OsmoSDRProfile(dc_offset=False),
+    'rtl':     OsmoSDRProfile(dc_offset=False),
+    'rtl_tcp': OsmoSDRProfile(dc_offset=False),
+    'uhd':     OsmoSDRProfile(dc_offset=True),
+    'miri':    OsmoSDRProfile(dc_offset=True),  # TODO confirm
+    'hackrf':  OsmoSDRProfile(dc_offset=True),
+    'bladerf': OsmoSDRProfile(dc_offset=True),
+    'rfspace': OsmoSDRProfile(dc_offset=True),
+    'airspy':  OsmoSDRProfile(dc_offset=True),
+    'soapy':   OsmoSDRProfile(),  # generic
+}
+_default_profiles['sdr-iq'] = _default_profiles['rfspace']
+_default_profiles['sdr-ip'] = _default_profiles['rfspace']
+_default_profiles['netsdr'] = _default_profiles['rfspace']
 
 
 class _OsmoSDRTuning(object):
@@ -115,7 +164,7 @@ class _OsmoSDRTuning(object):
 def OsmoSDRDevice(
         osmo_device,
         name=None,
-        profile=OsmoSDRProfile(),
+        profile=None,
         sample_rate=None,
         correction_ppm=0.0):
     '''
@@ -128,6 +177,8 @@ def OsmoSDRDevice(
     # The existence of the correction_ppm parameter is a workaround for the current inability to dynamically change an exported field's type (the frequency range), allowing them to be initialized early enough, in the configuration, to take effect. (Well, it's also nice to hardcode them in the config if you want to.)
     if name is None:
         name = 'OsmoSDR %s' % osmo_device
+    if profile is None:
+        profile = profile_from_device_string(osmo_device)
     
     source = osmosdr.source('numchan=1 ' + osmo_device)
     if source.get_num_channels() < 1:
