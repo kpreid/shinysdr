@@ -127,6 +127,8 @@ class TestTop(unittest.TestCase):
     
     @defer.inlineCallbacks
     def test_auto_retune(self):
+        # pylint: disable=no-member
+        
         f1 = 50e6  # avoid 100e6 because that's a default a couple of places
         dev = simulate.SimulatedDevice(freq=f1, allow_tuning=True)
         bandwidth = dev.get_rx_driver().get_output_type().get_sample_rate()

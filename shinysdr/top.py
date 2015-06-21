@@ -48,7 +48,7 @@ class ReceiverCollection(CollectionState):
         self.__top = top
     
     def state_insert(self, key, desc):
-        (key, receiver) = self.__top.add_receiver(mode=desc['mode'], key=key, state=desc)
+        self.__top.add_receiver(mode=desc['mode'], key=key, state=desc)
     
     def create_child(self, desc):
         (key, receiver) = self.__top.add_receiver(desc['mode'])
@@ -119,7 +119,8 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         def hookup_vfo_callback(k, d):  # function so as to not close over loop variable
             d.get_vfo_cell().subscribe(lambda: self.__device_vfo_callback(k))
         
-        for k, d in devices.iteritems(): hookup_vfo_callback(k, d)
+        for k, d in devices.iteritems():
+            hookup_vfo_callback(k, d)
         
         self._do_connect()
 

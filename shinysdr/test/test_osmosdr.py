@@ -34,6 +34,8 @@ class TestOsmoSDRDeviceCore(DeviceTestCase):
     # Test methods provided by DeviceTestCase
 
 class TestOsmoSDRDeviceMisc(unittest.TestCase):
+    # pylint: disable=no-member
+    
     def test_initial_zero_freq(self):
         # 100 MHz is a default we use
         self.assertEqual(100e6,

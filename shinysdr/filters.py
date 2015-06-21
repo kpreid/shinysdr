@@ -21,7 +21,6 @@ GNU Radio blocks which automatically compute appropriate filter designs.
 
 from __future__ import absolute_import, division
 
-from collections import namedtuple
 from fractions import gcd
 
 from gnuradio import gr
@@ -369,7 +368,7 @@ class MultistageChannelFilter(gr.hier_block2):
         # TODO: sanity check types:
         #   plan has matching stage types
         #   plan has same decimations
-        for stage_filter, (stage_design, taps) in zip(self.stages, self.__plan.get_stage_designs_and_taps()):
+        for stage_filter, (_stage_design, taps) in zip(self.stages, self.__plan.get_stage_designs_and_taps()):
             if hasattr(stage_filter, 'set_taps'):
                 stage_filter.set_taps(taps)
     

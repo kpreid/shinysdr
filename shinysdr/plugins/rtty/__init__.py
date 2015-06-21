@@ -256,7 +256,8 @@ def _encode_rtty(char_in, bits_out):
     limit_in = len(char_in)
     limit_out = len(bits_out) - _HALF_BITS_PER_CODE * 2
     while index_out < limit_out and index_in < limit_in:
-        code_bits, shift = _ASCII_TO_ITA2[char_in[index_in]]
+        # TODO: not encoding shift
+        code_bits, _shift = _ASCII_TO_ITA2[char_in[index_in]]
         bits_out[index_out:index_out + _HALF_BITS_PER_CODE] = code_bits
         index_out += _HALF_BITS_PER_CODE
         index_in += 1
