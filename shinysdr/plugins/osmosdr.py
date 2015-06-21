@@ -21,7 +21,7 @@ from zope.interface import implements  # available via Twisted
 
 from gnuradio import gr
 
-from shinysdr.devices import Device, FrequencyShift, IRXDriver, merge_devices
+from shinysdr.devices import Device, IRXDriver
 from shinysdr.signals import SignalType
 from shinysdr.types import Enum, Range
 from shinysdr.values import BlockCell, Cell, ExportedState, LooseCell, exported_value, setter
@@ -117,14 +117,12 @@ def OsmoSDRDevice(
         name=None,
         profile=OsmoSDRProfile(),
         sample_rate=None,
-        external_freq_shift=0.0,  # deprecated
         correction_ppm=0.0):
     '''
     osmo_device: gr-osmosdr device string
     name: block name (usually not specified)
     profile: an OsmoSDRProfile (see docs)
     sample_rate: desired sample rate, or None == guess a good rate
-    external_freq_shift: external (down|up)converter frequency (Hz) -- DEPRECATED, use shinysdr.devices.FrequencyShift
     correction_ppm: oscillator frequency calibration (parts-per-million)
     '''
     # The existence of the correction_ppm parameter is a workaround for the current inability to dynamically change an exported field's type (the frequency range), allowing them to be initialized early enough, in the configuration, to take effect. (Well, it's also nice to hardcode them in the config if you want to.)
@@ -161,19 +159,13 @@ def OsmoSDRDevice(
         print hw_initial_freq
         vfo_cell.set(tuning.from_hardware_freq(hw_initial_freq))
     
-    self = Device(
+    return Device(
         name=name,
         vfo_cell=vfo_cell,
         rx_driver=rx_driver)
-    
-    # implement legacy option in terms of new devices
-    if external_freq_shift == 0.0:
-        return self
-    else:
-        return merge_devices([self, FrequencyShift(-external_freq_shift)])
 
 
-__all__.append('SimulatedDevice')
+__all__.append('OsmoSDRDevice')
 
 
 OsmoSDRSource = OsmoSDRDevice  # legacy alias

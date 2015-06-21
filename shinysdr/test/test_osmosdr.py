@@ -63,7 +63,7 @@ class TestOsmoSDRDeviceMisc(unittest.TestCase):
         self.assertEqual(Range([(-30000.0, 30000.0)]),
             OsmoSDRDevice('file=/dev/null,rate=80000')
             .get_rx_driver().get_usable_bandwidth())
-        
+
 
 class TestOsmoSDRRange(unittest.TestCase):
     def test_convert_simple(self):
