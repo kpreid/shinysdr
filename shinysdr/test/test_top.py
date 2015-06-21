@@ -189,3 +189,6 @@ class ShutdownMockDriver(gr.hier_block2, ExportedState):
     
     def notify_reconnecting_or_restarting(self):
         pass
+    
+    def set_transmitting(self, value, midpoint_hook):
+        pass

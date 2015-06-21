@@ -34,27 +34,53 @@ class TestDevice(unittest.TestCase):
         self.assertEqual(u'x', Device(name='x').get_name())
         self.assertEqual(None, Device().get_name())
     
-    def test_rx_none(self):
+    def test_rx_absent(self):
         d = Device()
         self.assertEqual(False, d.can_receive())
         self.assertEqual(nullExportedState, d.get_rx_driver())
     
-    def test_rx_some(self):
+    def test_rx_present(self):
         rxd = _TestRXDriver()
         d = Device(rx_driver=rxd)
         self.assertEqual(True, d.can_receive())
         self.assertEqual(rxd, d.get_rx_driver())
     
-    def test_tx_none(self):
+    def test_tx_absent(self):
         d = Device()
         self.assertEqual(False, d.can_receive())
         self.assertEqual(nullExportedState, d.get_tx_driver())
     
-    def test_tx_some(self):
-        txd = _TestTXDriver()
+    def test_tx_present(self):
+        txd = _TestTXDriver([])
         d = Device(tx_driver=txd)
         self.assertEqual(True, d.can_transmit())
         self.assertEqual(txd, d.get_tx_driver())
+    
+    def test_tx_mode_noop(self):
+        '''
+        With no TX driver, set_transmitting is a noop.
+        
+        This was chosen as the most robust handling of the erroneous operation.
+        '''
+        d = Device(rx_driver=_TestRXDriver())
+        d.set_transmitting(True)
+        d.set_transmitting(False)
+    
+    def test_tx_mode_actual(self):
+        log = []
+        txd = _TestTXDriver(log)
+        d = Device(rx_driver=_TestRXDriver(), tx_driver=txd)
+        def midpoint_hook():
+            log.append('H')
+        # Either TX driver receives the hook (!= case) or the hook is called directly (== case)
+        d.set_transmitting(True, midpoint_hook)
+        self.assertEqual(log, [(True, midpoint_hook)])
+        d.set_transmitting(True, midpoint_hook)
+        self.assertEqual(log, [(True, midpoint_hook), 'H'])
+        d.set_transmitting(False, midpoint_hook)
+        self.assertEqual(log, [(True, midpoint_hook), 'H', (False, midpoint_hook)])
+        d.set_transmitting(False, midpoint_hook)
+        self.assertEqual(log, [(True, midpoint_hook), 'H', (False, midpoint_hook), 'H'])
     
     # TODO VFO tests
     # TODO components tests
@@ -80,8 +106,17 @@ class _TestRXDriver(ExportedState):
 class _TestTXDriver(ExportedState):
     implements(ITXDriver)
     
+    def __init__(self, log):
+        self.log = log
+    
     def get_input_type(self):
         return SignalType('IQ', 1)
+    
+    def notify_reconnecting_or_restarting(self):
+        pass
+    
+    def set_transmitting(self, value, midpoint_hook):
+        self.log.append((value, midpoint_hook))
 
 
 class TestMergeDevices(unittest.TestCase):

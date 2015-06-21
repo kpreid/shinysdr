@@ -109,6 +109,15 @@ class ITXDriver(Interface):
     
     def notify_reconnecting_or_restarting():
         pass
+    
+    def set_transmitting(value, midpoint_hook):
+        '''
+        Enable or disable actual transmission.
+        
+        The flowgraph will be locked or stopped before this method is called.
+        
+        This method will not be called redundantly.
+        '''
 
 
 __all__.append('ITXDriver')
@@ -150,6 +159,8 @@ class Device(ExportedState):
         self.__vfo_cell = vfo_cell
         self.__components = components
         self.components = CollectionState(self.__components, dynamic=False)
+        
+        self.__transmitting = False
     
     def get_name(self):
         return self.__name
@@ -194,6 +205,23 @@ class Device(ExportedState):
         (Convenience/consistency equivalent to self.state()['freq'].set.)
         '''
         return self.__vfo_cell.set(value)
+    
+    def set_transmitting(self, value, midpoint_hook=None):
+        '''
+        Start or stop transmitting. This may involve flowgraph reconfiguration, and as such the caller is responsible for locking or stopping the flowgraph(s) around this call.
+        
+        If there is no TX driver, then this has no effect.
+        
+        The output of the RX driver while transmitting is undefined; it may produce no samples, produce meaningless samples at the normal rate, or be unaffected (full duplex).
+        '''
+        value = bool(value)
+        if midpoint_hook is None:
+            midpoint_hook = lambda: None
+        if not self.can_transmit() or value == self.__transmitting:
+            midpoint_hook()
+            return
+        self.__transmitting = value
+        self.tx_driver.set_transmitting(value, midpoint_hook)
     
     def close(self):
         '''
@@ -472,6 +500,11 @@ class _AudioTXDriver(ExportedState, gr.hier_block2):
         self.disconnect_all()
     
     def notify_reconnecting_or_restarting(self):
+        pass
+    
+    def set_transmitting(self, value, midpoint_hook):
+        # Noop -- audio hardware is full duplex.
+        # TODO: But audio interfaces to radios generally have separate PTT control. Probably non-driver components should get TX notifications also.
         pass
 
 

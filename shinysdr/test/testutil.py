@@ -105,6 +105,23 @@ class DeviceTestCase(unittest.TestCase):
         if tx_driver is nullExportedState: return
         # No specific expectations, but it shouldn't throw.
         tx_driver.notify_reconnecting_or_restarting()
+    
+    def test_tx_set_transmitting(self):
+        if self.__noop: return
+        tx_driver = self.device.get_tx_driver()
+        if tx_driver is nullExportedState: return
+        nhook = [0]
+        def midpoint_hook():
+            nhook[0] += 1
+        # hook is always called exactly once
+        tx_driver.set_transmitting(True, midpoint_hook)
+        self.assertEqual(nhook, 1)
+        tx_driver.set_transmitting(True, midpoint_hook)
+        self.assertEqual(nhook, 2)
+        tx_driver.set_transmitting(False, midpoint_hook)
+        self.assertEqual(nhook, 3)
+        tx_driver.set_transmitting(False, midpoint_hook)
+        self.assertEqual(nhook, 4)
 
 
 class DemodulatorTester(object):
