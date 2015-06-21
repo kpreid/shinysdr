@@ -79,6 +79,9 @@ define(['./values', './events', './widget', './gltools'], function (values, even
       if (typeof name === 'string') {
         claimed[name] = true;
         targetCell = block[name];
+        if (!targetCell) {
+          return;
+        }
         if (config.idPrefix) {
           wEl.id = config.idPrefix + name;
         }
@@ -216,21 +219,12 @@ define(['./values', './events', './widget', './gltools'], function (values, even
         createWidgetExt(config.context, Select, sourceEl, block.source_name);
       }
       
-      if (false) { // TODO: Figure out a good way to display options for all sources
-        ignore('source');
-        if ('sources' in block) {
-          addWidget('sources', DeviceSet);
-        }
-      } else {
-        ignore('sources');
-        if ('source' in block) {
-          addWidget('source', Device);
-        }
-      }
+      // TODO: Figure out a good way to display options for all devices
+      ignore('sources');
+      addWidget('source', Device);
+
       addWidget('clip_warning', Banner);
-      if ('receivers' in block) {
-        addWidget('receivers', ReceiverSet);
-      }
+      addWidget('receivers', ReceiverSet);
       addWidget('accessories', AccessorySet);
       
       setToDetails();
@@ -427,9 +421,7 @@ define(['./values', './events', './widget', './gltools'], function (values, even
       
       setToDetails();
       
-      if ('correction_ppm' in block) {
-        addWidget('correction_ppm', SmallKnob, 'Freq.corr. (PPM)');
-      }
+      addWidget('correction_ppm', SmallKnob, 'Freq.corr. (PPM)');
       
       ignore('output_type');
     }, true);
@@ -524,18 +516,13 @@ define(['./values', './events', './widget', './gltools'], function (values, even
         addRow('RF', 'rf_power', Meter, 'meter');
         addRow('Squelch', 'squelch_threshold', LinSlider, 'input');
       }.call(this)); else {
-        if ('rf_power' in block) {
-          addWidget('rf_power', Meter, 'Power');
-        }
-        if ('squelch_threshold' in block) {
-          addWidget('squelch_threshold', LinSlider, 'Squelch');
-        }
+        // one of these is missing, use independently-conditional fallback
+        addWidget('rf_power', Meter, 'Power');
+        addWidget('squelch_threshold', LinSlider, 'Squelch');
       }
       
-      // TODO break dependency on plugin
-      if ('angle' in block) {
-        addWidget('angle', widgets.VOR$Angle, '');
-      }
+      // TODO: VOR plugin stuff; let the plugin handle it
+      addWidget('angle', widgets.VOR$Angle, '');
       ignore('zero_point');
     }, true);
   }
@@ -598,12 +585,8 @@ define(['./values', './events', './widget', './gltools'], function (values, even
       ignore('signal_type');
       ignore('fft');
       ignore('scope');
-      if ('frame_rate' in block) {
-        addWidget('frame_rate', LogSlider, 'Rate');
-      }
-      if ('freq_resolution' in block) {
-        addWidget('freq_resolution', LogSlider, 'Resolution');
-      }
+      addWidget('frame_rate', LogSlider, 'Rate');
+      addWidget('freq_resolution', LogSlider, 'Resolution');
       if ('paused' in block) {
         var pausedLabel = getAppend().appendChild(document.createElement('label'));
         var pausedEl = pausedLabel.appendChild(document.createElement('input'));
