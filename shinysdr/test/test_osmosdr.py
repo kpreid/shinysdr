@@ -33,6 +33,10 @@ class TestOsmoSDRDeviceCore(DeviceTestCase):
 
     # Test methods provided by DeviceTestCase
 
+
+# TODO: Find out if any of the device types supported by osmosdr.sink has a dummy/loopback mode, and if it does, use that to test OsmoSDRTXDriver.
+
+
 class TestOsmoSDRDeviceMisc(unittest.TestCase):
     # pylint: disable=no-member
     

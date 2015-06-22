@@ -20,11 +20,12 @@ from __future__ import absolute_import, division
 from zope.interface import implements  # available via Twisted
 
 from gnuradio import gr
+from gnuradio import blocks
 
-from shinysdr.devices import Device, IRXDriver
+from shinysdr.devices import Device, IRXDriver, ITXDriver
 from shinysdr.signals import SignalType
 from shinysdr.types import Constant, Enum, Range
-from shinysdr.values import BlockCell, Cell, ExportedState, LooseCell, exported_value, setter
+from shinysdr.values import BlockCell, Cell, ExportedState, LooseCell, exported_value, nullExportedState, setter
 
 import osmosdr
 
@@ -132,16 +133,16 @@ if True:  # dummy block
 
 
 class _OsmoSDRTuning(object):
-    def __init__(self, profile, correction_ppm, source):
+    def __init__(self, profile, correction_ppm, osmo_block):
         self.__profile = profile
         self.__correction_ppm = correction_ppm
-        self.__source = source
+        self.__osmo_block = osmo_block
         self.__vfo_cell = LooseCell(
             key='freq',
             value=0.0,
             # TODO: Eventually we'd like to be able to make the freq range vary dynamically with the correction setting
             ctor=convert_osmosdr_range(
-                source.get_freq_range(ch),
+                osmo_block.get_freq_range(ch),
                 strict=False,
                 transform=self.from_hardware_freq,
                 add_zero=profile.e4000),
@@ -150,7 +151,7 @@ class _OsmoSDRTuning(object):
             post_hook=self.__set_freq)
     
     def __set_freq(self, freq):
-        self.__source.set_center_freq(self.to_hardware_freq(freq))
+        self.__osmo_block.set_center_freq(self.to_hardware_freq(freq))
         
     def to_hardware_freq(self, effective_freq):
         if abs(effective_freq) < 1e-2 and self.__profile.e4000:
@@ -185,6 +186,11 @@ class _OsmoSDRTuning(object):
             return Range([(-passband, -epsilon), (epsilon, passband)])
         else:
             return Range([(-passband, passband)])
+    
+    def set_block(self, value):
+        self.__osmo_block = value
+        if self.__osmo_block is not None:
+            self.__set_freq(self.__vfo_cell.get())
 
 
 def OsmoSDRDevice(
@@ -223,11 +229,22 @@ def OsmoSDRDevice(
         source.set_sample_rate(sample_rate)
     
     rx_driver = _OsmoSDRRXDriver(
+        osmo_device=osmo_device,
         source=source,
         profile=profile,
         name=name,
-        sample_rate=sample_rate,
         tuning=tuning)
+    
+    if profile.tx:
+        tx_sample_rate = 2000000  # TODO KLUDGE NOT GENERAL need to use profile
+        tx_driver = _OsmoSDRTXDriver(
+            osmo_device=osmo_device,
+            rx=rx_driver,
+            name=name,
+            tuning=tuning,
+            sample_rate=tx_sample_rate)
+    else:
+        tx_driver = nullExportedState
     
     hw_initial_freq = source.get_center_freq()
     if hw_initial_freq == 0.0:
@@ -240,7 +257,8 @@ def OsmoSDRDevice(
     return Device(
         name=name,
         vfo_cell=vfo_cell,
-        rx_driver=rx_driver)
+        rx_driver=rx_driver,
+        tx_driver=tx_driver)
 
 
 __all__.append('OsmoSDRDevice')
@@ -254,17 +272,18 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     
     # Note: Docs for gr-osmosdr are in comments at gr-osmosdr/lib/source_iface.h
     def __init__(self,
+            osmo_device,
             source,
             profile,
             name,
-            sample_rate,
             tuning):
         gr.hier_block2.__init__(
-            self, name,
+            self, 'RX ' + name,
             gr.io_signature(0, 0, 0),
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
         )
         
+        self.__osmo_device = osmo_device
         self.__source = source
         self.__profile = profile
         self.__name = name
@@ -279,6 +298,10 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         self.iq_state = IQBalanceOff
         source.set_dc_offset_mode(self.dc_state, ch)  # no getter, set to known state
         source.set_iq_balance_mode(self.iq_state, ch)  # no getter, set to known state
+        
+        # Blocks
+        self.__state_while_inactive = {}
+        self.__placeholder = blocks.vector_source_c([])
         
         sample_rate = float(source.get_sample_rate())
         self.__signal_type = SignalType(
@@ -306,9 +329,8 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     
     # implement IRXDriver
     def close(self):
-        # Not found to be strictly necessary, because Device will drop this driver, but hey.
-        self.__source = None
-        self.disconnect_all()
+        self._stop_rx()
+        self.__tuning = None
     
     @exported_value(ctor=float)
     def get_correction_ppm(self):
@@ -321,6 +343,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     @exported_value(ctor_fn=lambda self: convert_osmosdr_range(
             self.__source.get_gain_range(ch), strict=False))
     def get_gain(self):
+        if self.__source is None: return 0.0
         return self.__source.get_gain(ch)
     
     @setter
@@ -329,6 +352,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     
     @exported_value(ctor_fn=lambda self: bool if self.__profile.agc else Constant(False))
     def get_agc(self):
+        if self.__source is None: return False
         return bool(self.__source.get_gain_mode(ch))
     
     @setter
@@ -338,6 +362,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     @exported_value(ctor_fn=lambda self: Enum(
         {unicode(name): unicode(name) for name in self.__source.get_antennas()}))
     def get_antenna(self):
+        if self.__source is None: return ''
         return unicode(self.__source.get_antenna(ch))
         # TODO review whether set_antenna is safe to expose
     
@@ -372,6 +397,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     @exported_value(ctor_fn=lambda self: convert_osmosdr_range(
         self.__source.get_bandwidth_range(ch), add_zero=True))
     def get_bandwidth(self):
+        if self.__source is None: return 0.0
         return self.__source.get_bandwidth(ch)
     
     @setter
@@ -381,26 +407,116 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     def notify_reconnecting_or_restarting(self):
         pass
 
+    # link to tx driver
+    def _stop_rx(self):
+        self.disconnect_all()
+        self.__state_while_inactive = self.state_to_json()
+        self.__tuning.set_block(None)
+        self.gains.close()
+        self.__source = None
+        self.connect(self.__placeholder, self)
+    
+    # link to tx driver
+    def _start_rx(self):
+        self.disconnect_all()
+        self.__source = osmosdr.source('numchan=1 ' + self.__osmo_device)
+        self.__source.set_sample_rate(self.__signal_type.get_sample_rate())
+        self.__tuning.set_block(self.__source)
+        self.gains = Gains(self.__source)
+        self.connect(self.__source, self)
+        self.state_from_json(self.__state_while_inactive)
+    
+
+
+class _OsmoSDRTXDriver(ExportedState, gr.hier_block2):
+    implements(ITXDriver)
+    
+    def __init__(self,
+            osmo_device,
+            rx,
+            name,
+            tuning,
+            sample_rate):
+        gr.hier_block2.__init__(
+            self, 'TX ' + name,
+            gr.io_signature(1, 1, gr.sizeof_gr_complex),
+            gr.io_signature(0, 0, 0))
+        
+        self.__osmo_device = osmo_device
+        self.__rx_driver = rx
+        self.__tuning = tuning
+        
+        self.__signal_type = SignalType(
+            kind='IQ',
+            sample_rate=sample_rate)
+        
+        self.__sink = None
+        self.__placeholder = blocks.null_sink(gr.sizeof_gr_complex)
+        self.__state_while_inactive = {}
+        
+        self.connect(self, self.__placeholder)
+    
+    # implement ITXDriver
+    def get_input_type(self):
+        return self.__signal_type
+    
+    # implement ITXDriver
+    def close(self):
+        self.disconnect_all()
+        self.__rx_driver = None
+        self.__sink = None
+        self.__tuning = None
+    
+    # implement ITXDriver
+    def notify_reconnecting_or_restarting(self):
+        pass
+    
+    # implement ITXDriver
+    def set_transmitting(self, value, midpoint_hook):
+        self.disconnect_all()
+        if value:
+            self.__rx_driver._stop_rx()
+            midpoint_hook()
+            self.__sink = osmosdr.sink(self.__osmo_device)
+            self.__sink.set_sample_rate(self.__signal_type.get_sample_rate())
+            self.__tuning.set_block(self.__sink)
+            self.connect(self, self.__sink)
+            self.state_from_json(self.__state_while_inactive)
+        else:
+            self.__state_while_inactive = self.state_to_json()
+            self.__tuning.set_block(None)
+            self.__sink = None
+            self.connect(self, self.__placeholder)
+            midpoint_hook()
+            self.__rx_driver._start_rx()
+
 
 class Gains(ExportedState):
     def __init__(self, source):
-        self.__source = source
+        self.__sourceref = [source]
+    
+    # be able to drop source ref
+    def close(self):
+        self.__sourceref[0] = None
     
     def state_def(self, callback):
-        source = self.__source
-        for name in source.get_gain_names():
+        sourceref = self.__sourceref
+        for name in sourceref[0].get_gain_names():
             # use a function to close over name
-            _install_gain_cell(self, source, name, callback)
+            _install_gain_cell(self, sourceref, name, callback)
 
 
-def _install_gain_cell(self, source, name, callback):
+def _install_gain_cell(self, sourceref, name, callback):
     def gain_getter():
-        return source.get_gain(name, ch)
+        source = sourceref[0]
+        return 0 if source is None else source.get_gain(name, ch)
     
     def gain_setter(value):
-        source.set_gain(float(value), name, ch)
+        source = sourceref[0]
+        if source is not None:
+            source.set_gain(float(value), name, ch)
     
-    gain_range = convert_osmosdr_range(source.get_gain_range(name, ch))
+    gain_range = convert_osmosdr_range(sourceref[0].get_gain_range(name, ch))
     
     # TODO: There should be a type of Cell such that we don't have to setattr
     setattr(self, 'get_' + name, gain_getter)
