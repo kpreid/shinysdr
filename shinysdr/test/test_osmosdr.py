@@ -68,23 +68,22 @@ class TestOsmoSDRDeviceMisc(unittest.TestCase):
 class TestOsmoSDRProfile(unittest.TestCase):
     def test_inference(self):
         self.assertEqual(
-            OsmoSDRProfile(e4000=False, dc_offset=False),
+            OsmoSDRProfile(),
             profile_from_device_string(''))
         # Strictly speaking, RTL devices may have DC offsets, but current production uses the R820T or similar tuners, which do not, so this is a reasonable default.
         self.assertEqual(
-            OsmoSDRProfile(e4000=False, dc_offset=False),
+            OsmoSDRProfile(agc=True, dc_cancel=False, dc_offset=False),
             profile_from_device_string('rtl=0'))
         self.assertEqual(
-            OsmoSDRProfile(e4000=False, dc_offset=True),
+            OsmoSDRProfile(tx=True, agc=False, dc_cancel=False, dc_offset=True),
             profile_from_device_string('hackrf=0'))
         self.assertEqual(
-            OsmoSDRProfile(e4000=False, dc_offset=False),
+            OsmoSDRProfile(agc=False, dc_cancel=False, dc_offset=False),
             profile_from_device_string('file=foo.bin'))
     
     def test_parser(self):
-        self.assertEqual(
-            OsmoSDRProfile(e4000=False, dc_offset=True),
-            profile_from_device_string('testarg=\',file\',hackrf'))
+        self.assertEqual(False, profile_from_device_string('testarg=\',hackrf\',rtl').dc_offset)
+        self.assertEqual(True, profile_from_device_string('testarg=\',rtl\',hackrf').dc_offset)
 
 
 class TestOsmoSDRRange(unittest.TestCase):

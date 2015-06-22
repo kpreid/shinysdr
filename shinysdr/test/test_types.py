@@ -19,7 +19,7 @@ from __future__ import absolute_import, division
 
 from twisted.trial import unittest
 
-from shinysdr.types import Enum, Range
+from shinysdr.types import Constant, Enum, Range, type_to_json
 
 
 def _testType(self, type_obj, good, bad):
@@ -34,6 +34,18 @@ def _testType(self, type_obj, good, bad):
         # pylint: disable=cell-var-from-loop
         self.assertRaises(ValueError, lambda: type_obj(value))
 
+
+class TestConstant(unittest.TestCase):
+    longMessage = True
+    
+    def test_serial(self):
+        self.assertEqual({u'type': u'constant', u'value': 1}, type_to_json(Constant(1)))
+    
+    def test_run(self):
+        _testType(self,
+            Constant(1),
+            [1, 1.0, (None, 1), ('foo', 1)],
+            [])
 
 class TestEnum(unittest.TestCase):
     longMessage = True

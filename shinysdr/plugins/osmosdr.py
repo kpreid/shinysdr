@@ -23,7 +23,7 @@ from gnuradio import gr
 
 from shinysdr.devices import Device, IRXDriver
 from shinysdr.signals import SignalType
-from shinysdr.types import Enum, Range
+from shinysdr.types import Constant, Enum, Range
 from shinysdr.values import BlockCell, Cell, ExportedState, LooseCell, exported_value, setter
 
 import osmosdr
@@ -35,6 +35,15 @@ __all__ = []
 ch = 0  # single channel number used
 
 
+# Constants from gr-osmosdr that aren't swig-exported
+DCOffsetOff = 0
+DCOffsetManual = 1
+DCOffsetAutomatic = 2
+IQBalanceOff = 0
+IQBalanceManual = 1
+IQBalanceAutomatic = 2
+
+
 # TODO: Allow profiles to export information about known spurious signals in receivers, in the form of a freq-DB. Note that they must be flagged as uncalibrated freqs.
 # Ex: Per <http://www.reddit.com/r/RTLSDR/comments/1nl3tl/has_anybody_done_a_comparison_of_where_the_spurs/> all RTL2832U have harmonics of 28.8MHz and 48MHz.
 
@@ -44,20 +53,34 @@ class OsmoSDRProfile(object):
     Description of the characteristics of specific hardware which cannot
     be obtained automatically via OsmoSDR.
     '''
-    def __init__(self, dc_offset=False, e4000=False):
+    
+    def __init__(self,
+            tx=False,  # safe assumption
+            agc=True,  # show useless controls > hide functionality
+            dc_cancel=True,  # ditto
+            dc_offset=True,  # safe assumption
+            e4000=False):
         '''
-        dc_offset: If true, the output has a DC offset and tuning should
+        All values are booleans.
+        
+        tx: The device supports transmitting (osmosdr.sink).
+        agc: The device has a hardware AGC (set_gain_mode works).
+        dc_cancel: The device supports DC offset auto cancellation
+            (set_dc_offset_mode auto works).
+        dc_offset: The output has a DC offset and tuning should
             avoid the area around DC.
         e4000: The device is an RTL2832U + E4000 tuner and can be
             confused into tuning to 0 Hz.
         '''
         
-        # TODO: If the user specifies an OsmoSDRProfile without a full set of explicit args, derive the rest from the device string.
-        
+        # TODO: If the user specifies an OsmoSDRProfile without a full set of explicit args, derive the rest from the device string instead of using defaults.
+        self.tx = tx
+        self.agc = agc
+        self.dc_cancel = dc_cancel
         self.dc_offset = dc_offset
         self.e4000 = e4000
     
-    # TODO: Is there a good way to not have to write all this "implementation of a data structure" boilerplate, that isn't "inherit namedtuple" which imposes further constraints?
+    # TODO: Is there a good way to not have to write all this "implementation of a simple structure" boilerplate, that isn't "inherit namedtuple" which imposes further constraints?
     
     def __eq__(self, other):
         # pylint: disable=unidiomatic-typecheck
@@ -86,23 +109,26 @@ def profile_from_device_string(device_string):
     return OsmoSDRProfile()
 
 
-_default_profiles = {
-    'file':    OsmoSDRProfile(dc_offset=False),
-    'osmosdr': OsmoSDRProfile(dc_offset=True),  # TODO confirm
-    'fcd':     OsmoSDRProfile(dc_offset=False),
-    'rtl':     OsmoSDRProfile(dc_offset=False),
-    'rtl_tcp': OsmoSDRProfile(dc_offset=False),
-    'uhd':     OsmoSDRProfile(dc_offset=True),
-    'miri':    OsmoSDRProfile(dc_offset=True),  # TODO confirm
-    'hackrf':  OsmoSDRProfile(dc_offset=True),
-    'bladerf': OsmoSDRProfile(dc_offset=True),
-    'rfspace': OsmoSDRProfile(dc_offset=True),
-    'airspy':  OsmoSDRProfile(dc_offset=True),
-    'soapy':   OsmoSDRProfile(),  # generic
-}
-_default_profiles['sdr-iq'] = _default_profiles['rfspace']
-_default_profiles['sdr-ip'] = _default_profiles['rfspace']
-_default_profiles['netsdr'] = _default_profiles['rfspace']
+
+if True:  # dummy block
+    # pylint: disable=bad-whitespace
+    _default_profiles = {
+        'file':    OsmoSDRProfile(tx=False, agc=False, dc_cancel=False, dc_offset=False),
+        'osmosdr': OsmoSDRProfile(tx=False, agc=True,  dc_cancel=False, dc_offset=True),  # TODO confirm dc
+        'fcd':     OsmoSDRProfile(tx=False, agc=False, dc_cancel=False, dc_offset=False),
+        'rtl':     OsmoSDRProfile(tx=False, agc=True,  dc_cancel=False, dc_offset=False),
+        'rtl_tcp': OsmoSDRProfile(tx=False, agc=True,  dc_cancel=False, dc_offset=False),
+        'uhd':     OsmoSDRProfile(tx=True,  agc=False, dc_cancel=True,  dc_offset=True),
+        'miri':    OsmoSDRProfile(tx=False, agc=True,  dc_cancel=False, dc_offset=True),  # TODO confirm dc
+        'hackrf':  OsmoSDRProfile(tx=True,  agc=False, dc_cancel=False, dc_offset=True),
+        'bladerf': OsmoSDRProfile(tx=True,  agc=False, dc_cancel=False, dc_offset=True),
+        'rfspace': OsmoSDRProfile(tx=False, agc=False, dc_cancel=False, dc_offset=True),
+        'airspy':  OsmoSDRProfile(tx=False, agc=False, dc_cancel=False, dc_offset=True),
+        'soapy':   OsmoSDRProfile(tx=True,  agc=True,  dc_cancel=True,  dc_offset=False),
+    }
+    _default_profiles['sdr-iq'] = _default_profiles['rfspace']
+    _default_profiles['sdr-ip'] = _default_profiles['rfspace']
+    _default_profiles['netsdr'] = _default_profiles['rfspace']
 
 
 class _OsmoSDRTuning(object):
@@ -198,6 +224,7 @@ def OsmoSDRDevice(
     
     rx_driver = _OsmoSDRRXDriver(
         source=source,
+        profile=profile,
         name=name,
         sample_rate=sample_rate,
         tuning=tuning)
@@ -228,6 +255,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     # Note: Docs for gr-osmosdr are in comments at gr-osmosdr/lib/source_iface.h
     def __init__(self,
             source,
+            profile,
             name,
             sample_rate,
             tuning):
@@ -236,18 +264,19 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
             gr.io_signature(0, 0, 0),
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
         )
-
+        
+        self.__source = source
+        self.__profile = profile
         self.__name = name
         self.__tuning = tuning
-        self.__source = source
         
         self.connect(self.__source, self)
         
         self.gains = Gains(source)
         
         # Misc state
-        self.dc_state = 0
-        self.iq_state = 0
+        self.dc_state = DCOffsetOff
+        self.iq_state = IQBalanceOff
         source.set_dc_offset_mode(self.dc_state, ch)  # no getter, set to known state
         source.set_iq_balance_mode(self.iq_state, ch)  # no getter, set to known state
         
@@ -298,7 +327,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     def set_gain(self, value):
         self.__source.set_gain(float(value), ch)
     
-    @exported_value(ctor=bool)
+    @exported_value(ctor_fn=lambda self: bool if self.__profile.agc else Constant(False))
     def get_agc(self):
         return bool(self.__source.get_gain_mode(ch))
     
@@ -313,32 +342,30 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         # TODO review whether set_antenna is safe to expose
     
     # Note: dc_cancel has a 'manual' mode we are not yet exposing
-    @exported_value(ctor=bool)
+    @exported_value(ctor_fn=lambda self: bool if self.__profile.dc_cancel else Constant(False))
     def get_dc_cancel(self):
         return bool(self.dc_state)
     
     @setter
     def set_dc_cancel(self, value):
-        self.dc_state = bool(value)
-        if self.dc_state:
-            mode = 2  # automatic mode
+        if value:
+            mode = DCOffsetAutomatic
         else:
-            mode = 0
-        self.__source.set_dc_offset_mode(mode, ch)
+            mode = DCOffsetOff
+        self.dc_state = self.__source.set_dc_offset_mode(mode, ch)
     
     # Note: iq_balance has a 'manual' mode we are not yet exposing
-    @exported_value(ctor=bool)
+    @exported_value(ctor=bool)  # TODO: detect gr-iqbal
     def get_iq_balance(self):
         return bool(self.iq_state)
 
     @setter
     def set_iq_balance(self, value):
-        self.iq_state = bool(value)
-        if self.iq_state:
-            mode = 2  # automatic mode
+        if value:
+            mode = IQBalanceAutomatic
         else:
-            mode = 0
-        self.__source.set_iq_balance_mode(mode, ch)
+            mode = IQBalanceOff
+        self.iq_state = self.__source.set_iq_balance_mode(mode, ch)
     
     # add_zero because zero means automatic setting based on sample rate.
     # TODO: Display automaticness in the UI rather than having a zero value.

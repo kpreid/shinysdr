@@ -45,6 +45,24 @@ class ValueType(object):
         raise NotImplementedError()
 
 
+class Constant(ValueType):
+    '''
+    A single-valued type.
+    '''
+    
+    def __init__(self, value):
+        self.__value = value
+    
+    def type_to_json(self):
+        return {
+            u'type': u'constant',
+            u'value': self.__value
+        }
+    
+    def __call__(self, specimen):
+        return self.__value
+
+
 class Enum(ValueType):
     def __init__(self, values, strict=False, base_type=unicode):
         """values: dict of {value: description}"""

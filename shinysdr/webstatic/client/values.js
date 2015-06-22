@@ -1,4 +1,4 @@
-// Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -19,6 +19,14 @@ define(['./events'], function (events) {
   'use strict';
   
   var exports = {};
+  
+  function Constant(value) {
+    this.value = value;
+  }
+  Constant.prototype.isSingleValued = function () {
+    return true;
+  };
+  exports.Constant = Constant;
   
   function Enum(valuesIn) {
     var values = Object.create(null);
@@ -118,6 +126,8 @@ define(['./events'], function (events) {
           return any;
         }
         switch (desc.type) {
+          case 'constant':
+            return new Constant(desc.value);
           case 'enum':
             return new Enum(desc.values);
           case 'range':

@@ -44,6 +44,11 @@ define(['./values', './events', './widget', './gltools'], function (values, even
   allModes.USB = 'Upper SSB';
   allModes.VOR = 'VOR';
   
+  function isSingleValued(type) {
+    // TODO: Stop using Boolean etc. as type objects and remove the need for this feature test
+    return type.isSingleValued && type.isSingleValued();
+  }
+  
   // Superclass for a sub-block widget
   function Block(config, optSpecial, optEmbed) {
     var block = config.target.depend(config.rebuildMe);
@@ -131,8 +136,7 @@ define(['./values', './events', './widget', './gltools'], function (values, even
       
       var member = block[name];
       if (member instanceof Cell) {
-        // TODO: Stop using Boolean etc. as type objects and remove the need for this feature test
-        if (member.type.isSingleValued && member.type.isSingleValued()) {
+        if (isSingleValued(member.type)) {
           return;
         }
         // TODO: Add a dispatch table of some sort to de-centralize this
@@ -336,7 +340,7 @@ define(['./values', './events', './widget', './gltools'], function (values, even
   function Device(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       var freqCell = block.freq;
-      if (!freqCell.type.isSingleValued()) {
+      if (!isSingleValued(freqCell.type)) {
         addWidget('freq', Knob, 'Center frequency');
       }
       addWidget('rx_driver', PickBlock);
@@ -352,7 +356,7 @@ define(['./values', './events', './widget', './gltools'], function (values, even
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       // If we have multiple gain-related controls, do a combined UI
       // TODO: Better feature-testing strategy
-      var hasAGC = 'agc' in block;
+      var hasAGC = 'agc' in block && !isSingleValued(block.agc.type);
       var hasSingleGain = 'gain' in block;
       var hasMultipleGain = 'gains' in block;
       if (hasAGC + hasSingleGain + hasMultipleGain > 1) (function () {
@@ -385,7 +389,6 @@ define(['./values', './events', './widget', './gltools'], function (values, even
           ignore('gains');
         }
         
-        // TODO: Figure out how to break these notify loops
         function bindGainModeSet() {
           var mode = gainModeCell.depend(bindGainModeSet);
           if (mode === 'auto' && !block.agc.get()) {
