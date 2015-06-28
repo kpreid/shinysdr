@@ -159,7 +159,7 @@ class VORModulator(gr.hier_block2, ExportedState):
     __audio_rate = 10000
     __rf_rate = 30000  # needs to be above fm_subcarrier * 2
 
-    def __init__(self, angle=0.0):
+    def __init__(self, context, mode, angle=0.0):
         gr.hier_block2.__init__(
             self, 'SimulatedDevice VOR modulator',
             gr.io_signature(1, 1, gr.sizeof_float * 1),

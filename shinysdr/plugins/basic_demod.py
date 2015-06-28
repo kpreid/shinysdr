@@ -224,7 +224,7 @@ class AMDemodulator(SimpleAudioDemodulator):
 class AMModulator(gr.hier_block2, ExportedState):
     implements(IModulator)
     
-    def __init__(self, rate=10000):
+    def __init__(self, context, mode, rate=10000):
         gr.hier_block2.__init__(
             self, type(self).__name__,
             gr.io_signature(1, 1, gr.sizeof_float * 1),
@@ -332,7 +332,7 @@ class NFMDemodulator(FMDemodulator):
 class NFMModulator(gr.hier_block2, ExportedState):
     implements(IModulator)
     
-    def __init__(self, audio_rate=10000, rf_rate=20000):
+    def __init__(self, context, mode, audio_rate=10000, rf_rate=20000):
         gr.hier_block2.__init__(
             self, type(self).__name__,
             gr.io_signature(1, 1, gr.sizeof_float * 1),
@@ -553,7 +553,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
 class DSBModulator(gr.hier_block2, ExportedState):
     implements(IModulator)
     
-    def __init__(self, rate=8000):
+    def __init__(self, context, mode, rate=8000):
         gr.hier_block2.__init__(
             self, type(self).__name__,
             gr.io_signature(1, 1, gr.sizeof_float * 1),

@@ -100,7 +100,8 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
             mode_def = lookup_mode(mode)
             if mode_def is None:  # missing plugin, say
                 return
-            modulator = mode_def.mod_class(**kwargs)
+            context = None  # TODO implement context
+            modulator = mode_def.mod_class(context=context, mode=mode, **kwargs)
             tx = _SimulatedTransmitter(modulator, audio_rate, rf_rate, freq)
             
             self.connect(audio_signal, tx)

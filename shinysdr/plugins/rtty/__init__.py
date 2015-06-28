@@ -156,7 +156,7 @@ class RTTYDemodulator(gr.hier_block2, ExportedState):
 class RTTYModulator(gr.hier_block2, ExportedState):
     implements(IModulator)
     
-    def __init__(self, rtty_baud=_DEFAULT_BAUD, rtty_shift=170.0, message='\0'):
+    def __init__(self, context, mode, rtty_baud=_DEFAULT_BAUD, rtty_shift=170.0, message='\0'):
         gr.hier_block2.__init__(
             self, self.__class__.__name__,
             gr.io_signature(0, 0, 0),
