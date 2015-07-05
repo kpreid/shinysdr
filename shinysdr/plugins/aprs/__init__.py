@@ -357,14 +357,15 @@ def _parse_payload(facts, errors, source, destination, payload, receive_time):
             
             # Type code per http://www.aprs.org/aprs12/mic-e-types.txt
             # TODO: parse and process manufacturer codes
-            type_match = re.match(r"^([] >`'])(...\})?(.*)$", type_and_more)
+            type_match = re.match(r"^([] >`'])(?:(...)\})?(.*)$", type_and_more)
             if type_match is None:
                 errors.append('Mic-E contained non-type-code text: %r' % type_and_more)
                 return type_and_more
             else:
                 type_code, opt_altitude, more_text = type_match.groups()
                 # TODO: process type code
-                # TODO: process altitude
+                if opt_altitude is not None:
+                    facts.append(Altitude(value=_parse_base91(opt_altitude) - 10000, feet_not_meters=False))
                 return more_text  # or should this be a status fact?
 
     elif data_type == ';':  # Object
@@ -526,6 +527,15 @@ def _parse_comment_altitude(facts, errors, comment):
         facts.append(Altitude(value=int(match.group(1)), feet_not_meters=True))
         comment = comment[:match.start()] + comment[match.end():]
     return comment
+
+
+def _parse_base91(text):
+    # per http://www.aprs.org/doc/APRS101.PDF page 55
+    # TODO: Error checking (out of range digits)
+    value = 0
+    for ch in text:
+        value = value * 91 + ord(ch) - 33
+    return value
 
 
 def _parse_telemetry_value(facts, errors, value_str, channel):

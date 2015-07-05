@@ -174,6 +174,7 @@ class TestAPRSParser(unittest.TestCase):
                 Position(latitude=36.382666666666665, longitude=-120.3465),
                 Velocity(speed_knots=63, course_degrees=31),
                 Symbol('/['),
+                Altitude(153, False),
             ],
             errors=[],
             # TODO: The _ is actually a manufacturer/version code or something but we don't support that yet
