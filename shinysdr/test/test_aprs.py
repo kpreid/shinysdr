@@ -25,7 +25,7 @@ from datetime import datetime
 
 from twisted.trial import unittest
 
-from shinysdr.plugins.aprs import APRSInformation, APRSStation, APRSMessage, Capabilities, ObjectItemReport, Messaging, Position, Status, Symbol, Telemetry, Timestamp, Velocity, parse_tnc2
+from shinysdr.plugins.aprs import Altitude, APRSInformation, APRSStation, APRSMessage, Capabilities, ObjectItemReport, Messaging, Position, Status, Symbol, Telemetry, Timestamp, Velocity, parse_tnc2
 from shinysdr.telemetry import TelemetryItem, empty_track
 
 
@@ -108,9 +108,10 @@ class TestAPRSParser(unittest.TestCase):
             facts=[
                 Messaging(False),
                 Position((37 + 26.16 / 60), -(122 + 19.21 / 60)),
-                Symbol('S#')],
+                Symbol('S#'),
+                Altitude(2080, True)],
             errors=[],
-            comment='PHG2436/A=002080')
+            comment='PHG2436')
     
     def test_position_with_timestamp_with_messaging(self):
         # TODO this message looks to have other stuff we should parse
@@ -134,9 +135,10 @@ class TestAPRSParser(unittest.TestCase):
                 Timestamp(_dummy_receive_datetime.replace(day=16, hour=2, minute=57, second=0, microsecond=0)),
                 Position((37 + 26.79 / 60), -(122 + 20.18 / 60)),
                 Symbol(u'\\v'),
+                Altitude(1955, True),
             ],
             errors=[],
-            comment='077/000/A=001955/N6ZX, Kings Mt. Eme')
+            comment='077/000/N6ZX, Kings Mt. Eme')
 
     def test_position_with_timestamp_zero_error(self):
         # TODO this message looks to have other stuff we should parse
@@ -152,16 +154,17 @@ class TestAPRSParser(unittest.TestCase):
         
     def test_position_ambiguity(self):
         # TODO the position ambiguity should be put in the facts
-        # TODO parse altitude
         # Note: This message was captured but has its ambiguity increased to test the left-of-the-dot ambiguity parsing.
         self.__check_parsed(
             'AG6WF-5>APDR13,TCPIP*,qAC,T2CSNGRAD:=341 .  N/1182 .  W$/A=000853',
             facts=[
                 Messaging(supported=True),
                 Position((34 + 10 / 60), -(118 + 20 / 60)),
-                Symbol(id=u'/$')],
+                Symbol(id=u'/$'),
+                Altitude(853, True),
+            ],
             errors=[],
-            comment='/A=000853')
+            comment='')
     
     def test_mic_e(self):
         self.__check_parsed(

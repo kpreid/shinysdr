@@ -217,6 +217,14 @@ Position = namedtuple('Position', [
 
 
 # fact
+Altitude = namedtuple('Altitude', [
+    'value',  # number: value
+    'feet_not_meters',  # boolean: true=units are feet, false=units are meters
+    # This horrible representation was chosen to ensure not losing data.
+])
+
+
+# fact
 Telemetry = namedtuple('Telemetry', [
     'channel',  # integer: channel 1-5
     'value',  # float: value
@@ -457,16 +465,16 @@ def _parse_position_and_symbol(facts, errors, data):
     if not match:
         errors.append('Position does not parse')
         return data
+
+    lat, symbol1, lon, symbol2, comment = match.groups()
+    plat = _parse_angle(lat)
+    plon = _parse_angle(lon)
+    if plat is not None and plon is not None:
+        facts.append(Position(plat, plon))
     else:
-        lat, symbol1, lon, symbol2, comment = match.groups()
-        plat = _parse_angle(lat)
-        plon = _parse_angle(lon)
-        if plat is not None and plon is not None:
-            facts.append(Position(plat, plon))
-        else:
-            errors.append('lat/lon does not parse: %r' % ((lat, lon),))
-        _parse_symbol(facts, errors, symbol1 + symbol2)
-        return comment
+        errors.append('lat/lon does not parse: %r' % ((lat, lon),))
+    _parse_symbol(facts, errors, symbol1 + symbol2)
+    return _parse_comment_altitude(facts, errors, comment)
 
 
 def _parse_dhm_hms_timestamp(facts, errors, data, receive_time):
@@ -510,6 +518,14 @@ def _parse_angle(angle_str):
         else:
             sign = 1
         return sign * (float(degrees) + float(minutes) / 60)
+
+
+def _parse_comment_altitude(facts, errors, comment):
+    match = re.search(r'/A=(\d{6})', comment)
+    if match:
+        facts.append(Altitude(value=int(match.group(1)), feet_not_meters=True))
+        comment = comment[:match.start()] + comment[match.end():]
+    return comment
 
 
 def _parse_telemetry_value(facts, errors, value_str, channel):
