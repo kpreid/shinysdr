@@ -224,6 +224,14 @@ class TestAPRSInformation(unittest.TestCase):
         self.assertEqual(['KE6AFE-2', 'TFCSCRUZ '], self.i.state().keys())
         # TODO test value
 
+    def test_drop_old(self):
+        self.i.receive(parse_tnc2('FOO>RX:>', _dummy_receive_time))
+        self.assertEqual(['FOO'], self.i.state().keys())
+        self.i.receive(parse_tnc2('BAR>RX:>', _dummy_receive_time + 599.9))
+        self.assertEqual({'BAR', 'FOO'}, set(self.i.state().keys()))
+        self.i.receive(parse_tnc2('BAR>RX:>', _dummy_receive_time + 600))
+        self.assertEqual(['BAR'], self.i.state().keys())
+
 
 class TestAPRSStation(unittest.TestCase):
     def setUp(self):

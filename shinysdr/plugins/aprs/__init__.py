@@ -58,6 +58,9 @@ _METERS_PER_NAUTICAL_MILE = 1852
 _KNOTS_TO_METERS_PER_SECOND = _METERS_PER_NAUTICAL_MILE / _SECONDS_PER_HOUR
 
 
+drop_unheard_timeout_seconds = 600  # 10 minutes, standard APRS cycle time
+
+
 class IAPRSInformation(Interface):
     '''marker interface for client'''
     pass
@@ -94,11 +97,23 @@ class APRSInformation(CollectionState):
                 else:
                     if fact.name in self.__stations:
                         del self.__stations[fact.name]
-    
+        
+        # logically independent but this is a convenient time, and this approach allows us to borrow the receive time rather than reading the system clock ourselves.
+        self.__flush_not_seen(message.receive_time)
+
     def __ensure_station(self, address):
         if address not in self.__stations:
             self.__stations[address] = APRSStation(address)
         return self.__stations[address]
+    
+    def __flush_not_seen(self, current_time):
+        deletes = []
+        limit = current_time - drop_unheard_timeout_seconds
+        for key, old_station in self.__stations.iteritems():
+            if old_station.get_last_heard_time() <= limit:
+                deletes.append(key)
+        for key in deletes:
+            del self.__stations[key]
 
 
 class IAPRSStation(Interface):
@@ -110,12 +125,14 @@ class APRSStation(ExportedState):
     implements(IAPRSStation)
     
     def __init__(self, address):
+        self.__last_heard_time = None
         self.__address = address
         self.__track = empty_track
         self.__status = u''
         self.__symbol = None
 
     def receive(self, message):
+        self.__last_heard_time = message.receive_time
         for fact in message.facts:
             if isinstance(fact, Position):
                 self.__track = self.__track._replace(
@@ -135,7 +152,11 @@ class APRSStation(ExportedState):
             else:
                 # TODO: Warn somewhere in this case (recognized by parser but not here)
                 pass
-
+    
+    @exported_value(ctor=float)
+    def get_last_heard_time(self):
+        return self.__last_heard_time
+    
     @exported_value(ctor=unicode)
     def get_address(self):
         return self.__address
