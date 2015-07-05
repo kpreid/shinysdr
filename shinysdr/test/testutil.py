@@ -60,6 +60,7 @@ class DeviceTestCase(unittest.TestCase):
     def test_smoke(self):
         if self.__noop: return
         self.assertIsInstance(self.device, Device)
+        # also tests close() by way of tearDown
     
     def test_rx_output_type(self):
         if self.__noop: return
@@ -82,13 +83,6 @@ class DeviceTestCase(unittest.TestCase):
         if rx_driver is nullExportedState: return
         self.assertIsInstance(rx_driver.get_usable_bandwidth(), Range)
     
-    def test_rx_close(self):
-        if self.__noop: return
-        rx_driver = self.device.get_rx_driver()
-        if rx_driver is nullExportedState: return
-        # No specific expectations, but it shouldn't throw.
-        self.device.get_rx_driver().close()
-    
     def test_rx_notify(self):
         if self.__noop: return
         rx_driver = self.device.get_rx_driver()
@@ -104,13 +98,6 @@ class DeviceTestCase(unittest.TestCase):
         self.assertIsInstance(t, SignalType)
         self.assertTrue(t.get_sample_rate() > 0)
         self.assertEquals(t.get_itemsize(), gr.sizeof_gr_complex)  # float not supported yet
-    
-    def test_tx_close(self):
-        if self.__noop: return
-        tx_driver = self.device.get_tx_driver()
-        if tx_driver is nullExportedState: return
-        # No specific expectations, but it shouldn't throw.
-        tx_driver.close()
     
     def test_tx_notify(self):
         if self.__noop: return
