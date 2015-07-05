@@ -497,12 +497,14 @@ def _parse_dhm_hms_timestamp(facts, errors, data, receive_time):
 
 
 def _parse_angle(angle_str):
-    # TODO digits are allowed to be space or dot for imprecise data
-    match = re.match(r'^(\d{1,3})(\d{2}.\d{2})([NESW])$', angle_str)
+    # TODO return imprecision information
+    # TODO old notes say "." is allowed as imprecision, check
+    match = re.match(r'^(\d{1,3})([\d ]{2}\.[\d ]{2})([NESW])$', angle_str)
     if not match:
         return None
     else:
         degrees, minutes, direction = match.groups()
+        minutes = minutes.replace(' ', '0')
         if direction == 'S' or direction == 'W':
             sign = -1
         else:

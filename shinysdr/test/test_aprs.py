@@ -150,7 +150,19 @@ class TestAPRSParser(unittest.TestCase):
             errors=['DHM/HMS timestamp invalid: day is out of range for month'],
             comment='087/004g006t068r000p000XTvEJeeWx')
         
-
+    def test_position_ambiguity(self):
+        # TODO the position ambiguity should be put in the facts
+        # TODO parse altitude
+        # Note: This message was captured but has its ambiguity increased to test the left-of-the-dot ambiguity parsing.
+        self.__check_parsed(
+            'AG6WF-5>APDR13,TCPIP*,qAC,T2CSNGRAD:=341 .  N/1182 .  W$/A=000853',
+            facts=[
+                Messaging(supported=True),
+                Position((34 + 10 / 60), -(118 + 20 / 60)),
+                Symbol(id=u'/$')],
+            errors=[],
+            comment='/A=000853')
+    
     def test_mic_e(self):
         self.__check_parsed(
             'KQ1N-7>SV2RYV,W6BXN-3*,N6ZX-3*,WIDE2*:`00krA4[/`"5U}_',
