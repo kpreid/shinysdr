@@ -473,21 +473,27 @@ def _parse_dhm_hms_timestamp(facts, errors, data, receive_time):
     match = re.match(r'^(\d\d)(\d\d)(\d\d)([zh/])$', data)
     if not match:
         errors.append('DHM/HMS timestamp does not parse')
-    else:
-        f1, f2, f3, kind = match.groups()
-        n1 = int(f1)
-        n2 = int(f2)
-        n3 = int(f3)
-        # TODO: This logic has not been completely tested.
-        # TODO: We should probably take larger-than-current day numbers as the previous month, and similar for hours just before midnight in 'h' format
+        return
+
+    f1, f2, f3, kind = match.groups()
+    n1 = int(f1)
+    n2 = int(f2)
+    n3 = int(f3)
+    
+    # TODO: This logic has not been completely tested.
+    # TODO: We should probably take larger-than-current day numbers as the previous month, and similar for hours just before midnight in 'h' format
+    try:
         if kind == 'h':
             absolute_time = datetime.utcfromtimestamp(receive_time).replace(hour=n1, minute=n2, second=n3)
         elif kind == 'z':
             absolute_time = datetime.utcfromtimestamp(receive_time).replace(day=n1, hour=n2, minute=n3, second=0, microsecond=0)
         else:  # kind == '/'
             absolute_time = datetime.fromtimestamp(receive_time).replace(day=n1, hour=n2, minute=n3, second=0, microsecond=0)
-        facts.append(Timestamp(absolute_time))
-        return ''
+    except ValueError, e:
+        errors.append('DHM/HMS timestamp invalid: %s' % (e.message,))
+        return
+    
+    facts.append(Timestamp(absolute_time))
 
 
 def _parse_angle(angle_str):

@@ -133,10 +133,23 @@ class TestAPRSParser(unittest.TestCase):
                 Messaging(False),
                 Timestamp(_dummy_receive_datetime.replace(day=16, hour=2, minute=57, second=0, microsecond=0)),
                 Position((37 + 26.79 / 60), -(122 + 20.18 / 60)),
-                Symbol('\\v'),
+                Symbol(u'\\v'),
             ],
             errors=[],
             comment='077/000/A=001955/N6ZX, Kings Mt. Eme')
+
+    def test_position_with_timestamp_zero_error(self):
+        # TODO this message looks to have other stuff we should parse
+        self.__check_parsed(
+            'N6TVE-11>APTW01,TCPIP*,qAC,T2BWI:@000000z3429.95N/11949.07W_087/004g006t068r000p000XTvEJeeWx',
+            facts=[
+                Messaging(True),
+                Position((34 + 29.95 / 60), -(119 + 49.07 / 60)),
+                Symbol(u'/_'),
+            ],
+            errors=['DHM/HMS timestamp invalid: day is out of range for month'],
+            comment='087/004g006t068r000p000XTvEJeeWx')
+        
 
     def test_mic_e(self):
         self.__check_parsed(
