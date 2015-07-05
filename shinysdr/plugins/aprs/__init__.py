@@ -49,6 +49,7 @@ from twisted.web import static
 from zope.interface import Interface, implements  # available via Twisted
 
 from shinysdr.telemetry import TelemetryItem, Track, empty_track
+from shinysdr.types import Notice
 from shinysdr.values import CollectionState, ExportedState, exported_value
 from shinysdr.web import ClientResourceDef
 
@@ -130,6 +131,7 @@ class APRSStation(ExportedState):
         self.__track = empty_track
         self.__status = u''
         self.__symbol = None
+        self.__last_parse_error = u''
 
     def receive(self, message):
         self.__last_heard_time = message.receive_time
@@ -152,6 +154,8 @@ class APRSStation(ExportedState):
             else:
                 # TODO: Warn somewhere in this case (recognized by parser but not here)
                 pass
+        if len(message.errors) > 0:
+            self.__last_parse_error = '; '.join(message.errors)
     
     @exported_value(ctor=float)
     def get_last_heard_time(self):
@@ -174,6 +178,10 @@ class APRSStation(ExportedState):
     def get_status(self):
         '''String status text.'''
         return self.__status
+
+    @exported_value(ctor=Notice(always_visible=False))
+    def get_last_parse_error(self):
+        return self.__last_parse_error
 
 
 APRSMessage = namedtuple('APRSMessage', [
