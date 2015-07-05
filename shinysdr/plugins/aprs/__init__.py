@@ -57,7 +57,7 @@ from shinysdr.web import ClientResourceDef
 _SECONDS_PER_HOUR = 60 * 60
 _METERS_PER_NAUTICAL_MILE = 1852
 _KNOTS_TO_METERS_PER_SECOND = _METERS_PER_NAUTICAL_MILE / _SECONDS_PER_HOUR
-
+_FEET_TO_METERS = 0.3048
 
 drop_unheard_timeout_seconds = 600  # 10 minutes, standard APRS cycle time
 
@@ -140,6 +140,11 @@ class APRSStation(ExportedState):
                 self.__track = self.__track._replace(
                     latitude=TelemetryItem(fact.latitude, message.receive_time),
                     longitude=TelemetryItem(fact.longitude, message.receive_time),
+                )
+            if isinstance(fact, Altitude):
+                conversion = _FEET_TO_METERS if fact.feet_not_meters else 1
+                self.__track = self.__track._replace(
+                    altitude=TelemetryItem(fact.value * conversion, message.receive_time),
                 )
             if isinstance(fact, Velocity):
                 self.__track = self.__track._replace(

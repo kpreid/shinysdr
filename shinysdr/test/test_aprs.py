@@ -283,11 +283,13 @@ class TestAPRSStation(unittest.TestCase):
     def test_track(self):
         self.assertEqual(empty_track, self.s.get_track())
         self.s.receive(self.__message([
-            Position(31, -42)
+            Position(31, -42),
+            Altitude(1000, True),
         ]))
         self.assertEqual(empty_track._replace(
             latitude=TelemetryItem(31, _dummy_receive_time),
             longitude=TelemetryItem(-42, _dummy_receive_time),
+            altitude=TelemetryItem(304.8, _dummy_receive_time)
         ), self.s.get_track())
         
     def test_symbol(self):
