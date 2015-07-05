@@ -44,10 +44,13 @@ from collections import namedtuple
 from datetime import datetime
 import os.path
 import re
+import time
 
+from twisted.python import log
 from twisted.web import static
 from zope.interface import Interface, implements  # available via Twisted
 
+from shinysdr.devices import Device
 from shinysdr.telemetry import TelemetryItem, Track, empty_track
 from shinysdr.types import Notice
 from shinysdr.values import CollectionState, ExportedState, exported_value
@@ -299,6 +302,42 @@ def parse_tnc2(line, receive_time):
         source, destination, via, payload = match.groups()
         comment = _parse_payload(facts, errors, source, destination, payload, receive_time)
         return APRSMessage(receive_time, source, destination, via, payload, facts, errors, comment)
+
+
+# TODO: This is something we want to support, but is not really appropriate as-is.
+# The data should go into the 'shared object', but right now only receivers can retrieve those. (I currently think shared objects ought to become more explicitly about telemetry-type data.) The current situation means that all of the data records get stuffed into an unfortunate part of the UI.
+# We need more support for non-RF devices, so that e.g. this can have a close callback, and perhaps so the rest of the system is aware of what this is actually doing.
+def APRSISRXDevice(reactor, client, name=None, filter=None):
+    '''
+    client: an aprs.APRS object (see <https://pypi.python.org/pypi/aprs>)
+    name: device label
+    filter: filter on incoming data (see <http://www.aprs-is.net/javAPRSFilter.aspx>)
+    '''
+    # pylint: disable=redefined-builtin
+    if name is None:
+        name = 'APRS-IS ' + filter
+    info = APRSInformation()  # TODO be able to grab the shared object instead
+    
+    def main_callback(line):
+        # TODO: This print-both-formats code is duplicated from multimon.py; it should be a utility in this module instead. Also, we should maybe have a try block.
+        log.msg(u'APRS: %r' % (line,))
+        message = parse_tnc2(line, time.time())
+        log.msg(u'   -> %s' % (message,))
+        parsed = parse_tnc2(line, time.time())
+        info.receive(message)
+    
+    # client blocks in a loop, so set up a thread
+    alive = True
+    def threaded_callback(line):
+        if not alive:
+            raise StopIteration()
+        reactor.callFromThread(main_callback, line)
+    
+    reactor.callInThread(client.receive, callback=threaded_callback, filter=filter)
+    
+    # TODO: Arrange so we can get close() callbacks and set alive=false
+    # TODO: Allow the filter to be changed at runtime
+    return Device(name=name, components={'aprs-is': info})
 
 
 def _parse_payload(facts, errors, source, destination, payload, receive_time):
