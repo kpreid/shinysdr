@@ -395,24 +395,23 @@ def _parse_payload(facts, errors, source, destination, payload, receive_time):
                 return more_text  # or should this be a status fact?
 
     elif data_type == ';':  # Object
-        match = re.match(r'^.(.{9})([*_])(.{7})(.{19})(.*)$', payload)
+        match = re.match(r'^.(.{9})([*_])(.{7})(.*)$', payload)
         if not match:
             errors.append('Object Information did not parse')
             return payload
         else:
-            name, live_str, time_str, position_str, ext_and_comment = match.groups()
+            name, live_str, time_str, position_ext_and_comment = match.groups()
             obj_facts = []
             
             _parse_dhm_hms_timestamp(obj_facts, errors, time_str, receive_time)
-            _parse_position_and_symbol(obj_facts, errors, position_str)
+            comment = _parse_position_and_symbol(obj_facts, errors, position_ext_and_comment)
             
             facts.append(ObjectItemReport(
                 object=True,
                 name=name,
                 live=live_str == '*',
                 facts=obj_facts))
-            # TODO: Parse data extension if present
-            return ext_and_comment
+            return comment
 
     elif data_type == 'T':  # Telemetry (1.0.1 format)
         # more lenient than spec because a real packet I saw had decimal points and variable field lengths
@@ -491,15 +490,17 @@ def _parse_position_and_symbol(facts, errors, data):
     # Uncompressed position
     match = re.match(r'^(\d.{7})(.)(.{9})(.)(.*)$', data)
     if match:
-        lat, symbol1, lon, symbol2, comment = match.groups()
+        lat, symbol1, lon, symbol2, ext_and_comment = match.groups()
         plat = _parse_angle(lat)
         plon = _parse_angle(lon)
         if plat is not None and plon is not None:
             facts.append(Position(plat, plon))
         else:
             errors.append('lat/lon does not parse: %r' % ((lat, lon),))
-        _parse_symbol(facts, errors, symbol1 + symbol2)
-        return _parse_comment_altitude(facts, errors, comment)
+        symbol = symbol1 + symbol2
+        _parse_symbol(facts, errors, symbol)
+        return _parse_comment_altitude(facts, errors,
+             _parse_data_extension(facts, errors, ext_and_comment, symbol))
     
     # Compressed position
     match = re.match(r'^(.)(.{4})(.{4})(.)(.)(.)(.)(.*)$', data)
@@ -534,7 +535,47 @@ def _parse_position_and_symbol(facts, errors, data):
     errors.append('Position does not parse')
     return data
 
+
+def _parse_data_extension(facts, errors, data, symbol):
+    if not len(data) >= 7:
+        return data
     
+    match = re.match(r'^(\d\d\d)/(\d\d\d)(.*)$', data)
+    if match and symbol is not '\\l':  # not an area object, which is ambiguous
+        # TODO: Deal with wind direction case
+        course, speed, comment = match.groups()
+        facts.append(Velocity(speed_knots=int(speed), course_degrees=int(course)))
+        return comment
+    
+    match = re.match(r'^PHG(\d)(\d)(\d)(\d)(.*)$', data)
+    if match:
+        # TODO: Store this data
+        p, h, g, d, comment = match.groups()
+        errors.append('PHG parsing not implemented')
+        return comment
+    
+    match = re.match(r'^RNG(\d\d\d\d)(.*)$', data)
+    if match:
+        range_str, comment = match.groups()
+        facts.append(RadioRange(int(range_str)))
+        return comment
+    
+    match = re.match(r'^DFS(\d)(\d)(\d)(\d)(.*)$', data)
+    if match:
+        # TODO: Store this data
+        s, h, g, d, comment = match.groups()
+        errors.append('DFS parsing not implemented')
+        return comment
+    
+    match = re.match(r'^(\d)(\d\d)([/1]\d)(\d\d)(.*)$', data)
+    if match:
+        # TODO: Store this data
+        type_code, yy, color_code, xx, comment = match.groups()
+        errors.append('Area object not implemented')
+        # TODO: Parse line "corridor"
+        return comment
+    
+    return data
 
 
 def _parse_dhm_hms_timestamp(facts, errors, data, receive_time):

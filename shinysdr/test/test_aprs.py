@@ -110,8 +110,8 @@ class TestAPRSParser(unittest.TestCase):
                 Position((37 + 26.16 / 60), -(122 + 19.21 / 60)),
                 Symbol('S#'),
                 Altitude(2080, True)],
-            errors=[],
-            comment='PHG2436')
+            errors=['PHG parsing not implemented'],
+            comment='')
     
     def test_position_with_timestamp_with_messaging(self):
         # TODO this message looks to have other stuff we should parse
@@ -122,12 +122,12 @@ class TestAPRSParser(unittest.TestCase):
                 Timestamp(_dummy_receive_datetime.replace(day=16, hour=2, minute=56, second=0, microsecond=0)),
                 Position((37 + 55.50 / 60), -(122 + 05.43 / 60)),
                 Symbol('/_'),
+                Velocity(speed_knots=3, course_degrees=204),
             ],
             errors=[],
-            comment='204/003g012t059r000p000P000h74b10084.DsVP')
+            comment='g012t059r000p000P000h74b10084.DsVP')
 
     def test_position_with_timestamp_without_messaging(self):
-        # TODO this message looks to have other stuff we should parse
         self.__check_parsed(
             'KMEP1>APT311,N6ZX-3*,WIDE1*,WIDE2-1:/160257z3726.79N\\12220.18Wv077/000/A=001955/N6ZX, Kings Mt. Eme',
             facts=[
@@ -135,10 +135,11 @@ class TestAPRSParser(unittest.TestCase):
                 Timestamp(_dummy_receive_datetime.replace(day=16, hour=2, minute=57, second=0, microsecond=0)),
                 Position((37 + 26.79 / 60), -(122 + 20.18 / 60)),
                 Symbol(u'\\v'),
+                Velocity(speed_knots=0, course_degrees=77),
                 Altitude(1955, True),
             ],
             errors=[],
-            comment='077/000/N6ZX, Kings Mt. Eme')
+            comment='/N6ZX, Kings Mt. Eme')
 
     def test_position_with_timestamp_zero_error(self):
         # TODO this message looks to have other stuff we should parse
@@ -148,9 +149,10 @@ class TestAPRSParser(unittest.TestCase):
                 Messaging(True),
                 Position((34 + 29.95 / 60), -(119 + 49.07 / 60)),
                 Symbol(u'/_'),
+                Velocity(speed_knots=4, course_degrees=87),
             ],
             errors=['DHM/HMS timestamp invalid: day is out of range for month'],
-            comment='087/004g006t068r000p000XTvEJeeWx')
+            comment='g006t068r000p000XTvEJeeWx')
         
     def test_position_ambiguity(self):
         # TODO the position ambiguity should be put in the facts
