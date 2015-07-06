@@ -58,19 +58,27 @@ define(['widgets', 'maps', 'events'], function (widgets, maps, events) {
   var OPACITY_STEPS = 20;
   
   var opacityClock = new Clock(APRS_TIMEOUT_SECONDS / OPACITY_STEPS);
+  var blinkClock = new Clock(1/30);
   
   function addAPRSMapLayer(db, scheduler, index, addLayer, addModeLayer) {
     addLayer('APRS', {
       featuresCell: index.implementing('shinysdr.plugins.aprs.IAPRSStation'),
       featureRenderer: function renderStation(station, dirty) {
-        var f = maps.renderTrackFeature(dirty, station.track,
-          'A=' + station.address.depend(dirty) +
-          ' st=' + station.status.depend(dirty) +
-          ' sy=' + station.symbol.depend(dirty));
+        var text = station.address.depend(dirty) + ' • ' + station.symbol.depend(dirty) +
+        ' • ' + (station.status.depend(dirty) || station.last_comment.depend(dirty));
+        // TODO: Add multiline text rendering and use it
+        var f = maps.renderTrackFeature(dirty, station.track, text);
+        
+        // TODO: Get an APRS icon set and use it.
         
         var now = opacityClock.convertToTimestampSeconds(opacityClock.depend(dirty));
         var age = now - station.last_heard_time.depend(dirty);
-        f.opacity = 1 - age / APRS_TIMEOUT_SECONDS;
+        if (age < 1) {
+          blinkClock.depend(dirty);  // cause fast updates
+          f.opacity = Math.cos(age * 4 * Math.PI) * 0.5 + 0.5;
+        } else {
+          f.opacity = 1 - age / APRS_TIMEOUT_SECONDS;
+        }
         
         return f;
       }
