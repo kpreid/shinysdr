@@ -16,11 +16,12 @@
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 // TODO: May be using the wrong relative module id -- otherwise this should have ..s
-define(['widgets', 'maps'], function (widgets, maps) {
+define(['widgets', 'maps', 'events'], function (widgets, maps, events) {
   'use strict';
   
   var Block = widgets.Block;
   var BlockSet = widgets.BlockSet;
+  var Clock = events.Clock;
   
   var exports = {};
   
@@ -53,14 +54,25 @@ define(['widgets', 'maps'], function (widgets, maps) {
   // TODO: Better widget-plugin system so we're not modifying should-be-static tables
   widgets['interface:shinysdr.plugins.aprs.IAPRSStation'] = APRSStationWidget;
   
+  var APRS_TIMEOUT_SECONDS = 600;
+  var OPACITY_STEPS = 20;
+  
+  var opacityClock = new Clock(APRS_TIMEOUT_SECONDS / OPACITY_STEPS);
+  
   function addAPRSMapLayer(db, scheduler, index, addLayer, addModeLayer) {
     addLayer('APRS', {
       featuresCell: index.implementing('shinysdr.plugins.aprs.IAPRSStation'),
       featureRenderer: function renderStation(station, dirty) {
-        return maps.renderTrackFeature(dirty, station.track,
-          'a=' + station.address.depend(dirty) +
+        var f = maps.renderTrackFeature(dirty, station.track,
+          'A=' + station.address.depend(dirty) +
           ' st=' + station.status.depend(dirty) +
           ' sy=' + station.symbol.depend(dirty));
+        
+        var now = opacityClock.convertToTimestampSeconds(opacityClock.depend(dirty));
+        var age = now - station.last_heard_time.depend(dirty);
+        f.opacity = 1 - age / APRS_TIMEOUT_SECONDS;
+        
+        return f;
       }
     });
   }
