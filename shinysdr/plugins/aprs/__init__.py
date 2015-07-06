@@ -131,6 +131,7 @@ class APRSStation(ExportedState):
         self.__track = empty_track
         self.__status = u''
         self.__symbol = None
+        self.__last_comment = u''
         self.__last_parse_error = u''
 
     def receive(self, message):
@@ -159,6 +160,7 @@ class APRSStation(ExportedState):
             else:
                 # TODO: Warn somewhere in this case (recognized by parser but not here)
                 pass
+        self.__last_comment = unicode(message.comment)
         if len(message.errors) > 0:
             self.__last_parse_error = '; '.join(message.errors)
     
@@ -183,6 +185,10 @@ class APRSStation(ExportedState):
     def get_status(self):
         '''String status text.'''
         return self.__status
+
+    @exported_value(ctor=unicode)
+    def get_last_comment(self):
+        return self.__last_comment
 
     @exported_value(ctor=Notice(always_visible=False))
     def get_last_parse_error(self):
