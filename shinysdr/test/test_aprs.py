@@ -25,7 +25,7 @@ from datetime import datetime
 
 from twisted.trial import unittest
 
-from shinysdr.plugins.aprs import Altitude, APRSInformation, APRSStation, APRSMessage, Capabilities, ObjectItemReport, Messaging, Position, Status, Symbol, Telemetry, Timestamp, Velocity, parse_tnc2
+from shinysdr.plugins.aprs import Altitude, APRSInformation, APRSStation, APRSMessage, Capabilities, ObjectItemReport, Messaging, Position, RadioRange, Status, Symbol, Telemetry, Timestamp, Velocity, parse_tnc2
 from shinysdr.telemetry import TelemetryItem, empty_track
 
 
@@ -165,6 +165,59 @@ class TestAPRSParser(unittest.TestCase):
             ],
             errors=[],
             comment='')
+    
+    # TODO compressed position parsing needs lots more testing, including altitude
+    def test_compressed_position_example_1(self):
+        '''example from APRS 1.0.1 page 40'''
+        # due to exponentiation being involved there is some FP error. TODO: Arrange to be able to assert the range, or duplicate the computation, instead of using exact constants
+        self.__check_parsed(
+            'FOO>BAR:!/5L!!<*e7>7P[',
+            facts=[
+                Messaging(supported=False),
+                Position((49 + 30 / 60), -72.75000393777269),
+                Symbol(id=u'/>'),
+                Velocity(speed_knots=36.23201216883807, course_degrees=88)
+            ],
+            errors=[],
+            comment='')
+    
+    def test_compressed_position_example_altitude(self):
+        '''example from APRS 1.0.1 page 40'''
+        # due to exponentiation being involved there is some FP error. TODO: Arrange to be able to assert the range, or duplicate the computation, instead of using exact constants
+        self.__check_parsed(
+            'FOO>BAR:!/!!!!!!!!>S]S',
+            facts=[
+                Messaging(supported=False),
+                Position(90, -180),
+                Symbol(id=u'/>'),
+                Altitude(value=10004.52005070133, feet_not_meters=True)
+            ],
+            errors=[],
+            comment='')
+    
+    def test_compressed_position_live(self):
+        self.__check_parsed(
+            'W6KWF-1>APOT30,WIDE2-1,qAR,W6YX-5:!/;ZI^/]m/k7UG 13.8V W6KWF',
+            facts=[
+                Messaging(supported=False),
+                Position(37.316371158702744, -121.96361498033738),
+                Symbol(id=u'/k'),
+                Velocity(speed_knots=53.70604083543306, course_degrees=88)
+            ],
+            errors=[],
+            comment=' 13.8V W6KWF')
+    
+    def test_compressed_position_radio_range(self):
+        self.__check_parsed(
+            'W6SJC-1>APX201,TCPIP*,qAC,T2SOCAL:=/;XuS/_3{o{LCXASTIR-Linux',
+            facts=[
+                Messaging(supported=True),
+                Position(latitude=37.34936706866951, longitude=-121.90397084998136),
+                Symbol(id=u'/o'),
+                RadioRange(27.3666404237768),
+            ],
+            errors=[],
+            comment='XASTIR-Linux')
     
     def test_mic_e(self):
         self.__check_parsed(

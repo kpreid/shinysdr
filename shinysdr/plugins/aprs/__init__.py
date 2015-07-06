@@ -208,6 +208,14 @@ Capabilities = namedtuple('Capabilities', [
 
 
 # fact
+Altitude = namedtuple('Altitude', [
+    'value',  # number: value
+    'feet_not_meters',  # boolean: true=units are feet, false=units are meters
+    # This horrible representation was chosen to ensure not losing data.
+])
+
+
+# fact
 Messaging = namedtuple('Messaging', [
     'supported',  # boolean
 ])
@@ -230,10 +238,9 @@ Position = namedtuple('Position', [
 
 
 # fact
-Altitude = namedtuple('Altitude', [
-    'value',  # number: value
-    'feet_not_meters',  # boolean: true=units are feet, false=units are meters
-    # This horrible representation was chosen to ensure not losing data.
+# TODO: Represent non-precalculated format
+RadioRange = namedtuple('RadioRange', [
+    'miles',  # float
 ])
 
 
@@ -475,20 +482,53 @@ def _parse_capability(capability):
 
 
 def _parse_position_and_symbol(facts, errors, data):
-    match = re.match(r'^(.{8})(.)(.{9})(.)(.*)$', data)
-    if not match:
-        errors.append('Position does not parse')
-        return data
-
-    lat, symbol1, lon, symbol2, comment = match.groups()
-    plat = _parse_angle(lat)
-    plon = _parse_angle(lon)
-    if plat is not None and plon is not None:
+    # Uncompressed position
+    match = re.match(r'^(\d.{7})(.)(.{9})(.)(.*)$', data)
+    if match:
+        lat, symbol1, lon, symbol2, comment = match.groups()
+        plat = _parse_angle(lat)
+        plon = _parse_angle(lon)
+        if plat is not None and plon is not None:
+            facts.append(Position(plat, plon))
+        else:
+            errors.append('lat/lon does not parse: %r' % ((lat, lon),))
+        _parse_symbol(facts, errors, symbol1 + symbol2)
+        return _parse_comment_altitude(facts, errors, comment)
+    
+    # Compressed position
+    match = re.match(r'^(.)(.{4})(.{4})(.)(.)(.)(.)(.*)$', data)
+    if match:
+        symbol1, lat, lon, symbol2, c, s, comptype, comment = match.groups()
+        plat = 90 - _parse_base91(lat) / 380926
+        plon = -180 + _parse_base91(lon) / 190463
         facts.append(Position(plat, plon))
-    else:
-        errors.append('lat/lon does not parse: %r' % ((lat, lon),))
-    _parse_symbol(facts, errors, symbol1 + symbol2)
-    return _parse_comment_altitude(facts, errors, comment)
+        _parse_symbol(facts, errors, symbol1 + symbol2)
+        comptype_bits = _parse_base91(comptype)
+        if comptype_bits & 0b11000 == 0b10000:
+            # compressed altitude
+            facts.append(Altitude(
+                value=1.002 ** _parse_base91(c + s),
+                feet_not_meters=True))
+        elif c == ' ':
+            # no data
+            pass
+        elif c == '{':
+            # radio range
+            facts.append(RadioRange(1.08 ** _parse_base91(s)))
+        elif 0 <= _parse_base91(c) <= 89:
+            # course/speed
+            # TODO: report errors on out of range values
+            facts.append(Velocity(
+                speed_knots=1.08 ** _parse_base91(s) - 1, 
+                course_degrees=_parse_base91(c) * 4))
+        # TODO: Parse "compression type" field (incl altitude)
+        # TODO: Should we be parsing comment-altitude here?
+        return comment
+    
+    errors.append('Position does not parse')
+    return data
+
+    
 
 
 def _parse_dhm_hms_timestamp(facts, errors, data, receive_time):
