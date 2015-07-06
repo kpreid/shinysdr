@@ -139,5 +139,36 @@ define(function () {
   };
   exports.Neverfier = Neverfier;
   
+  // A source of the current time in SECONDS which:
+  //   * works with schedulers/callbacks
+  //   * has a slightly coarse granularity of updates
+  //   * is offset to be close to zero, to be easier on low-precision math
+  function Clock(granularitySeconds) {
+    var granularityMs = granularitySeconds * 1000;
+    var clockEpoch_ms = Date.now();
+    var clockEpoch_s = clockEpoch_ms / 1000;
+    
+    var clockRunningFor = new Set();
+    
+    this.depend = function clockDepend(dirtyCallback) {
+      if (!clockRunningFor.has(dirtyCallback)) {
+        clockRunningFor.add(dirtyCallback);
+        // TODO: Removing this setTimeout causes bad scheduling behavior. Scheduler should either not put foo() at the end of the queue while inside foo(), or it should reject such scheduling.
+        setTimeout(function fireClock() {
+          clockRunningFor.delete(dirtyCallback);
+          dirtyCallback.scheduler.enqueue(dirtyCallback);
+        }, granularityMs);  // TODO: Adapt this interval to speed of animations in effect
+      }
+      return (Date.now() - clockEpoch_ms) / 1000;
+    };
+    this.convertFromTimestampSeconds = function (value) {
+      return value - clockEpoch_s;
+    };
+    this.convertToTimestampSeconds = function (value) {
+      return value + clockEpoch_s;
+    };
+  }
+  exports.Clock = Clock;
+  
   return Object.freeze(exports);
 });

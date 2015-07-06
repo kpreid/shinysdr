@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./values', './gltools', './widget', './widgets'], function (values, gltools, widget, widgets) {
+define(['./values', './gltools', './widget', './widgets', './events'], function (values, gltools, widget, widgets, events) {
   'use strict';
   
   var sin = Math.sin;
@@ -25,6 +25,7 @@ define(['./values', './gltools', './widget', './widgets'], function (values, glt
   var block = values.block;
   var Banner = widgets.Banner;
   var Cell = values.Cell;
+  var Clock = events.Clock;
   var ConstantCell = values.ConstantCell;
   var createWidgetExt = widget.createWidgetExt;
   var DerivedCell = values.DerivedCell;
@@ -52,23 +53,8 @@ define(['./values', './gltools', './widget', './widgets'], function (values, glt
     return array.reduce(function (a, b) { return a + b; }, 0) / array.length;
   }
 
-  // A source of the current time in SECONDS which:
-  //   * works with schedulers/callbacks
-  //   * has a slightly coarse granularity of updates
-  //   * is offset to be close to zero, to be easier on low-precision GPU math
-  var clockEpoch = Date.now();
-  var clockRunningFor = new Set();
-  function clock(dirtyCallback) {
-    if (!clockRunningFor.has(dirtyCallback)) {
-      clockRunningFor.add(dirtyCallback);
-      // TODO: Removing this setTimeout causes bad scheduling behavior. Scheduler should either not put foo() at the end of the queue while inside foo(), or it should reject such scheduling.
-      setTimeout(function () {
-        clockRunningFor.delete(dirtyCallback);
-        dirtyCallback.scheduler.enqueue(dirtyCallback);
-      }, 100);  // TODO: Adapt this interval to speed of animations in effect
-    }
-    return (Date.now() - clockEpoch) / 1000;
-  }
+  // Clock for position animations
+  var clock = new Clock(0.1);
 
   // Utility for turning "this list was updated" into "these items were added and removed".
   function AddKeepDrop(addCallback, removeCallback) {
@@ -723,7 +709,7 @@ define(['./values', './gltools', './widget', './widgets'], function (values, glt
         var base = index * FLOATS_PER_QUAD + offset * FLOATS_PER_VERT;
         var lat = (rendered.position || [0, 0])[0];
         var lon = (rendered.position || [0, 0])[1];
-        var instant = (rendered.timestamp || 0) - clockEpoch / 1000;
+        var instant = clock.convertFromTimestampSeconds(rendered.timestamp || 0);
         var radiansPerSecondSpeed = (rendered.speed || 0) * ((Math.PI * 2) / 40075e3)
         var planarXVel = dsin(rendered.vangle || 0) * radiansPerSecondSpeed;
         var planarYVel = dcos(rendered.vangle || 0) * radiansPerSecondSpeed;
@@ -828,7 +814,7 @@ define(['./values', './gltools', './widget', './widgets'], function (values, glt
           
           if (currentAnimatedFeatures.size > 0) {
             // if we don't have any animated features, don't depend on the clock
-            gl.uniform1f(gl.getUniformLocation(program, 'time'), clock(redrawCallback));
+            gl.uniform1f(gl.getUniformLocation(program, 'time'), clock.depend(redrawCallback));
           }
           
           gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
@@ -1747,10 +1733,12 @@ define(['./values', './gltools', './widget', './widgets'], function (values, glt
       });
     })();
     
+    var slowClockForTests = new Clock(1);
+    
     // TODO make this test layer more cleaned up and enableable
     var emptyItem = {value: null, timestamp: null};
     var motionTestTrackCell = new DerivedCell(any, scheduler, function(dirty) {
-      var t = Math.floor((clock(dirty) + clockEpoch/1000) / 1) * 1;  // emulated slow updates
+      var t = slowClockForTests.convertToTimestampSeconds(slowClockForTests.depend(dirty));
       var degreeSpeed = 10;
       var angle = t * degreeSpeed;
       var heading = angle + 90;
@@ -1819,7 +1807,7 @@ define(['./values', './gltools', './widget', './widgets'], function (values, glt
     if (false) addLayer('Add/Delete Test', {
       featuresCell: new DerivedCell(any, scheduler, function(dirty) {
         // TODO: use explicitly slow clock for less redundant updates
-        var t = Math.floor((clock(dirty)) / 1) * 1;
+        var t = Math.floor(slowClockForTests.depend(dirty) / 1) * 1;
         addDelFeature.label = 'Blinker ' + t;
         return t % 2 > 0 ? [addDelFeature] : [];
       }),
