@@ -113,9 +113,13 @@ class ReconnectSession(object):
         self.__buses = buses
         self.__devices = devices
         self.__queue_sinks = queue_sinks
-        self.__bus_inputs = defaultdict(lambda: [])
+        self.__bus_inputs = {bus: [] for bus in buses}
+        self.__fallback_bus = buses.keys()[0]
     
     def input(self, block, rate, destination):
+        if destination not in self.__bus_inputs:
+            log.msg('AudioManager: Invalid audio destination %r' % (destination,))
+            destination = self.__fallback_bus
         self.__bus_inputs[destination].append((rate, block))
     
     def finish_bus_connections(self):
