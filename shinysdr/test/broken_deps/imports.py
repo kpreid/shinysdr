@@ -1,0 +1,1 @@
+import shinysdr.test.nonexistent_module_in_dep

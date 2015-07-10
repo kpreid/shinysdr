@@ -41,6 +41,7 @@ from twisted.python import log
 
 # Note that gnuradio-dependent modules are loaded later, to avoid the startup time if all we're going to do is give a usage message
 from shinysdr.config import Config, make_default_config, execute_config
+from shinysdr.dependencies import DependencyTester
 
 
 def main(argv=None, _abort_for_test=False):
@@ -77,6 +78,10 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
     argParser.add_argument('--force-run', dest='force_run', action='store_true',
         help='Run DSP even if no client is connected (for debugging).')
     args = argParser.parse_args(args=argv[1:])
+
+    # Verify we can actually run.
+    # Note that this must be done before we actually load core modules, because we might get an import error then.
+    yield check_versions()
 
     # We don't actually use shinysdr.devices directly, but we want it to be guaranteed available in the context of the config file.
     import shinysdr.devices as lazy_devices
@@ -158,6 +163,16 @@ def top_defaults(top):
     # else out of ideas, let top block pick
     
     return state
+
+
+def check_versions():
+    t = DependencyTester()
+    t.check_module_attr('gnuradio.blocks', 'GNU Radio', 'rotator_cc')
+    t.check_module_attr('twisted.internet.task', 'Python library Twisted', 'react')
+    t.check_module_attr('txws', 'Python library txWS', 'WebSocketProtocol.setBinaryMode')
+    t.check_module_attr('six', 'Python library six', 'PY2')
+    if t.report() != None:
+        raise Exception(t.report())
 
 
 if __name__ == '__main__':
