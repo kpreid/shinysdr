@@ -46,7 +46,7 @@ def SimulatedDevice(name='Simulated RF', freq=0.0, allow_tuning=False):
         vfo_cell=LooseCell(
             key='freq',
             value=freq,
-            ctor=Range([(-1e9, 1e9)]) if allow_tuning else Range([(freq, freq)]),  # TODO kludge magic numbers
+            type=Range([(-1e9, 1e9)]) if allow_tuning else Range([(freq, freq)]),  # TODO kludge magic numbers
             writable=True,
             persists=False),
         rx_driver=_SimulatedRXDriver(name))
@@ -138,7 +138,7 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
         callback(BlockCell(self, 'transmitters'))
 
     # implement IRXDriver
-    @exported_value(ctor=SignalType)
+    @exported_value(type=SignalType)
     def get_output_type(self):
         return self.__signal_type
         
@@ -157,7 +157,7 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
     def close(self):
         pass
     
-    @exported_value(ctor=Range([(-50, 0)]))
+    @exported_value(type=Range([(-50, 0)]))
     def get_noise_level(self):
         return self.noise_level
     
@@ -209,7 +209,7 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
         # TODO make this possible to be decorator style
         callback(BlockCell(self, 'modulator'))
 
-    @exported_value(ctor_fn=lambda self: Range([(-self.__rf_rate / 2, self.__rf_rate / 2)], strict=False))
+    @exported_value(type_fn=lambda self: Range([(-self.__rf_rate / 2, self.__rf_rate / 2)], strict=False))
     def get_freq(self):
         return self.__freq
     
@@ -218,7 +218,7 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
         self.__freq = float(value)
         self.__rotator.set_phase_inc(rotator_inc(rate=self.__rf_rate, shift=self.__freq))
     
-    @exported_value(ctor=Range([(-50.0, 0.0)], strict=False))
+    @exported_value(type=Range([(-50.0, 0.0)], strict=False))
     def get_gain(self):
         return todB(self.__mult.k().real)
     

@@ -144,7 +144,7 @@ class TestMergeDevices(unittest.TestCase):
     def test_vfos(self):
         d = merge_devices([
             Device(vfo_cell=_ConstantVFOCell(1)),
-            Device(vfo_cell=LooseCell(key='freq', value=0, ctor=Range([(10, 20)]), writable=True))
+            Device(vfo_cell=LooseCell(key='freq', value=0, type=Range([(10, 20)]), writable=True))
         ])
         self.assertTrue(d.get_vfo_cell().isWritable())
         # TODO more testing

@@ -196,7 +196,7 @@ class StateSpecimen(ExportedState):
     def __init__(self):
         self.rw = 1.0
     
-    @exported_value(ctor=float)
+    @exported_value(type=float)
     def get_rw(self):
         return self.rw
     
@@ -238,6 +238,6 @@ class SerializationSpecimen(ExportedState):
     def __init__(self):
         self.st = None
     
-    @exported_value(ctor=SignalType)
+    @exported_value(type=SignalType)
     def get_st(self):
         return self.st

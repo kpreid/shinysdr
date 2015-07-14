@@ -164,33 +164,33 @@ class APRSStation(ExportedState):
         if len(message.errors) > 0:
             self.__last_parse_error = '; '.join(message.errors)
     
-    @exported_value(ctor=float)
+    @exported_value(type=float)
     def get_last_heard_time(self):
         return self.__last_heard_time
     
-    @exported_value(ctor=unicode)
+    @exported_value(type=unicode)
     def get_address(self):
         return self.__address
 
-    @exported_value(ctor=Track)
+    @exported_value(type=Track)
     def get_track(self):
         return self.__track
 
-    @exported_value(ctor=unicode)
+    @exported_value(type=unicode)
     def get_symbol(self):
         '''APRS symbol table identifier and symbol.'''
         return self.__symbol
 
-    @exported_value(ctor=unicode)
+    @exported_value(type=unicode)
     def get_status(self):
         '''String status text.'''
         return self.__status
 
-    @exported_value(ctor=unicode)
+    @exported_value(type=unicode)
     def get_last_comment(self):
         return self.__last_comment
 
-    @exported_value(ctor=Notice(always_visible=False))
+    @exported_value(type=Notice(always_visible=False))
     def get_last_parse_error(self):
         return self.__last_parse_error
 

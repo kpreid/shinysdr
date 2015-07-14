@@ -136,7 +136,7 @@ class RTTYDemodulator(gr.hier_block2, ExportedState):
             'width': self.__transition
         }
 
-    @exported_value(ctor=unicode)
+    @exported_value(type=unicode)
     def get_text(self):
         queue = self.__char_queue
         # we would use .delete_head_nowait() but it returns a crashy wrapper instead of a sensible value like None. So implement a test (which is safe as long as we're the only reader)
@@ -218,7 +218,7 @@ class RTTYFSKDemodulator(gr.hier_block2, ExportedState):
             self)
         self.connect(self.__dc_blocker, self.__freq_probe)
 
-    @exported_value(ctor=Range([(-2, 2)]))
+    @exported_value(type=Range([(-2, 2)]))
     def get_probe(self):
         return abs(self.__freq_probe.level())
 

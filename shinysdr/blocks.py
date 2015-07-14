@@ -266,7 +266,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__input_center_freq = float(input_center_freq)
         self.__paused = bool(paused)
         
-        self.__interested_cell = LooseCell(key='interested', ctor=bool, value=False, writable=False, persists=False)
+        self.__interested_cell = LooseCell(key='interested', type=bool, value=False, writable=False, persists=False)
         
         # blocks
         self.__gate = None
@@ -283,8 +283,8 @@ class MonitorSink(gr.hier_block2, ExportedState):
     def state_def(self, callback):
         super(MonitorSink, self).state_def(callback)
         # TODO make this possible to be decorator style
-        callback(StreamCell(self, 'fft', ctor=BulkDataType(array_format='b', info_format='dff')))
-        callback(StreamCell(self, 'scope', ctor=BulkDataType(array_format='f', info_format='d')))
+        callback(StreamCell(self, 'fft', type=BulkDataType(array_format='b', info_format='dff')))
+        callback(StreamCell(self, 'scope', type=BulkDataType(array_format='f', info_format='d')))
 
     def __rebuild(self):
         if self.__signal_type.is_analytic():
@@ -388,7 +388,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
     def set_input_center_freq(self, value):
         self.__input_center_freq = float(value) 
     
-    @exported_value(ctor=Range([(2, 4096)], logarithmic=True, integer=True))
+    @exported_value(type=Range([(2, 4096)], logarithmic=True, integer=True))
     def get_freq_resolution(self):
         return self.__freq_resolution
 
@@ -398,7 +398,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__rebuild()
         self.__connect()
 
-    @exported_value(ctor=Range([(1, 4096)], logarithmic=True, integer=True))
+    @exported_value(type=Range([(1, 4096)], logarithmic=True, integer=True))
     def get_time_length(self):
         return self.__time_length
 
@@ -408,7 +408,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__rebuild()
         self.__connect()
 
-    @exported_value(ctor=Range([(1, _maximum_fft_rate)], logarithmic=True, integer=False))
+    @exported_value(type=Range([(1, _maximum_fft_rate)], logarithmic=True, integer=False))
     def get_frame_rate(self):
         return self.__frame_rate
 
@@ -417,7 +417,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__frame_rate = value
         self.__logpwrfft.set_vec_rate(value)
     
-    @exported_value(ctor=bool)
+    @exported_value(type=bool)
     def get_paused(self):
         return self.__paused
 

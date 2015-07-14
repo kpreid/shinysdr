@@ -83,11 +83,11 @@ class SquelchMixin(ExportedState):
         self.rf_squelch_block = analog.simple_squelch_cc(squelch_threshold, alpha)
         self.rf_probe_block = analog.probe_avg_mag_sqrd_c(0, alpha=alpha)
 
-    @exported_value(ctor=Range([(-100, 0)], strict=False))
+    @exported_value(type=Range([(-100, 0)], strict=False))
     def get_rf_power(self):
         return todB(max(1e-10, self.rf_probe_block.level()))
 
-    @exported_value(ctor=Range([(-100, 0)], strict=False, logarithmic=False))
+    @exported_value(type=Range([(-100, 0)], strict=False, logarithmic=False))
     def get_squelch_threshold(self):
         return self.rf_squelch_block.threshold()
 
@@ -375,7 +375,7 @@ class WFMDemodulator(FMDemodulator):
             no_audio_filter=True,  # disable highpass
             **kwargs)
 
-    @exported_value(ctor=bool)
+    @exported_value(type=bool)
     def get_stereo(self):
         return self.stereo
     
@@ -545,7 +545,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
             'width': self.band_filter_width
         }
     
-    @exported_value(ctor=Range([(-20, _ssb_max_agc)]))
+    @exported_value(type=Range([(-20, _ssb_max_agc)]))
     def get_agc_gain(self):
         return todB(self.agc_block.gain())
 

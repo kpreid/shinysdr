@@ -428,7 +428,7 @@ class _HamlibProxy(ExportedState):
         p = self.__protocol
         self.poll_slow(p.rc_send)
     
-    @exported_value(ctor=Notice(always_visible=False))
+    @exported_value(type=Notice(always_visible=False))
     def get_errors(self):
         if self.__communication_error:
             return 'Rig not responding.'
@@ -451,35 +451,35 @@ def _install_cell(self, name, is_level, writable, callback, caps):
     if is_level:
         # TODO: Use range info from hamlib if available
         if name == 'STRENGTH level':
-            ctor = Range([(-54, 50)], strict=False)
+            vtype = Range([(-54, 50)], strict=False)
         elif name == 'SWR level':
-            ctor = Range([(1, 30)], strict=False)
+            vtype = Range([(1, 30)], strict=False)
         elif name == 'RFPOWER level':
-            ctor = Range([(0, 100)], strict=False)
+            vtype = Range([(0, 100)], strict=False)
         else:
-            ctor = Range([(-10, 10)], strict=False)
+            vtype = Range([(-10, 10)], strict=False)
     elif name == 'Mode' or name == 'TX Mode':
         # kludge
-        ctor = Enum({x: x for x in caps['Mode list'].strip().split(' ')})
+        vtype = Enum({x: x for x in caps['Mode list'].strip().split(' ')})
     elif name == 'VFO' or name == 'TX VFO':
-        ctor = Enum({x: x for x in caps['VFO list'].strip().split(' ')})
+        vtype = Enum({x: x for x in caps['VFO list'].strip().split(' ')})
     else:
-        ctor = self._info[name]
+        vtype = self._info[name]
     
     def updater(strval):
-        if ctor is bool:
+        if vtype is bool:
             value = bool(int(strval))
         else:
-            value = ctor(strval)
+            value = vtype(strval)
         cell.set_internal(value)
     
     def actually_write_value(value):
-        if ctor is bool:
+        if vtype is bool:
             self._ehs_set(name, str(int(value)))
         else:
-            self._ehs_set(name, str(ctor(value)))
+            self._ehs_set(name, str(vtype(value)))
     
-    cell = LooseCell(key=cell_name, value='placeholder', ctor=ctor, writable=writable, persists=False, post_hook=actually_write_value)
+    cell = LooseCell(key=cell_name, value='placeholder', type=vtype, writable=writable, persists=False, post_hook=actually_write_value)
     self._cell_updaters[name] = updater
     updater(self._ehs_get(name))
     callback(cell)

@@ -289,23 +289,23 @@ class Aircraft(ExportedState):
             self.__call is not None or \
             self.__aircraft_type is not None
         
-    @exported_value(ctor=float)
+    @exported_value(type=float)
     def get_last_heard_time(self):
         return self.__last_heard_time
     
-    @exported_value(ctor=unicode)
+    @exported_value(type=unicode)
     def get_call(self):
         return self.__call
     
-    @exported_value(ctor=int)
+    @exported_value(type=int)
     def get_ident(self):
         return self.__ident
     
-    @exported_value(ctor=unicode)
+    @exported_value(type=unicode)
     def get_aircraft_type(self):
         return self.__aircraft_type
     
-    @exported_value(ctor=Track)
+    @exported_value(type=Track)
     def get_track(self):
         return self.__track
 

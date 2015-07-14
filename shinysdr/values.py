@@ -96,9 +96,9 @@ class BaseCell(object):
 
 
 class ValueCell(BaseCell):
-    def __init__(self, target, key, ctor=None, **kwargs):
+    def __init__(self, target, key, type=None, **kwargs):
         BaseCell.__init__(self, target, key, **kwargs)
-        self._ctor = ctor
+        self._value_type = type
     
     def isBlock(self):
         return False
@@ -112,12 +112,12 @@ class ValueCell(BaseCell):
         return self.set(value)
     
     def type(self):
-        return self._ctor
+        return self._value_type
     
     def description(self):
         return {
             'kind': 'value',
-            'type': type_to_json(self._ctor),
+            'type': type_to_json(self._value_type),
             'writable': self.isWritable(),
             'current': self.get()
         }
@@ -125,9 +125,9 @@ class ValueCell(BaseCell):
 
 # TODO this name is historical and should be changed
 class Cell(ValueCell):
-    def __init__(self, target, key, writable=False, persists=None, ctor=None):
+    def __init__(self, target, key, writable=False, persists=None, type=None):
         if persists is None: persists = writable
-        ValueCell.__init__(self, target, key, writable=writable, persists=persists, ctor=ctor)
+        ValueCell.__init__(self, target, key, writable=writable, persists=persists, type=type)
         self._getter = getattr(self._target, 'get_' + key)
         if writable:
             self._setter = getattr(self._target, 'set_' + key)
@@ -140,7 +140,7 @@ class Cell(ValueCell):
     def set(self, value):
         if not self.isWritable():
             raise Exception('Not writable.')
-        return self._setter(self._ctor(value))
+        return self._setter(self._value_type(value))
 
 
 class _MessageSplitter(object):
@@ -198,9 +198,9 @@ class _MessageSplitter(object):
 
 
 class StreamCell(ValueCell):
-    def __init__(self, target, key, ctor=None):
-        assert isinstance(ctor, BulkDataType)
-        ValueCell.__init__(self, target, key, writable=False, persists=False, ctor=ctor)
+    def __init__(self, target, key, type=None):
+        assert isinstance(type, BulkDataType)
+        ValueCell.__init__(self, target, key, writable=False, persists=False, type=type)
         self.__dgetter = getattr(self._target, 'get_' + key + '_distributor')
         self.__igetter = getattr(self._target, 'get_' + key + '_info')
     
@@ -281,8 +281,7 @@ class LooseCell(ValueCell):
     '''
     implements(ISubscribableCell)
     
-    # TODO: the 'ctor' name is historic and wrong
-    def __init__(self, key, value, ctor, persists=True, writable=False, post_hook=None):
+    def __init__(self, key, value, type, persists=True, writable=False, post_hook=None):
         '''
         The key is not used by the cell itself.
         '''
@@ -290,7 +289,7 @@ class LooseCell(ValueCell):
             self,
             target=object(),
             key=key,
-            ctor=ctor,
+            type=type,
             persists=persists,
             writable=writable)
         self.__value = value
@@ -301,7 +300,7 @@ class LooseCell(ValueCell):
         return self.__value
     
     def set(self, value):
-        value = self._ctor(value)
+        value = self._value_type(value)
         if self.__value == value:
             return
         
@@ -545,25 +544,25 @@ class ExportedGetter(object):
     
     def make_cell(self, obj, attr):
         kwargs = self.__cell_kwargs
-        if 'ctor_fn' in kwargs:
-            if 'ctor' in kwargs:
-                raise ValueError('cannot specify both ctor and ctor_fn')
+        if 'type_fn' in kwargs:
+            if 'type' in kwargs:
+                raise ValueError('cannot specify both type and type_fn')
             kwargs = kwargs.copy()
-            kwargs['ctor'] = kwargs['ctor_fn'](obj)
-            del kwargs['ctor_fn']
+            kwargs['type'] = kwargs['type_fn'](obj)
+            del kwargs['type_fn']
         # TODO kludgy introspection, figure out what is better
         writable = hasattr(obj, 'set_' + attr) and isinstance(getattr(type(obj), 'set_' + attr), ExportedSetter)
         return Cell(obj, attr, writable=writable, **kwargs)
     
     def state_to_kwargs(self, value):
         if self.__parameter is not None:
-            return {self.__parameter: self.__cell_kwargs['ctor'](value)}
+            return {self.__parameter: self.__cell_kwargs['type'](value)}
 
 
 class ExportedSetter(object):
     '''Descriptor for a setter exported using @setter.'''
     def __init__(self, f):
-        # TODO: Coerce value with ctor?
+        # TODO: Coerce with value type?
         self.__function = f
     
     def __get__(self, obj, type=None):

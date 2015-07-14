@@ -81,7 +81,7 @@ class ValueAndBlockSpecimen(ExportedState):
         # TODO make this possible to be decorator style
         callback(BlockCell(self, 'block'))
     
-    @exported_value(ctor=float, parameter='value')
+    @exported_value(type=float, parameter='value')
     def get_value(self):
         return self.value
     
@@ -106,7 +106,7 @@ class TestDecoratorInheritance(unittest.TestCase):
 
 class DecoratorInheritanceSpecimenSuper(ExportedState):
     '''Helper for TestDecorator'''
-    @exported_value(ctor=float)
+    @exported_value(type=float)
     def get_inherited(self):
         return 9
 
@@ -116,7 +116,7 @@ class DecoratorInheritanceSpecimen(DecoratorInheritanceSpecimenSuper):
     def __init__(self):
         self.rw = 0.0
     
-    @exported_value(ctor=Range([(0.0, 10.0)]))
+    @exported_value(type=Range([(0.0, 10.0)]))
     def get_rw(self):
         return self.rw
     
@@ -150,13 +150,13 @@ class BlockCellSpecimen(ExportedState):
 
 class TestViewCell(unittest.TestCase):
     def setUp(self):
-        self.lc = LooseCell(value=0, key='a', ctor=int)
+        self.lc = LooseCell(value=0, key='a', type=int)
         self.vc = ViewCell(
             base=self.lc,
             get_transform=lambda x: x + 1,
             set_transform=lambda x: x - 1,
             key='b',
-            ctor=int)
+            type=int)
     
     def test_get_set(self):
         self.assertEqual(0, self.lc.get())
@@ -305,7 +305,7 @@ class PollerCellsSpecimen(ExportedState):
     foo = None
     
     def __init__(self):
-        self.subscribable = LooseCell(key='subscribable', value='', ctor=str)
+        self.subscribable = LooseCell(key='subscribable', value='', type=str)
     
     def state_def(self, callback):
         super(PollerCellsSpecimen, self).state_def(callback)

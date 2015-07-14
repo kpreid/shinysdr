@@ -254,7 +254,7 @@ def _ConstantVFOCell(value):
     return LooseCell(
         key='freq',
         value=value,
-        ctor=Range([(value, value)]),
+        type=Range([(value, value)]),
         writable=False,
         persists=False)
 
@@ -324,7 +324,7 @@ def _merge_vfos(vfos):
                 get_transform=lambda x: x + fixed,
                 set_transform=lambda x: x - fixed,
                 key='freq',
-                ctor=variable_one.type().shifted_by(fixed),
+                type=variable_one.type().shifted_by(fixed),
                 writable=True,
                 persists=variable_one.persists())
     else:
@@ -382,7 +382,7 @@ def AudioDevice(
         vfo_cell=LooseCell(
             key='freq',
             value=0.0,
-            ctor=Range([(0.0, 0.0)]),
+            type=Range([(0.0, 0.0)]),
             writable=True,
             persists=False),
         rx_driver=rx_driver,
@@ -434,7 +434,7 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
         # TODO: If not quadrature, we always discard the right channel. Is there a use for it? Would summing mono input reduce noise?
     
     # implement IRXDriver
-    @exported_value(ctor=SignalType)
+    @exported_value(type=SignalType)
     def get_output_type(self):
         return self.__signal_type
 
@@ -488,7 +488,7 @@ class _AudioTXDriver(ExportedState, gr.hier_block2):
         self.connect(self, split, (sink, 0))
         self.connect((split, 1), (sink, 1))
 
-    @exported_value(ctor=SignalType)
+    @exported_value(type=SignalType)
     def get_input_type(self):
         return self.__signal_type
 

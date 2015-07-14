@@ -180,7 +180,7 @@ class Receiver(gr.hier_block2, ExportedState):
         self.__update_rotator()
         # note does not revalidate() because the caller will handle that
 
-    @exported_value(parameter='device_name', ctor_fn=lambda self: self.context.get_rx_device_type())
+    @exported_value(parameter='device_name', type_fn=lambda self: self.context.get_rx_device_type())
     def get_device_name(self):
         return self.__device_name
     
@@ -194,7 +194,7 @@ class Receiver(gr.hier_block2, ExportedState):
             self.context.changed_needed_connections(u'changed device')
     
     # type construction is deferred because we don't want loading this file to trigger loading plugins
-    @exported_value(ctor_fn=lambda self: Enum({d.mode: d.label for d in get_modes()}))
+    @exported_value(type_fn=lambda self: Enum({d.mode: d.label for d in get_modes()}))
     def get_mode(self):
         return self.mode
     
@@ -209,7 +209,7 @@ class Receiver(gr.hier_block2, ExportedState):
             self._rebuild_demodulator(mode=mode, reason=u'changed mode')
 
     # TODO: rename rec_freq to just freq
-    @exported_value(ctor=float)
+    @exported_value(type=float)
     def get_rec_freq(self):
         return self.rec_freq
     
@@ -220,7 +220,7 @@ class Receiver(gr.hier_block2, ExportedState):
         self.context.revalidate(tuning=True)
     
     # TODO: support non-audio demodulators at which point these controls should be optional
-    @exported_value(ctor=Range([(-30, 20)], strict=False))
+    @exported_value(type=Range([(-30, 20)], strict=False))
     def get_audio_gain(self):
         return self.audio_gain
 
@@ -229,7 +229,7 @@ class Receiver(gr.hier_block2, ExportedState):
         self.audio_gain = value
         self.__update_audio_gain()
     
-    @exported_value(ctor_fn=lambda self: Range([(-1, 1)] if self.__audio_channels > 1 else [(0, 0)], strict=True))
+    @exported_value(type_fn=lambda self: Range([(-1, 1)] if self.__audio_channels > 1 else [(0, 0)], strict=True))
     def get_audio_pan(self):
         return self.audio_pan
     
@@ -238,7 +238,7 @@ class Receiver(gr.hier_block2, ExportedState):
         self.audio_pan = value
         self.__update_audio_gain()
     
-    @exported_value(parameter='audio_destination', ctor_fn=lambda self: self.context.get_audio_destination_type())
+    @exported_value(parameter='audio_destination', type_fn=lambda self: self.context.get_audio_destination_type())
     def get_audio_destination(self):
         return self.__audio_destination
     
@@ -248,7 +248,7 @@ class Receiver(gr.hier_block2, ExportedState):
             self.__audio_destination = value
             self.context.changed_needed_connections(u'changed destination')
     
-    @exported_value(ctor=bool)
+    @exported_value(type=bool)
     def get_is_valid(self):
         device = self.__get_device()
         sample_rate = device.get_rx_driver().get_output_type().get_sample_rate()
@@ -256,7 +256,7 @@ class Receiver(gr.hier_block2, ExportedState):
         return self.demodulator is not None and valid_bandwidth >= self.demodulator.get_half_bandwidth()
     
     # Note that the receiver cannot measure RF power because we don't know what the channel bandwidth is; we have to leave that to the demodulator.
-    @exported_value(ctor=Range([(_audio_power_minimum_dB, 0)], strict=False))
+    @exported_value(type=Range([(_audio_power_minimum_dB, 0)], strict=False))
     def get_audio_power(self):
         if self.get_is_valid():
             return todB(max(_audio_power_minimum_amplitude, self.probe_audio.level()))
