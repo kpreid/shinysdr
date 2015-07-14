@@ -21,8 +21,6 @@ GR blocks and such supporting receiver audio delivery.
 
 from __future__ import absolute_import, division
 
-from collections import defaultdict
-
 from twisted.python import log
 
 from gnuradio import audio
