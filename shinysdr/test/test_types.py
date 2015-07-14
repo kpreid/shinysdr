@@ -19,7 +19,7 @@ from __future__ import absolute_import, division
 
 from twisted.trial import unittest
 
-from shinysdr.types import Constant, Enum, Range, type_to_json
+from shinysdr.types import Constant, Enum, Range
 
 
 def _testType(self, type_obj, good, bad):
@@ -39,7 +39,7 @@ class TestConstant(unittest.TestCase):
     longMessage = True
     
     def test_serial(self):
-        self.assertEqual({u'type': u'constant', u'value': 1}, type_to_json(Constant(1)))
+        self.assertEqual({u'type': u'constant', u'value': 1}, Constant(1).type_to_json())
     
     def test_run(self):
         _testType(self,

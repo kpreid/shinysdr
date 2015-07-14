@@ -17,7 +17,7 @@
 
 
 '''
-Type definitions for ShinySDR value cells; "type" in the sense of "set of values", plus coercion and other hints.
+Type definitions for ShinySDR value cells etc.
 '''
 
 
@@ -28,21 +28,53 @@ import bisect
 import math
 
 
-def type_to_json(t):
-    if isinstance(t, ValueType):
-        return t.type_to_json()
-    elif t is bool:  # TODO can we generalize this?
-        return u'boolean'
+def to_value_type(typeoid):
+    if isinstance(typeoid, ValueType):
+        return typeoid
+    elif isinstance(typeoid, type):
+        # TODO: Stricten this to only allow a specific set
+        return BareType(typeoid)
     else:
-        return None
+        raise TypeError('Don\'t know how to make a ValueType of %r' % (typeoid,))
 
 
 class ValueType(object):
+    '''
+    A type in the sense of "set of values", plus coercion and other hints.
+    '''
     def type_to_json(self):
+        '''
+        Serialize this type for the client.
+        '''
         raise NotImplementedError()
     
     def __call__(self, specimen):
+        '''
+        Coerce the specimen to this type.
+        
+        If the specimen is not of a suitable type, raise TypeError.
+        
+        If the specimen is of a suitable type but out of range and this type does not choose to make it in range, raise ValueError.
+        '''
         raise NotImplementedError()
+
+
+class BareType(ValueType):
+    '''
+    ValueType wrapper for Python types.
+    '''
+    def __init__(self, python_type):
+        self.__python_type = python_type
+    
+    def type_to_json(self):
+        if self.__python_type == bool:
+            return u'boolean'
+        else:
+            # TODO
+            return None
+    
+    def __call__(self, specimen):
+        return self.__python_type(specimen)
 
 
 class Constant(ValueType):

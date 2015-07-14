@@ -35,7 +35,7 @@ from zope.interface import Interface, implements  # available via Twisted
 
 from gnuradio import gr
 
-from shinysdr.types import BulkDataType, type_to_json
+from shinysdr.types import BulkDataType, to_value_type
 
 
 class BaseCell(object):
@@ -96,9 +96,9 @@ class BaseCell(object):
 
 
 class ValueCell(BaseCell):
-    def __init__(self, target, key, type=None, **kwargs):
+    def __init__(self, target, key, type, **kwargs):
         BaseCell.__init__(self, target, key, **kwargs)
-        self._value_type = type
+        self._value_type = to_value_type(type)
     
     def isBlock(self):
         return False
@@ -117,7 +117,7 @@ class ValueCell(BaseCell):
     def description(self):
         return {
             'kind': 'value',
-            'type': type_to_json(self._value_type),
+            'type': self._value_type.type_to_json(),
             'writable': self.isWritable(),
             'current': self.get()
         }
@@ -125,7 +125,7 @@ class ValueCell(BaseCell):
 
 # TODO this name is historical and should be changed
 class Cell(ValueCell):
-    def __init__(self, target, key, writable=False, persists=None, type=None):
+    def __init__(self, target, key, type=to_value_type(object), writable=False, persists=None):
         if persists is None: persists = writable
         ValueCell.__init__(self, target, key, writable=writable, persists=persists, type=type)
         self._getter = getattr(self._target, 'get_' + key)
