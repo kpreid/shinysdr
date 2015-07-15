@@ -2321,14 +2321,17 @@ define(['./values', './events', './widget', './gltools', './database'], function
       });
     }, false);
     
+    var recordElements = new WeakMap();
+    var redrawHooks = new WeakMap();
+    
     function getElementForRecord(record) {
-      // TODO caching should be a WeakMap when possible
-      if (record._view_element) {
-        record._view_element._sdr_drawHook();
-        return record._view_element;
+      var item = recordElements.get(record);
+      if (item) {
+        redrawHooks.get(item)();
+        return item;
       }
       
-      var item = document.createElement('tr');
+      item = document.createElement('tr');
       var drawFns = [];
       function cell(className, textFn) {
         var td = item.appendChild(document.createElement('td'));
@@ -2337,7 +2340,7 @@ define(['./values', './events', './widget', './gltools', './database'], function
           td.textContent = textFn();
         });
       }
-      record._view_element = item;
+      recordElements.set(record, item);
       switch (record.type) {
         case 'channel':
           cell('freq', function () { return (record.freq / 1e6).toFixed(2); });
@@ -2369,7 +2372,7 @@ define(['./values', './events', './widget', './gltools', './database'], function
         }
       }
       draw.scheduler = scheduler;
-      item._sdr_drawHook = draw;
+      redrawHooks.set(item, draw);
       draw();
       
       return item;
