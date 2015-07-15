@@ -123,6 +123,7 @@ class DatabasesResource(resource.Resource):
         for (name, database) in databases.iteritems():
             self.putChild(name, DatabaseResource(database))
             self.names.append(name)
+        self.names.sort()  # TODO reconsider case/locale
 
 
 class _DbsIndexResource(resource.Resource):

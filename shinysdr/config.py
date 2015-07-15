@@ -185,13 +185,17 @@ class _ConfigDbs(object):
     def __init__(self, config, reactor):
         self._config = config
         self.__reactor = reactor
+        
+        self.__read_only_databases, diagnostics = databases_from_directory(self.__reactor,
+            os.path.join(os.path.dirname(__file__), 'data/dbs/'))
+        if len(diagnostics) > 0:
+            raise Exception(diagnostics)
     
     def add_directory(self, path):
         self._config._not_finished()
         path = str(path)
-        if self.__read_only_databases is not None:
-            raise Exception('Multiple database directories are not yet supported.')
-        self.__read_only_databases, path_diagnostics = databases_from_directory(self.__reactor, path)
+        dbs, path_diagnostics = databases_from_directory(self.__reactor, path)
+        self.__read_only_databases.update(dbs)
         for d in path_diagnostics:
             log.msg('%s: %s' % d)
 
@@ -214,6 +218,8 @@ class _ConfigDbs(object):
         if self.__read_only_databases is None:
             self.__read_only_databases = {}
         return self.__read_only_databases
+
+
 
 
 def execute_config(config_obj, config_file):
