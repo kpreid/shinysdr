@@ -54,7 +54,8 @@ define(['maps', 'widgets'], function (maps, widgets) {
     addLayer('Aircraft', {
       featuresCell: index.implementing('shinysdr.plugins.mode_s.IAircraft'),
       featureRenderer: function renderAircraft(aircraft, dirty) {
-        return maps.renderTrackFeature(dirty, aircraft.track,
+        var trackCell = aircraft.track;
+        return maps.renderTrackFeature(dirty, trackCell,
           'c=' + aircraft.call.depend(dirty) +
           ' id=' + aircraft.ident.depend(dirty) +
           ' alt=' + trackCell.depend(dirty).altitude.value);
