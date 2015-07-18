@@ -263,9 +263,11 @@ class Aircraft(ExportedState):
                 subtype = data['bds09'].get_type()
                 if subtype == 0:
                     (velocity, heading, vertical_speed, _turn_rate) = air_modes.parseBDS09_0(data)
+                    # TODO: note we're stuffing the heading in as track angle. Is there something better to do?
                     self.__track = self.__track._replace(
                         h_speed=TelemetryItem(velocity * _KNOTS_TO_METERS_PER_SECOND, receive_time),
                         heading=TelemetryItem(heading, receive_time),
+                        track_angle=TelemetryItem(heading, receive_time),
                         v_speed=TelemetryItem(vertical_speed, receive_time),
                         # TODO add turn rate
                     )
@@ -274,6 +276,7 @@ class Aircraft(ExportedState):
                     self.__track = self.__track._replace(
                         h_speed=TelemetryItem(velocity * _KNOTS_TO_METERS_PER_SECOND, receive_time),
                         heading=TelemetryItem(heading, receive_time),
+                        track_angle=TelemetryItem(heading, receive_time),
                         v_speed=TelemetryItem(vertical_speed, receive_time),
                         # TODO reset turn rate?
                     )
