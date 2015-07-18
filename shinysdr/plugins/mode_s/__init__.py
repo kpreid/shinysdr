@@ -294,8 +294,8 @@ class Aircraft(ExportedState):
         '''
         Does this aircraft have enough information to be worth mentioning?
         '''
+        # TODO: Loosen this rule once we have more efficient state transfer (no polling) and better UI for viewing them on the client.
         return \
-            self.__track.altitude.value is not None or \
             self.__track.latitude.value is not None or \
             self.__track.longitude.value is not None or \
             self.__call is not None or \
