@@ -1748,6 +1748,13 @@ define(['./values', './gltools', './widget', './widgets', './events'], function 
         return [
           //{
           //  timestamp: mtNow,
+          //  position: [45, 0],
+          //  label: '45N 0E 0°',
+          //  vangle: 0,
+          //  speed: speed,
+          //},
+          //{
+          //  timestamp: mtNow,
           //  position: [0, 0],
           //  label: '0N 0E 90°',
           //  vangle: 90,
