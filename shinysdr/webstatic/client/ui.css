@@ -46,7 +46,8 @@ html.subwindowed-page, .subwindowed-page body {
   width: 100%;
 }
 .main-not-yet-run.subwindowed > shinysdr-subwindow {
-  display: none;
+  /* hide unfinished UI (but still allow it to layout, i.e. avoid display: none) */
+  visibility: hidden;
 }
 
 /* container for subwindows */
