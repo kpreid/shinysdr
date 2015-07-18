@@ -682,6 +682,10 @@ define(['./values', './gltools', './widget', './widgets', './events'], function 
         var base = index * FLOATS_PER_QUAD + offset * FLOATS_PER_VERT;
         var lat = (rendered.position || [0, 0])[0];
         var lon = (rendered.position || [0, 0])[1];
+        var coslat = dcos(lat);
+        var coslon = dcos(lon);
+        var sinlat = dsin(lat);
+        var sinlon = dsin(lon);
         var instant = clock.convertFromTimestampSeconds(rendered.timestamp || 0);
         var radiansPerSecondSpeed = (rendered.speed || 0) * ((Math.PI * 2) / 40075e3)
         var opacity = isFinite(rendered.opacity) ? rendered.opacity : 1.0;
@@ -693,16 +697,16 @@ define(['./values', './gltools', './widget', './widgets', './events'], function 
         // Rotate it according to the latitude
         // (rotation matrix is incomplete because radial velocity is always zero)
         var latRotXVel = planarXVel;
-        var latRotYVel = planarYVel * dcos(lat);
-        var latRotZVel = planarYVel * dsin(lat);
+        var latRotYVel = planarYVel * coslat;
+        var latRotZVel = planarYVel * sinlat;
         // Rotate it according to the longitude
-        var finalXVel = latRotXVel * dcos(lon) - latRotZVel * dsin(lon);
+        var finalXVel = latRotXVel * coslon - latRotZVel * sinlon;
         var finalYVel = latRotYVel;
-        var finalZVel = latRotZVel * dcos(lon) + latRotXVel * dsin(lon);
+        var finalZVel = latRotZVel * coslon + latRotXVel * sinlon;
         
-        vertBufferArray[base + o_position    ] = dcos(lat) * dsin(lon);
-        vertBufferArray[base + o_position + 1] = dsin(lat);
-        vertBufferArray[base + o_position + 2] = dcos(lat) * -dcos(lon);
+        vertBufferArray[base + o_position    ] = coslat * sinlon;
+        vertBufferArray[base + o_position + 1] = sinlat;
+        vertBufferArray[base + o_position + 2] = coslat * -coslon;
         vertBufferArray[base + o_velocityAndTimestamp + 0] = finalXVel;
         vertBufferArray[base + o_velocityAndTimestamp + 1] = finalYVel;
         vertBufferArray[base + o_velocityAndTimestamp + 2] = finalZVel;
