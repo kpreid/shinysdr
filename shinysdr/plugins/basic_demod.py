@@ -489,7 +489,8 @@ class SSBDemodulator(SimpleAudioDemodulator):
             half_bandwidth = self.half_bandwidth = 500
             self.band_filter_width = 120
             band_mid = 0
-            agc_reference = dB(-13)
+            agc_reference = dB(-10)
+            agc_rate = 1e-1
         else:
             self.__offset = 0
             half_bandwidth = self.half_bandwidth = 2800 / 2  # standard SSB bandwidth
@@ -499,6 +500,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
             else:
                 band_mid = 200 + half_bandwidth
             agc_reference = dB(-8)
+            agc_rate = 8e-1
         
         self.band_filter_low = band_mid - half_bandwidth
         self.band_filter_high = band_mid + half_bandwidth
@@ -511,8 +513,8 @@ class SSBDemodulator(SimpleAudioDemodulator):
                 firdes.WIN_HAMMING))
         
         self.agc_block = analog.agc2_cc(reference=agc_reference)
-        self.agc_block.set_attack_rate(1e-1)
-        self.agc_block.set_decay_rate(1e-1)
+        self.agc_block.set_attack_rate(agc_rate)
+        self.agc_block.set_decay_rate(agc_rate)
         self.agc_block.set_max_gain(dB(_ssb_max_agc))
         
         ssb_demod_block = blocks.complex_to_real(1)
@@ -521,6 +523,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
             self,
             self.band_filter_block,
             sharp_filter_block,
+            # TODO: We would like to have an in
             self.rf_squelch_block,
             self.agc_block,
             ssb_demod_block)
