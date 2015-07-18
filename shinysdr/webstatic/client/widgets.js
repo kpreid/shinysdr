@@ -2169,12 +2169,11 @@ define(['./values', './events', './widget', './gltools', './database'], function
       var channel = group ? record.grouped[0] : record;
       var freq = record.freq;
       var mode = channel.mode;
-      var el = document.createElement('span');
+      var el = document.createElement('button');
       el.className = 'freqscale-channel';
       el.textContent =
         (group ? '(' + record.grouped.length + ') ' : '')
         + (channel.label || channel.mode);
-      // TODO: be an <a> or <button>
       el.addEventListener('click', function(event) {
         if (alwaysCreateReceiverFromEvent(event)) {
           radioCell.get().tune({
@@ -2184,7 +2183,6 @@ define(['./values', './events', './widget', './gltools', './database'], function
         } else {
           radioCell.get().preset.set(channel);
         }
-        event.stopPropagation();
       }, false);
       el.my_update = function() {
         el.style.left = view.freqToCSSLeft(freq);

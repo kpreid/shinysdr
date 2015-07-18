@@ -349,6 +349,13 @@ h2 input {
   position: absolute;
   -webkit-transform-origin: center left;
   -webkit-transform: rotate(-90deg) translate(1.9em, 0);
+  
+  /* override <button> styles */
+  color: inherit;
+  background: inherit;
+  border: none;
+  margin: 0;
+  padding: 0;
 }
 .freqscale-band {
   position: absolute;
