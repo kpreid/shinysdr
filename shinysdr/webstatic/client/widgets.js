@@ -1959,6 +1959,10 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
   }
   widgets.Knob = Knob;
   
+  function formatFreqMHz(freq) {
+    return (freq / 1e6).toFixed(2);
+  }
+  
   // "exact" as in doesn't drop digits
   function formatFreqExact(freq) {
     var a = Math.abs(freq);
@@ -2139,42 +2143,65 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
     return null;
   };
   
-  function createRecordTableRow(record, tune) {
-    var item = document.createElement('tr');
+  function createRecordTableRows(record, tune) {
     var drawFns = [];
-    function cell(className, textFn) {
-      var td = item.appendChild(document.createElement('td'));
-      td.className = 'freqlist-cell-' + className;
-      drawFns.push(function() {
-        td.textContent = textFn();
-      });
-    }
-    switch (record.type) {
-      case 'channel':
-        cell('freq', function () { return (record.freq / 1e6).toFixed(2); });
-        cell('mode', function () { return record.mode === 'ignore' ? '' : record.mode;  });
-        cell('label', function () { return record.label; });
-        drawFns.push(function () {
-          item.title = record.notes;
+    
+    function rowCommon(row, freq) {
+      row.classList.add('freqlist-item');
+      row.classList.add('freqlist-item-' + record.type);  // freqlist-item-channel, freqlist-item-band
+      if (!(record.mode in modeTable)) {
+        row.classList.add('freqlist-item-unsupported');
+      }
+      if (record.upperFreq !== freq) {
+        row.classList.add('freqlist-item-band-start');
+      }
+      if (record.lowerFreq !== freq) {
+        row.classList.add('freqlist-item-band-end');
+      }
+      row.addEventListener('click', function(event) {
+        tune({
+          record: record,
+          alwaysCreate: alwaysCreateReceiverFromEvent(event)
         });
-        break;
-      case 'band':
-      default:
-        break;
+        event.stopPropagation();
+      }, false);
+      
+      // row content
+      function cell(className, textFn) {
+        var td = row.appendChild(document.createElement('td'));
+        td.className = 'freqlist-cell-' + className;
+        drawFns.push(function() {
+          td.textContent = textFn();
+        });
+      }
+      switch (record.type) {
+        case 'channel':
+        case 'band':
+          cell('freq', function () {
+            return formatFreqMHz(freq);
+          });
+          cell('mode', function () { return record.mode === 'ignore' ? '' : record.mode;  });
+          cell('label', function () { return record.label; });
+          drawFns.push(function () {
+            firstRow.title = record.notes;
+          });
+          break;
+        default:
+          break;
+      }
     }
-    if (!(record.mode in modeTable)) {
-      item.classList.add('freqlist-item-unsupported');
+    
+    var firstRow = document.createElement('tr');
+    rowCommon(firstRow, record.lowerFreq);
+    var secondRow;
+    if (record.upperFreq != record.lowerFreq) {
+      secondRow = document.createElement('tr');
+      rowCommon(secondRow, record.upperFreq);
     }
-    item.addEventListener('click', function(event) {
-      tune({
-        record: record,
-        alwaysCreate: alwaysCreateReceiverFromEvent(event)
-      });
-      event.stopPropagation();
-    }, false);
+    // TODO: The fact that we decide on 1 or 2 rows based on the data makes the drawFns strategy invalid and we need to recreate things on record change. Or, we could construct a blank row...
     
     return {
-      element: item,
+      elements: secondRow ? [firstRow, secondRow] : [firstRow],
       drawNow: function () {
         drawFns.forEach(function (f) { f(); });
       }
@@ -2382,31 +2409,31 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
       });
     }, false);
     
-    var recordElements = new WeakMap();
+    var recordElAndDrawTable = new WeakMap();
     var redrawHooks = new WeakMap();
     
-    function getElementForRecord(record) {
-      var item = recordElements.get(record);
-      if (item) {
-        redrawHooks.get(item)();
-        return item;
+    function getElementsForRecord(record) {
+      var info = recordElAndDrawTable.get(record);
+      if (info) {
+        redrawHooks.get(info)();
+        return info.elements;
       }
       
-      var r = createRecordTableRow(record, tune);
-      item = r.element;
-      recordElements.set(record, item);
+      info = createRecordTableRows(record, tune);
+      var elements = info.element;
+      recordElAndDrawTable.set(record, info);
       
       function draw() {
-        r.drawNow();
+        info.drawNow();
         if (record.offsetWidth > 0) { // rough 'is in DOM tree' test
           record.n.listen(draw);
         }
       }
       draw.scheduler = scheduler;
-      redrawHooks.set(item, draw);
+      redrawHooks.set(info, draw);
       draw();
       
-      return item;
+      return info.elements;
     }
     
     var currentFilter = dataSource;
@@ -2415,7 +2442,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
       if (lastFilterText !== filterBox.value) {
         lastFilterText = filterBox.value;
         if (config.storage) config.storage.setItem(configKey, lastFilterText);
-        currentFilter = dataSource.string(lastFilterText).type('channel');
+        currentFilter = dataSource.string(lastFilterText);
         draw();
       }
     }
@@ -2426,8 +2453,19 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
       currentFilter.n.listen(draw);
       //console.groupEnd();
       list.textContent = '';  // clear
+      var deferredSecondHalves = [];
       currentFilter.forEach(function (record) {
-        list.appendChild(getElementForRecord(record));
+        // the >= rather than = comparison is critical to get abutting band edges in the ending-then-starting order
+        while (deferredSecondHalves.length && record.lowerFreq >= deferredSecondHalves[0].freq) {
+          list.appendChild(deferredSecondHalves.shift().el);
+        }
+        var elements = getElementsForRecord(record);
+        list.appendChild(elements[0]);
+        if (elements[1]) {
+          // TODO: Use an insert algorithm instead of sorting the whole
+          deferredSecondHalves.push({freq: record.upperFreq, el: elements[1]});
+          deferredSecondHalves.sort(function (a, b) { return a.freq - b.freq });
+        }
       });
       // sanity check
       var count = currentFilter.getAll().length;
@@ -2459,8 +2497,9 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
       .appendChild(document.createElement('tbody'));
     
     records.forEach(function (record) {
-      var r = createRecordTableRow(record, tuneWrapper);
-      list.appendChild(r.element);
+      var r = createRecordTableRows(record, tuneWrapper);
+      // This incomplete implementation of createRecordTableRows' expectations is sufficient because we never see a band here. TODO: Consider refactoring so we don't do this and instead BareFreqList is part of the implementation of FreqList.
+      list.appendChild(r.elements[0]);
       r.drawNow();
     });
   }

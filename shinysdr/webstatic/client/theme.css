@@ -120,11 +120,20 @@ shinysdr-subwindow > h2 {
 }
 .widget-FreqList .freqlist-item-unsupported {
   /* should go with .freqlist-box background colors */
-  background: white;
   color: gray;
 }
+.freqlist-item-band-start {
+  background: linear-gradient(to bottom, #DDD 0%, white .6em);
+}
+.freqlist-item-band-end {
+  background: linear-gradient(to top, #CCC 0%, white .6em);
+}
+.freqlist-item-band-start .freqlist-cell-label,
+.freqlist-item-band-end .freqlist-cell-label {
+  font-style: italic;
+}
 .widget-FreqList tr:hover {
-  background: #EEE;
+  background: #DDD;
 }
 
 .widget-Radio input {

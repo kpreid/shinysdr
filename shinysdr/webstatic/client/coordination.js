@@ -96,6 +96,9 @@ define(['./values'], function (values) {
         // TODO: should return stub for receiver or have a callback or something
       }
       
+      // TODO: If the record is a band, then also zoom the spectrum view to fit it.
+      // (This will require knowledge of retuning which is currently done implicitly on the server side.)
+      
       if (record) {
         selectedRecord.set(record);
       }
