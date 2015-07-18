@@ -32,8 +32,9 @@ from zope.interface import Interface, implements  # available via Twisted
 from gnuradio import blocks
 from gnuradio import gr
 
-from shinysdr.blocks import MonitorSink, RecursiveLockBlockMixin, Context
 from shinysdr.audiomux import AudioManager
+from shinysdr.blocks import MonitorSink, RecursiveLockBlockMixin, Context
+from shinysdr.math import LazyRateCalculator
 from shinysdr.receiver import Receiver
 from shinysdr.signals import SignalType
 from shinysdr.types import Enum, Notice
@@ -110,9 +111,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.__in_reconnect = False
         self.receiver_key_counter = 0
         self.receiver_default_state = {}
-        self.last_wall_time = time.time()
-        self.last_cpu_time = time.clock()
-        self.last_cpu_use = 0
+        self.__cpu_calculator = LazyRateCalculator(lambda: time.clock())
         
         # Initialization
         
@@ -365,15 +364,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
     
     @exported_value(type=float)
     def get_cpu_use(self):
-        cur_wall_time = time.time()
-        elapsed_wall = cur_wall_time - self.last_wall_time
-        if elapsed_wall > 0.5:
-            cur_cpu_time = time.clock()
-            elapsed_cpu = cur_cpu_time - self.last_cpu_time
-            self.last_wall_time = cur_wall_time
-            self.last_cpu_time = cur_cpu_time
-            self.last_cpu_use = round(elapsed_cpu / elapsed_wall, 2)
-        return self.last_cpu_use
+        return round(self.__cpu_calculator.get(), 2)
     
     def get_shared_object(self, ctor):
         # TODO: Make shared objects able to persist. This will probably require some kind of up-front registry.

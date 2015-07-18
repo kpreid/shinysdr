@@ -33,6 +33,7 @@ from gnuradio import gr
 from gnuradio import gru
 
 from shinysdr.filters import MultistageChannelFilter
+from shinysdr.math import LazyRateCalculator
 from shinysdr.modes import ModeDef, IDemodulator
 from shinysdr.signals import no_signal
 from shinysdr.telemetry import TelemetryItem, Track, empty_track
@@ -95,6 +96,9 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
             band_filter,
             self.__demod)
         
+        self.__messages_seen = 0
+        self.__message_rate_calc = LazyRateCalculator(lambda: self.__messages_seen, min_interval=2)
+        
         # Parsing
         # TODO: These bits are mimicking gr-air-modes toplevel code. Figure out if we can have less glue.
         # Note: gr pubsub is synchronous -- subscribers are called on the publisher's thread
@@ -112,6 +116,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
         self.__msgq_runner = gru.msgq_runner(hex_msg_queue, callback)
         
         def parsed_callback(msg):
+            self.__messages_seen += 1
             self.__information.receive(msg, cpr_decoder)
         
         for i in xrange(0, 2 ** 5):
@@ -119,7 +124,11 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 
     def __del__(self):
         self.__msgq_runner.stop()
-
+    
+    @exported_value(float)
+    def get_message_rate(self):
+        return round(self.__message_rate_calc.get(), 1)
+    
     def can_set_mode(self, mode):
         return False
 
