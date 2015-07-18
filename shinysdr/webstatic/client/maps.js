@@ -684,17 +684,28 @@ define(['./values', './gltools', './widget', './widgets', './events'], function 
         var lon = (rendered.position || [0, 0])[1];
         var instant = clock.convertFromTimestampSeconds(rendered.timestamp || 0);
         var radiansPerSecondSpeed = (rendered.speed || 0) * ((Math.PI * 2) / 40075e3)
-        var planarXVel = dsin(rendered.vangle || 0) * radiansPerSecondSpeed;
-        var planarYVel = dcos(rendered.vangle || 0) * radiansPerSecondSpeed;
         var opacity = isFinite(rendered.opacity) ? rendered.opacity : 1.0;
         var zFudge = -opacity;  // until we do proper depth sorting, this helps opaque things be in front of transparent things
+        
+        // Velocity in north=X east=Y tangent space
+        var planarXVel = dsin(rendered.vangle || 0) * radiansPerSecondSpeed;
+        var planarYVel = dcos(rendered.vangle || 0) * radiansPerSecondSpeed;
+        // Rotate it according to the latitude
+        // (rotation matrix is incomplete because radial velocity is always zero)
+        var latRotXVel = planarXVel;
+        var latRotYVel = planarYVel * dcos(lat);
+        var latRotZVel = planarYVel * dsin(lat);
+        // Rotate it according to the longitude
+        var finalXVel = latRotXVel * dcos(lon) - latRotZVel * dsin(lon);
+        var finalYVel = latRotYVel;
+        var finalZVel = latRotZVel * dcos(lon) + latRotXVel * dsin(lon);
         
         vertBufferArray[base + o_position    ] = dcos(lat) * dsin(lon);
         vertBufferArray[base + o_position + 1] = dsin(lat);
         vertBufferArray[base + o_position + 2] = dcos(lat) * -dcos(lon);
-        vertBufferArray[base + o_velocityAndTimestamp + 0] = planarXVel * dcos(lon);
-        vertBufferArray[base + o_velocityAndTimestamp + 1] = planarYVel * dcos(lat);
-        vertBufferArray[base + o_velocityAndTimestamp + 2] = planarXVel * dsin(lon) - planarYVel * dsin(lat);
+        vertBufferArray[base + o_velocityAndTimestamp + 0] = finalXVel;
+        vertBufferArray[base + o_velocityAndTimestamp + 1] = finalYVel;
+        vertBufferArray[base + o_velocityAndTimestamp + 2] = finalZVel;
         vertBufferArray[base + o_velocityAndTimestamp + 3] = instant;
         vertBufferArray[base + o_billboard + 0] = label['b' + xd + 'x'];  // TODO better data structure
         vertBufferArray[base + o_billboard + 1] = label['b' + yd + 'y'];
