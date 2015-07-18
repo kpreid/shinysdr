@@ -68,8 +68,10 @@ define(['maps', 'widgets'], function (maps, widgets) {
         if (altitude != null) {
           labelParts.push(altitude.toFixed(0) + ' m');
         }
-        return maps.renderTrackFeature(dirty, trackCell,
+        var f = maps.renderTrackFeature(dirty, trackCell,
           labelParts.join(' • '));
+        f.iconURL = '/client/plugins/shinysdr.plugins.mode_s/aircraft.svg';
+        return f;
       }
     });
   }
