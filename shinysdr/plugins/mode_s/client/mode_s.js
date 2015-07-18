@@ -55,10 +55,21 @@ define(['maps', 'widgets'], function (maps, widgets) {
       featuresCell: index.implementing('shinysdr.plugins.mode_s.IAircraft'),
       featureRenderer: function renderAircraft(aircraft, dirty) {
         var trackCell = aircraft.track;
+        var callsign = aircraft.call.depend(dirty);
+        var ident = aircraft.ident.depend(dirty);
+        var altitude = trackCell.depend(dirty).altitude.value;
+        var labelParts = [];
+        if (callsign != null) {
+          labelParts.push(callsign.replace(/^ | $/g, ''));
+        }
+        if (ident != null) {
+          labelParts.push(ident);
+        }
+        if (altitude != null) {
+          labelParts.push(altitude.toFixed(0) + ' m');
+        }
         return maps.renderTrackFeature(dirty, trackCell,
-          'c=' + aircraft.call.depend(dirty) +
-          ' id=' + aircraft.ident.depend(dirty) +
-          ' alt=' + trackCell.depend(dirty).altitude.value);
+          labelParts.join(' • '));
       }
     });
   }
