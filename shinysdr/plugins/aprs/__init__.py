@@ -59,7 +59,9 @@ _METERS_PER_NAUTICAL_MILE = 1852
 _KNOTS_TO_METERS_PER_SECOND = _METERS_PER_NAUTICAL_MILE / _SECONDS_PER_HOUR
 _FEET_TO_METERS = 0.3048
 
-drop_unheard_timeout_seconds = 600  # 10 minutes, standard APRS cycle time
+# 30 minutes, standard maximum APRS net cycle time
+# TODO: Make this configurable, and share this constant between client and server
+drop_unheard_timeout_seconds = 60 * 30
 
 
 class IAPRSInformation(Interface):

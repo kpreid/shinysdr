@@ -54,7 +54,10 @@ define(['widgets', 'maps', 'events'], function (widgets, maps, events) {
   // TODO: Better widget-plugin system so we're not modifying should-be-static tables
   widgets['interface:shinysdr.plugins.aprs.IAPRSStation'] = APRSStationWidget;
   
-  var APRS_TIMEOUT_SECONDS = 600;
+  // 30 minutes, standard maximum APRS net cycle time
+  // TODO: Make this configurable, and share this constant between client and server
+  var APRS_TIMEOUT_SECONDS = 60 * 30;
+
   var OPACITY_STEPS = 20;
   
   var opacityClock = new Clock(APRS_TIMEOUT_SECONDS / OPACITY_STEPS);
