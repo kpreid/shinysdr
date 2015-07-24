@@ -193,7 +193,13 @@ pluginDef_iq = ModeDef('IQ', label='Raw I/Q', demod_class=IQDemodulator)
 
 
 class AMDemodulator(SimpleAudioDemodulator):
-    def __init__(self, **kwargs):
+    '''
+    Amplitude modulation (AM) demodulator.
+    
+    If use_entire_input_band is true, then the receive frequency is ignored and the demodulator uses the entire input signal.
+    '''
+    
+    def __init__(self, use_entire_input_band=False, **kwargs):
         demod_rate = 10000
         
         SimpleAudioDemodulator.__init__(self,
@@ -202,23 +208,77 @@ class AMDemodulator(SimpleAudioDemodulator):
             band_filter=5000,
             band_filter_transition=5000,
             **kwargs)
+        
+        self.__use_entire_input_band = bool(use_entire_input_band)
+        self.__rec_freq_input = 0.0
     
         inherent_gain = 0.5  # fudge factor so that our output is similar level to narrow FM
         self.agc_block = analog.feedforward_agc_cc(int(.02 * demod_rate), inherent_gain)
         self.demod_block = blocks.complex_to_mag(1)
         
         # assuming below 40Hz is not of interest
-        dc_blocker = grfilter.dc_blocker_ff(demod_rate // 40, False)
+        self.dc_blocker = grfilter.dc_blocker_ff(demod_rate // 40, False)
         
-        self.connect(
-            self,
-            self.band_filter_block,
-            self.rf_squelch_block,
-            self.agc_block,
-            self.demod_block,
-            dc_blocker)
-        self.connect(self.band_filter_block, self.rf_probe_block)
-        self.connect_audio_output(dc_blocker)
+        self.__do_connect()
+
+    def __do_connect(self):
+        self.disconnect_all()
+        if self.__use_entire_input_band:
+            self.band_filter_block.set_center_freq(0)
+            self.connect(
+                self,
+                self.demod_block,
+                blocks.float_to_complex(),  # So we can use the complex-input band filter. TODO eliminate this for efficiency
+                self.band_filter_block,
+                self.rf_squelch_block,
+                self.agc_block,
+                blocks.complex_to_real(),
+                self.dc_blocker)
+            self.connect(self, self.rf_probe_block)
+        else:
+            self.band_filter_block.set_center_freq(self.__rec_freq_input)
+            self.connect(
+                self,
+                self.band_filter_block,
+                self.rf_squelch_block,
+                self.agc_block,
+                self.demod_block,
+                self.dc_blocker)
+            self.connect(self.band_filter_block, self.rf_probe_block)
+        self.connect_audio_output(self.dc_blocker)
+    
+    # TODO: it would be nice if use_entire_input_band were automatically reset to false on tuning to a DB channel, since it is unlikely to be intended. Or maybe we should look at it as such receivers should be ineligible for being repurposed that way.
+    @exported_value(parameter='use_entire_input_band', type=bool)
+    def get_use_entire_input_band(self):
+        return self.__use_entire_input_band
+    
+    @setter
+    def set_use_entire_input_band(self, value):
+        if value == self.__use_entire_input_band: return
+        self.__use_entire_input_band = bool(value)
+        self.context.lock()
+        self.__do_connect()
+        self.context.unlock()
+
+    @exported_value()
+    def get_band_filter_shape(self):
+        if self.__use_entire_input_band:
+            halfbw = self.input_rate * 0.5
+            offset = self.__rec_freq_input
+            return {
+                'low': -halfbw - offset,
+                'high': halfbw - offset,
+                'width': 0.0
+            }
+        else:
+            return super(AMDemodulator, self).get_band_filter_shape()
+
+    def set_rec_freq(self, freq):
+        '''override ITunableDemodulator implemented by SimpleAudioDemodulator'''
+        # TODO: We wouldn't need this kludge if we didn't inherit SimpleAudioDemodulator. Consider redesign of the whole thing.
+        self.__rec_freq_input = freq
+        if not self.__use_entire_input_band:
+            super(AMDemodulator, self).set_rec_freq(freq)
 
 
 class AMModulator(gr.hier_block2, ExportedState):

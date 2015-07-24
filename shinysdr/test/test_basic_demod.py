@@ -23,8 +23,8 @@ from shinysdr.test.testutil import DemodulatorTester
 
 
 class DemodulatorSmokeTest(unittest.TestCase):
-    def __test(self, mode):
-        with DemodulatorTester(mode):
+    def __test(self, mode, **kwargs):
+        with DemodulatorTester(mode, **kwargs):
             pass
     
     def test_iq(self):
@@ -32,6 +32,9 @@ class DemodulatorSmokeTest(unittest.TestCase):
     
     def test_am(self):
         self.__test('AM')
+    
+    def test_am_entire(self):
+        self.__test('AM', state={u'use_entire_input_band': True})
     
     def test_nfm(self):
         self.__test('NFM')

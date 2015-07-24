@@ -128,11 +128,13 @@ class DemodulatorTester(object):
     '''
     Set up an environment for testing a demodulator.
     '''
-    def __init__(self, mode):
+    def __init__(self, mode, state=None):
         # TODO: Refactor things so that we can take the demod ctor rather than a mode string
         # TODO: Tell the simulated device to have no modulators, or have a simpler dummy source for testing, so we don't waste time on setup
+        if state is None:
+            state = {}
         self.__top = Top(devices={'s1': SimulatedDevice()})
-        self.__top.add_receiver(mode, key='a')
+        self.__top.add_receiver(mode, key='a', state=state)
         self.__top.start()  # TODO overriding internals
     
     def close(self):
