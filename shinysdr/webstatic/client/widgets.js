@@ -24,6 +24,7 @@ define(['./values', './events', './widget', './gltools', './database'], function
   var Enum = values.Enum;
   var LocalCell = values.LocalCell;
   var Notice = values.Notice;
+  var SingleQuad = gltools.SingleQuad;
   var Union = database.Union;
   var alwaysCreateReceiverFromEvent = widget.alwaysCreateReceiverFromEvent;
   var createWidgetExt = widget.createWidgetExt;
@@ -653,41 +654,22 @@ define(['./values', './events', './widget', './gltools', './database'], function
     
     if (gl) (function() {
       function initContext() {
-        var att_position;
+        var quad;
         function buildProgram(vertexShaderSource, fragmentShaderSource) {
           var program = gltools.buildProgram(gl, vertexShaderSource, fragmentShaderSource);
-          att_position = gl.getAttribLocation(program, 'position');
-          gl.enableVertexAttribArray(att_position);
+          var att_position = gl.getAttribLocation(program, 'position');
+          quad = new SingleQuad(gl, -1, 1, -1, 1, att_position);
           return program;
         }
         
-        var quadBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
-        var f;
-        gl.bufferData(gl.ARRAY_BUFFER, f = new Float32Array([
-          // full screen triangle strip
-          -1, -1, 0, 1,
-          1, -1, 0, 1,
-          -1, 1, 0, 1,
-          1, 1, 0, 1
-        ]), gl.STATIC_DRAW);
-        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        
         
         var drawImpl = buildGL(gl, buildProgram, draw);
         dataHook = drawImpl.newData.bind(drawImpl);
         
         drawOuter = function (resized) {
-          gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
-          gl.vertexAttribPointer(
-            att_position,
-            4, // components
-            gl.FLOAT,
-            false,
-            0,
-            0);
-          gl.bindBuffer(gl.ARRAY_BUFFER, null);
           drawImpl.beforeDraw(resized);
-          gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);  // 4 vertices
+          quad.draw();
         };
       }
       

@@ -108,5 +108,36 @@ define(function () {
   };
   exports.AttributeLayout = AttributeLayout;
   
+  function SingleQuad(gl, nx, px, ny, py, positionAttribute) {
+    // TODO move
+    
+    var quadBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+      // full screen triangle strip
+      nx, ny, 0, 1,
+      px, ny, 0, 1,
+      nx, py, 0, 1,
+      px, py, 0, 1
+    ]), gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    
+    this.draw = function drawSingleQuad() {
+      gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
+      gl.enableVertexAttribArray(positionAttribute);
+      gl.vertexAttribPointer(
+        positionAttribute,
+        4, // components
+        gl.FLOAT,
+        false,
+        0,
+        0);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);  // 4 vertices
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      gl.disableVertexAttribArray(positionAttribute);
+    };
+  }
+  exports.SingleQuad = SingleQuad;
+
   return Object.freeze(exports);
 });
