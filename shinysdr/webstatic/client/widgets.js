@@ -654,23 +654,10 @@ define(['./values', './events', './widget', './gltools', './database'], function
     
     if (gl) (function() {
       function initContext() {
-        var quad;
-        function buildProgram(vertexShaderSource, fragmentShaderSource) {
-          var program = gltools.buildProgram(gl, vertexShaderSource, fragmentShaderSource);
-          var att_position = gl.getAttribLocation(program, 'position');
-          quad = new SingleQuad(gl, -1, 1, -1, 1, att_position);
-          return program;
-        }
-        
-        
-        
-        var drawImpl = buildGL(gl, buildProgram, draw);
+        var drawImpl = buildGL(gl, draw);
         dataHook = drawImpl.newData.bind(drawImpl);
         
-        drawOuter = function (resized) {
-          drawImpl.beforeDraw(resized);
-          quad.draw();
-        };
+        drawOuter = drawImpl.performDraw.bind(drawImpl);
       }
       
       initContext();
@@ -886,7 +873,7 @@ define(['./values', './events', './widget', './gltools', './database'], function
     
     CanvasSpectrumWidget.call(this, config, buildGL, build2D);
     
-    function buildGL(gl, buildProgram, draw) {
+    function buildGL(gl, draw) {
       canvas = self.element;
       var vertexShaderSource = ''
         + 'attribute vec4 position;\n'
@@ -930,7 +917,8 @@ define(['./values', './events', './widget', './gltools', './database'], function
         + '  mediump vec4 color = cut(peak, 1.0, background, cut(accum, 0.0, stroke, fill));\n'
         + '  gl_FragColor = color;\n'
         + '}\n';
-      var program = buildProgram(vertexShaderSource, fragmentShaderSource);
+      var program = gltools.buildProgram(gl, vertexShaderSource, fragmentShaderSource);
+      var quad = new SingleQuad(gl, -1, 1, -1, 1, gl.getAttribLocation(program, 'position'));
 
       var fftSize = Math.max(1, config.target.get().length);
 
@@ -1010,7 +998,7 @@ define(['./values', './events', './widget', './gltools', './database'], function
               intConversionOut);
           gl.bindTexture(gl.TEXTURE_2D, null);
         },
-        beforeDraw: function (didResize) {
+        performDraw: function (didResize) {
           commonBeforeDraw(draw);
           if (didResize) {
             setScale();
@@ -1027,7 +1015,8 @@ define(['./values', './events', './widget', './gltools', './database'], function
           var xZero = (lvf - viewCenterFreq + halfBinWidth)/(rsf-lsf);
           gl.uniform1f(gl.getUniformLocation(program, 'xZero'), xZero);
           gl.uniform1f(gl.getUniformLocation(program, 'xScale'), xScale);
-
+          
+          quad.draw();
         }
       };
     }
@@ -1159,7 +1148,7 @@ define(['./values', './events', './widget', './gltools', './database'], function
     layout.scheduler = config.scheduler;
     layout();
     
-    function buildGL(gl, buildProgram, draw) {
+    function buildGL(gl, draw) {
       canvas = self.element;
 
       var useFloatTexture =
@@ -1209,7 +1198,8 @@ define(['./values', './events', './widget', './gltools', './database'], function
         //+ '    gl_FragColor = vec4(gradientZero + gradientScale * data * 4.0 - 0.5);\n'
         + '  }\n'
         + '}\n';
-      var program = buildProgram(vertexShaderSource, fragmentShaderSource);
+      var program = gltools.buildProgram(gl, vertexShaderSource, fragmentShaderSource);
+      var quad = new SingleQuad(gl, -1, 1, -1, 1, gl.getAttribLocation(program, 'position'));
       
       var u_scroll = gl.getUniformLocation(program, 'scroll');
       var u_xTranslate = gl.getUniformLocation(program, 'xTranslate');
@@ -1452,7 +1442,7 @@ define(['./values', './events', './widget', './gltools', './database'], function
           gl.bindTexture(gl.TEXTURE_2D, null);
           slicePtr = mod(slicePtr + 1, historyCount);
         },
-        beforeDraw: function () {
+        performDraw: function () {
           view.n.listen(draw);
           var viewCenterFreq = view.getCenterFreq();
 
@@ -1466,6 +1456,7 @@ define(['./values', './events', './widget', './gltools', './database'], function
           gl.uniform1f(u_xTranslate, (view.leftVisibleFreq() - view.leftFreq()) * fs);
           gl.uniform1f(u_xScale, xScale);
 
+          quad.draw();
           cleared = false;
         }
       };
