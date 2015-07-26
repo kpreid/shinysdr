@@ -1306,10 +1306,6 @@ define(['./values', './events', './widget', './gltools', './database'], function
       gl.bindTexture(gl.TEXTURE_2D, null);
 
       function configureTexture() {
-        // dependent on fftSize so updating it here works out.
-        // Shift (with wrapping) the texture data by 1/2 minus half a bin width, to align the GL texels with the FFT bins.
-        gl.uniform1f(u_textureRotation, config.view.isRealFFT() ? 0 : -(0.5 - 0.5/fftSize));
-        
         if (useFloatTexture) {
           var init = new Float32Array(fftSize*historyCount);
           for (var i = 0; i < fftSize*historyCount; i++) {
@@ -1405,6 +1401,10 @@ define(['./values', './events', './widget', './gltools', './database'], function
             intConversionBuffer = useFloatTexture ? null : new Uint8ClampedArray(fftSize);
             intConversionOut = useFloatTexture ? null : new Uint8Array(intConversionBuffer.buffer);
           }
+
+          // TODO: This doesn't need to be updated every frame, but it does depend on the view unlike other things
+          // Shift (with wrapping) the texture data by 1/2 minus half a bin width, to align the GL texels with the FFT bins.
+          gl.uniform1f(u_textureRotation, config.view.isRealFFT() ? 0 : -(0.5 - 0.5/fftSize));
 
           if (useFloatTexture) {
             gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
