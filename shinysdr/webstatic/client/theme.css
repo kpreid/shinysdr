@@ -58,10 +58,11 @@ shinysdr-subwindow > h2 {
 }
 
 .hscalegroup {
-  /* TODO: We actually want this to be the SpectrumPlot's background color, but no good way to express that currently */
+  /* TODO: We actually want this to be the WaterfallPlot's graph background color, but no good way to express that currently */
   background: black;
+  color: white;
 }
-.widget-SpectrumPlot {
+.widget-WaterfallPlot {
   /* these properties (normally SVG-only) are read by the widget's code */
   fill: rgba(64, 100, 100, 0.75);
   stroke: #00FFAA;
@@ -78,14 +79,15 @@ shinysdr-subwindow > h2 {
 }
 
 .widget-FreqScale {
-  background: #444;
+  background: none;
   color: #FFF;
 }
-.freqscale-channel, .freqscale-band {
+.freqscale-band {
   opacity: 0.7;
 }
 .freqscale-channel {
-  color: #CCC;
+  opacity: 0.7;
+  color: #FFF;
 }
 .freqscale-band {
   background: #555;

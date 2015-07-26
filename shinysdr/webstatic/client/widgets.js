@@ -540,19 +540,20 @@ define(['./values', './events', './widget', './gltools', './database'], function
       element.classList.add('hscalegroup');
       element.id = config.element.id;
       
-      // TODO: shouldn't need to have this declared, should be implied by context
-      var isRFSpectrum = config.element.hasAttribute('data-is-rf-spectrum');
-      var context = config.context.withSpectrumView(element, block, isRFSpectrum);
-      
       var overlayContainer = element.appendChild(document.createElement('div'));
       overlayContainer.classList.add('hscale');
+
+      // TODO: shouldn't need to have this declared, should be implied by context
+      var isRFSpectrum = config.element.hasAttribute('data-is-rf-spectrum');
+      var context = config.context.withSpectrumView(element, overlayContainer, block, isRFSpectrum);
+      
       function makeOverlayPiece(name) {
         var el = overlayContainer.appendChild(document.createElement(name));
         el.classList.add('overlay');
         return el;
       }
       if (isRFSpectrum) createWidgetExt(context, ReceiverMarks, makeOverlayPiece('div'), block.fft);
-      createWidgetExt(context, SpectrumPlot, makeOverlayPiece('canvas'), block.fft);
+      createWidgetExt(context, WaterfallPlot, makeOverlayPiece('canvas'), block.fft);
       ignore('fft');
       
       // TODO this is clunky. (Note we're not just using rebuildMe because we don't want to lose waterfall history and reinit GL and and and...)
@@ -560,9 +561,8 @@ define(['./values', './events', './widget', './gltools', './database'], function
       var freqCell = new DerivedCell(Number, config.scheduler, function (dirty) {
         return radioCell.depend(dirty).source.depend(dirty).freq.depend(dirty);
       });
-      createWidgetExt(context, FreqScale, element.appendChild(document.createElement('div')), freqCell);
-      
-      createWidgetExt(context, WaterfallPlot, element.appendChild(document.createElement('canvas')), block.fft);
+      var freqScaleEl = overlayContainer.appendChild(document.createElement('div'));
+      createWidgetExt(context, FreqScale, freqScaleEl, freqCell);
       
       ignore('scope');
       ignore('time_length');
@@ -829,275 +829,11 @@ define(['./values', './events', './widget', './gltools', './database'], function
   }
   widgets.ScopePlot = ScopePlot;
   
-  function SpectrumPlot(config) {
-    var self = this;
-    var fftCell = config.target;
-    var view = config.view;
-    var avgAlphaCell = config.clientState.spectrum_average;
-    
-    var canvas; // set later
-    
-    // common logic
-    var averageBuffer = null;
-    var lastDrawnCenterFreq = NaN;
-    function commonNewData(fftBundle) {
-      var buffer = fftBundle[1];
-      var bufferCenterFreq = fftBundle[0].freq;
-      var len = buffer.length;
-      var alpha = avgAlphaCell.get();
-      var invAlpha = 1 - alpha;
-
-      // averaging
-      // TODO: Get separate averaged and unaveraged FFTs from server so that averaging behavior is not dependent on frame rate over the network
-      if (!averageBuffer
-          || averageBuffer.length !== len
-          || (lastDrawnCenterFreq !== bufferCenterFreq
-              && !isNaN(bufferCenterFreq))) {
-        lastDrawnCenterFreq = bufferCenterFreq;
-        averageBuffer = new Float32Array(buffer);
-      }
-
-      for (var i = 0; i < len; i++) {
-        averageBuffer[i] = averageBuffer[i] * invAlpha + buffer[i] * alpha;
-      }
-    }
-
-    var lvf, rvf, w, h;
-    function commonBeforeDraw(scheduledDraw) {
-      view.n.listen(scheduledDraw);
-      lvf = view.leftVisibleFreq();
-      rvf = view.rightVisibleFreq();
-      w = canvas.width;
-      h = canvas.height;
-    }
-    
-    CanvasSpectrumWidget.call(this, config, buildGL, build2D);
-    
-    function buildGL(gl, draw) {
-      canvas = self.element;
-      var vertexShaderSource = ''
-        + 'attribute vec4 position;\n'
-        + 'uniform mediump float xZero, xScale;\n'
-        + 'varying highp vec2 v_position;\n'
-        + 'void main(void) {\n'
-        + '  gl_Position = position;\n'
-        + '  mediump vec2 basePos = (position.xy + vec2(1.0)) / 2.0;\n'
-        + '  v_position = vec2(xScale * basePos.x + xZero, basePos.y);\n'
-        + '}\n';
-      var fragmentShaderSource = ''
-        + 'uniform sampler2D data;\n'
-        + 'uniform mediump float xScale, xRes, yRes;\n'
-        + 'varying highp vec2 v_position;\n'
-        // TODO: these colors should come from the theme css
-        + 'const lowp vec4 background = vec4(0.0, 0.0, 0.0, 0.0);\n'
-        + 'const lowp vec4 stroke = vec4(0.0, 1.0, 0.68, 1.0);\n'
-        //+ 'const lowp vec4 weakStroke = vec4(0.0, 0.5, 0.50, 1.0);\n'
-        + 'const lowp vec4 fill = vec4(0.25, 0.39, 0.39, 1.0) * 0.75;\n'
-        + 'const int stepRange = 8;\n'
-        + 'mediump vec4 cmix(mediump vec4 before, mediump vec4 after, mediump float a) {\n'
-        + '  return mix(before, after, clamp(a, 0.0, 1.0));\n'
-        + '}\n'
-        + 'mediump vec4 cut(mediump float boundary, mediump float offset, mediump vec4 before, mediump vec4 after) {\n'
-        + '  mediump float case = (boundary - v_position.y) * yRes + offset;\n'
-        + '  return cmix(before, after, case);\n'
-        + '}\n'
-        + 'void main(void) {\n'
-        + '  highp vec2 texLookup = mod(v_position, 1.0);\n'
-        + '  highp float dTex = xScale / xRes * (1.3 / float(stepRange));\n'
-        + '  mediump float accum = 0.0;\n'
-        + '  mediump float peak = -1.0;\n'
-        + '  mediump float valley = 2.0;\n'
-        + '  for (int i = -stepRange; i <= stepRange; i++) {\n'
-        + '    mediump float value = texture2D(data, texLookup + dTex * float(i)).r;\n'
-        + '    accum += value;\n'
-        + '    peak = max(peak, value);\n'
-        + '    valley = min(valley, value);\n'
-        + '  }\n'
-        + '  accum *= 1.0/(float(stepRange) * 2.0 + 1.0);\n'
-        + '  mediump vec4 color = cut(peak, 1.0, background, cut(accum, 0.0, stroke, fill));\n'
-        + '  gl_FragColor = color;\n'
-        + '}\n';
-      var program = gltools.buildProgram(gl, vertexShaderSource, fragmentShaderSource);
-      var quad = new SingleQuad(gl, -1, 1, -1, 1, gl.getAttribLocation(program, 'position'));
-
-      var fftSize = Math.max(1, config.target.get().length);
-
-      function setScale() {
-        var w = canvas.width;
-        var h = canvas.height;
-        gl.uniform1f(gl.getUniformLocation(program, 'xRes'), w);
-        gl.uniform1f(gl.getUniformLocation(program, 'yRes'), h);
-        gl.viewport(0, 0, w, h);
-      }
-      setScale();
-
-      var bufferTexture = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);  // doesn't matter
-      gl.bindTexture(gl.TEXTURE_2D, null);
-
-      function configureTexture() {
-        var init = new Uint8Array(fftSize*4);
-        gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
-        gl.texImage2D(
-          gl.TEXTURE_2D,
-          0, // level
-          gl.LUMINANCE, // internalformat
-          fftSize, // width (= fft size)
-          1, // height (actually a 1D texture)
-          0, // border
-          gl.LUMINANCE, // format
-          gl.UNSIGNED_BYTE, // type
-          init);
-        gl.bindTexture(gl.TEXTURE_2D, null);
-      }
-      configureTexture();
-
-      gl.activeTexture(gl.TEXTURE1);
-      gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
-      gl.uniform1i(gl.getUniformLocation(program, 'data'), 1);
-      gl.activeTexture(gl.TEXTURE0);
-
-      var intConversionBuffer, intConversionOut;
-      
-      return {
-        newData: function (fftBundle) {
-          var buffer = fftBundle[1];
-          var bufferCenterFreq = fftBundle[0].freq;
-          if (buffer.length === 0) {
-            return;
-          }
-          if (buffer.length !== fftSize || !intConversionBuffer) {
-            fftSize = buffer.length;
-            configureTexture();
-            intConversionBuffer = new Uint8ClampedArray(fftSize);
-            intConversionOut = new Uint8Array(intConversionBuffer.buffer);
-          }
-
-          commonNewData(fftBundle);
-
-          gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
-          var minLevel = view.minLevel;
-          var maxLevel = view.maxLevel;
-          var cscale = 255 / (maxLevel - minLevel);
-          for (var i = 0; i < fftSize; i++) {
-            intConversionBuffer[i] = (averageBuffer[i] - minLevel) * cscale;
-          }
-          gl.texSubImage2D(
-              gl.TEXTURE_2D,
-              0, // level
-              0, // xoffset
-              0, // yoffset
-              fftSize,
-              1,
-              gl.LUMINANCE,
-              gl.UNSIGNED_BYTE,
-              intConversionOut);
-          gl.bindTexture(gl.TEXTURE_2D, null);
-        },
-        performDraw: function (didResize) {
-          commonBeforeDraw(draw);
-          if (didResize) {
-            setScale();
-          }
-
-          // Adjust drawing region
-          var viewCenterFreq = view.getCenterFreq();
-          var lsf = view.leftFreq();
-          var rsf = view.rightFreq();
-          var bandwidth = rsf - lsf;
-          var halfBinWidth = bandwidth / fftSize / 2;
-          var xScale = (rvf-lvf)/(rsf-lsf);
-          // The half bin width correction is because OpenGL texture coordinates put (0,0) between texels, not centered on one.
-          var xZero = (lvf - viewCenterFreq + halfBinWidth)/(rsf-lsf);
-          gl.uniform1f(gl.getUniformLocation(program, 'xZero'), xZero);
-          gl.uniform1f(gl.getUniformLocation(program, 'xScale'), xScale);
-          
-          quad.draw();
-        }
-      };
-    }
-
-    function build2D(ctx, draw) {
-      canvas = self.element;      
-      ctx.lineWidth = 1;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      
-      var fillStyle = 'white';
-      var strokeStyle = 'white';
-      addLifecycleListener(canvas, 'init', function() {
-        fillStyle = getComputedStyle(canvas).fill;
-        strokeStyle = getComputedStyle(canvas).stroke;
-      });
-      
-      // Drawing parameters and functions
-      // Each variable is updated in draw()
-      // This is done so that the functions need not be re-created
-      // each frame.
-      var xZero, xScale, xNegBandwidthCoord, xPosBandwidthCoord, yZero, yScale, firstPoint, lastPoint, fftLen;
-      function freqToCoord(freq) {
-        return (freq - lvf) / (rvf-lvf) * w;
-      }
-      function path() {
-        ctx.beginPath();
-        ctx.moveTo(xNegBandwidthCoord - xScale, h + 2);
-        for (var i = firstPoint; i <= lastPoint; i++) {
-          ctx.lineTo(xZero + i * xScale, yZero + averageBuffer[mod(i, fftLen)] * yScale);
-        }
-        ctx.lineTo(xPosBandwidthCoord + xScale, h + 2);
-      }
-      
-      return {
-        newData: function (fftBundle) {
-          commonNewData(fftBundle);
-        },
-        performDraw: function (didClear) {
-          commonBeforeDraw(draw);
-          if (!didClear) {
-            ctx.clearRect(0, 0, w, h);
-          }
-
-          fftLen = averageBuffer.length;
-          var halfFFTLen = Math.floor(fftLen / 2);
-          
-          if (halfFFTLen <= 0) {
-            // no data yet, don't try to draw
-            return;
-          }
-
-          var viewCenterFreq = view.getCenterFreq();
-          xZero = freqToCoord(viewCenterFreq);
-          xNegBandwidthCoord = freqToCoord(view.leftFreq());
-          xPosBandwidthCoord = freqToCoord(view.rightFreq());
-          xScale = (xPosBandwidthCoord - xNegBandwidthCoord) / fftLen;
-          yScale = -h / (view.maxLevel - view.minLevel);
-          yZero = -view.maxLevel * yScale;
-
-          // choose points to draw
-          firstPoint = Math.floor(-xZero / xScale) - 1;
-          lastPoint = Math.ceil((w - xZero) / xScale) + 1;
-
-          // Fill is deliberately over stroke. This acts to deemphasize downward stroking of spikes, which tend to occur in noise.
-          ctx.fillStyle = fillStyle;
-          ctx.strokeStyle = strokeStyle;
-          path();
-          ctx.stroke();
-          path();
-          ctx.fill();
-        }
-      };
-    }
-  }
-  widgets.SpectrumPlot = SpectrumPlot;
-  
   function WaterfallPlot(config) {
     var self = this;
     var fftCell = config.target;
     var view = config.view;
+    var avgAlphaCell = config.clientState.spectrum_average;
     
     // I have read recommendations that color gradient scales should not involve more than two colors, as certain transitions between colors read as overly significant. However, in this case (1) we are not intending the waterfall chart to be read quantitatively, and (2) we want to have distinguishable small variations across a large dynamic range.
     var colors = [
@@ -1137,16 +873,14 @@ define(['./values', './events', './widget', './gltools', './database'], function
     
     CanvasSpectrumWidget.call(this, config, buildGL, build2D);
     
-    // TODO(kpreid): This is a horrible kludge and we should replace it by making the container into a widget which manages the layout of both views instead. Also making sure that in the pure-waterfall view the channel labels are moved to the waterfall side.
-    var el = this.element;
-    function layout() {
-      var otherFlexValue = 100;
-      var proportion = config.clientState.spectrum_split.depend(layout);
-      var flexValue = otherFlexValue * proportion / (1.001 - proportion);
-      el.style.flex = flexValue + ' ' + flexValue;
+    var lvf, rvf, w, h;
+    function commonBeforeDraw(scheduledDraw) {
+      view.n.listen(scheduledDraw);
+      lvf = view.leftVisibleFreq();
+      rvf = view.rightVisibleFreq();
+      w = canvas.width;
+      h = canvas.height;
     }
-    layout.scheduler = config.scheduler;
-    layout();
     
     function buildGL(gl, draw) {
       canvas = self.element;
@@ -1156,66 +890,183 @@ define(['./values', './events', './widget', './gltools', './database'], function
         !!gl.getExtension('OES_texture_float') &&
         !!gl.getExtension('OES_texture_float_linear');
 
-      var vertexShaderSource = ''
-        + 'attribute vec4 position;\n'
-        + 'varying highp vec2 v_position;\n'
-        + 'uniform highp float scroll;\n'
-        + 'uniform highp float xTranslate, xScale;\n'
-        + 'uniform highp float yScale;\n'
-        + 'void main(void) {\n'
-        // TODO use a single input matrix instead of this
-        + '  mat3 viewToTexture = mat3(0.5, 0.0, 0.0, 0.0, 0.5, 0.0, 0.5, 0.5, 1.0);\n'
-        + '  mat3 zoom = mat3(xScale, 0.0, 0.0, 0.0, 1.0, 0.0, xTranslate, 0.0, 1.0);\n'
-        + '  mat3 applyYScale = mat3(1.0, 0.0, 0.0, 0.0, yScale, 0.0, 0.0, -yScale, 1.0);\n'
-        + '  mat3 viewMatrix = applyYScale * zoom * viewToTexture;\n'
-        + '  gl_Position = position;\n'
-        + '  v_position = (viewMatrix * position.xyw).xy + vec2(0.0, scroll);\n'
-        + '}\n';
-      var fragmentShaderSource = ''
-        + 'uniform sampler2D data;\n'
+      var commonShaderCode = ''
         + 'uniform sampler2D centerFreqHistory;\n'
-        + 'uniform sampler2D gradient;\n'
-        + 'uniform mediump float gradientZero;\n'
-        + 'uniform mediump float gradientScale;\n'
-        + 'varying mediump vec2 v_position;\n'
         + 'uniform highp float currentFreq;\n'
         + 'uniform mediump float freqScale;\n'
-        + 'uniform highp float textureRotation;\n'
-        + 'void main(void) {\n'
-        + '  highp vec2 texLookup = mod(v_position, 1.0);\n'
+        + 'highp float getFreqOffset(highp vec2 c) {\n'
+        + '  c = vec2(0.0, mod(c.t, 1.0));\n'
         + (useFloatTexture
-              ? 'highp float historyFreq = texture2D(centerFreqHistory, texLookup).r;\n'
-              : 'highp vec4 hFreqVec = texture2D(centerFreqHistory, texLookup);\n'
-              + '  highp float historyFreq = ((hFreqVec.a * 255.0 * 256.0 + hFreqVec.b * 255.0) * 256.0 + hFreqVec.g * 255.0) * 256.0 + hFreqVec.r * 255.0;\n')
-        + '  highp float freqOffset = (currentFreq - historyFreq) * freqScale;\n'
-        + '  mediump vec2 shift = texLookup + vec2(freqOffset, 0.0);\n'
-        + '  if (shift.x < 0.0 || shift.x > 1.0) {\n'
-        + '    gl_FragColor = ' + backgroundColorGLSL + ';\n'
-        + '  } else {\n'
-        + '    mediump float data = texture2D(data, shift + vec2(textureRotation, 0.0)).r;\n'
-        + '    gl_FragColor = texture2D(gradient, vec2(0.5, gradientZero + gradientScale * data));\n'
-        //+ '    gl_FragColor = texture2D(gradient, vec2(0.5, v_position.x));\n'
-        //+ '    gl_FragColor = vec4(gradientZero + gradientScale * data * 4.0 - 0.5);\n'
-        + '  }\n'
-        + '}\n';
-      var program = gltools.buildProgram(gl, vertexShaderSource, fragmentShaderSource);
-      var quad = new SingleQuad(gl, -1, 1, -1, 1, gl.getAttribLocation(program, 'position'));
+              ? '  return currentFreq - texture2D(centerFreqHistory, c).r;\n'
+              : '  highp vec4 hFreqVec = texture2D(centerFreqHistory, c);\n'
+              + '  return currentFreq - (((hFreqVec.a * 255.0 * 256.0 + hFreqVec.b * 255.0) * 256.0 + hFreqVec.g * 255.0) * 256.0 + hFreqVec.r * 255.0);\n')
+        + '}\n'
+
+      var graphProgram = gltools.buildProgram(gl, 
+        // vertex shader
+        commonShaderCode
+          + 'attribute vec4 position;\n'
+          + 'uniform mediump float xZero, xScale;\n'
+          + 'varying highp vec2 v_position;\n'
+          + 'void main(void) {\n'
+          + '  gl_Position = position;\n'
+          + '  mediump vec2 basePos = (position.xy + vec2(1.0)) / 2.0;\n'
+          + '  v_position = vec2(xScale * basePos.x + xZero, basePos.y);\n'
+          + '}\n',
+        // fragment shader
+        commonShaderCode
+          + 'uniform sampler2D data;\n'
+          + 'uniform mediump float xScale, xRes, yRes, valueZero, valueScale;\n'
+          + 'uniform highp float scroll;\n'
+          + 'uniform highp float historyStep;\n'
+          + 'uniform lowp float avgAlpha;\n'
+          + 'varying highp vec2 v_position;\n'
+          + 'const int stepRange = 8;\n'
+          + 'highp vec2 stepStep;\n'  // initialized in main
+          + 'const lowp float stepSumScale = 1.0/(float(stepRange) * 2.0 + 1.0);\n'
+          + 'const int averaging = 32;\n'
+          + 'mediump vec4 cmix(mediump vec4 before, mediump vec4 after, mediump float a) {\n'
+          + '  return mix(before, after, clamp(a, 0.0, 1.0));\n'
+          + '}\n'
+          + 'mediump vec4 cut(mediump float boundary, mediump float offset, mediump vec4 before, mediump vec4 after) {\n'
+          + '  mediump float case = (boundary - v_position.y) * yRes + offset;\n'
+          + '  return cmix(before, after, case);\n'
+          + '}\n'
+          + 'lowp float filler(highp float value) {\n'
+          + '  return cmix(vec4(0.0), vec4(value), value).r;\n'
+          + '}\n'
+          + 'mediump vec4 line(lowp float plus, lowp float average, lowp float intensity, mediump vec4 bg, mediump vec4 fg) {\n'
+          + '  return cmix(bg, cut(average + plus, 0.5, bg, cut(average, -0.5, fg, bg)), intensity);\n'
+          + '}\n'
+          + 'highp vec2 coords(highp float framesBack) {\n'
+          + '  // compute texture coords -- must be moduloed aterward\n'
+          + '  return vec2(v_position.x, scroll - (framesBack + 0.5) * historyStep);\n'
+          + '}\n'
+          + 'highp float pointValueAt(highp vec2 c) {\n'
+          + '  return valueZero + valueScale * texture2D(data, mod(c, 1.0)).r;\n'
+          + '}\n'
+          + 'highp float shiftedPointValueAt(highp vec2 c) {\n'
+          + '  highp float offset = getFreqOffset(c) * freqScale;\n'
+          + '  return pointValueAt(c + vec2(offset, 0.0));\n'
+          + '}\n'
+          + 'highp float pointAverageAt(highp vec2 c) {\n'
+          + '  lowp float average = 0.0;\n'
+          + '  for (int t = averaging - 1; t >= 0; t--) {\n'
+          // note: FIR emulation of IIR filter because IIR is what the non-GL version uses
+          + '      average = mix(average, shiftedPointValueAt(c + vec2(0.0, -float(t) * historyStep)), t >= averaging - 1 ? 1.0 : avgAlpha);\n'
+          + '    }\n'
+          + '  return average;\n'
+          + '}\n'
+          + 'void fetchSmoothValueAt(highp float t, out mediump float plus, out mediump float average) {\n'
+          + '  highp vec2 texLookup = coords(t);\n'
+          + '  average = 0.0;\n'
+          + '  mediump float peak = -1.0;\n'
+          + '  mediump float valley = 2.0;\n'
+          + '  for (int i = -stepRange; i <= stepRange; i++) {\n'
+          + '    mediump float value = shiftedPointValueAt(texLookup + stepStep * float(i));\n'
+          + '    average += value;\n'
+          + '    peak = max(peak, value);\n'
+          + '    valley = min(valley, value);\n'
+          + '  }\n'
+          + '  average *= stepSumScale;\n'
+          + '  plus = peak - average;\n'
+          + '}\n'
+          + 'void fetchSmoothAverageValueAt(out mediump float plus, out mediump float average) {\n'
+          + '  highp vec2 texLookup = coords(0.0);\n'
+          + '  average = 0.0;\n'
+          + '  mediump float peak = -1.0;\n'
+          + '  mediump float valley = 2.0;\n'
+          + '  for (int i = -stepRange; i <= stepRange; i++) {\n'
+          + '    mediump float value = pointAverageAt(texLookup + stepStep * float(i));\n'
+          + '    average += value;\n'
+          + '    peak = max(peak, value);\n'
+          + '    valley = min(valley, value);\n'
+          + '  }\n'
+          + '  average *= stepSumScale;\n'
+          + '  plus = peak - average;\n'
+          + '}\n'
+          + 'lowp float accumFillIntensity() {\n'
+          + '  lowp float accumFill = 0.0;\n'
+          + '  for (highp float i = 0.0; i < float(averaging); i += 1.0) {\n'
+          + '    lowp float average;\n'
+          + '    lowp float plus;\n'
+          + '    fetchSmoothValueAt(i, plus, average);\n'
+          + '    accumFill += cut(average, 1.0, vec4(0.0), vec4(average)).r;\n'
+          + '  }\n'
+          + '  return accumFill * (1.0 / float(averaging));'
+          + '}\n'
+          + 'void main(void) {\n'
+          + '  // initialize globals\n'
+          + '  stepStep = vec2(xScale / xRes * (1.3 / float(stepRange)), 0.0);\n'
+          + '  \n'
+          + '  mediump float aaverage;\n'
+          + '  mediump float aplus;\n'
+          + '  fetchSmoothAverageValueAt(aplus, aaverage);\n'
+          + '  mediump float laverage;\n'
+          + '  mediump float lplus;\n'
+          + '  fetchSmoothValueAt(0.0, lplus, laverage);\n'
+          + '  gl_FragColor = vec4(0.0, 0.5, 1.0, 1.0) * accumFillIntensity() * 3.0;\n'
+          + '  gl_FragColor = line(aplus, aaverage, 0.75, gl_FragColor, vec4(0.0, 1.0, 0.6, 1.0));\n'
+          + '  gl_FragColor = line(lplus, laverage, max(0.0, laverage - aaverage) * 4.0, gl_FragColor, vec4(1.0, 0.2, 0.2, 1.0));\n'
+        + '}\n');
+      var graphQuad = new SingleQuad(gl, -1, 1, -1, 1, gl.getAttribLocation(graphProgram, 'position'));
+
+      var waterfallProgram = gltools.buildProgram(gl,
+        // vertex shader
+        commonShaderCode
+          + 'attribute vec4 position;\n'
+          + 'varying highp vec2 v_position;\n'
+          + 'uniform highp float scroll;\n'
+          + 'uniform highp float xTranslate, xScale;\n'
+          + 'uniform highp float yScale;\n'
+          + 'void main(void) {\n'
+          // TODO use a single input matrix instead of this
+          + '  mat3 viewToTexture = mat3(0.5, 0.0, 0.0, 0.0, 0.5, 0.0, 0.5, 0.5, 1.0);\n'
+          + '  mat3 zoom = mat3(xScale, 0.0, 0.0, 0.0, 1.0, 0.0, xTranslate, 0.0, 1.0);\n'
+          + '  mat3 applyYScale = mat3(1.0, 0.0, 0.0, 0.0, yScale, 0.0, 0.0, -yScale, 1.0);\n'
+          + '  mat3 viewMatrix = applyYScale * zoom * viewToTexture;\n'
+          + '  gl_Position = position;\n'
+          + '  v_position = (viewMatrix * position.xyw).xy + vec2(0.0, scroll);\n'
+          + '}\n',
+        // fragment shader
+        commonShaderCode
+          + 'uniform sampler2D data;\n'
+          + 'uniform sampler2D gradient;\n'
+          + 'uniform mediump float gradientZero;\n'
+          + 'uniform mediump float gradientScale;\n'
+          + 'varying mediump vec2 v_position;\n'
+          + 'uniform highp float textureRotation;\n'
+          + 'void main(void) {\n'
+          + '  highp vec2 texLookup = mod(v_position, 1.0);\n'
+          + '  highp float freqOffset = getFreqOffset(texLookup) * freqScale;\n'
+          + '  mediump vec2 shift = texLookup + vec2(freqOffset, 0.0);\n'
+          + '  if (shift.x < 0.0 || shift.x > 1.0) {\n'
+          + '    gl_FragColor = ' + backgroundColorGLSL + ';\n'
+          + '  } else {\n'
+          + '    mediump float data = texture2D(data, shift + vec2(textureRotation, 0.0)).r;\n'
+          + '    gl_FragColor = texture2D(gradient, vec2(0.5, gradientZero + gradientScale * data));\n'
+          //+ '    gl_FragColor = texture2D(gradient, vec2(0.5, v_position.x));\n'
+          //+ '    gl_FragColor = vec4(gradientZero + gradientScale * data * 4.0 - 0.5);\n'
+          + '  }\n'
+          + '}\n');
+      var waterfallQuad = new SingleQuad(gl, -1, 1, -1, 1, gl.getAttribLocation(waterfallProgram, 'position'));
       
-      var u_scroll = gl.getUniformLocation(program, 'scroll');
-      var u_xTranslate = gl.getUniformLocation(program, 'xTranslate');
-      var u_xScale = gl.getUniformLocation(program, 'xScale');
-      var u_yScale = gl.getUniformLocation(program, 'yScale');
-      var u_currentFreq = gl.getUniformLocation(program, 'currentFreq');
-      var u_freqScale = gl.getUniformLocation(program, 'freqScale');
-      var u_gradientZero = gl.getUniformLocation(program, 'gradientZero');
-      var u_gradientScale = gl.getUniformLocation(program, 'gradientScale');
-      var u_textureRotation = gl.getUniformLocation(program, 'textureRotation');
+      var u_scroll = gl.getUniformLocation(waterfallProgram, 'scroll');
+      var u_xTranslate = gl.getUniformLocation(waterfallProgram, 'xTranslate');
+      var u_xScale = gl.getUniformLocation(waterfallProgram, 'xScale');
+      var u_yScale = gl.getUniformLocation(waterfallProgram, 'yScale');
+      var wu_currentFreq = gl.getUniformLocation(waterfallProgram, 'currentFreq');
+      var gu_currentFreq = gl.getUniformLocation(graphProgram, 'currentFreq');
+      var wu_freqScale = gl.getUniformLocation(waterfallProgram, 'freqScale');
+      var gu_freqScale = gl.getUniformLocation(graphProgram, 'freqScale');
+      var u_textureRotation = gl.getUniformLocation(waterfallProgram, 'textureRotation');
       
       var fftSize = Math.max(1, config.target.get().length);
       
 
       var bufferTexture = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
+      // Ideally we would be linear in S (freq) and nearest in T (time), but that's not an option.
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
@@ -1271,8 +1122,14 @@ define(['./values', './events', './widget', './gltools', './database'], function
           valueZero = 0;
           valueScale = 1;
         }
-        gl.uniform1f(u_gradientZero, insetZero + insetScale * valueZero);
-        gl.uniform1f(u_gradientScale, insetScale * valueScale);
+        
+        gl.useProgram(graphProgram);
+        gl.uniform1f(gl.getUniformLocation(graphProgram, 'valueZero'), valueZero);
+        gl.uniform1f(gl.getUniformLocation(graphProgram, 'valueScale'), valueScale);
+
+        gl.useProgram(waterfallProgram);
+        gl.uniform1f(gl.getUniformLocation(waterfallProgram, 'gradientZero'), insetZero + insetScale * valueZero);
+        gl.uniform1f(gl.getUniformLocation(waterfallProgram, 'gradientScale'), insetScale * valueScale);
       }());
 
       gl.bindTexture(gl.TEXTURE_2D, null);
@@ -1281,7 +1138,7 @@ define(['./values', './events', './widget', './gltools', './database'], function
         if (useFloatTexture) {
           var init = new Float32Array(fftSize*historyCount);
           for (var i = 0; i < fftSize*historyCount; i++) {
-            init[i] = -100;
+            init[i] = view.minLevel;
           }
           gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
           gl.texImage2D(
@@ -1342,15 +1199,27 @@ define(['./values', './events', './widget', './gltools', './database'], function
       }
       configureTexture();
 
+      // initial state of graph program
+      gl.useProgram(graphProgram);
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
-      gl.uniform1i(gl.getUniformLocation(program, 'data'), 1);
+      gl.uniform1i(gl.getUniformLocation(graphProgram, 'data'), 1);
       gl.activeTexture(gl.TEXTURE2);
       gl.bindTexture(gl.TEXTURE_2D, historyFreqTexture);
-      gl.uniform1i(gl.getUniformLocation(program, 'centerFreqHistory'), 2);
+      gl.uniform1i(gl.getUniformLocation(graphProgram, 'centerFreqHistory'), 2);
+      gl.activeTexture(gl.TEXTURE0);
+      
+      // initial state of waterfall program
+      gl.useProgram(waterfallProgram);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
+      gl.uniform1i(gl.getUniformLocation(waterfallProgram, 'data'), 1);
+      gl.activeTexture(gl.TEXTURE2);
+      gl.bindTexture(gl.TEXTURE_2D, historyFreqTexture);
+      gl.uniform1i(gl.getUniformLocation(waterfallProgram, 'centerFreqHistory'), 2);
       gl.activeTexture(gl.TEXTURE3);
       gl.bindTexture(gl.TEXTURE_2D, gradientTexture);
-      gl.uniform1i(gl.getUniformLocation(program, 'gradient'), 3);
+      gl.uniform1i(gl.getUniformLocation(waterfallProgram, 'gradient'), 3);
       gl.activeTexture(gl.TEXTURE0);
 
       var slicePtr = 0;
@@ -1442,21 +1311,50 @@ define(['./values', './events', './widget', './gltools', './database'], function
           gl.bindTexture(gl.TEXTURE_2D, null);
           slicePtr = mod(slicePtr + 1, historyCount);
         },
-        performDraw: function () {
-          view.n.listen(draw);
+        performDraw: function (didResize) {
+          commonBeforeDraw(draw);
           var viewCenterFreq = view.getCenterFreq();
-
-          gl.viewport(0, 0, canvas.width, canvas.height);
-          gl.uniform1f(u_scroll, slicePtr / historyCount);
-          gl.uniform1f(u_yScale, canvas.height / historyCount);
+          var split = Math.round(canvas.height * config.clientState.spectrum_split.depend(draw));
+          
+          // common calculations
           var fs = 1.0 / (view.rightFreq() - view.leftFreq());
-          gl.uniform1f(u_freqScale, fs);
-          gl.uniform1f(u_currentFreq, viewCenterFreq);
+          
+          gl.viewport(0, split, w, h - split);
+          
+          gl.useProgram(graphProgram);
+          gl.uniform1f(gl.getUniformLocation(graphProgram, 'xRes'), w);
+          gl.uniform1f(gl.getUniformLocation(graphProgram, 'yRes'), h - split);
+          gl.uniform1f(gu_freqScale, fs);
+          gl.uniform1f(gu_currentFreq, viewCenterFreq);
+          gl.uniform1f(gl.getUniformLocation(graphProgram, 'avgAlpha'), avgAlphaCell.depend(draw));
+          // Adjust drawing region
+          var viewCenterFreq = view.getCenterFreq();
+          var lsf = view.leftFreq();
+          var rsf = view.rightFreq();
+          var bandwidth = rsf - lsf;
+          var halfBinWidth = bandwidth / fftSize / 2;
+          var xScale = (rvf-lvf)/(rsf-lsf);
+          // The half bin width correction is because OpenGL texture coordinates put (0,0) between texels, not centered on one.
+          var xZero = (lvf - viewCenterFreq + halfBinWidth)/(rsf-lsf);
+          gl.uniform1f(gl.getUniformLocation(graphProgram, 'xZero'), xZero);
+          gl.uniform1f(gl.getUniformLocation(graphProgram, 'xScale'), xScale);
+          gl.uniform1f(gl.getUniformLocation(graphProgram, 'scroll'), slicePtr / historyCount);
+          gl.uniform1f(gl.getUniformLocation(graphProgram, 'historyStep'), 1.0 / historyCount);
+          
+          graphQuad.draw();
+          
+          gl.viewport(0, 0, w, split);
+          
+          gl.useProgram(waterfallProgram);
+          gl.uniform1f(u_scroll, slicePtr / historyCount);
+          gl.uniform1f(u_yScale, split / historyCount);
+          gl.uniform1f(wu_freqScale, fs);
+          gl.uniform1f(wu_currentFreq, viewCenterFreq);
           var xScale = (view.rightVisibleFreq() - view.leftVisibleFreq()) * fs;
           gl.uniform1f(u_xTranslate, (view.leftVisibleFreq() - view.leftFreq()) * fs);
           gl.uniform1f(u_xScale, xScale);
 
-          quad.draw();
+          waterfallQuad.draw();
           cleared = false;
         }
       };
@@ -1486,22 +1384,64 @@ define(['./values', './events', './widget', './gltools', './database'], function
           freqToCanvasPixelFactor * (freqOffset - xTranslateFreq), y, pixelWidthOfFFT, 1);  // destination rect
       }
       
-      // circular buffer of ImageData objects
+      // circular buffer of ImageData objects, and info to invalidate it
       var slices = [];
       var slicePtr = 0;
       var lastDrawnLeftVisibleFreq = NaN;
       var lastDrawnRightVisibleFreq = NaN;
-
+      
+      // for detecting when to invalidate the averaging buffer
+      var lastDrawnCenterFreq = NaN;
+      
+      // Graph drawing parameters and functions
+      // Each variable is updated in draw()
+      // This is done so that the functions need not be re-created
+      // each frame.
+      var gxZero, xScale, xNegBandwidthCoord, xPosBandwidthCoord, yZero, yScale, firstPoint, lastPoint, fftLen, graphDataBuffer;
+      function freqToCoord(freq) {
+        return (freq - lvf) / (rvf-lvf) * w;
+      }
+      function graphPath() {
+        ctx.beginPath();
+        ctx.moveTo(xNegBandwidthCoord - xScale, h + 2);
+        for (var i = firstPoint; i <= lastPoint; i++) {
+          ctx.lineTo(gxZero + i * xScale, yZero + graphDataBuffer[mod(i, fftLen)] * yScale);
+        }
+        ctx.lineTo(xPosBandwidthCoord + xScale, h + 2);
+      }
+      
+      // Drawing state for graph
+      ctx.lineWidth = 1;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      
+      var fillStyle = 'white';
+      var strokeStyle = 'white';
+      addLifecycleListener(canvas, 'init', function() {
+        fillStyle = getComputedStyle(canvas).fill;
+        strokeStyle = getComputedStyle(canvas).stroke;
+      });
+      
+      function changedSplit() {
+        cleared = true;
+        draw.scheduler.enqueue(draw);
+      }
+      changedSplit.scheduler = config.scheduler;
+      
       var performDraw = config.boundedFn(function performDrawImpl(clearedIn) {
+        commonBeforeDraw(draw);
+        
         cleared = cleared || clearedIn;
-        var h = canvas.height;
-        var w = canvas.width;
         var viewLVF = view.leftVisibleFreq();
         var viewRVF = view.rightVisibleFreq();
         var viewCenterFreq = view.getCenterFreq();
         freqToCanvasPixelFactor = w / (viewRVF - viewLVF);
         xTranslateFreq = viewLVF - view.leftFreq();
         pixelWidthOfFFT = view.getTotalPixelWidth();
+
+        var split = Math.round(canvas.height * config.clientState.spectrum_split.depend(changedSplit));
+        var topOfWaterfall = h - split;
+        var heightOfWaterfall = split;
 
         var buffer, bufferCenterFreq;
         if (dataToDraw) {
@@ -1546,15 +1486,17 @@ define(['./values', './events', './widget', './gltools', './database'], function
         var sameView = lastDrawnLeftVisibleFreq === viewLVF && lastDrawnRightVisibleFreq === viewRVF;
         if (dataToDraw && sameView && !cleared) {
           // Scroll
-          ctx.drawImage(ctx.canvas, 0, 0, w, h-1, 0, 1, w, h-1);
+          ctx.drawImage(ctx.canvas,
+            0, topOfWaterfall, w, heightOfWaterfall-1,
+            0, topOfWaterfall+1, w, heightOfWaterfall-1);
 
           // fill background of new line, if needed
           if (bufferCenterFreq !== viewCenterFreq) {
-            ctx.fillRect(0, 0, w, 1);
+            ctx.fillRect(0, topOfWaterfall, w, 1);
           }
 
           // Paint newest slice
-          paintSlice(ibuf, bufferCenterFreq - viewCenterFreq, 0);
+          paintSlice(ibuf, bufferCenterFreq - viewCenterFreq, topOfWaterfall);
         } else if (cleared || !sameView) {
           // Horizontal position changed, paint all slices onto canvas
           
@@ -1566,14 +1508,58 @@ define(['./values', './events', './widget', './gltools', './database'], function
           var sliceCount = slices.length;
           for (var i = sliceCount - 1; i >= 0; i--) {
             var slice = slices[mod(i + slicePtr, sliceCount)];
-            var y = sliceCount - i - 1;
-            if (y >= canvas.height) break;
+            var y = topOfWaterfall + sliceCount - i - 1;
+            if (y >= h) break;
 
             // paint slice
             paintSlice(slice[0], slice[1] - viewCenterFreq, y);
           }
           ctx.fillRect(0, y+1, w, h);
         }
+
+        // Done with waterfall, now draw graph
+        (function() {
+          if (!graphDataBuffer) return;
+          
+          fftLen = graphDataBuffer.length;  // TODO name collisionish
+          var halfFFTLen = Math.floor(fftLen / 2);
+        
+          if (halfFFTLen <= 0) {
+            // no data yet, don't try to draw
+            return;
+          }
+
+          var viewCenterFreq = view.getCenterFreq();
+          gxZero = freqToCoord(viewCenterFreq);
+          xNegBandwidthCoord = freqToCoord(view.leftFreq());
+          xPosBandwidthCoord = freqToCoord(view.rightFreq());
+          xScale = (xPosBandwidthCoord - xNegBandwidthCoord) / fftLen;
+          yScale = -topOfWaterfall / (view.maxLevel - view.minLevel);
+          yZero = -view.maxLevel * yScale;
+
+          // choose points to draw
+          firstPoint = Math.floor(-gxZero / xScale) - 1;
+          lastPoint = Math.ceil((w - gxZero) / xScale) + 1;
+
+          // clip so our oversized path doesn't hit waterfall
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(0, 0, w, topOfWaterfall);
+          ctx.clip();
+          
+          // Draw graph.
+          // Fill is deliberately over stroke. This acts to deemphasize downward stroking of spikes, which tend to occur in noise.
+          ctx.clearRect(0, 0, w, topOfWaterfall);
+          ctx.fillStyle = fillStyle;
+          ctx.strokeStyle = strokeStyle;
+          graphPath();
+          ctx.stroke();
+          graphPath();
+          ctx.fill();
+          
+          // unclip
+          ctx.restore();
+        }());
 
         dataToDraw = null;
         cleared = false;
@@ -1582,9 +1568,29 @@ define(['./values', './events', './widget', './gltools', './database'], function
       var dataToDraw = null;  // TODO this is a data flow kludge
       return {
         newData: function (fftBundle) {
-          dataToDraw = fftBundle;
-          // The storage/scrolling logic is in performDraw, and we call it immediately to ensure every frame gets painted.
+          var buffer = fftBundle[1];
+          var bufferCenterFreq = fftBundle[0].freq;
+          var len = buffer.length;
+          var alpha = avgAlphaCell.get();
+          var invAlpha = 1 - alpha;
+
+          // averaging
+          // TODO: Get separate averaged and unaveraged FFTs from server so that averaging behavior is not dependent on frame rate over the network
+          if (!graphDataBuffer
+              || graphDataBuffer.length !== len
+              || (lastDrawnCenterFreq !== bufferCenterFreq
+                  && !isNaN(bufferCenterFreq))) {
+            lastDrawnCenterFreq = bufferCenterFreq;
+            graphDataBuffer = new Float32Array(buffer);
+          }
+
+          for (var i = 0; i < len; i++) {
+            graphDataBuffer[i] = graphDataBuffer[i] * invAlpha + buffer[i] * alpha;
+          }
+          
+          // Hand data over to waterfall drawing immediately, so that the scrolling occurs and every frame is painted.
           // TODO: It would be more efficient to queue things so that if we _do_ have multiple frames to draw, we don't do multiple one-pixel scrolling steps
+          dataToDraw = fftBundle;
           performDraw(false);
         },
         performDraw: performDraw
@@ -1602,6 +1608,8 @@ define(['./values', './events', './widget', './gltools', './database'], function
     var view = config.view;
     var radioCell = config.radioCell;
     var others = config.index.implementing('shinysdr.top.IHasFrequency');
+    // TODO: That this cell matters here is shared knowledge between this and ReceiverMarks. Should instead be managed by SpectrumView (since it already handles freq coordinates), in the form "get Y position of minLevel".
+    var splitCell = config.clientState.spectrum_split;
     
     var canvas = config.element;
     if (canvas.tagName !== 'CANVAS') {
@@ -1643,10 +1651,10 @@ define(['./values', './events', './widget', './gltools', './database'], function
       var visibleDevice = radioCell.depend(draw).source_name.depend(draw);
       lvf = view.leftVisibleFreq();
       rvf = view.rightVisibleFreq();
-      var yScale = -h / (view.maxLevel - view.minLevel);
-      var yZero = -view.maxLevel * yScale;
       
       canvas.style.marginLeft = view.freqToCSSLeft(lvf);
+      canvas.style.width = view.freqToCSSLength(rvf - lvf);
+
       w = canvas.offsetWidth;
       h = canvas.offsetHeight;
       if (canvas.width !== w || canvas.height !== h) {
@@ -1656,6 +1664,9 @@ define(['./values', './events', './widget', './gltools', './database'], function
       } else {
         ctx.clearRect(0, 0, w, h);
       }
+      
+      var yScale = -(h * (1 - splitCell.depend(draw))) / (view.maxLevel - view.minLevel);
+      var yZero = -view.maxLevel * yScale;
       
       ctx.strokeStyle = 'gray';
       drawHair(view.getCenterFreq()); // center frequency
@@ -2135,6 +2146,14 @@ define(['./values', './events', './widget', './gltools', './database'], function
     numbers.className = 'freqscale-numbers';
     var labels = outer.appendChild(document.createElement('div'));
     labels.className = 'freqscale-labels';
+    
+    outer.style.position = 'absolute';
+    function doLayout() {
+      // TODO: This is shared knowledge between this, WaterfallPlot, and ReceiverMarks. Should instead be managed by SpectrumView (since it already handles freq coordinates), in the form "get Y position of minLevel".
+      outer.style.bottom = (config.clientState.spectrum_split.depend(doLayout) * 100).toFixed(2) + '%';
+    }
+    doLayout.scheduler = config.scheduler;
+    doLayout();
     
     // label maker fns
     function addChannel(record) {

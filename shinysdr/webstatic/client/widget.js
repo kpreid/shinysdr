@@ -97,13 +97,15 @@ define(['./values', './events'], function (values, events) {
     this.writableDB = config.writableDB;
     this.spectrumView = config.spectrumView;
   }
-  Context.prototype.withSpectrumView = function (element, monitor, isRFSpectrum) {
-    if (!element.id) throw new Error('spectrum view element must have an id for persistence');
-    var ns = new StorageNamespace(localStorage, 'shinysdr.viewState.' + element.id + '.');
+  Context.prototype.withSpectrumView = function (outerElement, innerElement, monitor, isRFSpectrum) {
+    var id = outerElement.id || innerElement.id;
+    if (!id) throw new Error('spectrum view element must have an id for persistence');
+    var ns = new StorageNamespace(localStorage, 'shinysdr.viewState.' + id + '.');
     var view = new SpectrumView({
       scheduler: this.scheduler,
       radioCell: this.radioCell,
-      element: element,
+      outerElement: outerElement,
+      innerElement: innerElement,
       storage: ns,
       isRFSpectrum: isRFSpectrum,
       signalTypeCell: monitor.signal_type
@@ -332,19 +334,14 @@ define(['./values', './events'], function (values, events) {
   function SpectrumView(config) {
     // TODO: It should be the case that radioCell is used only if isRFSpectrum is true. This is not quite true.
     var radioCell = config.radioCell;
-    var container = config.element;
+    var container = config.outerElement;
+    var innerElement = config.innerElement;
     var scheduler = config.scheduler;
     var storage = config.storage;
     var isRFSpectrum = config.isRFSpectrum;
     var signalTypeCell = config.signalTypeCell;
     var self = this;
 
-    // used to force the container's scroll range to widen immediately
-    var scrollStub = container.appendChild(document.createElement('div'));
-    scrollStub.style.height = '1px';
-    scrollStub.style.marginBottom = '-1px';
-    scrollStub.style.visibility = 'hidden';
-    
     var n = this.n = new events.Notifier();
     
     // per-drawing-frame parameters
@@ -359,7 +356,7 @@ define(['./values', './events'], function (values, events) {
       // TODO: clamp zoom here in the same way changeZoom does
       zoom = parseFloat(storage.getItem('zoom')) || 1;
       var initScroll = parseFloat(storage.getItem('scroll')) || 0;
-      scrollStub.style.width = (container.offsetWidth * zoom) + 'px';
+      innerElement.style.width = (container.offsetWidth * zoom) + 'px';
       prepare();
       function later() {  // gack kludge
         container.scrollLeft = Math.floor(initScroll);
@@ -382,20 +379,38 @@ define(['./values', './events'], function (values, events) {
       analytic = sourceType.kind == 'IQ';  // TODO have glue code
       leftFreq = analytic ? centerFreq - nyquist : centerFreq;
       rightFreq = centerFreq + nyquist;
-      pixelWidth = container.offsetWidth;
       pixelsPerHertz = pixelWidth / (rightFreq - leftFreq) * zoom;
-      // accessing scrollLeft triggers relayout
+
+      // Adjust scroll to match possible viewport size change.
+      if (pixelWidth != container.offsetWidth) {
+        // Compute change
+        var scaleChange = container.offsetWidth / pixelWidth;
+        var scrollValue = (cacheScrollLeft + fractionalScroll) * scaleChange;
+        
+        pixelWidth = container.offsetWidth;
+        
+        // Update scrollable range
+        var w = pixelWidth * zoom;
+        innerElement.style.width = w + 'px';
+        
+        // Apply change
+        container.scrollLeft = scrollValue;
+        fractionalScroll = scrollValue - container.scrollLeft;
+      }
+      
+      // accessing scrollLeft triggers relayout, so cache it
       cacheScrollLeft = container.scrollLeft;
       n.notify();
+      
       // Note that this uses source.freq, not the spectrum data center freq. This is correct because we want to align the coords with what we have selected, not the current data; and the WaterfallPlot is aware of this distinction.
     }
     prepare.scheduler = config.scheduler;
     prepare();
     
     window.addEventListener('resize', function (event) {
-      // immediate to ensure smooth animation
+      // immediate to ensure smooth animation and to allow scroll adjustment
       scheduler.callNow(prepare);
-    });
+    }.bind(this));
     
     container.addEventListener('scroll', scheduler.syncEventCallback(function (event) {
       storage.setItem('scroll', String(container.scrollLeft + fractionalScroll));
@@ -458,11 +473,17 @@ define(['./values', './events'], function (values, events) {
     }
     function startZoomUpdate() {
       // Force scrollable range to update, for when zoom and scrollLeft change together.
+      // The (temporary) range is the max of the old and new ranges.
       var w = pixelWidth * zoom;
-      scrollStub.style.width = w + 'px';
+      var oldWidth = parseInt(innerElement.style.width);
+      innerElement.style.width = Math.max(w, oldWidth) + 'px';
     }
     function finishZoomUpdate(scrollValue) {
       scrollValue = clampScroll(scrollValue);
+      
+      // Final scroll-range update.
+      var w = pixelWidth * zoom;
+      innerElement.style.width = w + 'px';
       
       container.scrollLeft = scrollValue;
       fractionalScroll = scrollValue - container.scrollLeft;
