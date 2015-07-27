@@ -1,0 +1,12 @@
+Frequency,Mode,Name
+0.190-0.435,AM,Aeronautical Radionavigation (Non-directional beacons)
+0.510-0.530,AM,Aeronautical Radionavigation (Non-directional beacons)
+2.850-3.155,AM,Aeronautical Mobile
+3.400-3.500,AM,Aeronautical Mobile
+108-117.975,AM,Aeronautical Radionavigation
+117.975-137,AM,Aeronautical Mobile
+328.6-335.4,AM,Aeronautical Radionavigation
+960-1215,AM,Aeronautical Radionavigation
+978.0,MODE-S,UAT transcievers
+1030.0,ignore,aircraft ATCRBS interrogators
+1090.0,MODE-S,aircraft ATCRBS transponders
