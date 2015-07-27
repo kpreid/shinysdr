@@ -462,7 +462,7 @@ h2 input {
   max-width: 8em;
 }
 .widget-Slider-panel input, .widget-Slider-panel meter {
-  flex: 1 1 auto;
+  flex: 1 1 0;  /* TODO: 'auto' basis used to work, sometimes doesn't now. Figure out how to not be plugging in a nonsense length here. */
 
   vertical-align: middle;
 }
