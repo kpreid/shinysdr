@@ -79,7 +79,7 @@ class Demodulator(gr.hier_block2, ExportedState):
 
 class SquelchMixin(ExportedState):
     def __init__(self, squelch_rate, squelch_threshold=-100):
-        alpha = 9.6 / squelch_rate
+        alpha = 80.0 / squelch_rate
         self.rf_squelch_block = analog.simple_squelch_cc(squelch_threshold, alpha)
         self.rf_probe_block = analog.probe_avg_mag_sqrd_c(0, alpha=alpha)
 
