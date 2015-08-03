@@ -186,7 +186,7 @@ class FMAPRSDemodulator(gr.hier_block2, ExportedState):
         self.input_rate = input_rate
         
         # FM demod
-        # TODO: Retry telling the NFMDemodulator to have its output rate be pipe_rate instead of using a resampler. Something went wrong when trying that before.
+        # TODO: Retry telling the NFMDemodulator to have its output rate be pipe_rate instead of using a resampler. Something went wrong when trying that before. Same thing is done in dsd.py
         self.fm_demod = NFMDemodulator(
             mode='NFM',
             input_rate=input_rate,

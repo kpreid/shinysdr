@@ -55,12 +55,15 @@ Installation procedure:
     * [GNU Radio](http://gnuradio.org/) 3.7.4 or later.
     * [`gr-osmosdr`](http://sdr.osmocom.org/trac/wiki/GrOsmoSDR), and any applicable hardware drivers such as `librtlsdr`. (Plugins may be written to use other RF sources, but the only built-in support is for `gr-osmosdr`.)
 
-2. Optionally install these:
+2. Optionally install these programs/libraries:
 
     * [`gr-air-modes`](https://github.com/bistromath/gr-air-modes) (for receiving ADS-B, aircraft transponders).
     * [`multimon-ng`](https://github.com/EliasOenal/multimon-ng) (for receiving APRS).
+    * `gr-dsd` (for receiving digital voice modes supported by DSD).
+    
+    (If any of these are not installed, ShinySDR will simply hide the corresponding mode options.)
 
-    <!-- TODO: Mention hamlib once that is better-supported -->
+    <!-- TODO: Mention hamlib once that is better-supported and more useful -->
 
 3. There are two different ways you can go about installing and running ShinySDR, and now you need to know which ones you are planning to use.
 The first way is to use the standard Python module/application install process, `setup.py`; this will copy it to an appropriate location on your system and add a command-line program `shinysdr`.
