@@ -131,7 +131,7 @@ A very brief summary of basic operation:
 Copyright and License
 ---------------------
 
-Copyright 2013, 2014, 2015 Kevin Reid &lt;<kpreid@switchb.org>&gt;
+Copyright 2013, 2014, 2015 Kevin Reid &lt;kpreid@switchb.org&gt;
 
 ShinySDR is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -145,3 +145,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
+
+### Additional information
+
+* The file `shinysdr/webstatic/client/basemap.geojson` was derived from [the Natural Earth data set `ne_50m_admin_0_countries`, version 2.0.0](http://www.naturalearthdata.com/downloads/50m-cultural-vectors/).
+    This data set [is in the public domain](http://www.naturalearthdata.com/about/terms-of-use/).

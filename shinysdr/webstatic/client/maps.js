@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./values', './gltools', './widget', './widgets', './events'], function (values, gltools, widget, widgets, events) {
+define(['./values', './gltools', './widget', './widgets', './events', './network'], function (values, gltools, widget, widgets, events, network) {
   'use strict';
   
   var sin = Math.sin;
@@ -31,6 +31,7 @@ define(['./values', './gltools', './widget', './widgets', './events'], function 
   var createWidgetExt = widget.createWidgetExt;
   var DerivedCell = values.DerivedCell;
   var Enum = values.Enum;
+  var externalGet = network.externalGet;
   var LocalReadCell = values.LocalReadCell;
   var makeBlock = values.makeBlock;
   var PickBlock = widgets.PickBlock;
@@ -56,7 +57,10 @@ define(['./values', './gltools', './widget', './widgets', './events'], function 
 
   // Clock for position animations
   var clock = new Clock(0.1);
-
+  
+  // TODO: Instead of using a blank icon, provide a way to skip the geometry entirely
+  var blank = 'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22/%3E';
+  
   // Process touch events to implement one- and two-finger pan/zoom gestures
   // Moves as if the space is linear but can tolerate it not actually being.
   // Does not provide rotation or tilt.
@@ -1453,6 +1457,59 @@ define(['./values', './gltools', './widget', './widgets', './events'], function 
     
     // --- Done with rendering setup, now data logic. TODO Split.
     
+    (function() {
+      var dataCell = new LocalReadCell(Object, null);
+      // TODO: This file is potentially of a nontrivial size; fetch it only when the user makes the map visible.
+      // TODO: .gz suffix really shouldn't be there. Configure web server appropriately.
+      // TODO: externalGet into a cell ought to be factored out
+      externalGet('/client/basemap.geojson.gz', 'text', function(jsonString) {
+        var geojson = JSON.parse(jsonString);
+        dataCell._update(geojson);
+      });
+      addLayer('Basemap', {
+        featuresCell: new DerivedCell(any, scheduler, function(dirty) {
+          var geojson = dataCell.depend(dirty);
+          if (!geojson) return [];
+          
+          var rings = [];
+
+          function traverse(object) {
+            switch (object.type) {
+              case 'FeatureCollection':
+                object.features.forEach(traverse);
+                break;
+              case 'Feature':
+                traverse(object.geometry);
+                break
+              case 'MultiPolygon':
+                object.coordinates.forEach(function (polygonCoords) {
+                  polygonCoords.forEach(function (linearRingCoords) {
+                    rings.push(linearRingCoords.map(function (position) {
+                      return [position[1], position[0]];
+                    }));
+                  })
+                });
+                break;
+              default:
+                console.error('basemap unknown object type:', object.type, object);
+            }
+          }
+          traverse(geojson);
+
+          return rings;
+        }),
+        featureRenderer: function stubRenderer(feature, dirty) {
+          // TODO: Arrange for labels
+          return {
+            label: '',
+            iconURL: blank,
+            position: feature[0],
+            line: feature
+          };
+        }
+      });
+    }());
+    
     function devicePosition(device, dirty) {
       // TODO full of kludges
       var components = device.components.depend(dirty);
@@ -1534,9 +1591,6 @@ define(['./values', './gltools', './widget', './widgets', './events'], function 
     }());
     
     (function() {
-      var blank = 'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22/%3E';
-      // TODO: Instead of using a blank icon, skip the geometry entirely
-      
       var graticuleTypeCell = new StorageCell(storage, new Enum({
         'degrees': 'Degrees',
         'maidenhead': 'Maidenhead'
