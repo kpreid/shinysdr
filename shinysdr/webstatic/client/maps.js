@@ -1453,29 +1453,40 @@ define(['./values', './gltools', './widget', './widgets', './events'], function 
     
     // --- Done with rendering setup, now data logic. TODO Split.
     
-    
+    function devicePosition(device, dirty) {
+      // TODO full of kludges
+      var components = device.components.depend(dirty);
+      // components._reshapeNotice.listen(dirty);  // can't happen
+      if (!components.position) return null;
+      var positionObj = components.position.depend(dirty);
+      if (!positionObj['_implements_shinysdr.devices.IPositionedDevice']) return null;
+      return positionObj.position.depend(dirty);
+    }
     
     // Condensed info about receivers to update DB layer.
+    // TODO: Use info for more than the 'current' device.
     var radioStateInfo = new DerivedCell(any, scheduler, function (dirty) {
       var radio = radioCell.depend(dirty);
-      var source = radio.source.depend(dirty);
-      var center = source.freq.depend(dirty);
+      var device = radio.source.depend(dirty);
+      var center = device.freq.depend(dirty);
+      var position = devicePosition(device, dirty);
       // TODO: Ask the "bandwidth" question directly rather than hardcoding logic here
-      var width = source.rx_driver.depend(dirty).output_type.depend(dirty).sample_rate;
+      var width = device.rx_driver.depend(dirty).output_type.depend(dirty).sample_rate;
       var lower = center - width / 2;
       var upper = center + width / 2;
       
-      var receiving = [];
+      var receiving = new Map();
       var receivers = radio.receivers.depend(dirty);
       receivers._reshapeNotice.listen(dirty);
       for (var key in receivers) (function(receiver) {
-        receiving.push(receiver.rec_freq.depend(dirty));
+        receiving.set(receiver.rec_freq.depend(dirty), receiver);
       }(receivers[key].depend(dirty)));
       
       return {
         lower: lower,
         upper: upper,
-        receiving: receiving
+        receiving: receiving,
+        position: position
       };
     });
     
@@ -1487,16 +1498,30 @@ define(['./values', './gltools', './widget', './widgets', './events'], function 
           return db.string(searchCell.depend(dirty) || '').getAll();
         }), 
         featureRenderer: function dbRenderer(record, dirty) {
+          record.n.listen(dirty);
+          var location = record.location;
+          if (!location) return {};  // TODO use a filter on the db instead
+          
           var info = radioStateInfo.depend(dirty);
           var inSourceBand = info.lower < record.freq && record.freq < info.upper;
-          var isReceiving = info.receiving.indexOf(record.freq) !== -1;
-      
+          var isReceiving = info.receiving.has(record.freq);
+          
+          var line;
+          if (isReceiving && info.position) {
+            //var receiver = info.receiving.get(record);
+            // TODO: Should be matching against receiver's device rather than selected device
+            line = [info.position];
+          } else {
+            line = [];
+          }
+          
           // TODO: style for isReceiving
           return {
             iconURL: '/client/map-icons/station-generic.svg',
-            position: record.location,
+            position: location,
             label: record.label,
-            opacity: inSourceBand ? 1.0 : 0.25
+            opacity: inSourceBand ? 1.0 : 0.25,
+            line: line
           };
         },
         onclick: function clickOnDbFeature(feature) {
