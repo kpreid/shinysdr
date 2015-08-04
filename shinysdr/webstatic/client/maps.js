@@ -1484,7 +1484,7 @@ define(['./values', './gltools', './widget', './widgets', './events'], function 
       addLayer('Database', {
         featuresCell: new DerivedCell(any, scheduler, function(dirty) {
           db.n.listen(dirty);
-          return db.string(searchCell.depend(dirty)).getAll();
+          return db.string(searchCell.depend(dirty) || '').getAll();
         }), 
         featureRenderer: function dbRenderer(record, dirty) {
           var info = radioStateInfo.depend(dirty);
