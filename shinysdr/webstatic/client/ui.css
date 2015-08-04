@@ -201,6 +201,9 @@ h2 input {
 .map-container {
   display: flex;
   flex-direction: column;
+
+  flex: 1 1;
+
   position: relative;  /* abs position root */
 }
 .map-canvas {
