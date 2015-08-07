@@ -692,6 +692,10 @@ class _RadioIndexHtmlResource(Resource):
 def renderElement(request, element):
     # per http://stackoverflow.com/questions/8160061/twisted-web-resource-resource-with-twisted-web-template-element-example
     # should be replaced with twisted.web.template.renderElement once we have Twisted >= 12.1.0 available in MacPorts.
+    
+    # TODO: Instead of this kludge (here because it would be a syntax error in the XHTML template}, serve XHTML and fix the client-side issues that pop up due to element-name capitalization.
+    request.write('<!doctype html>')
+    
     d = template.flatten(request, element, request.write)
     
     def done(ignored):
