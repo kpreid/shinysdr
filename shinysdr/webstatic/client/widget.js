@@ -489,7 +489,7 @@ define(['./values', './events'], function (values, events) {
       fractionalScroll = scrollValue - container.scrollLeft;
       
       storage.setItem('zoom', String(zoom));
-      storage.setItem('scroll', String(scroll));
+      storage.setItem('scroll', String(scrollValue));
       
       // recompute with new scrollLeft/fractionalScroll
       scheduler.callNow(prepare);
