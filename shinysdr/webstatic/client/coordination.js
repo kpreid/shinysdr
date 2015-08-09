@@ -92,9 +92,24 @@ define([], function () {
       return receiver;
     }
     
+    
+    var mapPanCallback = null;
+    function navigateMap(trackCell) {
+      // TODO: Also be able to make the map subwindow visible
+      if (mapPanCallback) {
+        mapPanCallback(trackCell);
+      }
+    }
+    
+    function registerMap(callback) {
+      mapPanCallback = callback;
+    }
+    
     // TODO: Revisit whether this is a well-designed interface
     this.actions = Object.freeze({
-      tune: tune
+      tune: tune,
+      navigateMap: navigateMap,  // TODO: caller should be able to find out whether this is effective, in the form of a cell
+      _registerMap: registerMap  // TODO: should not be on this facet
     });
     
     Object.freeze(this);

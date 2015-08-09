@@ -1004,7 +1004,7 @@ define(['./values', './gltools', './widget', './widgets', './events'], function 
   }
 
   // Not reusable, just a subdivision for sanity
-  function MapCamera(storage, redrawCallback, pickFromMouseEvent, positionedDevices) {
+  function MapCamera(scheduler, storage, redrawCallback, pickFromMouseEvent, positionedDevices, coordActions) {
     var w = 1;
     var h = 1;
     
@@ -1021,6 +1021,9 @@ define(['./values', './gltools', './widget', './widgets', './events'], function 
         viewZoom = 50;
       }
     }
+    
+    // If not null, a cell holding a Track object which we are locking the view to
+    var trackingCell = null;
     
     // TODO: No standard cell class is suitable (write side effects, goes to storage, doesn't reparse on every read); fix.
     var latitudeCell = this.latitudeCell = new Cell(Number);
@@ -1091,6 +1094,8 @@ define(['./values', './gltools', './widget', './widgets', './events'], function 
     }
 
     function drag(event) {
+      trackingCell = null;  // cancel tracking
+      
       // TODO: Should use scales based on what's under the cursor.
       var angleScales = getAngleScales();
       
@@ -1112,6 +1117,8 @@ define(['./values', './gltools', './widget', './widgets', './events'], function 
           };
         },
         setState: function(state, grabDX, grabDY, nowDX, nowDY, dzoom) {
+          trackingCell = null;  // cancel tracking
+          
           viewZoom = state.zoom;
           var preAngleScales = getAngleScales();
           viewZoom = state.zoom * dzoom;  // done first to apply the change to scale
@@ -1202,6 +1209,22 @@ define(['./values', './gltools', './widget', './widgets', './events'], function 
       var aspect = w / h;
       return viewZoom * (aspect < 1 ? aspect : 1);
     };
+    
+    // tracking
+    function updateFromCell() {
+      if (trackingCell == null) return;
+      var track = trackingCell.depend(updateFromCell);
+      viewCenterLat = track.latitude.value;
+      viewCenterLon = track.longitude.value;
+      // TODO initial zoom, interpolation, possible absence of actual lat/lon values
+      changedView();
+    }
+    updateFromCell.scheduler = scheduler;
+    
+    coordActions._registerMap(function navigateMapCallback(trackCell) {
+      trackingCell = trackCell;
+      updateFromCell();
+    });
     
     changedView();
   }
@@ -1345,7 +1368,7 @@ define(['./values', './gltools', './widget', './widgets', './events'], function 
       scheduler.callNow(draw);
     });
     
-    var mapCamera = new MapCamera(storage, draw, pickFromMouseEvent, config.index.implementing('shinysdr.devices.IPositionedDevice'));
+    var mapCamera = new MapCamera(scheduler, storage, draw, pickFromMouseEvent, config.index.implementing('shinysdr.devices.IPositionedDevice'), config.actions);
     // TODO: Once we have overlays, put the listeners on the overlay container...?
     mapCamera.addDragListeners(canvas);
     

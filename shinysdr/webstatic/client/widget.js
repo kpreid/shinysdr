@@ -122,7 +122,7 @@ define(['./values', './events'], function (values, events) {
       scheduler: this.scheduler,
       spectrumView: view,
       coordinator: this.coordinator
-    })
+    });
   }
   exports.Context = Context;
   

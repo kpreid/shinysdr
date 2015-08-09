@@ -2922,6 +2922,8 @@ define(['./values', './events', './widget', './gltools', './database'], function
   
   // widget for the shinysdr.telemetry.Track type
   function TrackWidget(config) {
+    var actions = config.actions;
+    
     // TODO not _really_ a SimpleElementWidget
     SimpleElementWidget.call(this, config, 'TABLE',
       function buildPanelForTrack(container) {
@@ -2936,22 +2938,31 @@ define(['./values', './events', './widget', './gltools', './database'], function
         return valueEl;
       },
       function initEl(valueEl, target) {
-        function addRow(label) {
+        function addRow(label, linked) {
           var rowEl = valueEl.appendChild(document.createElement('tr'));
           rowEl.appendChild(document.createElement('th'))
             .appendChild(document.createTextNode(label));
           var textNode = document.createTextNode('');
-          var textEl = rowEl.appendChild(document.createElement('td'))
-            .appendChild(document.createElement('tt'))  // fixed width formatting
-            .appendChild(textNode);
+          var textCell = rowEl.appendChild(document.createElement('td'));
+          if (linked) {  // TODO: make this && actions.<can navigateMap>
+            textCell = textCell.appendChild(document.createElement('a'));
+            // TODO: Consider using an actual href and putting the map view state (as well as other stuff) into the fragment!
+            textCell.href = '#i-apologize-for-not-being-a-real-link';
+            textCell.addEventListener('click', function (event) {
+              actions.navigateMap(target);
+              event.preventDefault();  // no navigation
+            }, false);
+          }
+          textCell.appendChild(document.createElement('tt'))  // fixed width formatting
+              .appendChild(textNode);
           return {
             row: rowEl,
             text: textNode
           };
         }
-        var posRow = addRow('Position');
-        var velRow = addRow('Velocity');
-        var vertRow = addRow('Vertical');
+        var posRow = addRow('Position', true);
+        var velRow = addRow('Velocity', false);
+        var vertRow = addRow('Vertical', false);
         
         function formatitude(value, p, n) {
           value = +value;
