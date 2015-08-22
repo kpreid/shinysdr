@@ -1,4 +1,4 @@
-// Copyright 2014, 2014 Kevin Reid <kpreid@switchb.org>
+// Copyright 2014 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -16,12 +16,13 @@
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 // TODO: May be using the wrong relative module id -- otherwise this should have ..s
-define(['widgets', 'maps', 'events'], function (widgets, maps, events) {
+define(['widgets', 'map-core', 'events'], function (widgets, mapCore, events) {
   'use strict';
   
   var Block = widgets.Block;
   var BlockSet = widgets.BlockSet;
   var Clock = events.Clock;
+  var renderTrackFeature = mapCore.renderTrackFeature;
   
   var exports = {};
   
@@ -63,14 +64,14 @@ define(['widgets', 'maps', 'events'], function (widgets, maps, events) {
   var opacityClock = new Clock(APRS_TIMEOUT_SECONDS / OPACITY_STEPS);
   var blinkClock = new Clock(1/30);
   
-  function addAPRSMapLayer(db, scheduler, index, addLayer, addModeLayer) {
-    addLayer('APRS', {
-      featuresCell: index.implementing('shinysdr.plugins.aprs.IAPRSStation'),
+  function addAPRSMapLayer(mapPluginConfig) {
+    mapPluginConfig.addLayer('APRS', {
+      featuresCell: mapPluginConfig.index.implementing('shinysdr.plugins.aprs.IAPRSStation'),
       featureRenderer: function renderStation(station, dirty) {
         var text = station.address.depend(dirty) + ' • ' + station.symbol.depend(dirty) +
         ' • ' + (station.status.depend(dirty) || station.last_comment.depend(dirty));
         // TODO: Add multiline text rendering and use it
-        var f = maps.renderTrackFeature(dirty, station.track, text);
+        var f = renderTrackFeature(dirty, station.track, text);
         
         // TODO: Get an APRS icon set and use it.
         
@@ -88,7 +89,7 @@ define(['widgets', 'maps', 'events'], function (widgets, maps, events) {
     });
   }
   
-  maps.register(addAPRSMapLayer);
+  mapCore.register(addAPRSMapLayer);
   
   return Object.freeze(exports);
 });

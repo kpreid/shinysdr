@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./values', './events', './database', './network', './maps', './widget', './widgets', './audio', './window-manager'], function (values, events, database, network, maps, widget, widgets, audio, windowManager) {
+define(['./values', './events', './database', './network', './map-core', './map-layers', './widget', './widgets', './audio', './window-manager'], function (values, events, database, network, mapCore, mapLayers, widget, widgets, audio, windowManager) {
   'use strict';
   
   function log(progressAmount, msg) {
@@ -227,7 +227,7 @@ define(['./values', './events', './database', './network', './maps', './widget',
         widget.createWidgets(everything, context, document);
         
         // Map (all geographic data)
-        widget.createWidgetExt(context, maps.GeoMap, document.getElementById('map'), remoteCell);
+        widget.createWidgetExt(context, mapCore.GeoMap, document.getElementById('map'), remoteCell);
       
         // Now that the widgets are live, show the full UI, with a tiny pause for progress display completion and in case of last-minute jank
         log(1.0, 'Ready.');

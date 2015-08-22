@@ -16,11 +16,12 @@
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 // TODO: May be using the wrong relative module id -- otherwise this should have ..s
-define(['maps', 'widgets'], function (maps, widgets) {
+define(['map-core', 'widgets'], function (mapCore, widgets) {
   'use strict';
   
   var BlockSet = widgets.BlockSet;
   var Block = widgets.Block;
+  var renderTrackFeature = mapCore.renderTrackFeature;
   
   var exports = {};
   
@@ -50,9 +51,9 @@ define(['maps', 'widgets'], function (maps, widgets) {
   // TODO: Better widget-plugin system so we're not modifying should-be-static tables
   widgets['interface:shinysdr.plugins.mode_s.IAircraft'] = AircraftWidget;
   
-  function addAircraftMapLayer(db, scheduler, index, addLayer, addModeLayer) {
-    addLayer('Aircraft', {
-      featuresCell: index.implementing('shinysdr.plugins.mode_s.IAircraft'),
+  function addAircraftMapLayer(mapPluginConfig) {
+    mapPluginConfig.addLayer('Aircraft', {
+      featuresCell: mapPluginConfig.index.implementing('shinysdr.plugins.mode_s.IAircraft'),
       featureRenderer: function renderAircraft(aircraft, dirty) {
         var trackCell = aircraft.track;
         var callsign = aircraft.call.depend(dirty);
@@ -68,7 +69,7 @@ define(['maps', 'widgets'], function (maps, widgets) {
         if (altitude != null) {
           labelParts.push(altitude.toFixed(0) + ' m');
         }
-        var f = maps.renderTrackFeature(dirty, trackCell,
+        var f = renderTrackFeature(dirty, trackCell,
           labelParts.join(' • '));
         f.iconURL = '/client/plugins/shinysdr.plugins.mode_s/aircraft.svg';
         return f;
@@ -76,7 +77,7 @@ define(['maps', 'widgets'], function (maps, widgets) {
     });
   }
   
-  maps.register(addAircraftMapLayer);
+  mapCore.register(addAircraftMapLayer);
   
   return Object.freeze(exports);
 });

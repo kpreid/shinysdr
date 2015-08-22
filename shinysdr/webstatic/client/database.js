@@ -488,7 +488,7 @@ define(['./events', './network', './values'], function (events, network, values)
       throw new Error('Removal not implemented');
     });
     
-    // TODO generic glue copied from maps.js
+    // TODO generic glue copied from map-core.js, should be a feature of AddKeepDrop itself
     function dumpArray() {
       sourceAKD.begin();
       var array = sourcesCell.depend(dumpArray);

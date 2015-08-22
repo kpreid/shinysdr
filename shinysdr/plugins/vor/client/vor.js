@@ -16,7 +16,7 @@
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 // TODO: May be using the wrong relative module id -- otherwise this should have ..s
-define(['maps', 'widgets'], function (maps, widgets) {
+define(['map-core', 'widgets'], function (mapCore, widgets) {
   'use strict';
   
   var exports = {};
@@ -83,10 +83,12 @@ define(['maps', 'widgets'], function (maps, widgets) {
   // TODO: Better widget-plugin system so we're not modifying should-be-static tables
   widgets.VOR$Angle = Angle;
   
-  function addVORMapLayer(db, scheduler, index, addLayer, addModeLayer) {
+  function addVORMapLayer(mapPluginConfig) {
+    var db = mapPluginConfig.db;
+    
     var lengthInDegrees = 0.5;
     
-    addModeLayer('VOR', function(receiver, dirty) {
+    mapPluginConfig.addModeLayer('VOR', function(receiver, dirty) {
       var angleCell = receiver.demodulator.depend(dirty).angle;  // demodulator change will be handled by addModeLayer
       if (!angleCell) {
         console.warn('addVORMapLayer saw a non-VOR demodulator');
@@ -123,7 +125,7 @@ define(['maps', 'widgets'], function (maps, widgets) {
     });
   }
   
-  maps.register(addVORMapLayer);
+  mapCore.register(addVORMapLayer);
   
   return Object.freeze(exports);
 });
