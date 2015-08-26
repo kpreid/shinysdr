@@ -137,7 +137,8 @@ describe('widgets', function () {
           freq: new ConstantCell(Number, 0),
           rx_driver: new ConstantCell(shinysdr.values.block, makeBlock({
             output_type: new ConstantCell(shinysdr.values.any, {sample_rate: 1})
-          }))
+          })),
+          components: new ConstantCell(shinysdr.values.block, makeBlock({}))
         })),
         receivers: new ConstantCell(shinysdr.values.block, makeBlock({
         }))
