@@ -311,9 +311,9 @@ class TestAPRSInformation(unittest.TestCase):
     def test_drop_old(self):
         self.i.receive(parse_tnc2('FOO>RX:>', _dummy_receive_time))
         self.assertEqual(['FOO'], self.i.state().keys())
-        self.i.receive(parse_tnc2('BAR>RX:>', _dummy_receive_time + 599.9))
+        self.i.receive(parse_tnc2('BAR>RX:>', _dummy_receive_time + 1799.9))
         self.assertEqual({'BAR', 'FOO'}, set(self.i.state().keys()))
-        self.i.receive(parse_tnc2('BAR>RX:>', _dummy_receive_time + 600))
+        self.i.receive(parse_tnc2('BAR>RX:>', _dummy_receive_time + 1800))
         self.assertEqual(['BAR'], self.i.state().keys())
 
 
