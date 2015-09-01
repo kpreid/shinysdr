@@ -53,6 +53,12 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
         var geojson = dataCell.depend(dirty);
         if (!geojson) return [];
         
+        // TODO: More correct parsing
+        // TODO: Report this error (and others) inside the layer select UI
+        if (geojson.crs.properties.name !== 'urn:ogc:def:crs:OGC:1.3:CRS84') {
+          console.error('GeoJSON not in WGS84; will not be correctly displayed.', geojson.crs);
+        }
+        
         var rings = [];
 
         // TODO: Expand supported objects to include labels, etc. so that this can be used for more than just drawing polygons.
