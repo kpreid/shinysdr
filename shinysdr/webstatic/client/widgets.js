@@ -2125,6 +2125,7 @@ define(['./values', './events', './widget', './gltools', './database'], function
     var radioCell = config.radioCell;
     var dataSource = config.freqDB.groupSameFreq();
     var view = config.view;
+    var tune = config.actions.tune;
 
     // cache query
     var query, qLower = NaN, qUpper = NaN;
@@ -2168,11 +2169,12 @@ define(['./values', './events', './widget', './gltools', './database'], function
         + (channel.label || channel.mode);
       el.addEventListener('click', function(event) {
         if (alwaysCreateReceiverFromEvent(event)) {
-          radioCell.get().tune({
+          tune({
             record: channel,
             alwaysCreate: true
           });
         } else {
+          // TODO: Pipe this through the coordinator instead
           radioCell.get().preset.set(channel);
         }
       }, false);

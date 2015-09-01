@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./values', './events', './database', './network', './map-core', './map-layers', './widget', './widgets', './audio', './window-manager'], function (values, events, database, network, mapCore, mapLayers, widget, widgets, audio, windowManager) {
+define(['./values', './events', './coordination', './database', './network', './map-core', './map-layers', './widget', './widgets', './audio', './window-manager'], function (values, events, coordination, database, network, mapCore, mapLayers, widget, widgets, audio, windowManager) {
   'use strict';
   
   function log(progressAmount, msg) {
@@ -28,6 +28,7 @@ define(['./values', './events', './database', './network', './map-core', './map-
   
   var any = values.any;
   var ConstantCell = values.ConstantCell;
+  var Coordinator = coordination.Coordinator;
   var createWidgetExt = widget.createWidgetExt;
   var LocalCell = values.LocalCell;
   var makeBlock = values.makeBlock;
@@ -114,84 +115,12 @@ define(['./values', './events', './database', './network', './map-core', './map-
     function initialStateReady() {
       var radio = remoteCell.depend(initialStateReady);
       
-      // Get mode from frequency DB
-      function bandMode(freq) {
-        var foundWidth = Infinity;
-        var foundMode = null;
-        freqDB.inBand(freq, freq).forEach(function(record) {
-          var l = record.lowerFreq;
-          var u = record.upperFreq;
-          var bandwidth = Math.abs(u - l);  // should not be negative but not enforced, abs for robustness
-          if (bandwidth < foundWidth) {
-            foundWidth = bandwidth;
-            foundMode = record.mode;
-          }
-        });
-        return foundMode;
-      }
-
-      // Options
-      //   receiver: optional receiver
-      //   alwaysCreate: optional boolean (false)
-      //   freq: float Hz
-      //   mode: optional string
-      function tune(options) {
-        var alwaysCreate = options.alwaysCreate;
-        var record = options.record;
-        var freq = options.freq !== undefined ? +options.freq : (record && record.freq);
-        // Note for mode selection that bandMode is only used if we are creating a receiver (below); this ensures that we don't undesirably change the mode on drag-tuning of an existing receiver. This is a kludge and should probably be replaced by (1) making a distinction between dragging a receiver and clicking elsewhere, (2) changing mode only if the receiver's mode was matched to the old band, or (3) changing mode on long jumps but not short ones.
-        var mode = options.mode || (record && record.mode);
-        var receiver = options.receiver;
-        //console.log('tune', alwaysCreate, freq, mode, receiver);
-      
-        var receivers = radio.receivers.get();
-        var fit = Infinity;
-        if (!receiver && !alwaysCreate) {
-          // Search for nearest matching receiver
-          for (var recKey in receivers) {
-            var candidate = receivers[recKey].get();
-            if (!candidate.rec_freq) continue;  // sanity check
-            var sameMode = candidate.mode.get() === mode;
-            var thisFit = Math.abs(candidate.rec_freq.get() - freq) + (sameMode ? 0 : 1e6);
-            if (thisFit < fit) {
-              fit = thisFit;
-              receiver = candidate;
-            }
-          }
-        }
-      
-        if (receiver) {
-          receiver.rec_freq.set(freq);
-          if (mode && receiver.mode.get() !== mode) {
-            receiver.mode.set(mode);
-          }
-          if (receiver.device_name.get() !== radio.source_name.get()) {
-            // TODO: In principle this ought to be specified by parameter rather than fixed here. But this behavior is appropriate for all current use cases and we'll probably have to overhaul the whole thing anyway.
-            receiver.device_name.set(radio.source_name.get());
-          }
-        } else {
-          // TODO less ambiguous-naming api
-          receivers.create({
-            mode: mode || bandMode(freq) || 'AM',
-            rec_freq: freq
-          });
-          // TODO: should return stub for receiver or have a callback or something
-        }
-        
-        return receiver;
-      }
-      Object.defineProperty(radio, 'tune', {
-        value: tune,
-        configurable: true,
-        enumerable: false
-      });
-    
       // Kludge to let frequency preset widgets do their thing
-      // TODO(kpreid): Make this explicitly client state instead
+      // TODO(kpreid): Replace this with Coordinator functions
       radio.preset = new LocalCell(any, undefined);
       radio.preset.set = function(freqRecord) {
         LocalCell.prototype.set.call(this, freqRecord);
-        tune({
+        coordinator.actions.tune({
           record: freqRecord
         });
       };
@@ -207,6 +136,8 @@ define(['./values', './events', './database', './network', './map-core', './map-
       
         var index = new Index(scheduler, everything);
       
+        var coordinator = new Coordinator(scheduler, freqDB, remoteCell);
+      
         var context = new widget.Context({
           // TODO all of this should be narrowed down, read-only, replaced with other means to get it to the widgets that need it, etc.
           widgets: widgets,
@@ -216,7 +147,8 @@ define(['./values', './events', './database', './network', './map-core', './map-
           spectrumView: null,
           freqDB: freqDB,
           writableDB: writableDB,
-          scheduler: scheduler
+          scheduler: scheduler,
+          coordinator: coordinator
         });
       
         // generic control UI widget tree

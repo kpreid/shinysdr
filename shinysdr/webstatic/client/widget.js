@@ -96,6 +96,7 @@ define(['./values', './events'], function (values, events) {
     this.freqDB = config.freqDB;
     this.writableDB = config.writableDB;
     this.spectrumView = config.spectrumView;
+    this.coordinator = config.coordinator;
   }
   Context.prototype.withSpectrumView = function (outerElement, innerElement, monitor, isRFSpectrum) {
     var id = outerElement.id || innerElement.id;
@@ -108,7 +109,8 @@ define(['./values', './events'], function (values, events) {
       innerElement: innerElement,
       storage: ns,
       isRFSpectrum: isRFSpectrum,
-      signalTypeCell: monitor.signal_type
+      signalTypeCell: monitor.signal_type,
+      actions: this.coordinator.actions
     });
     return new Context({
       widgets: this.widgets,
@@ -118,7 +120,8 @@ define(['./values', './events'], function (values, events) {
       freqDB: this.freqDB,
       writableDB: this.writableDB,
       scheduler: this.scheduler,
-      spectrumView: view
+      spectrumView: view,
+      coordinator: this.coordinator
     })
   }
   exports.Context = Context;
@@ -172,12 +175,13 @@ define(['./values', './events'], function (values, events) {
         target: targetCell,
         element: newSourceEl,
         context: context, // TODO redundant values -- added for programmatic widget-creation; maybe facetize createWidget. Also should remove text-named widget table from this to make it more tightly scoped, perhaps.
-        view: context.spectrumView, // TODO should be context-dependent
+        view: context.spectrumView,
         clientState: context.clientState,
         freqDB: context.freqDB, // TODO: remove the need for this
         writableDB: context.writableDB, // TODO: remove the need for this
         radioCell: context.radioCell, // TODO: remove the need for this
         index: context.index, // TODO: remove the need for this
+        actions: context.coordinator.actions,
         storage: idPrefix ? new StorageNamespace(localStorage, 'shinysdr.widgetState.' + idPrefix) : null,
         shouldBePanel: shouldBePanel,
         rebuildMe: go,
@@ -340,6 +344,7 @@ define(['./values', './events'], function (values, events) {
     var storage = config.storage;
     var isRFSpectrum = config.isRFSpectrum;
     var signalTypeCell = config.signalTypeCell;
+    var tune = config.actions.tune;
     var self = this;
 
     var n = this.n = new events.Notifier();
@@ -637,7 +642,7 @@ define(['./values', './events'], function (values, events) {
         var info = activeTouches[touch.identifier];
         var newViewX = clientXToViewportLeft(touch.clientX);
         if (Math.abs(newViewX - info.grabView) < 20) {  // TODO justify choice of slop
-          radioCell.get().tune({
+          tune({
             freq: info.grabFreq,  // use initial touch pos, not final, because I expect it to be more precise
             alwaysCreate: alwaysCreateReceiverFromEvent(event)
           })
@@ -662,7 +667,7 @@ define(['./values', './events'], function (values, events) {
           // We sent the request to create a receiver, but it doesn't exist on the client yet. Do nothing.
           // TODO: Check for the appearance of the receiver and start dragging it.
         } else {
-          dragReceiver = radioCell.get().tune({
+          dragReceiver = tune({
             receiver: dragReceiver,
             freq: freq,
             alwaysCreate: firstEvent && alwaysCreateReceiverFromEvent(event)
