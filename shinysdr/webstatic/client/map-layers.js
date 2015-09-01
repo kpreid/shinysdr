@@ -39,25 +39,23 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
   var blank = 'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22/%3E';
   
   // TODO: only needs scheduler for DerivedCell. See if DerivedCell can be made to not need a scheduler.
-  registerMapPlugin(function (mapPluginConfig) {
-    var addLayer = mapPluginConfig.addLayer;
-    var scheduler = mapPluginConfig.scheduler;
-    
+  function makeStaticLayer(url, scheduler) {
+    // TODO: Only fetch the URL when the user makes the map visible, to speed up page loading otherwise.
     var dataCell = new LocalReadCell(Object, null);
-    // TODO: This file is potentially of a nontrivial size; fetch it only when the user makes the map visible.
-    // TODO: .gz suffix really shouldn't be there. Configure web server appropriately.
     // TODO: externalGet into a cell ought to be factored out
-    externalGet('/client/basemap.geojson.gz', 'text', function(jsonString) {
+    // TODO: UI-visible error report when there are parse errors at any level
+    externalGet(url, 'text', function(jsonString) {
       var geojson = JSON.parse(jsonString);
       dataCell._update(geojson);
     });
-    addLayer('Basemap', {
+    return {
       featuresCell: new DerivedCell(any, scheduler, function(dirty) {
         var geojson = dataCell.depend(dirty);
         if (!geojson) return [];
         
         var rings = [];
 
+        // TODO: Expand supported objects to include labels, etc. so that this can be used for more than just drawing polygons.
         function traverse(object) {
           switch (object.type) {
             case 'FeatureCollection':
@@ -76,7 +74,7 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
               });
               break;
             default:
-              console.error('basemap unknown object type:', object.type, object);
+              console.error('unknown GeoJSON object type:', object.type, object);
           }
         }
         traverse(geojson);
@@ -92,7 +90,14 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
           line: feature
         };
       }
-    });
+    };
+  };
+  
+  registerMapPlugin(function (mapPluginConfig) {
+    var addLayer = mapPluginConfig.addLayer;
+    var scheduler = mapPluginConfig.scheduler;
+    // TODO: .gz suffix really shouldn't be there. Configure web server appropriately.
+    addLayer('Basemap', makeStaticLayer('/client/basemap.geojson.gz', scheduler));
   });
   
   function devicePosition(device, dirty) {
