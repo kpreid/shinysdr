@@ -54,11 +54,7 @@ define(['./values', './events', './database', './network', './map-core', './map-
   
   // TODO(kpreid): Client state should be more closely associated with the components that use it.
   function cc(key, type, value) {
-    var cell = new StorageCell(clientStateStorage, type, key);
-    if (cell.get() === null) {
-      cell.set(value);
-    }
-    return cell;
+    return new StorageCell(clientStateStorage, type, value, key);
   }
   var clientState = makeBlock({
     opengl: cc('opengl', Boolean, true),

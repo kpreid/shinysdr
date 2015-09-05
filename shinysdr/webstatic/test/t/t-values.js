@@ -91,8 +91,8 @@ describe('values', function () {
       // TODO: use a mock storage instead of abusing sessionStorage
       sessionStorage.clear();
       var ns = new values.StorageNamespace(sessionStorage, 'foo.');
-      var cell = new values.StorageCell(ns, 'bar');
-      expect(cell.get()).toBe(null);
+      var cell = new values.StorageCell(ns, 'bar', 'default');
+      expect(cell.get()).toBe('default');
       cell.set('a');
       expect(cell.get()).toBe('a');
       var l = createListenerSpy();

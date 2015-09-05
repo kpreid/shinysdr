@@ -150,11 +150,11 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
       };
     });
   
-    var searchCell = new StorageCell(storage, String, 'databaseFilterString');
+    var searchCell = new StorageCell(storage, String, '', 'databaseFilterString');
     addLayer('Database', {
       featuresCell: new DerivedCell(any, scheduler, function(dirty) {
         db.n.listen(dirty);
-        return db.string(searchCell.depend(dirty) || '').getAll();
+        return db.string(searchCell.depend(dirty)).getAll();
       }), 
       featureRenderer: function dbRenderer(record, dirty) {
         record.n.listen(dirty);
@@ -201,10 +201,7 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
     var graticuleTypeCell = new StorageCell(storage, new Enum({
       'degrees': 'Degrees',
       'maidenhead': 'Maidenhead'
-    }), 'graticuleType');
-    if (graticuleTypeCell.get() == null) {
-      graticuleTypeCell.set('degrees');
-    }
+    }), 'degrees', 'graticuleType');
     
     var smoothStep = 1;
     

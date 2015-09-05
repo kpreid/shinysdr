@@ -34,11 +34,7 @@ define(['../../client/values', '../../client/events', '../../client/widget', '..
   // TODO duplicated code w/ regular shinysdr
   var clientStateStorage = new StorageNamespace(localStorage, 'shinysdr.client.');
   function cc(key, type, value) {
-    var cell = new StorageCell(clientStateStorage, type, key);
-    if (cell.get() === null) {
-      cell.set(value);
-    }
-    return cell;
+    return new StorageCell(clientStateStorage, type, value, key);
   }
   var clientState = makeBlock({
     opengl: cc('opengl', Boolean, true),

@@ -22,7 +22,6 @@ define(['./values', './events', './network', './widget', './widgets'], function 
   var ConstantCell = values.ConstantCell;
   var LocalCell = values.LocalCell;
   var makeBlock = values.makeBlock;
-  var StorageCell = values.StorageCell;
   var StorageNamespace = values.StorageNamespace;
   var Index = values.Index;
   

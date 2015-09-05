@@ -467,10 +467,7 @@ define(['./events', './network', './values'], function (events, network, values)
       // TODO get clean stable unique names from the sources
       var label = source.getTableLabel ? source.getTableLabel() : (i++);
       var key = 'enabled_' + label; 
-      var cell = new StorageCell(storage, Boolean, key);
-      if (cell.get() === null) {
-        cell.set(true);
-      }
+      var cell = new StorageCell(storage, Boolean, true, key);
       self[key] = cell;
       // TODO unbreakable notify loop. consider switching Union to work like, or to take a, DerivedCell.
       function updateUnionFromCell() {

@@ -276,22 +276,28 @@ define(['./events'], function (events) {
     allStorageCellNotifiers.forEach(function (n) { n.notify(); });
   });
   
-  // Presents a Storage (localStorage) entry as a cell
+  // Presents a Storage (localStorage) entry as a cell; the value must be representable as JSON.
   // Warning: Only one cell should exist per unique key, or notifications may not occur; also, creating cells repeatedly will leak.
   // TODO: Fix that by interning cells.
-  function StorageCell(storage, type, key) {
+  function StorageCell(storage, type, initialValue, key) {
     key = String(key);
 
     Cell.call(this, type);
 
     this._storage = storage;
     this._key = key;
+    this._initialValue = JSON.parse(JSON.stringify(initialValue));
 
     allStorageCellNotifiers.push(this.n);
   }
   StorageCell.prototype = Object.create(Cell.prototype, {constructor: {value: StorageCell}});
   StorageCell.prototype.get = function() {
-    return JSON.parse(this._storage.getItem(this._key));
+    var storedString = this._storage.getItem(this._key);
+    if (storedString) {
+      return JSON.parse(storedString);
+    } else {
+      return this._initialValue;
+    }
   };
   StorageCell.prototype.set = function(value) {
     this._storage.setItem(this._key, JSON.stringify(value));

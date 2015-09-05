@@ -1403,10 +1403,7 @@ define(['./values', './gltools', './widget', './widgets', './events'], function 
       // TODO: Instead of a "clickHandler" we should have a more general presentation-style system
       var controlsCell = new ConstantCell(block, lconfig.controls || makeBlock({}));
       
-      var visibilityCell = new StorageCell(storage, Boolean, 'layer-visible.' + label);
-      if (visibilityCell.get() === null) {  // set up default value
-        visibilityCell.set(true);
-      }
+      var visibilityCell = new StorageCell(storage, Boolean, true, 'layer-visible.' + label);
       
       function redrawLayer() {
         if (visibilityCell.get()) {
