@@ -472,10 +472,9 @@ class MaxProbe(gr.hier_block2):
     '''
     def __init__(self, window=10000):
         gr.hier_block2.__init__(
-            self, 'ShinySDR MaxProbe',
+            self, type(self).__name__,
             gr.io_signature(1, 1, gr.sizeof_gr_complex),
-            gr.io_signature(0, 0, 0),
-        )
+            gr.io_signature(0, 0, 0))
         self.__sink = None  # quiet pylint
         self.set_window_and_reconnect(window)
     
@@ -487,7 +486,8 @@ class MaxProbe(gr.hier_block2):
         '''
         Must be called while the flowgraph is locked already.
         '''
-        window = int(window)
+        # Use a power-of-2 window size to satisfy gnuradio allocation alignment without going overboard.
+        window = int(2 ** math.floor(math.log(window, 2)))
         self.disconnect_all()
         self.__sink = blocks.probe_signal_f()
         self.connect(
