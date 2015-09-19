@@ -921,7 +921,7 @@ define(['./values', './events', './widget', './gltools', './database'], function
           + 'uniform highp float historyStep;\n'
           + 'uniform lowp float avgAlpha;\n'
           + 'varying highp vec2 v_position;\n'
-          + 'const int stepRange = 8;\n'
+          + 'const int stepRange = 1;\n'
           + 'highp vec2 stepStep;\n'  // initialized in main
           + 'const lowp float stepSumScale = 1.0/(float(stepRange) * 2.0 + 1.0);\n'
           + 'const int averaging = 32;\n'
