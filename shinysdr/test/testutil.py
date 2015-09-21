@@ -35,7 +35,19 @@ from shinysdr.plugins.simulate import SimulatedDevice
 from shinysdr.signals import SignalType
 from shinysdr.top import Top
 from shinysdr.types import Range
-from shinysdr.values import nullExportedState
+from shinysdr.values import ExportedState, nullExportedState
+
+
+# --- Values/types/state test utilities
+
+
+def state_smoke_test(value):
+    '''Retrieve every value in the given ExportedState instance and its children.'''
+    assert isinstance(value, ExportedState)
+    for cell in value.state().itervalues():
+        value = cell.get()
+        if cell.isBlock():
+            state_smoke_test(value)
 
 
 # --- Radio test utilities ---
@@ -126,7 +138,7 @@ class DeviceTestCase(unittest.TestCase):
 
 class DemodulatorTester(object):
     '''
-    Set up an environment for testing a demodulator.
+    Set up an environment for testing a demodulator and do some fundamental tests.
     '''
     def __init__(self, mode, state=None):
         # TODO: Refactor things so that we can take the demod ctor rather than a mode string
@@ -134,7 +146,8 @@ class DemodulatorTester(object):
         if state is None:
             state = {}
         self.__top = Top(devices={'s1': SimulatedDevice()})
-        self.__top.add_receiver(mode, key='a', state=state)
+        (_, receiver) = self.__top.add_receiver(mode, key='a', state=state)
+        self.__demodulator = receiver.get_demodulator()
         self.__top.start()  # TODO overriding internals
     
     def close(self):
@@ -143,7 +156,7 @@ class DemodulatorTester(object):
             self.__top = None
     
     def __enter__(self):
-        pass
+        state_smoke_test(self.__demodulator)
     
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()

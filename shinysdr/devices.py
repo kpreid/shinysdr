@@ -30,7 +30,7 @@ from gnuradio import gr
 
 from shinysdr.signals import SignalType
 from shinysdr.types import Range
-from shinysdr.values import BlockCell, CollectionState, ExportedState, LooseCell, ViewCell, exported_value, nullExportedState
+from shinysdr.values import CollectionState, ExportedState, LooseCell, ViewCell, exported_block, exported_value, nullExportedState
 
 
 __all__ = []
@@ -158,7 +158,7 @@ class Device(ExportedState):
         self.tx_driver = ITXDriver(tx_driver) if tx_driver is not nullExportedState else nullExportedState
         self.__vfo_cell = vfo_cell
         self.__components = components
-        self.components = CollectionState(self.__components, dynamic=False)
+        self.__components_state = CollectionState(self.__components, dynamic=False)
         
         self.__transmitting = False
     
@@ -168,9 +168,6 @@ class Device(ExportedState):
     def state_def(self, callback):
         super(Device, self).state_def(callback)
         callback(self.__vfo_cell)
-        callback(BlockCell(self, 'rx_driver'))
-        callback(BlockCell(self, 'tx_driver'))
-        callback(BlockCell(self, 'components'))
     
     def can_receive(self):
         return self.rx_driver is not nullExportedState
@@ -181,14 +178,24 @@ class Device(ExportedState):
     def can_tune(self):
         return self.__vfo_cell is not _stub_vfo
     
+    @exported_block()
     def get_rx_driver(self):
         return self.rx_driver
     
+    @exported_block()
     def get_tx_driver(self):
         return self.tx_driver
     
+    @exported_block()
+    def get_components(self):
+        return self.__components_state
+    
     def get_vfo_cell(self):
         return self.__vfo_cell
+    
+    def get_components_dict(self):
+        '''Do not mutate the dictionary returned.'''
+        return self.__components
     
     def get_freq(self):
         '''
@@ -240,10 +247,6 @@ class Device(ExportedState):
             self.rx_driver.notify_reconnecting_or_restarting()
         if self.tx_driver is not nullExportedState:
             self.tx_driver.notify_reconnecting_or_restarting()
-    
-    def get_components(self):
-        '''Do not mutate the dictionary returned.'''
-        return self.__components
 
 
 __all__.append('Device')
@@ -271,14 +274,14 @@ def merge_devices(devices):
         rx_drivers = [d.get_rx_driver() for d in devices if d.can_receive()]
         tx_drivers = [d.get_tx_driver() for d in devices if d.can_transmit()]
         vfo_cells = [d.get_vfo_cell() for d in devices if d.can_tune()]
-        component_names = Counter(k for d in devices for k in d.get_components().keys())
+        component_names = Counter(k for d in devices for k in d.get_components_dict().keys())
         merged_components = {}
         for i, d in enumerate(devices):
-            if any(component_names[k] > 1 for k in d.get_components().keys()):
+            if any(component_names[k] > 1 for k in d.get_components_dict().keys()):
                 prefix = u'%i-' % i
             else:
                 prefix = ''
-            for k, component in d.get_components().iteritems():
+            for k, component in d.get_components_dict().iteritems():
                 merged_components[prefix + k] = component
         return Device(
             name=None if len(names) == 0 else '+'.join(names),

@@ -38,7 +38,7 @@ from shinysdr.math import LazyRateCalculator
 from shinysdr.receiver import Receiver
 from shinysdr.signals import SignalType
 from shinysdr.types import Enum, Notice
-from shinysdr.values import ExportedState, CollectionState, exported_value, setter, BlockCell, IWritableCollection
+from shinysdr.values import ExportedState, CollectionState, exported_block, exported_value, setter, IWritableCollection
 
 
 class ReceiverCollection(CollectionState):
@@ -85,6 +85,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 
         # Blocks etc.
         # TODO: device refactoring: remove 'source' concept (which is currently a device)
+        # TODO: remove legacy no-underscore names, maybe get rid of self.source
         self.source = None
         self.__monitor_rx_driver = None
         self.monitor = MonitorSink(
@@ -99,7 +100,8 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         
         self.__shared_objects = {}
         
-        # kludge for using collection like block - TODO: better architecture
+        # collections
+        # TODO: No longer necessary to have these non-underscore names
         self.sources = CollectionState(self._sources)
         self.receivers = ReceiverCollection(self._receivers, self)
         self.accessories = CollectionState(accessories)
@@ -287,17 +289,31 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         if receiver.get_is_valid() != self._receiver_valid[key]:
             self.__needs_reconnect.append(u'receiver %s validity changed' % (key,))
             self._do_connect()
-
-    def state_def(self, callback):
-        super(Top, self).state_def(callback)
-        # TODO make this possible to be decorator style
-        callback(BlockCell(self, 'monitor'))
-        callback(BlockCell(self, 'sources'))
-        callback(BlockCell(self, 'source', persists=False))
-        callback(BlockCell(self, 'receivers'))
-        callback(BlockCell(self, 'accessories', persists=False))
-        callback(BlockCell(self, 'shared_objects'))
-
+    
+    @exported_block()
+    def get_monitor(self):
+        return self.monitor
+    
+    @exported_block()
+    def get_sources(self):
+        return self.sources
+    
+    @exported_block(persists=False)
+    def get_source(self):
+        return self.source  # TODO no need for this now...?
+    
+    @exported_block()
+    def get_receivers(self):
+        return self.receivers
+    
+    @exported_block(persists=False)
+    def get_accessories(self):
+        return self.accessories
+    
+    @exported_block()
+    def get_shared_objects(self):
+        return self.shared_objects
+    
     def start(self, **kwargs):
         # trigger reconnect/restart notification
         self._recursive_lock()

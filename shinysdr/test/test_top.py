@@ -29,11 +29,15 @@ from shinysdr.devices import Device, IRXDriver, ITXDriver
 from shinysdr.top import Top
 from shinysdr.plugins import simulate
 from shinysdr.signals import SignalType
+from shinysdr.test.testutil import state_smoke_test
 from shinysdr.types import Range
 from shinysdr.values import ExportedState
 
 
 class TestTop(unittest.TestCase):
+    def test_state_smoke(self):
+        state_smoke_test(Top(devices={'s1': simulate.SimulatedDevice()}))
+    
     def test_monitor_source_switch(self):
         freq1 = 1e6
         freq2 = 2e6

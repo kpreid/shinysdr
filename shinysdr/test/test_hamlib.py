@@ -21,6 +21,7 @@ from twisted.trial import unittest
 from twisted.internet import defer, reactor
 
 from shinysdr.plugins.hamlib import connect_to_rig, connect_to_rotator
+from shinysdr.test.testutil import state_smoke_test
 
 
 class TestHamlibRig(unittest.TestCase):
@@ -34,7 +35,7 @@ class TestHamlibRig(unittest.TestCase):
         d = connect_to_rig(reactor, options=['-m', '1'], port=4530)
         
         def on_connect(rig_device):
-            self.__rig = rig_device.get_components()['rig']
+            self.__rig = rig_device.get_components_dict()['rig']
         
         d.addCallback(on_connect)
         return d
@@ -46,6 +47,12 @@ class TestHamlibRig(unittest.TestCase):
         '''basic connect and disconnect, check is clean'''
         pass
 
+    @defer.inlineCallbacks
+    def test_state_smoke(self):
+        state_smoke_test(self.__rig)
+        yield self.__rig.sync()
+        state_smoke_test(self.__rig)
+    
     @defer.inlineCallbacks
     def test_getter(self):
         yield self.__rig.sync()
@@ -72,7 +79,7 @@ class TestHamlibRotator(unittest.TestCase):
         d = connect_to_rotator(reactor, options=['-m', '1'], port=4531)
         
         def on_connect(rotator_device):
-            self.__rotator = rotator_device.get_components()['rotator']
+            self.__rotator = rotator_device.get_components_dict()['rotator']
         
         d.addCallback(on_connect)
         return d

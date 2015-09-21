@@ -40,7 +40,7 @@ from shinysdr.plugins.basic_demod import NFMDemodulator
 from shinysdr.plugins.aprs import APRSInformation, parse_tnc2
 from shinysdr.signals import SignalType
 from shinysdr.types import Enum
-from shinysdr.values import BlockCell, ExportedState, exported_value, setter
+from shinysdr.values import ExportedState, exported_block, exported_value, setter
 
 pipe_rate = 22050  # what multimon-ng expects
 _maxint32 = 2 ** 15 - 1
@@ -208,11 +208,6 @@ class FMAPRSDemodulator(gr.hier_block2, ExportedState):
             self.mm_demod,
             self)
     
-    def state_def(self, callback):
-        super(FMAPRSDemodulator, self).state_def(callback)
-        # TODO make this possible to be decorator style
-        callback(BlockCell(self, 'mm_demod'))
-    
     def can_set_mode(self, mode):
         return False
     
@@ -221,6 +216,10 @@ class FMAPRSDemodulator(gr.hier_block2, ExportedState):
     
     def get_output_type(self):
         return self.mm_demod.get_output_type()
+    
+    @exported_block()
+    def get_mm_demod(self):
+        return self.mm_demod
     
     @exported_value()
     def get_band_filter_shape(self):

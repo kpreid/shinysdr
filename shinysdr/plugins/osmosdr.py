@@ -25,7 +25,7 @@ from gnuradio import blocks
 from shinysdr.devices import Device, IRXDriver, ITXDriver
 from shinysdr.signals import SignalType
 from shinysdr.types import Constant, Enum, Range
-from shinysdr.values import BlockCell, Cell, ExportedState, LooseCell, exported_value, nullExportedState, setter
+from shinysdr.values import Cell, ExportedState, LooseCell, exported_block, exported_value, nullExportedState, setter
 
 import osmosdr
 
@@ -291,7 +291,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         
         self.connect(self.__source, self)
         
-        self.gains = Gains(source)
+        self.__gains = Gains(source)
         
         # Misc state
         self.dc_state = DCOffsetOff
@@ -308,12 +308,6 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
             kind='IQ',
             sample_rate=sample_rate)
         self.__usable_bandwidth = tuning.calc_usable_bandwidth(sample_rate)
-        
-        
-    def state_def(self, callback):
-        super(_OsmoSDRRXDriver, self).state_def(callback)
-        # TODO make this possible to be decorator style
-        callback(BlockCell(self, 'gains'))
     
     @exported_value(type=SignalType)
     def get_output_type(self):
@@ -339,6 +333,10 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     @setter
     def set_correction_ppm(self, value):
         self.__tuning.set_correction_ppm(value)
+    
+    @exported_block()
+    def get_gains(self):
+        return self.__gains
     
     @exported_value(type_fn=lambda self: convert_osmosdr_range(
             self.__source.get_gain_range(ch), strict=False))
@@ -412,7 +410,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         self.disconnect_all()
         self.__state_while_inactive = self.state_to_json()
         self.__tuning.set_block(None)
-        self.gains.close()
+        self.__gains.close()
         self.__source = None
         self.connect(self.__placeholder, self)
     
@@ -422,7 +420,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         self.__source = osmosdr.source('numchan=1 ' + self.__osmo_device)
         self.__source.set_sample_rate(self.__signal_type.get_sample_rate())
         self.__tuning.set_block(self.__source)
-        self.gains = Gains(self.__source)
+        self.__gains = Gains(self.__source)
         self.connect(self.__source, self)
         self.state_from_json(self.__state_while_inactive)
     

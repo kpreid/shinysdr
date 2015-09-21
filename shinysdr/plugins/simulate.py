@@ -34,7 +34,7 @@ from shinysdr.modes import IModulator, lookup_mode
 from shinysdr.signals import SignalType, no_signal
 from shinysdr.devices import Device, IRXDriver
 from shinysdr.types import Range
-from shinysdr.values import BlockCell, CollectionState, ExportedState, LooseCell, exported_value, setter
+from shinysdr.values import CollectionState, ExportedState, LooseCell, exported_block, exported_value, setter
 
 
 __all__ = []  # appended later
@@ -79,7 +79,7 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
         self.noise_level = -22
         self._transmitters = {}
         
-        self.transmitters = CollectionState(self._transmitters, dynamic=True)
+        self.__transmitters_cs = CollectionState(self._transmitters, dynamic=True)
         
         self.bus = blocks.add_vcc(1)
         self.channel_model = channels.channel_model(
@@ -139,10 +139,9 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
         self.__usable_bandwidth = Range([(-rf_rate / 2, self.rf_rate / 2)])
         
     
-    def state_def(self, callback):
-        super(_SimulatedRXDriver, self).state_def(callback)
-        # TODO make this possible to be decorator style
-        callback(BlockCell(self, 'transmitters'))
+    @exported_block()
+    def get_transmitters(self):
+        return self.__transmitters_cs
 
     # implement IRXDriver
     @exported_value(type=SignalType)
@@ -192,8 +191,7 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
         
         self.__freq = freq
         self.__rf_rate = rf_rate
-        
-        self.modulator = modulator  # exported
+        self.__modulator = modulator
         
         modulator_input_type = modulator.get_input_type()
         if modulator_input_type.get_kind() == 'MONO':
@@ -211,10 +209,9 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
         self.__mult = blocks.multiply_const_cc(dB(-10))
         self.connect(modulator, rf_resampler, self.__rotator, self.__mult, self)
     
-    def state_def(self, callback):
-        super(_SimulatedTransmitter, self).state_def(callback)
-        # TODO make this possible to be decorator style
-        callback(BlockCell(self, 'modulator'))
+    @exported_block()
+    def get_modulator(self):
+        return self.__modulator
 
     @exported_value(type_fn=lambda self: Range([(-self.__rf_rate / 2, self.__rf_rate / 2)], strict=False))
     def get_freq(self):

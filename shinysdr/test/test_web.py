@@ -34,7 +34,7 @@ from gnuradio import gr
 
 from shinysdr.db import DatabaseModel
 from shinysdr.signals import SignalType
-from shinysdr.values import BlockCell, ExportedState, CollectionState, NullExportedState, Poller, exported_value, nullExportedState, setter
+from shinysdr.values import ExportedState, CollectionState, NullExportedState, Poller, exported_block, exported_value, nullExportedState, setter
 # TODO: StateStreamInner is an implementation detail; arrange a better interface to test
 from shinysdr.web import StateStreamInner, WebService
 from shinysdr.test import testutil
@@ -221,11 +221,13 @@ class DuplicateReferenceSpecimen(ExportedState):
     def __init__(self):
         self.foo = self.bar = nullExportedState
     
-    def state_def(self, callback):
-        super(DuplicateReferenceSpecimen, self).state_def(callback)
-        # TODO make this possible to be decorator style
-        callback(BlockCell(self, 'foo'))
-        callback(BlockCell(self, 'bar'))
+    @exported_block()
+    def get_foo(self):
+        return self.foo
+    
+    @exported_block()
+    def get_bar(self):
+        return self.bar
 
 
 class TestSerialization(StateStreamTestCase):

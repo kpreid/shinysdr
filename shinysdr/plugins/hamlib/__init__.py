@@ -281,7 +281,7 @@ def _connect_to_device(reactor, options, port, daemon, connect_func):
         raise refused
     
     # TODO: Sometimes we fail to kill the process because there was a protocol error during the connection stages. Refactor so that doesn't happen.
-    proxy = proxy_device.get_components().values()[0]
+    proxy = proxy_device.get_components_dict().values()[0]
     proxy.when_closed().addCallback(lambda _: process.kill())
     
     defer.returnValue(proxy_device)

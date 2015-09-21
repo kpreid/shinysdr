@@ -24,7 +24,7 @@ from __future__ import absolute_import, division
 import unittest
 
 from shinysdr.types import Range
-from shinysdr.values import ExportedState, BlockCell, CollectionState, LooseCell, Poller, ViewCell, exported_value, setter, unserialize_exported_state
+from shinysdr.values import ExportedState, CollectionState, LooseCell, Poller, ViewCell, exported_block, exported_value, setter, unserialize_exported_state
 
 
 class TestExportedState(unittest.TestCase):
@@ -73,21 +73,20 @@ class TestExportedState(unittest.TestCase):
 class ValueAndBlockSpecimen(ExportedState):
     '''Helper for TestExportedState'''
     def __init__(self, block, value=0):
-        self.value = value
-        self.block = block
-        
-    def state_def(self, callback):
-        super(ValueAndBlockSpecimen, self).state_def(callback)
-        # TODO make this possible to be decorator style
-        callback(BlockCell(self, 'block'))
+        self.__value = value
+        self.__block = block
+    
+    @exported_block()
+    def get_block(self):
+        return self.__block
     
     @exported_value(type=float, parameter='value')
     def get_value(self):
-        return self.value
+        return self.__value
     
     @setter
     def set_value(self, value):
-        self.value = value
+        self.__value = value
 
 
 class TestDecoratorInheritance(unittest.TestCase):
@@ -140,12 +139,11 @@ class BlockCellSpecimen(ExportedState):
     block = None
     
     def __init__(self, block):
-        self.block = block
+        self.__block = block
     
-    def state_def(self, callback):
-        super(BlockCellSpecimen, self).state_def(callback)
-        # TODO make this possible to be decorator style
-        callback(BlockCell(self, 'block'))
+    @exported_block()
+    def get_block(self):
+        return self.__block
 
 
 class TestViewCell(unittest.TestCase):
@@ -232,11 +230,10 @@ class TestCellIdentity(unittest.TestCase):
 
 class CellIdentitySpecimen(ExportedState):
     '''Helper for TestCellIdentity'''
-    value = 1
-    block = None
+    __value = 1
     
     def __init__(self):
-        self.block = ExportedState()
+        self.__block = ExportedState()
     
     # force worst-case
     def state_is_dynamic(self):
@@ -246,10 +243,9 @@ class CellIdentitySpecimen(ExportedState):
     def get_value(self):
         return 9
 
-    def state_def(self, callback):
-        super(CellIdentitySpecimen, self).state_def(callback)
-        # TODO make this possible to be decorator style
-        callback(BlockCell(self, 'block'))
+    @exported_block()
+    def get_block(self):
+        return self.__block
 
 
 class TestPoller(unittest.TestCase):

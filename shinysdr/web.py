@@ -422,7 +422,7 @@ class StateStreamInner(object):
     def __init__(self, send, root_object, root_url, poller=the_poller):
         self.__poller = poller
         self._send = send
-        self._root_object = root_object
+        self.__root_object = root_object
         self._cell = BlockCell(self, '_root_object')
         self._lastSerial = 0
         root_registration = _StateStreamObjectRegistration(ssi=self, poller=self.__poller, obj=self._cell, serial=0, url=root_url, refcount=0)
@@ -438,6 +438,10 @@ class StateStreamInner(object):
     
     def dataReceived(self, data):
         pass
+    
+    def get__root_object(self):
+        '''Accessor for implementing self._cell.'''
+        return self.__root_object
     
     def do_delete(self, reg):
         self._send1(False, ('delete', reg.serial))

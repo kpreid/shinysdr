@@ -36,7 +36,7 @@ from shinysdr.filters import MultistageChannelFilter
 from shinysdr.modes import ModeDef, IDemodulator, IModulator
 from shinysdr.signals import SignalType, no_signal
 from shinysdr.types import Range
-from shinysdr.values import BlockCell, ExportedState, exported_value
+from shinysdr.values import ExportedState, exported_block, exported_value
 
 
 try:
@@ -112,11 +112,6 @@ class RTTYDemodulator(gr.hier_block2, ExportedState):
             self.__real,
             self)
     
-    def state_def(self, callback):
-        super(RTTYDemodulator, self).state_def(callback)
-        # TODO decoratorify
-        callback(BlockCell(self, 'fsk_demod'))
-    
     def get_output_type(self):
         return SignalType(kind='MONO', sample_rate=self.samp_rate)
 
@@ -128,6 +123,10 @@ class RTTYDemodulator(gr.hier_block2, ExportedState):
         '''implement IDemodulator'''
         return self.__filter_high
 
+    @exported_block()
+    def get_fsk_demod(self):
+        return self.fsk_demod
+    
     @exported_value()
     def get_band_filter_shape(self):
         return {

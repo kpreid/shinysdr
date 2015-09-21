@@ -1,4 +1,4 @@
-# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -243,13 +243,16 @@ class BaseBlockCell(BaseCell):
         return self.get().state_description()
 
 
+# TODO: get() code is same as Cell (value-type cell). Refactoring in progress to make block cells less magic.
 class BlockCell(BaseBlockCell):
     def __init__(self, target, key, persists=True):
         BaseBlockCell.__init__(self, target, key, persists=persists)
+        self._getter = getattr(self._target, 'get_' + key)
     
     def get(self):
-        # TODO method-based access
-        return getattr(self._target, self._key)
+        block = self._getter()
+        assert isinstance(block, ExportedState), (self._target, self._key)
+        return block
 
 
 # TODO: It's unclear whether or not the Cell design makes sense in light of this. We seem to have conflated the index in the container and the type of the contained into one object.
@@ -519,20 +522,29 @@ class IWritableCollection(Interface):
 def exported_value(parameter=None, **cell_kwargs):
     '''Decorator for exported state; takes Cell's kwargs.'''
     def decorator(f):
-        return ExportedGetter(f, parameter, cell_kwargs)
+        return ExportedGetter(f, parameter, False, cell_kwargs)
+    return decorator
+
+
+# TODO: @exported_block() maybe should become @exported_value(type=block), depending on how cell types get refactored.
+def exported_block(parameter=None, **cell_kwargs):
+    '''Decorator for exported state; takes BlockCell's kwargs.'''
+    def decorator(f):
+        return ExportedGetter(f, parameter, True, cell_kwargs)
     return decorator
 
 
 def setter(f):
-    '''Decorator for setters of exported state; must be paired with a getter'''
+    '''Decorator for setters of exported state; must be paired with an @exported_value getter.'''
     return ExportedSetter(f)
 
 
 class ExportedGetter(object):
     '''Descriptor for a getter exported using @exported_value.'''
-    def __init__(self, f, parameter, cell_kwargs):
+    def __init__(self, f, parameter, is_block, cell_kwargs):
         self.__function = f
         self.__parameter = parameter
+        self.__is_block = is_block
         self.__cell_kwargs = cell_kwargs
     
     def __get__(self, obj, type=None):
@@ -552,7 +564,11 @@ class ExportedGetter(object):
             del kwargs['type_fn']
         # TODO kludgy introspection, figure out what is better
         writable = hasattr(obj, 'set_' + attr) and isinstance(getattr(type(obj), 'set_' + attr), ExportedSetter)
-        return Cell(obj, attr, writable=writable, **kwargs)
+        if self.__is_block:
+            assert not writable
+            return BlockCell(obj, attr, **kwargs)
+        else:
+            return Cell(obj, attr, writable=writable, **kwargs)
     
     def state_to_kwargs(self, value):
         if self.__parameter is not None:

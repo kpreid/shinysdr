@@ -36,7 +36,7 @@ from shinysdr.math import dB, todB
 from shinysdr.modes import ITunableDemodulator, get_modes, lookup_mode
 from shinysdr.signals import SignalType
 from shinysdr.types import Enum, Range
-from shinysdr.values import ExportedState, BlockCell, exported_value, setter, unserialize_exported_state
+from shinysdr.values import ExportedState, exported_block, exported_value, setter, unserialize_exported_state
 
 
 # arbitrary non-infinite limit
@@ -97,7 +97,7 @@ class Receiver(gr.hier_block2, ExportedState):
         
         # Blocks
         self.__rotator = blocks.rotator_cc()
-        self.demodulator = self.__make_demodulator(mode, {})
+        self.__demodulator = self.__make_demodulator(mode, {})
         self.__update_demodulator_info()
         self.__audio_gain_blocks = [blocks.multiply_const_ff(0.0) for _ in xrange(self.__audio_channels)]
         self.probe_audio = analog.probe_avg_mag_sqrd_f(0, alpha=10.0 / 44100)  # TODO adapt to output audio rate
@@ -109,14 +109,9 @@ class Receiver(gr.hier_block2, ExportedState):
         self.__update_audio_gain()
         self.__do_connect(reason=u'initialization')
     
-    def state_def(self, callback):
-        super(Receiver, self).state_def(callback)
-        # TODO decoratorify
-        callback(BlockCell(self, 'demodulator'))
-    
     def __update_demodulator_info(self):
-        self.__demod_tunable = ITunableDemodulator.providedBy(self.demodulator)
-        output_type = self.demodulator.get_output_type()
+        self.__demod_tunable = ITunableDemodulator.providedBy(self.__demodulator)
+        output_type = self.__demodulator.get_output_type()
         assert isinstance(output_type, SignalType)
         # TODO: better expression of this condition
         assert output_type.get_kind() == 'STEREO' or output_type.get_kind() == 'MONO' or output_type.get_kind() == 'NONE'
@@ -134,20 +129,20 @@ class Receiver(gr.hier_block2, ExportedState):
             
             # Connect input of demodulator
             if self.__demod_tunable:
-                self.connect(self, self.demodulator)
+                self.connect(self, self.__demodulator)
             else:
-                self.connect(self, self.__rotator, self.demodulator)
+                self.connect(self, self.__rotator, self.__demodulator)
             
             if self.__demod_output:
                 # Connect output of demodulator
-                self.connect((self.demodulator, 0), self.__audio_gain_blocks[0])  # left or mono
+                self.connect((self.__demodulator, 0), self.__audio_gain_blocks[0])  # left or mono
                 if self.__audio_channels == 2:
                     self.connect(
-                        (self.demodulator, 1 if self.__demod_stereo else 0),
+                        (self.__demodulator, 1 if self.__demod_stereo else 0),
                         self.__audio_gain_blocks[1])
                 else:
                     if self.__demod_stereo:
-                        self.connect((self.demodulator, 1), blocks.null_sink(gr.sizeof_float))
+                        self.connect((self.__demodulator, 1), blocks.null_sink(gr.sizeof_float))
                 
                 # Connect output of receiver
                 for ch in xrange(self.__audio_channels):
@@ -155,7 +150,7 @@ class Receiver(gr.hier_block2, ExportedState):
                 
                 # Level meter
                 # TODO: should mix left and right or something
-                self.connect((self.demodulator, 0), self.probe_audio)
+                self.connect((self.__demodulator, 0), self.probe_audio)
             else:
                 # Dummy output.
                 # TODO: Teach top block about no-audio so we don't have to have a dummy output.
@@ -172,13 +167,17 @@ class Receiver(gr.hier_block2, ExportedState):
                 self.context.changed_needed_connections(u'changed output type')
         finally:
             self.context.unlock()
-
+    
     def get_output_type(self):
         return self.__output_type
 
     def changed_device_freq(self):
         self.__update_rotator()
         # note does not revalidate() because the caller will handle that
+
+    @exported_block()
+    def get_demodulator(self):
+        return self.__demodulator
 
     @exported_value(parameter='device_name', type_fn=lambda self: self.context.get_rx_device_type())
     def get_device_name(self):
@@ -202,8 +201,8 @@ class Receiver(gr.hier_block2, ExportedState):
     def set_mode(self, mode):
         mode = unicode(mode)
         if mode == self.mode: return
-        if self.demodulator and self.demodulator.can_set_mode(mode):
-            self.demodulator.set_mode(mode)
+        if self.__demodulator and self.__demodulator.can_set_mode(mode):
+            self.__demodulator.set_mode(mode)
             self.mode = mode
         else:
             self._rebuild_demodulator(mode=mode, reason=u'changed mode')
@@ -253,7 +252,7 @@ class Receiver(gr.hier_block2, ExportedState):
         device = self.__get_device()
         sample_rate = device.get_rx_driver().get_output_type().get_sample_rate()
         valid_bandwidth = sample_rate / 2 - abs(self.rec_freq - device.get_freq())
-        return self.demodulator is not None and valid_bandwidth >= self.demodulator.get_half_bandwidth()
+        return self.__demodulator is not None and valid_bandwidth >= self.__demodulator.get_half_bandwidth()
     
     # Note that the receiver cannot measure RF power because we don't know what the channel bandwidth is; we have to leave that to the demodulator.
     @exported_value(type=Range([(_audio_power_minimum_dB, 0)], strict=False))
@@ -269,7 +268,7 @@ class Receiver(gr.hier_block2, ExportedState):
         sample_rate = device.get_rx_driver().get_output_type().get_sample_rate()
         offset = self.rec_freq - self.__get_device().get_freq()
         if self.__demod_tunable:
-            self.demodulator.set_rec_freq(offset)
+            self.__demodulator.set_rec_freq(offset)
         else:
             self.__rotator.set_phase_inc(rotator_inc(rate=sample_rate, shift=-offset))
     
@@ -284,13 +283,13 @@ class Receiver(gr.hier_block2, ExportedState):
         #self.context.revalidaate(tuning=False)  # in case our bandwidth changed
 
     def __rebuild_demodulator_nodirty(self, mode=None):
-        if self.demodulator is None:
+        if self.__demodulator is None:
             defaults = {}
         else:
-            defaults = self.demodulator.state_to_json()
+            defaults = self.__demodulator.state_to_json()
         if mode is None:
             mode = self.mode
-        self.demodulator = self.__make_demodulator(mode, defaults)
+        self.__demodulator = self.__make_demodulator(mode, defaults)
         self.__update_demodulator_info()
         self.__update_rotator()
         self.mode = mode

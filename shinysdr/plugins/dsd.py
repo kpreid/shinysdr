@@ -33,7 +33,7 @@ from shinysdr.filters import make_resampler
 from shinysdr.modes import ModeDef, IDemodulator
 from shinysdr.plugins.basic_demod import NFMDemodulator
 from shinysdr.signals import SignalType
-from shinysdr.values import BlockCell, ExportedState, exported_value
+from shinysdr.values import ExportedState, exported_block, exported_value
 
 try:
     from dsd import block_ff as dsd_block_ff
@@ -56,26 +56,26 @@ class DSDDemodulator(gr.hier_block2, ExportedState):
             gr.io_signature(1, 1, gr.sizeof_float))
         
         # TODO: Retry telling the NFMDemodulator to have its output rate be pipe_rate instead of using a resampler. Something went wrong when trying that before. Same thing is done in multimon.py
-        self.fm_demod = NFMDemodulator(
+        self.__fm_demod = NFMDemodulator(
             mode='NFM',
             input_rate=input_rate,
             no_audio_filter=True,  # don't remove CTCSS tone
             tau=None)  # no deemphasis
-        assert self.fm_demod.get_output_type().get_kind() == 'MONO'
-        fm_audio_rate = self.fm_demod.get_output_type().get_sample_rate()
+        assert self.__fm_demod.get_output_type().get_kind() == 'MONO'
+        fm_audio_rate = self.__fm_demod.get_output_type().get_sample_rate()
 
         self.__output_type = SignalType(kind='MONO', sample_rate=8000)
         
         self.connect(
             self,
-            self.fm_demod,
+            self.__fm_demod,
             make_resampler(fm_audio_rate, _demod_rate),
             dsd_block_ff(),
             self)
     
-    def state_def(self, callback):
-        super(DSDDemodulator, self).state_def(callback)
-        callback(BlockCell(self, 'fm_demod'))  # exports RF squelch controls
+    @exported_block()
+    def get_fm_demod(self):
+        return self.__fm_demod
     
     def can_set_mode(self, mode):
         return False
@@ -84,11 +84,11 @@ class DSDDemodulator(gr.hier_block2, ExportedState):
         return self.__output_type
     
     def get_half_bandwidth(self):
-        return self.fm_demod.get_half_bandwidth()
+        return self.__fm_demod.get_half_bandwidth()
     
     @exported_value()
     def get_band_filter_shape(self):
-        return self.fm_demod.get_band_filter_shape()
+        return self.__fm_demod.get_band_filter_shape()
 
 
 _modeDef = ModeDef(
