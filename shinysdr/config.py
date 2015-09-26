@@ -108,10 +108,13 @@ class Config(object):
             raise ValueError('config.serve_web: root_cap must be None or a nonempty string')
         
         def make_service(top, note_dirty):
+            # TODO: This is, of course, not where session objects should be created. Working on it...
             import shinysdr.web as lazy_web
+            import shinysdr.session as lazy_session
             return lazy_web.WebService(
                 reactor=self.reactor,
-                top=top,
+                root_object=lazy_session.Session(top),
+                flowgraph_for_debug=top,  # TODO: Once we have the diagnostics or admin page however that turns out to work, this goes away
                 note_dirty=note_dirty,
                 read_only_dbs=self.databases._get_read_only_databases(),
                 writable_db=self.databases._get_writable_database(),

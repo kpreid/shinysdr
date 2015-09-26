@@ -30,6 +30,8 @@ from twisted.trial import unittest
 from twisted.internet import reactor
 from twisted.web import http
 
+from gnuradio import gr
+
 from shinysdr.db import DatabaseModel
 from shinysdr.signals import SignalType
 from shinysdr.values import BlockCell, ExportedState, CollectionState, NullExportedState, Poller, exported_value, nullExportedState, setter
@@ -48,7 +50,8 @@ class TestWebSite(unittest.TestCase):
             root_cap='ROOT',
             read_only_dbs={},
             writable_db=DatabaseModel(reactor, []),
-            top=SiteStateStub(),
+            root_object=SiteStateStub(),
+            flowgraph_for_debug=gr.top_block(),
             title='test title',
             note_dirty=_noop)
         self.__service.startService()
@@ -87,6 +90,13 @@ class TestWebSite(unittest.TestCase):
                 u'children': {},
             })
         return testutil.http_get(reactor, self.url + 'radio', accept='application/json').addCallback(callback)
+    
+    def test_flowgraph_page(self):
+        # TODO: This ought to be a separate test of block-resources
+        def callback((response, data)):
+            self.assertEqual(response.code, http.OK)
+            # ...
+        return testutil.http_get(reactor, self.url + 'flow-graph').addCallback(callback)
 
 
 def _noop():

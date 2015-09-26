@@ -48,7 +48,6 @@ import weakref
 
 import shinysdr.plugins
 import shinysdr.db
-from shinysdr.session import Session
 from shinysdr.signals import SignalType
 from shinysdr.values import ExportedState, BaseCell, BlockCell, StreamCell, IWritableCollection, the_poller
 
@@ -707,11 +706,9 @@ def renderElement(request, element):
 
 class WebService(Service):
     # TODO: Too many parameters
-    def __init__(self, reactor, top, note_dirty, read_only_dbs, writable_db, http_endpoint, ws_endpoint, root_cap, title):
+    def __init__(self, reactor, root_object, note_dirty, read_only_dbs, writable_db, http_endpoint, ws_endpoint, root_cap, title, flowgraph_for_debug):
         self.__http_port = http_endpoint
         self.__ws_port = ws_endpoint
-        
-        root_object = Session(top)
         
         # Roots of resource trees
         # - appRoot is everything stateful/authority-bearing
@@ -741,7 +738,7 @@ class WebService(Service):
         appRoot.putChild('wdb', shinysdr.db.DatabaseResource(writable_db))
         
         # Debug graph
-        appRoot.putChild('flow-graph', FlowgraphVizResource(reactor, top))
+        appRoot.putChild('flow-graph', FlowgraphVizResource(reactor, flowgraph_for_debug))
         
         # Construct explicit resources for merge.
         test = _reify(serverRoot, 'test')
