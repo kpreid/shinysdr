@@ -21,13 +21,9 @@
 
 from __future__ import absolute_import, division
 
-import math
-
 from zope.interface import implements
 
-from gnuradio import analog
 from gnuradio import gr
-from gnuradio import blocks
 
 from shinysdr.filters import make_resampler
 from shinysdr.modes import ModeDef, IDemodulator

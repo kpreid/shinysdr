@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-
 from __future__ import absolute_import, division
 
 from importlib import import_module
@@ -44,15 +43,18 @@ class DependencyTester(object):
             else:
                 self.__missing.add(entry)
             return
+        # pylint: disable=broad-except
         try:
-            attr = getattr_path(module, attr_path)
-        except Exception as e:
+            getattr_path(module, attr_path)
+        except Exception:
             self.__broken.add((dep_name, 'Error checking for %s.%s.' % (module_name, attr_path)))  # TODO mention error
     
     def check_module(self, module_name, dep_name, old=False):
+        # pylint: disable=broad-except
         try:
             return import_module(module_name)
         except ImportError as e:
+            # pylint: disable=no-member
             msg = e.message
             if msg.startswith('No module named '):
                 # confirm using message contents
