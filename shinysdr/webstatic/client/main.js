@@ -61,7 +61,7 @@ define(['./values', './events', './coordination', './database', './network', './
     opengl: cc('opengl', Boolean, true),
     opengl_float: cc('opengl_float', Boolean, true),
     spectrum_split: cc('spectrum_split', new values.Range([[0, 1]], false, false), 0.5),
-    spectrum_average: cc('spectrum_average', new values.Range([[0.05, 1]], true, false), 0.25),
+    spectrum_average: cc('spectrum_average', new values.Range([[0.1, 1]], true, false), 0.25),
     databases: new ConstantCell(values.block, databasePicker)
   });
   var clientBlockCell = new ConstantCell(values.block, clientState);
