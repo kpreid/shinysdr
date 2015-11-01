@@ -54,6 +54,11 @@ describe('widgets', function () {
     function rebuildMe() { throw new Error('mock rebuildMe not implemented'); }
     rebuildMe.scheduler = scheduler;
     var index = new shinysdr.values.Index(scheduler, cell);
+    var stubCoordinator = {
+      actions: {
+        _registerMap: function () {}  // TODO this is a stub of a kludge and should go away when the kludge does
+      }
+    }
     return {
       storage: new shinysdr.values.StorageNamespace(sessionStorage, Math.random() + '.'),
       freqDB: new shinysdr.database.Table('foo', false),
@@ -71,8 +76,10 @@ describe('widgets', function () {
       context: {
         widgets: {},
         scheduler: scheduler,
-        index: index
-      }
+        index: index,
+        coordinator: stubCoordinator
+      },
+      actions: stubCoordinator.actions,
     };
   }
   

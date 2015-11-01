@@ -15,11 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./values', './events'], function (values, events) {
+define(['./values', './events', './coordination'], function (values, events, coordination) {
   'use strict';
   
   var Cell = values.Cell;
   var ConstantCell = values.ConstantCell;
+  var Coordinator = coordination.Coordinator;
   var DerivedCell = values.DerivedCell;
   var StorageNamespace = values.StorageNamespace;
   
@@ -96,7 +97,8 @@ define(['./values', './events'], function (values, events) {
     this.freqDB = config.freqDB;
     this.writableDB = config.writableDB;
     this.spectrumView = config.spectrumView;
-    this.coordinator = config.coordinator;
+    // TODO reconsider this unusual handling. Required to avoid miscellaneous things needing to define a coordinator.
+    this.coordinator = config.coordinator || new Coordinator(this.scheduler, this.freqDB, this.radioCell);
   }
   Context.prototype.withSpectrumView = function (outerElement, innerElement, monitor, isRFSpectrum) {
     var id = outerElement.id || innerElement.id;
