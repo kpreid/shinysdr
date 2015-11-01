@@ -68,8 +68,8 @@ define(['../../client/values', '../../client/events', '../../client/widget', '..
     clientState: makeBlock({
       opengl: cc('opengl', Boolean, true),
       opengl_float: cc('opengl_float', Boolean, true),
-      spectrum_split: cc('spectrum_split', new values.Range([[0, 1]], false, false), 0.5),
-      spectrum_average: cc('spectrum_average', new values.Range([[0.05, 1]], true, false), 0.25)
+      spectrum_split: cc('spectrum_split', new values.Range([[0, 1]], false, false), 0.6),
+      spectrum_average: cc('spectrum_average', new values.Range([[0.10, 1]], true, false), 0.10)
     }),
     spectrumView: null,
     freqDB: new database.Union(),
@@ -78,9 +78,6 @@ define(['../../client/values', '../../client/events', '../../client/widget', '..
   
   function updateFFT() {
     var array = new Float32Array(binCount);
-    //for (var i = 0; i < binCount; i++) {
-    //  array[i] = -40 + Math.random() * 20;
-    //}
     fftnode.getFloatFrequencyData(array);
 
     var gain = -75;
@@ -101,7 +98,7 @@ define(['../../client/values', '../../client/events', '../../client/widget', '..
   }
   
   function loop() {
-    updateFFT();
+    // Unfortunately, we can't ask for a callback when the AnalyserNode has new data. But once per rAF seems to be almost exactly right. On my machine and so on...
     updateFFT();
     requestAnimationFrame(loop);
   }
