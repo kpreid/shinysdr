@@ -48,6 +48,7 @@ import weakref
 
 import shinysdr.plugins
 import shinysdr.db
+from shinysdr.ephemeris import EphemerisResource
 from shinysdr.signals import SignalType
 from shinysdr.values import ExportedState, BaseCell, BlockCell, StreamCell, IWritableCollection, the_poller
 
@@ -740,6 +741,9 @@ class WebService(Service):
         
         # Debug graph
         appRoot.putChild('flow-graph', FlowgraphVizResource(reactor, flowgraph_for_debug))
+        
+        # Ephemeris
+        appRoot.putChild('ephemeris', EphemerisResource())
         
         # Construct explicit resources for merge.
         test = _reify(serverRoot, 'test')

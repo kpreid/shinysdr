@@ -47,6 +47,7 @@ setup(
         #'osmosdr',  # Not PyPI
         'twisted',
         'txws',
+        'ephem'
     ],
     dependency_links=[],
     # zip_safe: TODO: Investigate. I suspect unsafe due to serving web resources relative to __file__.

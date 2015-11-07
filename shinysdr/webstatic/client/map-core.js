@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./values', './gltools', './widget', './widgets', './events'], function (values, gltools, widget, widgets, events) {
+define(['./values', './gltools', './widget', './widgets', './events', './network'], function (values, gltools, widget, widgets, events, network) {
   'use strict';
   
   var sin = Math.sin;
@@ -35,6 +35,7 @@ define(['./values', './gltools', './widget', './widgets', './events'], function 
   var SmallKnob = widgets.SmallKnob;
   var StorageCell = values.StorageCell;
   var Toggle = widgets.Toggle;
+  var externalGet = network.externalGet;
   
   var exports = {};
   
@@ -365,20 +366,40 @@ define(['./values', './gltools', './widget', './widgets', './events'], function 
       + 'attribute highp vec2 lonlat;\n'
       + 'uniform highp mat4 projection;\n'
       + 'varying highp vec2 v_lonlat;\n'
+      + 'varying highp vec3 v_position;\n'
       + 'void main(void) {\n'
       + '  gl_Position = vec4(position, 1.0) * projection;\n'
       + '  v_lonlat = lonlat;\n'
+      + '  v_position = position;\n'
       + '}\n';
     var fragmentShaderSource = ''
       + 'varying highp vec2 v_lonlat;\n'
+      + 'varying highp vec3 v_position;\n'
       + 'uniform sampler2D texture;\n'
+      + 'uniform lowp vec3 sun;\n'
       + 'void main(void) {\n'
-      + '  gl_FragColor = texture2D(texture, mod(v_lonlat + vec2(180.0, 90.0), 360.0) * vec2(1.0/360.0, -1.0/180.0) + vec2(0.0, 1.0));\n'
+      + '  lowp vec4 texture = texture2D(texture, mod(v_lonlat + vec2(180.0, 90.0), 360.0) * vec2(1.0/360.0, -1.0/180.0) + vec2(0.0, 1.0));\n'
+      + '   lowp float light = mix(1.0, clamp(dot(v_position, sun) * 10.0 + 1.0, 0.0, 1.0), 0.25);'
+      + '   gl_FragColor = vec4(texture.rgb * light, texture.a);\n'
       + '}\n';
     var program = gltools.buildProgram(gl, vertexShaderSource, fragmentShaderSource);
     var att_position = gl.getAttribLocation(program, 'position');
     var att_lonlat = gl.getAttribLocation(program, 'lonlat');
     gl.uniform1i(gl.getUniformLocation(program, 'texture'), 0);
+    
+    function fetchSun() {
+      // TODO relative url bad idea
+      externalGet('ephemeris', 'text', function (response) {
+        var xyz = JSON.parse(response);
+      
+        gl.useProgram(program);
+        gl.uniform3fv(gl.getUniformLocation(program, 'sun'), xyz);
+        gl.useProgram(null);
+        redrawCallback.scheduler.enqueue(redrawCallback);
+      });
+    }
+    fetchSun();
+    setInterval(fetchSun, 1000 * 60 * 15);
     
     var sphereTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, sphereTexture);

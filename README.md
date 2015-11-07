@@ -74,6 +74,7 @@ You can do both, if you want.
 
     * [Twisted](http://twistedmatrix.com/) 12.3.0 or later.
     * [txWS](https://github.com/MostAwesomeDude/txWS) 0.8 or later.
+    * [PyEphem](http://rhodesmill.org/pyephem/) 3.7.5.1 or later.
 
 4. Either run the script `fetch-js-deps.sh`, or copy or symlink the following items into the `shinysdr/deps/` directory:
 

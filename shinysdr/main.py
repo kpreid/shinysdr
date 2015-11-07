@@ -171,6 +171,7 @@ def check_versions():
     t.check_module_attr('twisted.internet.task', 'Python library Twisted', 'react')
     t.check_module_attr('txws', 'Python library txWS', 'WebSocketProtocol.setBinaryMode')
     t.check_module_attr('six', 'Python library six', 'PY2')
+    t.check_module('ephem', 'Python library PyEphem')
     if t.report() != None:
         raise Exception(t.report())
 
