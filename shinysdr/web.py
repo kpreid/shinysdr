@@ -135,8 +135,6 @@ class CellResource(Resource):
 
 
 class ValueCellResource(CellResource):
-    defaultContentType = 'application/json'
-
     def __init__(self, cell, noteDirty):
         CellResource.__init__(self, cell, noteDirty)
 
@@ -152,7 +150,6 @@ def notDeletable():
 
 
 class BlockResource(Resource):
-    defaultContentType = 'application/json'
     isLeaf = False
 
     def __init__(self, block, noteDirty, deleteSelf):

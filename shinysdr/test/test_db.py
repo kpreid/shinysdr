@@ -199,11 +199,19 @@ class TestDBWeb(unittest.TestCase):
     def __url(self, path):
         return 'http://127.0.0.1:%i%s' % (self.port.getHost().port, path)
     
-    def test_response(self):
-        def callback(s):
-            j = json.loads(s)
+    def test_index_response(self):
+        def callback((response, data)):
+            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
+            j = json.loads(data)
             self.assertEqual(j, self.test_data_json)
-        return client.getPage(self.__url('/')).addCallback(callback)
+        return testutil.http_get(reactor, self.__url('/')).addCallback(callback)
+
+    def test_record_response(self):
+        def callback((response, data)):
+            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
+            j = json.loads(data)
+            self.assertEqual(j, self.test_data_json[0])
+        return testutil.http_get(reactor, self.__url('/0')).addCallback(callback)
 
     def test_update_good(self):
         new_record = {

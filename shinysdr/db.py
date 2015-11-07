@@ -128,13 +128,13 @@ class DatabasesResource(resource.Resource):
 
 class _DbsIndexResource(resource.Resource):
     isLeaf = True
-    defaultContentType = 'text/html'
     
     def __init__(self, dbs_resource):
         resource.Resource.__init__(self)
         self.dbs_resource = dbs_resource
     
     def render_GET(self, request):
+        request.setHeader('Content-Type', 'text/html')
         request.write('<html><title>Databases</title><ul>')
         for name in self.dbs_resource.names:
             request.write('<li><a href="%s/">%s</a>' % (cgi.escape(urllib.quote(name, '')), name))
@@ -158,14 +158,14 @@ class DatabaseResource(resource.Resource):
 
 class _DbIndexResource(resource.Resource):
     isLeaf = True
-    defaultContentType = 'application/json'
     
     def __init__(self, db, instantiate):
         resource.Resource.__init__(self)
         self.__database = db
         self.__instantiate = instantiate
     
-    def render_GET(self, _request):
+    def render_GET(self, request):
+        request.setHeader('Content-Type', 'application/json')
         return json.dumps(self.__database.records)
     
     def render_POST(self, request):
@@ -187,14 +187,14 @@ class _DbIndexResource(resource.Resource):
 
 class _RecordResource(resource.Resource):
     isLeaf = True
-    defaultContentType = 'application/json'
     
     def __init__(self, database, record):
         resource.Resource.__init__(self)
         self.__database = database
         self.__record = record
     
-    def render_GET(self, _request):
+    def render_GET(self, request):
+        request.setHeader('Content-Type', 'application/json')
         return json.dumps(self.__record)
     
     def render_POST(self, request):

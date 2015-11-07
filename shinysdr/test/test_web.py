@@ -74,6 +74,7 @@ class TestWebSite(unittest.TestCase):
     def test_index_page(self):
         def callback((response, data)):
             self.assertEqual(response.code, http.OK)
+            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['text/html'])
             self.assertIn('</html>', data)  # complete
             self.assertIn('<title>test title</title>', data)
             # TODO: Probably not here, add an end-to-end test for page title _default_.
@@ -84,6 +85,7 @@ class TestWebSite(unittest.TestCase):
         # TODO: This ought to be a separate test of block-resources
         def callback((response, data)):
             self.assertEqual(response.code, http.OK)
+            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
             description_json = json.loads(data)
             self.assertEqual(description_json, {
                 u'kind': u'block',
@@ -95,7 +97,8 @@ class TestWebSite(unittest.TestCase):
         # TODO: This ought to be a separate test of block-resources
         def callback((response, data)):
             self.assertEqual(response.code, http.OK)
-            # ...
+            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['image/png'])
+            # TODO ...
         return testutil.http_get(reactor, self.url + 'flow-graph').addCallback(callback)
 
 
