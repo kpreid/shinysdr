@@ -1120,8 +1120,8 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
       // TODO: Should use scales based on what's under the cursor.
       var angleScales = getAngleScales();
       
-      viewCenterLon += (event.movementX || event.webkitMovementX) * angleScales.x;
-      viewCenterLat += (event.movementY || event.webkitMovementY) * angleScales.y;
+      viewCenterLon += event.movementX * angleScales.x;
+      viewCenterLat += event.movementY * angleScales.y;
       changedView();
       
       event.stopPropagation();

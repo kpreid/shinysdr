@@ -757,7 +757,7 @@ define(['./values', './events', './widget', './gltools', './database'], function
     
     // dragging
     function drag(event) {
-      viewAngle += (event.movementX || event.webkitMovementX) * 0.01;
+      viewAngle += event.movementX * 0.01;
       viewAngle = Math.min(Math.PI / 2, Math.max(0, viewAngle));
       if (storage) storage.setItem('angle', viewAngle);
       scheduler.enqueue(draw);
