@@ -270,10 +270,11 @@ define(['./events'], function (events) {
   };
   exports.StorageNamespace = StorageNamespace;
   
-  var allStorageCellNotifiers = [];
-  // Note that browsers do not fire this event unless the storage was changed from SOME OTHER window; so this code is not usually applicable. We're also being imprecise.
+  var allStorageCells = [];
+  // Note that browsers do not fire this event unless the storage was changed from SOME OTHER window; so this code is not usually applicable.
+  // TODO: Use the properties of the storage event to not need to iterate over all cells. This will require StorageNamespace to provide remapped events.
   window.addEventListener('storage', function (event) {
-    allStorageCellNotifiers.forEach(function (n) { n.notify(); });
+    allStorageCells.forEach(function (cell) { cell.get(); });
   });
   
   // Presents a Storage (localStorage) entry as a cell; the value must be representable as JSON.
@@ -287,21 +288,33 @@ define(['./events'], function (events) {
     this._storage = storage;
     this._key = key;
     this._initialValue = JSON.parse(JSON.stringify(initialValue));
-
-    allStorageCellNotifiers.push(this.n);
+    
+    this._lastSeenString = {};  // guaranteed unequal
+    this._lastSeenValue = undefined;
+    this.get();  // initialize last-seen
+    
+    allStorageCells.push(this);
   }
   StorageCell.prototype = Object.create(Cell.prototype, {constructor: {value: StorageCell}});
   StorageCell.prototype.get = function() {
     var storedString = this._storage.getItem(this._key);
-    if (storedString) {
-      return JSON.parse(storedString);
+    
+    if (storedString !== this._lastSeenString) {
+      // (Possibly unexpected) change.
+      this._lastSeenString = storedString;
+      this.n.notify();
     } else {
-      return this._initialValue;
+      // Shortcut: don't parse.
+      return this._lastSeenValue;
     }
+    
+    var value = storedString ? JSON.parse(storedString) : this._initialValue;
+    this._lastSeenValue = value;
+    return value;
   };
   StorageCell.prototype.set = function(value) {
     this._storage.setItem(this._key, JSON.stringify(value));
-    this.n.notify();
+    this.get();  // trigger notification and read-back
   };
   exports.StorageCell = StorageCell;
   

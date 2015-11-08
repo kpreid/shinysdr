@@ -1,4 +1,4 @@
-// Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -39,6 +39,11 @@ describe('values', function () {
       expect(l).toHaveBeenCalledWith();
     });
   }
+  function waitsForNotificationCycle() {
+    var dummyWait = createListenerSpy();
+    s.enqueue(dummyWait);
+    expectNotification(dummyWait);
+  }
 
   describe('Range', function () {
     var Range = values.Range;
@@ -76,9 +81,7 @@ describe('values', function () {
       var cell = new values.LocalCell(values.any, 'foo');
       var l = createListenerSpy();
       cell.n.listen(l);
-      var dummyWait = createListenerSpy();
-      s.enqueue(dummyWait);
-      expectNotification(dummyWait);
+      waitsForNotificationCycle();
       runs(function () {
         expect(l).not.toHaveBeenCalled();
       });
@@ -91,15 +94,51 @@ describe('values', function () {
       // TODO: use a mock storage instead of abusing sessionStorage
       sessionStorage.clear();
       var ns = new values.StorageNamespace(sessionStorage, 'foo.');
-      var cell = new values.StorageCell(ns, 'bar', 'default');
+      var cell = new values.StorageCell(ns, String, 'default', 'bar');
       expect(cell.get()).toBe('default');
       cell.set('a');
       expect(cell.get()).toBe('a');
+      expect(ns.getItem('bar')).toBe('"a"');
       var l = createListenerSpy();
       cell.n.listen(l);
       cell.set('b');
       expect(cell.get()).toBe('b');
       expectNotification(l);
+    });
+    
+    function fireStorageEvent() {
+      var event = document.createEvent('Event');
+      event.initEvent('storage', false, false);
+      window.dispatchEvent(event);
+    }
+    
+    it('should notify if a storage event occurs', function () {
+      sessionStorage.clear();
+      var ns = new values.StorageNamespace(sessionStorage, 'foo.');
+      var cell = new values.StorageCell(ns, String, 'default', 'bar');
+      var l = createListenerSpy();
+      cell.n.listen(l);
+      
+      sessionStorage.setItem('foo.bar', '"sval"');
+      fireStorageEvent();
+      expectNotification(l);
+      expect(cell.get()).toBe('sval');
+    });
+    
+    it('should not notify if an unrelated storage event occurs', function () {
+      sessionStorage.clear();
+      var ns = new values.StorageNamespace(sessionStorage, 'foo.');
+      var cell = new values.StorageCell(ns, String, 'default', 'bar');
+      var l = createListenerSpy();
+      cell.n.listen(l);
+      
+      sessionStorage.setItem('unrelated', '"sval"');
+      fireStorageEvent();
+      waitsForNotificationCycle();
+      runs(function () {
+        expect(l).not.toHaveBeenCalled();
+        expect(cell.get()).toBe('default');
+      });
     });
   });
   
