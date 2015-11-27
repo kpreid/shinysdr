@@ -52,8 +52,8 @@ __all__.append('Track')
 
 # TODO awful name
 TelemetryItem = namedtuple('TelemetryItem', [
-    'value',  # may be None if unknown, or an actual value (usually but not alays a number).
-    'timestamp',  # Unix time at which the value was last obtained, or None if no data.
+    'value',  # may be None if unknown, or an actual value (usually but not always a number).
+    'timestamp',  # Unix time at which the value was last obtained, or None if no data or undefined time.
 ])
 
 

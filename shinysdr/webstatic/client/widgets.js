@@ -2990,7 +2990,7 @@ define(['./values', './events', './widget', './gltools', './database'], function
         function formatGroup(row, f) {
           var out = [];
           f(function write(telemetryItem, text) {
-            if (telemetryItem.timestamp !== null) out.push(text);
+            if (telemetryItem.value !== null) out.push(text);
           });
           if (out.length > 0) {
             row.row.style.removeProperty('display');
