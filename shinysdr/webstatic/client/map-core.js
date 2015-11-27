@@ -1029,9 +1029,9 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
     var w = 1;
     var h = 1;
     
-    var viewCenterLat = storage && +storage.getItem('viewCenterLat');
-    var viewCenterLon = storage && +storage.getItem('viewCenterLon');
-    var viewZoom = storage && +storage.getItem('viewZoom');
+    var viewCenterLat = storage && +(storage.getItem('viewCenterLat') || "NaN");
+    var viewCenterLon = storage && +(storage.getItem('viewCenterLon') || "NaN");
+    var viewZoom = storage && +(storage.getItem('viewZoom') || "NaN");
     if (!(isFinite(viewCenterLat) && isFinite(viewCenterLon) && viewZoom >= 1)) {
       // Saved coords are either nonexistent or invalid. Use a default.
       // TODO Use the device the user has actually selected. Be able to reset to this from the UI, too.
