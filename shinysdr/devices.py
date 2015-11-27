@@ -29,6 +29,7 @@ from gnuradio import blocks
 from gnuradio import gr
 
 from shinysdr.signals import SignalType
+from shinysdr.telemetry import TelemetryItem, Track, empty_track
 from shinysdr.types import Range
 from shinysdr.values import CollectionState, ExportedState, LooseCell, ViewCell, exported_block, exported_value, nullExportedState
 
@@ -528,8 +529,10 @@ class _PositionedDeviceComponent(ExportedState):
     implements(IPositionedDevice)
     
     def __init__(self, latitude, longitude):
-        self.__position = float(latitude), float(longitude)
+        self.__track = empty_track._replace(
+            latitude=TelemetryItem(float(latitude), None),
+            longitude=TelemetryItem(float(longitude), None))
 
-    @exported_value()
-    def get_position(self):
-        return self.__position
+    @exported_value(type=Track)
+    def get_track(self):
+        return self.__track

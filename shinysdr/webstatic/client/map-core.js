@@ -1037,8 +1037,8 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
       // TODO Use the device the user has actually selected. Be able to reset to this from the UI, too.
       var pd = positionedDevices.get()[0];
       if (pd) {
-        viewCenterLat = pd.position.get()[0];
-        viewCenterLon = pd.position.get()[1];
+        viewCenterLat = +pd.track.get().latitude.value;
+        viewCenterLon = +pd.track.get().longitude.value;
         viewZoom = 50;
       }
     }

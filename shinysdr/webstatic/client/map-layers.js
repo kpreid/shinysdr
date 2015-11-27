@@ -29,6 +29,7 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
   var LocalReadCell = values.LocalReadCell;
   var makeBlock = values.makeBlock;
   var registerMapPlugin = mapCore.register;
+  var renderTrackFeature = mapCore.renderTrackFeature;
   var StorageCell = values.StorageCell;
   
   var RADIANS_PER_DEGREE = Math.PI / 180;
@@ -106,14 +107,14 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
     addLayer('Basemap', makeStaticLayer('/client/basemap.geojson.gz', scheduler));
   });
   
-  function devicePosition(device, dirty) {
+  function deviceTrack(device, dirty) {
     // TODO full of kludges
     var components = device.components.depend(dirty);
     // components._reshapeNotice.listen(dirty);  // can't happen
     if (!components.position) return null;
     var positionObj = components.position.depend(dirty);
     if (!positionObj['_implements_shinysdr.devices.IPositionedDevice']) return null;
-    return positionObj.position.depend(dirty);
+    return positionObj.track.depend(dirty);
   }
   
   registerMapPlugin(function databaseLayerPlugin(mapPluginConfig) {
@@ -129,7 +130,7 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
       var radio = radioCell.depend(dirty);
       var device = radio.source.depend(dirty);
       var center = device.freq.depend(dirty);
-      var position = devicePosition(device, dirty);
+      var track = deviceTrack(device, dirty);
       // TODO: Ask the "bandwidth" question directly rather than hardcoding logic here
       var width = device.rx_driver.depend(dirty).output_type.depend(dirty).sample_rate;
       var lower = center - width / 2;
@@ -146,7 +147,7 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
         lower: lower,
         upper: upper,
         receiving: receiving,
-        position: position
+        track: track
       };
     });
   
@@ -166,10 +167,10 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
         var isReceiving = info.receiving.has(record.freq);
         
         var line;
-        if (isReceiving && info.position) {
+        if (isReceiving && info.track) {
           //var receiver = info.receiving.get(record);
           // TODO: Should be matching against receiver's device rather than selected device
-          line = [info.position];
+          line = [[+info.track.latitude.value, +info.track.longitude.value]];
         } else {
           line = [];
         }
@@ -507,12 +508,10 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
       featuresCell: index.implementing('shinysdr.devices.IPositionedDevice'),
       featureRenderer: function (devicePositioning, dirty) {
         // TODO: Because devicePositioning is a device component, we don't have the device itself in order to display the device's name. However, the Index is in a position to provide "containing object" information and arguably should.
-        var position = devicePositioning.position.depend(dirty);
-        return {
-          position: position,
-          label: '',
-          iconURL: '/client/map-icons/station-user.svg'
-        };
+        var track = devicePositioning.track.depend(dirty);
+        var f = renderTrackFeature(dirty, devicePositioning.track, '');
+        f.iconURL = '/client/map-icons/station-user.svg';
+        return f;
       }
     });
   });
