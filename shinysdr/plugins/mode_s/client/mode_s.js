@@ -44,7 +44,7 @@ define(['map-core', 'widgets'], function (mapCore, widgets) {
   
   function AircraftWidget(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
-      addWidget('track', widgets.TrackWidget);  // TODO: Should be handled by type information instead
+      addWidget('track', widgets.TrackWidget);
     }, false);
   }
   

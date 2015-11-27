@@ -67,14 +67,16 @@ class BareType(ValueType):
         self.__python_type = python_type
     
     def type_to_json(self):
-        if self.__python_type == bool:
-            return u'boolean'
-        else:
-            # TODO
-            return None
+        return bare_type_registry.get(self.__python_type, None)
     
     def __call__(self, specimen):
         return self.__python_type(specimen)
+
+
+# TODO: Replace this raw object with a proper API
+bare_type_registry = {
+    bool: u'boolean'
+}
 
 
 class Constant(ValueType):

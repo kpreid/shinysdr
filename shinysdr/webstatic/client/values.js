@@ -114,12 +114,21 @@ define(['./events'], function (events) {
   var any = Object.freeze({});
   exports.any = any;
 
+  // type for track objects
+  // TODO type name capitalization is getting inconsistent.
+  var Track = Object.freeze({});
+  exports.Track = Track;
+
   function typeFromDesc(desc) {
     switch (typeof desc) {
       case 'string':
         switch (desc) {
           case 'boolean':
             return Boolean; // will do till we need something fancier
+          case 'shinysdr.telemetry.Track':
+            return Track;
+          default:
+            throw new TypeError('unknown type desc value: ' + desc);
         }
       case 'object':
         if (desc === null) {

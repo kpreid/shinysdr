@@ -26,6 +26,9 @@ from __future__ import absolute_import, division
 from collections import namedtuple
 
 
+from shinysdr.types import bare_type_registry
+
+
 __all__ = []  # appended later
 
 
@@ -43,6 +46,7 @@ Track = namedtuple('Track', [
 ])
 
 
+bare_type_registry[Track] = 'shinysdr.telemetry.Track'
 __all__.append('Track')
 
 

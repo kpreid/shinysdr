@@ -48,7 +48,7 @@ define(['widgets', 'map-core', 'events'], function (widgets, mapCore, events) {
   function APRSStationWidget(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       ignore('address'); // in header
-      addWidget('track', widgets.TrackWidget);  // TODO: Should be handled by type information instead
+      addWidget('track', widgets.TrackWidget);
     }, false);
   }
   

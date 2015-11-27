@@ -24,7 +24,9 @@ define(['./values', './events', './widget', './gltools', './database'], function
   var Enum = values.Enum;
   var LocalCell = values.LocalCell;
   var Notice = values.Notice;
+  var Range = values.Range;
   var SingleQuad = gltools.SingleQuad;
+  var Track = values.Track;
   var Union = database.Union;
   var alwaysCreateReceiverFromEvent = widget.alwaysCreateReceiverFromEvent;
   var createWidgetExt = widget.createWidgetExt;
@@ -142,18 +144,20 @@ define(['./values', './events', './widget', './gltools', './database'], function
           return;
         }
         // TODO: Add a dispatch table of some sort to de-centralize this
-        if (member.type instanceof values.Range) {
+        if (member.type instanceof Range) {
           if (member.set) {
             addWidget(name, member.type.logarithmic ? LogSlider : LinSlider, name);
           } else {
             addWidget(name, Meter, name);
           }
-        } else if (member.type instanceof values.Enum) {
+        } else if (member.type instanceof Enum) {
           addWidget(name, Radio, name);
         } else if (member.type === Boolean) {
           addWidget(name, Toggle, name);
         } else if (member.type === String && member.set) {
           addWidget(name, TextBox, name);
+        } else if (member.type === Track) {
+          addWidget(name, TrackWidget, name);
         } else if (member.type instanceof Notice) {
           addWidget(name, Banner, name);
         } else if (member.type === values.block) {  // TODO colliding name
