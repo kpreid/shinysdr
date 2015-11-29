@@ -187,6 +187,10 @@ class TestDBWeb(unittest.TestCase):
             u'location': None,
         },
     ]
+    response_json = {
+        u'records': test_data_json,
+        u'writable': True,
+    }
     
     def setUp(self):
         db_model = db.DatabaseModel(reactor, self.test_data_json, writable=True)
@@ -203,7 +207,7 @@ class TestDBWeb(unittest.TestCase):
         def callback((response, data)):
             self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
             j = json.loads(data)
-            self.assertEqual(j, self.test_data_json)
+            self.assertEqual(j, self.response_json)
         return testutil.http_get(reactor, self.__url('/')).addCallback(callback)
 
     def test_record_response(self):
@@ -235,7 +239,7 @@ class TestDBWeb(unittest.TestCase):
             
             def check(s):
                 j = json.loads(s)
-                self.assertEqual(j, modified)
+                self.assertEqual(j[u'records'], modified)
             
             return client.getPage(self.__url('/')).addCallback(check)
         d.addCallback(proceed)
@@ -260,7 +264,7 @@ class TestDBWeb(unittest.TestCase):
             
             def check(s):
                 j = json.loads(s)
-                self.assertEqual(j[-1], new_record)
+                self.assertEqual(j[u'records'][-1], new_record)
             
             return client.getPage(self.__url('/')).addCallback(check)
         d.addCallback(proceed)

@@ -235,9 +235,17 @@ define(['./events', './network', './values'], function (events, network, values)
     this._addURL = addURL;
     this.writable = !!writable;
     if (initializer) {
-      initializer(function (suppliedRecord, url) {
-        this._entries.push(new Record(suppliedRecord, url, writable ? this._triggerFacet : null));
-      }.bind(this));
+      initializer({
+        add: function (suppliedRecord, url) {
+          this._entries.push(new Record(suppliedRecord, url, this.writable ? this._triggerFacet : null));
+        }.bind(this),
+        makeWritable: function () {
+          if (this._entries.length > 0) {
+            throw new Error('too late to makeWritable');
+          }
+          this.writable = true;
+        }.bind(this)
+      });
     }
   }
   // TODO: Make Table inherit only Source, not View, as it's not obvious what the resulting requirements for how View works are
@@ -292,12 +300,16 @@ define(['./events', './network', './values'], function (events, network, values)
   function fromURL(url) {
     return new Table(
       decodeURIComponent(url.replace(/^.*\/(?=.)/, '').replace(/(.csv)?(\/)?$/, '')),
-      true,
-      function (internalAdd) {
+      false,
+      function (init) {
         // TODO (implicitly) check mime type
         externalGet(url, 'text', function(jsonString) {
-          JSON.parse(jsonString).forEach(function (record, i) {
-            internalAdd(record, url + i);  // TODO: proper url resolution, urls from server.
+          var obj = JSON.parse(jsonString);
+          if (obj.writable) {
+            init.makeWritable();
+          }
+          obj.records.forEach(function (record, i) {
+            init.add(record, url + i);  // TODO: proper url resolution, urls from server.
           });
         });
       },
@@ -362,7 +374,7 @@ define(['./events', './network', './values'], function (events, network, values)
     notes: makeRecordProp('notes', String, '')
   };
   function Record(initial, url, changeHook) {
-    if (url || changeHook) {
+    if (changeHook) {
       this._url = url;
       
       // flags to avoid racing spammy updates
@@ -502,11 +514,11 @@ define(['./events', './network', './values'], function (events, network, values)
   // Generic FM broadcast channels
   exports.fm = (function () {
     // Wikipedia currently says FM channels are numbered like so, but no one uses the numbers. Well, I'll use the numbers, just to start from integers. http://en.wikipedia.org/wiki/FM_broadcasting_in_the_USA
-    return new Table('US FM broadcast', false, function (internalAdd) {
+    return new Table('US FM broadcast', false, function (init) {
       for (var channel = 200; channel <= 300; channel++) {
         // not computing in MHz because that leads to roundoff error
         var freq = (channel - 200) * 2e5 + 879e5;
-        internalAdd({
+        init.add({
           type: 'channel',
           freq: freq,
           mode: 'WFM',
@@ -519,9 +531,9 @@ define(['./events', './network', './values'], function (events, network, values)
   // Aircraft band channels
   exports.air = (function () {
     // http://en.wikipedia.org/wiki/Airband
-    return new Table('US airband', false, function (internalAdd) {
+    return new Table('US airband', false, function (init) {
       for (var freq = 108e6; freq <= 117.96e6; freq += 50e3) {
-        internalAdd({
+        init.add({
           type: 'channel',
           freq: freq,
           mode: '-',
@@ -529,7 +541,7 @@ define(['./events', './network', './values'], function (events, network, values)
         });
       }
       for (var freq = 118e6; freq < 137e6; freq += 25e3) {
-        internalAdd({
+        init.add({
           type: 'channel',
           freq: freq,
           mode: 'AM',

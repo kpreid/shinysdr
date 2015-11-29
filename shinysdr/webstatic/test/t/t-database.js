@@ -89,8 +89,8 @@ describe('database', function () {
     });
 
     it('should refuse to modify records if not writable', function () {
-      var table = new shinysdr.database.Table('writable', false, function(add) {
-        add({freq: 0, label: 'foo'});
+      var table = new shinysdr.database.Table('writable', false, function(init) {
+        init.add({freq: 0, label: 'foo'});
       });
       expect(table.getAll()[0].writable).toBe(false);
       expect(function () {
@@ -121,6 +121,18 @@ describe('database', function () {
       expect(r.freq).toBe(3);
     });
     
+    it('should report writability', function () {
+      function makeRecord(writable) {
+        var table = new shinysdr.database.Table('writable', false, function (init) {
+          if (writable) init.makeWritable();
+          init.add({});
+        });
+        return table.getAll()[0];
+      }
+      expect(makeRecord(true).writable).toBe(true);
+      expect(makeRecord(false).writable).toBe(false);
+    });
+
     it('should notify on record modification', function () {
       var t = new shinysdr.database.Table('foo', true);
       var l = createListenerSpy();

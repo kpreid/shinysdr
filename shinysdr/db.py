@@ -166,7 +166,10 @@ class _DbIndexResource(resource.Resource):
     
     def render_GET(self, request):
         request.setHeader('Content-Type', 'application/json')
-        return json.dumps(self.__database.records)
+        return json.dumps({
+            u'records': self.__database.records,
+            u'writable': self.__database.writable
+        })
     
     def render_POST(self, request):
         desc = json.load(request.content)
