@@ -47,6 +47,8 @@ define(['./values'], function (values) {
     showButton.textContent = '\u25B8\u00A0' + header.textContent;
 
     var visible = this.hasAttribute(VISIBLE_ATTRIBUTE) ? JSON.parse(this.getAttribute(VISIBLE_ATTRIBUTE)) : true;
+    
+    var lastUserOpenedTime = 0;
 
     if (this.id) {
       // same protocol as we install on <details>
@@ -78,10 +80,14 @@ define(['./values'], function (values) {
       }
 
       if (visible && visibleCount <= 1) return;
-      visible = !visible;
+      if (!visible) lastUserOpenedTime = Date.now();
+      setVisibleAndUpdate(!visible);
+      event.stopPropagation();
+    }
+    function setVisibleAndUpdate(newVisible) {
+      visible = newVisible;
       update();
       globalUpdate();
-      event.stopPropagation();
     }
     // TODO look into how to accomplish automatic keyboard accessibility
     header.addEventListener('click', toggle, false);
@@ -90,9 +96,11 @@ define(['./values'], function (values) {
     allWindows.push({
       element: this,
       visible: function() { return visible; },
+      setVisibleAndUpdate: setVisibleAndUpdate,
       slot: buttonsSlot,
       button: showButton,
-      update: update
+      update: update,
+      getLastUserOpenedTime: function () { return lastUserOpenedTime; }
     });
     allWindows.sort(function(a, b) {
       var comparison = a.element.compareDocumentPosition(b.element);
@@ -105,6 +113,10 @@ define(['./values'], function (values) {
   }
   
   function globalUpdate() {
+    if (closeExtraWide()) {
+      return;
+    }
+    
     // Distribute show-buttons of hidden windows among headers of available visible windows.
     var lastVisibleWindow = null;
     var queued = [];
@@ -134,6 +146,30 @@ define(['./values'], function (values) {
     resize.initEvent('resize', false, false);
     window.dispatchEvent(resize);
   }
+  
+  // returns true if it triggered an update
+  function closeExtraWide() {
+    // TODO: Subwindows might be used somewhere other than document.body
+    if (document.body.scrollWidth > document.body.offsetWidth) {
+      var bestToClose = null;
+      var bestTime = Date.now();
+      allWindows.forEach(function (r) {
+        // TODO: Use something other than the class name, because this module is supposed to be largely independent of other app HTML usage
+        if (r.visible() && !r.element.classList.contains('stretchy') && r.getLastUserOpenedTime() < bestTime) {
+          bestToClose = r;
+          bestTime = r.getLastUserOpenedTime();
+        }
+      });
+      if (bestToClose) {
+        bestToClose.setVisibleAndUpdate(false);
+        return true;
+      }
+    }
+    return false;
+  }
+  window.addEventListener('resize', function (event) {
+    closeExtraWide();
+  });
   
   if (!document.registerElement) {
     console.warn('document.registerElement not supported; window management unavailable');
