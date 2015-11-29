@@ -593,8 +593,9 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
     });
     
     var textLabelCache = Object.create(null);
-    this.refTextLabel = function refTextLabel(xoff, yoff, text) {
+    this.refTextLabel = function refTextLabel(xanchor, xoff, yoff, text) {
       var textWidth = labelRenderCtx.measureText(text).width;
+      xoff += textWidth / 2 * xanchor;
       function paintTextLabel(ctx, x, y) {
         // TODO save/restore state
         ctx.lineWidth = 2.5;
@@ -801,6 +802,7 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
       // vangle (number or null): angle of horizontal velocity vector
       // speed (number or null): horizontal speed in m/s
       // iconURL (string or falsy/absent for default): icon
+      // labelSide: ('top', 'left', 'right', 'bottom', 'center')
       // opacity: 0..1
 
       return {
@@ -912,7 +914,12 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
         var rendered = renderer(feature, dirty);
         if (rendered.position) {
           var iconURL = rendered.iconURL || '/client/map-icons/default.svg';
-          var textLabel = labelTextureManager.refTextLabel(0, textRowHeight, rendered.label);
+          var anchor = rendered.labelSide || 'top';
+          var textLabel = labelTextureManager.refTextLabel(
+            anchor === 'left' ? -1 : anchor === 'right' ? 1 : 0,
+            anchor === 'left' ? -textRowHeight : anchor === 'right' ? textRowHeight : 0,
+            anchor === 'bottom' ? -textRowHeight : anchor === 'top' ? textRowHeight : 0,
+            rendered.label);
           var iconLabel = labelTextureManager.refIconLabel(0, 0, iconURL);
           var lat = rendered.position[0];
           var lon = rendered.position[1];

@@ -219,16 +219,12 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
     function computeLabelPosition(lowBound, highBound, logStep) {
       var spacingStep = Math.pow(10, logStep);
       
-      var margin = spacingStep * 0.15;  // TODO better definition
-      lowBound += margin;
-      highBound -= margin;
-      
       var coord = Math.max(lowBound, Math.min(highBound, 0));
       coord = floorTo(coord, spacingStep);
       if (coord <= lowBound) coord += spacingStep;
       return coord;
     }
-    function addLinesAndMarks(features, axis, otherCoord, lowBound, highBound, logStep) {
+    function addLinesAndMarks(features, axis, otherCoord, otherAxisPos, lowBound, highBound, logStep) {
       var spacingStep = Math.pow(10, logStep);
       for (var x = floorTo(lowBound, spacingStep); x < highBound + spacingStep; x += spacingStep) {
         features.push(axis + 'Line,' + x);
@@ -318,10 +314,9 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
           var lonLogStep = Math.max(lonStepLimit, latLogStep);
 
           var latLabelLon = computeLabelPosition(visLonInnerMin, visLonInnerMax, lonLogStep);
-          addLinesAndMarks(features, 'lat', latLabelLon, visLatMin, visLatMax, latLogStep);
-
           var lonLabelLat = computeLabelPosition(visLatMin, visLatMax, latLogStep);
-          addLinesAndMarks(features, 'lon', lonLabelLat, visLonMin, visLonMax, lonLogStep);
+          addLinesAndMarks(features, 'lat', latLabelLon, lonLabelLat, visLatMin, visLatMax, latLogStep);
+          addLinesAndMarks(features, 'lon', lonLabelLat, latLabelLon, visLonMin, visLonMax, lonLogStep);
         } else if (graticuleType === 'maidenhead') {
           var lonDepth = maidenheadDepth(visibleRadiusLonDeg / 360);
           var latDepth = maidenheadDepth(visibleRadiusLatDeg / 180);
@@ -373,19 +368,27 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
             var lon = parseFloat(parts[1]);
             var logStep = parseFloat(parts[2]);
             var lat = parseFloat(parts[3]);
+            var epsilon = Math.pow(10, logStep) / 2;
             return Object.freeze({
               position: Object.freeze([lat, lon]),
               iconURL: blank,
-              label: roundLabel(lon, logStep)
+              label: lon > epsilon ? roundLabel(lon, logStep) + 'E' :
+                     lon < -epsilon ? roundLabel(-lon, logStep) + 'W' :
+                     '0',
+              labelSide: lat < 0 ? 'bottom' : lat > 0 ? 'top' : 'center'
             });
           case 'latLabel':
             var lat = parseFloat(parts[1]);
             var logStep = parseFloat(parts[2]);
             var lon = parseFloat(parts[3]);
+            var epsilon = Math.pow(10, logStep) / 2;
             return Object.freeze({
               position: Object.freeze([lat, lon]),
               iconURL: blank,
-              label: lat > 0 ? roundLabel(lat, logStep) + 'N' : roundLabel(-lat, logStep) + 'S'
+              label: lat > epsilon ? roundLabel(lat, logStep) + 'N' :
+                     lat < -epsilon ? roundLabel(-lat, logStep) + 'S' :
+                     '0',
+              labelSide: lon < 0 ? 'left' : lon < 0 ? 'right' : 'center'
             });
           case 'maidenhead':
             var lon = parseFloat(parts[1]);
