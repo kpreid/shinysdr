@@ -1087,7 +1087,7 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
       // Recover from NaNs and non-numbers.
       if (!isFinite(viewCenterLat)) viewCenterLat = 0;
       if (!isFinite(viewCenterLon)) viewCenterLon = 0;
-      if (!isFinite(viewZoom)) viewCenterLon = 1;
+      if (!isFinite(viewZoom)) viewZoom = 1;
       
       // Clamp and normalize.
       viewCenterLat = Math.min(90, Math.max(-90, viewCenterLat));
