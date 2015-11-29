@@ -91,7 +91,9 @@ define(['./values', './events', './coordination', './database', './network', './
     initialStateReady.scheduler = scheduler;
     var remoteCell = network.connect(network.convertToWebSocketURL('radio'), connectionCallback);
     remoteCell.n.listen(initialStateReady);
-
+    
+    var coordinator = new Coordinator(scheduler, freqDB, remoteCell);
+    
     var audioState = audio.connectAudio(network.convertToWebSocketURL('audio'));  // TODO get url from server
 
     function connectionCallback(state) {
@@ -135,8 +137,6 @@ define(['./values', './events', './coordination', './database', './network', './
         }));
       
         var index = new Index(scheduler, everything);
-      
-        var coordinator = new Coordinator(scheduler, freqDB, remoteCell);
       
         var context = new widget.Context({
           // TODO all of this should be narrowed down, read-only, replaced with other means to get it to the widgets that need it, etc.
