@@ -5,6 +5,10 @@ Frequency,Mode,Name
 3.400-3.500,AM,Aeronautical Mobile
 108-117.975,AM,Aeronautical Radionavigation
 117.975-137,AM,Aeronautical Mobile
+121.5,AM,Guard (civilian aircraft emergency)
+122.2,AM,Flight Service (US)
+122.75,AM,Air-to-air (US)
+243,AM,Guard (military aircraft emergency)
 328.6-335.4,AM,Aeronautical Radionavigation
 960-1215,AM,Aeronautical Radionavigation
 978.0,MODE-S,UAT transcievers
