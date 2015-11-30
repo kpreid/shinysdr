@@ -16,13 +16,17 @@
  * along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-body {
-  background: #BBB;
-  color: black;
+.subwindowed {
+  /* This background color shows up only where there is no subwindow to fill the space. */
+  background: #333;
+  background-image: linear-gradient(45deg, #2F2F2F 26%, #333 26%, #333 51%, #2F2F2F 51%, #2F2F2F 76%, #333 76%);
+  background-size: 1em 1em;
+  color: white;
 }
 
 shinysdr-subwindow {
   background: linear-gradient(to right, #BCBCBC 0%,#B5B5B5 100%);
+  color: black;
 }
 shinysdr-subwindow > h2 {
   border: #EEE outset;
