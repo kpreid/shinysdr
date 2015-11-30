@@ -352,11 +352,13 @@ define(['./values', './events', './coordination'], function (values, events, coo
     var n = this.n = new events.Notifier();
     
     // per-drawing-frame parameters
-    var nyquist, centerFreq, leftFreq, rightFreq, pixelWidth, pixelsPerHertz, cacheScrollLeft, analytic;
+    var nyquist, centerFreq, leftFreq, rightFreq, pixelWidth, pixelsPerHertz, analytic;
     
     // Zoom state variables
     // We want the cursor point to stay fixed, but scrollLeft quantizes to integer; fractionalScroll stores a virtual fractional part.
-    var zoom = 1, fractionalScroll = 0;
+    var zoom = 1;
+    var fractionalScroll = 0;
+    var cacheScrollLeft = 0;
     
     // Restore persistent zoom state
     addLifecycleListener(container, 'init', function() {
@@ -378,6 +380,7 @@ define(['./values', './events', './coordination'], function (values, events, coo
       // TODO: unbreakable notify loop here; need to be lazy
       var sourceType = signalTypeCell.depend(prepare);
       if (isRFSpectrum) {
+        // Note that this uses source.freq, not the spectrum data center freq. This is correct because we want to align the coords with what we have selected, not the current data; and the WaterfallPlot is aware of this distinction.
         centerFreq = radioCell.depend(prepare).source.depend(prepare).freq.depend(prepare);
       } else {
         centerFreq = 0;
@@ -387,11 +390,17 @@ define(['./values', './events', './coordination'], function (values, events, coo
       leftFreq = analytic ? centerFreq - nyquist : centerFreq;
       rightFreq = centerFreq + nyquist;
       pixelsPerHertz = pixelWidth / (rightFreq - leftFreq) * zoom;
-
+      
+      if (!isFinite(fractionalScroll)) {
+        console.error("Shouldn't happen: SpectrumView fractionalScroll =", fractionalScroll);
+        fractionalScroll = 0;
+      }
+      
       // Adjust scroll to match possible viewport size change.
-      if (pixelWidth != container.offsetWidth) {
-        // Compute change
-        var scaleChange = container.offsetWidth / pixelWidth;
+      // (But if we are hidden or zero size, then the new scroll position would be garbage, so keep the old state.)
+      if (container.offsetWidth > 0 && pixelWidth != container.offsetWidth) {
+        // Compute change (with case for first time initialization)
+        var scaleChange = isFinite(pixelWidth) ? container.offsetWidth / pixelWidth : 1;
         var scrollValue = (cacheScrollLeft + fractionalScroll) * scaleChange;
         
         pixelWidth = container.offsetWidth;
@@ -408,8 +417,6 @@ define(['./values', './events', './coordination'], function (values, events, coo
       // accessing scrollLeft triggers relayout, so cache it
       cacheScrollLeft = container.scrollLeft;
       n.notify();
-      
-      // Note that this uses source.freq, not the spectrum data center freq. This is correct because we want to align the coords with what we have selected, not the current data; and the WaterfallPlot is aware of this distinction.
     }
     prepare.scheduler = config.scheduler;
     prepare();
