@@ -15,8 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define([], function () {
+define(['./values'], function (values) {
   'use strict';
+
+  var any = values.any;
+  var LocalCell = values.LocalCell;
+  var makeBlock = values.makeBlock;
 
   var exports = {};
   
@@ -89,6 +93,10 @@ define([], function () {
         // TODO: should return stub for receiver or have a callback or something
       }
       
+      if (record) {
+        selectedRecord.set(record);
+      }
+      
       return receiver;
     }
     
@@ -105,12 +113,15 @@ define([], function () {
       mapPanCallback = callback;
     }
     
+    var selectedRecord = new LocalCell(any, undefined);  // TODO should have a type
+    
     // TODO: Revisit whether this is a well-designed interface
-    this.actions = Object.freeze({
+    this.actions = Object.freeze(makeBlock({
       tune: tune,
       navigateMap: navigateMap,  // TODO: caller should be able to find out whether this is effective, in the form of a cell
-      _registerMap: registerMap  // TODO: should not be on this facet
-    });
+      _registerMap: registerMap,  // TODO: should not be on this facet
+      selectedRecord: selectedRecord  // TODO generalize notion of selection/reveal
+    }));
     
     Object.freeze(this);
   }

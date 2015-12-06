@@ -123,6 +123,7 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
     var db = mapPluginConfig.db;
     var storage = mapPluginConfig.storage;
     var radioCell = mapPluginConfig.radioCell;
+    var tune = mapPluginConfig.actions.tune;
     
     // Condensed info about receivers to update DB layer.
     // TODO: Use info for more than the 'current' device.
@@ -185,7 +186,7 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
         };
       },
       onclick: function clickOnDbFeature(feature) {
-        radioCell.get().preset.set(feature);
+        tune({record: feature});
       },
       controls: makeBlock({
         search: searchCell

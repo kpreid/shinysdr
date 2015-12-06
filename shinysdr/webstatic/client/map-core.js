@@ -1534,7 +1534,8 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
       addModeLayer: addModeLayer,
       storage: storage,  // TODO drop this or give it a namespace
       radioCell: radioCell,  // TODO: let the layers get their own data, somehow
-      mapCamera: mapCamera  // TODO: provide a read-only or otherwise appropriately designed facet
+      mapCamera: mapCamera,  // TODO: provide a read-only or otherwise appropriately designed facet
+      actions: config.actions
     });
     plugins.forEach(function(pluginFunc) {
       pluginFunc(mapPluginConfig);

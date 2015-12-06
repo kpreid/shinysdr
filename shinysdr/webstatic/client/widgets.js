@@ -1,4 +1,4 @@
-// Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -215,7 +215,6 @@ define(['./values', './events', './widget', './gltools', './database'], function
   function Top(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       // TODO: It's a lousy design to require widgets to know what not to show. We should have a generic system for multiple widgets to decide "OK, you'll display this and I won't".
-      ignore('preset');  // displayed separately, not real state
       ignore('targetDB');  // not real state
       ignore('monitor');  // displayed separately
       ignore('shared_objects');  // displayed separately
@@ -2126,7 +2125,6 @@ define(['./values', './events', './widget', './gltools', './database'], function
   
   function FreqScale(config) {
     var tunerSource = config.target;
-    var radioCell = config.radioCell;
     var dataSource = config.freqDB.groupSameFreq();
     var view = config.view;
     var tune = config.actions.tune;
@@ -2172,15 +2170,10 @@ define(['./values', './events', './widget', './gltools', './database'], function
         (group ? '(' + record.grouped.length + ') ' : '')
         + (channel.label || channel.mode);
       el.addEventListener('click', function(event) {
-        if (alwaysCreateReceiverFromEvent(event)) {
-          tune({
-            record: channel,
-            alwaysCreate: true
-          });
-        } else {
-          // TODO: Pipe this through the coordinator instead
-          radioCell.get().preset.set(channel);
-        }
+        tune({
+          record: channel,
+          alwaysCreate: alwaysCreateReceiverFromEvent(event)
+        });
       }, false);
       el.my_update = function() {
         el.style.left = view.freqToCSSLeft(freq);
@@ -2281,6 +2274,7 @@ define(['./values', './events', './widget', './gltools', './database'], function
   function FreqList(config) {
     var radioCell = config.radioCell;
     var scheduler = config.scheduler;
+    var tune = config.actions.tune;
     var configKey = 'filterString';
     
     // TODO recognize hardware limits somewhere central
@@ -2357,7 +2351,7 @@ define(['./values', './events', './widget', './gltools', './database'], function
         item.classList.add('freqlist-item-unsupported');
       }
       item.addEventListener('click', function(event) {
-        radioCell.get().preset.set(record);
+        tune({record: record});
         event.stopPropagation();
       }, false);
       
@@ -2514,8 +2508,8 @@ define(['./values', './events', './widget', './gltools', './database'], function
   
   // Silly single-purpose widget 'till we figure out more where the UI is going
   function SaveButton(config) {
-    var radioCell = config.radioCell;
     var receiver = config.target.get();
+    var selectedRecord = config.actions.selectedRecord;
     var panel = this.element = config.element;
     panel.classList.add('panel');
     
@@ -2532,7 +2526,7 @@ define(['./values', './events', './widget', './gltools', './database'], function
         mode: receiver.mode.get(),
         label: 'untitled'
       };
-      radioCell.get().preset.set(config.writableDB.add(record));
+      selectedRecord.set(config.writableDB.add(record));
     };
   }
   widgets.SaveButton = SaveButton;

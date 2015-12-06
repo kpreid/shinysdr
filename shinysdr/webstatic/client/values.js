@@ -426,7 +426,12 @@ define(['./events'], function (events) {
         // Add all cells found in this object
         for (var key in object) {
           var childCell = object[key];
+          // TODO: centralize this is-a-cell test and any others like it
           if (!(childCell !== null && typeof childCell == 'object' && 'get' in childCell)) {
+            if (typeof childCell === 'function') {
+              // allow methods. TODO revisit what the contract of a block is
+              continue;
+            }
             console.error('Unexpected non-cell', childCell, 'in', object);
             continue;
           }

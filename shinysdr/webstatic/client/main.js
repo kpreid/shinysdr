@@ -27,6 +27,7 @@ define(['./values', './events', './coordination', './database', './network', './
   }
   
   var any = values.any;
+  var block = values.block;
   var ConstantCell = values.ConstantCell;
   var Coordinator = coordination.Coordinator;
   var createWidgetExt = widget.createWidgetExt;
@@ -62,9 +63,9 @@ define(['./values', './events', './coordination', './database', './network', './
     opengl_float: cc('opengl_float', Boolean, true),
     spectrum_split: cc('spectrum_split', new values.Range([[0, 1]], false, false), 0.5),
     spectrum_average: cc('spectrum_average', new values.Range([[0.1, 1]], true, false), 0.25),
-    databases: new ConstantCell(values.block, databasePicker)
+    databases: new ConstantCell(block, databasePicker)
   });
-  var clientBlockCell = new ConstantCell(values.block, clientState);
+  var clientBlockCell = new ConstantCell(block, clientState);
   
   // TODO get url from server
   log(0.4, 'Loading plugins…');
@@ -117,23 +118,14 @@ define(['./values', './events', './coordination', './database', './network', './
     function initialStateReady() {
       var radio = remoteCell.depend(initialStateReady);
       
-      // Kludge to let frequency preset widgets do their thing
-      // TODO(kpreid): Replace this with Coordinator functions
-      radio.preset = new LocalCell(any, undefined);
-      radio.preset.set = function(freqRecord) {
-        LocalCell.prototype.set.call(this, freqRecord);
-        coordinator.actions.tune({
-          record: freqRecord
-        });
-      };
-      
       if (firstConnection) {
         firstConnection = false;
         
-        var everything = new ConstantCell(values.block, makeBlock({
+        var everything = new ConstantCell(block, makeBlock({
           client: clientBlockCell,
           radio: remoteCell,
-          audio: new ConstantCell(values.block, audioState)
+          actions: new ConstantCell(block, coordinator.actions),
+          audio: new ConstantCell(block, audioState)
         }));
       
         var index = new Index(scheduler, everything);
