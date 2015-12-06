@@ -99,6 +99,8 @@ define(['./values', './events', './coordination'], function (values, events, coo
     this.spectrumView = config.spectrumView;
     // TODO reconsider this unusual handling. Required to avoid miscellaneous things needing to define a coordinator.
     this.coordinator = config.coordinator || new Coordinator(this.scheduler, this.freqDB, this.radioCell);
+    this.actionCompleted = config.actionCompleted || function actionCompletedNoop() {};
+    Object.freeze(this);
   }
   Context.prototype.withSpectrumView = function (outerElement, innerElement, monitor, isRFSpectrum) {
     var id = outerElement.id || innerElement.id;
@@ -123,9 +125,26 @@ define(['./values', './events', './coordination'], function (values, events, coo
       writableDB: this.writableDB,
       scheduler: this.scheduler,
       spectrumView: view,
-      coordinator: this.coordinator
+      coordinator: this.coordinator,
+      actionCompleted: this.actionCompleted
     });
-  }
+  };
+  Context.prototype.forMenu = function (closeCallback) {
+    return new Context({
+      widgets: this.widgets,
+      radioCell: this.radioCell,
+      index: this.index,
+      clientState: this.clientState,
+      freqDB: this.freqDB,
+      writableDB: this.writableDB,
+      scheduler: this.scheduler,
+      spectrumView: null,
+      coordinator: this.coordinator,
+      actionCompleted: function actionCompletedWrapper() {  // wrapper to suppress this
+        closeCallback();
+      }
+    });
+  };
   exports.Context = Context;
   
   function createWidgetsInNode(rootTargetCell, context, node) {

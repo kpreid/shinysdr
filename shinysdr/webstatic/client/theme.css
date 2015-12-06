@@ -35,6 +35,10 @@ shinysdr-subwindow > h2 {
   cursor: pointer;
 }
 
+.menu-dialog {
+  box-shadow: 0 0.1em 1em 0.1em rgba(0, 0, 0, 0.25);
+}
+
 .panel {
   border-bottom: 0.1em solid #CCC;
 }

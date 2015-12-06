@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./values', './events', './widget', './gltools', './database'], function (values, events, widget, gltools, database) {
+define(['./values', './events', './widget', './gltools', './database', './menus'], function (values, events, widget, gltools, database, menus) {
   'use strict';
   
   var Cell = values.Cell;
@@ -23,6 +23,7 @@ define(['./values', './events', './widget', './gltools', './database'], function
   var DerivedCell = values.DerivedCell;
   var Enum = values.Enum;
   var LocalCell = values.LocalCell;
+  var Menu = menus.Menu;
   var Notice = values.Notice;
   var Range = values.Range;
   var SingleQuad = gltools.SingleQuad;
@@ -2123,11 +2124,54 @@ define(['./values', './events', './widget', './gltools', './database'], function
     return null;
   };
   
+  function createRecordTableRow(record, tune) {
+    var item = document.createElement('tr');
+    var drawFns = [];
+    function cell(className, textFn) {
+      var td = item.appendChild(document.createElement('td'));
+      td.className = 'freqlist-cell-' + className;
+      drawFns.push(function() {
+        td.textContent = textFn();
+      });
+    }
+    switch (record.type) {
+      case 'channel':
+        cell('freq', function () { return (record.freq / 1e6).toFixed(2); });
+        cell('mode', function () { return record.mode === 'ignore' ? '' : record.mode;  });
+        cell('label', function () { 
+          var notes = record.notes;
+          return notes.indexOf(record.label) === 0 /* TODO KLUDGE for current sloppy data sources */ ? notes : record.label;
+        });
+        drawFns.push(function () {
+          item.title = record.notes;
+        });
+        break;
+      case 'band':
+      default:
+        break;
+    }
+    if (!(record.mode in allModes)) {
+      item.classList.add('freqlist-item-unsupported');
+    }
+    item.addEventListener('click', function(event) {
+      tune({record: record});
+      event.stopPropagation();
+    }, false);
+    
+    return {
+      element: item,
+      drawNow: function () {
+        drawFns.forEach(function (f) { f(); });
+      }
+    };
+  }
+  
   function FreqScale(config) {
     var tunerSource = config.target;
     var dataSource = config.freqDB.groupSameFreq();
     var view = config.view;
     var tune = config.actions.tune;
+    var menuContext = config.context;
 
     // cache query
     var query, qLower = NaN, qUpper = NaN;
@@ -2160,20 +2204,35 @@ define(['./values', './events', './widget', './gltools', './database'], function
     
     // label maker fns
     function addChannel(record) {
-      var group = record.type === 'group';
-      var channel = group ? record.grouped[0] : record;
+      var isGroup = record.type === 'group';
+      var channel = isGroup ? record.grouped[0] : record;
       var freq = record.freq;
       var mode = channel.mode;
       var el = document.createElement('button');
       el.className = 'freqscale-channel';
       el.textContent =
-        (group ? '(' + record.grouped.length + ') ' : '')
+        (isGroup ? '(' + record.grouped.length + ') ' : '')
         + (channel.label || channel.mode);
       el.addEventListener('click', function(event) {
-        tune({
-          record: channel,
-          alwaysCreate: alwaysCreateReceiverFromEvent(event)
-        });
+        if (isGroup) {
+          var isAllSameMode = record.grouped.every(function (groupRecord) {
+            return groupRecord.mode == channel.mode;
+          });
+          if (isAllSameMode) {
+            tune({
+              record: channel,
+              alwaysCreate: alwaysCreateReceiverFromEvent(event)
+            });
+          }
+          // TODO: It would make sense to, once the user picks a record from the group, to show that record as the arbitrary-choice-of-label in this widget.
+          var menu = new Menu(menuContext, BareFreqList, record.grouped);
+          menu.openAt(el);
+        } else {
+          tune({
+            record: channel,
+            alwaysCreate: alwaysCreateReceiverFromEvent(event)
+          });
+        }
       }, false);
       el.my_update = function() {
         el.style.left = view.freqToCSSLeft(freq);
@@ -2284,7 +2343,7 @@ define(['./values', './events', './widget', './gltools', './database'], function
     var filterBox = container.appendChild(document.createElement('input'));
     filterBox.type = 'search';
     filterBox.placeholder = 'Filter channels...';
-    filterBox.value = config.storage.getItem(configKey) || '';
+    filterBox.value = (config.storage && config.storage.getItem(configKey)) || '';
     filterBox.addEventListener('input', refilter, false);
     
     var listOuter = container.appendChild(document.createElement('div'))
@@ -2318,42 +2377,12 @@ define(['./values', './events', './widget', './gltools', './database'], function
         return item;
       }
       
-      item = document.createElement('tr');
-      var drawFns = [];
-      function cell(className, textFn) {
-        var td = item.appendChild(document.createElement('td'));
-        td.className = 'freqlist-cell-' + className;
-        drawFns.push(function() {
-          td.textContent = textFn();
-        });
-      }
+      var r = createRecordTableRow(record, tune);
+      item = r.element;
       recordElements.set(record, item);
-      switch (record.type) {
-        case 'channel':
-          cell('freq', function () { return (record.freq / 1e6).toFixed(2); });
-          cell('mode', function () { return record.mode === 'ignore' ? '' : record.mode;  });
-          cell('label', function () { 
-            var notes = record.notes;
-            return notes.indexOf(record.label) === 0 /* TODO KLUDGE for current sloppy data sources */ ? notes : record.label;
-          });
-          drawFns.push(function () {
-            item.title = record.notes;
-          });
-          break;
-        case 'band':
-        default:
-          break;
-      }
-      if (!(record.mode in allModes)) {
-        item.classList.add('freqlist-item-unsupported');
-      }
-      item.addEventListener('click', function(event) {
-        tune({record: record});
-        event.stopPropagation();
-      }, false);
       
       function draw() {
-        drawFns.forEach(function (f) { f(); });
+        r.drawNow();
         if (record.offsetWidth > 0) { // rough 'is in DOM tree' test
           record.n.listen(draw);
         }
@@ -2370,7 +2399,7 @@ define(['./values', './events', './widget', './gltools', './database'], function
     function refilter() {
       if (lastFilterText !== filterBox.value) {
         lastFilterText = filterBox.value;
-        config.storage.setItem(configKey, lastFilterText);
+        if (config.storage) config.storage.setItem(configKey, lastFilterText);
         currentFilter = dataSource.string(lastFilterText).type('channel');
         draw();
       }
@@ -2394,6 +2423,32 @@ define(['./values', './events', './widget', './gltools', './database'], function
     refilter();
   }
   widgets.FreqList = FreqList;
+
+  // Like FreqList, but with no controls, no live updating, and taking an array rather than the freqDB. For FreqScale disambiguation menus.
+  function BareFreqList(config) {
+    var records = config.target.get();
+    var scheduler = config.scheduler;
+    var actionCompleted = config.context.actionCompleted;  // TODO should have direct access not through context
+    var tune = config.actions.tune;  // TODO: Wrap with close-containing-menu
+    function tuneWrapper(options) {
+      tune(options);
+      actionCompleted();
+    }
+    
+    var container = this.element = document.createElement('div');
+    container.classList.add('panel');
+    
+    var listOuter = container.appendChild(document.createElement('div'))
+    listOuter.className = 'freqlist-box';
+    var list = listOuter.appendChild(document.createElement('table'))
+      .appendChild(document.createElement('tbody'));
+    
+    records.forEach(function (record) {
+      var r = createRecordTableRow(record, tuneWrapper);
+      list.appendChild(r.element);
+      r.drawNow();
+    });
+  }
   
   var NO_RECORD = {};
   function RecordCellPropCell(recordCell, prop) {

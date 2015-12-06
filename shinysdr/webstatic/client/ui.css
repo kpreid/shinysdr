@@ -87,6 +87,15 @@ shinysdr-subwindow > h2 {
   text-overflow: ellipsis;
 }
 
+/* menus (which are <dialog> elements) */
+.menu-dialog {
+  margin: 0;
+  border: none;
+  padding: 0.25em;
+  
+  left: 0; right: 0;
+}
+
 /* widgets */
 .sidebar {
   flex: 1 1 auto;
