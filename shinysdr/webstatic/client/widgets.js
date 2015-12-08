@@ -2276,10 +2276,7 @@ define(['./values', './events', './widget', './gltools', './database'], function
     var scheduler = config.scheduler;
     var tune = config.actions.tune;
     var configKey = 'filterString';
-    
-    // TODO recognize hardware limits somewhere central
-    // TODO should be union of 0-samplerate and 15e6-...
-    var dataSource = config.freqDB.inBand(0, 2200e6); 
+    var dataSource = config.freqDB;  // TODO optionally filter to available receive hardware
     
     var container = this.element = document.createElement('div');
     container.classList.add('panel');
