@@ -2154,7 +2154,10 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
       item.classList.add('freqlist-item-unsupported');
     }
     item.addEventListener('click', function(event) {
-      tune({record: record});
+      tune({
+        record: record,
+        alwaysCreate: alwaysCreateReceiverFromEvent(event)
+      });
       event.stopPropagation();
     }, false);
     
