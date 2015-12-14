@@ -22,6 +22,12 @@ require.config({
 define(['types', 'values', 'events', 'widget', 'widgets', 'network', 'database', 'coordination'], function (types, values, events, widget, widgets, network, database, coordination) {
   'use strict';
   
+  // TODO have gui settable parameters and include these
+  // These options create a less meaningful and more 'decorative' result.
+  var FREQ_ADJ = false;    // Compensate for typical frequency dependence in music so peaks are equal.
+  var TIME_ADJ = false;    // Subtract median amplitude; hides strong beats.
+  var HIDE_LOWER = false;  // Shifts the range to put most noise offscreen.
+  
   var ClientStateObject = coordination.ClientStateObject;
   var ConstantCell = values.ConstantCell;
   var makeBlock = values.makeBlock;
@@ -32,9 +38,9 @@ define(['types', 'values', 'events', 'widget', 'widgets', 'network', 'database',
   var sampleRate = ctx.sampleRate;
   var fftnode = ctx.createAnalyser();
   fftnode.smoothingTimeConstant = 0;
-  fftnode.fftSize = 2048;
+  fftnode.fftSize = 16384;
   // ignore mostly useless high freq bins
-  var binCount = fftnode.frequencyBinCount / 2;
+  var binCount = fftnode.frequencyBinCount / 4;
   
   var getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozUserMedia || navigator.msGetUserMedia;
   getUserMedia.call(navigator, {audio: true}, function getUserMediaSuccess(stream) {
@@ -74,19 +80,35 @@ define(['types', 'values', 'events', 'widget', 'widgets', 'network', 'database',
   function updateFFT() {
     var array = new Float32Array(binCount);
     fftnode.getFloatFrequencyData(array);
-
-    var gain = -75;
-    var offset = -40;
+    
+    var absolute_adj;
+    if (TIME_ADJ) {
+      var medianBuffer = Array.prototype.slice.call(array);
+      medianBuffer.sort(function(a, b) {return a - b; });
+      absolute_adj = -100 - medianBuffer[binCount / 2];
+    } else {
+      absolute_adj = 0;
+    }
+    
+    var freq_adj;
+    if (FREQ_ADJ) {
+      freq_adj = 1;
+    } else {
+      freq_adj = 0;
+    }
+    
+    var gain = -75 + absolute_adj + (HIDE_LOWER ? -50 : 0);
+    var byteRangeOffset = -40;
 
     var buffer = new ArrayBuffer(4+8+4+4 + binCount * 1);
     var dv = new DataView(buffer);
     dv.setFloat64(4, 0, true); // freq
     dv.setFloat32(4+8, sampleRate, true);
-    dv.setFloat32(4+8+4, offset - gain, true); // offset
+    dv.setFloat32(4+8+4, byteRangeOffset - gain, true); // offset
     var bytearray = new Int8Array(buffer, 4+8+4+4, binCount);
     
     for (var i = 0; i < binCount; i++) {
-      bytearray[i] = Math.max(-128, Math.min(127, array[i] - offset));
+      bytearray[i] = Math.max(-128, Math.min(127, array[i] - byteRangeOffset + freq_adj * Math.pow(i, 0.5)));
     }
     
     fftcell._update(buffer);
