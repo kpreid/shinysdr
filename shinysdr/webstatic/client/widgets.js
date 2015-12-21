@@ -2138,10 +2138,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
       case 'channel':
         cell('freq', function () { return (record.freq / 1e6).toFixed(2); });
         cell('mode', function () { return record.mode === 'ignore' ? '' : record.mode;  });
-        cell('label', function () { 
-          var notes = record.notes;
-          return notes.indexOf(record.label) === 0 /* TODO KLUDGE for current sloppy data sources */ ? notes : record.label;
-        });
+        cell('label', function () { return record.label; });
         drawFns.push(function () {
           item.title = record.notes;
         });
