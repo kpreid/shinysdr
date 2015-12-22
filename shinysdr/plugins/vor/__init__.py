@@ -19,6 +19,9 @@
 
 from __future__ import absolute_import, division
 
+import math
+import os.path
+
 from twisted.web import static
 from zope.interface import implements
 
@@ -28,9 +31,6 @@ from gnuradio import fft
 from gnuradio import gr
 from gnuradio import filter as grfilter  # don't shadow builtin
 from gnuradio.filter import firdes
-
-import math
-import os.path
 
 from shinysdr.filters import make_resampler
 from shinysdr.modes import ModeDef, IDemodulator, IModulator

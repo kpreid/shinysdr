@@ -17,6 +17,8 @@
 
 from __future__ import absolute_import, division
 
+import math
+
 from zope.interface import implements  # available via Twisted
 
 from gnuradio import analog
@@ -24,8 +26,6 @@ from gnuradio import blocks
 from gnuradio import channels
 from gnuradio import gr
 from gnuradio.filter import rational_resampler
-
-import math
 
 from shinysdr.blocks import rotator_inc
 from shinysdr.filters import make_resampler

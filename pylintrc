@@ -1,9 +1,8 @@
 # This is a truncated and customized version of the default pylint configuration. The sections pertaining to reporting and other execution behavior have been removed entirely, leaving only the configuration of code style.
 
 [MESSAGES CONTROL]
-disable=locally-disabled,trailing-whitespace,fixme,missing-docstring,protected-access,invalid-name,bad-builtin,super-init-not-called,star-args,no-self-argument,inherit-non-class,no-self-use,unused-argument,too-many-return-statements,too-many-branches,too-many-function-args,too-many-instance-attributes,too-many-locals,bad-continuation,unnecessary-lambda
+disable=locally-disabled,trailing-whitespace,fixme,missing-docstring,protected-access,invalid-name,super-init-not-called,star-args,no-self-argument,inherit-non-class,no-self-use,unused-argument,too-many-return-statements,too-many-branches,too-many-function-args,too-many-instance-attributes,too-many-locals,bad-continuation,unnecessary-lambda,redefined-variable-type
 # why super-init-not-called: false positives
-# why bad-builtin: I reject the premise
 # why star-args: I reject the premise
 # why protected-access: because I am using it for 'friend' access, maybe fix that
 # why no-self-argument: false positives on interface declarations
@@ -14,15 +13,13 @@ disable=locally-disabled,trailing-whitespace,fixme,missing-docstring,protected-a
 # why too-many-function-args, too-many-instance-attributes, too-many-locals: we're doing things that just have lots of knobs
 # why bad-continuation: I don't want to do aligned indentation
 # why unnecessary-lambda: false positives, I don't make this mistake
+# why redefined-variable-type: interferes with polymorphism. https://github.com/PyCQA/pylint/issues/710
 # TODO: turn on missing-docstring, invalid-name
 
 [BASIC]
 
-# Required attributes for module, separated by a comma
-required-attributes=
-
 # List of builtins function names that should not be used, separated by a comma
-bad-functions=map,filter,apply,input
+bad-functions=apply,input
 
 # Regular expression which should only match correct module names
 module-rgx=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
@@ -125,10 +122,6 @@ ignore-mixin-members=yes
 # (useful for classes with attributes dynamically set).
 ignored-classes=SQLObject
 
-# When zope mode is activated, add a predefined set of Zope acquired attributes
-# to generated-members.
-zope=no
-
 # List of members which are set dynamically and missed by pylint inference
 # system, and so shouldn't trigger E0201 when accessed. Python regular
 # expressions are accepted.
@@ -151,10 +144,6 @@ additional-builtins=
 
 
 [CLASSES]
-
-# List of interface methods to ignore, separated by a comma. This is used for
-# instance to not check methods defines in Zope's Interface base class.
-ignore-iface-methods=isImplementedBy,deferred,extends,names,namesAndDescriptions,queryDescriptionFor,getBases,getDescriptionFor,getDoc,getName,getTaggedValue,getTaggedValueTags,isEqualOrExtendedBy,setTaggedValue,isImplementedByInstancesOf,adaptWith,is_implemented_by
 
 # List of method names used to declare (i.e. assign) instance attributes.
 defining-attr-methods=__init__,__new__,setUp

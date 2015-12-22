@@ -17,6 +17,8 @@
 
 from __future__ import absolute_import, division
 
+import math
+
 from zope.interface import implements
 
 from gnuradio import gr
@@ -32,9 +34,6 @@ from shinysdr.filters import MultistageChannelFilter, make_resampler
 from shinysdr.signals import SignalType
 from shinysdr.types import Range
 from shinysdr.values import ExportedState, exported_value, setter
-
-import math
-
 
 TWO_PI = math.pi * 2
 

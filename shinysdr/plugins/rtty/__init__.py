@@ -32,18 +32,17 @@ from gnuradio.filter import firdes
 from gnuradio import gr
 import numpy
 
-from shinysdr.filters import MultistageChannelFilter
-from shinysdr.modes import ModeDef, IDemodulator, IModulator
-from shinysdr.signals import SignalType, no_signal
-from shinysdr.types import Range
-from shinysdr.values import ExportedState, exported_block, exported_value
-
-
 try:
     import rtty  # gr-rtty
     _available = True
 except ImportError:
     _available = False
+
+from shinysdr.filters import MultistageChannelFilter
+from shinysdr.modes import ModeDef, IDemodulator, IModulator
+from shinysdr.signals import SignalType, no_signal
+from shinysdr.types import Range
+from shinysdr.values import ExportedState, exported_block, exported_value
 
 
 # note: this string is ordered so that the first bit (on the air) is the least significant bit of the index in the string

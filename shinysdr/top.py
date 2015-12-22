@@ -63,7 +63,7 @@ class ReceiverCollection(CollectionState):
 class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 
     def __init__(self, devices={}, audio_config=None, stereo=True):
-        if not len(devices) > 0:
+        if len(devices) <= 0:
             raise ValueError('Must have at least one RF device')
         
         gr.top_block.__init__(self, "SDR top block")

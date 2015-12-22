@@ -104,7 +104,7 @@ class Config(object):
         # TODO: See if we're reinventing bits of Twisted service stuff here
         
         root_cap = unicode(root_cap)
-        if not len(root_cap) > 0:
+        if len(root_cap) <= 0:
             raise ValueError('config.serve_web: root_cap must be None or a nonempty string')
         
         def make_service(top, note_dirty):
@@ -175,7 +175,7 @@ class _ConfigDict(object):
 
 class _ConfigDevices(_ConfigDict):
     def add(self, key, *devices):
-        if not len(devices) > 0:
+        if len(devices) <= 0:
             raise ValueError('config.devices: no device(s) specified')
         from shinysdr.devices import merge_devices
         super(_ConfigDevices, self).add(key, merge_devices(devices))

@@ -22,12 +22,12 @@ from zope.interface import implements  # available via Twisted
 from gnuradio import gr
 from gnuradio import blocks
 
+import osmosdr
+
 from shinysdr.devices import Device, IRXDriver, ITXDriver
 from shinysdr.signals import SignalType
 from shinysdr.types import Constant, Enum, Range
 from shinysdr.values import Cell, ExportedState, LooseCell, exported_block, exported_value, nullExportedState, setter
-
-import osmosdr
 
 
 __all__ = []
@@ -111,7 +111,7 @@ def profile_from_device_string(device_string):
 
 
 
-if True:  # dummy block
+if 1 == 1:  # dummy block
     # pylint: disable=bad-whitespace
     _default_profiles = {
         'file':    OsmoSDRProfile(tx=False, agc=False, dc_cancel=False, dc_offset=False),

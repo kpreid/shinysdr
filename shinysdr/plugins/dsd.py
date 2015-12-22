@@ -25,17 +25,17 @@ from zope.interface import implements
 
 from gnuradio import gr
 
-from shinysdr.filters import make_resampler
-from shinysdr.modes import ModeDef, IDemodulator
-from shinysdr.plugins.basic_demod import NFMDemodulator
-from shinysdr.signals import SignalType
-from shinysdr.values import ExportedState, exported_block, exported_value
-
 try:
     from dsd import block_ff as dsd_block_ff
     _available = True
 except ImportError:
     _available = False
+
+from shinysdr.filters import make_resampler
+from shinysdr.modes import ModeDef, IDemodulator
+from shinysdr.plugins.basic_demod import NFMDemodulator
+from shinysdr.signals import SignalType
+from shinysdr.values import ExportedState, exported_block, exported_value
 
 
 _demod_rate = 48000  # hardcoded in gr-dsd

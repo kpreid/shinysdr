@@ -25,6 +25,12 @@
 
 from __future__ import absolute_import, division
 
+import json
+import urllib
+import os.path
+import struct
+import weakref
+
 from twisted.application import strports
 from twisted.application.service import Service
 from twisted.internet import defer
@@ -39,12 +45,6 @@ from zope.interface import Interface, implements, providedBy  # available via Tw
 from gnuradio import gr
 
 import txws
-
-import json
-import urllib
-import os.path
-import struct
-import weakref
 
 import shinysdr.plugins
 import shinysdr.db

@@ -578,7 +578,7 @@ def _parse_position_and_symbol(facts, errors, data):
 
 
 def _parse_data_extension(facts, errors, data, symbol):
-    if not len(data) >= 7:
+    if len(data) < 7:
         return data
     
     match = re.match(r'^(\d\d\d)/(\d\d\d)(.*)$', data)

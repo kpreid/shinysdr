@@ -32,6 +32,12 @@ from zope.interface import Interface, implements
 from gnuradio import gr
 from gnuradio import gru
 
+try:
+    import air_modes
+    _available = True
+except ImportError:
+    _available = False
+
 from shinysdr.filters import MultistageChannelFilter
 from shinysdr.math import LazyRateCalculator
 from shinysdr.modes import ModeDef, IDemodulator
@@ -40,12 +46,6 @@ from shinysdr.telemetry import TelemetryItem, Track, empty_track
 from shinysdr.types import Notice
 from shinysdr.values import CollectionState, ExportedState, exported_value
 from shinysdr.web import ClientResourceDef
-
-try:
-    import air_modes
-    _available = True
-except ImportError:
-    _available = False
 
 
 demod_rate = 2000000
