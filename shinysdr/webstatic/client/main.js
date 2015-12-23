@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['values', 'events', 'coordination', 'database', 'network', 'map-core', 'map-layers', 'widget', 'widgets', 'audio', 'window-manager'], function (values, events, coordination, database, network, mapCore, mapLayers, widget, widgets, audio, windowManager) {
+define(['values', 'events', 'coordination', 'database', 'network', 'map-core', 'map-layers', 'widget', 'widgets', 'audio', 'window-manager', 'plugins'], function (values, events, coordination, database, network, mapCore, mapLayers, widget, widgets, audio, windowManager, plugins) {
   'use strict';
   
   function log(progressAmount, msg) {
@@ -67,22 +67,13 @@ define(['values', 'events', 'coordination', 'database', 'network', 'map-core', '
   });
   var clientBlockCell = new ConstantCell(block, clientState);
   
-  // TODO get url from server
   log(0.4, 'Loading plugins…');
-  network.externalGet('/client/plugin-index.json', 'text', function gotPluginIndex(jsonstr) {
-    var pluginIndex = JSON.parse(jsonstr);
-    Array.prototype.forEach.call(pluginIndex.css, function (cssUrl) {
-      var link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = String(cssUrl);
-      document.querySelector('head').appendChild(link);
-    })
-    requirejs(Array.prototype.slice.call(pluginIndex.js), function (plugins) {
-      connectRadio();
-    }, function (err) {
-      log(0, 'Failed to load plugins.\n  ' + err.requireModules + '\n  ' + err.requireType);
-      // TODO: There's no reason we can't continue without the plugin. The problem is that right now there's no good way to report the failure, and silent failures are bad.
-    });
+  plugins.loadCSS();
+  requirejs(plugins.getJSModuleIds(), function (plugins) {
+    connectRadio();
+  }, function (err) {
+    log(0, 'Failed to load plugins.\n  ' + err.requireModules + '\n  ' + err.requireType);
+    // TODO: There's no reason we can't continue without the plugin. The problem is that right now there's no good way to report the failure, and silent failures are bad.
   });
   
   function connectRadio() {
