@@ -755,6 +755,8 @@ class WebService(Service):
         client = _reify(serverRoot, 'client')
         client.putChild('require.js', static.File(os.path.join(
             os.path.dirname(__file__), 'deps/require.js')))
+        client.putChild('text.js', static.File(os.path.join(
+            os.path.dirname(__file__), 'deps/text.js')))
         
         # Plugin resources
         load_list_css = []

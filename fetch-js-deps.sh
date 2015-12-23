@@ -8,4 +8,5 @@ set -e
 git submodule update --init
 
 (cd shinysdr/deps/ &&
-  wget -N http://requirejs.org/docs/release/2.1.9/comments/require.js)
+  wget -N http://requirejs.org/docs/release/2.1.22/comments/require.js &&
+  wget -N https://raw.githubusercontent.com/requirejs/text/646db27aaf2236cea92ac4107f32cbe5ae7a8d3a/text.js)
