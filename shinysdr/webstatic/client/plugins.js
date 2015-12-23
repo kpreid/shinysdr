@@ -21,6 +21,12 @@ define(['text!plugin-index.json'], function (text) {
   var pluginIndex = JSON.parse(text);
   var moduleIds = Object.freeze(Array.prototype.slice.call(pluginIndex.js));
   
+  var modeTable = Object.create(null);
+  for (var k in pluginIndex.modes) {
+    modeTable[k] = Object.freeze(pluginIndex.modes[k]);
+  }
+  Object.freeze(modeTable);
+  
   var exports = {};
   
   exports.loadCSS = function () {
@@ -34,6 +40,10 @@ define(['text!plugin-index.json'], function (text) {
   
   exports.getJSModuleIds = function () {
     return moduleIds;
+  };
+  
+  exports.getModeTable = function () {
+    return modeTable;
   };
   
   return Object.freeze(exports);

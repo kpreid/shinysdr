@@ -49,6 +49,7 @@ import txws
 import shinysdr.plugins
 import shinysdr.db
 from shinysdr.ephemeris import EphemerisResource
+from shinysdr.modes import get_modes
 from shinysdr.signals import SignalType
 from shinysdr.values import ExportedState, BaseCell, BlockCell, StreamCell, IWritableCollection, the_poller
 
@@ -758,28 +759,7 @@ class WebService(Service):
         client.putChild('text.js', static.File(os.path.join(
             os.path.dirname(__file__), 'deps/text.js')))
         
-        # Plugin resources
-        load_list_css = []
-        load_list_js = []
-        plugin_resources = Resource()
-        client.putChild('plugins', plugin_resources)
-        for resource_def in getPlugins(IClientResourceDef, shinysdr.plugins):
-            # Add the plugin's resource to static serving
-            plugin_resources.putChild(resource_def.key, resource_def.resource)
-            plugin_resource_url = '/client/plugins/' + urllib.quote(resource_def.key, safe='') + '/'
-            # Tell the client to load the plugins
-            # TODO constrain path values to be relative
-            if resource_def.load_css_path is not None:
-                load_list_css.append(plugin_resource_url + resource_def.load_cs_path)
-            if resource_def.load_js_path is not None:
-                # TODO constrain value to be in the directory
-                load_list_js.append(plugin_resource_url + resource_def.load_js_path)
-        
-        # Client plugin list
-        client.putChild('plugin-index.json', static.Data(_serialize({
-            u'css': load_list_css,
-            u'js': load_list_js,
-        }).encode('utf-8'), 'application/json'))
+        _add_plugin_resources(client)
         
         self.__site = server.Site(serverRoot)
         self.__ws_port_obj = None
@@ -815,3 +795,34 @@ class WebService(Service):
             webbrowser.open(url, new=1, autoraise=True)
         else:
             log.msg('Visit ' + url)
+
+
+def _add_plugin_resources(client_resource):
+    # Plugin resources and plugin info
+    load_list_css = []
+    load_list_js = []
+    mode_table = {}
+    plugin_resources = Resource()
+    client_resource.putChild('plugins', plugin_resources)
+    for resource_def in getPlugins(IClientResourceDef, shinysdr.plugins):
+        # Add the plugin's resource to static serving
+        plugin_resources.putChild(resource_def.key, resource_def.resource)
+        plugin_resource_url = '/client/plugins/' + urllib.quote(resource_def.key, safe='') + '/'
+        # Tell the client to load the plugins
+        # TODO constrain path values to be relative (not on a different origin, to not leak urls)
+        if resource_def.load_css_path is not None:
+            load_list_css.append(plugin_resource_url + resource_def.load_cs_path)
+        if resource_def.load_js_path is not None:
+            # TODO constrain value to be in the directory
+            load_list_js.append(plugin_resource_url + resource_def.load_js_path)
+    for mode_def in get_modes():
+        mode_table[mode_def.mode] = {
+            u'label': mode_def.label,
+            u'can_transmit': mode_def.mod_class is not None
+        }
+    # Client gets info about plugins through this resource
+    client_resource.putChild('plugin-index.json', static.Data(_serialize({
+        u'css': load_list_css,
+        u'js': load_list_js,
+        u'modes': mode_table,
+    }).encode('utf-8'), 'application/json'))

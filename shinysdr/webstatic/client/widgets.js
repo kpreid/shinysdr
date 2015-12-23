@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./values', './events', './widget', './gltools', './database', './menus'], function (values, events, widget, gltools, database, menus) {
+define(['./values', './events', './widget', './gltools', './database', './menus', './plugins'], function (values, events, widget, gltools, database, menus, plugins) {
   'use strict';
   
   var Cell = values.Cell;
@@ -29,9 +29,10 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
   var SingleQuad = gltools.SingleQuad;
   var Track = values.Track;
   var Union = database.Union;
+  var addLifecycleListener = widget.addLifecycleListener;
   var alwaysCreateReceiverFromEvent = widget.alwaysCreateReceiverFromEvent;
   var createWidgetExt = widget.createWidgetExt;
-  var addLifecycleListener = widget.addLifecycleListener;
+  var modeTable = plugins.getModeTable();
   
   // contains *only* widget types and can be used as a lookup namespace
   var widgets = Object.create(null);
@@ -39,15 +40,6 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
   function mod(value, modulus) {
     return (value % modulus + modulus) % modulus;
   }
-  
-  // TODO get this from server
-  var allModes = Object.create(null);
-  allModes.WFM = 'Wide FM';
-  allModes.NFM = 'Narrow FM';
-  allModes.AM = 'AM';
-  allModes.LSB = 'Lower SSB';
-  allModes.USB = 'Upper SSB';
-  allModes.VOR = 'VOR';
   
   function isSingleValued(type) {
     // TODO: Stop using Boolean etc. as type objects and remove the need for this feature test
@@ -2147,7 +2139,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
       default:
         break;
     }
-    if (!(record.mode in allModes)) {
+    if (!(record.mode in modeTable)) {
       item.classList.add('freqlist-item-unsupported');
     }
     item.addEventListener('click', function(event) {
@@ -2472,6 +2464,12 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
   }
   RecordCellPropCell.prototype = Object.create(Cell.prototype, {constructor: {value: RecordCellPropCell}});
   
+  var dbModeTable = Object.create(null);
+  dbModeTable[''] = '—';
+  for (var key in modeTable) {
+    dbModeTable[key] = modeTable[key].label;
+  }
+  
   function RecordDetails(config) {
     var recordCell = config.target;
     var scheduler = config.scheduler;
@@ -2533,7 +2531,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
     }
     menu(cell('type'), 'Type', {'channel': 'Channel', 'band': 'Band'});
     input(cell('freq'), 'Freq');  // TODO add lowerFreq/upperFreq display
-    menu(cell('mode'), 'Mode', allModes);
+    menu(cell('mode'), 'Mode', dbModeTable);
     input(cell('location'), 'Location').readOnly = true;  // can't edit yet
     input(cell('label'), 'Label');
     textarea(cell('notes'));
