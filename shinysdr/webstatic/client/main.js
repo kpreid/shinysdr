@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./values', './events', './coordination', './database', './network', './map-core', './map-layers', './widget', './widgets', './audio', './window-manager'], function (values, events, coordination, database, network, mapCore, mapLayers, widget, widgets, audio, windowManager) {
+define(['values', 'events', 'coordination', 'database', 'network', 'map-core', 'map-layers', 'widget', 'widgets', 'audio', 'window-manager'], function (values, events, coordination, database, network, mapCore, mapLayers, widget, widgets, audio, windowManager) {
   'use strict';
   
   function log(progressAmount, msg) {

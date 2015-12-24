@@ -26,10 +26,14 @@
   <script src="../client/require.js"></script>
 </head><body>
   <script>
+    require.config({
+      baseUrl: '/client/'
+    });
+    
     // TODO: kludge to use old style namespaces
     var shinysdr = {};
     var load_names = ['audio', 'coordination', 'database', 'events', 'map-core', 'map-layers', 'network', 'window-manager', 'values', 'widget', 'widgets'];
-    require(load_names.map(function(x) { return '../client/' + x; }), function() {
+    require(load_names, function() {
       var args = arguments;
       console.log(args);
       load_names.forEach(function (name, i) {

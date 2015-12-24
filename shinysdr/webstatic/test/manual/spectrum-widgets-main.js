@@ -16,7 +16,10 @@
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 // TODO: remove network module depenency
-define(['../../client/values', '../../client/events', '../../client/widget', '../../client/widgets', '../../client/network', '../../client/database'], function (values, events, widget, widgets, network, database) {
+require.config({
+  baseUrl: '/client/'
+});
+define(['values', 'events', 'widget', 'widgets', 'network', 'database'], function (values, events, widget, widgets, network, database) {
   'use strict';
 
   var ConstantCell = values.ConstantCell;
