@@ -104,7 +104,7 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
         if stateFile is not None:
             # just immediately write (revisit this when more performance is needed)
             with open(stateFile, 'w') as f:
-                json.dump(top.state_to_json(), f)
+                json.dump(app.state_to_json(), f)
     
     def restore(root, get_defaults):
         if stateFile is not None:
@@ -115,18 +115,18 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
             else:
                 root.state_from_json(get_defaults(root))
     
-    log.msg('Constructing flow graph...')
-    top = configObj._create_top_block()
+    log.msg('Constructing...')
+    app = configObj._create_app()
     
-    singleton_reactor.addSystemEventTrigger('during', 'shutdown', top.close_all_devices)
+    singleton_reactor.addSystemEventTrigger('during', 'shutdown', app.close_all_devices)
     
     log.msg('Restoring state...')
-    restore(top, top_defaults)
+    restore(app, app_defaults)
     
     log.msg('Starting web server...')
     services = MultiService()
     for maker in configObj._service_makers:
-        IService(maker(top, noteDirty)).setServiceParent(services)
+        IService(maker(app, noteDirty)).setServiceParent(services)
     services.startService()
     
     log.msg('ShinySDR is ready.')
@@ -138,20 +138,22 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
     if args.force_run:
         log.msg('force_run')
         from gnuradio.gr import msg_queue
-        top.monitor.get_fft_distributor().subscribe(msg_queue(limit=2))
+        # TODO kludge, make this less digging into guts
+        app.get_receive_flowgraph().monitor.get_fft_distributor().subscribe(msg_queue(limit=2))
     
     if _abort_for_test:
         services.stopService()
-        defer.returnValue((top, noteDirty))
+        defer.returnValue((app, noteDirty))
     else:
         yield defer.Deferred()  # never fires
 
 
-def top_defaults(top):
-    '''Return a friendly initial state for the top block using knowledge of the default config file.'''
+def app_defaults(app):
+    '''Return a friendly initial state for the app using knowledge of the default config file.'''
     state = {}
     
     # TODO: fix fragility of assumptions
+    top = app.get_receive_flowgraph()
     sources = top.state()['source_name'].type().values()
     restricted = dict(sources)
     if 'audio' in restricted: del restricted['audio']  # typically not RF

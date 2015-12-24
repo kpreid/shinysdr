@@ -15,9 +15,31 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+# TODO: Now that this module has AppRoot in it, it is misnamed.
+
 from __future__ import absolute_import, division
 
-from shinysdr.values import ExportedState
+from shinysdr.top import Top
+from shinysdr.values import ExportedState, exported_block
+
+
+class AppRoot(ExportedState):
+    def __init__(self, **kwargs):
+        # TODO: don't just forward args, do something more sensible, or take as args
+        self.__receive_flowgraph = Top(**kwargs)
+        # TODO: only one session while we sort out other things
+        self.__session = Session(self.__receive_flowgraph)
+    
+    @exported_block()
+    def get_receive_flowgraph(self):
+        return self.__receive_flowgraph
+    
+    # TODO: should become something more like 'create new session'
+    def get_session(self):
+        return self.__session
+    
+    def close_all_devices(self):
+        self.__receive_flowgraph.close_all_devices()
 
 
 class Session(ExportedState):

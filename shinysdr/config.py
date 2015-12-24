@@ -77,9 +77,9 @@ class Config(object):
         if len(self._service_makers) == 0:
             warnings.warn('No network service defined!')
     
-    def _create_top_block(self):
-        from shinysdr import top
-        return top.Top(
+    def _create_app(self):
+        from shinysdr import session
+        return session.AppRoot(
             devices=self.devices._values,
             audio_config=self.__server_audio,
             stereo=self.__stereo)
@@ -107,14 +107,13 @@ class Config(object):
         if len(root_cap) <= 0:
             raise ValueError('config.serve_web: root_cap must be None or a nonempty string')
         
-        def make_service(top, note_dirty):
+        def make_service(app, note_dirty):
             # TODO: This is, of course, not where session objects should be created. Working on it...
             import shinysdr.web as lazy_web
-            import shinysdr.session as lazy_session
             return lazy_web.WebService(
                 reactor=self.reactor,
-                root_object=lazy_session.Session(top),
-                flowgraph_for_debug=top,  # TODO: Once we have the diagnostics or admin page however that turns out to work, this goes away
+                root_object=app.get_session(),
+                flowgraph_for_debug=app.get_receive_flowgraph(),  # TODO: Once we have the diagnostics or admin page however that turns out to work, this goes away
                 note_dirty=note_dirty,
                 read_only_dbs=self.databases._get_read_only_databases(),
                 writable_db=self.databases._get_writable_database(),
@@ -129,9 +128,9 @@ class Config(object):
         self._not_finished()
         # TODO: Alternate services should be provided using getPlugins rather than hardcoded
         
-        def make_service(top, note_dirty):
+        def make_service(app, note_dirty):
             import shinysdr.plugins.ghpsdr as lazy_ghpsdr
-            return lazy_ghpsdr.DspserverService(top, note_dirty, 'tcp:8000')
+            return lazy_ghpsdr.DspserverService(app.get_receive_flowgraph(), note_dirty, 'tcp:8000')
         
         self._service_makers.append(make_service)
     

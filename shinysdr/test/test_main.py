@@ -69,12 +69,14 @@ class TestMain(unittest.TestCase):
     @defer.inlineCallbacks
     def test_persistence(self):
         '''Test that state persists.'''
-        (top, note_dirty) = yield self.__run_main()
-        self.assertEqual(top.get_source_name(), 'sim_bar')  # check initial assumption
-        top.set_source_name('sim_foo')
+        (app, note_dirty) = yield self.__run_main()
+        rxf = app.get_receive_flowgraph()
+        self.assertEqual(rxf.get_source_name(), 'sim_bar')  # check initial assumption
+        rxf.set_source_name('sim_foo')
         note_dirty()
-        (top, note_dirty) = yield self.__run_main()
-        self.assertEqual(top.get_source_name(), 'sim_foo')  # check persistence
+        (app, note_dirty) = yield self.__run_main()
+        rxf = app.get_receive_flowgraph()
+        self.assertEqual(rxf.get_source_name(), 'sim_foo')  # check persistence
 
     @defer.inlineCallbacks
     def test_minimal(self):
@@ -86,12 +88,14 @@ class TestMain(unittest.TestCase):
                 config.devices.add('sim_bar', shinysdr.plugins.simulate.SimulatedDevice())
             '''))
         
-        (top, note_dirty) = yield self.__run_main()
-        self.assertEqual(top.get_source_name(), 'sim_bar')  # check initial assumption
-        top.set_source_name('sim_foo')
+        (app, note_dirty) = yield self.__run_main()
+        rxf = app.get_receive_flowgraph()
+        self.assertEqual(rxf.get_source_name(), 'sim_bar')  # check initial assumption
+        rxf.set_source_name('sim_foo')
         note_dirty()
-        (top, note_dirty) = yield self.__run_main()
-        self.assertEqual(top.get_source_name(), 'sim_bar')  # expect NO persistence
+        (app, note_dirty) = yield self.__run_main()
+        rxf = app.get_receive_flowgraph()
+        self.assertEqual(rxf.get_source_name(), 'sim_bar')  # expect NO persistence
     
     @defer.inlineCallbacks
     def test_deferred_config(self):
@@ -105,5 +109,5 @@ class TestMain(unittest.TestCase):
                 config.wait_for(d)
             '''))
         
-        (top, _note_dirty) = yield self.__run_main()
-        self.assertEqual(top.state()['sources'].get().state().keys(), ['a_source'])
+        (app, _note_dirty) = yield self.__run_main()
+        self.assertEqual(app.get_receive_flowgraph().state()['sources'].get().state().keys(), ['a_source'])

@@ -147,8 +147,8 @@ class ValueCellResource(CellResource):
         return _serialize(value).encode('utf-8')
 
 
-def notDeletable():
-    raise Exception('Attempt to delete top block')
+def not_deletable():
+    raise Exception('Attempt to delete session root')
 
 
 class BlockResource(Resource):
@@ -734,7 +734,7 @@ class WebService(Service):
         appRoot.putChild('', _RadioIndexHtmlResource(title))
         
         # Exported radio control objects
-        appRoot.putChild('radio', BlockResource(root_object, note_dirty, notDeletable))
+        appRoot.putChild('radio', BlockResource(root_object, note_dirty, not_deletable))
         
         # Frequency DB
         appRoot.putChild('dbs', shinysdr.db.DatabasesResource(read_only_dbs))
