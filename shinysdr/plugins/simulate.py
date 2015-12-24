@@ -41,6 +41,7 @@ __all__ = []  # appended later
 
 
 def SimulatedDevice(name='Simulated RF', freq=0.0, allow_tuning=False):
+    rx_driver = _SimulatedRXDriver(name)
     return Device(
         name=name,
         vfo_cell=LooseCell(
@@ -48,8 +49,9 @@ def SimulatedDevice(name='Simulated RF', freq=0.0, allow_tuning=False):
             value=freq,
             type=Range([(-1e9, 1e9)]) if allow_tuning else Range([(freq, freq)]),  # TODO kludge magic numbers
             writable=True,
-            persists=False),
-        rx_driver=_SimulatedRXDriver(name))
+            persists=False,
+            post_hook=rx_driver._set_sim_freq),
+        rx_driver=rx_driver)
 
 
 __all__.append('SimulatedDevice')
@@ -76,23 +78,25 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
         rf_rate = self.rf_rate
         audio_rate = self.audio_rate
         
-        self.noise_level = -22
-        self._transmitters = {}
+        self.__noise_level = -22
+        self.__transmitters = {}
         
-        self.__transmitters_cs = CollectionState(self._transmitters, dynamic=True)
+        self.__transmitters_cs = CollectionState(self.__transmitters, dynamic=True)
         
-        self.bus = blocks.add_vcc(1)
-        self.channel_model = channels.channel_model(
-            noise_voltage=dB(self.noise_level),
+        self.__bus = blocks.add_vcc(1)
+        self.__channel_model = channels.channel_model(
+            noise_voltage=dB(self.__noise_level),
             frequency_offset=0,
             epsilon=1.01,  # TODO: expose this parameter
             # taps=...,  # TODO: apply something here?
         )
-        self.throttle = blocks.throttle(gr.sizeof_gr_complex, rf_rate)
+        self.__rotator = blocks.rotator_cc()
+        self.__throttle = blocks.throttle(gr.sizeof_gr_complex, rf_rate)
         self.connect(
-            self.bus,
-            self.channel_model,
-            self.throttle,
+            self.__bus,
+            self.__throttle,
+            self.__channel_model,
+            self.__rotator,
             self)
         signals = []
         
@@ -112,7 +116,7 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
             
             self.connect(audio_signal, tx)
             signals.append(tx)
-            self._transmitters[key] = tx
+            self.__transmitters[key] = tx
         
         # Audio input signal
         pitch = analog.sig_source_f(audio_rate, analog.GR_SAW_WAVE, -1, 2000, 1000)
@@ -130,13 +134,13 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
         
         bus_input = 0
         for signal in signals:
-            self.connect(signal, (self.bus, bus_input))
+            self.connect(signal, (self.__bus, bus_input))
             bus_input = bus_input + 1
         
         self.__signal_type = SignalType(
             kind='IQ',
             sample_rate=rf_rate)
-        self.__usable_bandwidth = Range([(-rf_rate / 2, self.rf_rate / 2)])
+        self.__usable_bandwidth = Range([(-rf_rate / 2, rf_rate / 2)])
         
     
     @exported_block()
@@ -148,8 +152,8 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
     def get_output_type(self):
         return self.__signal_type
         
-    def _really_set_frequency(self, freq):
-        pass
+    def _set_sim_freq(self, freq):
+        self.__rotator.set_phase_inc(rotator_inc(rate=self.rf_rate, shift=-freq))
     
     # implement IRXDriver
     def get_tune_delay(self):
@@ -165,17 +169,17 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
     
     @exported_value(type=Range([(-50, 0)]))
     def get_noise_level(self):
-        return self.noise_level
+        return self.__noise_level
     
     @setter
     def set_noise_level(self, value):
-        self.channel_model.set_noise_voltage(dB(value))
-        self.noise_level = value
+        self.__channel_model.set_noise_voltage(dB(value))
+        self.__noise_level = value
 
     def notify_reconnecting_or_restarting(self):
         # The throttle block runs on a clock which does not stop when the flowgraph stops; resetting the sample rate restarts the clock.
         # The necessity of this kludge has been filed as a gnuradio bug at <http://gnuradio.org/redmine/issues/649>
-        self.throttle.set_sample_rate(self.throttle.sample_rate())
+        self.__throttle.set_sample_rate(self.__throttle.sample_rate())
 
 
 class _SimulatedTransmitter(gr.hier_block2, ExportedState):
