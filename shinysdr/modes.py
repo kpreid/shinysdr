@@ -1,4 +1,4 @@
-# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -49,7 +49,9 @@ class IDemodulator(Interface):
     
     def get_output_type():
         '''
-        Return the SignalType of the demodulator's output, which must currently be stereo audio at any sample rate.
+        Return the SignalType of the demodulator's output.
+        
+        The output must be stereo audio, mono audio, or nothing.
         '''
 
 
