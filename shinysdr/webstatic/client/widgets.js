@@ -208,9 +208,8 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
   function Top(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       // TODO: It's a lousy design to require widgets to know what not to show. We should have a generic system for multiple widgets to decide "OK, you'll display this and I won't".
-      ignore('targetDB');  // not real state
       ignore('monitor');  // displayed separately
-      ignore('shared_objects');  // displayed separately
+      ignore('telemetry_store');  // displayed separately
       
       var sourceToolbar = this.element.appendChild(document.createElement('div'));
       sourceToolbar.className = 'panel frame-controls';

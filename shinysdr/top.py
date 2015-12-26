@@ -37,6 +37,7 @@ from shinysdr.blocks import MonitorSink, RecursiveLockBlockMixin, Context
 from shinysdr.math import LazyRateCalculator
 from shinysdr.receiver import Receiver
 from shinysdr.signals import SignalType
+from shinysdr.telemetry import TelemetryStore
 from shinysdr.types import Enum, Notice
 from shinysdr.values import ExportedState, CollectionState, exported_block, exported_value, setter, IWritableCollection
 
@@ -98,15 +99,12 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self._receivers = {}
         self._receiver_valid = {}
         
-        self.__shared_objects = {}
-        
         # collections
         # TODO: No longer necessary to have these non-underscore names
         self.sources = CollectionState(self._sources)
         self.receivers = ReceiverCollection(self._receivers, self)
         self.accessories = CollectionState(accessories)
-        # TODO: better name than "shared objects"
-        self.shared_objects = CollectionState(self.__shared_objects, dynamic=True)
+        self.__telemetry_store = TelemetryStore()
         
         # Flags, other state
         self.__needs_reconnect = [u'initialization']
@@ -311,8 +309,8 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         return self.accessories
     
     @exported_block()
-    def get_shared_objects(self):
-        return self.shared_objects
+    def get_telemetry_store(self):
+        return self.__telemetry_store
     
     def start(self, **kwargs):
         # trigger reconnect/restart notification
@@ -382,14 +380,6 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
     @exported_value(type=float)
     def get_cpu_use(self):
         return round(self.__cpu_calculator.get(), 2)
-    
-    def get_shared_object(self, ctor):
-        # TODO: Make shared objects able to persist. This will probably require some kind of up-front registry.
-        # TODO: __name__ is a lousy strategy
-        key = ctor.__name__
-        if key not in self.__shared_objects:
-            self.__shared_objects[key] = ctor()
-        return self.__shared_objects[key]
     
     def _get_rx_device_type(self):
         '''for ContextForReceiver only'''
@@ -472,8 +462,8 @@ class ContextForReceiver(Context):
         if self._enabled:
             self.__top._trigger_reconnect(u'receiver %s: %s' % (self._key, reason))
     
-    def get_shared_object(self, ctor):
-        return self.__top.get_shared_object(ctor)
+    def output_message(self, message):
+        self.__top.get_telemetry_store().receive(message)
 
 
 class IHasFrequency(Interface):

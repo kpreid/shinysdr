@@ -109,7 +109,6 @@ class ModeDef(object):
             label,
             demod_class,
             mod_class=None,
-            shared_objects=None,
             available=True):
         '''
         mode: String uniquely identifying this mode, typically a standard abbreviation written in uppercase letters (e.g. "USB").
@@ -117,16 +116,12 @@ class ModeDef(object):
         demod_class: Class to instantiate to create a demodulator for this mode.
         mod_class: Class to instantiate to create a modulator for this mode.
         (TODO: cite demodulator and modulator interface docs)
-        shared_objects: TODO explain
         available: If false, this mode definition will be ignored.
         '''
-        if shared_objects is None:
-            shared_objects = {}
         self.mode = mode
         self.label = label
         self.demod_class = demod_class
         self.mod_class = mod_class
-        self.shared_objects = shared_objects
         self.available = available
 
 

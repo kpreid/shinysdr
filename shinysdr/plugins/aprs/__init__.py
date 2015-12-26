@@ -49,7 +49,7 @@ from twisted.web import static
 from zope.interface import Interface, implements  # available via Twisted
 
 from shinysdr.devices import Device
-from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, Track, empty_track
+from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, TelemetryStore, Track, empty_track
 from shinysdr.types import Notice
 from shinysdr.values import CollectionState, ExportedState, exported_value
 from shinysdr.web import ClientResourceDef
@@ -299,7 +299,7 @@ def APRSISRXDevice(reactor, client, name=None, filter=None):
     # pylint: disable=redefined-builtin
     if name is None:
         name = 'APRS-IS ' + filter
-    info = TelemetryStore()  # TODO be able to grab the shared object instead
+    info = TelemetryStore()  # TODO this is wrong, need to be able to output_message.
     
     def main_callback(line):
         # TODO: This print-both-formats code is duplicated from multimon.py; it should be a utility in this module instead. Also, we should maybe have a try block.

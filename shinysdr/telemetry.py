@@ -29,7 +29,7 @@ from twisted.internet.interfaces import IReactorTime
 from zope.interface import Interface, implements
 
 from shinysdr.types import bare_type_registry
-from shinysdr.values import CollectionState, ExportedState, exported_value
+from shinysdr.values import CollectionState
 
 
 __all__ = []  # appended later

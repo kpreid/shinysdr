@@ -66,7 +66,7 @@ _METERS_PER_FEET = (_CM_PER_INCH * _INCH_PER_FOOT) / 100
 class ModeSDemodulator(gr.hier_block2, ExportedState):
     implements(IDemodulator)
     
-    def __init__(self, mode='MODE-S', input_rate=0, mode_s_information=None, context=None):
+    def __init__(self, mode='MODE-S', input_rate=0, context=None):
         assert input_rate > 0
         gr.hier_block2.__init__(
             self, 'Mode S/ADS-B/1090 demodulator',
@@ -74,10 +74,6 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
             gr.io_signature(0, 0, 0))
         self.mode = mode
         self.input_rate = input_rate
-        if mode_s_information is not None:
-            self.__information = mode_s_information
-        else:
-            self.__information = TelemetryStore()
         
         hex_msg_queue = gr.msg_queue(100)
         
@@ -119,7 +115,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
         def parsed_callback(msg):
             timestamp = time.time()
             self.__messages_seen += 1
-            self.__information.receive(ModeSMessageWrapper(msg, cpr_decoder, timestamp))
+            context.output_message(ModeSMessageWrapper(msg, cpr_decoder, timestamp))
         
         for i in xrange(0, 2 ** 5):
             parser_output.subscribe('type%i_dl' % i, parsed_callback)
@@ -297,8 +293,7 @@ plugin_mode = ModeDef(
     mode='MODE-S',
     label='Mode S',
     demod_class=ModeSDemodulator,
-    available=_available,
-    shared_objects={'mode_s_information': TelemetryStore})
+    available=_available)
 plugin_client = ClientResourceDef(
     key=__name__,
     resource=static.File(os.path.join(os.path.split(__file__)[0], 'client')),

@@ -17,8 +17,6 @@
 
 from __future__ import absolute_import, division
 
-import time
-
 from twisted.internet.task import Clock
 from twisted.trial import unittest
 from zope.interface import implements

@@ -39,7 +39,6 @@ from shinysdr.modes import ModeDef, IDemodulator
 from shinysdr.plugins.basic_demod import NFMDemodulator
 from shinysdr.plugins.aprs import parse_tnc2
 from shinysdr.signals import SignalType
-from shinysdr.telemetry import TelemetryStore
 from shinysdr.types import Enum
 from shinysdr.values import ExportedState, exported_block, exported_value, setter
 
@@ -100,26 +99,21 @@ _aprs_squelch_type = Enum({
 
 class APRSDemodulator(gr.hier_block2, ExportedState):
     '''
-    Demod and parse APRS and feed into a telemetry store.
+    Demod and parse APRS.
     '''
-    def __init__(self, aprs_information=None, context=None):
+    def __init__(self, context):
         gr.hier_block2.__init__(
             self, self.__class__.__name__,
             gr.io_signature(1, 1, gr.sizeof_float * 1),
             gr.io_signature(1, 1, gr.sizeof_float * 1),
         )
         
-        if aprs_information is not None:
-            self.__information = aprs_information
-        else:
-            self.__information = TelemetryStore()
-        
         def receive(line):
             # %r here provides robustness against arbitrary bytes.
             log.msg(u'APRS: %r' % (line,))
             message = parse_tnc2(line, time.time())
             log.msg(u'   -> %s' % (message,))
-            self.__information.receive(message)
+            context.output_message(message)
         
         self.__mm_demod = MultimonNGDemodulator(
             multimon_demod_args=['-A'],
@@ -176,8 +170,9 @@ class APRSDemodulator(gr.hier_block2, ExportedState):
 class FMAPRSDemodulator(gr.hier_block2, ExportedState):
     implements(IDemodulator)
     
-    def __init__(self, mode, input_rate=0, aprs_information=None, context=None):
+    def __init__(self, mode, input_rate=0, context=None):
         assert input_rate > 0
+        assert context is not None
         gr.hier_block2.__init__(
             self, str(mode) + ' (FM + Multimon-NG) demodulator',
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
@@ -197,8 +192,7 @@ class FMAPRSDemodulator(gr.hier_block2, ExportedState):
         fm_audio_rate = self.fm_demod.get_output_type().get_sample_rate()
         
         # Subprocess
-        self.mm_demod = APRSDemodulator(
-            aprs_information=aprs_information)
+        self.mm_demod = APRSDemodulator(context=context)
         mm_audio_rate = self.mm_demod.get_input_type().get_sample_rate()
         
         # Output
@@ -269,5 +263,4 @@ pluginDef_APRS = ModeDef(
     mode='APRS',  # TODO: Rename mode to be more accurate
     label='APRS',
     demod_class=FMAPRSDemodulator,
-    shared_objects={'aprs_information': TelemetryStore},
     available=_multimon_available)

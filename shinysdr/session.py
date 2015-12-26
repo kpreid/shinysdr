@@ -54,7 +54,7 @@ class Session(ExportedState):
         callback(rxfs['source'])
         callback(rxfs['receivers'])
         callback(rxfs['accessories'])
-        callback(rxfs['shared_objects'])
+        callback(rxfs['telemetry_store'])
         callback(rxfs['source_name'])
         callback(rxfs['clip_warning'])
         

@@ -318,8 +318,6 @@ class Receiver(gr.hier_block2, ExportedState):
             mode=mode,
             input_rate=self.__get_device().get_rx_driver().get_output_type().get_sample_rate(),
             context=facet)
-        for sh_key, sh_ctor in mode_def.shared_objects.iteritems():
-            init_kwargs[sh_key] = self.context.get_shared_object(sh_ctor)
         demodulator = unserialize_exported_state(
             ctor=clas,
             state=state,
@@ -355,3 +353,6 @@ class ContextForDemodulator(object):
 
     def unlock(self):
         self._receiver.context.unlock()
+    
+    def output_message(self, message):
+        self._receiver.context.output_message(message)
