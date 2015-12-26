@@ -25,23 +25,6 @@ define(['map-core', 'widgets'], function (mapCore, widgets) {
   
   var exports = {};
   
-  function entryBuilder(setElement, block, name) {
-    var container = setElement.appendChild(document.createElement('div'));
-    container.className = 'frame';
-    var toolbar = container.appendChild(document.createElement('div'));
-    toolbar.className = 'panel frame-controls';
-    
-    var label = document.createElement('span');
-    label.textContent = name;
-    toolbar.appendChild(label);
-    
-    return container.appendChild(document.createElement('div'));
-  };
-  var ModeSInformationWidget = BlockSet(AircraftWidget, entryBuilder);
-  
-  // TODO: Better widget-plugin system so we're not modifying should-be-static tables
-  widgets['interface:shinysdr.plugins.mode_s.IModeSInformation'] = ModeSInformationWidget;
-  
   function AircraftWidget(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       addWidget('track', widgets.TrackWidget);

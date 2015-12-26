@@ -42,7 +42,7 @@ from shinysdr.filters import MultistageChannelFilter
 from shinysdr.math import LazyRateCalculator
 from shinysdr.modes import ModeDef, IDemodulator
 from shinysdr.signals import no_signal
-from shinysdr.telemetry import TelemetryItem, Track, empty_track
+from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, TelemetryStore, Track, empty_track
 from shinysdr.types import Notice
 from shinysdr.values import CollectionState, ExportedState, exported_value
 from shinysdr.web import ClientResourceDef
@@ -62,6 +62,7 @@ _CM_PER_INCH = 2.54
 _INCH_PER_FOOT = 12
 _METERS_PER_FEET = (_CM_PER_INCH * _INCH_PER_FOOT) / 100
 
+
 class ModeSDemodulator(gr.hier_block2, ExportedState):
     implements(IDemodulator)
     
@@ -76,7 +77,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
         if mode_s_information is not None:
             self.__information = mode_s_information
         else:
-            self.__information = ModeSInformation()
+            self.__information = TelemetryStore()
         
         hex_msg_queue = gr.msg_queue(100)
         
@@ -116,8 +117,9 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
         self.__msgq_runner = gru.msgq_runner(hex_msg_queue, callback)
         
         def parsed_callback(msg):
+            timestamp = time.time()
             self.__messages_seen += 1
-            self.__information.receive(msg, cpr_decoder)
+            self.__information.receive(ModeSMessageWrapper(msg, cpr_decoder, timestamp))
         
         for i in xrange(0, 2 ** 5):
             parser_output.subscribe('type%i_dl' % i, parsed_callback)
@@ -147,64 +149,26 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
         }
 
 
-class IModeSInformation(Interface):
-    '''marker interface for client'''
-    pass
-
-
-class ModeSInformation(CollectionState):
-    '''
-    Accepts Mode-S messages and exports the accumulated information obtained from them.
-    '''
-    implements(IModeSInformation)
+class ModeSMessageWrapper(object):
+    implements(ITelemetryMessage)
     
-    def __init__(self):
-        self.__aircraft = {}
-        self.__interesting_aircraft = {}
-        CollectionState.__init__(self, self.__interesting_aircraft, dynamic=True)
+    def __init__(self, message, cpr_decoder, receive_time):
+        self.message = message  # a gr-air-modes message
+        self.cpr_decoder = cpr_decoder
+        self.receive_time = float(receive_time)
     
-    # not exported
-    def receive(self, message, cpr_decoder):
-        '''
-        Interpret and store the message provided, which should be in the format produced by air_modes.make_parser.
-        '''
+    def get_object_id(self):
         # Unfortunately, gr-air-modes doesn't provide a function to implement this gunk -- imitating output_print.catch_nohandler
-        data = message.data
+        data = self.message.data
         if "aa" in data.fields:
             address_int = data["aa"]
         else:
-            address_int = message.ecc
+            address_int = self.message.ecc
         
-        # Process the message
-        aircraft = self.__ensure_aircraft(address_int)
-        aircraft.receive(message, cpr_decoder)
-        
-        # Maybe promote the aircraft
-        if aircraft.is_interesting():
-            self.__interesting_aircraft[self.__string_address(address_int)] = aircraft
-        
-        # logically independent but this is a convenient time
-        self.__flush_not_seen()
-    
-    def __ensure_aircraft(self, address_int):
-        if address_int not in self.__aircraft:
-            self.__aircraft[address_int] = Aircraft(address_int)
-        return self.__aircraft[address_int]
-    
-    def __string_address(self, address_int):
         return '%.6x' % (address_int,)
     
-    def __flush_not_seen(self):
-        deletes = []
-        limit = time.time() - drop_unheard_timeout_seconds
-        for key, old_aircraft in self.__aircraft.iteritems():
-            if old_aircraft.get_last_heard_time() < limit:
-                deletes.append(key)
-        for key in deletes:
-            del self.__aircraft[key]
-            address_hex = self.__string_address(key)
-            if address_hex in self.__interesting_aircraft:
-                del self.__interesting_aircraft[address_hex]
+    def get_object_constructor(self):
+        return Aircraft
 
 
 class IAircraft(Interface):
@@ -213,9 +177,10 @@ class IAircraft(Interface):
 
 
 class Aircraft(ExportedState):
-    implements(IAircraft)
+    implements(IAircraft, ITelemetryObject)
     
-    def __init__(self, address_hex):
+    def __init__(self, object_id):
+        '''Implements ITelemetryObject. object_id is the hex formatted address.'''
         self.__last_heard_time = None
         self.__track = empty_track
         self.__call = None
@@ -223,8 +188,10 @@ class Aircraft(ExportedState):
         self.__aircraft_type = None
     
     # not exported
-    def receive(self, message, cpr_decoder):
-        receive_time = time.time()  # TODO: arguably should be an argument
+    def receive(self, message_wrapper):
+        message = message_wrapper.message
+        cpr_decoder = message_wrapper.cpr_decoder
+        receive_time = message_wrapper.receive_time
         self.__last_heard_time = receive_time
         # Unfortunately, gr-air-modes doesn't provide a function to implement this gunk -- imitating its output_flightgear code which
         data = message.data
@@ -292,7 +259,7 @@ class Aircraft(ExportedState):
     
     def is_interesting(self):
         '''
-        Does this aircraft have enough information to be worth mentioning?
+        Implements ITelemetryObject. Does this aircraft have enough information to be worth mentioning?
         '''
         # TODO: Loosen this rule once we have more efficient state transfer (no polling) and better UI for viewing them on the client.
         return \
@@ -300,7 +267,11 @@ class Aircraft(ExportedState):
             self.__track.longitude.value is not None or \
             self.__call is not None or \
             self.__aircraft_type is not None
-        
+    
+    def get_object_expiry(self):
+        '''implement ITelemetryObject'''
+        return self.__last_heard_time + drop_unheard_timeout_seconds
+    
     @exported_value(type=float)
     def get_last_heard_time(self):
         return self.__last_heard_time
@@ -327,7 +298,7 @@ plugin_mode = ModeDef(
     label='Mode S',
     demod_class=ModeSDemodulator,
     available=_available,
-    shared_objects={'mode_s_information': ModeSInformation})
+    shared_objects={'mode_s_information': TelemetryStore})
 plugin_client = ClientResourceDef(
     key=__name__,
     resource=static.File(os.path.join(os.path.split(__file__)[0], 'client')),

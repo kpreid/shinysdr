@@ -17,9 +17,7 @@
 
 
 '''
-APRS support plugin. This does not provide a complete APRS receiver, but only an APRS message parser (parse_tnc2), and an information store (APRSInformation).
-
-If APRSInformation is exported to the web client its data will appear on the map.
+APRS support plugin. This does not provide a complete APRS receiver, but only an APRS message parser (parse_tnc2), and telemetry store interface.
 '''
 
 
@@ -51,7 +49,7 @@ from twisted.web import static
 from zope.interface import Interface, implements  # available via Twisted
 
 from shinysdr.devices import Device
-from shinysdr.telemetry import TelemetryItem, Track, empty_track
+from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, Track, empty_track
 from shinysdr.types import Notice
 from shinysdr.values import CollectionState, ExportedState, exported_value
 from shinysdr.web import ClientResourceDef
@@ -67,59 +65,27 @@ _FEET_TO_METERS = 0.3048
 drop_unheard_timeout_seconds = 60 * 30
 
 
-class IAPRSInformation(Interface):
-    '''marker interface for client'''
-    pass
-
-
-class APRSInformation(CollectionState):
-    '''
-    Accepts APRS messages and exports the accumulated information obtained from them.
-    '''
-    implements(IAPRSInformation)
+def expand_aprs_message(message, store):
+    def f(message):
+        store.receive(message)
     
-    def __init__(self):
-        self.__stations = {}
-        CollectionState.__init__(self, self.__stations, dynamic=True)
-    
-    # not exported
-    def receive(self, message):
-        '''Store the supplied APRSMessage object.'''
-        self.__ensure_station(message.source).receive(message)
-        for fact in message.facts:
-            if isinstance(fact, ObjectItemReport):
-                if fact.live:
-                    # TODO kludgy. review for correctness.
-                    # consider defining an 'object' instead of 'station' type, which can then be given a 'reported by' field.
-                    self.__ensure_station(fact.name).receive(APRSMessage(
-                        receive_time=message.receive_time,
-                        source=fact.name,
-                        destination=None,
-                        via=None,
-                        payload=None,
-                        facts=fact.facts,
-                        errors=message.errors,
-                        comment=message.comment))
-                else:
-                    if fact.name in self.__stations:
-                        del self.__stations[fact.name]
-        
-        # logically independent but this is a convenient time, and this approach allows us to borrow the receive time rather than reading the system clock ourselves.
-        self.__flush_not_seen(message.receive_time)
-
-    def __ensure_station(self, address):
-        if address not in self.__stations:
-            self.__stations[address] = APRSStation(address)
-        return self.__stations[address]
-    
-    def __flush_not_seen(self, current_time):
-        deletes = []
-        limit = current_time - drop_unheard_timeout_seconds
-        for key, old_station in self.__stations.iteritems():
-            if old_station.get_last_heard_time() <= limit:
-                deletes.append(key)
-        for key in deletes:
-            del self.__stations[key]
+    store.receive(message)
+    for fact in message.facts:
+        if isinstance(fact, ObjectItemReport):
+            if fact.live:
+                # TODO kludgy. review for correctness.
+                # consider defining an 'object' instead of 'station' type, which can then be given a 'reported by' field.
+                store.receive(APRSMessage(
+                    receive_time=message.receive_time,
+                    source=fact.name,
+                    destination=None,
+                    via=None,
+                    payload=None,
+                    facts=fact.facts,
+                    errors=message.errors,
+                    comment=message.comment))
+            else:
+                store.receive(DeleteOperation(fact.name))  # TODO not implemented
 
 
 class IAPRSStation(Interface):
@@ -128,11 +94,11 @@ class IAPRSStation(Interface):
 
 
 class APRSStation(ExportedState):
-    implements(IAPRSStation)
+    implements(IAPRSStation, ITelemetryObject)
     
-    def __init__(self, address):
+    def __init__(self, object_id):
         self.__last_heard_time = None
-        self.__address = address
+        self.__address = object_id
         self.__track = empty_track
         self.__status = u''
         self.__symbol = None
@@ -140,6 +106,7 @@ class APRSStation(ExportedState):
         self.__last_parse_error = u''
 
     def receive(self, message):
+        '''implement ITelemetryObject'''
         self.__last_heard_time = message.receive_time
         for fact in message.facts:
             if isinstance(fact, Position):
@@ -168,6 +135,14 @@ class APRSStation(ExportedState):
         self.__last_comment = unicode(message.comment)
         if len(message.errors) > 0:
             self.__last_parse_error = '; '.join(message.errors)
+    
+    def is_interesting(self):
+        '''implement ITelemetryObject'''
+        return True
+    
+    def get_object_expiry(self):
+        '''implement ITelemetryObject'''
+        return self.__last_heard_time + drop_unheard_timeout_seconds
     
     @exported_value(type=float)
     def get_last_heard_time(self):
@@ -200,7 +175,7 @@ class APRSStation(ExportedState):
         return self.__last_parse_error
 
 
-APRSMessage = namedtuple('APRSMessage', [
+class APRSMessage(namedtuple('APRSMessage', [
     'receive_time',  # unix time: when the message was received
     'source',  # string: AX.25 address
     'destination',  # string: AX.25 address
@@ -209,7 +184,15 @@ APRSMessage = namedtuple('APRSMessage', [
     'facts',  # list: of fact objects parsed from the message
     'errors',  # list: of strings describing parse failures
     'comment',  # APRS comment text
-])
+])):
+    implements(ITelemetryMessage)
+    
+    def get_object_id(self):
+        # TODO: Fail on object/item facts which should never be seen here
+        return self.source
+    
+    def get_object_constructor(self):
+        return APRSStation
 
 
 # fact
@@ -316,7 +299,7 @@ def APRSISRXDevice(reactor, client, name=None, filter=None):
     # pylint: disable=redefined-builtin
     if name is None:
         name = 'APRS-IS ' + filter
-    info = APRSInformation()  # TODO be able to grab the shared object instead
+    info = TelemetryStore()  # TODO be able to grab the shared object instead
     
     def main_callback(line):
         # TODO: This print-both-formats code is duplicated from multimon.py; it should be a utility in this module instead. Also, we should maybe have a try block.

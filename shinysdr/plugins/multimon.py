@@ -1,4 +1,4 @@
-# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -37,8 +37,9 @@ from shinysdr.blocks import make_sink_to_process_stdin, test_subprocess
 from shinysdr.filters import make_resampler
 from shinysdr.modes import ModeDef, IDemodulator
 from shinysdr.plugins.basic_demod import NFMDemodulator
-from shinysdr.plugins.aprs import APRSInformation, parse_tnc2
+from shinysdr.plugins.aprs import parse_tnc2
 from shinysdr.signals import SignalType
+from shinysdr.telemetry import TelemetryStore
 from shinysdr.types import Enum
 from shinysdr.values import ExportedState, exported_block, exported_value, setter
 
@@ -99,7 +100,7 @@ _aprs_squelch_type = Enum({
 
 class APRSDemodulator(gr.hier_block2, ExportedState):
     '''
-    Demod APRS and feed into an APRSInformation object.
+    Demod and parse APRS and feed into a telemetry store.
     '''
     def __init__(self, aprs_information=None, context=None):
         gr.hier_block2.__init__(
@@ -111,7 +112,7 @@ class APRSDemodulator(gr.hier_block2, ExportedState):
         if aprs_information is not None:
             self.__information = aprs_information
         else:
-            self.__information = APRSInformation()
+            self.__information = TelemetryStore()
         
         def receive(line):
             # %r here provides robustness against arbitrary bytes.
@@ -268,5 +269,5 @@ pluginDef_APRS = ModeDef(
     mode='APRS',  # TODO: Rename mode to be more accurate
     label='APRS',
     demod_class=FMAPRSDemodulator,
-    shared_objects={'aprs_information': APRSInformation},
+    shared_objects={'aprs_information': TelemetryStore},
     available=_multimon_available)

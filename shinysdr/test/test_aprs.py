@@ -1,4 +1,4 @@
-# Copyright 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2014, 2015 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -23,10 +23,11 @@ from __future__ import absolute_import, division
 
 from datetime import datetime
 
+from twisted.internet.task import Clock
 from twisted.trial import unittest
 
-from shinysdr.plugins.aprs import Altitude, APRSInformation, APRSStation, APRSMessage, Capabilities, ObjectItemReport, Messaging, Position, RadioRange, Status, Symbol, Telemetry, Timestamp, Velocity, parse_tnc2
-from shinysdr.telemetry import TelemetryItem, empty_track
+from shinysdr.plugins.aprs import Altitude, APRSStation, APRSMessage, Capabilities, ObjectItemReport, Messaging, Position, RadioRange, Status, Symbol, Telemetry, Timestamp, Velocity, expand_aprs_message, parse_tnc2
+from shinysdr.telemetry import TelemetryItem, TelemetryStore, empty_track
 
 
 # January 2, 2000, 12:30:30 + 1 microsecond
@@ -290,31 +291,44 @@ class TestAPRSParser(unittest.TestCase):
             comment='')
 
 
-class TestAPRSInformation(unittest.TestCase):
+class TestAPRSTelemetryStore(unittest.TestCase):
+    '''
+    This is a test of APRSStation's implementation of ITelemetryObject.
+    '''
+    
     def setUp(self):
-        self.i = APRSInformation()
+        self.clock = Clock()
+        self.clock.advance(_dummy_receive_time)
+        self.store = TelemetryStore(time_source=self.clock)
+    
+    def __receive(self, msg):
+        expand_aprs_message(msg, self.store)
     
     def test_new_station(self):
-        self.assertEqual([], self.i.state().keys())
-        self.i.receive(parse_tnc2(
+        self.assertEqual([], self.store.state().keys())
+        self.__receive(parse_tnc2(
             'N6WKZ-3>APU25N,WB6TMS-3*,N6ZX-3*,WIDE2*:=3746.42N112226.00W# {UIV32N}',
             _dummy_receive_time))
-        self.assertEqual(['N6WKZ-3'], self.i.state().keys())
+        self.assertEqual(['N6WKZ-3'], self.store.state().keys())
 
+    # TODO: this test makes less sense now that expand_aprs_message is separate
     def test_object_item_report(self):
-        self.i.receive(parse_tnc2(
+        self.__receive(parse_tnc2(
             'KE6AFE-2>APU25N,WR6ABD*,NCA1:;TFCSCRUZ *160323z3655.94N\12200.92W?70 In 10 Minutes',
             _dummy_receive_time))
-        self.assertEqual(['KE6AFE-2', 'TFCSCRUZ '], self.i.state().keys())
+        self.assertEqual(['KE6AFE-2', 'TFCSCRUZ '], self.store.state().keys())
         # TODO test value
+        # TODO test delete operation
 
     def test_drop_old(self):
-        self.i.receive(parse_tnc2('FOO>RX:>', _dummy_receive_time))
-        self.assertEqual(['FOO'], self.i.state().keys())
-        self.i.receive(parse_tnc2('BAR>RX:>', _dummy_receive_time + 1799.9))
-        self.assertEqual({'BAR', 'FOO'}, set(self.i.state().keys()))
-        self.i.receive(parse_tnc2('BAR>RX:>', _dummy_receive_time + 1800))
-        self.assertEqual(['BAR'], self.i.state().keys())
+        self.__receive(parse_tnc2('FOO>RX:>', _dummy_receive_time))
+        self.assertEqual(['FOO'], self.store.state().keys())
+        self.clock.advance(1799.5)
+        self.__receive(parse_tnc2('BAR>RX:>', _dummy_receive_time + 1799.5))
+        self.assertEqual({'BAR', 'FOO'}, set(self.store.state().keys()))
+        self.clock.advance(0.5)
+        self.__receive(parse_tnc2('BAR>RX:>', _dummy_receive_time + 1800))
+        self.assertEqual(['BAR'], self.store.state().keys())
 
 
 class TestAPRSStation(unittest.TestCase):
