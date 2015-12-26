@@ -2581,6 +2581,10 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
   }
   widgets.SaveButton = SaveButton;
   
+  // TODO: Needs to be more than just a BlockSet: eventually a table with grouped headings and sorting, maybe
+  var TelemetryStoreWidget = BlockSet(PickBlock, BlockSetInFrameEntryBuilder(''));
+  widgets['interface:shinysdr.telemetry.ITelemetryStore'] = TelemetryStoreWidget;
+  
   // TODO: lousy name
   // This abstract widget class is for widgets which use an INPUT or similar element and optionally wrap it in a panel.
   function SimpleElementWidget(config, expectedNodeName, buildPanel, initDataEl, update) {

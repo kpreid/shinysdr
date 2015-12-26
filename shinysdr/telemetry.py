@@ -22,11 +22,14 @@ TODO: This doesn't actually deserve its own module; it's just not clear where to
 
 from __future__ import absolute_import, division
 
-
 from collections import namedtuple
 
+from twisted.internet import reactor as the_reactor
+from twisted.internet.interfaces import IReactorTime
+from zope.interface import Interface, implements
 
 from shinysdr.types import bare_type_registry
+from shinysdr.values import CollectionState, ExportedState, exported_value
 
 
 __all__ = []  # appended later
@@ -65,7 +68,6 @@ class Track(_TrackNT):
                 return _TrackNT.__new__(cls, **kwargs)
         else:
             raise TypeError('Track constructor takes 1 dict or kwargs')
-                
 
 
 bare_type_registry[Track] = 'shinysdr.telemetry.Track'
@@ -99,3 +101,106 @@ empty_track = Track(
 )
 
 __all__.append('empty_track')
+
+
+class ITelemetryObject(Interface):
+    '''
+    An object that can be in an TelemetryStore.
+    '''
+    
+    def receive(message):
+        '''
+        TODO document
+        '''
+    
+    def is_interesting():
+        '''
+        Return whether this object should be shown to the client. The value should change only when a message is receive()d.
+        '''
+    
+    def get_object_expiry():
+        '''
+        Return the absolute time after which this object should be deleted from the store.
+        '''
+
+
+__all__.append('ITelemetryMessage')
+
+
+class ITelemetryMessage(Interface):
+    '''
+    A message that can be delivered to an ITelemetryObject or TelemetryStore.
+    '''
+    
+    def get_object_id():
+        '''
+        Return a string identifying the object this message is about. It must be unique among all objects, not just within a particular telemetry mode.
+        '''
+    
+    def get_object_constructor():
+        '''
+        Return a constructor function for this type of telemetry object.
+        '''
+
+
+__all__.append('ITelemetryMessage')
+
+
+class ITelemetryStore(Interface):
+    '''
+    Marker interface for client. Only implementation is TelemetryStore.
+    '''
+
+
+__all__.append('ITelemetryMessage')
+
+
+class TelemetryStore(CollectionState):
+    '''
+    Accepts telemetry messages and exports the accumulated information obtained from them.
+    '''
+    implements(ITelemetryStore)
+        
+    def __init__(self, time_source=the_reactor):
+        self.__interesting_objects = {}
+        CollectionState.__init__(self, self.__interesting_objects, dynamic=True)
+        self.__objects = {}
+        self.__expiry_times = {}
+        self.__time_source = IReactorTime(time_source)
+    
+    # not exported
+    def receive(self, message):
+        '''Store the supplied telemetry message object.'''
+        message = ITelemetryMessage(message)
+        object_id = message.get_object_id()
+        
+        if object_id in self.__objects:
+            obj = self.__objects[object_id]
+        else:
+            obj = self.__objects[object_id] = ITelemetryObject(
+                # TODO: Should probably have a context object supplying last message time and delete_me()
+                message.get_object_constructor()(object_id=object_id))
+
+        obj.receive(message)
+        self.__expiry_times[object_id] = obj.get_object_expiry()
+        if obj.is_interesting():
+            self.__interesting_objects[object_id] = obj
+        
+        # logically independent but this is a convenient time, and this approach allows us to borrow the receive time rather than reading the system clock ourselves.
+        # TODO: But it doesn't deal with timing out when we aren't receiving messages
+        self.__flush_expired()
+    
+    def __flush_expired(self):
+        current_time = self.__time_source.seconds()
+        deletes = []
+        for object_id, expiry in self.__expiry_times.iteritems():
+            if expiry <= current_time:
+                deletes.append(object_id)
+        for object_id in deletes:
+            del self.__objects[object_id]
+            del self.__expiry_times[object_id]
+            if object_id in self.__interesting_objects:
+                del self.__interesting_objects[object_id]
+
+
+__all__.append('TelemetryStore')
