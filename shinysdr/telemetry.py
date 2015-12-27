@@ -33,7 +33,7 @@ __all__ = []  # appended later
 
 
 # Rpresentation of information about an object whose location is being tracked.
-Track = namedtuple('Track', [
+_TrackNT = namedtuple('Track', [
     'latitude',  # TelemetryItem(latitude in degrees north)
     'longitude',  # TelemetryItem(latitude in degrees east)
 
@@ -44,6 +44,28 @@ Track = namedtuple('Track', [
     'altitude',  # TelemetryItem(altitude in meters above sea level)  TODO: Allow choice of reference? Barometric vs GPS vs other?
     'v_speed',  # TelemetryItem(vertical speed in m/s)
 ])
+class Track(_TrackNT):
+    def __new__(cls, *args, **kwargs):
+        if len(args) == 1 and len(kwargs) == 0:
+            # convert dict argument, possibly pure JSON (instead of TelemetryItems), to kwargs
+            args_in = dict(args[0])
+            args_out = {}
+            for k, v in args_in.iteritems():
+                if isinstance(v, TelemetryItem):
+                    args_out[k] = args_in[k]
+                else:
+                    args_out[k] = TelemetryItem(**args_in[k])
+            return cls.__new__(cls, **args_out)
+        elif len(args) == 0:
+            assert cls == Track
+            try:
+                # allow partial init args
+                return empty_track._replace(**kwargs)
+            except NameError:  # empty_track not yet initialized
+                return _TrackNT.__new__(cls, **kwargs)
+        else:
+            raise TypeError('Track constructor takes 1 dict or kwargs')
+                
 
 
 bare_type_registry[Track] = 'shinysdr.telemetry.Track'
