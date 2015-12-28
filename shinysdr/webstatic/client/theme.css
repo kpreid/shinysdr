@@ -75,7 +75,7 @@ shinysdr-subwindow > h2 {
   cursor: pointer;
 }
 
-.widget-Monitor-scrollable {
+.widget-Monitor-outer {
   /* TODO: We actually want this to be the WaterfallPlot's graph background color, but no good way to express that currently */
   background: black;
   color: white;

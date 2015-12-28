@@ -379,11 +379,14 @@ h2 input {
   display: block;
 }
 
-/* widgets: frequency scale */
-.freqscale {
+/* frequency scale and power scale */
+.freqscale, .widget-VerticalScale {
   font-family: 'Arial', sans-serif;
   font-size: .75em;
+}
 
+/* widgets: frequency scale */
+.freqscale {
   flex-shrink: 0;
   height: 1em;
   position: relative;
@@ -434,6 +437,20 @@ h2 input {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
+}
+
+/* Vertical scales on spectrum. See also combined styles with FreqScale. */
+.widget-VerticalScale {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+}
+.widget-VerticalScale-number {
+  position: absolute;
+  border-top: 1px solid;
 }
 
 /* widgets: frequency database list */
