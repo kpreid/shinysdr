@@ -31,6 +31,7 @@ from twisted.web import http
 from twisted.web.http_headers import Headers
 
 from shinysdr.devices import Device
+from shinysdr.modes import lookup_mode
 from shinysdr.plugins.simulate import SimulatedDevice
 from shinysdr.signals import SignalType
 from shinysdr.top import Top
@@ -142,12 +143,17 @@ class DemodulatorTester(object):
     '''
     def __init__(self, mode, state=None):
         # TODO: Refactor things so that we can take the demod ctor rather than a mode string
-        # TODO: Tell the simulated device to have no modulators, or have a simpler dummy source for testing, so we don't waste time on setup
         if state is None:
             state = {}
+        mode_def = lookup_mode(mode)
+        if mode_def is None:
+            raise Exception('No such mode is registered: ' + repr(mode))
+        # TODO: Tell the simulated device to have no modulators, or have a simpler dummy source for testing, so we don't waste time on setup
         self.__top = Top(devices={'s1': SimulatedDevice()})
         (_, receiver) = self.__top.add_receiver(mode, key='a', state=state)
         self.__demodulator = receiver.get_demodulator()
+        if not isinstance(self.__demodulator, mode_def.demod_class):
+            raise Exception('Demodulator not of expected class: ' + repr(self.__demodulator))
         self.__top.start()  # TODO overriding internals
     
     def close(self):

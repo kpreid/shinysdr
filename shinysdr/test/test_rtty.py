@@ -26,16 +26,14 @@ import numpy
 import numpy.testing
 
 from shinysdr.plugins import rtty
-from shinysdr.test.testutil import DemodulatorTester
+#from shinysdr.test.testutil import DemodulatorTester
 
-
-class TestRTTY(unittest.TestCase):
-    def __make(self):
-        return rtty.RTTYDemodulator(mode='RTTY', input_rate=48000, context=None)
-    
-    def test_common(self):
-        with DemodulatorTester('RTTY'):
-            pass
+# disable: mode is disabled so we can't test it
+#class TestRTTY(unittest.TestCase):
+#    def __make(self):
+#    def test_common(self):
+#        with DemodulatorTester('RTTY'):
+#            pass
 
 
 class TestRTTYEncoder(unittest.TestCase):
