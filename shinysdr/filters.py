@@ -22,8 +22,10 @@ GNU Radio blocks which automatically compute appropriate filter designs.
 from __future__ import absolute_import, division
 
 from fractions import gcd
+from math import pi, sin, cos
 
 from gnuradio import gr
+from gnuradio.fft import window
 from gnuradio import filter as grfilter  # don't shadow builtin
 from gnuradio.filter import pfb
 from gnuradio.filter import firdes
@@ -465,3 +467,39 @@ def make_resampler(in_rate, out_rate):
 
 
 __all__.append('make_resampler')
+
+
+def design_sawtooth_filter(
+        ntaps=40,
+        decreasing=False,
+        window_type=window.WIN_HAMMING,
+        beta=0):
+    '''
+    This filter has a response which increases or decreases linearly with frequency, cut at f_s/2. Its gain is 1 at frequency 0 and thus also 1 averaged over all frequencies.
+    '''
+    window_values = window.build(window_type, ntaps, beta)
+    
+    # Formula provided by Olli Niemitalo in <http://dsp.stackexchange.com/a/28035/4655>.
+    taps = []
+    for i in xrange(0, ntaps):
+        k = i - ntaps // 2  # k = 0 at middle
+        if k == 0:
+            # substitute limit for division by zero
+            ideal_response = complex(pi, 0)
+        else:
+            # The real part is pi * sinc(k), but that is always zero when k != 0.
+            ideal_response = complex(0, sin(pi * k) / (pi * k * k) - cos(pi * k) / k)
+        taps.append(window_values[i] * ideal_response)
+        
+    # Compute gain at frequency 0, and divide by it so as to set the wanted gain.
+    gain_factor = 1.0 / abs(sum(taps))
+    for i in xrange(0, ntaps):
+        taps[i] *= gain_factor
+    
+    # Reverse if appropriate.
+    if decreasing:
+        taps = taps[::-1]
+    return taps
+
+
+__all__.append('design_sawtooth_filter')
