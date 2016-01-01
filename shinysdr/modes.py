@@ -133,20 +133,37 @@ class ModeDef(object):
 __all__.append('ModeDef')
 
 
+# Object for memoizing results of getPlugins(_IModeDef)
+class _ModeTable(object):
+    def __init__(self):
+        self.__modes = {p.mode: p for p in getPlugins(_IModeDef, plugins) if p.available}
+    
+    def get_modes(self):
+        return self.__modes.values()
+    
+    def lookup_mode(self, mode):
+        return self.__modes.get(mode)
+
+
+_mode_table = None
+
+
+def _get_mode_table():
+    global _mode_table
+    if _mode_table is None:
+        _mode_table = _ModeTable()
+    return _mode_table
+
+
 def get_modes():
-    # TODO caching? prebuilt mode table?
-    return [p for p in getPlugins(_IModeDef, plugins) if p.available]
+    return _get_mode_table().get_modes()
 
 
 __all__.append('get_modes')
 
 
 def lookup_mode(mode):
-    # TODO sensible lookup table (doesn't matter for now because small N)
-    for mode_def in get_modes():
-        if mode_def.mode == mode:
-            return mode_def
-    return None
+    return _get_mode_table().lookup_mode(mode)
 
 
 __all__.append('lookup_mode')
