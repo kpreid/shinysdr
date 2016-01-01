@@ -34,7 +34,7 @@ class DemodulatorSmokeTest(unittest.TestCase):
         self.__test('AM')
     
     def test_am_entire(self):
-        self.__test('AM', state={u'use_entire_input_band': True})
+        self.__test('AM-unsel')
     
     def test_nfm(self):
         self.__test('NFM')
