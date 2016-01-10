@@ -54,11 +54,9 @@ class Demodulator(gr.hier_block2, ExportedState):
         
         self.__channels = channels = 2 if self.get_output_type().get_kind() == 'STEREO' else 1
         gr.hier_block2.__init__(
-            # str() because insists on non-unicode
-            self, str('%s receiver' % (mode,)),
+            self, (u'%s(mode=%r)' % (type(self).__name__, mode)).encode('utf-8'),
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
-            gr.io_signature(channels, channels, gr.sizeof_float * 1),
-        )
+            gr.io_signature(channels, channels, gr.sizeof_float * 1))
 
     def can_set_mode(self, mode):
         return False
