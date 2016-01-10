@@ -551,13 +551,18 @@ class OurStreamProtocol(protocol.Protocol):
         self.inner = None
     
     def dataReceived(self, data):
-        """twisted Protocol implementation"""
-        if self.inner is None:
-            # To work around txWS's lack of a notification when the URL is available, all clients send a dummy first message.
-            self.__dispatch_url()
-        else:
-            self.inner.dataReceived(data)
-            
+        """Twisted Protocol implementation.
+        
+        Additionally, txWS takes no care with exceptions here, so we catch and log."""
+        try:
+            if self.inner is None:
+                # To work around txWS's lack of a notification when the URL is available, all clients send a dummy first message.
+                self.__dispatch_url()
+            else:
+                self.inner.dataReceived(data)
+        except Exception as e:
+            log.err(e)
+    
     def __dispatch_url(self):
         loc = self.transport.location
         log.msg('Stream connection to ', loc)
