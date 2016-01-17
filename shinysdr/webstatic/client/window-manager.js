@@ -36,11 +36,13 @@ define(['./values'], function (values) {
       return;
     }
 
+    // Modifications to element DOM.
     header.tabIndex = 0;
+    var leftSlot = header.insertBefore(document.createElement('span'), header.firstChild);
+    var rightSlot = header.appendChild(document.createElement('span'));
+    rightSlot.classList.add('subwindow-show-buttons');
 
-    var buttonsSlot = header.appendChild(document.createElement('span'));
-    buttonsSlot.classList.add('subwindow-show-buttons');
-
+    // Show-this-subwindow button to be displayed elsewhere.
     var showButton = document.createElement('a');
     showButton.tabIndex = 0;
     showButton.classList.add('subwindow-show-button');
@@ -97,7 +99,8 @@ define(['./values'], function (values) {
       element: this,
       visible: function() { return visible; },
       setVisibleAndUpdate: setVisibleAndUpdate,
-      slot: buttonsSlot,
+      leftSlot: leftSlot,
+      rightSlot: rightSlot,
       button: showButton,
       update: update,
       getLastUserOpenedTime: function () { return lastUserOpenedTime; }
@@ -128,12 +131,12 @@ define(['./values'], function (values) {
         if (r.button.parentNode) r.button.parentNode.removeChild(r.button);
         
         queued.forEach(function (q) {
-          r.slot.appendChild(q.button);
+          r.rightSlot.appendChild(q.button);
         });
         queued.length = 0;
       } else {
         if (lastVisibleWindow) {
-          lastVisibleWindow.slot.appendChild(r.button);
+          lastVisibleWindow.rightSlot.appendChild(r.button);
         } else {
           queued.push(r);
         }
