@@ -1,4 +1,4 @@
-/* Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+/* Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
  * 
  * This file is part of ShinySDR.
  * 
@@ -73,21 +73,69 @@ shinysdr-subwindow > h2 {
   padding: .2em;
   flex: 0 0 auto;
 }
-.subwindow-show-buttons {
+.subwindow-menu-button {
+  /* reset */
+  border: none;
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: 100%;
+  
   display: block;
-  float: right;
-  font-size: 80%;
+  float: left;
+  margin: -.18em 0 -.2em -.2em; /* cancel padding */ /* TODO: .18em is a mysterious fudge factor which ought to be .2em. */
+  width: 1.4em;
+  height: 1.4em;
+  text-align: center;
+  vertical-align: middle;
+  overflow: hidden;
+  
+  /* spacing vs. other header content -- probably should be moved */
+  margin-right: 0.2em;
+  
+  cursor: pointer;
 }
-.subwindow-show-button {
+.subwindow-menu-button img {
   display: inline-block;
-  margin: 0 .2em;
+  width: 80%;
+  height: 80%;
+}
+.subwindow-menu-button:disabled img {
+  opacity: 0.4;
+}
+
+/* left sidebar menu which contains window show-buttons and links */
+ul.system-menu-list, .system-menu-list ul { /* TODO doesn't fit here, is styling for side menu */
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.system-menu-list li {
+  display: block;
+  margin: 0;
+  padding: 0;
 
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.system-menu-list li > a:first-child:last-child,
+.system-menu-list li > button:first-child:last-child {
+  display: block;
+  margin: 0;
+  padding: .4em;
 
-/* menus (which are <dialog> elements) */
+  /* button reset */
+  width: 100%;
+  font: inherit;
+  border: none;
+  background: none;
+  text-align: left;
+
+  cursor: pointer;
+}
+
+/* pop-up menus (which are <dialog> elements) */
 .menu-dialog {
   margin: 0;
   border: none;

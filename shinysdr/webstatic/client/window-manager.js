@@ -1,4 +1,4 @@
-// Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -24,10 +24,15 @@ define(['./values'], function (values) {
   
   var ELEMENT = 'shinysdr-subwindow';
   var VISIBLE_ATTRIBUTE = 'visible';
+  var WINDOW_LIST_ID = 'shinysdr-subwindow-list';
 
   var allWindows = [];
   var visibleCount = NaN;
   var firstUpdateDone = false;
+  
+  function isWindowListSubwindow(subwindowElement) {
+    return subwindowElement.querySelector('#' + WINDOW_LIST_ID) != null;
+  }
   
   function enroll(/* this = element */) {
     var header = this.querySelector('h2');
@@ -37,16 +42,25 @@ define(['./values'], function (values) {
     }
 
     // Modifications to element DOM.
-    header.tabIndex = 0;
     var leftSlot = header.insertBefore(document.createElement('span'), header.firstChild);
     var rightSlot = header.appendChild(document.createElement('span'));
     rightSlot.classList.add('subwindow-show-buttons');
 
     // Show-this-subwindow button to be displayed elsewhere.
-    var showButton = document.createElement('a');
-    showButton.tabIndex = 0;
-    showButton.classList.add('subwindow-show-button');
-    showButton.textContent = '\u25B8\u00A0' + header.textContent;
+    var showBtnOuter, showButton;
+    if (isWindowListSubwindow(this)) {
+      showBtnOuter = showButton = document.createElement('button');
+      showButton.classList.add('subwindow-menu-button');
+      var showButtonIcon = showButton.appendChild(document.createElement('img'));
+      showButtonIcon.src = '/client/menu.svg';
+      showButtonIcon.alt = '\u2261';
+    } else {
+      showBtnOuter = document.createElement('li');
+      showBtnOuter.classList.add('subwindow-show-button');
+      showButton = showBtnOuter.appendChild(document.createElement('button'));
+      showButton.tabIndex = 0;
+      showButton.textContent = header.textContent;
+    }
 
     var visible = this.hasAttribute(VISIBLE_ATTRIBUTE) ? JSON.parse(this.getAttribute(VISIBLE_ATTRIBUTE)) : true;
     
@@ -65,6 +79,7 @@ define(['./values'], function (values) {
       } else {
         this.style.display = 'none';
       }
+      showBtnOuter.classList[visible ? 'add' : 'remove']('subwindow-show-button-shown');
       if (ns) ns.setItem('detailsOpen', JSON.stringify(visible));
       
       if (firstUpdateDone) {  // don't do n^2 work on page load
@@ -75,24 +90,28 @@ define(['./values'], function (values) {
       // Don't grab events from controls in headers
       // There doesn't seem to be a better more composable way to handle this --
       // http://stackoverflow.com/questions/15657776/detect-default-event-handling
-      if (event.target.tagName === 'INPUT'
-          || event.target.tagName === 'LABEL'
-          || event.target.tagName === 'BUTTON') {
+      if (event.target != showButton &&
+          (event.target.tagName === 'INPUT'
+           || event.target.tagName === 'LABEL'
+           || event.target.tagName === 'BUTTON')) {
         return;
       }
+
+      var hasFocusBefore = document.activeElement;
 
       if (visible && visibleCount <= 1) return;
       if (!visible) lastUserOpenedTime = Date.now();
       setVisibleAndUpdate(!visible);
       event.stopPropagation();
+      
+      // The focused thing might be the menu button moved by globalUpdate, so restore focus.
+      if (hasFocusBefore) hasFocusBefore.focus();
     }
     function setVisibleAndUpdate(newVisible) {
       visible = newVisible;
       update();
       globalUpdate();
     }
-    // TODO look into how to accomplish automatic keyboard accessibility
-    header.addEventListener('click', toggle, false);
     showButton.addEventListener('click', toggle, false);
 
     allWindows.push({
@@ -101,7 +120,7 @@ define(['./values'], function (values) {
       setVisibleAndUpdate: setVisibleAndUpdate,
       leftSlot: leftSlot,
       rightSlot: rightSlot,
-      button: showButton,
+      button: showBtnOuter,
       update: update,
       getLastUserOpenedTime: function () { return lastUserOpenedTime; }
     });
@@ -116,32 +135,47 @@ define(['./values'], function (values) {
   }
   
   function globalUpdate() {
+    var windowListElement = document.getElementById(WINDOW_LIST_ID);
+    
     if (closeExtraWide()) {
+      // Don't do anything because closeExtraWide triggered its own update.
       return;
     }
     
-    // Distribute show-buttons of hidden windows among headers of available visible windows.
-    var lastVisibleWindow = null;
-    var queued = [];
-    visibleCount = 0;
-    allWindows.forEach(function (r) {
-      if (r.visible()) {
-        visibleCount++;
-        lastVisibleWindow = r;
-        if (r.button.parentNode) r.button.parentNode.removeChild(r.button);
-        
-        queued.forEach(function (q) {
-          r.rightSlot.appendChild(q.button);
-        });
-        queued.length = 0;
-      } else {
-        if (lastVisibleWindow) {
-          lastVisibleWindow.rightSlot.appendChild(r.button);
-        } else {
-          queued.push(r);
+    // TODO: Don't rebuild entire structure every time; this approach is a relic of a different design.
+    if (!windowListElement) {
+      console.warn('#' + WINDOW_LIST_ID + ' not present in document.');
+    } else { 
+      var windowListSubwindow;
+      visibleCount = 0;
+      allWindows.forEach(function (r) {
+        if (r.visible()) {
+          visibleCount++;
         }
+        if (isWindowListSubwindow(r.element)) {
+          windowListSubwindow = r;
+        }
+        if (windowListElement) {
+          windowListElement.appendChild(r.button);
+        }
+      });
+      
+      if (windowListSubwindow) {
+        allWindows.some(function (r) {
+          if (r.visible()) {
+            r.leftSlot.appendChild(windowListSubwindow.button);
+            return true;
+          }
+        });
+        windowListSubwindow.button.disabled = visibleCount <= 1 && windowListSubwindow.visible();
       }
-    });
+    }
+    
+    if (visibleCount <= 0 && allWindows.length > 0) {
+      // If all windows are hidden (e.g. due to bad persistent state), show one.
+      allWindows[0].setVisibleAndUpdate(true);
+      return;
+    }
     
     // kludge to trigger relayout on other elements that need it
     // This kludge is needed because there's no way for an element to be notified on relayout.

@@ -1,4 +1,4 @@
-/* Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+/* Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
  * 
  * This file is part of ShinySDR.
  * 
@@ -32,7 +32,17 @@ shinysdr-subwindow > h2 {
   border: #EEE outset;
   border-width: 0 1px;
   background: linear-gradient(to bottom, #FFF 0%,#CCC 100%);
-  cursor: pointer;
+}
+.subwindow-menu-button {
+  border: 0 #EEE groove;
+  border-width: 0 2px 0 0;
+}
+
+.system-menu-list .subwindow-show-button-shown {
+  background: rgba(255, 255, 255, 0.2);
+}
+.system-menu-list .subwindow-show-button:hover {
+  background: rgba(255, 255, 255, 0.4);
 }
 
 .menu-dialog {
