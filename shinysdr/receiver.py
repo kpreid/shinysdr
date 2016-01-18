@@ -185,7 +185,7 @@ class Receiver(gr.hier_block2, ExportedState):
     
     @setter
     def set_device_name(self, value):
-        value = unicode(value)
+        value = self.context.get_rx_device_type()(value)
         if self.__device_name != value:
             self.__device_name = value
             self.__update_rotator()  # freq
