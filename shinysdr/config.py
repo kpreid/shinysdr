@@ -238,26 +238,27 @@ def make_default_config():
     return '''\
 # This is a ShinySDR configuration file. For more information about what can
 # be put here, read the manual section on it, available from the running
-# ShinySDR server at: /manual/configuration (or the link at the bottom right).
+# ShinySDR server at: http://localhost:8100/manual/configuration
 
-import shinysdr.devices
-import shinysdr.plugins.osmosdr
-import shinysdr.plugins.simulate
+from shinysdr.devices import AudioDevice
+from shinysdr.plugins.osmosdr import OsmoSDRDevice
+from shinysdr.plugins.simulate import SimulatedDevice
 
 # OsmoSDR generic driver; handles USRP, RTL-SDR, FunCube Dongle, HackRF, etc.
 # To select a specific device, replace '' with 'rtl=0' etc.
-config.devices.add(u'osmo', shinysdr.plugins.osmosdr.OsmoSDRDevice(''))
+config.devices.add(u'osmo', OsmoSDRDevice(''))
 
 # For hardware which uses a sound-card as its ADC or appears as an
 # audio device.
-config.devices.add(u'audio', shinysdr.devices.AudioDevice(''))
+config.devices.add(u'audio', AudioDevice(''))
 
 # Locally generated RF signals for test purposes.
-config.devices.add(u'sim', shinysdr.plugins.simulate.SimulatedDevice())
+config.devices.add(u'sim', SimulatedDevice())
 
 config.persist_to_file('state.json')
 
-# Put CHIRP-style frequency list .csv files in here.
+# You can put CHIRP-style frequency list .csv files in this directory.
+# See http://localhost:8100/manual/dbs for more information.
 config.databases.add_directory('dbs/')
 
 config.serve_web(

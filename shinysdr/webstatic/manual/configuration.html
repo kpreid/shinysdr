@@ -40,13 +40,13 @@ It is a Python program so that unusual configurations can be accommodated, up to
 
 <p>For illustration, here is the default configuration file (created by <code>shinysdr --create <var>filename</var></code>), without the comments:</p>
 
-<blockquote><pre>import shinysdr.devices
-import shinysdr.plugins.osmosdr
-import shinysdr.plugins.simulate
+<blockquote><pre>from shinysdr.devices import AudioDevice
+from shinysdr.plugins.osmosdr import OsmoSDRDevice
+from shinysdr.plugins.simulate import SimulatedDevice
 
-config.devices.add(u'osmo', shinysdr.plugins.osmosdr.OsmoSDRDevice(''))
-config.devices.add(u'audio', shinysdr.devices.AudioDevice(''))
-config.devices.add(u'sim', shinysdr.plugins.simulate.SimulatedDevice())
+config.devices.add(u'osmo', OsmoSDRDevice(''))
+config.devices.add(u'audio', AudioDevice(''))
+config.devices.add(u'sim', SimulatedDevice())
 
 config.persist_to_file('state.json')
 config.databases.add_directory('dbs/')
