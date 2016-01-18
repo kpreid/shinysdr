@@ -56,6 +56,12 @@ class TestEnum(unittest.TestCase):
             [(u'a', u'a'), ('a', u'a')],
             [u'c', 999])
 
+    def test_strict_by_default(self):
+        _testType(self,
+            Enum({u'a': u'a', u'b': u'b'}),
+            [(u'a', u'a'), ('a', u'a')],
+            [u'c', 999])
+
     def test_lenient(self):
         _testType(self,
             Enum({u'a': u'a', u'b': u'b'}, strict=False),

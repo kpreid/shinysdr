@@ -126,10 +126,10 @@ RIG_EVFO = -15
 RIG_EDOM = -16
 
 
-_modes = Enum({x: x for x in ['USB', 'LSB', 'CW', 'CWR', 'RTTY', 'RTTYR', 'AM', 'FM', 'WFM', 'AMS', 'PKTLSB', 'PKTUSB', 'PKTFM', 'ECSSUSB', 'ECSSLSB', 'FAX', 'SAM', 'SAL', 'SAH', 'DSB']})
+_modes = Enum({x: x for x in ['USB', 'LSB', 'CW', 'CWR', 'RTTY', 'RTTYR', 'AM', 'FM', 'WFM', 'AMS', 'PKTLSB', 'PKTUSB', 'PKTFM', 'ECSSUSB', 'ECSSLSB', 'FAX', 'SAM', 'SAL', 'SAH', 'DSB']}, strict=False)
 
 
-_vfos = Enum({'VFOA': 'VFO A', 'VFOB': 'VFO B', 'VFOC': 'VFO C', 'currVFO': 'currVFO', 'VFO': 'VFO', 'MEM': 'MEM', 'Main': 'Main', 'Sub': 'Sub', 'TX': 'TX', 'RX': 'RX'})
+_vfos = Enum({'VFOA': 'VFO A', 'VFOB': 'VFO B', 'VFOC': 'VFO C', 'currVFO': 'currVFO', 'VFO': 'VFO', 'MEM': 'MEM', 'Main': 'Main', 'Sub': 'Sub', 'TX': 'TX', 'RX': 'RX'}, strict=False)
 
 
 _passbands = Range([(0, 0)])

@@ -98,7 +98,7 @@ class Constant(ValueType):
 
 
 class Enum(ValueType):
-    def __init__(self, values, strict=False, base_type=unicode):
+    def __init__(self, values, strict=True, base_type=unicode):
         """values: dict of {value: description}"""
         self.__values = dict(values)  # paranoid copy
         self.__strict = bool(strict)

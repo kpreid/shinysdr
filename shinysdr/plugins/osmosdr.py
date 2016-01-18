@@ -358,7 +358,8 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         self.__source.set_gain_mode(bool(value), ch)
     
     @exported_value(type_fn=lambda self: Enum(
-        {unicode(name): unicode(name) for name in self.__source.get_antennas()}))
+        {unicode(name): unicode(name) for name in self.__source.get_antennas()},
+        strict=False))
     def get_antenna(self):
         if self.__source is None: return ''
         return unicode(self.__source.get_antenna(ch))
