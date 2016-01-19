@@ -1,12 +1,13 @@
 # This is a truncated and customized version of the default pylint configuration. The sections pertaining to reporting and other execution behavior have been removed entirely, leaving only the configuration of code style.
 
 [MESSAGES CONTROL]
-disable=locally-disabled,trailing-whitespace,fixme,missing-docstring,protected-access,invalid-name,super-init-not-called,star-args,no-self-argument,inherit-non-class,no-self-use,unused-argument,too-many-return-statements,too-many-branches,too-many-function-args,too-many-instance-attributes,too-many-locals,bad-continuation,unnecessary-lambda,redefined-variable-type,global-statement
+disable=locally-disabled,trailing-whitespace,fixme,missing-docstring,protected-access,invalid-name,super-init-not-called,star-args,no-self-argument,inherit-non-class,no-method-argument,no-self-use,unused-argument,too-many-return-statements,too-many-branches,too-many-function-args,too-many-instance-attributes,too-many-locals,bad-continuation,unnecessary-lambda,redefined-variable-type,global-statement
 # why super-init-not-called: false positives
 # why star-args: I reject the premise
 # why protected-access: because I am using it for 'friend' access, maybe fix that
 # why no-self-argument: false positives on interface declarations
 # why inherit-non-class: false positives on interface declarations
+# why no-method-argument: false positives on interface declarations
 # why no-self-use: false positives on exported state
 # why unused-argument: apparently cannot be prevented when an implementation legitimately does not use an arg
 # why too-many-return-statements and too-many-branches: useful for parsers

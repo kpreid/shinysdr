@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-# pylint: disable=no-method-argument, no-init
+# pylint: disable=no-init
 # (pylint is confused by interfaces)
 
 from __future__ import absolute_import, division
