@@ -465,7 +465,7 @@ class StateStreamInner(object):
             log.msg('set %s to %r (%1.2fs)' % (registration, value, t1 - t0))
             self.__noteDirty()  # TODO fix things so noteDirty is not needed
         else:
-            log.msg('Unrecognized state stream op received: %r' % (self, command))
+            log.msg('Unrecognized state stream op received: %r' % (command,))
             
     
     def get__root_object(self):
@@ -588,6 +588,7 @@ class OurStreamProtocol(protocol.Protocol):
         """Twisted Protocol implementation.
         
         Additionally, txWS takes no care with exceptions here, so we catch and log."""
+        # pylint: disable=broad-except
         try:
             if self.inner is None:
                 # To work around txWS's lack of a notification when the URL is available, all clients send a dummy first message.
