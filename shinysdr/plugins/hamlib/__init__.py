@@ -274,7 +274,7 @@ def _connect_to_device(reactor, options, port, daemon, connect_func):
                 host=host,
                 port=port)
             break
-        except ConnectionRefusedError, e:
+        except ConnectionRefusedError as e:
             refused = e
             yield deferLater(reactor, 0.1 * (2 ** i), lambda: None)
     else:
@@ -467,10 +467,13 @@ def _install_cell(self, name, is_level, writable, callback, caps):
         vtype = self._info[name]
     
     def updater(strval):
-        if vtype is bool:
-            value = bool(int(strval))
-        else:
-            value = vtype(strval)
+        try:
+            if vtype is bool:
+                value = bool(int(strval))
+            else:
+                value = vtype(strval)
+        except ValueError:
+            value = unicode(strval)
         cell.set_internal(value)
     
     def actually_write_value(value):
@@ -500,7 +503,7 @@ class _HamlibRig(_HamlibProxy):
         'XIT': (int),
         'PTT': (bool),
         'DCD': (bool),
-        'Rptr Shift': (Enum({'+': '+', '-': '-'})),
+        'Rptr Shift': (Enum({'+': '+', '-': '-', 'None': 'None'}, strict=False)),
         'Rptr Offset': (int),
         'CTCSS Tone': (int),
         'DCS Code': (str),
