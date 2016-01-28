@@ -119,7 +119,7 @@ class Receiver(gr.hier_block2, ExportedState):
         self.__demod_stereo = output_type.get_kind() == 'STEREO'
         self.__output_type = SignalType(
             kind='STEREO',
-            sample_rate=output_type.get_sample_rate() if self.__demod_output else _dummy_audio_rate)
+            sample_rate=output_type.get_sample_rate() if self.__demod_output else 0)
     
     def __do_connect(self, reason):
         #log.msg(u'receiver do_connect: %s' % (reason,))
@@ -152,15 +152,10 @@ class Receiver(gr.hier_block2, ExportedState):
                 # TODO: should mix left and right or something
                 self.connect((self.__demodulator, 0), self.probe_audio)
             else:
-                # Dummy output.
-                # TODO: Teach top block about no-audio so we don't have to have a dummy output.
-                throttle = blocks.throttle(gr.sizeof_float, _dummy_audio_rate)
-                throttle.set_max_output_buffer(_dummy_audio_rate // 10)  # ensure smooth output
-                self.connect(
-                    analog.sig_source_f(0, analog.GR_CONST_WAVE, 0, 0, 0),
-                    throttle)
-                for ch in xrange(self.__audio_channels):
-                    self.connect(throttle, (self, ch))
+                # Dummy output, ignored by containing block
+                source_of_nothing = blocks.vector_source_f([])
+                for ch in xrange(0, self.__audio_channels):
+                    self.connect(source_of_nothing, (self, ch))
             
             if self.__output_type != self.__last_output_type:
                 self.__last_output_type = self.__output_type

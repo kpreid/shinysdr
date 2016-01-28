@@ -252,7 +252,14 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
                     log.err('Flow graph: Refusing to connect more than 6 receivers')
                     break
                 self.connect(self._sources[receiver.get_device_name()].get_rx_driver(), receiver)
-                audio_rs.input(receiver, receiver.get_output_type().get_sample_rate(), receiver.get_audio_destination())
+                receiver_output_type = receiver.get_output_type()
+                if receiver_output_type.get_sample_rate() <= 0:
+                    # receiver has dummy output, connect it to something to satisfy flow graph structure
+                    for ch in xrange(0, self.__audio_manager.get_channels()):
+                        self.connect((receiver, ch), blocks.null_sink(gr.sizeof_float))
+                else:
+                    assert receiver_output_type.get_kind() == 'STEREO'
+                    audio_rs.input(receiver, receiver_output_type.get_sample_rate(), receiver.get_audio_destination())
             
             self.__has_a_useful_receiver = audio_rs.finish_bus_connections()
             
