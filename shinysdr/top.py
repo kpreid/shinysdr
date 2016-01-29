@@ -144,8 +144,11 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
             defaults = self.receiver_default_state
             
         combined_state = defaults.copy()
-        if 'device_name' in combined_state: del combined_state['device_name']  # should not be overridden
-        if state is not None: combined_state.update(state)
+        for do_not_use_default in ['device_name', 'freq_linked_to_device']:
+            if do_not_use_default in combined_state:
+                del combined_state[do_not_use_default]
+        if state is not None:
+            combined_state.update(state)
         
         facet = ContextForReceiver(self, key)
         receiver = unserialize_exported_state(Receiver, kwargs=dict(

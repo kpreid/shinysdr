@@ -59,7 +59,9 @@ class Receiver(gr.hier_block2, ExportedState):
     implements(IReceiver)
     
     def __init__(self, mode,
-            rec_freq=100.0,
+            freq_absolute=100.0,
+            freq_relative=None,
+            freq_linked_to_device=False,
             audio_destination=None,
             device_name=None,
             audio_gain=-6,
@@ -90,10 +92,18 @@ class Receiver(gr.hier_block2, ExportedState):
         
         # Simple state
         self.mode = mode
-        self.rec_freq = rec_freq
         self.audio_gain = audio_gain
         self.audio_pan = min(1, max(-1, audio_pan))
         self.__audio_destination = audio_destination
+        
+        # Receive frequency.
+        self.__freq_linked_to_device = bool(freq_linked_to_device)
+        if self.__freq_linked_to_device and freq_relative is not None:
+            self.__freq_relative = float(freq_relative)
+            self.__freq_absolute = self.__freq_relative + self.__get_device().get_freq()
+        else:
+            self.__freq_absolute = float(freq_absolute)
+            self.__freq_relative = self.__freq_absolute - self.__get_device().get_freq()
         
         # Blocks
         self.__rotator = blocks.rotator_cc()
@@ -167,6 +177,10 @@ class Receiver(gr.hier_block2, ExportedState):
         return self.__output_type
 
     def changed_device_freq(self):
+        if self.__freq_linked_to_device:
+            self.__freq_absolute = self.__freq_relative + self.__get_device().get_freq()
+        else:
+            self.__freq_relative = self.__freq_absolute - self.__get_device().get_freq()
         self.__update_rotator()
         # note does not revalidate() because the caller will handle that
 
@@ -183,7 +197,7 @@ class Receiver(gr.hier_block2, ExportedState):
         value = self.context.get_rx_device_type()(value)
         if self.__device_name != value:
             self.__device_name = value
-            self.__update_rotator()  # freq
+            self.changed_device_freq()  # freq
             self._rebuild_demodulator(reason=u'changed device, thus maybe sample rate')  # rate
             self.context.changed_needed_connections(u'changed device')
     
@@ -203,15 +217,36 @@ class Receiver(gr.hier_block2, ExportedState):
             self._rebuild_demodulator(mode=mode, reason=u'changed mode')
 
     # TODO: rename rec_freq to just freq
-    @exported_value(type=float, parameter='rec_freq')
+    @exported_value(type=float, parameter='freq_absolute')
     def get_rec_freq(self):
-        return self.rec_freq
+        return self.__freq_absolute
     
     @setter
-    def set_rec_freq(self, rec_freq):
-        self.rec_freq = float(rec_freq)
+    def set_rec_freq(self, absolute):
+        absolute = float(absolute)
+        
+        if self.__freq_linked_to_device:
+            # Temporarily violating the (device freq + relative freq = absolute freq) invariant, which will be restored below by changing the device freq.
+            self.__freq_absolute = absolute
+        else:
+            self.__freq_absolute = absolute
+            self.__freq_relative = absolute - self.__get_device().get_freq()
+        
         self.__update_rotator()
-        self.context.revalidate(tuning=True)
+
+        if self.__freq_linked_to_device:
+            # TODO: reconsider whether we should be giving commands directly to the device, vs. going through the context.
+            self.__get_device().set_freq(self.__freq_absolute - self.__freq_relative)
+        else:
+            self.context.revalidate(tuning=True)
+    
+    @exported_value(type=bool)
+    def get_freq_linked_to_device(self):
+        return self.__freq_linked_to_device
+    
+    @setter
+    def set_freq_linked_to_device(self, value):
+        self.__freq_linked_to_device = bool(value)
     
     # TODO: support non-audio demodulators at which point these controls should be optional
     @exported_value(parameter='audio_gain', type=Range([(-30, 20)], strict=False))
@@ -246,7 +281,7 @@ class Receiver(gr.hier_block2, ExportedState):
     def get_is_valid(self):
         device = self.__get_device()
         sample_rate = device.get_rx_driver().get_output_type().get_sample_rate()
-        valid_bandwidth = sample_rate / 2 - abs(self.rec_freq - device.get_freq())
+        valid_bandwidth = sample_rate / 2 - abs(self.__freq_relative)
         return self.__demodulator is not None and valid_bandwidth >= self.__demodulator.get_half_bandwidth()
     
     # Note that the receiver cannot measure RF power because we don't know what the channel bandwidth is; we have to leave that to the demodulator.
@@ -261,11 +296,11 @@ class Receiver(gr.hier_block2, ExportedState):
     def __update_rotator(self):
         device = self.__get_device()
         sample_rate = device.get_rx_driver().get_output_type().get_sample_rate()
-        offset = self.rec_freq - self.__get_device().get_freq()
         if self.__demod_tunable:
-            self.__demodulator.set_rec_freq(offset)
+            # TODO: Method should perhaps be renamed to convey that it is relative
+            self.__demodulator.set_rec_freq(self.__freq_relative)
         else:
-            self.__rotator.set_phase_inc(rotator_inc(rate=sample_rate, shift=-offset))
+            self.__rotator.set_phase_inc(rotator_inc(rate=sample_rate, shift=-self.__freq_relative))
     
     def __get_device(self):
         return self.context.get_device(self.__device_name)
