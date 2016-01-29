@@ -39,7 +39,7 @@ from shinysdr.receiver import Receiver
 from shinysdr.signals import SignalType
 from shinysdr.telemetry import TelemetryStore
 from shinysdr.types import Enum, Notice
-from shinysdr.values import ExportedState, CollectionState, exported_block, exported_value, setter, IWritableCollection
+from shinysdr.values import ExportedState, CollectionState, exported_block, exported_value, setter, IWritableCollection, unserialize_exported_state
 
 
 class ReceiverCollection(CollectionState):
@@ -148,14 +148,13 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         if state is not None: combined_state.update(state)
         
         facet = ContextForReceiver(self, key)
-        receiver = Receiver(
+        receiver = unserialize_exported_state(Receiver, kwargs=dict(
             mode=mode,
             audio_channels=self.__audio_manager.get_channels(),
             device_name=self.source_name,
             audio_destination=self.__audio_manager.get_default_destination(),  # TODO match others
             context=facet,
-        )
-        receiver.state_from_json(combined_state)  # TODO: Use unserialize_exported_state
+        ), state=combined_state)
         facet._receiver = receiver
         self._receivers[key] = receiver
         self._receiver_valid[key] = False

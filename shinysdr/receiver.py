@@ -174,7 +174,7 @@ class Receiver(gr.hier_block2, ExportedState):
     def get_demodulator(self):
         return self.__demodulator
 
-    @exported_value(parameter='device_name', type_fn=lambda self: self.context.get_rx_device_type())
+    @exported_value(type_fn=lambda self: self.context.get_rx_device_type())
     def get_device_name(self):
         return self.__device_name
     
@@ -203,7 +203,7 @@ class Receiver(gr.hier_block2, ExportedState):
             self._rebuild_demodulator(mode=mode, reason=u'changed mode')
 
     # TODO: rename rec_freq to just freq
-    @exported_value(type=float)
+    @exported_value(type=float, parameter='rec_freq')
     def get_rec_freq(self):
         return self.rec_freq
     
@@ -214,7 +214,7 @@ class Receiver(gr.hier_block2, ExportedState):
         self.context.revalidate(tuning=True)
     
     # TODO: support non-audio demodulators at which point these controls should be optional
-    @exported_value(type=Range([(-30, 20)], strict=False))
+    @exported_value(parameter='audio_gain', type=Range([(-30, 20)], strict=False))
     def get_audio_gain(self):
         return self.audio_gain
 
@@ -232,7 +232,7 @@ class Receiver(gr.hier_block2, ExportedState):
         self.audio_pan = value
         self.__update_audio_gain()
     
-    @exported_value(parameter='audio_destination', type_fn=lambda self: self.context.get_audio_destination_type())
+    @exported_value(type_fn=lambda self: self.context.get_audio_destination_type())
     def get_audio_destination(self):
         return self.__audio_destination
     

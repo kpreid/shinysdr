@@ -542,6 +542,11 @@ def setter(f):
 class ExportedGetter(object):
     '''Descriptor for a getter exported using @exported_value.'''
     def __init__(self, f, parameter, is_block, cell_kwargs):
+        if 'type_fn' in cell_kwargs and 'type' in cell_kwargs:
+            raise ValueError('cannot specify both "type" and "type_fn"')
+        if 'type_fn' in cell_kwargs and parameter:
+            raise ValueError('"type_fn" is incompatible with "parameter"')
+        
         self.__function = f
         self.__parameter = parameter
         self.__is_block = is_block
@@ -557,8 +562,6 @@ class ExportedGetter(object):
     def make_cell(self, obj, attr):
         kwargs = self.__cell_kwargs
         if 'type_fn' in kwargs:
-            if 'type' in kwargs:
-                raise ValueError('cannot specify both type and type_fn')
             kwargs = kwargs.copy()
             kwargs['type'] = kwargs['type_fn'](obj)
             del kwargs['type_fn']
