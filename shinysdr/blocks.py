@@ -178,7 +178,7 @@ class MessageDistributorSink(gr.hier_block2):
             self.__notify()
 
 
-_maximum_fft_rate = 120
+_maximum_fft_rate = 500
 
 
 class _OverlapGimmick(gr.hier_block2):
@@ -414,8 +414,8 @@ class MonitorSink(gr.hier_block2, ExportedState):
 
     @setter
     def set_frame_rate(self, value):
-        self.__frame_rate = value
-        self.__logpwrfft.set_vec_rate(value)
+        self.__logpwrfft.set_vec_rate(float(value))
+        self.__frame_rate = self.__logpwrfft.frame_rate()
     
     @exported_value(type=bool)
     def get_paused(self):
