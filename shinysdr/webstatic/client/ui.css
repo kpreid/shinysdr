@@ -65,7 +65,7 @@ html.subwindowed-page, .subwindowed-page body {
 }
 .subwindowed > shinysdr-subwindow.stretchy {
   flex: 1 2;
-  width: auto;
+  width: 1px;  /* This width is not actually wanted, but leaving it unset or auto causes sized content such as in the spectrum subwindow to overrun the intended flexible width. It is 1px because it will act as a minimum width. */
 }
 shinysdr-subwindow > h2 {
   font-size: 100%;
@@ -264,8 +264,8 @@ h2 input {
   position: relative;  /* abs position root */
 }
 .map-canvas {
-  flex: 1 1;
-  height: 100%;
+  flex: 1 1 0;
+  height: 1px; /* TODO: voodoo */
 }
 .map-coordinate-control {
   position: absolute;
@@ -524,6 +524,7 @@ h2 input {
 }
 .widget-Slider-panel input, .widget-Slider-panel meter {
   flex: 1 1 0;  /* TODO: 'auto' basis used to work, sometimes doesn't now. Figure out how to not be plugging in a nonsense length here. */
+  width: 3em;  /* This width is not actually wanted and only acts as a minimum width, but leaving it unset or auto causes bad layout in the spectrum rate/resolution controls. */
 
   vertical-align: middle;
 }
