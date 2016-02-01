@@ -75,17 +75,18 @@ def expand_aprs_message(message, store):
             if fact.live:
                 # TODO kludgy. review for correctness.
                 # consider defining an 'object' instead of 'station' type, which can then be given a 'reported by' field.
-                store.receive(APRSMessage(
-                    receive_time=message.receive_time,
-                    source=fact.name,
-                    destination=None,
-                    via=None,
-                    payload=None,
-                    facts=fact.facts,
-                    errors=message.errors,
-                    comment=message.comment))
+                object_facts = fact.facts
             else:
-                store.receive(DeleteOperation(fact.name))  # TODO not implemented
+                object_facts = [KillObject()]
+            store.receive(APRSMessage(
+                receive_time=message.receive_time,
+                source=fact.name,
+                destination=None,
+                via=None,
+                payload=None,
+                facts=object_facts,
+                errors=message.errors,
+                comment=message.comment))
 
 
 class IAPRSStation(Interface):
@@ -109,6 +110,9 @@ class APRSStation(ExportedState):
         '''implement ITelemetryObject'''
         self.__last_heard_time = message.receive_time
         for fact in message.facts:
+            if isinstance(fact, KillObject):
+                # Kill by pretending the object is ancient.
+                self.__last_heard_time = 0
             if isinstance(fact, Position):
                 self.__track = self.__track._replace(
                     latitude=TelemetryItem(fact.latitude, message.receive_time),
@@ -222,6 +226,10 @@ ObjectItemReport = namedtuple('ObjectItemReport', [
     'live',  # boolean
     'facts',  # list of facts: about this object (rather than the source address)
 ])
+
+
+# special fact used to kill objects when an Object/Item Report says to
+KillObject = namedtuple('KillObject', [])
 
 
 # fact

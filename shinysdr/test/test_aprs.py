@@ -260,6 +260,22 @@ class TestAPRSParser(unittest.TestCase):
             errors=[],
             comment='TCARES Field Day Site June 28-29')
     
+    def test_object_report_kill(self):
+        # Never seen a kill report live, so faked up from the test_object_report sample data
+        self.__check_parsed(
+            'FOO>BAR:;THEOBJECT_061508z3803.13N/12017.88Wr',
+            facts=[ObjectItemReport(
+                object=True,
+                name='THEOBJECT',
+                live=False,
+                facts=[
+                    Timestamp(_dummy_receive_datetime.replace(day=6, hour=15, minute=8, second=0, microsecond=0)),
+                    Position(latitude=38.052166666666665, longitude=-120.298),
+                    Symbol('/r'),
+                ])],
+            errors=[],
+            comment='')
+    
     def test_telemetry(self):
         # TODO: binary is missing
         self.__check_parsed(
@@ -316,9 +332,18 @@ class TestAPRSTelemetryStore(unittest.TestCase):
         self.__receive(parse_tnc2(
             'KE6AFE-2>APU25N,WR6ABD*,NCA1:;TFCSCRUZ *160323z3655.94N\12200.92W?70 In 10 Minutes',
             _dummy_receive_time))
-        self.assertEqual(['KE6AFE-2', 'TFCSCRUZ '], self.store.state().keys())
-        # TODO test value
-        # TODO test delete operation
+        self.assertEqual({'KE6AFE-2', 'TFCSCRUZ '}, set(self.store.state().keys()))
+        # TODO test value of object
+
+    def test_object_kill(self):
+        self.__receive(parse_tnc2(
+            'KE6AFE-2>APU25N,WR6ABD*,NCA1:;TFCSCRUZ *160323z3655.94N\12200.92W?70 In 10 Minutes',
+            _dummy_receive_time))
+        self.assertEqual({'KE6AFE-2', 'TFCSCRUZ '}, set(self.store.state().keys()))
+        self.__receive(parse_tnc2(
+            'FOO>BAR:;TFCSCRUZ _160323z3655.94N\12200.92W?',
+            _dummy_receive_time))
+        self.assertEqual({'FOO', 'KE6AFE-2'}, set(self.store.state().keys()))
 
     def test_drop_old(self):
         self.__receive(parse_tnc2('FOO>RX:>', _dummy_receive_time))
