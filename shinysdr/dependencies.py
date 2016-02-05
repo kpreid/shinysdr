@@ -20,6 +20,7 @@
 from __future__ import absolute_import, division
 
 from importlib import import_module
+import os.path
 
 
 class DependencyTester(object):
@@ -30,6 +31,7 @@ class DependencyTester(object):
         self.__missing = set()
         self.__broken = set()
         self.__old = set()
+        self.__missing_files = set()
 
     def check_module_attr(self, module_name, dep_name, attr_path, old=False):
         module = self.check_module(module_name, dep_name, old=old)
@@ -68,6 +70,12 @@ class DependencyTester(object):
             self.__broken.add((dep_name, '%s failed to import (%s).' % (module_name, e)))
             return None
     
+    # This method has an overly-specific name because it has an overly-specific report message.
+    def check_jsdep_file(self, relative_to_pathname, expected_pathname, dep_name):
+        absolute_path = os.path.join(os.path.dirname(relative_to_pathname), expected_pathname)
+        if not os.path.exists(absolute_path):
+            self.__missing_files.add((dep_name, '%s does not exist.' % absolute_path))
+    
     def report(self):
         report_text = ''
         if len(self.__missing) > 0:
@@ -78,6 +86,12 @@ class DependencyTester(object):
             report_text += 'The following libraries/programs are too old:\n' + self.__format_entries(self.__old)
         if report_text != '':
             report_text += 'Please (re)install current versions.'
+        if len(self.__missing_files) > 0:
+            if report_text != '':
+                report_text += '\n'
+            report_text += 'The following files are missing:\n' + self.__format_entries(self.__missing_files)
+            report_text += 'Please (re)run fetch-js-deps.sh and, if applicable, setup.py install.'
+        if report_text != '':
             return report_text
         else:
             return None

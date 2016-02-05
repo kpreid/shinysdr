@@ -81,7 +81,10 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
 
     # Verify we can actually run.
     # Note that this must be done before we actually load core modules, because we might get an import error then.
-    yield check_versions()
+    version_report = yield check_versions()
+    if version_report:
+        print >>sys.stderr, version_report
+        sys.exit(1)
 
     # We don't actually use shinysdr.devices directly, but we want it to be guaranteed available in the context of the config file.
     import shinysdr.devices as lazy_devices
@@ -174,8 +177,10 @@ def check_versions():
     t.check_module_attr('txws', 'Python library txWS', 'WebSocketProtocol.setBinaryMode')
     t.check_module_attr('six', 'Python library six', 'PY2')
     t.check_module('ephem', 'Python library PyEphem')
-    if t.report() != None:
-        raise Exception(t.report())
+    t.check_jsdep_file(__file__, 'deps/require.js', 'RequireJS')
+    t.check_jsdep_file(__file__, 'deps/text.js', 'RequireJS')
+    t.check_jsdep_file(__file__, 'deps/jasmine', 'Jasmine')
+    return t.report()
 
 
 if __name__ == '__main__':

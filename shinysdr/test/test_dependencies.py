@@ -18,6 +18,8 @@
 
 from __future__ import absolute_import, division
 
+import os.path
+
 from twisted.trial import unittest
 
 from shinysdr.dependencies import DependencyTester
@@ -60,3 +62,12 @@ class TestDependencyTester(unittest.TestCase):
             'The following libraries/programs are too old:\n\t<dep name>  (Check: shinysdr.test.test_dependencies.nonexistent_attr not present.)\nPlease (re)install current versions.')
     
     # note: 'broken attr' (hasattr true but it raises on get) is theoretically possible but hard to cause
+    
+    def test_file_ok(self):
+        self.t.check_jsdep_file(__file__, 'broken_deps/__init__.py', '<dep name>')
+        self.assertEqual(self.t.report(), None)
+    
+    def test_file_missing(self):
+        self.t.check_jsdep_file(__file__, 'broken_deps/nonexistent_filename', '<dep name>')
+        self.assertEqual(self.t.report(),
+            'The following files are missing:\n\t<dep name>  (Check: ' + os.path.dirname(__file__) + '/broken_deps/nonexistent_filename does not exist.)\nPlease (re)run fetch-js-deps.sh and, if applicable, setup.py install.')
