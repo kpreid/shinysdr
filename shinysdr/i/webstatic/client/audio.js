@@ -100,11 +100,12 @@ define(['./events', './network', './types', './values'],
     }
     var info = makeBlock({
       buffered: new LocalReadCell(new types.RangeT([[0, 2]], false, false), 0),
-      target: new LocalReadCell(stringT, ''),  // TODO should be numeric w/ unit
+      target: new LocalReadCell({value_type: stringT, naming: { label: 'Target latency' }}, ''),  // TODO should be numeric w/ unit
       error: new LocalReadCell(new NoticeT(true), ''),
       //averageSkew: new LocalReadCell(Number, 0),
       monitor: new ConstantCell(types.blockT, analyserAdapter)
     });
+    Object.defineProperty(info, '_implements_shinysdr.client.audio.AudioStreamStatus', {});
     function updateStatus() {
       // TODO: I think we are mixing up per-channel and total samples here  (queueSampleCount counts both channels individually)
       var buffered = (queueSampleCount + audioStreamChunk.length - chunkIndex) / nativeSampleRate;

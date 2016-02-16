@@ -28,6 +28,7 @@ define(['./basic', './spectrum',
   const Knob = widgets_basic.Knob;
   const LinSlider = widgets_basic.LinSlider;
   const LocalCell = values.LocalCell;
+  const MeasvizWidget = widgets_basic.MeasvizWidget;
   const Meter = widgets_basic.Meter;
   const NoticeT = types.NoticeT;
   const NumberWidget = widgets_basic.Number;
@@ -432,6 +433,16 @@ define(['./basic', './spectrum',
   // TODO: Needs to be more than just a BlockSet: eventually a table with grouped headings and sorting, maybe
   var TelemetryStoreWidget = BlockSet(PickWidget, BlockSetInFrameEntryBuilder(''));
   exports['interface:shinysdr.telemetry.ITelemetryStore'] = TelemetryStoreWidget;
+  
+  function AudioStreamStatusWidget(config) {
+    Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
+      addWidget('buffered', MeasvizWidget);
+      addWidget('target', PickWidget, 'Target latency');  // TODO: label should not need to be repeated here
+      addWidget('error');
+      ignore('monitor');
+    });
+  }
+  exports['interface:shinysdr.client.audio.AudioStreamStatus'] = AudioStreamStatusWidget;
   
   class ThemeApplier {
     constructor(config) {

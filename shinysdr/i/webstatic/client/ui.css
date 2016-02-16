@@ -16,6 +16,8 @@
  * along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+@import "measviz.css";
+
 /* global structure */
 html.subwindowed-page, .subwindowed-page body {
   margin: 0;

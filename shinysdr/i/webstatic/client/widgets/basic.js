@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['../events', '../types', '../values', '../widget'],
-       (    events,      types,      values,      widget) => {
+define(['../events', '../math', '../measviz', '../types', '../values', '../widget'],
+       (    events,      math, _measvizStub,     types,      values,      widget) => {
   'use strict';
   
   const Cell = values.Cell;
@@ -29,6 +29,7 @@ define(['../events', '../types', '../values', '../widget'],
   const RangeT = types.RangeT;
   const TimestampT = types.TimestampT;
   const booleanT = types.booleanT;
+  const mod = math.mod;
   const numberT = types.numberT;
   const stringT = types.stringT;
   const trackT = types.trackT;
@@ -994,6 +995,45 @@ define(['../events', '../types', '../values', '../widget'],
       });
   }
   exports.TrackWidget = TrackWidget;
+  
+  function MeasvizWidget(config) {
+    const target = config.target;
+    const container = this.element = config.element;
+        
+    const isRange = target.type instanceof RangeT;
+    const scale = (isRange && target.type.integer) ? 1 : 1000;
+    
+    const buffer = new Float32Array(128);  // TODO magic number
+    let index = 0;
+    
+    const graph = new measviz.Graph({
+      buffer: buffer,
+      getBufferIndex() { return index; },
+      getHeight() { return 16; },  // TODO magic number
+      min: isRange ? scale * target.type.getMin() : 0,
+      low: isRange ? scale * target.type.getMin() : 0,
+      high: isRange ? scale * target.type.getMax() : Infinity,
+      max: isRange ? scale * target.type.getMax() : Infinity
+    });
+    
+    if (config.shouldBePanel) {
+      container.classList.add('panel');
+      if (container.hasAttribute('title')) {
+        container.appendChild(document.createTextNode(container.getAttribute('title') + ' '));
+        container.removeAttribute('title');
+      }
+    }
+    container.appendChild(graph.element);
+    
+    function draw() {
+      buffer[index] = target.depend(draw) * scale;
+      index = mod(index + 1, buffer.length);
+      graph.draw();
+    }
+    draw.scheduler = config.scheduler;
+    draw();
+  }
+  exports.MeasvizWidget = MeasvizWidget;
   
   return Object.freeze(exports);
 });

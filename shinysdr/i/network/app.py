@@ -183,8 +183,10 @@ def _put_root_static(container_resource):
     
     # Link deps into /client/.
     client = container_resource.children['client']
-    client.putChild('require.js', _make_static_resource(os.path.join(deps_path, 'require.js')))
-    client.putChild('text.js', _make_static_resource(os.path.join(deps_path, 'text.js')))
+    for name in ['require.js', 'text.js']:
+        client.putChild(name, _make_static_resource(os.path.join(deps_path, name)))
+    for name in ['measviz.js', 'measviz.css']:
+        client.putChild(name, _make_static_resource(os.path.join(deps_path, 'measviz/src', name)))
     
     # Link deps into /test/.
     test = container_resource.children['test']
