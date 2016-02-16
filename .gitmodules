@@ -7,3 +7,6 @@
 [submodule "shinysdr/deps/jasmine"]
 	path = shinysdr/deps/jasmine
 	url = https://github.com/pivotal/jasmine
+[submodule "shinysdr/deps/measviz"]
+	path = shinysdr/deps/measviz
+	url = https://github.com/kpreid/measviz/
