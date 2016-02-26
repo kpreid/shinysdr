@@ -2345,12 +2345,12 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
     var receiveAllButton = container.appendChild(document.createElement('button'));
     receiveAllButton.textContent = 'Receive all in search';
     receiveAllButton.addEventListener('click', function (event) {
-      var receivers = radioCell.get().recevers.get();
+      var receivers = radioCell.get().receivers.get();
       for (var key in receivers) {
         receivers.delete(key);
       }
       currentFilter.forEach(function(p) {
-        radioCell.get().tune({
+        tune({
           freq: p.freq,
           mode: p.mode,
           alwaysCreate: true
