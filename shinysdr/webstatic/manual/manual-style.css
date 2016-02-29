@@ -19,7 +19,15 @@
 @import url(/client/ui.css);
 @import url(/client/theme.css);
 
-html { max-width: 60em; margin: auto; }
+html {
+  margin: 0;
+}
+
+body { 
+  margin: 0 auto;
+  padding: 0 1em;
+  max-width: 60em;
+}
 
 .major-dl > dt {
   margin: 0.7em 0 0 0;
