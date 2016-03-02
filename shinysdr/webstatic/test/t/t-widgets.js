@@ -18,6 +18,7 @@
 'use strict';
 
 describe('widgets', function () {
+  var ClientStateObject = shinysdr.coordination.ClientStateObject;
   var ConstantCell = shinysdr.values.ConstantCell;
   var makeBlock = shinysdr.values.makeBlock;
   
@@ -59,17 +60,14 @@ describe('widgets', function () {
         _registerMap: function () {}  // TODO this is a stub of a kludge and should go away when the kludge does
       }
     }
+    var storage = new shinysdr.values.StorageNamespace(sessionStorage, Math.random() + '.');
     return {
-      storage: new shinysdr.values.StorageNamespace(sessionStorage, Math.random() + '.'),
+      storage: storage,
       freqDB: new shinysdr.database.Table('foo', false),
       element: element,
       target: cell,
       scheduler: scheduler,
-      clientState: shinysdr.values.makeBlock({
-        // TODO: The shape of clientState needs to be defined in some module or we need to make it optional
-        opengl: new shinysdr.values.LocalCell(Boolean, true),
-        opengl_float: new shinysdr.values.LocalCell(Boolean, true),
-      }),
+      clientState: new ClientStateObject(storage, null),
       boundedFn: function(f) { return f; },
       rebuildMe: rebuildMe,
       index: index,

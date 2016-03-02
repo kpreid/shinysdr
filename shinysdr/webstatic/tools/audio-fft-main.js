@@ -19,9 +19,10 @@
 require.config({
   baseUrl: '/client/'
 });
-define(['values', 'events', 'widget', 'widgets', 'network', 'database'], function (values, events, widget, widgets, network, database) {
+define(['values', 'events', 'widget', 'widgets', 'network', 'database', 'coordination'], function (values, events, widget, widgets, network, database, coordination) {
   'use strict';
   
+  var ClientStateObject = coordination.ClientStateObject;
   var ConstantCell = values.ConstantCell;
   var makeBlock = values.makeBlock;
   
@@ -61,19 +62,10 @@ define(['values', 'events', 'widget', 'widgets', 'network', 'database'], functio
     }))
   }));
   
-  function cc(key, type, value) {
-    var cell = new ConstantCell(type, value);
-    return cell;
-  }
   var context = new widget.Context({
     widgets: widgets,
     radioCell: root,  // TODO: 'radio' name is bogus
-    clientState: makeBlock({
-      opengl: cc('opengl', Boolean, true),
-      opengl_float: cc('opengl_float', Boolean, true),
-      spectrum_split: cc('spectrum_split', new values.Range([[0, 1]], false, false), 0.6),
-      spectrum_average: cc('spectrum_average', new values.Range([[0.10, 1]], true, false), 0.10)
-    }),
+    clientState: new ClientStateObject(sessionStorage, null),  // TODO: using sessionStorage as an approximation for "no storage".
     spectrumView: null,
     freqDB: new database.Union(),
     scheduler: scheduler

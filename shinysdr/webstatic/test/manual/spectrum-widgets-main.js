@@ -19,9 +19,10 @@
 require.config({
   baseUrl: '/client/'
 });
-define(['values', 'events', 'widget', 'widgets', 'network', 'database'], function (values, events, widget, widgets, network, database) {
+define(['values', 'events', 'widget', 'widgets', 'network', 'database', 'coordination'], function (values, events, widget, widgets, network, database, coordination) {
   'use strict';
 
+  var ClientStateObject = coordination.ClientStateObject;
   var ConstantCell = values.ConstantCell;
   var StorageCell = values.StorageCell;
   var StorageNamespace = values.StorageNamespace;
@@ -34,21 +35,12 @@ define(['values', 'events', 'widget', 'widgets', 'network', 'database'], functio
   
   var scheduler = new events.Scheduler();
 
-  // TODO duplicated code w/ regular shinysdr
   var clientStateStorage = new StorageNamespace(localStorage, 'shinysdr.client.');
-  function cc(key, type, value) {
-    return new StorageCell(clientStateStorage, type, value, key);
-  }
-  var clientState = makeBlock({
-    opengl: cc('opengl', Boolean, true),
-    opengl_float: cc('opengl_float', Boolean, true),
-    spectrum_split: cc('spectrum_split', new values.Range([[0, 1]], false, false), 0.5),
-    spectrum_average: cc('spectrum_average', new values.Range([[0.05, 1]], true, false), 0.25)
-  });
+  var clientState = new ClientStateObject(clientStateStorage, null);
   
   var fftcell = new network.BulkDataCell('<dummy spectrum>', new values.BulkDataType('dff', 'b'));
   var root = new ConstantCell(values.block, makeBlock({
-    unpaused: cc('_test_unpaused', Boolean, true),
+    unpaused: new StorageCell(clientStateStorage, Boolean, true, '_test_unpaused'),
     source: new ConstantCell(values.block, makeBlock({
       freq: new ConstantCell(Number, 0),
     })),

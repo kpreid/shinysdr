@@ -55,16 +55,7 @@ define(['values', 'events', 'coordination', 'database', 'network', 'map-core', '
   var freqDB = databasePicker.getUnion();
   
   // TODO(kpreid): Client state should be more closely associated with the components that use it.
-  function cc(key, type, value) {
-    return new StorageCell(clientStateStorage, type, value, key);
-  }
-  var clientState = makeBlock({
-    opengl: cc('opengl', Boolean, true),
-    opengl_float: cc('opengl_float', Boolean, true),
-    spectrum_split: cc('spectrum_split', new values.Range([[0, 1]], false, false), 0.5),
-    spectrum_average: cc('spectrum_average', new values.Range([[0.1, 1]], true, false), 0.25),
-    databases: new ConstantCell(block, databasePicker)
-  });
+  var clientState = new coordination.ClientStateObject(clientStateStorage, databasePicker);
   var clientBlockCell = new ConstantCell(block, clientState);
   
   log(0.4, 'Loading plugins…');
