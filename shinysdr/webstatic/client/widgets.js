@@ -2917,6 +2917,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
         if (container.hasAttribute('title')) {
           var labelEl = container.appendChild(document.createElement('span'));
           labelEl.appendChild(document.createTextNode(container.getAttribute('title')));
+          container.appendChild(document.createTextNode(' '));
           container.removeAttribute('title');
         }
         
