@@ -117,7 +117,7 @@ def profile_from_device_string(device_string):
 
 
 
-if 1 == 1:  # dummy block
+if 1 == 1:  # dummy block for pylint
     # pylint: disable=bad-whitespace
     _default_profiles = {
         'file':    OsmoSDRProfile(tx=False, agc=False, dc_cancel=False, dc_offset=False, tune_delay=0.0),

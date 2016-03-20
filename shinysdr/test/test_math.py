@@ -17,6 +17,8 @@
 
 from __future__ import absolute_import, division
 
+from math import pi
+
 from twisted.trial import unittest
 
 import shinysdr.math as smath
@@ -53,3 +55,15 @@ class TestSmallFactorAtLeast(unittest.TestCase):
         self.assertEqual(smath.small_factor_at_least(100, 9, _force_approx=True), 25)
         self.assertEqual(smath.small_factor_at_least(100, 10, _force_approx=True), 10)
         self.assertEqual(smath.small_factor_at_least(100, 11, _force_approx=True), 25)
+
+
+class TestSphericalMath(unittest.TestCase):
+    def test_geodesic_distance(self):
+        self.assertApproximates(
+            smath.geodesic_distance((0, 0), (0, 180)),
+            smath._EARTH_MEAN_RADIUS_METERS * pi,
+            1e-8)
+        self.assertApproximates(
+            smath.geodesic_distance((0, 0), (0, 90)),
+            smath._EARTH_MEAN_RADIUS_METERS * pi / 2,
+            1e-8)

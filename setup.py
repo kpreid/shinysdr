@@ -54,7 +54,8 @@ setup(
     zip_safe=False,
     entry_points={
         'console_scripts': {
-            'shinysdr = shinysdr.main:main'
+            'shinysdr = shinysdr.main:main',
+            'shinysdr-import = shinysdr.db_import:import_main'
         }
     }
 )

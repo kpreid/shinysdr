@@ -286,7 +286,18 @@ def _normalize_record(record):
     return out
 
 
-def _write_csv_file(csvfile, db):
+def write_csv_file(csvfile, records):
+    """Write a database CSV file.
+    
+    csvfile: A file-like object.
+    records: A list of records in the ShinySDR JSON format (TODO document that).
+    """
+    # This function exists to be the explicitly public version
+    # TODO: validate input
+    _write_csv_file(csvfile, records)
+
+
+def _write_csv_file(csvfile, records):
     writer = csv.DictWriter(csvfile, [
         u'Mode',
         u'Frequency',
@@ -296,7 +307,7 @@ def _write_csv_file(csvfile, db):
         u'Comment',
     ])
     writer.writeheader()
-    for record in db:
+    for record in records:
         csvrecord = {}
         lf = uf = None
         for key, value in record.iteritems():

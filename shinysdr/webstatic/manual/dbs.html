@@ -26,13 +26,39 @@
 
 <h1><a href="./">ShinySDR Manual</a>: Frequency Databases</h1>
 
+<ol>
+  <li><a href="#using">Using databases</a></li>
+  <li><a href="#importing">Importing from other data sources</a></li>
+  <li><a href="#format">Data format</a></li>
+</ol>
+
 <p>Frequency databases are reference information for navigating the radio spectrum; each database record may describe a band, channel, or station. They are available in a list, overlaid on the spectrum display, and (when geographic information is available) overlaid on the map.</p>
 
-<h2>Using databases</h2>
+<h2 id="using">Using databases</h2>
 
 <p>[TODO: Explain the UI here]</p>
 
-<h2>Data format</h2>
+<h2 id="importing">Importing from other data sources</h2>
+
+<p>ShinySDR can convert some third-party data sets into ShinySDR database format. The supported formats are:
+
+<ul>
+  <li><p><a href="https://www.fcc.gov/">FCC</a> <a href="http://wireless.fcc.gov/uls/index.htm?job=home">ULS</a> <a href="http://wireless.fcc.gov/uls/index.htm?job=transaction&page=weekly">database downloads</a> and <a href="http://wireless2.fcc.gov/UlsApp/UlsSearch/searchLicense.jsp">license query downloads</a>.</p></li>
+  
+  <li><p><a href="http://www.hfcc.org/">HFCC</a> shortwave broadcast <a href="http://www.hfcc.org/data/">schedule files</a>.</p></li>
+</ul>
+
+<p>Importing is done using the separate command <code>shinysdr-import</code>. (Integrating conversion so that ShinySDR can directly read other file formats, or even automatically download them from the source, has been considered, but none of the currently supported formats seem worth doing this for.) It is used like this:</p>
+
+<blockquote><code><kbd>shinysdr-import</kbd> <var>type</var> <var>files...</var> > <var>output.csv</var></code></blockquote>
+
+<p>The <var>type</var> identifier is currently either “<code>hfcc</code>” or “<code>uls</code>”. Note that ULS database downloads come in multiple files, and HFCC schedules have “reference table” files. In both cases, all of these files must be supplied to a single import command so that they can be cross-referenced by the importer.</p>
+
+<p>The importer supports limiting the output to stations geographically located within a specified circle. For details on this and other options, run <code><kbd>shinysdr-import --help</kbd></code>.</p>
+
+<p>As with many other features of ShinySDR, the importer is a work in progress; it does not yet extract and neatly format every possible piece of information in the original files. Suggestions for improvement are welcome.</p>
+
+<h2 id="format">Data format</h2>
 
 <p>The file format for frequency databases is a relative of <a href="http://chirp.danplanet.com/">CHIRP</a>'s <a href="https://en.wikipedia.org/wiki/Comma-separated_values">CSV</a>-based database format; files created by/for CHIRP can be used in ShinySDR.
   (Why? Because it was the first documented and straightforward existing data format I found.)

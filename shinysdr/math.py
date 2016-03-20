@@ -24,11 +24,16 @@ interface.
 
 from __future__ import absolute_import, division
 
-from math import log10
+from math import acos, cos, log10, pi, sin
 import time
 
 
 __all__ = []  # appended later
+
+
+_RADIANS_PER_DEGREE = pi / 180
+
+_EARTH_MEAN_RADIUS_METERS = 6371.0088e3
 
 
 def factorize(n):
@@ -134,3 +139,40 @@ class LazyRateCalculator(object):
 
 
 __all__.append('LazyRateCalculator')
+
+
+def geodesic_distance(a, b):
+    """Return the distance between a and b on the surface of the Earth.
+    
+    Spherical approximation used.
+    a and b are pairs of [lat, lon] in degrees.
+    Result is in meters.
+    """
+    dp = _dot_product_3(_polar_degrees_to_cartesian_3d(a),
+                        _polar_degrees_to_cartesian_3d(b))
+    angle = acos(max(-1.0, min(1.0, dp)))
+    return _EARTH_MEAN_RADIUS_METERS * angle
+
+
+__all__.append('geodesic_distance')
+
+
+# --- Everything below this point is internal helpers not yet chosen to be exposed.
+
+
+def _dsin(x): return sin(_RADIANS_PER_DEGREE * x)
+def _dcos(x): return cos(_RADIANS_PER_DEGREE * x)
+
+
+def _polar_degrees_to_cartesian_3d(latlon):
+    lat, lon = latlon
+    return (
+        _dcos(lat) * _dsin(lon),
+        _dsin(lat),
+        _dcos(lat) * -_dcos(lon))
+
+
+def _dot_product_3(a, b):
+    a1, a2, a3 = a
+    b1, b2, b3 = b
+    return a1 * b1 + a2 * b2 + a3 * b3
