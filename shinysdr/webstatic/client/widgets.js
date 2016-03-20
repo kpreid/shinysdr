@@ -433,12 +433,36 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
   function Receiver(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       ignore('is_valid');
-      if (!block.device_name.type.isSingleValued()) {
-        addWidget('device_name', Select, 'RF source');
+      
+      var deviceAndFreqPanel = getAppend().appendChild(document.createElement('div'));
+      deviceAndFreqPanel.classList.add('panel');
+
+      // RF source and link option
+      var deviceSection = deviceAndFreqPanel.appendChild(document.createElement('div'));
+      deviceSection.classList.add('widget-Receiver-device-controls');
+      var hasDeviceMenu = !block.device_name.type.isSingleValued();
+      if (hasDeviceMenu) {
+        // deviceSection.appendChild(document.createTextNode('Input from '));
+        var deviceMenu = deviceSection.appendChild(document.createElement('select'));
+        createWidgetExt(config.context, Select, deviceMenu, block.device_name);
+        ignore('device_name');
       } else {
+        deviceSection.appendChild(document.createTextNode('Frequency '));
         ignore('device_name');
       }
-      addWidget('rec_freq', Knob, 'Channel frequency');
+      if ('freq_linked_to_device' in block) {
+        var linkLabel = deviceSection.appendChild(document.createElement('label'));
+        var linkCheckbox = linkLabel.appendChild(document.createElement('input'));
+        linkLabel.appendChild(document.createTextNode(' Follow device'));
+        linkCheckbox.type = 'checkbox';
+        createWidgetExt(config.context, Toggle, linkCheckbox, block.freq_linked_to_device);
+        ignore('freq_linked_to_device');
+      }
+      
+      var knobContainer = deviceAndFreqPanel.appendChild(document.createElement('div'));
+      createWidgetExt(config.context, Knob, knobContainer, block.rec_freq);
+      ignore('rec_freq');
+      
       addWidget('mode', Radio);
       addWidget('demodulator', Demodulator);
       

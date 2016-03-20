@@ -426,6 +426,12 @@ h2 input {
   text-align: center;
 }
 
+.widget-Receiver-device-controls {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
 /* widgets: frequency database list */
 .widget-FreqList {
   min-height: 10em;
