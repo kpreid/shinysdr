@@ -301,7 +301,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
     def get_monitor(self):
         return self.monitor
     
-    @exported_block()
+    @exported_block(persists=False)
     def get_sources(self):
         return self.sources
     

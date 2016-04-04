@@ -31,8 +31,16 @@ class AppRoot(ExportedState):
         self.__session = Session(self.__receive_flowgraph)
     
     @exported_block()
-    def get_receive_flowgraph(self):
+    def get_receive_flowgraph(self):  # TODO needs to go away
         return self.__receive_flowgraph
+    
+    @exported_block(persists=True)
+    def get_devices(self):
+        '''Return all existant devices.
+        
+        This exists only for persistence purposes.
+        '''
+        return self.__receive_flowgraph.get_sources()
     
     # TODO: should become something more like 'create new session'
     def get_session(self):
