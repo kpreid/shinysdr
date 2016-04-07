@@ -197,9 +197,9 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self._do_connect()
     
     def get_audio_queue_channels(self):
-        '''
+        """
         Return the number of channels (which will be 1 or 2) in audio queue outputs.
-        '''
+        """
         return self.__audio_manager.get_channels()
 
     def _do_connect(self):
@@ -353,9 +353,9 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         reactor.callLater(0, self.__start_or_stop)
 
     def close_all_devices(self):
-        '''Close all devices in preparation for a clean shutdown.
+        """Close all devices in preparation for a clean shutdown.
         
-        Makes this top block unusable'''
+        Makes this top block unusable"""
         for device in self._sources.itervalues():
             device.close()
         for device in self._accessories.itervalues():
@@ -391,11 +391,11 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         return round(self.__cpu_calculator.get(), 2)
     
     def _get_rx_device_type(self):
-        '''for ContextForReceiver only'''
+        """for ContextForReceiver only"""
         return self.__rx_device_type
     
     def _get_audio_destination_type(self):
-        '''for ContextForReceiver only'''
+        """for ContextForReceiver only"""
         return self.__audio_manager.get_destination_type()
     
     def _trigger_reconnect(self, reason):
@@ -482,9 +482,9 @@ class IHasFrequency(Interface):
 
 
 class MaxProbe(gr.hier_block2):
-    '''
+    """
     A probe whose level is the maximum magnitude-squared occurring within the specified window of samples.
-    '''
+    """
     def __init__(self, window=10000):
         gr.hier_block2.__init__(
             self, type(self).__name__,
@@ -498,9 +498,9 @@ class MaxProbe(gr.hier_block2):
         raise Exception('This placeholder should never get called')
     
     def set_window_and_reconnect(self, window):
-        '''
+        """
         Must be called while the flowgraph is locked already.
-        '''
+        """
         # Use a power-of-2 window size to satisfy gnuradio allocation alignment without going overboard.
         window = int(2 ** math.floor(math.log(window, 2)))
         self.disconnect_all()
@@ -518,7 +518,7 @@ class MaxProbe(gr.hier_block2):
 
 
 def base26(x):
-    '''not quite base 26, actually, because it has no true zero digit'''
+    """not quite base 26, actually, because it has no true zero digit"""
     if x < 26:
         return 'abcdefghijklmnopqrstuvwxyz'[x]
     else:

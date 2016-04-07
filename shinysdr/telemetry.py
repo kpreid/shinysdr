@@ -15,10 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 TODO: This doesn't actually deserve its own module; it's just not clear where to put it.
 
-'''
+"""
 
 from __future__ import absolute_import, division
 
@@ -104,61 +104,61 @@ __all__.append('empty_track')
 
 
 class ITelemetryObject(Interface):
-    '''
+    """
     An object that can be in an TelemetryStore.
-    '''
+    """
     
     def receive(message):
-        '''
+        """
         TODO document
-        '''
+        """
     
     def is_interesting():
-        '''
+        """
         Return whether this object should be shown to the client. The value should change only when a message is receive()d.
-        '''
+        """
     
     def get_object_expiry():
-        '''
+        """
         Return the absolute time after which this object should be deleted from the store.
-        '''
+        """
 
 
 __all__.append('ITelemetryMessage')
 
 
 class ITelemetryMessage(Interface):
-    '''
+    """
     A message that can be delivered to an ITelemetryObject or TelemetryStore.
-    '''
+    """
     
     def get_object_id():
-        '''
+        """
         Return a string identifying the object this message is about. It must be unique among all objects, not just within a particular telemetry mode.
-        '''
+        """
     
     def get_object_constructor():
-        '''
+        """
         Return a constructor function for this type of telemetry object.
-        '''
+        """
 
 
 __all__.append('ITelemetryMessage')
 
 
 class ITelemetryStore(Interface):
-    '''
+    """
     Marker interface for client. Only implementation is TelemetryStore.
-    '''
+    """
 
 
 __all__.append('ITelemetryMessage')
 
 
 class TelemetryStore(CollectionState):
-    '''
+    """
     Accepts telemetry messages and exports the accumulated information obtained from them.
-    '''
+    """
     implements(ITelemetryStore)
         
     def __init__(self, time_source=the_reactor):
@@ -170,7 +170,7 @@ class TelemetryStore(CollectionState):
     
     # not exported
     def receive(self, message):
-        '''Store the supplied telemetry message object.'''
+        """Store the supplied telemetry message object."""
         message = ITelemetryMessage(message)
         object_id = message.get_object_id()
         

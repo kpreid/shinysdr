@@ -98,9 +98,9 @@ _aprs_squelch_type = Enum({
 
 
 class APRSDemodulator(gr.hier_block2, ExportedState):
-    '''
+    """
     Demod and parse APRS.
-    '''
+    """
     def __init__(self, context):
         gr.hier_block2.__init__(
             self, self.__class__.__name__,

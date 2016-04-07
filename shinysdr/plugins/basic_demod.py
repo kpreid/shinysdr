@@ -127,7 +127,7 @@ class SimpleAudioDemodulator(Demodulator, SquelchMixin):
         return self.__signal_type
 
     def set_rec_freq(self, freq):
-        '''for ITunableDemodulator'''
+        """for ITunableDemodulator"""
         self.band_filter_block.set_center_freq(freq)
 
     @exported_value()
@@ -140,11 +140,11 @@ class SimpleAudioDemodulator(Demodulator, SquelchMixin):
 
 
 def design_lofi_audio_filter(rate, lowpass):
-    '''
+    """
     Audio output filter for speech-type receivers.
     
     Original motivation was to remove CTCSS tones.
-    '''
+    """
     upper = min(10000, rate / 2)
     transition = 1000
     if lowpass:
@@ -191,9 +191,9 @@ pluginDef_iq = ModeDef('IQ', label='Raw I/Q', demod_class=IQDemodulator)
 
 
 class AMDemodulator(SimpleAudioDemodulator):
-    '''
+    """
     Amplitude modulation (AM) demodulator.
-    '''
+    """
     
     def __init__(self, **kwargs):
         demod_rate = 10000
@@ -224,9 +224,9 @@ class AMDemodulator(SimpleAudioDemodulator):
 
 
 class UnselectiveAMDemodulator(gr.hier_block2, ExportedState):
-    '''
+    """
     Wideband AM demodulator. Ignores the receive frequency and demodulates the entire RF signal.
-    '''
+    """
     implements(IDemodulator, ITunableDemodulator)
     
     def __init__(self, mode, input_rate, context):
@@ -269,20 +269,20 @@ class UnselectiveAMDemodulator(gr.hier_block2, ExportedState):
                 (self, channel))
     
     def can_set_mode(self, mode):
-        '''implement IDemodulator'''
+        """implement IDemodulator"""
         return False
     
     def get_half_bandwidth(self):
-        '''implement IDemodulator'''
+        """implement IDemodulator"""
         return 0.0
     
     def get_output_type(self):
-        '''implement IDemodulator'''
+        """implement IDemodulator"""
         return self.__signal_type
     
     @exported_value()
     def get_band_filter_shape(self):
-        '''implement IDemodulator'''
+        """implement IDemodulator"""
         halfbw = self.__input_rate * 0.5
         offset = self.__rec_freq_input
         return {
@@ -292,7 +292,7 @@ class UnselectiveAMDemodulator(gr.hier_block2, ExportedState):
         }
 
     def set_rec_freq(self, freq):
-        '''implement ITunableDemodulator'''
+        """implement ITunableDemodulator"""
         # By implementing ITunableDemodulator and doing
         self.__rec_freq_input = freq
 
@@ -387,7 +387,7 @@ class FMDemodulator(SimpleAudioDemodulator):
             return resampler
 
     def connect_audio_stage(self, input_port):
-        '''Override point for stereo'''
+        """Override point for stereo"""
         resampler = self._make_resampler(input_port, self.demod_rate)
         self.connect_audio_output(resampler)
 

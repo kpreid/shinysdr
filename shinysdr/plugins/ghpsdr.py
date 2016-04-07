@@ -16,7 +16,7 @@
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 
-'''
+"""
 This is a adapter to allow ghpsdr3-alex clients such as "glSDR" for
 Android to connect to ShinySDR as a "dspserver"; references:
 <http://openhpsdr.org/wiki/index.php?title=Ghpsdr3_protocols>.
@@ -27,7 +27,7 @@ DOES NOT YET WORK: some messages we send have the wrong length as judged
 by the glSDR client, resulting in the following messages being
 misparsed. No success yet in figuring out where the discrepancy is.
 Patches welcome.
-'''
+"""
 
 
 # pylint: disable=maybe-no-member, attribute-defined-outside-init, signature-differs
@@ -57,7 +57,7 @@ _CLIENT_MSG_LENGTH = 64
 
 
 def _cmd_noop(self, argstr):
-    '''stub command implementation'''
+    """stub command implementation"""
     pass
 
 
@@ -97,7 +97,7 @@ class _DspserverProtocol(protocol.Protocol):
         self._top.add_audio_queue(self.__audio_queue, 8000)
 
     def dataReceived(self, data):
-        '''twisted Protocol implementation'''
+        """twisted Protocol implementation"""
         self.__msgbuf += data
         while len(self.__msgbuf) >= _CLIENT_MSG_LENGTH:
             # TODO: efficient buffering
@@ -188,7 +188,7 @@ class _DspserverFactory(protocol.Factory):
         self.__top = top
     
     def buildProtocol(self, addr):
-        '''twisted Factory implementation'''
+        """twisted Factory implementation"""
         p = self.protocol(self.__top)
         p.factory = self
         return p
@@ -207,5 +207,5 @@ class DspserverService(Service):
         return self.__port_obj.stopListening()
 
     def announce(self, open_client):
-        '''interface used by shinysdr.main'''
+        """interface used by shinysdr.main"""
         log.msg('GHPSDR-compatible server at port %s' % self.__endpoint)

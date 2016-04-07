@@ -41,9 +41,9 @@ class DatabaseModel(object):
         self.writable = writable
     
     def dirty(self):
-        '''
+        """
         Notify that a record has been changed and the database should be written to disk.
-        '''
+        """
         if self.__can_write() and not self.__dirty:
             self.__dirty = True
             self.__reactor.callLater(0.5, self.__write)
@@ -275,7 +275,7 @@ def _format_freq(freq):
 
 
 def _normalize_record(record):
-    '''Normalize values in a record dict.'''
+    """Normalize values in a record dict."""
     # TODO: type/syntax check
     out = {}
     for k, v in record.iteritems():

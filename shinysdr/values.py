@@ -70,19 +70,19 @@ class BaseCell(object):
         return self._key
 
     def get(self):
-        '''Return the value/object held by this cell.'''
+        """Return the value/object held by this cell."""
         raise NotImplementedError()
     
     def set(self, value):
-        '''Set the value held by this cell.'''
+        """Set the value held by this cell."""
         raise NotImplementedError()
     
     def get_state(self):
-        '''Return the value, or state of the object, held by this cell.'''
+        """Return the value, or state of the object, held by this cell."""
         raise NotImplementedError()
     
     def set_state(self, state):
-        '''Set the value held by this cell, or set the state of the object held by this cell, as appropriate.'''
+        """Set the value held by this cell, or set the state of the object held by this cell, as appropriate."""
         raise NotImplementedError()
     
     def isWritable(self):  # TODO underscore naming
@@ -145,10 +145,10 @@ class Cell(ValueCell):
 
 class _MessageSplitter(object):
     def __init__(self, queue, info_getter, close, type):
-        '''
+        """
         info_format: format string as used by the struct module
         array_format: type code as used by the array module
-        '''
+        """
         # config
         self.__queue = queue
         self.__igetter = info_getter
@@ -270,24 +270,24 @@ class CollectionMemberCell(BaseBlockCell):
 
 class ISubscribableCell(Interface):
     def subscribe(callback):
-        '''
+        """
         (TODO main doc)
         
         Note that the callback may be called _immediately_ upon value change; the callback should therefore avoid taking significant actions until later.
-        '''
+        """
         pass
 
 
 class LooseCell(ValueCell):
-    '''
+    """
     A cell which stores a value and does not get it from another object; it can therefore reliably provide update notifications.
-    '''
+    """
     implements(ISubscribableCell)
     
     def __init__(self, key, value, type, persists=True, writable=False, post_hook=None):
-        '''
+        """
         The key is not used by the cell itself.
-        '''
+        """
         ValueCell.__init__(
             self,
             target=object(),
@@ -317,7 +317,7 @@ class LooseCell(ValueCell):
     
     def set_internal(self, value):
         # TODO: More cap-ish strategy to handle this
-        '''For use only by the "owner" to report updates.'''
+        """For use only by the "owner" to report updates."""
         self.__value = value
         self._fire()
     
@@ -332,7 +332,7 @@ class LooseCell(ValueCell):
         return subscription
     
     def _unsubscribe(self, subscription):
-        '''for use by the subscription only'''
+        """for use by the subscription only"""
         self.__subscriptions.remove(subscription)
 
 
@@ -346,11 +346,11 @@ class _LooseCellSubscription(object):
 
 
 def ViewCell(base, get_transform, set_transform, **kwargs):
-    '''
+    """
     A Cell whose value is always a transformation of another.
     
     TODO: Stop implementing this as LooseCell.
-    '''
+    """
     
     def forward(view_value):
         base_value = set_transform(view_value)
@@ -374,7 +374,7 @@ def ViewCell(base, get_transform, set_transform, **kwargs):
 
 class ExportedState(object):
     def state_def(self, callback):
-        '''Override this to call the callback with additional cells.'''
+        """Override this to call the callback with additional cells."""
         pass
     
     def state_insert(self, key, desc):
@@ -483,11 +483,11 @@ def unserialize_exported_state(ctor, kwargs=None, state=None):
 
 
 class INull(Interface):
-    '''Marker for nullExportedState.'''
+    """Marker for nullExportedState."""
 
 
 class NullExportedState(ExportedState):
-    '''An ExportedState object containing no cells, for use analogously to None.'''
+    """An ExportedState object containing no cells, for use analogously to None."""
     implements(INull)
 
 
@@ -495,7 +495,7 @@ nullExportedState = NullExportedState()
 
 
 class CollectionState(ExportedState):
-    '''Wrapper around a plain Python collection.'''
+    """Wrapper around a plain Python collection."""
     def __init__(self, collection, dynamic=False):
         self._collection = collection  # accessed by CollectionMemberCell
         self.__keys = collection.keys()
@@ -514,13 +514,13 @@ class CollectionState(ExportedState):
 
 
 class IWritableCollection(Interface):
-    '''
+    """
     Marker that a dynamic state object should expose create/delete operations
-    '''
+    """
 
 
 def exported_value(parameter=None, **cell_kwargs):
-    '''Decorator for exported state; takes Cell's kwargs.'''
+    """Decorator for exported state; takes Cell's kwargs."""
     def decorator(f):
         return ExportedGetter(f, parameter, False, cell_kwargs)
     return decorator
@@ -528,19 +528,19 @@ def exported_value(parameter=None, **cell_kwargs):
 
 # TODO: @exported_block() maybe should become @exported_value(type=block), depending on how cell types get refactored.
 def exported_block(parameter=None, **cell_kwargs):
-    '''Decorator for exported state; takes BlockCell's kwargs.'''
+    """Decorator for exported state; takes BlockCell's kwargs."""
     def decorator(f):
         return ExportedGetter(f, parameter, True, cell_kwargs)
     return decorator
 
 
 def setter(f):
-    '''Decorator for setters of exported state; must be paired with an @exported_value getter.'''
+    """Decorator for setters of exported state; must be paired with an @exported_value getter."""
     return ExportedSetter(f)
 
 
 class ExportedGetter(object):
-    '''Descriptor for a getter exported using @exported_value.'''
+    """Descriptor for a getter exported using @exported_value."""
     def __init__(self, f, parameter, is_block, cell_kwargs):
         if 'type_fn' in cell_kwargs and 'type' in cell_kwargs:
             raise ValueError('cannot specify both "type" and "type_fn"')
@@ -553,7 +553,7 @@ class ExportedGetter(object):
         self.__cell_kwargs = cell_kwargs
     
     def __get__(self, obj, type=None):
-        '''implements method binding'''
+        """implements method binding"""
         if obj is None:
             return self
         else:
@@ -579,13 +579,13 @@ class ExportedGetter(object):
 
 
 class ExportedSetter(object):
-    '''Descriptor for a setter exported using @setter.'''
+    """Descriptor for a setter exported using @setter."""
     def __init__(self, f):
         # TODO: Coerce with value type?
         self.__function = f
     
     def __get__(self, obj, type=None):
-        '''implements method binding'''
+        """implements method binding"""
         if obj is None:
             return self
         else:
@@ -593,12 +593,12 @@ class ExportedSetter(object):
 
 
 class _SortedMultimap(object):
-    '''
+    """
     Support for Poller.
     Properties not explained by the name:
     * Values must be unique within a given key.
     * Keys are iterated in sorted order (values are not)
-    '''
+    """
     def __init__(self):
         # key -> set(values)
         self.__dict = {}
@@ -624,7 +624,7 @@ class _SortedMultimap(object):
         self.__value_count += 1
     
     def remove(self, key, value):
-        '''Returns true if the value was the last value for that key'''
+        """Returns true if the value was the last value for that key"""
         if key not in self.__dict:
             raise KeyError('No key to remove: %r' % ((key, value),))
         values = self.__dict[key]
@@ -651,9 +651,9 @@ class _SortedMultimap(object):
 
 
 class Poller(object):
-    '''
+    """
     Polls cells for new values.
-    '''
+    """
     
     def __init__(self):
         # sorting provides determinism for testing etc.
@@ -702,7 +702,7 @@ class Poller(object):
                 function()
     
     def queue_function(self, function, *args, **kwargs):
-        '''Queue a function to be called on the same schedule as the poller would.'''
+        """Queue a function to be called on the same schedule as the poller would."""
         def thunk():
             function(*args, **kwargs)
         
@@ -765,7 +765,7 @@ class _PollerTarget(object):
         return hash(self._obj)
     
     def poll(self, fire):
-        '''Call fire (with arbitrary info in args) if the thing polled has changed.'''
+        """Call fire (with arbitrary info in args) if the thing polled has changed."""
         raise NotImplementedError()
     
     def unsubscribe(self):

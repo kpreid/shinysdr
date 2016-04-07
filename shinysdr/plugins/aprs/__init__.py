@@ -16,9 +16,9 @@
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 
-'''
+"""
 APRS support plugin. This does not provide a complete APRS receiver, but only an APRS message parser (parse_tnc2), and telemetry store interface.
-'''
+"""
 
 
 # References:
@@ -90,7 +90,7 @@ def expand_aprs_message(message, store):
 
 
 class IAPRSStation(Interface):
-    '''marker interface for client'''
+    """marker interface for client"""
     pass
 
 
@@ -107,7 +107,7 @@ class APRSStation(ExportedState):
         self.__last_parse_error = u''
 
     def receive(self, message):
-        '''implement ITelemetryObject'''
+        """implement ITelemetryObject"""
         self.__last_heard_time = message.receive_time
         for fact in message.facts:
             if isinstance(fact, KillObject):
@@ -141,11 +141,11 @@ class APRSStation(ExportedState):
             self.__last_parse_error = '; '.join(message.errors)
     
     def is_interesting(self):
-        '''implement ITelemetryObject'''
+        """implement ITelemetryObject"""
         return True
     
     def get_object_expiry(self):
-        '''implement ITelemetryObject'''
+        """implement ITelemetryObject"""
         return self.__last_heard_time + drop_unheard_timeout_seconds
     
     @exported_value(type=float)
@@ -162,12 +162,12 @@ class APRSStation(ExportedState):
 
     @exported_value(type=unicode)
     def get_symbol(self):
-        '''APRS symbol table identifier and symbol.'''
+        """APRS symbol table identifier and symbol."""
         return self.__symbol
 
     @exported_value(type=unicode)
     def get_status(self):
-        '''String status text.'''
+        """String status text."""
         return self.__status
 
     @exported_value(type=unicode)
@@ -279,7 +279,7 @@ Velocity = namedtuple('Velocity', [
 
 
 def parse_tnc2(line, receive_time):
-    '''Parse "TNC2 text format" APRS messages.'''
+    """Parse "TNC2 text format" APRS messages."""
     if not isinstance(line, unicode):
         # TODO: Is there a more-often-than-not used encoding beyond ASCII, that we should use here?
         line = unicode(line, 'ascii', 'replace')
@@ -299,11 +299,11 @@ def parse_tnc2(line, receive_time):
 # The data should go into the 'shared object', but right now only receivers can retrieve those. (I currently think shared objects ought to become more explicitly about telemetry-type data.) The current situation means that all of the data records get stuffed into an unfortunate part of the UI.
 # We need more support for non-RF devices, so that e.g. this can have a close callback, and perhaps so the rest of the system is aware of what this is actually doing.
 def APRSISRXDevice(reactor, client, name=None, filter=None):
-    '''
+    """
     client: an aprs.APRS object (see <https://pypi.python.org/pypi/aprs>)
     name: device label
     filter: filter on incoming data (see <http://www.aprs-is.net/javAPRSFilter.aspx>)
-    '''
+    """
     # pylint: disable=redefined-builtin
     if name is None:
         name = 'APRS-IS ' + filter

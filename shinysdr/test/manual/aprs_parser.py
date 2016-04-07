@@ -17,9 +17,9 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 Test for APRS parser. Accepts lines and prints the parsed form.
-'''
+"""
 
 from __future__ import absolute_import, division
 

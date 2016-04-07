@@ -57,11 +57,11 @@ class TestDevice(unittest.TestCase):
         self.assertEqual(txd, d.get_tx_driver())
     
     def test_tx_mode_noop(self):
-        '''
+        """
         With no TX driver, set_transmitting is a noop.
         
         This was chosen as the most robust handling of the erroneous operation.
-        '''
+        """
         d = Device(rx_driver=_TestRXDriver())
         d.set_transmitting(True)
         d.set_transmitting(False)

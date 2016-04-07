@@ -18,11 +18,11 @@
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 
-'''
+"""
 Config interface.
 
 The "public" operations on these objects are used by configuration files to specify configuration. The "private" operations are then used by main to implement the configuration.
-'''
+"""
 
 
 from __future__ import absolute_import, division
@@ -89,7 +89,7 @@ class Config(object):
             raise Exception('Too late to modify configuration')
     
     def wait_for(self, deferred):
-        '''Wait for the provided Deferred before assuming the configuration to be finished.'''
+        """Wait for the provided Deferred before assuming the configuration to be finished."""
         self._not_finished()
         self.__waiting.append(defer.maybeDeferred(lambda: deferred))
     
@@ -135,9 +135,9 @@ class Config(object):
         self._service_makers.append(make_service)
     
     def set_server_audio_allowed(self, allowed, device_name='', sample_rate=44100):
-        '''
+        """
         Set whether clients are allowed to send output to the server audio device.
-        '''
+        """
         self._not_finished()
         
         if allowed:
@@ -146,11 +146,11 @@ class Config(object):
             self.__server_audio = None
     
     def set_stereo(self, value):
-        '''
+        """
         Set whether audio output is stereo (True) or mono (False). Defaults to True.
         
         Disabling stereo saves CPU time and network bandwidth.
-        '''
+        """
         self._not_finished()
         
         self.__stereo = bool(value)
@@ -225,10 +225,10 @@ class _ConfigDbs(object):
 
 
 def execute_config(config_obj, config_file):
-    '''
+    """
     Execute a config file with the special environment.
     Note: does not _wait_and_validate()
-    '''
+    """
     env = dict(__builtin__.__dict__)
     env.update({'shinysdr': shinysdr, 'config': config_obj})
     execfile(config_file, env)

@@ -35,16 +35,16 @@ class SignalType(object):
     # TODO __eq__ and so on
     
     def get_sample_rate(self):
-        '''Sample rate in samples per second.'''
+        """Sample rate in samples per second."""
         return self.__sample_rate
     
     def get_kind(self):
         # TODO will probably want to change this
-        '''
+        """
         One of 'NONE', 'IQ', 'USB', 'LSB', 'MONO', or 'STEREO'.
         
         Note that due to the current implementation, USB and LSB are complex with a zero Q component.
-        '''
+        """
         return self.__kind
     
     def get_itemsize(self):
@@ -56,7 +56,7 @@ class SignalType(object):
             return gr.sizeof_gr_complex
     
     def is_analytic(self):
-        '''Regardless of the signal being represented as gr_complex, does it have a two-sided spectrum?'''
+        """Regardless of the signal being represented as gr_complex, does it have a two-sided spectrum?"""
         return self.__kind == 'IQ'
     
     def compatible_items(self, other):

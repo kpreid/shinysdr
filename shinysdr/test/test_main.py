@@ -15,9 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 See also test_config.py.
-'''
+"""
 
 
 from __future__ import absolute_import, division
@@ -61,14 +61,14 @@ class TestMain(unittest.TestCase):
     
     @defer.inlineCallbacks
     def test_main_first_run_sources(self):
-        '''Regression: first run with no state file would fail due to assumptions about the source names.'''
+        """Regression: first run with no state file would fail due to assumptions about the source names."""
         yield main.main(
             argv=['shinysdr', self.__config_name],
             _abort_for_test=True)
     
     @defer.inlineCallbacks
     def test_persistence(self):
-        '''Test that state persists.'''
+        """Test that state persists."""
         (app, note_dirty) = yield self.__run_main()
         rxf = app.get_receive_flowgraph()
         self.assertEqual(rxf.get_source_name(), 'sim_bar')  # check initial assumption
@@ -80,7 +80,7 @@ class TestMain(unittest.TestCase):
 
     @defer.inlineCallbacks
     def test_minimal(self):
-        '''Test that things function with no state file and no servers.'''
+        """Test that things function with no state file and no servers."""
         with open(self.__config_name, 'w') as config:
             config.write(textwrap.dedent('''\
                 import shinysdr.plugins.simulate
@@ -99,7 +99,7 @@ class TestMain(unittest.TestCase):
     
     @defer.inlineCallbacks
     def test_deferred_config(self):
-        '''Test that the config can defer.'''
+        """Test that the config can defer."""
         with open(self.__config_name, 'w') as config:
             config.write(textwrap.dedent('''\
                 import shinysdr.plugins.simulate

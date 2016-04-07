@@ -24,9 +24,9 @@ import os.path
 
 
 class DependencyTester(object):
-    '''
+    """
     Attempt to import things and collect reports of failure.
-    '''
+    """
     def __init__(self):
         self.__missing = set()
         self.__broken = set()

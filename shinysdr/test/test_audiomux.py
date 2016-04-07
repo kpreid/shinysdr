@@ -42,9 +42,9 @@ class TestAudioManager(unittest.TestCase):
         self.tb.wait()
 
     def test_wrong_dest_name(self):
-        '''
+        """
         Shouldn't fail to construct a valid flow graph, despite the bad name.
-        '''
+        """
         rs = self.p.reconnecting()
         rs.input(ConnectionCanarySource(self.tb), 10000, 'bogusname')
         rs.finish_bus_connections()
@@ -54,9 +54,9 @@ class TestAudioManager(unittest.TestCase):
 
 
 def ConnectionCanarySource(graph):
-    '''
+    """
     Set up a partial graph to detect its output not being connected
-    '''
+    """
     source = blocks.vector_source_f([])
     copy = blocks.copy(gr.sizeof_float)
     graph.connect(source, copy)

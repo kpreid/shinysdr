@@ -74,9 +74,9 @@ class TestTelemetryStore(unittest.TestCase):
         # 'become boring' is not implemented, so also not tested yet
     
     def test_drop_old_boring(self):
-        '''
+        """
         Make sure that dropping a boring object doesn't fail.
-        '''
+        """
         self.store.receive(Msg('foo', 1000, 'boring'))
         self.assertEqual([], self.store.state().keys())
         self.clock.advance(1800)

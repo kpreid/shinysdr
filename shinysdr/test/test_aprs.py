@@ -79,7 +79,7 @@ class TestAPRSParser(unittest.TestCase):
             comment='')
     
     def test_parse_and_position_without_timestamp(self):
-        '''this test case looks at the entire message structure'''
+        """this test case looks at the entire message structure"""
         self.__check(
             'N6WKZ-3>APU25N,WB6TMS-3*,N6ZX-3*,WIDE2*:=3746.42N112226.00W# {UIV32N}',
             APRSMessage(
@@ -171,7 +171,7 @@ class TestAPRSParser(unittest.TestCase):
     
     # TODO compressed position parsing needs lots more testing, including altitude
     def test_compressed_position_example_1(self):
-        '''example from APRS 1.0.1 page 40'''
+        """example from APRS 1.0.1 page 40"""
         # due to exponentiation being involved there is some FP error. TODO: Arrange to be able to assert the range, or duplicate the computation, instead of using exact constants
         self.__check_parsed(
             'FOO>BAR:!/5L!!<*e7>7P[',
@@ -185,7 +185,7 @@ class TestAPRSParser(unittest.TestCase):
             comment='')
     
     def test_compressed_position_example_altitude(self):
-        '''example from APRS 1.0.1 page 40'''
+        """example from APRS 1.0.1 page 40"""
         # due to exponentiation being involved there is some FP error. TODO: Arrange to be able to assert the range, or duplicate the computation, instead of using exact constants
         self.__check_parsed(
             'FOO>BAR:!/!!!!!!!!>S]S',
@@ -308,9 +308,9 @@ class TestAPRSParser(unittest.TestCase):
 
 
 class TestAPRSTelemetryStore(unittest.TestCase):
-    '''
+    """
     This is a test of APRSStation's implementation of ITelemetryObject.
-    '''
+    """
     
     def setUp(self):
         self.clock = Clock()

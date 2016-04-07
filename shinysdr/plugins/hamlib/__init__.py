@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 Plugin for Hamlib hardware interfaces.
 
 To use this plugin, add something like this to your config file:
@@ -26,7 +26,7 @@ config.devices.add('my-other-radio',
         options=['-m', '<model ID>', '-r', '<device file name>']))
 
 TODO explain how to link up with soundcard devices
-'''
+"""
 
 # pylint: disable=no-init, no-member, signature-differs, raising-bad-type
 # (no-init: pylint confused by interfaces)
@@ -63,27 +63,27 @@ __all__ = []  # appended later
 
 
 class IProxy(Interface):
-    '''
+    """
     Marker interface for hamlib proxies (rig, rotator).
-    '''
+    """
 
 
 __all__.append('IProxy')
 
 
 class IRig(IProxy):
-    '''
+    """
     Hamlib rig proxy (anything interfaced by rigctld).
-    '''
+    """
 
 
 __all__.append('IRig')
 
 
 class IRotator(IProxy):
-    '''
+    """
     Hamlib rotator proxy (anything interfaced by rotctld).
-    '''
+    """
 
 
 __all__.append('IRotator')
@@ -154,9 +154,9 @@ _cap_remap = {
 
 @defer.inlineCallbacks
 def connect_to_rigctld(reactor, host='localhost', port=4532):
-    '''
+    """
     Connect to an existing rigctld process.
-    '''
+    """
     proxy = yield _connect_to_daemon(
         reactor=reactor,
         host=host,
@@ -173,9 +173,9 @@ __all__.append('connect_to_rigctld')
 
 @defer.inlineCallbacks
 def connect_to_rotctld(reactor, host='localhost', port=4533):
-    '''
+    """
     Connect to an existing rotctld process.
-    '''
+    """
     proxy = yield _connect_to_daemon(
         reactor=reactor,
         host=host,
@@ -200,14 +200,14 @@ def _connect_to_daemon(reactor, host, port, server_name, proxy_ctor):
 
 
 def connect_to_rig(reactor, options=None, port=4532):
-    '''
+    """
     Start a rigctld process and connect to it.
     
     options: list of rigctld options, e.g. ['-m', '123', '-r', '/dev/ttyUSB0'].
     Do not specify host or port in the options.
     
     port: A free port number to use.
-    '''
+    """
     return _connect_to_device(
         reactor=reactor,
         options=options,
@@ -220,14 +220,14 @@ __all__.append('connect_to_rig')
 
 
 def connect_to_rotator(reactor, options=None, port=4533):
-    '''
+    """
     Start a rotctld process and connect to it.
     
     options: list of rotctld options, e.g. ['-m', '1102', '-r', '/dev/ttyUSB0'].
     Do not specify host or port in the options.
     
     port: A free port number to use.
-    '''
+    """
     return _connect_to_device(
         reactor=reactor,
         options=options,
@@ -288,9 +288,9 @@ def _connect_to_device(reactor, options, port, daemon, connect_func):
 
 
 class _HamlibProxy(ExportedState):
-    '''
+    """
     Abstract class for objects which export state proxied to a hamlib daemon.
-    '''
+    """
     implements(IProxy)
     
     def __init__(self, protocol):

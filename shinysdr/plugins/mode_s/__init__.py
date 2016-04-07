@@ -168,7 +168,7 @@ class ModeSMessageWrapper(object):
 
 
 class IAircraft(Interface):
-    '''marker interface for client'''
+    """marker interface for client"""
     pass
 
 
@@ -176,7 +176,7 @@ class Aircraft(ExportedState):
     implements(IAircraft, ITelemetryObject)
     
     def __init__(self, object_id):
-        '''Implements ITelemetryObject. object_id is the hex formatted address.'''
+        """Implements ITelemetryObject. object_id is the hex formatted address."""
         self.__last_heard_time = None
         self.__track = empty_track
         self.__call = None
@@ -254,9 +254,9 @@ class Aircraft(ExportedState):
             pass
     
     def is_interesting(self):
-        '''
+        """
         Implements ITelemetryObject. Does this aircraft have enough information to be worth mentioning?
-        '''
+        """
         # TODO: Loosen this rule once we have more efficient state transfer (no polling) and better UI for viewing them on the client.
         return \
             self.__track.latitude.value is not None or \
@@ -265,7 +265,7 @@ class Aircraft(ExportedState):
             self.__aircraft_type is not None
     
     def get_object_expiry(self):
-        '''implement ITelemetryObject'''
+        """implement ITelemetryObject"""
         return self.__last_heard_time + drop_unheard_timeout_seconds
     
     @exported_value(type=float)

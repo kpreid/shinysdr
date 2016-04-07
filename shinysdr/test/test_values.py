@@ -71,7 +71,7 @@ class TestExportedState(unittest.TestCase):
 
 
 class ValueAndBlockSpecimen(ExportedState):
-    '''Helper for TestExportedState'''
+    """Helper for TestExportedState"""
     def __init__(self, block, value=0):
         self.__value = value
         self.__block = block
@@ -104,14 +104,14 @@ class TestDecoratorInheritance(unittest.TestCase):
 
 
 class DecoratorInheritanceSpecimenSuper(ExportedState):
-    '''Helper for TestDecorator'''
+    """Helper for TestDecorator"""
     @exported_value(type=float)
     def get_inherited(self):
         return 9
 
 
 class DecoratorInheritanceSpecimen(DecoratorInheritanceSpecimenSuper):
-    '''Helper for TestDecorator'''
+    """Helper for TestDecorator"""
     def __init__(self):
         self.rw = 0.0
     
@@ -135,7 +135,7 @@ class TestBlockCell(unittest.TestCase):
 
 
 class BlockCellSpecimen(ExportedState):
-    '''Helper for TestBlockCell'''
+    """Helper for TestBlockCell"""
     block = None
     
     def __init__(self, block):
@@ -192,7 +192,7 @@ class TestStateInsert(unittest.TestCase):
         self.assertEqual([], self.object.state().keys())
     
     def test_undefined(self):
-        '''no state_insert method defined'''
+        """no state_insert method defined"""
         self.object = CollectionState({}, dynamic=True)
         self.object.state_from_json({'foo': {'fail': True}})
         # throws but exception is caught
@@ -200,7 +200,7 @@ class TestStateInsert(unittest.TestCase):
 
 
 class InsertFailSpecimen(CollectionState):
-    '''Helper for TestStateInsert'''
+    """Helper for TestStateInsert"""
     def __init__(self):
         self.table = {}
         CollectionState.__init__(self, self.table, dynamic=True)
@@ -229,7 +229,7 @@ class TestCellIdentity(unittest.TestCase):
 
 
 class CellIdentitySpecimen(ExportedState):
-    '''Helper for TestCellIdentity'''
+    """Helper for TestCellIdentity"""
     __value = 1
     
     def __init__(self):
@@ -297,7 +297,7 @@ class TestPoller(unittest.TestCase):
 
 
 class PollerCellsSpecimen(ExportedState):
-    '''Helper for TestPoller'''
+    """Helper for TestPoller"""
     foo = None
     
     def __init__(self):

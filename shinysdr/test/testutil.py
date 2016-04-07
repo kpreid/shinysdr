@@ -43,7 +43,7 @@ from shinysdr.values import ExportedState, nullExportedState
 
 
 def state_smoke_test(value):
-    '''Retrieve every value in the given ExportedState instance and its children.'''
+    """Retrieve every value in the given ExportedState instance and its children."""
     assert isinstance(value, ExportedState)
     for cell in value.state().itervalues():
         value = cell.get()
@@ -138,9 +138,9 @@ class DeviceTestCase(unittest.TestCase):
 
 
 class DemodulatorTester(object):
-    '''
+    """
     Set up an environment for testing a demodulator and do some fundamental tests.
-    '''
+    """
     def __init__(self, mode, state=None):
         # TODO: Refactor things so that we can take the demod ctor rather than a mode string
         if state is None:

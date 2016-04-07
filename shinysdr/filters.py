@@ -15,9 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 GNU Radio blocks which automatically compute appropriate filter designs.
-'''
+"""
 
 from __future__ import absolute_import, division
 
@@ -41,10 +41,10 @@ _use_rational_resampler = True
 
 
 class _MultistageChannelFilterPlan(object):
-    '''
+    """
     Description of a MultistageChannelFilter without any instantiation. The analogue of
     an array of taps for a single-stage filter.
-    '''
+    """
     
     def __init__(self, stage_designs, freq_xlate_stage, cutoff_freq, transition_width, taps=None):
         self.__stage_designs = stage_designs
@@ -313,11 +313,11 @@ def _make_filter_plan_1(input_rate, output_rate):
 
 
 class MultistageChannelFilter(gr.hier_block2):
-    '''
+    """
     Provides frequency translation, low-pass filtering, and arbitrary sample rate conversion.
     
     The multistage aspect improves CPU efficiency and also enables high decimations/sharp filters that would otherwise run into buffer length limits. Or at least, those were the problems I was seeing which I wrote this to fix.
-    '''
+    """
     def __init__(self,
             name='Multistage Channel Filter',
             input_rate=0,
@@ -366,7 +366,7 @@ class MultistageChannelFilter(gr.hier_block2):
         self.freq_filter_block.set_center_freq(center_freq)
     
     def __do_taps(self):
-        '''Re-assign taps for all stages.'''
+        """Re-assign taps for all stages."""
         # TODO: sanity check types:
         #   plan has matching stage types
         #   plan has same decimations
@@ -375,7 +375,7 @@ class MultistageChannelFilter(gr.hier_block2):
                 stage_filter.set_taps(taps)
     
     def explain(self):
-        '''Return a description of the filter design.'''
+        """Return a description of the filter design."""
         stages = self.stages
         stage_designs = self.__plan.get_stage_designs()
         s = '%s stages from %i to %i' % (
@@ -474,9 +474,9 @@ def design_sawtooth_filter(
         decreasing=False,
         window_type=window.WIN_HAMMING,
         beta=0):
-    '''
+    """
     This filter has a response which increases or decreases linearly with frequency, cut at f_s/2. Its gain is 1 at frequency 0 and thus also 1 averaged over all frequencies.
-    '''
+    """
     window_values = window.build(window_type, ntaps, beta)
     
     # Formula provided by Olli Niemitalo in <http://dsp.stackexchange.com/a/28035/4655>.

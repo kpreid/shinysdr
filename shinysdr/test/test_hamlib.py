@@ -25,9 +25,9 @@ from shinysdr.test.testutil import state_smoke_test
 
 
 class TestHamlibRig(unittest.TestCase):
-    '''
+    """
     Also contains generic proxy tests.
-    '''
+    """
     timeout = 5
     __rig = None
     
@@ -44,7 +44,7 @@ class TestHamlibRig(unittest.TestCase):
         return self.__rig.close()
     
     def test_noop(self):
-        '''basic connect and disconnect, check is clean'''
+        """basic connect and disconnect, check is clean"""
         pass
 
     @defer.inlineCallbacks
@@ -88,5 +88,5 @@ class TestHamlibRotator(unittest.TestCase):
         return self.__rotator.close()
     
     def test_noop(self):
-        '''basic connect and disconnect, check is clean'''
+        """basic connect and disconnect, check is clean"""
         pass

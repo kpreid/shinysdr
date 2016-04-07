@@ -153,7 +153,7 @@ class TestStateStream(StateStreamTestCase):
         ])
 
     def test_two_references(self):
-        '''Two references are handled correctly, including not deleting until both are gone.'''
+        """Two references are handled correctly, including not deleting until both are gone."""
         self.setUpForObject(DuplicateReferenceSpecimen())
         self.assertEqual(self.getUpdates(), [
             [u'register_block', 1, u'urlroot', []],
@@ -244,7 +244,7 @@ class IFoo(Interface):
 
 
 class StateSpecimen(ExportedState):
-    '''Helper for TestStateStream'''
+    """Helper for TestStateStream"""
     implements(IFoo)
 
     def __init__(self):
@@ -260,7 +260,7 @@ class StateSpecimen(ExportedState):
 
 
 class DuplicateReferenceSpecimen(ExportedState):
-    '''Helper for TestStateStream'''
+    """Helper for TestStateStream"""
 
     def __init__(self):
         self.foo = self.bar = nullExportedState
@@ -288,7 +288,7 @@ class TestSerialization(StateStreamTestCase):
 
 
 class SerializationSpecimen(ExportedState):
-    '''Helper for TestStateStream'''
+    """Helper for TestStateStream"""
     implements(IFoo)
 
     def __init__(self):

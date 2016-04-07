@@ -183,7 +183,7 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
 
 
 class _SimulatedTransmitter(gr.hier_block2, ExportedState):
-    '''provides frequency parameters'''
+    """provides frequency parameters"""
     def __init__(self, modulator, audio_rate, rf_rate, freq):
         modulator = IModulator(modulator)
         

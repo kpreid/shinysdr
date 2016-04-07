@@ -115,11 +115,11 @@ class RTTYDemodulator(gr.hier_block2, ExportedState):
         return SignalType(kind='MONO', sample_rate=self.samp_rate)
 
     def can_set_mode(self, mode):
-        '''implement IDemodulator'''
+        """implement IDemodulator"""
         return False
     
     def get_half_bandwidth(self):
-        '''implement IDemodulator'''
+        """implement IDemodulator"""
         return self.__filter_high
 
     @exported_block()
@@ -186,12 +186,12 @@ class RTTYModulator(gr.hier_block2, ExportedState):
 
 
 class RTTYFSKDemodulator(gr.hier_block2, ExportedState):
-    '''
+    """
     Demodulate FSK with parameters suitable for gr-rtty.
     
     TODO: Make this into something more reusable once we have other examples of FSK.
     Note this differs from the GFSK demod in gnuradio.digital by having a DC blocker.
-    '''
+    """
     def __init__(self, input_rate, baud):
         gr.hier_block2.__init__(
             self, 'RTTY FSK demodulator',
@@ -222,9 +222,9 @@ class RTTYFSKDemodulator(gr.hier_block2, ExportedState):
 
 
 def _to_bits(code):
-    '''
+    """
     ITA2 code number to _HALF_BITS_PER_CODE-element array
-    '''
+    """
     l = [0, 0]
     for i in xrange(_DATA_BITS):
         j = _DATA_BITS - 1 - i
@@ -272,9 +272,9 @@ def _encode_rtty_alloc(char_in):
 
 # Not usable because python blocks have bad interactions with reconfiguration or something.
 # class RTTYEncoder(gr.basic_block):
-#   '''
+#   """
 #   Convert ASCII to a bit-stream with 2 bits per symbol (except for stop bits which are 3).
-#   '''
+#   """
 #   def __init__(self):
 #       gr.basic_block.__init__(self,
 #           name=self.__class__.__name__,

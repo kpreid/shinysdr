@@ -152,7 +152,7 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
 
 
 def app_defaults(app):
-    '''Return a friendly initial state for the app using knowledge of the default config file.'''
+    """Return a friendly initial state for the app using knowledge of the default config file."""
     state = {}
     
     # TODO: fix fragility of assumptions

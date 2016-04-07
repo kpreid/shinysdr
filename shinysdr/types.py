@@ -16,9 +16,9 @@
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 
-'''
+"""
 Type definitions for ShinySDR value cells etc.
-'''
+"""
 
 
 from __future__ import absolute_import, division
@@ -39,30 +39,30 @@ def to_value_type(typeoid):
 
 
 class ValueType(object):
-    '''
+    """
     A type in the sense of "set of values", plus coercion and other hints.
-    '''
+    """
     def type_to_json(self):
-        '''
+        """
         Serialize this type for the client.
-        '''
+        """
         raise NotImplementedError()
     
     def __call__(self, specimen):
-        '''
+        """
         Coerce the specimen to this type.
         
         If the specimen is not of a suitable type, raise TypeError.
         
         If the specimen is of a suitable type but out of range and this type does not choose to make it in range, raise ValueError.
-        '''
+        """
         raise NotImplementedError()
 
 
 class BareType(ValueType):
-    '''
+    """
     ValueType wrapper for Python types.
-    '''
+    """
     def __init__(self, python_type):
         self.__python_type = python_type
     
@@ -80,9 +80,9 @@ bare_type_registry = {
 
 
 class Constant(ValueType):
-    '''
+    """
     A single-valued type.
-    '''
+    """
     
     def __init__(self, value):
         self.__value = value
@@ -201,9 +201,9 @@ class Range(ValueType):
         return self.__maxes[-1]
     
     def get_single_point(self):
-        '''
+        """
         If this Range contains only a single value, return it, else None.
-        '''
+        """
         if len(self.__mins) != 1:
             return None
         else:

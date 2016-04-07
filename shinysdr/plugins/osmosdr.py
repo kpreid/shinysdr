@@ -50,10 +50,10 @@ IQBalanceAutomatic = 2
 
 
 class OsmoSDRProfile(object):
-    '''
+    """
     Description of the characteristics of specific hardware which cannot
     be obtained automatically via OsmoSDR.
-    '''
+    """
     
     def __init__(self,
             tx=False,  # safe assumption
@@ -61,7 +61,7 @@ class OsmoSDRProfile(object):
             dc_cancel=True,  # ditto
             dc_offset=True,  # safe assumption
             e4000=False):
-        '''
+        """
         All values are booleans.
         
         tx: The device supports transmitting (osmosdr.sink).
@@ -72,7 +72,7 @@ class OsmoSDRProfile(object):
             avoid the area around DC.
         e4000: The device is an RTL2832U + E4000 tuner and can be
             confused into tuning to 0 Hz.
-        '''
+        """
         
         # TODO: If the user specifies an OsmoSDRProfile without a full set of explicit args, derive the rest from the device string instead of using defaults.
         self.tx = tx
@@ -199,13 +199,13 @@ def OsmoSDRDevice(
         profile=None,
         sample_rate=None,
         correction_ppm=0.0):
-    '''
+    """
     osmo_device: gr-osmosdr device string
     name: block name (usually not specified)
     profile: an OsmoSDRProfile (see docs)
     sample_rate: desired sample rate, or None == guess a good rate
     correction_ppm: oscillator frequency calibration (parts-per-million)
-    '''
+    """
     # The existence of the correction_ppm parameter is a workaround for the current inability to dynamically change an exported field's type (the frequency range), allowing them to be initialized early enough, in the configuration, to take effect. (Well, it's also nice to hardcode them in the config if you want to.)
     if name is None:
         name = 'OsmoSDR %s' % osmo_device

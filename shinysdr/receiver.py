@@ -48,11 +48,11 @@ _dummy_audio_rate = 2000
 
 
 class IReceiver(Interface):
-    '''
+    """
     Marker interface for receivers.
     
     (This exists even though Receiver has no class hierarchy because the client would like to know what's a receiver block, and interface information is automatically delivered to the client.)
-    '''
+    """
 
 
 class Receiver(gr.hier_block2, ExportedState):
@@ -329,7 +329,7 @@ class Receiver(gr.hier_block2, ExportedState):
         self.__update_audio_gain()
 
     def __make_demodulator(self, mode, state):
-        '''Returns the demodulator.'''
+        """Returns the demodulator."""
 
         t0 = time.time()
         

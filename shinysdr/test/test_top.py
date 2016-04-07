@@ -64,9 +64,9 @@ class TestTop(unittest.TestCase):
         # TODO: Also test value found in data stream
 
     def test_receiver_source_switch(self):
-        '''
+        """
         Regression test: Switching sources was not updating receiver input frequency.
-        '''
+        """
         freq1 = 1e6
         freq2 = 2e6
         top = Top(devices={
@@ -82,9 +82,9 @@ class TestTop(unittest.TestCase):
         self.assertTrue(receiver.get_is_valid(), 'receiver now valid')
 
     def test_receiver_device_default(self):
-        '''
+        """
         Receiver should default to the monitor device, not other receiver's device.
-        '''
+        """
         top = Top(devices={
             's1': simulate.SimulatedDevice(),
             's2': simulate.SimulatedDevice(),
@@ -98,9 +98,9 @@ class TestTop(unittest.TestCase):
         self.assertEquals(receiver1.get_device_name(), 's1')
 
     def test_add_unknown_mode(self):
-        '''
+        """
         Specifying an unknown mode should not _fail_.
-        '''
+        """
         top = Top(devices={'s1': simulate.SimulatedDevice(freq=0)})
         (_key, receiver) = top.add_receiver('NONSENSE', key='a')
         self.assertEqual(receiver.get_mode(), 'AM')

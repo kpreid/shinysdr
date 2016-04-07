@@ -101,7 +101,7 @@ def _serialize(obj):
 
 
 class _SlashedResource(Resource):
-    '''Redirects /.../this to /.../this/.'''
+    """Redirects /.../this to /.../this/."""
     
     def render(self, request):
         request.setHeader('Location', request.childLink(''))
@@ -209,7 +209,7 @@ class BlockResource(Resource):
             return renderElement(request, self.__element)
     
     def render_POST(self, request):
-        '''currently only meaningful to create children of CollectionResources'''
+        """currently only meaningful to create children of CollectionResources"""
         block = self._block
         if not IWritableCollection.providedBy(block):
             raise Exception('Block is not a writable collection')
@@ -237,9 +237,9 @@ class BlockResource(Resource):
 
 
 class _BlockHtmlElement(template.Element):
-    '''
+    """
     Template element for HTML page for an arbitrary block.
-    '''
+    """
     loader = template.XMLFile(os.path.join(_templatePath, 'block.template.xhtml'))
 
     @template.renderer
@@ -329,7 +329,7 @@ class _StateStreamObjectRegistration(object):
         self.value_is_references = is_references
     
     def send_initial_value(self):
-        '''kludge to get initial state sent'''
+        """kludge to get initial state sent"""
     
     def send_now_if_needed(self):
         # should be overridden in instance
@@ -469,7 +469,7 @@ class StateStreamInner(object):
             
     
     def get__root_object(self):
-        '''Accessor for implementing self._cell.'''
+        """Accessor for implementing self._cell."""
         return self.__root_object
     
     def do_delete(self, reg):
@@ -660,9 +660,9 @@ class OurStreamFactory(protocol.Factory):
 
 
 class IClientResourceDef(Interface):
-    '''
+    """
     Client plugin interface object
-    '''
+    """
     # Only needed to make the plugin system work
     # TODO write interface methods anyway
 
@@ -686,16 +686,16 @@ def _make_static(filePath):
 
 
 def _reify(parent, name):
-    '''
+    """
     Construct an explicit twisted.web.static.File child identical to the implicit one so that non-filesystem children can be added to it.
-    '''
+    """
     r = parent.createSimilarFile(parent.child(name).path)
     parent.putChild(name, r)
     return r
 
 
 def _strport_to_url(desc, scheme='http', path='/', socket_port=0):
-    '''Construct a URL from a twisted.application.strports string.'''
+    """Construct a URL from a twisted.application.strports string."""
     # TODO: need to know canonical domain name, not localhost; can we extract from the ssl cert?
     # TODO: strports.parse is deprecated
     (method, args, _) = strports.parse(desc, None)
@@ -828,7 +828,7 @@ class WebService(Service):
         return _strport_to_url(self.__http_port, socket_port=port_num, path=self.__visit_path)
 
     def announce(self, open_client):
-        '''interface used by shinysdr.main'''
+        """interface used by shinysdr.main"""
         url = self.get_url()
         if open_client:
             log.msg('Opening ' + url)

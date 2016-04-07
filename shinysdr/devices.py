@@ -37,47 +37,47 @@ __all__ = []
 
 
 class IDevice(Interface):
-    '''
+    """
     The only implementation of IDevice is Device; it is used only as an explicit type.
-    '''
+    """
 
 
 class IRXDriver(Interface):
-    '''
+    """
     Additional requirements:
     The object must be a GNU Radio source block with the specified output type.
     get_output_type should be exported.
-    '''
+    """
     
     def get_output_type():
-        '''
+        """
         Should return an instance of SignalType describing the output signal.
         
         The value MUST NOT change in an incompatible way during the lifetime of the source. 
-        '''
+        """
 
     def get_tune_delay():
-        '''
+        """
         Return the amount of time, in seconds, between a call to set_freq() and the new center frequency taking effect as observed at top.monitor.fft.
         
         TODO: We need a better strategy for this. Stream tags might help if we can get them in the right places.
         
         TODO: With the device refactoring, tune delays should come from VFOs not rx drivers.
-        '''
+        """
     
     def get_usable_bandwidth():
-        '''
+        """
         Return a Range object which specifies what portion of the bandwidth of the output signal should be conidered usable, in baseband Hz.
         
         Usable here means that it is within the filter passband and does not contain spurs (in particular, a DC offset).
-        '''
+        """
     
     def close():
-        '''
+        """
         Perform a clean shutdown.
         
         This may or may not leave the driver in an unusable state.
-        '''
+        """
     
     def notify_reconnecting_or_restarting():
         pass
@@ -87,44 +87,44 @@ __all__.append('IRXDriver')
 
 
 class ITXDriver(Interface):
-    '''
+    """
     Additional requirements:
     The object must be a GNU Radio sink block with the specified input type.
     get_input_type should be exported.
-    '''
+    """
 
     def get_input_type():
-        '''
+        """
         Should return an instance of SignalType describing the input signal.
         
         The value MUST NOT change in an incompatible way during the lifetime of the source. 
-        '''
+        """
     
     def close():
-        '''
+        """
         Perform a clean shutdown.
         
         This may or may not leave the driver in an unusable state.
-        '''
+        """
     
     def notify_reconnecting_or_restarting():
         pass
     
     def set_transmitting(value, midpoint_hook):
-        '''
+        """
         Enable or disable actual transmission.
         
         The flowgraph will be locked or stopped before this method is called.
         
         This method will not be called redundantly.
-        '''
+        """
 
 
 __all__.append('ITXDriver')
 
 
 class Device(ExportedState):
-    '''
+    """
     A Device aggregates the functions of one or more pieces of radio hardware or drivers for same; particularly:
     
     * receiver
@@ -132,7 +132,7 @@ class Device(ExportedState):
     * VFO
     
     For example, if one is using a sound card-based transceiver, then there would be an audio-source, an audio-sink, and a separate interface to the VFO and other hardware controls. These are completely unrelated as far as the operating system and GNU Radio are concerned, but the Device object aggregates all of those so that the user interface can display them as properly related and control them in sync.
-    '''
+    """
     implements(IDevice)
     # pylint: disable=no-member
     # (confused by nullExportedState)
@@ -143,11 +143,11 @@ class Device(ExportedState):
             tx_driver=nullExportedState,
             vfo_cell=None,
             components={}):
-        '''
+        """
         rx_driver -- may be nullExportedState
         tx_driver -- may be nullExportedState
         vfo_cell -- may be None
-        '''
+        """
         if vfo_cell is None:
             vfo_cell = _stub_vfo
         assert vfo_cell.key() == 'freq'
@@ -194,33 +194,33 @@ class Device(ExportedState):
         return self.__vfo_cell
     
     def get_components_dict(self):
-        '''Do not mutate the dictionary returned.'''
+        """Do not mutate the dictionary returned."""
         return self.__components
     
     def get_freq(self):
-        '''
+        """
         Get the frequency from the VFO cell.
         
         (Convenience/consistency equivalent to self.state()['freq'].get.)
-        '''
+        """
         return self.__vfo_cell.get()
     
     def set_freq(self, value):
-        '''
+        """
         Set the frequency in the VFO cell.
         
         (Convenience/consistency equivalent to self.state()['freq'].set.)
-        '''
+        """
         return self.__vfo_cell.set(value)
     
     def set_transmitting(self, value, midpoint_hook=None):
-        '''
+        """
         Start or stop transmitting. This may involve flowgraph reconfiguration, and as such the caller is responsible for locking or stopping the flowgraph(s) around this call.
         
         If there is no TX driver, then this has no effect.
         
         The output of the RX driver while transmitting is undefined; it may produce no samples, produce meaningless samples at the normal rate, or be unaffected (full duplex).
-        '''
+        """
         value = bool(value)
         if midpoint_hook is None:
             midpoint_hook = lambda: None
@@ -231,9 +231,9 @@ class Device(ExportedState):
         self.tx_driver.set_transmitting(value, midpoint_hook)
     
     def close(self):
-        '''
+        """
         Instruct the drivers to perform a clean shutdown, and discard them.
-        '''
+        """
         if self.rx_driver is not nullExportedState:
             self.rx_driver.close()
             self.rx_driver = nullExportedState
@@ -339,11 +339,11 @@ def _merge_vfos(vfos):
 
 
 def FrequencyShift(shift, name=None):
-    '''
+    """
     Define a fixed VFO frequency shift, such as if a upconverter/downconverter/transverter is in use.
     
     The shift value should be set to the needed change in the _displayed_ frequency. For example, if using a 125 MHz upconverter for receiving HF (such as the popular Ham-It-Up), one should specify a shift of -125e6.
-    '''
+    """
     shift = float(shift)
     return Device(name=name, vfo_cell=_ConstantVFOCell(shift))
 
@@ -512,16 +512,16 @@ class _AudioTXDriver(ExportedState, gr.hier_block2):
 
 
 def PositionedDevice(latitude, longitude):
-    '''
+    """
     Combine with other devices to specify a device's location on the Earth.
-    '''
+    """
     return Device(components={'position': _PositionedDeviceComponent(latitude, longitude)})
 
 
 class IPositionedDevice(Interface):
-    '''
+    """
     Client marker interface only.
-    '''
+    """
 
 
 class _PositionedDeviceComponent(ExportedState):

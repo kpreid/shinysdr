@@ -15,9 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 See also test_main.py.
-'''
+"""
 
 from __future__ import absolute_import, division
 
@@ -35,7 +35,7 @@ from shinysdr.values import nullExportedState
 
 
 def StubDevice():
-    '''Return a valid trivial device.'''
+    """Return a valid trivial device."""
     return devices.Device(components={u'c': nullExportedState})
 
 

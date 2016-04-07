@@ -15,9 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 GR blocks and such supporting receiver audio delivery.
-'''
+"""
 
 from __future__ import absolute_import, division
 
@@ -38,11 +38,11 @@ CLIENT_AUDIO_DEVICE = 'client'
 
 
 class AudioManager(object):
-    '''
+    """
     Manage connecting audio sources (i.e. demodulators) to audio destinations (local devices and network clients represented as message queues).
     
     (This cannot be a hierarchical block, because hierarchical blocks cannot currently have variable numbers of ports.)
-    '''
+    """
     # TODO: This class needs a better name.
     
     def __init__(self, graph, audio_config, stereo=True):
@@ -68,23 +68,23 @@ class AudioManager(object):
         self.__audio_buses = {key: BusPlumber(graph, self.__audio_channels) for key in audio_destination_dict}
     
     def get_destination_type(self):
-        '''
+        """
         Return a type object for the available destinations
-        '''
+        """
         return self.__audio_destination_type
     
     def get_default_destination(self):
         return CLIENT_AUDIO_DEVICE
 
     def add_audio_queue(self, queue, queue_rate):
-        '''Caller must reconnect flow graph.'''
+        """Caller must reconnect flow graph."""
         
         # TODO: place limit on maximum requested sample rate
         self.__audio_queue_sinks[queue] = (queue_rate,
             AudioQueueSink(channels=self.__audio_channels, queue=queue))
     
     def remove_audio_queue(self, queue):
-        '''Caller must reconnect flow graph.'''
+        """Caller must reconnect flow graph."""
         
         del self.__audio_queue_sinks[queue]
     
@@ -139,13 +139,13 @@ class ReconnectSession(object):
 
 
 class BusPlumber(object):
-    '''
+    """
     Takes an arbitrary number of blocks' float outputs (bus inputs), sums and resamples them, and connects them to an arbitrary number of blocks' inputs (bus outputs).
     
     If there are no outputs, the inputs will go to a null sink. If there are no inputs, the outputs will remain unconnected.
     
     (This cannot be a hierarchical block, because hierarchical blocks cannot currently have variable numbers of ports.)
-    '''
+    """
     def __init__(self, graph, nchannels):
         self.__graph = graph
         self.__channels = xrange(nchannels)
@@ -157,11 +157,11 @@ class BusPlumber(object):
         return self.__bus_rate
     
     def connect(self, inputs, outputs):
-        '''
+        """
         Make all new connections (graph.disconnect_all() must have been done) between inputs and outputs.
         
         inputs and outputs must be iterables of (sample_rate, block) tuples.
-        '''
+        """
         inputs = list(inputs)
         outputs = list(outputs)
         

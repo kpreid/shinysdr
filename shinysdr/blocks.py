@@ -15,12 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 GNU Radio flowgraph blocks for use by ShinySDR.
 
 This module is not an external API and not guaranteed to have a stable
 interface.
-'''
+"""
 
 # pylint: disable=attribute-defined-outside-init
 # (attribute-defined-outside-init: doing it carefully)
@@ -42,13 +42,13 @@ from shinysdr.values import ExportedState, LooseCell, StreamCell, exported_value
 
 
 class RecursiveLockBlockMixin(object):
-    '''
+    """
     For top blocks needing recursive locking and/or a notification to restart parts.
-    '''
+    """
     __lock_count = 0
     
     def _recursive_lock_hook(self):
-        ''' override'''
+        """ override"""
         pass
     
     def _recursive_lock(self):
@@ -65,9 +65,9 @@ class RecursiveLockBlockMixin(object):
 
 
 class Context(object):
-    '''
+    """
     Client facet for RecursiveLockBlockMixin.
-    '''
+    """
     def __init__(self, top):
         self.__top = top
     
@@ -79,17 +79,17 @@ class Context(object):
 
 
 def rotator_inc(rate, shift):
-    '''
+    """
     Calculation for using gnuradio.blocks.rotator_cc or other interfaces wanting radians/sample input.
     
     rate: sample rate
     shift: frequency shift in Hz
-    '''
+    """
     return (2 * math.pi) * (shift / rate)
 
 
 def make_sink_to_process_stdin(process, itemsize=gr.sizeof_char):
-    '''Given a twisted Process, connect a sink to its stdin.'''
+    """Given a twisted Process, connect a sink to its stdin."""
     fd_owned_by_twisted = process.pipes[0].fileno()  # TODO: More public way to do this?
     fd_owned_by_sink = os.dup(fd_owned_by_twisted)
     process.closeStdin()
@@ -97,7 +97,7 @@ def make_sink_to_process_stdin(process, itemsize=gr.sizeof_char):
 
 
 def test_subprocess(args, substring, shell=False):
-    '''Check the stdout or stderr of the specified command for a specified string.'''
+    """Check the stdout or stderr of the specified command for a specified string."""
     # TODO: establish resource and output size limits
     # TODO: Use Twisted facilities instead to avoid possible conflicts
     try:
@@ -121,9 +121,9 @@ class _NoContext(object):
 
 
 class MessageDistributorSink(gr.hier_block2):
-    '''Like gnuradio.blocks.message_sink, but copies its messages to a dynamic set of queues and saves the most recent item.
+    """Like gnuradio.blocks.message_sink, but copies its messages to a dynamic set of queues and saves the most recent item.
     
-    Never blocks.'''
+    Never blocks."""
     def __init__(self, itemsize, context, migrate=None, notify=None):
         gr.hier_block2.__init__(
             self, self.__class__.__name__,
@@ -182,21 +182,21 @@ _maximum_fft_rate = 500
 
 
 class _OverlapGimmick(gr.hier_block2):
-    '''
+    """
     Pure flowgraph kludge to cause a logpwrfft block to perform overlapped FFTs.
     
     The more correct solution would be to replace stream_to_vector_decimator (used inside of logpwrfft) with a block which takes arbitrarily-spaced vector chunks of the input rather than chunking and then decimating in terms of whole chunks. The cost of doing this instead is more scheduling steps and more data copies.
     
     To adjust for the data rate, the logpwrfft block's sample rate parameter must be multiplied by the factor parameter of this block; or equivalently, the frame rate must be divided by it.
-    '''
+    """
     
     def __init__(self, size, factor, itemsize=gr.sizeof_gr_complex):
-        '''
+        """
         size: (int) vector size (FFT size) of next block
         factor: (int) output will have this many more samples than input
         
         If size is not divisible by factor, then the output will necessarily have jitter.
-        '''
+        """
         size = int(size)
         factor = int(factor)
         # assert size % factor == 0
@@ -228,11 +228,11 @@ class _OverlapGimmick(gr.hier_block2):
 
 
 class MonitorSink(gr.hier_block2, ExportedState):
-    '''
+    """
     Convenience wrapper around all the bits and pieces to display the signal spectrum to the client.
     
     The units of the FFT output are dB power/Hz (power spectral density) relative to unit amplitude (i.e. dBFS assuming the source clips at +/-1). Note this is different from the standard logpwrfft result of power _per bin_, which would be undesirably dependent on the sample rate and bin size.
-    '''
+    """
     def __init__(self,
             signal_type=None,
             enable_scope=False,
