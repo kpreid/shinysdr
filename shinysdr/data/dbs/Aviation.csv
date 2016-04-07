@@ -11,6 +11,6 @@ Frequency,Mode,Name
 243,AM,Guard (military aircraft emergency)
 328.6-335.4,AM,Aeronautical Radionavigation
 960-1215,AM,Aeronautical Radionavigation
-978.0,MODE-S,UAT transcievers
+978.0,MODE-S,UAT transceivers
 1030.0,ignore,aircraft ATCRBS interrogators
 1090.0,MODE-S,aircraft ATCRBS transponders
