@@ -1,5 +1,15 @@
-Frequency,Mode,Name
-0.530,AM,Traveler's Information
-0.530-1.710,AM,AM broadcast
-1.610,AM,Traveler's Information
-88-108,WFM,FM broadcast
+Mode,Frequency,Name,Comment,Latitude,Longitude
+,0.060,WWVB,,40.677722,-105.038819
+AM,0.530,Traveler's Information
+AM,0.530-1.710,AM broadcast
+AM,1.610,Traveler's Information
+AM,2.5,WWV 2.5,,40.682,-105.041944
+AM,5.0,WWV 5,,40.678361,-105.04025
+AM,10.0,WWV 10,,40.679944,-105.040306
+AM,15.0,WWV 15,,40.679167,-105.040139
+AM,20.0,WWV 20,,40.681417,-105.04125
+AM,2.5,WWVH 2.5,,21.989139,-159.764556
+AM,5.0,WWVH 5,,21.986333,-159.762444
+AM,10.0,WWVH 10,,21.988389,-159.76425
+AM,15.0,WWVH 15,,21.987583,-159.763889
+WFM,88-108,FM broadcast
