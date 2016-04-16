@@ -3,6 +3,18 @@ Frequency,Mode,Name
 0.510-0.530,AM,Aeronautical Radionavigation (Non-directional beacons)
 2.850-3.155,AM,Aeronautical Mobile
 3.400-3.500,AM,Aeronautical Mobile
+4.65-4.75,,Aeronautical Radionavigation
+5.45-5.73,AM,Aeronautical Mobile (US)
+6.525-6.765,AM,Aeronautical Mobile (US)
+8.815-9.040,AM,Aeronautical Mobile (US)
+10.005-10.1,AM,Aeronautical Mobile (US)
+11.175-11.4,AM,Aeronautical Mobile (US)
+13.2-13.36,AM,Aeronautical Mobile (US)
+15.010-15.10,AM,Aeronautical Mobile (US)
+17.9-18.03,AM,Aeronautical Mobile (US)
+21.924-22.0,AM,Aeronautical Mobile (US)
+23.2-23.35,AM,Aeronautical Mobile (US)
+74.8-75.2,AM,Aeronautical Radionavigation
 108-117.975,AM,Aeronautical Radionavigation
 117.975-137,AM,Aeronautical Mobile
 121.5,AM,Guard (civilian aircraft emergency)
@@ -10,7 +22,13 @@ Frequency,Mode,Name
 122.75,AM,Air-to-air (US)
 243,AM,Guard (military aircraft emergency)
 328.6-335.4,AM,Aeronautical Radionavigation
+849-851,AM,Aeronautical Mobile (US)
+894-896,AM,Aeronautical Mobile (US)
 960-1215,AM,Aeronautical Radionavigation
 978.0,MODE-S,UAT transceivers
 1030.0,ignore,aircraft ATCRBS interrogators
 1090.0,MODE-S,aircraft ATCRBS transponders
+1300-1350,,Aeronautical Radionavigation
+1559-1626.5,,Aeronautical Radionavigation
+2700-2900,,Aeronautical Radionavigation
+3500-3650,,Aeronautical Radionavigation (Ground)

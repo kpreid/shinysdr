@@ -1,7 +1,7 @@
 Mode,Frequency,Name,Comment,Latitude,Longitude
 ,0.060,WWVB,,40.677722,-105.038819
 AM,0.530,Traveler's Information
-AM,0.530-1.710,AM broadcast
+AM,0.530-1.705,AM broadcast
 AM,1.610,Traveler's Information
 AM,2.5,WWV 2.5,,40.682,-105.041944
 AM,5.0,WWV 5,,40.678361,-105.04025
