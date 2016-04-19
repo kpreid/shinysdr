@@ -236,7 +236,13 @@ extendedKeyUsage=critical,serverAuth</pre></blockquote>
     
     <dl>
       <dt><code>'stereo'</code>
-      <dd>Stereo audio output. Enabled by default and may be disabled (producing mono audio instead) to reduce CPU usage and network data rate.</dd>
+      <dd><p>Stereo audio output. Enabled by default and may be disabled (producing mono audio instead) to reduce CPU usage and network data rate.</p></dd>
+
+      <dt><code>'reboot'</code>
+      <dd>
+        <p>Allows restarting or stopping the server by request from the client. Disabled by default.
+        <p>This feature is useful if you have flaky or sometimes-unplugged RF devices. It is incomplete in that the commands do not yet live in a sensible location in the user interface, and they may not work if you have an unusual configuration (it is implemented as essentially <code>exec&nbsp;python -m&nbsp;shinysdr.main&nbsp;...</code>).</p>
+      </p></dd>
     </dl>
   </dd>
 

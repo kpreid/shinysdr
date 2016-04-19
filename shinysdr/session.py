@@ -19,8 +19,13 @@
 
 from __future__ import absolute_import, division
 
+import os
+import sys
+
+from twisted.internet import reactor as the_reactor  # TODO fix
+
 from shinysdr.top import Top
-from shinysdr.values import ExportedState, exported_block
+from shinysdr.values import Command, ExportedState, exported_block
 
 
 class AppRoot(ExportedState):
@@ -57,7 +62,8 @@ class AppRoot(ExportedState):
 class Session(ExportedState):
     def __init__(self, receive_flowgraph, features):
         self.__receive_flowgraph = receive_flowgraph
-
+        self.__enable_reboot = features['reboot']
+    
     def state_def(self, callback):
         super(Session, self).state_def(callback)
         rxfs = self.__receive_flowgraph.state()
@@ -69,7 +75,12 @@ class Session(ExportedState):
         callback(rxfs['telemetry_store'])
         callback(rxfs['source_name'])
         callback(rxfs['clip_warning'])
+        if self.__enable_reboot:
+            # TODO kludge
+            callback(Command(self, 'reboot', self.reboot))
+            callback(Command(self, 'kill', self.kill))
         
+    
     def add_audio_queue(self, queue, queue_rate):
         return self.__receive_flowgraph.add_audio_queue(queue, queue_rate)
     
@@ -78,4 +89,12 @@ class Session(ExportedState):
     
     def get_audio_queue_channels(self):
         return self.__receive_flowgraph.get_audio_queue_channels()
+        
+    # TODO: reboot and kill don't belong here, neither the interface nor the implementation.
+    def reboot(self):
+        # Note that this will immediately kill us and so we will never ack the client invocation -- which we're doing as a deliberate indication of our temporary death.
+        # TODO: Do better preservation of options, path, python executable, etc.
+        os.execlp('python', 'python', '-m', 'shinysdr.main', *sys.argv[1:])
     
+    def kill(self):
+        the_reactor.stop()

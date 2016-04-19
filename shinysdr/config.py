@@ -224,6 +224,7 @@ class _ConfigDbs(object):
 class _ConfigFeatures(object):
     def __init__(self, config):
         self._state = {
+            'reboot': False,
             'stereo': True,
             '_test_disabled_feature': False,
             '_test_enabled_feature': True,
