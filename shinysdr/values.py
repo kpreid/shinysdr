@@ -372,6 +372,54 @@ def ViewCell(base, get_transform, set_transform, **kwargs):
     return self
 
 
+class Command(BaseCell):
+    """A Cell which does not primarily produce a value, but is a side-effecting operation that can be invoked.
+    
+    This is a Cell for reasons of convenience in the existing architecture, and because it has several similarities.
+    
+    Its value is (TODO should be something generically useful).
+    """
+    
+    def __init__(self, target, key, function):
+        # TODO: remove writable=true when we have a proper invoke path
+        BaseCell.__init__(self, target=target, key=key, persists=False, writable=True)
+        self.__function = function
+    
+    def isBlock(self):
+        return False
+    
+    def get_state(self):
+        """implements BaseCell"""
+        return self.get()
+    
+    def set_state(self, value):
+        """implements BaseCell"""
+        return self.set(value)
+    
+    def type(self):
+        """implements BaseCell"""
+        return to_value_type(type(None))
+    
+    def description(self):
+        """implements BaseCell"""
+        # TODO: This is identicalish to ValueCell.description except for the kind.
+        return {
+            'kind': 'command',
+            'type': self.type().type_to_json(),
+            'writable': self.isWritable(),
+            'current': self.get(),
+        }
+    
+    def get(self):
+        """implements BaseCell"""
+        return None
+    
+    def set(self, _dummy_value):
+        # raise Exception('Not writable.')
+        # TODO: Make a separate command-triggering path, because this is a HORRIBLE KLUDGE.
+        self.__function()
+
+
 class ExportedState(object):
     def state_def(self, callback):
         """Override this to call the callback with additional cells."""
@@ -397,12 +445,15 @@ class ExportedState(object):
             for k in dir(type(self)):
                 if not hasattr(self, k): continue
                 v = getattr(type(self), k)
+                # TODO use an interface here and move the check inside
                 if isinstance(v, ExportedGetter):
                     if not k.startswith('get_'):
                         # TODO factor out attribute name usage in Cell so this restriction is moot
                         raise LookupError('Bad getter name', k)
                     else:
                         k = k[len('get_'):]
+                    cache[k] = v.make_cell(self, k)
+                elif isinstance(v, ExportedCommand):
                     cache[k] = v.make_cell(self, k)
             
         return self.__cache
@@ -520,7 +571,7 @@ class IWritableCollection(Interface):
 
 
 def exported_value(parameter=None, **cell_kwargs):
-    """Decorator for exported state; takes Cell's kwargs."""
+    """Returns a decorator for exported state; takes Cell's kwargs."""
     def decorator(f):
         return ExportedGetter(f, parameter, False, cell_kwargs)
     return decorator
@@ -528,7 +579,7 @@ def exported_value(parameter=None, **cell_kwargs):
 
 # TODO: @exported_block() maybe should become @exported_value(type=block), depending on how cell types get refactored.
 def exported_block(parameter=None, **cell_kwargs):
-    """Decorator for exported state; takes BlockCell's kwargs."""
+    """Returns a decorator for exported state; takes BlockCell's kwargs."""
     def decorator(f):
         return ExportedGetter(f, parameter, True, cell_kwargs)
     return decorator
@@ -537,6 +588,11 @@ def exported_block(parameter=None, **cell_kwargs):
 def setter(f):
     """Decorator for setters of exported state; must be paired with an @exported_value getter."""
     return ExportedSetter(f)
+
+
+def command():
+    """Returns a decorator for command methods."""
+    return ExportedCommand
 
 
 class ExportedGetter(object):
@@ -574,12 +630,16 @@ class ExportedGetter(object):
             return Cell(obj, attr, writable=writable, **kwargs)
     
     def state_to_kwargs(self, value):
+        # clunky: invoked by unserialize_exported_state via a type test
         if self.__parameter is not None:
             return {self.__parameter: self.__cell_kwargs['type'](value)}
 
 
 class ExportedSetter(object):
     """Descriptor for a setter exported using @setter."""
+    
+    # This has no relevant behavior of its own; it is merely searched for by its paired ExportedGetter.
+    
     def __init__(self, f):
         # TODO: Coerce with value type?
         self.__function = f
@@ -590,6 +650,22 @@ class ExportedSetter(object):
             return self
         else:
             return self.__function.__get__(obj, type)
+
+
+class ExportedCommand(object):
+    """Descriptor for a command method exported using @command."""
+    def __init__(self, f):
+        self.__function = f
+    
+    def __get__(self, obj, type=None):
+        """implements method binding"""
+        if obj is None:
+            return self
+        else:
+            return self.__function.__get__(obj, type)
+    
+    def make_cell(self, obj, attr):
+        return Command(obj, attr, self.__get__(obj))
 
 
 class _SortedMultimap(object):

@@ -24,7 +24,7 @@ from __future__ import absolute_import, division
 import unittest
 
 from shinysdr.types import Range
-from shinysdr.values import ExportedState, CollectionState, LooseCell, Poller, ViewCell, exported_block, exported_value, setter, unserialize_exported_state
+from shinysdr.values import ExportedState, CollectionState, LooseCell, Poller, ViewCell, command, exported_block, exported_value, setter, unserialize_exported_state
 
 
 class TestExportedState(unittest.TestCase):
@@ -175,6 +175,31 @@ class TestViewCell(unittest.TestCase):
         self.vc.subscribe(f)
         self.lc.set(1)
         self.assertEqual([2], fired)
+
+
+class TestCommandCell(unittest.TestCase):
+    def setUp(self):
+        self.specimen = DecoratorCommandSpecimen()
+    
+    def test_method(self):
+        self.assertEqual(0, self.specimen.count)
+        r = self.specimen.cmd()
+        self.assertEqual(None, r)
+        self.assertEqual(1, self.specimen.count)
+    
+    def test_cell(self):
+        self.assertEqual(0, self.specimen.count)
+        self.specimen.state()['cmd'].set(None)  # TODO: Stop overloading 'set' to mean 'invoke'
+        self.assertEqual(1, self.specimen.count)
+
+
+class DecoratorCommandSpecimen(ExportedState):
+    def __init__(self):
+        self.count = 0
+    
+    @command()
+    def cmd(self):
+        self.count += 1
 
 
 class TestStateInsert(unittest.TestCase):
