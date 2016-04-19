@@ -19,6 +19,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
   'use strict';
   
   var Cell = values.Cell;
+  var CommandCell = values.CommandCell;
   var ConstantCell = values.ConstantCell;
   var DerivedCell = values.DerivedCell;
   var Enum = values.Enum;
@@ -153,6 +154,8 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
           addWidget(name, TrackWidget, name);
         } else if (member.type instanceof Notice) {
           addWidget(name, Banner, name);
+        } else if (member instanceof CommandCell) {
+          addWidget(name, CommandButton, name);
         } else if (member.type === values.block) {  // TODO colliding name
           // TODO: Add hook to choose a widget class based on interfaces
           // Furthermore, use that for the specific block widget classes too, rather than each one knowing the types of its sub-widgets.
@@ -2618,7 +2621,35 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
   }
   widgets['interface:shinysdr.client.database.DatabasePicker'] = DatabasePickerWidget;
   
+  function CommandButton(config) {
+    var commandCell = config.target;
+    var panel = this.element = config.element;
+    var isDirectlyButton = panel.tagName === 'BUTTON';
+    if (!isDirectlyButton) panel.classList.add('panel');
+    
+    var button = isDirectlyButton ? panel : panel.querySelector('button');
+    if (!button) {
+      button = panel.appendChild(document.createElement('button'));
+      if (panel.hasAttribute('title')) {
+        button.textContent = panel.getAttribute('title');
+        panel.removeAttribute('title');
+      } else {
+        button.textContent = '<unknown action>'; 
+      }
+    }
+    
+    button.disabled = false;
+    button.onclick = function (event) {
+      button.disabled = true;  // TODO: Some buttons should be rapid-fireable, this is mainly to give a latency cue
+      commandCell.invoke(function completionCallback() {
+        button.disabled = false;
+      });
+    };
+  }
+  widgets.CommandButton = CommandButton;
+  
   // Silly single-purpose widget 'till we figure out more where the UI is going
+  // TODO: Inherit from CommandButton
   function SaveButton(config) {
     var receiver = config.target.get();
     var selectedRecord = config.actions.selectedRecord;

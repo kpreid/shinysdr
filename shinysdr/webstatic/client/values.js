@@ -18,6 +18,9 @@
 define(['./events'], function (events) {
   'use strict';
   
+  var Neverfier = events.Neverfier;
+  var Notifier = events.Notifier;
+  
   var exports = {};
   
   function Constant(value) {
@@ -157,7 +160,7 @@ define(['./events'], function (events) {
   function Cell(type) {
     if (type === undefined) { throw new Error('oops type: ' + this.constructor.name); }
     this.type = type;
-    this.n = new events.Notifier();
+    this.n = new Notifier();
   }
   Cell.prototype.depend = function(listener) {
     this.n.listen(listener);
@@ -215,7 +218,7 @@ define(['./events'], function (events) {
   function ConstantCell(type, value) {
     Cell.call(this, type);
     this._value = value;
-    this.n = new events.Neverfier();  // TODO throwing away initial value, unclean
+    this.n = new Neverfier();  // TODO throwing away super's value, unclean
   }
   ConstantCell.prototype = Object.create(Cell.prototype, {constructor: {value: ConstantCell}});
   ConstantCell.prototype.get = function () {
@@ -262,6 +265,27 @@ define(['./events'], function (events) {
     return this._value;
   }
   exports.DerivedCell = DerivedCell;
+  
+  // Cell which does not really hold a value, but 
+  function CommandCell(fn, type) {
+    // TODO: type is kind of useless, make it useful or make it explicitly stubbed out
+    Cell.call(this, type);
+    this.n = new Neverfier();  // TODO throwing away super's value, unclean
+    this.invoke = function commandProxy(callback) {
+      if (!callback) {
+        callback = Function.prototype;
+      } else if (typeof callback !== 'function') {
+        // sanity check
+        throw new Error('passed a non-function to CommandCell.invoke');
+      }
+      fn(callback);
+    };
+  }
+  CommandCell.prototype = Object.create(Cell.prototype, {constructor: {value: CommandCell}});
+  CommandCell.prototype.get = function () {
+    return null;
+  };
+  exports.CommandCell = CommandCell;
   
   // Adds a prefix to Storage (localStorage) keys
   function StorageNamespace(base, prefix) {
@@ -468,7 +492,7 @@ define(['./events'], function (events) {
   
   // make an object which is like a remote object (called block for legacy reasons)
   function makeBlock(obj) {
-    Object.defineProperty(obj, '_reshapeNotice', {value: new events.Neverfier()});
+    Object.defineProperty(obj, '_reshapeNotice', {value: new Neverfier()});
     return obj;
   }
   exports.makeBlock = makeBlock;

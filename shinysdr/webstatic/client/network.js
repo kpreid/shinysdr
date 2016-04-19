@@ -20,6 +20,7 @@ define(['./values', './events'], function (values, events) {
   
   var BulkDataType = values.BulkDataType;
   var Cell = values.Cell;
+  var CommandCell = values.CommandCell;
   var typeFromDesc = values.typeFromDesc;
   
   var exports = {};
@@ -131,6 +132,16 @@ define(['./values', './events'], function (values, events) {
   }
   ReadCell.prototype = Object.create(Cell.prototype, {constructor: {value: ReadCell}});
   exports.ReadCell = ReadCell;
+  
+  function RemoteCommandCell(setter, type) {
+    // TODO: type is kind of useless, make it useful or make it explicitly stubbed out
+    function setterAdapter(callback) {
+      setter(null, callback);
+    }
+    CommandCell.call(this, setterAdapter, type);
+  }
+  RemoteCommandCell.prototype = Object.create(CommandCell.prototype, {constructor: {value: RemoteCommandCell}});
+  //exports.CommandCell = CommandCell;  // not yet needed, params in flux, so not exported yet
   
   function BulkDataCell(setter, type) {
     var fft = new Float32Array(1);
@@ -281,6 +292,8 @@ define(['./values', './events'], function (values, events) {
       // TODO blocks should not need urls (switch http op to websocket)
       cell = new ReadCell(setter, /* dummy */ makeBlock(url, []), type,
         function (id) { return idMap[id]; });
+    } else if (desc.kind === 'command') {
+      cell = new RemoteCommandCell(setter, type);
     } else if (desc.writable) {
       cell = new ReadWriteCell(setter, desc.current, type);
     } else {
