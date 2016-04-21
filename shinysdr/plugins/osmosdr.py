@@ -288,6 +288,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         self.__profile = profile
         self.__name = name
         self.__tuning = tuning
+        self.__antenna_type = Enum({unicode(name): unicode(name) for name in self.__source.get_antennas()}, strict=True)
         
         self.connect(self.__source, self)
         
@@ -357,13 +358,15 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     def set_agc(self, value):
         self.__source.set_gain_mode(bool(value), ch)
     
-    @exported_value(type_fn=lambda self: Enum(
-        {unicode(name): unicode(name) for name in self.__source.get_antennas()},
-        strict=False))
+    @exported_value(type_fn=lambda self: self.__antenna_type)
     def get_antenna(self):
         if self.__source is None: return ''
         return unicode(self.__source.get_antenna(ch))
-        # TODO review whether set_antenna is safe to expose
+    
+    @setter
+    def set_antenna(self, value):
+        # TODO we should have a provision for restricting antenna selection when transmit is possible to avoid hardware damage
+        self.__source.set_antenna(str(self.__antenna_type(value)), ch)
     
     # Note: dc_cancel has a 'manual' mode we are not yet exposing
     @exported_value(type_fn=lambda self: bool if self.__profile.dc_cancel else Constant(False))
