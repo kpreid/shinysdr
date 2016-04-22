@@ -79,7 +79,6 @@ define(['./values'], function (values) {
       }
     
       if (receiver) {
-        receiver.rec_freq.set(freq);
         if (mode && receiver.mode.get() !== mode) {
           receiver.mode.set(mode);
         }
@@ -87,6 +86,8 @@ define(['./values'], function (values) {
           // TODO: In principle this ought to be specified by parameter rather than fixed here. But this behavior is appropriate for all current use cases and we'll probably have to overhaul the whole thing anyway.
           receiver.device_name.set(radio.source_name.get());
         }
+        // Frequency must be set after device name, to avoid (in case of freq_linked_to_device = true) unnecessarily tuning the old device.
+        receiver.rec_freq.set(freq);
       } else {
         // TODO less ambiguous-naming api
         receivers.create({
