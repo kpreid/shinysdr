@@ -45,6 +45,10 @@ IQBalanceManual = 1
 IQBalanceAutomatic = 2
 
 
+# default tune_delay value
+DEFAULT_DELAY = 0.07
+
+
 # TODO: Allow profiles to export information about known spurious signals in receivers, in the form of a freq-DB. Note that they must be flagged as uncalibrated freqs.
 # Ex: Per <http://www.reddit.com/r/RTLSDR/comments/1nl3tl/has_anybody_done_a_comparison_of_where_the_spurs/> all RTL2832U have harmonics of 28.8MHz and 48MHz.
 
@@ -60,6 +64,7 @@ class OsmoSDRProfile(object):
             agc=True,  # show useless controls > hide functionality
             dc_cancel=True,  # ditto
             dc_offset=True,  # safe assumption
+            tune_delay=DEFAULT_DELAY,
             e4000=False):
         """
         All values are booleans.
@@ -75,11 +80,12 @@ class OsmoSDRProfile(object):
         """
         
         # TODO: If the user specifies an OsmoSDRProfile without a full set of explicit args, derive the rest from the device string instead of using defaults.
-        self.tx = tx
-        self.agc = agc
-        self.dc_cancel = dc_cancel
-        self.dc_offset = dc_offset
-        self.e4000 = e4000
+        self.tx = bool(tx)
+        self.agc = bool(agc)
+        self.dc_cancel = bool(dc_cancel)
+        self.dc_offset = bool(dc_offset)
+        self.tune_delay = float(tune_delay)
+        self.e4000 = bool(e4000)
     
     # TODO: Is there a good way to not have to write all this "implementation of a simple structure" boilerplate, that isn't "inherit namedtuple" which imposes further constraints?
     
@@ -114,18 +120,18 @@ def profile_from_device_string(device_string):
 if 1 == 1:  # dummy block
     # pylint: disable=bad-whitespace
     _default_profiles = {
-        'file':    OsmoSDRProfile(tx=False, agc=False, dc_cancel=False, dc_offset=False),
-        'osmosdr': OsmoSDRProfile(tx=False, agc=True,  dc_cancel=False, dc_offset=True),  # TODO confirm dc
-        'fcd':     OsmoSDRProfile(tx=False, agc=False, dc_cancel=False, dc_offset=False),
-        'rtl':     OsmoSDRProfile(tx=False, agc=True,  dc_cancel=False, dc_offset=False),
-        'rtl_tcp': OsmoSDRProfile(tx=False, agc=True,  dc_cancel=False, dc_offset=False),
-        'uhd':     OsmoSDRProfile(tx=True,  agc=False, dc_cancel=True,  dc_offset=True),
-        'miri':    OsmoSDRProfile(tx=False, agc=True,  dc_cancel=False, dc_offset=True),  # TODO confirm dc
-        'hackrf':  OsmoSDRProfile(tx=True,  agc=False, dc_cancel=False, dc_offset=True),
-        'bladerf': OsmoSDRProfile(tx=True,  agc=False, dc_cancel=False, dc_offset=True),
-        'rfspace': OsmoSDRProfile(tx=False, agc=False, dc_cancel=False, dc_offset=True),
-        'airspy':  OsmoSDRProfile(tx=False, agc=False, dc_cancel=False, dc_offset=True),
-        'soapy':   OsmoSDRProfile(tx=True,  agc=True,  dc_cancel=True,  dc_offset=False),
+        'file':    OsmoSDRProfile(tx=False, agc=False, dc_cancel=False, dc_offset=False, tune_delay=0.0),
+        'osmosdr': OsmoSDRProfile(tx=False, agc=True,  dc_cancel=False, dc_offset=True,  tune_delay=DEFAULT_DELAY),  # TODO confirm dc
+        'fcd':     OsmoSDRProfile(tx=False, agc=False, dc_cancel=False, dc_offset=False, tune_delay=DEFAULT_DELAY),
+        'rtl':     OsmoSDRProfile(tx=False, agc=True,  dc_cancel=False, dc_offset=False, tune_delay=0.13),
+        'rtl_tcp': OsmoSDRProfile(tx=False, agc=True,  dc_cancel=False, dc_offset=False, tune_delay=DEFAULT_DELAY),
+        'uhd':     OsmoSDRProfile(tx=True,  agc=False, dc_cancel=True,  dc_offset=True,  tune_delay=0.0),
+        'miri':    OsmoSDRProfile(tx=False, agc=True,  dc_cancel=False, dc_offset=True,  tune_delay=DEFAULT_DELAY),  # TODO confirm dc
+        'hackrf':  OsmoSDRProfile(tx=True,  agc=False, dc_cancel=False, dc_offset=True,  tune_delay=0.045),
+        'bladerf': OsmoSDRProfile(tx=True,  agc=False, dc_cancel=False, dc_offset=True,  tune_delay=DEFAULT_DELAY),
+        'rfspace': OsmoSDRProfile(tx=False, agc=False, dc_cancel=False, dc_offset=True,  tune_delay=DEFAULT_DELAY),
+        'airspy':  OsmoSDRProfile(tx=False, agc=False, dc_cancel=False, dc_offset=True,  tune_delay=DEFAULT_DELAY),
+        'soapy':   OsmoSDRProfile(tx=True,  agc=True,  dc_cancel=True,  dc_offset=False, tune_delay=DEFAULT_DELAY),
     }
     _default_profiles['sdr-iq'] = _default_profiles['rfspace']
     _default_profiles['sdr-ip'] = _default_profiles['rfspace']
@@ -316,7 +322,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     
     # implement IRXDriver
     def get_tune_delay(self):
-        return 0.25  # TODO: make configurable and/or account for as many factors as we can
+        return self.__profile.tune_delay
 
     # implement IRXDriver
     def get_usable_bandwidth(self):
