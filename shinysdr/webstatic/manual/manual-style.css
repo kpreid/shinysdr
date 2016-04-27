@@ -1,4 +1,4 @@
-/* Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+/* Copyright 2013, 2014, 2016 Kevin Reid <kpreid@switchb.org>
  * 
  * This file is part of ShinySDR.
  * 
@@ -21,13 +21,13 @@
 
 html { max-width: 60em; margin: auto; }
 
-dt {
+.major-dl > dt {
   margin: 0.7em 0 0 0;
   border: 1px solid;
   border-bottom-color: transparent;
   padding: 0 0.5em 0 1em;
 }
-dd {
+.major-dl > dd {
   margin: 0 0 0.7em 0;
   border: 1px solid;
   border-top-color: transparent;

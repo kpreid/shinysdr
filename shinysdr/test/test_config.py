@@ -1,4 +1,4 @@
-# Copyright 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -177,6 +177,27 @@ class TestConfigObject(unittest.TestCase):
         self.assertEqual({}, self.config.devices._values)
     
     # TODO test rest of config.set_stereo
+    
+    # --- Features ---
+    
+    def test_features_unknown(self):
+        self.assertRaises(ConfigException, lambda:
+            self.config.features.enable('bogus'))
+        self.assertFalse('bogus' in self.config.features._state)
+    
+    @defer.inlineCallbacks
+    def test_features_enable_too_late(self):
+        yield self.config._wait_and_validate()
+        self.assertRaises(ConfigTooLateException, lambda:
+            self.config.features.enable('_test_disabled_feature'))
+        self.assertFalse(self.config.features._get('_test_disabled_feature'))
+    
+    @defer.inlineCallbacks
+    def test_features_disable_too_late(self):
+        yield self.config._wait_and_validate()
+        self.assertRaises(ConfigTooLateException, lambda:
+            self.config.features.enable('_test_enabled_feature'))
+        self.assertTrue(self.config.features._get('_test_enabled_feature'))
     
     # --- Databases ---
     

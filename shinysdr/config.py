@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -46,6 +46,7 @@ __all__ = []  # appended later
 class Config(object):
     def __init__(self, reactor):
         # public config elements
+        self.features = _ConfigFeatures(self)
         self.devices = _ConfigDevices(self)
         self.sources = self.devices  # temporary legacy compat -- TODO emit deprecation warnings or something, then remove
         self.databases = _ConfigDbs(self, reactor)
@@ -58,7 +59,6 @@ class Config(object):
         self._service_makers = []
         
         # private: config state
-        self.__stereo = True
         self.__server_audio = None
         
         # private: meta
@@ -78,7 +78,7 @@ class Config(object):
         return session.AppRoot(
             devices=self.devices._values,
             audio_config=self.__server_audio,
-            stereo=self.__stereo)
+            stereo=self.features._get('stereo'))
     
     def _not_finished(self):
         if self.__finished:
@@ -144,13 +144,12 @@ class Config(object):
     
     def set_stereo(self, value):
         """
-        Set whether audio output is stereo (True) or mono (False). Defaults to True.
-        
-        Disabling stereo saves CPU time and network bandwidth.
+        Deprecated alias for self.features.(en|dis)able('stereo').
         """
-        self._not_finished()
-        
-        self.__stereo = bool(value)
+        if value:
+            self.features.enable('stereo')
+        else:
+            self.features.disable('stereo')
 
 
 __all__.append('Config')
@@ -222,6 +221,32 @@ class _ConfigDbs(object):
         return self.__read_only_databases
 
 
+class _ConfigFeatures(object):
+    def __init__(self, config):
+        self._state = {
+            'stereo': True,
+            '_test_disabled_feature': False,
+            '_test_enabled_feature': True,
+        }
+        self.__config = config
+    
+    def enable(self, name):
+        self.__config._not_finished()
+        self._state[self.__validate(name)] = True
+    
+    def disable(self, name):
+        self.__config._not_finished()
+        self._state[self.__validate(name)] = False
+    
+    def __validate(self, name):
+        name = unicode(name)
+        if name not in self._state:
+            raise ConfigException(u'Unknown feature name: %s' % name)
+        return name
+    
+    def _get(self, name):
+        return self._state[name]
+    
 
 
 def execute_config(config_obj, config_file):

@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  Copyright 2015 Kevin Reid <kpreid@switchb.org>
+  Copyright 2015, 2016 Kevin Reid <kpreid@switchb.org>
   
   This file is part of ShinySDR.
   
@@ -197,7 +197,7 @@ extendedKeyUsage=critical,serverAuth</pre></blockquote>
 
 <h3>Other features of the <code>config</code> object</h3>
 
-<dl>
+<dl class="major-dl">
 
   <dt><code>config.persist_to_file(<var>pathname</var>)</code></dt>
   <dd>
@@ -220,9 +220,24 @@ extendedKeyUsage=critical,serverAuth</pre></blockquote>
     <code>sample_rate</code> is optional, defaults to 44100, must be an integer, and specifies the sample rate to request.</p>
   </dd>
 
-  <dt><code>config.set_stereo(False)</code></dt>
+  <dt>
+    <!-- TODO bad markup, should be just two <dt>s -->
+    <div><code>config.features.enable('<var>...</var>')</code></div>
+    <div><code>config.features.disable('<var>...</var>')</code></div>
+  </dt>
   <dd>
-    <p>Disable stereo audio processing, to reduce CPU usage.</p>
+    <p>Enable or disable the optional feature with the specified name.</p>
+    
+    <p>Certain features of ShinySDR are notably incomplete, in which case they are disabled by default but can be enabled, or costly, in which case they are enabled by default but one might wish to disable them.</p>
+    
+    <p>Attempting to enable or disable an unrecognized feature name is an error. Attempting to disable a feature which in a previous version of ShinySDR was disabled-by-default but is now always enabled will have no effect.</p>
+    
+    <p>The currently defined optional features' names are:</p>
+    
+    <dl>
+      <dt><code>'stereo'</code>
+      <dd>Stereo audio output. Enabled by default and may be disabled (producing mono audio instead) to reduce CPU usage and network data rate.</dd>
+    </dl>
   </dd>
 
   <dt><code>config.reactor</code></dt>
