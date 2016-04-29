@@ -822,10 +822,19 @@ class WebService(Service):
             self.__http_port_obj.stopListening(),
             self.__ws_port_obj.stopListening()])
     
+    def get_host_relative_url(self):
+        """Get the host-relative URL of the service.
+        
+        This method exists primarily for testing purposes."""
+        return self.__visit_path
+    
     def get_url(self):
+        """Get the absolute URL of the service. Cannot be used before startService is called.
+        
+        This method exists primarily for testing purposes."""
         port_num = self.__http_port_obj.socket.getsockname()[1]  # TODO touching implementation, report need for a better way (web_port_obj.port is 0 if specified port is 0, not actual port)
     
-        return _strport_to_url(self.__http_port, socket_port=port_num, path=self.__visit_path)
+        return _strport_to_url(self.__http_port, socket_port=port_num, path=self.get_host_relative_url())
 
     def announce(self, open_client):
         """interface used by shinysdr.main"""

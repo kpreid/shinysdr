@@ -41,9 +41,11 @@ from shinysdr.test import testutil
 
 
 class TestWebSite(unittest.TestCase):
+    # note: this test has a subclass
+
     def setUp(self):
         # TODO: arrange so we don't need to pass as many bogus strings
-        self.__service = WebService(
+        self._service = WebService(
             reactor=reactor,
             http_endpoint='tcp:0',
             ws_endpoint='tcp:0',
@@ -54,13 +56,19 @@ class TestWebSite(unittest.TestCase):
             flowgraph_for_debug=gr.top_block(),
             title='test title',
             note_dirty=_noop)
-        self.__service.startService()
-        self.url = self.__service.get_url()
+        self._service.startService()
+        self.url = self._service.get_url()
     
     def tearDown(self):
-        return self.__service.stopService()
+        return self._service.stopService()
+    
+    def test_expected_url(self):
+        self.assertEqual('/ROOT/', self._service.get_host_relative_url())
     
     def test_app_redirect(self):
+        if 'ROOT' not in self.url:
+            return  # test does not apply
+            
         url_without_slash = self.url[:-1]
         
         def callback((response, data)):
@@ -100,6 +108,28 @@ class TestWebSite(unittest.TestCase):
             self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['image/png'])
             # TODO ...
         return testutil.http_get(reactor, self.url + 'flow-graph').addCallback(callback)
+
+
+class TestSiteWithoutRootCap(TestWebSite):
+    """Like TestWebSite but with root_cap set to None."""
+    def setUp(self):
+        # TODO: arrange so we don't need to pass as many bogus strings
+        self._service = WebService(
+            reactor=reactor,
+            http_endpoint='tcp:0',
+            ws_endpoint='tcp:0',
+            root_cap=None,
+            read_only_dbs={},
+            writable_db=DatabaseModel(reactor, []),
+            root_object=SiteStateStub(),
+            flowgraph_for_debug=gr.top_block(),
+            title='test title',
+            note_dirty=_noop)
+        self._service.startService()
+        self.url = self._service.get_url()
+    
+    def test_expected_url(self):
+        self.assertEqual('/', self._service.get_host_relative_url())
 
 
 def _noop():

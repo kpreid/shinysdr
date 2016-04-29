@@ -31,7 +31,7 @@ from twisted.trial import unittest
 
 from shinysdr import devices
 from shinysdr.config import Config, execute_config, make_default_config
-from shinysdr.values import nullExportedState
+from shinysdr.values import ExportedState, nullExportedState
 
 
 def StubDevice():
@@ -138,6 +138,13 @@ class TestConfigObject(unittest.TestCase):
             self.config.serve_web(http_endpoint='tcp:8100', ws_endpoint='tcp:8101', root_cap=''))
         self.assertEqual([], self.config._service_makers)
     
+    def test_web_root_cap_none(self):
+        self.config.serve_web(http_endpoint='tcp:0', ws_endpoint='tcp:0')
+        self.assertEqual(1, len(self.config._service_makers))
+        # Actually instantiating the service. We need to do this to check if the root_cap value was processed correctly.
+        service = self.config._service_makers[0](DummyAppRoot(), lambda: None)
+        self.assertEqual('/', service.get_host_relative_url())
+    
     # --- serve_ghpsdr ---
     
     @defer.inlineCallbacks
@@ -198,3 +205,11 @@ class TestDefaultConfig(unittest.TestCase):
         config_obj = Config(the_reactor)
         execute_config(config_obj, self.__config_name)
         return config_obj._wait_and_validate()
+
+
+class DummyAppRoot(ExportedState):
+    def get_session(self):
+        return self
+    
+    def get_receive_flowgraph(self):
+        return None

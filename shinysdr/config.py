@@ -103,9 +103,10 @@ class Config(object):
         self._not_finished()
         # TODO: See if we're reinventing bits of Twisted service stuff here
         
-        root_cap = unicode(root_cap)
-        if len(root_cap) <= 0:
-            raise ValueError('config.serve_web: root_cap must be None or a nonempty string')
+        if root_cap is not None:
+            root_cap = unicode(root_cap)
+            if len(root_cap) <= 0:
+                raise ValueError('config.serve_web: root_cap must be None or a nonempty string')
         
         def make_service(app, note_dirty):
             # TODO: This is, of course, not where session objects should be created. Working on it...
