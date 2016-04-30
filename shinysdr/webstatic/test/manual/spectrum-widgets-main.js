@@ -28,7 +28,7 @@ define(['values', 'events', 'widget', 'widgets', 'network', 'database', 'coordin
   var StorageNamespace = values.StorageNamespace;
   var makeBlock = values.makeBlock;
   
-  var binCount = 512;
+  var binCount = 4096;
   var sampleRate = 1e6;
   var minLevel = -130;
   var maxLevel = -20;
@@ -76,12 +76,18 @@ define(['values', 'events', 'widget', 'widgets', 'network', 'database', 'coordin
     
     var i = 0;
     for (; i < binCount/2; i++) {
-      bytearray[i] = Math.exp(i / binCount * 14) % (maxLevel - minLevel) - 128;
+      bytearray[i] = Math.exp(i / binCount * 28) % ((maxLevel - minLevel) * 0.3) - 128;
     }
     for (; i < binCount; i++) {
       var bit = Math.floor((i - binCount/2) / binCount * 32);
       bytearray[i] = (frameCount >> bit) & 1 ? -30 : -120;
     }
+    
+    bytearray[2] = -70;
+
+    bytearray[8] = -80;
+    bytearray[9] = -70;
+    bytearray[10] = -80;
     
     fftcell._update(buffer);
   }
