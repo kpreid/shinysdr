@@ -70,11 +70,13 @@
     <div data-widget="Top" data-target="radio" id="_radio"></div>
     <div data-target="client">
       <details class="panel frame" id="client-options">
-        <summary>Client options</summary><!-- TODO better label -->
-        <div data-target="opengl" data-widget="Toggle" title="Use OpenGL spectrum displays"></div>
-        <div data-target="opengl_float" data-widget="Toggle" title="...with float textures"></div>
-        <div data-target="spectrum_split" data-widget="LinSlider" title="Spectrum layout"></div>
-        <div data-target="spectrum_average" data-widget="LogSlider" title="Spectrum averaging"></div>
+        <summary>Spectrum display options</summary><!-- TODO better label -->
+        <div data-target="opengl" data-widget="Toggle" title="Use OpenGL"></div>
+        <div class="panel">&#x00A0;&#x00A0;&#x00A0;<input type="checkbox" data-target="opengl_float" data-widget="Toggle"/> with float textures</div>
+        <div data-target="spectrum_split" data-widget="LinSlider" title="Split view"></div>
+        <div data-target="spectrum_average" data-widget="LogSlider" title="Averaging"></div>
+        <div data-target="spectrum_level_min" data-widget="LinSlider" title="Lowest value"></div>
+        <div data-target="spectrum_level_max" data-widget="LinSlider" title="Highest value"></div>
       </details>
     </div>
     <details class="panel frame" id="client-audio" data-widget="Block" data-target="audio">

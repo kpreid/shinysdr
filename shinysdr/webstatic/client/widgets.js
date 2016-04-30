@@ -857,6 +857,9 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
     var view = config.view;
     var avgAlphaCell = config.clientState.spectrum_average;
     
+    var minLevelCell = config.clientState.spectrum_level_min;
+    var maxLevelCell = config.clientState.spectrum_level_max;
+    
     // I have read recommendations that color gradient scales should not involve more than two colors, as certain transitions between colors read as overly significant. However, in this case (1) we are not intending the waterfall chart to be read quantitatively, and (2) we want to have distinguishable small variations across a large dynamic range.
     var colors = [
       [0, 0, 0],
@@ -1131,27 +1134,32 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
 
         // gradientZero and gradientScale set the scaling from data texture values to gradient texture coordinates
         // gradientInset is the amount to compensate for half-texel edges
-        var gradientInset = 0.5 / (gradientInit.length / components);
-        var insetZero = gradientInset;
-        var insetScale = 1 - gradientInset * 2;
-        var valueZero, valueScale;
-        if (useFloatTexture) {
-          var minLevel = config.view.minLevel;
-          var maxLevel = config.view.maxLevel;
-          valueScale = 1 / (maxLevel - minLevel);
-          valueZero = valueScale * -minLevel;
-        } else {
-          valueZero = 0;
-          valueScale = 1;
-        }
+        function computeGradientScale() {
+          var gradientInset = 0.5 / (gradientInit.length / components);
+          var insetZero = gradientInset;
+          var insetScale = 1 - gradientInset * 2;
+          var valueZero, valueScale;
+          if (useFloatTexture) {
+            var minLevel = minLevelCell.depend(computeGradientScale);
+            var maxLevel = maxLevelCell.depend(computeGradientScale);
+            valueScale = 1 / (maxLevel - minLevel);
+            valueZero = valueScale * -minLevel;
+          } else {
+            valueZero = 0;
+            valueScale = 1;
+          }
         
-        gl.useProgram(graphProgram);
-        gl.uniform1f(gl.getUniformLocation(graphProgram, 'valueZero'), valueZero);
-        gl.uniform1f(gl.getUniformLocation(graphProgram, 'valueScale'), valueScale);
+          gl.useProgram(graphProgram);
+          gl.uniform1f(gl.getUniformLocation(graphProgram, 'valueZero'), valueZero);
+          gl.uniform1f(gl.getUniformLocation(graphProgram, 'valueScale'), valueScale);
 
-        gl.useProgram(waterfallProgram);
-        gl.uniform1f(gl.getUniformLocation(waterfallProgram, 'gradientZero'), insetZero + insetScale * valueZero);
-        gl.uniform1f(gl.getUniformLocation(waterfallProgram, 'gradientScale'), insetScale * valueScale);
+          gl.useProgram(waterfallProgram);
+          gl.uniform1f(gl.getUniformLocation(waterfallProgram, 'gradientZero'), insetZero + insetScale * valueZero);
+          gl.uniform1f(gl.getUniformLocation(waterfallProgram, 'gradientScale'), insetScale * valueScale);
+          draw.scheduler.enqueue(draw);
+        }
+        computeGradientScale.scheduler = config.scheduler;
+        computeGradientScale();
       }());
 
       gl.bindTexture(gl.TEXTURE_2D, null);
@@ -1160,7 +1168,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
         if (useFloatTexture) {
           var init = new Float32Array(fftSize*historyCount);
           for (var i = 0; i < fftSize*historyCount; i++) {
-            init[i] = view.minLevel;
+            init[i] = -1000;  // well below minimum display level
           }
           gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
           gl.texImage2D(
@@ -1296,8 +1304,9 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
                 freqWriteBuffer);
           } else {
             gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
-            var minLevel = config.view.minLevel;
-            var maxLevel = config.view.maxLevel;
+            // TODO: By doing the level shift at this point, we are locking in the current settings. It would be better to arrange for min/max changes to rescale historical data as well, as it does in float-texture mode (would require keeping the original data as well as the texture contents and recopying it).
+            var minLevel = minLevelCell.get();
+            var maxLevel = maxLevelCell.get();
             var cscale = 255 / (maxLevel - minLevel);
             for (var i = 0; i < fftSize; i++) {
               intConversionBuffer[i] = (buffer[i] - minLevel) * cscale;
@@ -1492,9 +1501,10 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
 
           // Generate image slice from latest FFT data.
           // TODO get half-pixel alignment right elsewhere, and supply wraparound on both ends in this data
+          // TODO: By converting to color at this point, we are locking in the current min/max settings. It would be better to arrange for min/max changes to rescale historical data as well, as it does in GL-float-texture mode (would require keeping the original data as well as the texture contents and recopying it).
           var xZero = view.isRealFFT() ? 0 : Math.floor(fftLength / 2);
-          var cScale = 1 / (view.maxLevel - view.minLevel);
-          var cZero = 1 - view.maxLevel * cScale;
+          var cScale = 1 / (maxLevelCell.get() - minLevelCell.get());
+          var cZero = 1 - maxLevelCell.get() * cScale;
           var data = ibuf.data;
           for (var x = 0; x < fftLength; x++) {
             var base = x * 4;
@@ -1556,8 +1566,8 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
           xNegBandwidthCoord = freqToCoord(view.leftFreq());
           xPosBandwidthCoord = freqToCoord(view.rightFreq());
           xScale = (xPosBandwidthCoord - xNegBandwidthCoord) / fftLen;
-          yScale = -topOfWaterfall / (view.maxLevel - view.minLevel);
-          yZero = -view.maxLevel * yScale;
+          yScale = -topOfWaterfall / (maxLevelCell.depend(draw) - minLevelCell.depend(draw));
+          yZero = -maxLevelCell.depend(draw) * yScale;
 
           // choose points to draw
           firstPoint = Math.floor(-gxZero / xScale) - 1;
@@ -1632,6 +1642,8 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
     var others = config.index.implementing('shinysdr.top.IHasFrequency');
     // TODO: That this cell matters here is shared knowledge between this and ReceiverMarks. Should instead be managed by SpectrumView (since it already handles freq coordinates), in the form "get Y position of minLevel".
     var splitCell = config.clientState.spectrum_split;
+    var minLevelCell = config.clientState.spectrum_level_min;
+    var maxLevelCell = config.clientState.spectrum_level_max;
     
     var canvas = config.element;
     if (canvas.tagName !== 'CANVAS') {
@@ -1687,8 +1699,8 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
         ctx.clearRect(0, 0, w, h);
       }
       
-      var yScale = -(h * (1 - splitCell.depend(draw))) / (view.maxLevel - view.minLevel);
-      var yZero = -view.maxLevel * yScale;
+      var yScale = -(h * (1 - splitCell.depend(draw))) / (maxLevelCell.depend(draw) - minLevelCell.depend(draw));
+      var yZero = -maxLevelCell.depend(draw) * yScale;
       
       ctx.strokeStyle = 'gray';
       drawHair(view.getCenterFreq()); // center frequency

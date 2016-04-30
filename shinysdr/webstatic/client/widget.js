@@ -454,10 +454,6 @@ define(['./values', './events', './coordination'], function (values, events, coo
     // exported for the sake of createWidgets -- TODO proper factoring?
     this.scheduler = scheduler;
     
-    // TODO legacy stubs -- vertical scale should be managed separately
-    this.minLevel = -130;
-    this.maxLevel = -20;
-    
     this.isRealFFT = function isRealFFT(freq) {
       // When posible, prefer the coordinate-conversion functions to this one. But sometimes this is much more direct.
       return !analytic;
