@@ -36,6 +36,10 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
   function dcos(x) { return cos(RADIANS_PER_DEGREE * x); }
   function dsin(x) { return sin(RADIANS_PER_DEGREE * x); }
   
+  function mod(a, b) {
+    return ((a % b) + b) % b;
+  }
+  
   // TODO: Instead of using a blank icon, provide a way to skip the geometry entirely
   var blank = 'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22/%3E';
   
