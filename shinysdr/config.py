@@ -236,6 +236,17 @@ def execute_config(config_obj, config_file):
 
 
 def make_default_config():
+    # TODO: support enumerating osmosdr devices and configuring specifically for them
+    # TODO: support more than one audio device (moot currently because gnuradio doesn't have a enumeration operation)
+    from shinysdr.devices import find_audio_rx_names
+    audio_rx_names = find_audio_rx_names()
+    if audio_rx_names:
+        has_audio = True
+        audio_rx_name = audio_rx_names[0]
+    else:
+        has_audio = False
+        audio_rx_name = ''
+    
     return '''\
 # This is a ShinySDR configuration file. For more information about what can
 # be put here, read the manual section on it, available from the running
@@ -251,7 +262,7 @@ config.devices.add(u'osmo', OsmoSDRDevice(''))
 
 # For hardware which uses a sound-card as its ADC or appears as an
 # audio device.
-config.devices.add(u'audio', AudioDevice(''))
+%(audio_comment)sconfig.devices.add(u'audio', AudioDevice(rx_device='%(audio_rx_name)s'))
 
 # Locally generated RF signals for test purposes.
 config.devices.add(u'sim', SimulatedDevice())
@@ -278,4 +289,8 @@ config.serve_web(
     
     # Page title / station name
     title='ShinySDR')
-''' % {'root_cap': base64.urlsafe_b64encode(os.urandom(128 // 8)).replace('=', '')}
+''' % {
+        'root_cap': base64.urlsafe_b64encode(os.urandom(128 // 8)).replace('=', ''),
+        'audio_comment': '' if has_audio else '# ',
+        'audio_rx_name': audio_rx_name,
+    }

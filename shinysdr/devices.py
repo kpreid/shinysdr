@@ -395,6 +395,18 @@ def AudioDevice(
 __all__.append('AudioDevice')
 
 
+def find_audio_rx_names():
+    # TODO: request that gnuradio support device enumeration
+    try:
+        AudioDevice(rx_device='')
+        return ['']
+    except RuntimeError:  # thrown by gnuradio
+        return []
+
+
+__all__.append('find_audio_rx_names')
+
+
 class _AudioRXDriver(ExportedState, gr.hier_block2):
     implements(IRXDriver)
     

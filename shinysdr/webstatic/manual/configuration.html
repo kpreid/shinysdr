@@ -45,7 +45,7 @@ from shinysdr.plugins.osmosdr import OsmoSDRDevice
 from shinysdr.plugins.simulate import SimulatedDevice
 
 config.devices.add(u'osmo', OsmoSDRDevice(''))
-config.devices.add(u'audio', AudioDevice(''))
+config.devices.add(u'audio', AudioDevice(rx_device=''))
 config.devices.add(u'sim', SimulatedDevice())
 
 config.persist_to_file('state.json')
