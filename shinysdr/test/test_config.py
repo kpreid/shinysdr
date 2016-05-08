@@ -30,7 +30,7 @@ from twisted.internet import defer
 from twisted.trial import unittest
 
 from shinysdr import devices
-from shinysdr.config import Config, execute_config, make_default_config
+from shinysdr.config import Config, ConfigException, ConfigTooLateException, execute_config, make_default_config
 from shinysdr.values import ExportedState, nullExportedState
 
 
@@ -66,7 +66,7 @@ class TestConfigObject(unittest.TestCase):
     @defer.inlineCallbacks
     def test_persist_too_late(self):
         yield self.config._wait_and_validate()
-        self.assertRaises(Exception, lambda:
+        self.assertRaises(ConfigTooLateException, lambda:
             self.config.persist_to_file('foo'))
         self.assertEqual({}, self.config.devices._values)
     
@@ -79,7 +79,7 @@ class TestConfigObject(unittest.TestCase):
 
     def test_persist_duplication(self):
         self.config.persist_to_file('foo')
-        self.assertRaises(ValueError, lambda: self.config.persist_to_file('bar'))
+        self.assertRaises(ConfigException, lambda: self.config.persist_to_file('bar'))
         self.assertEqual('foo', self.config._state_filename)
 
     # --- Devices ---
@@ -87,7 +87,7 @@ class TestConfigObject(unittest.TestCase):
     @defer.inlineCallbacks
     def test_device_too_late(self):
         yield self.config._wait_and_validate()
-        self.assertRaises(Exception, lambda:
+        self.assertRaises(ConfigTooLateException, lambda:
             self.config.devices.add(u'foo', StubDevice()))
         self.assertEqual({}, self.config.devices._values)
     
@@ -104,19 +104,19 @@ class TestConfigObject(unittest.TestCase):
         self.assertEqual(unicode, type(self.config.devices._values.keys()[0]))
     
     def test_device_key_type(self):
-        self.assertRaises(TypeError, lambda:
+        self.assertRaises(ConfigException, lambda:
             self.config.devices.add(StubDevice(), StubDevice()))
         self.assertEqual({}, self.config.devices._values)
     
     def test_device_key_duplication(self):
         dev = StubDevice()
         self.config.devices.add(u'foo', dev)
-        self.assertRaises(KeyError, lambda:
+        self.assertRaises(ConfigException, lambda:
             self.config.devices.add(u'foo', StubDevice()))
         self.assertEqual({u'foo': dev}, self.config.devices._values)
     
     def test_device_empty(self):
-        self.assertRaises(ValueError, lambda:
+        self.assertRaises(ConfigException, lambda:
             self.config.devices.add(u'foo'))
         self.assertEqual({}, self.config.devices._values)
     
@@ -125,7 +125,7 @@ class TestConfigObject(unittest.TestCase):
     @defer.inlineCallbacks
     def test_web_too_late(self):
         yield self.config._wait_and_validate()
-        self.assertRaises(Exception, lambda:
+        self.assertRaises(ConfigTooLateException, lambda:
             self.config.serve_web(http_endpoint='tcp:8100', ws_endpoint='tcp:8101'))
         self.assertEqual({}, self.config.devices._values)
     
@@ -134,7 +134,7 @@ class TestConfigObject(unittest.TestCase):
         self.assertEqual(1, len(self.config._service_makers))
     
     def test_web_root_cap_empty(self):
-        self.assertRaises(ValueError, lambda:
+        self.assertRaises(ConfigException, lambda:
             self.config.serve_web(http_endpoint='tcp:8100', ws_endpoint='tcp:8101', root_cap=''))
         self.assertEqual([], self.config._service_makers)
     
@@ -150,7 +150,7 @@ class TestConfigObject(unittest.TestCase):
     @defer.inlineCallbacks
     def test_ghpsdr_too_late(self):
         yield self.config._wait_and_validate()
-        self.assertRaises(Exception, lambda:
+        self.assertRaises(ConfigTooLateException, lambda:
             self.config.serve_ghpsdr())
         self.assertEqual({}, self.config.devices._values)
     
@@ -163,7 +163,7 @@ class TestConfigObject(unittest.TestCase):
     @defer.inlineCallbacks
     def test_server_audio_too_late(self):
         yield self.config._wait_and_validate()
-        self.assertRaises(Exception, lambda:
+        self.assertRaises(ConfigTooLateException, lambda:
             self.config.set_server_audio_allowed(True))
         self.assertEqual({}, self.config.devices._values)
     
@@ -172,7 +172,7 @@ class TestConfigObject(unittest.TestCase):
     @defer.inlineCallbacks
     def test_stereo_too_late(self):
         yield self.config._wait_and_validate()
-        self.assertRaises(Exception, lambda:
+        self.assertRaises(ConfigTooLateException, lambda:
             self.config.set_stereo(True))
         self.assertEqual({}, self.config.devices._values)
     

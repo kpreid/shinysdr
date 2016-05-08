@@ -40,11 +40,7 @@ import shinysdr  # put into config namespace
 from shinysdr.db import DatabaseModel, database_from_csv, databases_from_directory
 
 
-__all__ = [
-    'Config',
-    'execute_config',
-    'make_default_config'
-]
+__all__ = []  # appended later
 
 
 class Config(object):
@@ -86,7 +82,7 @@ class Config(object):
     
     def _not_finished(self):
         if self.__finished:
-            raise Exception('Too late to modify configuration')
+            raise ConfigTooLateException()
     
     def wait_for(self, deferred):
         """Wait for the provided Deferred before assuming the configuration to be finished."""
@@ -96,7 +92,7 @@ class Config(object):
     def persist_to_file(self, filename):
         self._not_finished()
         if self._state_filename is not None:
-            raise ValueError('config.persist_to_file has already been done once')
+            raise ConfigException('config.persist_to_file has already been done once')
         self._state_filename = str(filename)
 
     def serve_web(self, http_endpoint, ws_endpoint, root_cap=None, title=u'ShinySDR'):
@@ -106,7 +102,7 @@ class Config(object):
         if root_cap is not None:
             root_cap = unicode(root_cap)
             if len(root_cap) <= 0:
-                raise ValueError('config.serve_web: root_cap must be None or a nonempty string')
+                raise ConfigException('config.serve_web: root_cap must be None or a nonempty string')
         
         def make_service(app, note_dirty):
             # TODO: This is, of course, not where session objects should be created. Working on it...
@@ -157,6 +153,9 @@ class Config(object):
         self.__stereo = bool(value)
 
 
+__all__.append('Config')
+
+
 class _ConfigDict(object):
     def __init__(self, config):
         self._values = {}
@@ -166,17 +165,17 @@ class _ConfigDict(object):
         self._config._not_finished()
         if not (isinstance(key, unicode) or isinstance(key, str)):
             # Used to just coerce, but I saw a user error where they did "config.devices.add(device)", so I figured an error is better
-            raise TypeError('Key must be a string, not a %s: %r' % (type(key), key))
+            raise ConfigException('Key must be a string, not a %s: %r' % (type(key), key))
         key = unicode(key)
         if key in self._values:
-            raise KeyError('Key %r already present' % (key,))
+            raise ConfigException('Key %r already present' % (key,))
         self._values[key] = value
 
 
 class _ConfigDevices(_ConfigDict):
     def add(self, key, *devices):
         if len(devices) <= 0:
-            raise ValueError('config.devices: no device(s) specified')
+            raise ConfigException('config.devices: no device(s) specified')
         from shinysdr.devices import merge_devices
         super(_ConfigDevices, self).add(key, merge_devices(devices))
 
@@ -192,7 +191,7 @@ class _ConfigDbs(object):
         self.__read_only_databases, diagnostics = databases_from_directory(self.__reactor,
             os.path.join(os.path.dirname(__file__), 'data/dbs/'))
         if len(diagnostics) > 0:
-            raise Exception(diagnostics)
+            raise ConfigException(diagnostics)
     
     def add_directory(self, path):
         self._config._not_finished()
@@ -206,7 +205,7 @@ class _ConfigDbs(object):
         self._config._not_finished()
         path = str(path)
         if self.__writable_db is not None:
-            raise Exception('Multiple writable databases are not yet supported.')
+            raise ConfigException('Multiple writable databases are not yet supported.')
         self.__writable_db, diagnostics = database_from_csv(self.__reactor, path, writable=True)
         for d in diagnostics:
             log.msg('%s: %s' % (path, d))
@@ -233,6 +232,9 @@ def execute_config(config_obj, config_file):
     env = dict(__builtin__.__dict__)
     env.update({'shinysdr': shinysdr, 'config': config_obj})
     execfile(config_file, env)
+
+
+__all__.append('execute_config')
 
 
 def make_default_config():
@@ -294,3 +296,23 @@ config.serve_web(
         'audio_comment': '' if has_audio else '# ',
         'audio_rx_name': audio_rx_name,
     }
+
+
+__all__.append('make_default_config')
+
+
+class ConfigException(Exception):
+    """Indicates erroneous configuration of some type."""
+
+
+__all__.append('ConfigException')
+
+
+class ConfigTooLateException(ConfigException):
+    """Indicates that a config method was called too late for it to take effect."""
+    
+    def __init__(self):
+        super(ConfigTooLateException, self).__init__('Too late to modify configuration')
+
+
+__all__.append('ConfigTooLateException')
