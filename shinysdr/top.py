@@ -61,9 +61,13 @@ class ReceiverCollection(CollectionState):
         self.__top.delete_receiver(key)
 
 
+# TODO: Figure out how to stop having to 'declare' this here and in config.py
+_stub_features = {'stereo': True}
+
+
 class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 
-    def __init__(self, devices={}, audio_config=None, stereo=True):
+    def __init__(self, devices={}, audio_config=None, features=_stub_features):
         if len(devices) <= 0:
             raise ValueError('Must have at least one RF device')
         
@@ -82,7 +86,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.__audio_manager = AudioManager(  # must be before contexts
             graph=self,
             audio_config=audio_config,
-            stereo=stereo)
+            stereo=features['stereo'])
 
         # Blocks etc.
         # TODO: device refactoring: remove 'source' concept (which is currently a device)

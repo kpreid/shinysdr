@@ -78,7 +78,7 @@ class Config(object):
         return session.AppRoot(
             devices=self.devices._values,
             audio_config=self.__server_audio,
-            stereo=self.features._get('stereo'))
+            features=self.features._get_all())
     
     def _not_finished(self):
         if self.__finished:
@@ -247,6 +247,8 @@ class _ConfigFeatures(object):
     def _get(self, name):
         return self._state[name]
     
+    def _get_all(self):
+        return dict(self._state)
 
 
 def execute_config(config_obj, config_file):

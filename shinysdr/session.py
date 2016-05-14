@@ -1,4 +1,4 @@
-# Copyright 2015 Kevin Reid <kpreid@switchb.org>
+# Copyright 2015, 2016 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -24,11 +24,15 @@ from shinysdr.values import ExportedState, exported_block
 
 
 class AppRoot(ExportedState):
-    def __init__(self, **kwargs):
-        # TODO: don't just forward args, do something more sensible, or take as args
-        self.__receive_flowgraph = Top(**kwargs)
+    def __init__(self, devices, audio_config, features):
+        self.__receive_flowgraph = Top(
+            devices=devices,
+            audio_config=audio_config,
+            features=features)
         # TODO: only one session while we sort out other things
-        self.__session = Session(self.__receive_flowgraph)
+        self.__session = Session(
+            receive_flowgraph=self.__receive_flowgraph,
+            features=features)
     
     @exported_block()
     def get_receive_flowgraph(self):  # TODO needs to go away
@@ -51,7 +55,7 @@ class AppRoot(ExportedState):
 
 
 class Session(ExportedState):
-    def __init__(self, receive_flowgraph):
+    def __init__(self, receive_flowgraph, features):
         self.__receive_flowgraph = receive_flowgraph
 
     def state_def(self, callback):
