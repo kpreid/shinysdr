@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -19,6 +19,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
   'use strict';
   
   var Cell = values.Cell;
+  var Clock = events.Clock;
   var CommandCell = values.CommandCell;
   var ConstantCell = values.ConstantCell;
   var DerivedCell = values.DerivedCell;
@@ -28,6 +29,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
   var Notice = values.Notice;
   var Range = values.Range;
   var SingleQuad = gltools.SingleQuad;
+  var Timestamp = values.Timestamp;
   var Track = values.Track;
   var Union = database.Union;
   var addLifecycleListener = widget.addLifecycleListener;
@@ -154,6 +156,8 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
           addWidget(name, TrackWidget, name);
         } else if (member.type instanceof Notice) {
           addWidget(name, Banner, name);
+        } else if (member.type instanceof Timestamp) {
+          addWidget(name, TimestampWidget, name);
         } else if (member instanceof CommandCell) {
           addWidget(name, CommandButton, name);
         } else if (member.type === values.block) {  // TODO colliding name
@@ -2708,7 +2712,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
     
     var draw = config.boundedFn(function drawImpl() {
       var value = target.depend(draw);
-      update(value);
+      update(value, draw);
     });
     draw.scheduler = config.scheduler;
     draw();
@@ -2722,7 +2726,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
         return container.appendChild(document.createTextNode(''));
       },
       function init(node, target) {
-        return function updateGeneric(value) {
+        return function updateGeneric(value, draw) {
           node.textContent = value;
         };
       });
@@ -2742,7 +2746,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
         return container;
       },
       function init(node, target) {
-        return function updateGeneric(value) {
+        return function updateBanner(value, draw) {
           value = String(value);
           textNode.textContent = value;
           var active = value !== '';
@@ -2760,6 +2764,31 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
       });
   }
   widgets.Banner = Banner;
+  
+  // widget for Timestamp type
+  var timestampUpdateClock = new Clock(1);
+  function TimestampWidget(config) {
+    SimpleElementWidget.call(this, config, undefined,
+      function buildPanel(container) {
+        container.appendChild(document.createTextNode(container.getAttribute('title') + ': '));
+        container.removeAttribute('title');
+        var holder = container.appendChild(document.createTextNode(''));
+        container.appendChild(document.createTextNode(' seconds ago'));
+        return holder;
+      },
+      function init(holder, target) {
+        var element = holder.parentNode;
+        return function updateTimestamp(value, draw) {
+          var relativeTime = timestampUpdateClock.convertToTimestampSeconds(timestampUpdateClock.depend(draw)) - value;
+          holder.textContent = '' + Math.round(relativeTime);
+          
+          var date = new Date(0);
+          date.setUTCSeconds(value);
+          element.title = '' + date;
+        };
+      });
+  }
+  widgets.TimestampWidget = TimestampWidget;
   
   function TextBox(config) {
     SimpleElementWidget.call(this, config, 'INPUT',

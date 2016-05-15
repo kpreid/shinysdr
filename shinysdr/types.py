@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -227,6 +227,19 @@ class Notice(ValueType):
     
     def __call__(self, specimen):
         return unicode(specimen)
+
+
+class Timestamp(ValueType):
+    def __init__(self):
+        pass
+    
+    def type_to_json(self):
+        return {
+            'type': 'Timestamp'
+        }
+    
+    def __call__(self, specimen):
+        return float(specimen)
 
 
 class BulkDataType(ValueType):

@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -93,10 +93,16 @@ define(['./events'], function (events) {
   };
   exports.Range = Range;
 
+  // TODO: probably ought to have these type-_constructor_ names be named in some systematic way that distinguishes them from value-constructors.
+
   function Notice(alwaysVisible) {
     this.alwaysVisible = alwaysVisible;
   }
   exports.Notice = Notice;
+
+  function Timestamp() {
+  }
+  exports.Timestamp = Timestamp;
 
   function BulkDataType(info_format, array_format) {
     // TODO: redesign things so that we have the semantic info from the server
@@ -146,6 +152,8 @@ define(['./events'], function (events) {
             return new Range(desc.subranges, desc.logarithmic, desc.integer);
           case 'notice':
             return new Notice(desc.always_visible);
+          case 'Timestamp':
+            return new Timestamp();
           case 'bulk_data':
             return new BulkDataType(desc.info_format, desc.array_format);
           default:

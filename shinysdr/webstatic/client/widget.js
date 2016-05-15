@@ -222,7 +222,7 @@ define(['./values', './events', './coordination'], function (values, events, coo
       
       var newEl = widget.element;
       var placeMark = newSourceEl.nextSibling;
-      if (newSourceEl.hasAttribute('title')) {
+      if (newSourceEl.hasAttribute('title') && newSourceEl.getAttribute('title') === originalStash.getAttribute('title')) {
         console.warn('Widget ' + widgetCtor.name + ' did not handle title attribute');
       }
       

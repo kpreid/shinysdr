@@ -43,7 +43,7 @@ from shinysdr.math import LazyRateCalculator
 from shinysdr.modes import ModeDef, IDemodulator
 from shinysdr.signals import no_signal
 from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, TelemetryStore, Track, empty_track
-from shinysdr.types import Notice
+from shinysdr.types import Notice, Timestamp
 from shinysdr.values import CollectionState, ExportedState, exported_value
 from shinysdr.web import ClientResourceDef
 
@@ -260,7 +260,7 @@ class Aircraft(ExportedState):
         """implement ITelemetryObject"""
         return self.__last_heard_time + drop_unheard_timeout_seconds
     
-    @exported_value(type=float)
+    @exported_value(type=Timestamp())
     def get_last_heard_time(self):
         return self.__last_heard_time
     
