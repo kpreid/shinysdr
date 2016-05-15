@@ -37,6 +37,7 @@ class TestHamlibRig(unittest.TestCase):
         def on_connect(rig_device):
             self.__rig = rig_device.get_components_dict()['rig']
         
+        # pylint: disable=no-member
         d.addCallback(on_connect)
         return d
     
@@ -81,6 +82,7 @@ class TestHamlibRotator(unittest.TestCase):
         def on_connect(rotator_device):
             self.__rotator = rotator_device.get_components_dict()['rotator']
         
+        # pylint: disable=no-member
         d.addCallback(on_connect)
         return d
     

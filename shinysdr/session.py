@@ -97,4 +97,5 @@ class Session(ExportedState):
         os.execlp('python', 'python', '-m', 'shinysdr.main', *sys.argv[1:])
     
     def kill(self):
+        # pylint: disable=no-member
         the_reactor.stop()
