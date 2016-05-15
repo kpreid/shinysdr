@@ -1,4 +1,4 @@
-// Copyright 2013 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2015, 2016 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -149,15 +149,21 @@ define(function () {
     var clockEpoch_s = clockEpoch_ms / 1000;
     
     var clockRunningFor = new Set();
+    function enq(f) {
+      clockRunningFor.delete(f);
+      f.scheduler.enqueue(f);
+    }
+    var i = 0;
+    function fireClock() {
+      clockRunningFor.forEach(enq);
+    }
     
     this.depend = function clockDepend(dirtyCallback) {
-      if (!clockRunningFor.has(dirtyCallback)) {
-        clockRunningFor.add(dirtyCallback);
-        // TODO: Removing this setTimeout causes bad scheduling behavior. Scheduler should either not put foo() at the end of the queue while inside foo(), or it should reject such scheduling.
-        setTimeout(function fireClock() {
-          clockRunningFor.delete(dirtyCallback);
-          dirtyCallback.scheduler.enqueue(dirtyCallback);
-        }, granularityMs);  // TODO: Adapt this interval to speed of animations in effect
+      var before = clockRunningFor.size;
+      clockRunningFor.add(dirtyCallback);
+      var after = clockRunningFor.size;
+      if (!before && after) {
+        setTimeout(fireClock, granularityMs);
       }
       return (Date.now() - clockEpoch_ms) / 1000;
     };
