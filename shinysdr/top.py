@@ -244,6 +244,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
             # Filter receivers
             audio_rs = self.__audio_manager.reconnecting()
             n_valid_receivers = 0
+            has_non_audio_receiver = False
             for key, receiver in self._receivers.iteritems():
                 self._receiver_valid[key] = receiver.get_is_valid()
                 if not self._receiver_valid[key]:
@@ -260,14 +261,17 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
                 self.connect(self._sources[receiver.get_device_name()].get_rx_driver(), receiver)
                 receiver_output_type = receiver.get_output_type()
                 if receiver_output_type.get_sample_rate() <= 0:
-                    # receiver has dummy output, connect it to something to satisfy flow graph structure
+                    # Demodulator has no output, but receiver has a dummy output, so connect it to something to satisfy flow graph structure.
                     for ch in xrange(0, self.__audio_manager.get_channels()):
                         self.connect((receiver, ch), blocks.null_sink(gr.sizeof_float))
+                    # Note that we have a non-audio receiver which may be useful even if there is no audio output
+                    has_non_audio_receiver = True
                 else:
                     assert receiver_output_type.get_kind() == 'STEREO'
                     audio_rs.input(receiver, receiver_output_type.get_sample_rate(), receiver.get_audio_destination())
             
-            self.__has_a_useful_receiver = audio_rs.finish_bus_connections()
+            self.__has_a_useful_receiver = audio_rs.finish_bus_connections() or \
+                has_non_audio_receiver
             
             self._recursive_unlock()
             # (this is in an if block but it can't not execute if anything else did)
@@ -338,11 +342,14 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.__running = False
 
     def __start_or_stop(self):
-        # TODO: We should also run if any of:
-        #   there are any data-logging receivers (e.g. APRS, ADS-B)
-        #       (requires becoming aware of no-audio receivers)
-        #   a client is watching a receiver's cell-based outputs (e.g. VOR)
-        #       (requires becoming aware of cell subscriptions)
+        # TODO: Improve start/stop conditions:
+        #
+        # * run if a client is watching an audio-having receiver's cell-based outputs (e.g. VOR) but not listening to audio
+        #
+        # * don't run if no client is watching a pure telemetry receiver
+        #   (maybe a user preference since having a history when you connect is useful)
+        #
+        # Both of these refinements require becoming aware of cell subscriptions.
         should_run = (
             self.__has_a_useful_receiver
             or self.monitor.get_interested_cell().get())
