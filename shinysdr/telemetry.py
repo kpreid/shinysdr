@@ -1,4 +1,4 @@
-# Copyright 2015 Kevin Reid <kpreid@switchb.org>
+# Copyright 2015, 2016 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -172,7 +172,7 @@ class TelemetryStore(CollectionState):
     def receive(self, message):
         """Store the supplied telemetry message object."""
         message = ITelemetryMessage(message)
-        object_id = message.get_object_id()
+        object_id = unicode(message.get_object_id())
         
         if object_id in self.__objects:
             obj = self.__objects[object_id]
