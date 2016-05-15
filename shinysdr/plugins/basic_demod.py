@@ -61,8 +61,8 @@ class Demodulator(gr.hier_block2, ExportedState):
     def can_set_mode(self, mode):
         return False
 
-    def get_half_bandwidth(self):
-        raise NotImplementedError('Demodulator.get_half_bandwidth')
+    def get_band_filter_shape(self):
+        raise NotImplementedError('Demodulator.get_band_filter_shape')
 
     def get_output_type(self):
         raise NotImplementedError('Demodulator.get_output_type')
@@ -117,20 +117,19 @@ class SimpleAudioDemodulator(Demodulator, SquelchMixin):
             output_rate=demod_rate,
             cutoff_freq=band_filter,
             transition_width=band_filter_transition)
-
-    def get_half_bandwidth(self):
-        return self.band_filter_block.get_shape()['high']
-
+    
+    @exported_value()
+    def get_band_filter_shape(self):
+        """Implements IDemodulator."""
+        return self.band_filter_block.get_shape()
+    
     def get_output_type(self):
+        """Implements IDemodulator."""
         return self.__signal_type
 
     def set_rec_freq(self, freq):
-        """for ITunableDemodulator"""
+        """Implements ITunableDemodulator."""
         self.band_filter_block.set_center_freq(freq)
-
-    @exported_value()
-    def get_band_filter_shape(self):
-        return self.band_filter_block.get_shape()
 
 
 def design_lofi_audio_filter(rate, lowpass):
@@ -266,24 +265,21 @@ class UnselectiveAMDemodulator(gr.hier_block2, ExportedState):
         """implement IDemodulator"""
         return False
     
-    def get_half_bandwidth(self):
-        """implement IDemodulator"""
-        return 0.0
-    
-    def get_output_type(self):
-        """implement IDemodulator"""
-        return self.__signal_type
-    
     @exported_value()
     def get_band_filter_shape(self):
         """implement IDemodulator"""
         halfbw = self.__input_rate * 0.5
         offset = self.__rec_freq_input
+        epsilon = 1  # don't be invalid in case of floating-point error
         return {
-            'low': -halfbw - offset,
-            'high': halfbw - offset,
-            'width': 0.0
+            'low': -halfbw - offset + epsilon,
+            'high': halfbw - offset - epsilon,
+            'width': epsilon * 2
         }
+    
+    def get_output_type(self):
+        """implement IDemodulator"""
+        return self.__signal_type
 
     def set_rec_freq(self, freq):
         """implement ITunableDemodulator"""
@@ -606,20 +602,15 @@ class SSBDemodulator(SimpleAudioDemodulator):
             ssb_demod_block)
         self.connect(sharp_filter_block, self.rf_probe_block)
         self.connect_audio_output(ssb_demod_block)
-
-    # override
-    # TODO: this is the interface used to determine receiver.get_is_valid, but SSB demonstrates that the interface is insufficiently expressive. Should we use get_band_filter_shape instead? Should we use a different interface designed for expressing the channel? Or are signals like SSB which are asymmetric about the "carrier" frequency uncommon enough that we should not worry about handling this case well?
-    def get_half_bandwidth(self):
-        return self.half_bandwidth
-    
-    # override
-    def set_rec_freq(self, freq):
-        super(SSBDemodulator, self).set_rec_freq(freq - self.__offset)
     
     # override
     @exported_value()
     def get_band_filter_shape(self):
         return self.__filter_shape
+    
+    # override
+    def set_rec_freq(self, freq):
+        super(SSBDemodulator, self).set_rec_freq(freq - self.__offset)
     
     @exported_value(type=Range([(-20, _ssb_max_agc)]))
     def get_agc_gain(self):

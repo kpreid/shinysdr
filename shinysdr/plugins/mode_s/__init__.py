@@ -48,8 +48,6 @@ from shinysdr.values import CollectionState, ExportedState, exported_value
 from shinysdr.web import ClientResourceDef
 
 
-demod_rate = 2000000
-transition_width = 500000
 
 
 drop_unheard_timeout_seconds = 60
@@ -72,8 +70,9 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
             self, 'Mode S/ADS-B/1090 demodulator',
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
             gr.io_signature(0, 0, 0))
-        self.mode = mode
-        self.input_rate = input_rate
+        
+        demod_rate = 2000000
+        transition_width = 500000
         
         hex_msg_queue = gr.msg_queue(100)
         
@@ -130,9 +129,6 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
     def can_set_mode(self, mode):
         return False
 
-    def get_half_bandwidth(self):
-        return demod_rate / 2
-    
     def get_output_type(self):
         return no_signal
     

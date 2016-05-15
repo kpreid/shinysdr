@@ -206,8 +206,9 @@ class FMAPRSDemodulator(gr.hier_block2, ExportedState):
     def can_set_mode(self, mode):
         return False
     
-    def get_half_bandwidth(self):
-        return self.fm_demod.get_half_bandwidth()
+    @exported_value()
+    def get_band_filter_shape(self):
+        return self.fm_demod.get_band_filter_shape()
     
     def get_output_type(self):
         return self.mm_demod.get_output_type()
@@ -215,10 +216,6 @@ class FMAPRSDemodulator(gr.hier_block2, ExportedState):
     @exported_block()
     def get_mm_demod(self):
         return self.mm_demod
-    
-    @exported_value()
-    def get_band_filter_shape(self):
-        return self.fm_demod.get_band_filter_shape()
 
 
 class APRSProcessProtocol(ProcessProtocol):

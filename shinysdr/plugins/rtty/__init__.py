@@ -111,28 +111,26 @@ class RTTYDemodulator(gr.hier_block2, ExportedState):
             self.__real,
             self)
     
-    def get_output_type(self):
-        return SignalType(kind='MONO', sample_rate=self.samp_rate)
-
     def can_set_mode(self, mode):
         """implement IDemodulator"""
         return False
     
-    def get_half_bandwidth(self):
-        """implement IDemodulator"""
-        return self.__filter_high
-
-    @exported_block()
-    def get_fsk_demod(self):
-        return self.fsk_demod
-    
     @exported_value()
     def get_band_filter_shape(self):
+        """implement IDemodulator"""
         return {
             'low': self.__filter_low,
             'high': self.__filter_high,
             'width': self.__transition
         }
+    
+    def get_output_type(self):
+        """implement IDemodulator"""
+        return SignalType(kind='MONO', sample_rate=self.samp_rate)
+
+    @exported_block()
+    def get_fsk_demod(self):
+        return self.fsk_demod
 
     @exported_value(type=unicode)
     def get_text(self):

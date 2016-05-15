@@ -42,9 +42,16 @@ class IDemodulator(Interface):
         Per can_set_mode.
         """
     
-    def get_half_bandwidth():
+    def get_band_filter_shape():
         """
-        TODO explain
+        Returns a dict describing the shape of the demodulator's input filter.
+        
+        This is used to display the filter on-screen and to determine when to disable a receiver because the demodulator's passband is outside the device's bandwidth.
+        
+        The dict must have the following elements:
+            'low': lower edge (Hz relative to nominal carrier frequency, usually negative)
+            'high': upper edge (Hz relative to nominal carrier frequency, usually positive)
+            'width': transition band width
         """
     
     def get_output_type():

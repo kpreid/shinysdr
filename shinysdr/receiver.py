@@ -279,10 +279,14 @@ class Receiver(gr.hier_block2, ExportedState):
     
     @exported_value(type=bool)
     def get_is_valid(self):
-        device = self.__get_device()
-        sample_rate = device.get_rx_driver().get_output_type().get_sample_rate()
-        valid_bandwidth = sample_rate / 2 - abs(self.__freq_relative)
-        return self.__demodulator is not None and valid_bandwidth >= self.__demodulator.get_half_bandwidth()
+        if self.__demodulator is None:
+            return False
+        half_sample_rate = self.__get_device().get_rx_driver().get_output_type().get_sample_rate() / 2
+        demod_shape = self.__demodulator.get_band_filter_shape()
+        valid_bandwidth_lower = -half_sample_rate - self.__freq_relative
+        valid_bandwidth_upper = half_sample_rate - self.__freq_relative
+        return valid_bandwidth_lower <= min(0, demod_shape['low']) and \
+               valid_bandwidth_upper >= max(0, demod_shape['high'])
     
     # Note that the receiver cannot measure RF power because we don't know what the channel bandwidth is; we have to leave that to the demodulator.
     @exported_value(type=Range([(_audio_power_minimum_dB, 0)], strict=False))

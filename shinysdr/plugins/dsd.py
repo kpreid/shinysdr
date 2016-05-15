@@ -79,9 +79,6 @@ class DSDDemodulator(gr.hier_block2, ExportedState):
     def get_output_type(self):
         return self.__output_type
     
-    def get_half_bandwidth(self):
-        return self.__fm_demod.get_half_bandwidth()
-    
     @exported_value()
     def get_band_filter_shape(self):
         return self.__fm_demod.get_band_filter_shape()
