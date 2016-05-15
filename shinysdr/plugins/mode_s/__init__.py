@@ -77,7 +77,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
         
         hex_msg_queue = gr.msg_queue(100)
         
-        band_filter = MultistageChannelFilter(
+        self.__band_filter = MultistageChannelFilter(
             input_rate=input_rate,
             output_rate=demod_rate,
             cutoff_freq=demod_rate / 2,
@@ -90,7 +90,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
             use_dcblock=True)
         self.connect(
             self,
-            band_filter,
+            self.__band_filter,
             self.__demod)
         
         self.__messages_seen = 0
@@ -138,11 +138,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
     
     @exported_value()
     def get_band_filter_shape(self):
-        return {
-            'low': -demod_rate / 2,
-            'high': demod_rate / 2,
-            'width': transition_width
-        }
+        return self.__band_filter.get_shape()
 
 
 class ModeSMessageWrapper(object):

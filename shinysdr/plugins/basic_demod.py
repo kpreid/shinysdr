@@ -107,8 +107,6 @@ class SimpleAudioDemodulator(Demodulator, SquelchMixin):
         Demodulator.__init__(self, **kwargs)
         SquelchMixin.__init__(self, demod_rate)
         
-        self.band_filter = band_filter
-        self.band_filter_transition = band_filter_transition
         self.demod_rate = demod_rate
         self.audio_rate = audio_rate
 
@@ -121,7 +119,7 @@ class SimpleAudioDemodulator(Demodulator, SquelchMixin):
             transition_width=band_filter_transition)
 
     def get_half_bandwidth(self):
-        return self.band_filter
+        return self.band_filter_block.get_shape()['high']
 
     def get_output_type(self):
         return self.__signal_type
@@ -132,11 +130,7 @@ class SimpleAudioDemodulator(Demodulator, SquelchMixin):
 
     @exported_value()
     def get_band_filter_shape(self):
-        return {
-            'low': -self.band_filter,
-            'high': self.band_filter,
-            'width': self.band_filter_transition
-        }
+        return self.band_filter_block.get_shape()
 
 
 def design_lofi_audio_filter(rate, lowpass):
@@ -565,14 +559,14 @@ class SSBDemodulator(SimpleAudioDemodulator):
         if cw:
             self.__offset = 1500  # CW beat frequency
             half_bandwidth = self.half_bandwidth = 500
-            self.band_filter_width = 120
+            band_filter_width = 120
             band_mid = 0
             agc_reference = dB(-10)
             agc_rate = 1e-1
         else:
             self.__offset = 0
             half_bandwidth = self.half_bandwidth = 2800 / 2  # standard SSB bandwidth
-            self.band_filter_width = half_bandwidth / 5
+            band_filter_width = half_bandwidth / 5
             if lsb:
                 band_mid = -200 - half_bandwidth
             else:
@@ -580,15 +574,20 @@ class SSBDemodulator(SimpleAudioDemodulator):
             agc_reference = dB(-8)
             agc_rate = 8e-1
         
-        self.band_filter_low = band_mid - half_bandwidth
-        self.band_filter_high = band_mid + half_bandwidth
+        band_filter_low = band_mid - half_bandwidth
+        band_filter_high = band_mid + half_bandwidth
         sharp_filter_block = grfilter.fir_filter_ccc(
             1,
             firdes.complex_band_pass(1.0, demod_rate,
-                self.band_filter_low + self.__offset,
-                self.band_filter_high + self.__offset,
-                self.band_filter_width,
+                band_filter_low + self.__offset,
+                band_filter_high + self.__offset,
+                band_filter_width,
                 firdes.WIN_HAMMING))
+        self.__filter_shape = {
+            u'low': band_filter_low,
+            u'high': band_filter_high,
+            u'width': band_filter_width
+        }
         
         self.agc_block = analog.agc2_cc(reference=agc_reference)
         self.agc_block.set_attack_rate(agc_rate)
@@ -620,11 +619,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
     # override
     @exported_value()
     def get_band_filter_shape(self):
-        return {
-            'low': self.band_filter_low,
-            'high': self.band_filter_high,
-            'width': self.band_filter_width
-        }
+        return self.__filter_shape
     
     @exported_value(type=Range([(-20, _ssb_max_agc)]))
     def get_agc_gain(self):

@@ -52,6 +52,11 @@ class _MultistageChannelFilterPlan(object):
         self.__freq_xlate_stage = freq_xlate_stage
         self.__cutoff_freq = float(cutoff_freq)
         self.__transition_width = float(transition_width)
+        self.__shape_json = {
+            'low': -self.__cutoff_freq,
+            'high': self.__cutoff_freq,
+            'width': self.__transition_width
+        }
     
     def get_stage_designs(self):
         return self.__stage_designs
@@ -67,6 +72,9 @@ class _MultistageChannelFilterPlan(object):
     
     def get_transition_width(self):
         return self.__transition_width
+    
+    def get_shape(self):
+        return self.__shape_json
     
     def replace(self, cutoff_freq=None, transition_width=None):
         if cutoff_freq is None:
@@ -422,6 +430,13 @@ class MultistageChannelFilter(gr.hier_block2):
     
     def set_center_freq(self, freq):
         self.freq_filter_block.set_center_freq(freq)
+    
+    def get_shape(self):
+        """Describe the filter shape in the format used by ShinySDR demodulators.
+        
+        This is primarily a helper for simplifying the code implementing demodulator objects.
+        """
+        return self.__plan.get_shape()
 
 
 __all__.append('MultistageChannelFilter')
