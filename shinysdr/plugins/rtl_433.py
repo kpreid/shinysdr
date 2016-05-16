@@ -26,11 +26,12 @@ from twisted.protocols.basic import LineReceiver
 from twisted.python import log
 from zope.interface import implements
 
-from gnuradio import blocks
+from gnuradio import analog
 from gnuradio import gr
 
 from shinysdr.blocks import make_sink_to_process_stdin, test_subprocess
 from shinysdr.filters import MultistageChannelFilter
+from shinysdr.math import dB
 from shinysdr.modes import ModeDef, IDemodulator
 from shinysdr.signals import no_signal
 from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject
@@ -39,6 +40,7 @@ from shinysdr.values import ExportedState, LooseCell, exported_value
 
 
 drop_unheard_timeout_seconds = 120
+upper_preferred_demod_rate = 400000
 
 
 class RTL433Demodulator(gr.hier_block2, ExportedState):
@@ -52,13 +54,32 @@ class RTL433Demodulator(gr.hier_block2, ExportedState):
             gr.io_signature(1, 1, gr.sizeof_gr_complex),
             gr.io_signature(0, 0, 0))
         
-        # Note that the bandwidth chosen is not primarily determined by the bandwidth of the input signals, but by the frequency error of the transmitters.
-        demod_rate = 250000  # rtl_433's default, presumably a good choice.
-        self.__band_filter = MultistageChannelFilter(
-            input_rate=input_rate,
-            output_rate=demod_rate,
-            cutoff_freq=demod_rate * 0.4,
-            transition_width=demod_rate * 0.2)
+        # The input bandwidth chosen is not primarily determined by the bandwidth of the input signals, but by the frequency error of the transmitters. Therefore it is not too critical, and we can choose the exact rate to make the filtering easy.
+        if input_rate <= upper_preferred_demod_rate:
+            # Skip having a filter at all.
+            self.__band_filter = None
+            demod_rate = input_rate
+        else:
+            # TODO: This gunk is very similar to the stuff that MultistageChannelFilter does. See if we can share some code.
+            lower_rate = input_rate
+            lower_rate_prev = None
+            while lower_rate > upper_preferred_demod_rate and lower_rate != lower_rate_prev:
+                lower_rate_prev = lower_rate
+                if lower_rate % 5 == 0 and lower_rate > upper_preferred_demod_rate * 3:
+                    lower_rate /= 5
+                elif lower_rate % 2 == 0:
+                    lower_rate /= 2
+                else:
+                    # non-integer ratio
+                    lower_rate = upper_preferred_demod_rate
+                    break
+            demod_rate = lower_rate
+            
+            self.__band_filter = MultistageChannelFilter(
+                input_rate=input_rate,
+                output_rate=demod_rate,
+                cutoff_freq=demod_rate * 0.4,
+                transition_width=demod_rate * 0.2)
         
         # Subprocess
         # using /usr/bin/env because twisted spawnProcess doesn't support path search
@@ -80,11 +101,20 @@ class RTL433Demodulator(gr.hier_block2, ExportedState):
             })
         sink = make_sink_to_process_stdin(process, itemsize=gr.sizeof_gr_complex)
         
-        self.connect(
-            self,
-            self.__band_filter,
-            blocks.multiply_const_cc(10.0),  # accounts for loss due to channel filtering I guess
-            sink)
+        agc = analog.agc2_cc(reference=dB(-4))
+        agc.set_attack_rate(200 / demod_rate)
+        agc.set_decay_rate(200 / demod_rate)
+        
+        if self.__band_filter:
+            self.connect(
+                self,
+                self.__band_filter,
+                agc)
+        else:
+            self.connect(
+                self,
+                agc)
+        self.connect(agc, sink)
     
     def can_set_mode(self, mode):
         """implements IDemodulator"""
@@ -93,7 +123,15 @@ class RTL433Demodulator(gr.hier_block2, ExportedState):
     @exported_value()
     def get_band_filter_shape(self):
         """implements IDemodulator"""
-        return self.__band_filter.get_shape()
+        if self.__band_filter:
+            return self.__band_filter.get_shape()
+        else:
+            # TODO stub
+            return {
+                'low': 0,
+                'high': 0,
+                'width': 0
+            }
     
     def get_output_type(self):
         """implements IDemodulator"""
