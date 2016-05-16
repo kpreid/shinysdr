@@ -325,4 +325,6 @@ def _write_csv_file(csvfile, db):
             csvrecord[u'Frequency'] = _format_freq(lf)
         else:
             csvrecord[u'Frequency'] = _format_freq(lf) + '-' + _format_freq(uf)
+        for key in csvrecord:
+            csvrecord[key] = unicode(csvrecord[key]).encode('utf-8')
         writer.writerow(csvrecord)

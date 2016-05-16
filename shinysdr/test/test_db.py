@@ -136,6 +136,18 @@ class TestCSV(unittest.TestCase):
                 u'location': [10.0, 20.0]}],
             [])
 
+    def test_roundtrip_unicode(self):
+        self.__roundtrip(
+            [{
+                u'type': u'channel',
+                u'lowerFreq': 1.1e6,
+                u'upperFreq': 1.1e6,
+                u'mode': u'FOO\u2022',
+                u'label': u'a\u2022',
+                u'notes': u'b\u2022',
+                u'location': [10.0, 20.0]}],
+            [])
+
 
 class TestDirectory(unittest.TestCase):
     def setUp(self):
