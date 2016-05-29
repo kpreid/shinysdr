@@ -79,7 +79,6 @@ class Session(ExportedState):
             # TODO kludge
             callback(Command(self, 'reboot', self.reboot))
             callback(Command(self, 'kill', self.kill))
-        
     
     def add_audio_queue(self, queue, queue_rate):
         return self.__receive_flowgraph.add_audio_queue(queue, queue_rate)
@@ -93,8 +92,9 @@ class Session(ExportedState):
     # TODO: reboot and kill don't belong here, neither the interface nor the implementation.
     def reboot(self):
         # Note that this will immediately kill us and so we will never ack the client invocation -- which we're doing as a deliberate indication of our temporary death.
-        # TODO: Do better preservation of options, path, python executable, etc.
-        os.execlp('python', 'python', '-m', 'shinysdr.main', *sys.argv[1:])
+        # TODO: Do better preservation of interpreter options, etc.
+        os.execlp(sys.executable or 'python', 'python',
+            '-m', 'shinysdr.main', *sys.argv[1:])
     
     def kill(self):
         # pylint: disable=no-member
