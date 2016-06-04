@@ -1,4 +1,4 @@
-# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -28,6 +28,20 @@ import urllib
 from twisted.python import log
 from twisted.web import http
 from twisted.web import resource
+
+from shinysdr.types import Enum, to_value_type
+
+
+_NO_DEFAULT = object()
+_json_columns = {
+    u'type': (Enum({'channel': 'channel', 'band': 'band'}), 'channel'),
+    u'lowerFreq': (to_value_type(float), _NO_DEFAULT),
+    u'upperFreq': (to_value_type(float), _NO_DEFAULT),
+    u'mode': (to_value_type(unicode), u''),
+    u'label': (to_value_type(unicode), u''),
+    u'notes': (to_value_type(unicode), u''),
+    u'location': (lambda x: x, None),  # TODO missing constraint
+}
 
 
 class DatabaseModel(object):
@@ -177,7 +191,7 @@ class _DbIndexResource(resource.Resource):
             request.setResponseCode(http.FORBIDDEN)
             request.setHeader('Content-Type', 'text/plain')
             return 'This database is not writable.'
-        record = _normalize_record(desc['new'])
+        record = normalize_record(desc['new'])
         self.__database.records.append(record)
         index = len(self.__database.records) - 1
         self.__instantiate(index)
@@ -207,7 +221,7 @@ class _RecordResource(resource.Resource):
             request.setHeader('Content-Type', 'text/plain')
             return 'The database containing this record is not writable.'
         patch = json.load(request.content)
-        old = _normalize_record(patch['old'])
+        old = normalize_record(patch['old'])
         new = patch['new']
         if old == self.__record:
             # TODO check syntax of record
@@ -274,15 +288,25 @@ def _format_freq(freq):
     return unicode(freq / 1e6)
 
 
-def _normalize_record(record):
-    """Normalize values in a record dict."""
-    # TODO: type/syntax check
+def normalize_record(record):
+    """Normalize and type-check a record dict.
+    
+    There is one 'syntax extension' beyond normalizing: the key 'freq' may be used in place of specifying both 'lowerFreq' and 'upperFreq'."""
     out = {}
+    if u'freq' in record:
+        if u'lowerFreq' in record or u'upperFreq' in record:
+            raise ValueError('"freq" is mutually exclusive with lower/upper')
+        record = dict(record)
+        record[u'lowerFreq'] = record[u'upperFreq'] = float(record[u'freq'])
+        del record[u'freq']
     for k, v in record.iteritems():
-        # JSON/JS/JSON roundtrip turns integral floats into ints
-        if isinstance(v, int):
-            v = float(v)
-        out[k] = v
+        if k not in _json_columns:
+            raise ValueError('record contains unknown key %r' % (k,))
+    for k, (column_type, default) in _json_columns.iteritems():
+        value = record.get(k, default)
+        if value is _NO_DEFAULT:
+            raise ValueError('record is missing key %r' % (k,))
+        out[k] = column_type(value)
     return out
 
 

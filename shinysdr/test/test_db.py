@@ -1,4 +1,4 @@
-# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -36,6 +36,58 @@ from twisted.web import server
 
 from shinysdr import db
 from shinysdr.test import testutil
+
+
+class TestRecords(unittest.TestCase):
+    def test_normalize_complete_result(self):
+        self.assertEqual(
+            {
+                u'type': u'channel',
+                u'lowerFreq': 1e6,
+                u'upperFreq': 2e6,
+                u'mode': u'',
+                u'label': u'',
+                u'notes': u'',
+                u'location': None
+            },
+            db.normalize_record({
+                'lowerFreq': 1e6,
+                'upperFreq': 2e6,
+            }))
+    
+    def test_freq_shorthand(self):
+        r = db.normalize_record({
+            'freq': 1,
+        })
+        self.assertEqual(r['lowerFreq'], 1)
+        self.assertEqual(r['upperFreq'], 1)
+        self.assertNotIn('freq', r)
+    
+    def test_normalize_float(self):
+        r = db.normalize_record({
+            'lowerFreq': 1,
+            'upperFreq': 2
+        })
+        self.assertIsInstance(r['lowerFreq'], float)
+        self.assertIsInstance(r['upperFreq'], float)
+    
+    def test_bad_field(self):
+        def f():
+            db.normalize_record({
+                'lowerFreq': 1,
+                'upperFreq': 1,
+                'foo': 'bar',
+            })
+        
+        self.assertRaises(ValueError, f)
+
+    def test_missing_field(self):
+        def f():
+            db.normalize_record({
+                'label': 'foo',
+            })
+        
+        self.assertRaises(ValueError, f)
 
 
 class TestCSV(unittest.TestCase):
@@ -260,7 +312,8 @@ class TestDBWeb(unittest.TestCase):
     def test_create(self):
         new_record = {
             u'type': u'channel',
-            u'freq': 20e6,
+            u'lowerFreq': 20e6,
+            u'upperFreq': 20e6,
         }
 
         d = testutil.http_post(reactor, self.__url('/'), {
@@ -276,7 +329,7 @@ class TestDBWeb(unittest.TestCase):
             
             def check(s):
                 j = json.loads(s)
-                self.assertEqual(j[u'records'][-1], new_record)
+                self.assertEqual(j[u'records'][-1], db.normalize_record(new_record))
             
             return client.getPage(self.__url('/')).addCallback(check)
         d.addCallback(proceed)

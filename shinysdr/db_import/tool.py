@@ -22,7 +22,7 @@ import sys
 
 from twisted.plugin import getPlugins
 
-from shinysdr.db import _normalize_record, write_csv_file  # TODO stop referring to a _ name
+from shinysdr.db import normalize_record, write_csv_file
 from shinysdr.db_import import GeoFilter, IImporter, _IImporterDef
 from shinysdr import plugins
 
@@ -91,7 +91,7 @@ def import_main():
     
     records = []
     def add_record(record):
-        records.append(_normalize_record(record))
+        records.append(normalize_record(record))
     
     importer.create_database(
         add_record,
