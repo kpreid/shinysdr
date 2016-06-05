@@ -116,40 +116,19 @@ class TestCSV(unittest.TestCase):
     def test_no_frequency(self):
         self.__parse(
             'Name,Frequency\na,1\nb',
-            [{
-                u'type': u'channel',
-                u'lowerFreq': 1e6,
-                u'upperFreq': 1e6,
-                u'mode': u'',
-                u'label': u'a',
-                u'notes': u'',
-                u'location': None}],
+            [db.normalize_record({'freq': 1e6, 'label': 'a'})],
             [(3, Warning, 'Record contains no value for Frequency column; line discarded.')])
     
     def test_short_line(self):
         self.__parse(
             'Frequency,Name,Comment\n1,a',
-            [{
-                u'type': u'channel',
-                u'lowerFreq': 1e6,
-                u'upperFreq': 1e6,
-                u'mode': u'',
-                u'label': u'a',
-                u'notes': u'',
-                u'location': None}],
+            [db.normalize_record({'freq': 1e6, 'label': 'a'})],
             [])
     
     def test_long_line(self):
         self.__parse(
             'Frequency,Name\n1,a,boom',
-            [{
-                u'type': u'channel',
-                u'lowerFreq': 1e6,
-                u'upperFreq': 1e6,
-                u'mode': u'',
-                u'label': u'a',
-                u'notes': u'',
-                u'location': None}],
+            [db.normalize_record({'freq': 1e6, 'label': 'a'})],
             [(2, Warning, 'Record contains extra columns; data discarded.')])
 
     def test_roundtrip_channel(self):
@@ -232,7 +211,7 @@ class TestDirectory(unittest.TestCase):
 
 class TestDBWeb(unittest.TestCase):
     test_data_json = [
-        {
+        db.normalize_record({
             u'type': u'channel',
             u'lowerFreq': 10e6,
             u'upperFreq': 10e6,
@@ -240,8 +219,8 @@ class TestDBWeb(unittest.TestCase):
             u'label': u'name',
             u'notes': u'comment',
             u'location': [0, 90],
-        },
-        {
+        }),
+        db.normalize_record({
             u'type': u'band',
             u'lowerFreq': 10e6,
             u'upperFreq': 20e6,
@@ -249,7 +228,7 @@ class TestDBWeb(unittest.TestCase):
             u'label': u'bandname',
             u'notes': u'comment',
             u'location': None,
-        },
+        }),
     ]
     response_json = {
         u'records': test_data_json,
