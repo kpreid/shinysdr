@@ -304,13 +304,14 @@ define(['./events', './network', './values'], function (events, network, values)
       function (init) {
         // TODO (implicitly) check mime type
         externalGet(url, 'text', function(jsonString) {
-          var obj = JSON.parse(jsonString);
-          if (obj.writable) {
+          var databaseJson = JSON.parse(jsonString);
+          if (databaseJson.writable) {
             init.makeWritable();
           }
-          obj.records.forEach(function (record, i) {
-            init.add(record, url + i);  // TODO: proper url resolution, urls from server.
-          });
+          var recordsJson = databaseJson.records;
+          for (var key in recordsJson) {
+            init.add(recordsJson[key], url + encodeURIComponent(key));
+          }
         });
       },
       url);

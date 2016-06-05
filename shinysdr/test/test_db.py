@@ -116,67 +116,76 @@ class TestCSV(unittest.TestCase):
     def test_no_frequency(self):
         self.__parse(
             'Name,Frequency\na,1\nb',
-            [db.normalize_record({'freq': 1e6, 'label': 'a'})],
+            {1: db.normalize_record({'freq': 1e6, 'label': 'a'})},
             [(3, Warning, 'Record contains no value for Frequency column; line discarded.')])
     
     def test_short_line(self):
         self.__parse(
             'Frequency,Name,Comment\n1,a',
-            [db.normalize_record({'freq': 1e6, 'label': 'a'})],
+            {1: db.normalize_record({'freq': 1e6, 'label': 'a'})},
             [])
     
     def test_long_line(self):
         self.__parse(
             'Frequency,Name\n1,a,boom',
-            [db.normalize_record({'freq': 1e6, 'label': 'a'})],
+            {1: db.normalize_record({'freq': 1e6, 'label': 'a'})},
             [(2, Warning, 'Record contains extra columns; data discarded.')])
+
+    def test_parse_rkey(self):
+        self.__parse(
+            'Location,Frequency\n3,100\n1,101',
+            {
+                3: db.normalize_record({'freq': 100e6}),
+                1: db.normalize_record({'freq': 101e6}),
+            },
+            [])
 
     def test_roundtrip_channel(self):
         self.__roundtrip(
-            [{
+            {1: {
                 u'type': u'channel',
                 u'lowerFreq': 1.1e6,
                 u'upperFreq': 1.1e6,
                 u'mode': u'FOO',
                 u'label': u'a',
                 u'notes': u'b',
-                u'location': None}],
+                u'location': None}},
             [])
 
     def test_roundtrip_band(self):
         self.__roundtrip(
-            [{
+            {1: {
                 u'type': u'band',
                 u'lowerFreq': 1.1e6,
                 u'upperFreq': 1.2e6,
                 u'mode': u'FOO',
                 u'label': u'a',
                 u'notes': u'b',
-                u'location': None}],
+                u'location': None}},
             [])
 
     def test_roundtrip_location(self):
         self.__roundtrip(
-            [{
+            {1: {
                 u'type': u'band',
                 u'lowerFreq': 1.1e6,
                 u'upperFreq': 1.2e6,
                 u'mode': u'FOO',
                 u'label': u'a',
                 u'notes': u'b',
-                u'location': [10.0, 20.0]}],
+                u'location': [10.0, 20.0]}},
             [])
 
     def test_roundtrip_unicode(self):
         self.__roundtrip(
-            [{
+            {1: {
                 u'type': u'channel',
                 u'lowerFreq': 1.1e6,
                 u'upperFreq': 1.1e6,
                 u'mode': u'FOO\u2022',
                 u'label': u'a\u2022',
                 u'notes': u'b\u2022',
-                u'location': [10.0, 20.0]}],
+                u'location': [10.0, 20.0]}},
             [])
 
 
@@ -210,17 +219,17 @@ class TestDirectory(unittest.TestCase):
 
 
 class TestDBWeb(unittest.TestCase):
-    test_data_json = [
-        db.normalize_record({
+    test_records = {
+        1: db.normalize_record({
             u'type': u'channel',
             u'lowerFreq': 10e6,
             u'upperFreq': 10e6,
             u'mode': u'AM',
-            u'label': u'name',
+            u'label': u'chname',
             u'notes': u'comment',
             u'location': [0, 90],
         }),
-        db.normalize_record({
+        2: db.normalize_record({
             u'type': u'band',
             u'lowerFreq': 10e6,
             u'upperFreq': 20e6,
@@ -229,14 +238,14 @@ class TestDBWeb(unittest.TestCase):
             u'notes': u'comment',
             u'location': None,
         }),
-    ]
+    }
     response_json = {
-        u'records': test_data_json,
+        u'records': {unicode(k): v for k, v in test_records.iteritems()},
         u'writable': True,
     }
     
     def setUp(self):
-        db_model = db.DatabaseModel(reactor, self.test_data_json, writable=True)
+        db_model = db.DatabaseModel(reactor, dict(self.test_records), writable=True)
         dbResource = db.DatabaseResource(db_model)
         self.port = reactor.listenTCP(0, server.Site(dbResource), interface="127.0.0.1")
     
@@ -257,22 +266,23 @@ class TestDBWeb(unittest.TestCase):
         def callback((response, data)):
             self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
             j = json.loads(data)
-            self.assertEqual(j, self.test_data_json[0])
-        return testutil.http_get(reactor, self.__url('/0')).addCallback(callback)
+            self.assertEqual(j, self.test_records[1])
+        return testutil.http_get(reactor, self.__url('/1')).addCallback(callback)
 
     def test_update_good(self):
-        new_record = {
+        new_data = {
             u'type': u'channel',
             u'lowerFreq': 20e6,
             u'upperFreq': 20e6,
+            u'label': u'modified',
         }
-        index = 0
-        modified = self.test_data_json[:]
-        modified[index] = new_record
+        index = u'1'
+        modified = dict(self.response_json[u'records'])
+        modified[index] = db.normalize_record(new_data)
 
         d = testutil.http_post(reactor, self.__url('/' + str(index)), {
-            'old': self.test_data_json[index],
-            'new': new_record
+            'old': self.response_json[u'records'][index],
+            'new': new_data
         })
 
         def proceed((response, data)):
@@ -304,11 +314,11 @@ class TestDBWeb(unittest.TestCase):
                 print data
             self.assertEqual(response.code, http.CREATED)
             url = 'ONLYONE'.join(response.headers.getRawHeaders('Location'))
-            self.assertEqual(url, self.__url('/2'))  # URL of new entry
+            self.assertEqual(url, self.__url('/3'))  # URL of new entry
             
             def check(s):
                 j = json.loads(s)
-                self.assertEqual(j[u'records'][-1], db.normalize_record(new_record))
+                self.assertEqual(j[u'records'][u'3'], db.normalize_record(new_record))
             
             return client.getPage(self.__url('/')).addCallback(check)
         d.addCallback(proceed)

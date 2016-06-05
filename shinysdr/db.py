@@ -43,11 +43,14 @@ _json_columns = {
     u'location': (lambda x: x, None),  # TODO missing constraint
 }
 
+_LOWEST_RKEY = 1
+
 
 class DatabaseModel(object):
     __dirty = False
     
     def __init__(self, reactor, records, pathname=None, writable=False):
+        assert isinstance(records, dict)
         # TODO: don't expose records/writable directly
         self.__reactor = reactor
         self.records = records
@@ -162,12 +165,12 @@ class DatabaseResource(resource.Resource):
     def __init__(self, database):
         resource.Resource.__init__(self)
         
-        def instantiate(i):
-            self.putChild(str(i), _RecordResource(database, database.records[i]))
+        def instantiate(rkey):
+            self.putChild(str(rkey), _RecordResource(database, database.records[rkey]))
         
         self.putChild('', _DbIndexResource(database, instantiate))
-        for i in xrange(0, len(database.records)):
-            instantiate(i)
+        for rkey in database.records:
+            instantiate(rkey)
 
 
 class _DbIndexResource(resource.Resource):
@@ -192,10 +195,13 @@ class _DbIndexResource(resource.Resource):
             request.setHeader('Content-Type', 'text/plain')
             return 'This database is not writable.'
         record = normalize_record(desc['new'])
-        self.__database.records.append(record)
-        index = len(self.__database.records) - 1
-        self.__instantiate(index)
-        url = request.prePathURL() + str(index)
+
+        dbdict = self.__database.records
+        rkey = _LOWEST_RKEY
+        while rkey in dbdict: rkey += 1
+        dbdict[rkey] = record
+        self.__instantiate(rkey)
+        url = request.prePathURL() + str(rkey)
         request.setResponseCode(http.CREATED)
         request.setHeader('Content-Type', 'text/plain')
         request.setHeader('Location', url)
@@ -222,9 +228,8 @@ class _RecordResource(resource.Resource):
             return 'The database containing this record is not writable.'
         patch = json.load(request.content)
         old = normalize_record(patch['old'])
-        new = patch['new']
+        new = normalize_record(patch['new'])
         if old == self.__record:
-            # TODO check syntax of record
             self.__record.clear()
             self.__record.update(new)
             self.__database.dirty()
@@ -237,7 +242,9 @@ class _RecordResource(resource.Resource):
 
 
 def _parse_csv_file(csvfile):
-    db = []
+    records_assigned = {}
+    records_unassigned = []
+    free_rkey = _LOWEST_RKEY
     diagnostics = []
     reader = csv.DictReader(csvfile)
     for strcsvrec in reader:
@@ -276,8 +283,25 @@ def _parse_csv_file(csvfile):
             record[u'location'] = [float(csvrec['Latitude']), float(csvrec['Longitude'])]
         else:
             record[u'location'] = None
-        db.append(record)
-    return db, diagnostics
+        # Give the record a key corresponding to Location if possible
+        # TODO: error messages for bad Location
+        rkey_str = csvrec.get('Location', '')
+        try:
+            rkey = int(rkey_str)
+            if rkey < _LOWEST_RKEY: rkey = None
+        except ValueError:
+            rkey = None
+        if rkey is not None:
+            # TODO conflicts
+            records_assigned[rkey] = record
+        else:
+            records_unassigned.append(record)
+    for record in records_unassigned:
+        while free_rkey in records_assigned:
+            free_rkey += 1
+        records_assigned[free_rkey] = record
+        free_rkey += 1
+    return records_assigned, diagnostics
 
 
 def _parse_freq(freq_str):
@@ -323,6 +347,7 @@ def write_csv_file(csvfile, records):
 
 def _write_csv_file(csvfile, records):
     writer = csv.DictWriter(csvfile, [
+        u'Location',
         u'Mode',
         u'Frequency',
         u'Name',
@@ -331,8 +356,8 @@ def _write_csv_file(csvfile, records):
         u'Comment',
     ])
     writer.writeheader()
-    for record in records:
-        csvrecord = {}
+    for rkey, record in records.iteritems():
+        csvrecord = {u'Location': str(rkey)}
         lf = uf = None
         for key, value in record.iteritems():
             if key == u'type':
@@ -342,7 +367,7 @@ def _write_csv_file(csvfile, records):
             elif key == u'lowerFreq':
                 lf = value
             elif key == u'upperFreq':
-                uf = value = value
+                uf = value
             elif key == u'location':
                 if value is None:
                     csvrecord[u'Latitude'] = ''
