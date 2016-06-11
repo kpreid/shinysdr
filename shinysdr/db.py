@@ -200,6 +200,7 @@ class _DbIndexResource(resource.Resource):
         rkey = _LOWEST_RKEY
         while rkey in dbdict: rkey += 1
         dbdict[rkey] = record
+        self.__database.dirty()  # TODO: There is no test that this is done.
         self.__instantiate(rkey)
         url = request.prePathURL() + str(rkey)
         request.setResponseCode(http.CREATED)
