@@ -1777,7 +1777,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
         var textY = textOffsetFromTop - textSpacing;
 
         ctx.fillText(recKey, textX, textY += textSpacing);
-        ctx.fillText(formatFreqExact(receiver.rec_freq.depend(draw)), textX, textY += textSpacing);
+        ctx.fillText(formatFreqInexactVerbose(receiver.rec_freq.depend(draw)), textX, textY += textSpacing);
         ctx.fillText(receiver.mode.depend(draw), textX, textY += textSpacing);
       }
     });
@@ -1982,8 +1982,9 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
     return (freq / 1e6).toFixed(2);
   }
   
-  // "exact" as in doesn't drop digits
+  // "exact" as in doesn't drop digits. Used in frequency scale.
   function formatFreqExact(freq) {
+    freq = +freq;
     var a = Math.abs(freq);
     if (a < 1e3) {
       return String(freq);
@@ -1994,6 +1995,29 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
     } else {
       return freq / 1e9 + 'G';
     }
+  }
+  
+  // Format with dropping digits likely not cared about, and units. Used in receiver frequency marks.
+  function formatFreqInexactVerbose(freq) {
+    freq = +freq;
+    var a = Math.abs(freq);
+    var prefix;
+    if (a < 1e3) {
+      prefix = '';
+    } else if (a < 1e6) {
+      freq /= 1e3;
+      prefix = 'k';
+    } else if (a < 1e9) {
+      freq /= 1e6;
+      prefix = 'M';
+    } else {
+      freq /= 1e9;
+      prefix = 'G';
+    }
+    var freqText = freq.toFixed(3);
+    // toFixed rounds, but also adds zeros; we want only the rounding.
+    freqText = freqText.replace(/([0-9])0+$/, '$1');
+    return freqText + ' ' + prefix + 'Hz';
   }
   
   // minimal ES-Harmony shim for use by VisibleItemCache
