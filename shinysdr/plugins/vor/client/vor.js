@@ -112,14 +112,13 @@ define(['map-core', 'widgets'], function (mapCore, widgets) {
 
       var angle = angleCell.depend(dirty);
       return {
-        label: '',
-        // TODO: better "blank" approach
-        iconURL: 'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22/%3E',
-        position: [lat, lon],
         // The following assumes that the projection in use is conformal, and that the length is small compared to the curvature.
-        line: [[
-          lat + Math.cos(angle) * lengthInDegrees,
-          lon + Math.sin(angle) * lengthInDegrees
+        polylines: [[
+          {position: [lat, lon]},
+          {position: [
+            lat + Math.cos(angle) * lengthInDegrees,
+            lon + Math.sin(angle) * lengthInDegrees
+          ]},
         ]]
       }
     });

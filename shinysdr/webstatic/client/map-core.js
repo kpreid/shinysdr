@@ -639,7 +639,7 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
   // properties of feature renderer's return value:
   // position (latlon or null to temporarily hide)
   // label (string)
-  // line: array of [lat, lon]
+  // polylines: array of array of {position, vangle, speed} records
   // timestamp: time at which current position = specified position, in unix-epoch seconds
   // vangle (number or null): angle of horizontal velocity vector
   // speed (number or null): horizontal speed in m/s
@@ -649,7 +649,7 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
   var expectedRenderedKeys = Object.create(null);
   expectedRenderedKeys['position'] = 1;
   expectedRenderedKeys['label'] = 1;
-  expectedRenderedKeys['line'] = 1;
+  expectedRenderedKeys['polylines'] = 1;
   expectedRenderedKeys['timestamp'] = 1;
   expectedRenderedKeys['vangle'] = 1;
   expectedRenderedKeys['speed'] = 1;
@@ -664,6 +664,11 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
       }
     }
     return rendered;
+  }
+  
+  // "directly" meaning not by way of a subordinate part
+  function isRenderedAnimatedDirectly(rendered) {
+    return rendered.speed > 0 && isFinite(rendered.vangle);
   }
 
   function GLFeatureLayers(gl, scheduler, primitive, pickingColorAllocator, specialization) {
@@ -944,7 +949,7 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
           var iconLabel = labelTextureManager.refIconLabel(0, 0, iconURL);
           var lat = rendered.position[0];
           var lon = rendered.position[1];
-          var animated = rendered.speed > 0 && isFinite(rendered.vangle);
+          var animated = isRenderedAnimatedDirectly(rendered);
           writeQuad(labelsByIndex, writeVertex, info.iconIndex, rendered, iconLabel, pickingColor);
           writeQuad(labelsByIndex, writeVertex, info.textIndex, rendered, textLabel, pickingColor);
           textLabel.decRefCount();  // balance ref (now retained by writeQuad)
@@ -997,12 +1002,13 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
         gl.lineWidth(1);  // reset
       },
       allocateFeature: function (array, indexFreeList, feature) {
-        return {
-          indices: []
+        var info = {
+          allocatedIndices: []
         };
+        return info;
       },
       deallocateFeature: function (layerState, writeVertex, indexFreeList, feature, info) {
-        var indices = info.indices;
+        var indices = info.allocatedIndices;
         for (var i = 0; i < indices.length; i++) {
           var index = indices[i];
           writeVertex(index, 0, {}, {}, 'n', 'n', NO_PICKING_COLOR);
@@ -1011,41 +1017,40 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
         }
       },
       updateFeatureRendering: function (layerState, dirty, indexFreeList, feature, writeVertex, info, renderer, pickingColor) {
-        var indices = info.indices;
         var rendered = checkRendered(renderer(feature, dirty));
-        var lineData = rendered.line;
-        if (lineData == null) {
-          lineData = [];
+        var allocatedIndices = info.allocatedIndices;
+        
+        var isAnimated = false;
+        var bufferIndexAlloc = 0;  // allocation pointer into allocatedIndices
+        
+        // TODO do enough type checking to not throw on bad data
+        
+        // In GeoJSON terms, polylines is a MultiLineString (but the coordinates are the general 'rendered' structure instead of lon-lat tuples.
+        var lineStrings = rendered.polylines || [];
+        for (var lineStringIndex = 0; lineStringIndex < lineStrings.length; lineStringIndex++) {
+          var lineString = lineStrings[lineStringIndex];
+          for (var lineIndex = 0; lineIndex < lineString.length - 1; lineIndex++) {
+            var bufferIndexIndex = bufferIndexAlloc++;
+            var bufferIndex = allocatedIndices[bufferIndexIndex];
+            if (bufferIndex === undefined) {
+              allocatedIndices.push(bufferIndex = indexFreeList.allocate());
+            }
+            writeVertex(bufferIndex, 0, dummyLabel, lineString[lineIndex    ], 'n', 'n', pickingColor);
+            writeVertex(bufferIndex, 1, dummyLabel, lineString[lineIndex + 1], 'p', 'p', pickingColor);
+            isAnimated = isAnimated || isRenderedAnimatedDirectly(lineString[lineIndex])
+              || isRenderedAnimatedDirectly(lineString[lineIndex + 1]);  // TODO redundant calcs
+          }
         }
         
-        // allocate as needed
-        while (indices.length < lineData.length) {
-          indices.push(indexFreeList.allocate());
-        }
-        while (indices.length > lineData.length) {
-          var index = indices.pop();
-          writeVertex(index, 0, {}, {}, 'n', 'n', pickingColor);
-          writeVertex(index, 1, {}, {}, 'p', 'p', pickingColor);
+        // Shorten allocation list if needed
+        while (allocatedIndices.length > bufferIndexAlloc) {
+          var index = allocatedIndices.pop();
+          writeVertex(index, 0, dummyLabel, {}, 'n', 'n', pickingColor);
+          writeVertex(index, 1, dummyLabel, {}, 'p', 'p', pickingColor);
           indexFreeList.deallocate(index);
         }
-        //console.log(rendered.label + ' adjusted to ' + indices.length);
-
         
-        for (var i = 0; i < indices.length; i++) {
-          var proxyPointA = {
-            position: lineData[i]
-          }
-          if (i == lineData.length - 1) {
-            var proxyPointB = rendered;
-          } else {
-            var proxyPointB = {
-              position: lineData[i + 1]
-            }
-          }
-          writeVertex(info.indices[i], 0, dummyLabel, proxyPointA, 'n', 'n', pickingColor);
-          writeVertex(info.indices[i], 1, dummyLabel, proxyPointB, 'p', 'p', pickingColor);
-        }
-        return rendered.speed > 0 && isFinite(rendered.vangle);
+        return isAnimated;
       }
     });
     this.createLayer = base.createLayer.bind(base);
@@ -1593,17 +1598,19 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
     }
     
     if (position && (!lastHistory || (position[0] != lastHistory[0] && position[1] != lastHistory[1]))) {
-      history.push(position);
+      history.push({position: position});
     }
     
-    return {
+    var renderedFeature = {
       timestamp: track.longitude.timestamp,  // TODO verify other values match
       label: label,
       position: position,
       vangle: track.track_angle.value,
       speed: track.h_speed.value || 0,
-      line: history
+      polylines: [history]
     };
+    renderedFeature.polylines = [history.concat([renderedFeature])];  // TODO this circular reference works but is not really Correct.
+    return renderedFeature;
   }
   exports.renderTrackFeature = renderTrackFeature;
   

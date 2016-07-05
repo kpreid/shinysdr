@@ -64,7 +64,7 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
           console.error('GeoJSON not in WGS84; will not be correctly displayed.', geojson.crs);
         }
         
-        var rings = [];
+        var convertedFeatures = [];
 
         // TODO: Expand supported objects to include labels, etc. so that this can be used for more than just drawing polygons.
         function traverse(object) {
@@ -73,14 +73,19 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
               object.features.forEach(traverse);
               break;
             case 'Feature':
+              // don't yet care about feature structure, break down into geometry
               traverse(object.geometry);
               break
             case 'MultiPolygon':
+              // don't yet care about structure, break down the multipolygon into rings
               object.coordinates.forEach(function (polygonCoords) {
                 polygonCoords.forEach(function (linearRingCoords) {
-                  rings.push(linearRingCoords.map(function (position) {
-                    return [position[1], position[0]];
-                  }));
+                  var convertedLinearRing = linearRingCoords.map(function (position) {
+                    return {position: [position[1], position[0]]};
+                  });
+                  convertedFeatures.push({
+                    polylines: [convertedLinearRing]
+                  })
                 })
               });
               break;
@@ -90,16 +95,10 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
         }
         traverse(geojson);
 
-        return rings;
+        return convertedFeatures;
       }),
       featureRenderer: function stubRenderer(feature, dirty) {
-        // TODO: Arrange for labels
-        return {
-          label: '',
-          iconURL: blank,
-          position: feature[0],
-          line: feature
-        };
+        return feature;
       }
     };
   };
@@ -171,13 +170,16 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
         var inSourceBand = info.lower < record.freq && record.freq < info.upper;
         var isReceiving = info.receiving.has(record.freq);
         
-        var line;
+        var lines;
         if (isReceiving && info.track) {
           //var receiver = info.receiving.get(record);
           // TODO: Should be matching against receiver's device rather than selected device
-          line = [[+info.track.latitude.value, +info.track.longitude.value]];
+          lines = [[
+            {position: location},
+            {position: [+info.track.latitude.value, +info.track.longitude.value]},
+          ]];
         } else {
-          line = [];
+          lines = [[]];
         }
         
         // TODO: style for isReceiving
@@ -186,7 +188,7 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
           position: location,
           label: record.label,
           opacity: inSourceBand ? 1.0 : 0.25,
-          line: line
+          polylines: lines
         };
       },
       onclick: function clickOnDbFeature(feature) {
@@ -349,25 +351,19 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
             var lon = parseFloat(parts[1]);
             var line = [];
             for (var lat = -90; lat < 90 + smoothStep/2; lat += smoothStep) {
-              line.push([lat, lon]);
+              line.push(Object.freeze({position: Object.freeze([lat, lon])}));
             }
             return Object.freeze({
-              position: Object.freeze([90, lon]),
-              iconURL: blank,
-              label: '',
-              line: Object.freeze(line)
+              polylines: Object.freeze([Object.freeze(line)])
             });
           case 'latLine':
             var lat = parseFloat(parts[1]);
             var line = [];
             for (var lon = 0; lon < 360 + smoothStep/2; lon += smoothStep) {
-              line.push([lat, lon]);
+              line.push(Object.freeze({position: Object.freeze([lat, lon])}));
             }
             return Object.freeze({
-              position: Object.freeze([lat, 0]),
-              iconURL: blank,
-              label: '',
-              line: Object.freeze(line)
+              polylines: Object.freeze([Object.freeze(line)])
             });
           case 'lonLabel':
             var lon = parseFloat(parts[1]);
