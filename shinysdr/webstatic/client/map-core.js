@@ -636,6 +636,36 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
 
   var NO_PICKING_COLOR = 0;
 
+  // properties of feature renderer's return value:
+  // position (latlon or null to temporarily hide)
+  // label (string)
+  // line: array of [lat, lon]
+  // timestamp: time at which current position = specified position, in unix-epoch seconds
+  // vangle (number or null): angle of horizontal velocity vector
+  // speed (number or null): horizontal speed in m/s
+  // iconURL (string or falsy/absent for default): icon
+  // labelSide: ('top', 'left', 'right', 'bottom', 'center')
+  // opacity: 0..1
+  var expectedRenderedKeys = Object.create(null);
+  expectedRenderedKeys['position'] = 1;
+  expectedRenderedKeys['label'] = 1;
+  expectedRenderedKeys['line'] = 1;
+  expectedRenderedKeys['timestamp'] = 1;
+  expectedRenderedKeys['vangle'] = 1;
+  expectedRenderedKeys['speed'] = 1;
+  expectedRenderedKeys['iconURL'] = 1;
+  expectedRenderedKeys['labelSide'] = 1;
+  expectedRenderedKeys['opacity'] = 1;
+  Object.freeze(expectedRenderedKeys);
+  function checkRendered(rendered) {
+    for (var key in rendered) {
+      if (!(key in expectedRenderedKeys)) {
+        console.warn('Rendered feature: unexpected key: ' + key);
+      }
+    }
+    return rendered;
+  }
+
   function GLFeatureLayers(gl, scheduler, primitive, pickingColorAllocator, specialization) {
     var vertexShaderSource = ''
       + 'attribute vec3 position;\n'
@@ -699,6 +729,7 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
       var o_texcoordAndOpacity = attLayout.offsets.texcoordAndOpacity;
       var o_pickingColor = attLayout.offsets.pickingColor;
       function writeVertex(index, offset, label, rendered, xd, yd, pickingColor) {
+        rendered = checkRendered(rendered);
         var base = index * FLOATS_PER_QUAD + offset * FLOATS_PER_VERT;
         var lat = (rendered.position || [0, 0])[0];
         var lon = (rendered.position || [0, 0])[1];
@@ -795,16 +826,6 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
       dumpArray.scheduler = scheduler;
       dumpArray();
       
-      // properties of renderer's return value:
-      // position (latlon or null to temporarily hide)
-      // label (string)
-      // timestamp: time at which current position = specified position, in unix-epoch seconds
-      // vangle (number or null): angle of horizontal velocity vector
-      // speed (number or null): horizontal speed in m/s
-      // iconURL (string or falsy/absent for default): icon
-      // labelSide: ('top', 'left', 'right', 'bottom', 'center')
-      // opacity: 0..1
-
       return {
         draw: function (picking) {
           specialization.beforeDraw(program);
@@ -911,7 +932,7 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
       },
       updateFeatureRendering: function (layerState, dirty, indexFreeList, feature, writeVertex, info, renderer, pickingColor) {
         var labelsByIndex = layerState.labelsByIndex;
-        var rendered = renderer(feature, dirty);
+        var rendered = checkRendered(renderer(feature, dirty));
         if (rendered.position) {
           var iconURL = rendered.iconURL || '/client/map-icons/default.svg';
           var anchor = rendered.labelSide || 'top';
@@ -991,7 +1012,7 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
       },
       updateFeatureRendering: function (layerState, dirty, indexFreeList, feature, writeVertex, info, renderer, pickingColor) {
         var indices = info.indices;
-        var rendered = renderer(feature, dirty);
+        var rendered = checkRendered(renderer(feature, dirty));
         var lineData = rendered.line;
         if (lineData == null) {
           lineData = [];
