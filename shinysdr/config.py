@@ -212,7 +212,7 @@ class _ConfigDbs(object):
     def _get_writable_database(self):
         if self.__writable_db is None:
             # TODO temporary stub till the client takes more configurability -- we should omit the writable db rather than having an unbacked one
-            self.__writable_db = DatabaseModel(None, [], writable=True)
+            self.__writable_db = DatabaseModel(None, {}, writable=True)
         return self.__writable_db
     
     def _get_read_only_databases(self):
