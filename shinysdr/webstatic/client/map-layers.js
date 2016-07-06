@@ -84,6 +84,7 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
                     return {position: [position[1], position[0]]};
                   });
                   convertedFeatures.push({
+                    lineWeight: 0.65,  // TODO shouldn't be hardcoded in makeStaticLayer
                     polylines: [convertedLinearRing]
                   })
                 })
@@ -354,6 +355,7 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
               line.push(Object.freeze({position: Object.freeze([lat, lon])}));
             }
             return Object.freeze({
+              lineWeight: 0.25,
               polylines: Object.freeze([Object.freeze(line)])
             });
           case 'latLine':
@@ -363,6 +365,7 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
               line.push(Object.freeze({position: Object.freeze([lat, lon])}));
             }
             return Object.freeze({
+              lineWeight: 0.25,
               polylines: Object.freeze([Object.freeze(line)])
             });
           case 'lonLabel':

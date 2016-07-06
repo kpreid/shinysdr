@@ -655,6 +655,7 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
   expectedRenderedKeys['speed'] = 1;
   expectedRenderedKeys['iconURL'] = 1;
   expectedRenderedKeys['labelSide'] = 1;
+  expectedRenderedKeys['lineWeight'] = 1;
   expectedRenderedKeys['opacity'] = 1;
   Object.freeze(expectedRenderedKeys);
   function checkRendered(rendered) {
@@ -967,19 +968,6 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
   }
 
   function GLCurveLayers(gl, scheduler, pickingColorAllocator) {
-    var dummyLabel = {
-      tnx: 0,
-      tpx: 0,
-      tny: 0,
-      tpy: 0,
-      bnx: 0,
-      bpx: 0,
-      bny: 0,
-      bpy: 0,
-      bnz: 0,
-      bpz: 0
-    };
-    
     var base = new GLFeatureLayers(gl, scheduler, gl.LINES, pickingColorAllocator, {
       VERTS_PER_INDEX: 2,
       fragmentShader: ''
@@ -988,9 +976,9 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
         + 'uniform sampler2D labels;\n'
         + 'uniform bool picking;\n'
         + 'void main(void) {\n'
-        + '  lowp vec2 texcoord = v_texcoordAndOpacity.xy;\n'
+        + '  lowp float lineBrightness = v_texcoordAndOpacity.x;\n'
         + '  lowp float opacity = v_texcoordAndOpacity.z;\n'
-        + '  gl_FragColor = picking ? v_pickingColor : v_texcoordAndOpacity.z * vec4(0.0, 0.0, 0.0, 1.0);\n'
+        + '  gl_FragColor = picking ? v_pickingColor : v_texcoordAndOpacity.z * vec4(vec3(1.0 - lineBrightness), 1.0);\n'
         + '}\n',
       createLayer: function () {
         return {};
@@ -1023,6 +1011,24 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
         var isAnimated = false;
         var bufferIndexAlloc = 0;  // allocation pointer into allocatedIndices
         
+        // TODO per-line line width. That will probably have to wait for billboarded and join-aware line rendering, and won't that be a pain.
+        // lineBrightness here is a poor representation too because it is overlaid on a _gray_ background. Which happens to work out currently but doesn't in general.
+        var lineWeight = rendered.lineWeight || 1;
+        var lineBrightness = Math.min(lineWeight, 1);
+        var dummyStyleLabel = {
+          // kludge! TODO: arrange to be able to override the texcoordAndOpacity mechanism for something more useful for GLCurveLayers -- it was designed for GLPointLayers first.
+          tnx: lineBrightness,
+          tpx: lineBrightness,
+          tny: 0,
+          tpy: 0,
+          bnx: 0,
+          bpx: 0,
+          bny: 0,
+          bpy: 0,
+          bnz: 0,
+          bpz: 0
+        }
+        
         // TODO do enough type checking to not throw on bad data
         
         // In GeoJSON terms, polylines is a MultiLineString (but the coordinates are the general 'rendered' structure instead of lon-lat tuples.
@@ -1035,8 +1041,8 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
             if (bufferIndex === undefined) {
               allocatedIndices.push(bufferIndex = indexFreeList.allocate());
             }
-            writeVertex(bufferIndex, 0, dummyLabel, lineString[lineIndex    ], 'n', 'n', pickingColor);
-            writeVertex(bufferIndex, 1, dummyLabel, lineString[lineIndex + 1], 'p', 'p', pickingColor);
+            writeVertex(bufferIndex, 0, dummyStyleLabel, lineString[lineIndex    ], 'n', 'n', pickingColor);
+            writeVertex(bufferIndex, 1, dummyStyleLabel, lineString[lineIndex + 1], 'p', 'p', pickingColor);
             isAnimated = isAnimated || isRenderedAnimatedDirectly(lineString[lineIndex])
               || isRenderedAnimatedDirectly(lineString[lineIndex + 1]);  // TODO redundant calcs
           }
@@ -1045,8 +1051,8 @@ define(['./values', './gltools', './widget', './widgets', './events', './network
         // Shorten allocation list if needed
         while (allocatedIndices.length > bufferIndexAlloc) {
           var index = allocatedIndices.pop();
-          writeVertex(index, 0, dummyLabel, {}, 'n', 'n', pickingColor);
-          writeVertex(index, 1, dummyLabel, {}, 'p', 'p', pickingColor);
+          writeVertex(index, 0, {}, {}, 'n', 'n', pickingColor);
+          writeVertex(index, 1, {}, {}, 'p', 'p', pickingColor);
           indexFreeList.deallocate(index);
         }
         
