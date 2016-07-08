@@ -1,4 +1,5 @@
-# Copyright 2014, 2015 Kevin Reid <kpreid@switchb.org>
+# -*- coding: utf-8 -*-
+# Copyright 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -22,7 +23,7 @@ from twisted.trial import unittest
 from zope.interface import implements  # available via Twisted
 
 # Note: not testing _ConstantVFOCell, it's just a useful utility
-from shinysdr.devices import _ConstantVFOCell, AudioDevice, Device, FrequencyShift, IDevice, IRXDriver, ITXDriver, PositionedDevice, merge_devices
+from shinysdr.devices import _ConstantVFOCell, AudioDevice, Device, FrequencyShift, IDevice, IRXDriver, ITXDriver, PositionedDevice, _coerce_channel_mapping, merge_devices
 from shinysdr.signals import SignalType
 from shinysdr.test.testutil import DeviceTestCase
 from shinysdr.types import Range
@@ -150,12 +151,57 @@ class TestMergeDevices(unittest.TestCase):
         # TODO more testing
 
 
-class TestAudioDevice(DeviceTestCase):
+class TestAudioDevice1Ch(DeviceTestCase):
     def setUp(self):
-        super(TestAudioDevice, self).setUpFor(
-            device=AudioDevice(''))
+        super(TestAudioDevice1Ch, self).setUpFor(
+            device=AudioDevice('', channel_mapping=1))
 
     # Test methods provided by DeviceTestCase
+
+
+class TestAudioDevice2Ch(DeviceTestCase):
+    def setUp(self):
+        super(TestAudioDevice2Ch, self).setUpFor(
+            device=AudioDevice('', channel_mapping='IQ'))
+
+    # Test methods provided by DeviceTestCase
+
+
+class TestAudioDeviceChannels(unittest.TestCase):
+    """Tests for _coerce_channel_mapping.
+    
+    This is an internal helper for AudioDevice, but it is complex and it would be impractical to test otherwise, as the test would constitute checking for the expected signal from an AudioDevice."""
+    def test_one_channel_shorthand(self):
+        self.assertEqual(_coerce_channel_mapping(1), [[1]])
+        self.assertEqual(_coerce_channel_mapping(2), [[0, 1]])
+        self.assertEqual(_coerce_channel_mapping(3), [[0, 0, 1]])
+    
+    def test_iq_shorthand(self):
+        self.assertEqual(_coerce_channel_mapping('IQ'), [[1, 0], [0, 1]])
+        self.assertEqual(_coerce_channel_mapping('QI'), [[0, 1], [1, 0]])
+    
+    def test_default(self):
+        self.assertEqual(_coerce_channel_mapping(None),
+                         _coerce_channel_mapping('IQ'))
+    
+    def test_matrix(self):
+        self.assertEqual(_coerce_channel_mapping([[1], [2]]), [[1], [2]])
+        self.assertEqual(_coerce_channel_mapping([[1, 2], [3, 4]]), [[1, 2], [3, 4]])
+        self.assertEqual(_coerce_channel_mapping([[1, 2, 3], [4, 5, 6]]), [[1, 2, 3], [4, 5, 6]])
+    
+    def test_bad_type(self):
+        self.assertRaises(TypeError, lambda: _coerce_channel_mapping('foo'))
+        self.assertRaises(TypeError, lambda: _coerce_channel_mapping(object()))
+        self.assertRaises(TypeError, lambda: _coerce_channel_mapping([object()]))
+        self.assertRaises(TypeError, lambda: _coerce_channel_mapping([[0], [object()]]))
+    
+    def test_bad_size(self):
+        self.assertRaises(TypeError, lambda: _coerce_channel_mapping(0))
+        self.assertRaises(TypeError, lambda: _coerce_channel_mapping([]))
+        self.assertRaises(TypeError, lambda: _coerce_channel_mapping([[]]))
+        self.assertRaises(TypeError, lambda: _coerce_channel_mapping([[], []]))
+        self.assertRaises(TypeError, lambda: _coerce_channel_mapping([[1, 2], []]))
+        self.assertRaises(TypeError, lambda: _coerce_channel_mapping([[1], [2, 3]]))
 
 
 class TestFrequencyShift(DeviceTestCase):

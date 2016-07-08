@@ -1,4 +1,5 @@
-# Copyright 2014, 2015 Kevin Reid <kpreid@switchb.org>
+# -*- coding: utf-8 -*-
+# Copyright 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -356,11 +357,12 @@ def AudioDevice(
         tx_device=None,
         name=None,
         sample_rate=44100,
-        quadrature_as_stereo=False):
+        channel_mapping=None):
     rx_device = str(rx_device)
     if tx_device is not None:
         tx_device = str(tx_device)
-        
+    channel_mapping = _coerce_channel_mapping(channel_mapping)
+    
     if name is None:
         full_name = u'Audio ' + rx_device
         if tx_device is not None:
@@ -371,12 +373,12 @@ def AudioDevice(
     rx_driver = _AudioRXDriver(
         device_name=rx_device,
         sample_rate=sample_rate,
-        quadrature_as_stereo=quadrature_as_stereo)
+        channel_mapping=channel_mapping)
     if tx_device is not None:
         tx_driver = _AudioTXDriver(
             device_name=tx_device,
             sample_rate=sample_rate,
-            quadrature_as_stereo=quadrature_as_stereo)
+            channel_mapping=channel_mapping)
     else:
         tx_driver = nullExportedState
     
@@ -393,6 +395,35 @@ def AudioDevice(
 
 
 __all__.append('AudioDevice')
+
+
+def _coerce_channel_mapping(channel_mapping):
+    if channel_mapping is None:  # Not documented value, just default.
+        return _coerce_channel_mapping('IQ')
+    elif isinstance(channel_mapping, int):
+        if channel_mapping <= 0:
+            raise TypeError('AudioDevice: channel_mapping channel number must be greater than 0, but was %r' % (channel_mapping,))
+        return [[int(i == channel_mapping - 1) for i in xrange(0, channel_mapping)]]
+    elif channel_mapping == 'IQ':
+        return [[1, 0], [0, 1]]
+    elif channel_mapping == 'QI':
+        return [[0, 1], [1, 0]]
+    elif isinstance(channel_mapping, tuple) or isinstance(channel_mapping, list):
+        if not 1 <= len(channel_mapping) <= 2:
+            raise TypeError('AudioDevice: len(channel_mapping) must be 1 or 2 but was %r' % (len(channel_mapping),))
+        for i, row in enumerate(channel_mapping):
+            if not (isinstance(row, tuple) or isinstance(row, list)):
+                raise TypeError('AudioDevice: channel_mapping[%r] must be a list of input channel gains' % (i,))
+            for j, elem in enumerate(row):
+                if not (isinstance(elem, float) or isinstance(elem, int)):
+                    raise TypeError('AudioDevice: channel_mapping[%r][%r] must be a numeric gain value' % (i, j))
+        if len(channel_mapping) == 2 and len(channel_mapping[0]) != len(channel_mapping[1]):
+            raise TypeError('AudioDevice: channel_mapping must have the same number of input channels in each row but had %d and %d' % (len(channel_mapping[0]), len(channel_mapping[1])))
+        if len(channel_mapping[0]) == 0:
+            raise TypeError('AudioDevice: channel_mapping must specify at least one input channel')
+        return channel_mapping
+    else:
+        raise TypeError('AudioDevice: channel_mapping parameter must be a channel number, "IQ", "QI", or a 2×N list-of-lists matrix, but was %r' % (channel_mapping,))
 
 
 def find_audio_rx_names():
@@ -413,12 +444,11 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
     def __init__(self,
             device_name,
             sample_rate,
-            quadrature_as_stereo):
+            channel_mapping):
         self.__device_name = device_name
         self.__sample_rate = sample_rate
-        self.__quadrature_as_stereo = quadrature_as_stereo
         
-        if self.__quadrature_as_stereo:
+        if len(channel_mapping) == 2:
             self.__signal_type = SignalType(
                 kind='IQ',
                 sample_rate=self.__sample_rate)
@@ -441,12 +471,13 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
             device_name=self.__device_name,
             ok_to_block=True)
         
+        channel_matrix = blocks.multiply_matrix_ff(channel_mapping)
         combine = blocks.float_to_complex(1)
-        self.connect(self.__source, combine, self)
-        if self.__quadrature_as_stereo:
-            # if we don't do this, the imaginary component is 0 and the spectrum is symmetric
-            self.connect((self.__source, 1), (combine, 1))
-        # TODO: If not quadrature, we always discard the right channel. Is there a use for it? Would summing mono input reduce noise?
+        for i in xrange(0, len(channel_mapping[0])):
+            self.connect((self.__source, i), (channel_matrix, i))
+        for i in xrange(0, len(channel_mapping)):
+            self.connect((channel_matrix, i), (combine, i))
+        self.connect(combine, self)
     
     # implement IRXDriver
     @exported_value(type=SignalType)
@@ -478,14 +509,13 @@ class _AudioTXDriver(ExportedState, gr.hier_block2):
     def __init__(self,
             device_name,
             sample_rate,
-            quadrature_as_stereo):
+            channel_mapping):
         self.__device_name = device_name
         self.__sample_rate = sample_rate
-        self.__quadrature_as_stereo = quadrature_as_stereo
         
         self.__signal_type = SignalType(
             # TODO: type should be able to be LSB
-            kind='IQ' if quadrature_as_stereo else 'USB',
+            kind='IQ' if len(channel_mapping) == 2 else 'USB',
             sample_rate=self.__sample_rate)
         
         gr.hier_block2.__init__(
@@ -499,6 +529,7 @@ class _AudioTXDriver(ExportedState, gr.hier_block2):
             device_name=self.__device_name,
             ok_to_block=True)
         
+        # TODO: ignoring channel_mapping parameter, shouldn't be
         split = blocks.complex_to_float(1)
         self.connect(self, split, (sink, 0))
         self.connect((split, 1), (sink, 1))

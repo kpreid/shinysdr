@@ -262,31 +262,31 @@ extendedKeyUsage=critical,serverAuth</pre></blockquote>
 
 <p>These are the device types which are available in ShinySDR or the bundled plugins.</p>
 
-<dl>
+<dl class="major-dl">
 
-<dt><code>shinysdr.devices.AudioDevice(rx_device='...', tx_device='...', name='...', sample_rate=44100, quadrature_as_stereo=False)</code></dt>
+<dt><code>shinysdr.devices.AudioDevice(rx_device='...', tx_device='...', name='...', sample_rate=44100, channel_mapping='IQ')</code></dt>
 <dd>
   <p>An system audio input (&ldquo;sound card&rdquo;) device.</p>
   
   <p>There are two basic use cases for this device, depending on what the sound card is connected to:</p>
   <ul>
     <li>
-      <p>A SDR receiver device which uses a standard sound card (possibly built into the SDR unit) for the analog-to-digital conversion.
-      The <code>quadrature_as_stereo</code> option should be set to <code>True</code>. Example:</p>
+      <p>A SDR receiver device which uses a standard sound card (possibly built into the SDR unit) for the analog-to-digital conversion of a baseband I/Q signal.
+      The <code>channel_mapping</code> option should be set to <code>'IQ'</code> (or <code>'QI'</code> to swap the channels if needed; see below for details). Example:</p>
       <pre>from shinysdr.devices import AudioDevice
 config.devices.add(u'fcd', AudioDevice(
   rx_device='Built-in Input',
   sample_rate=192000,
-  quadrature_as_stereo=True))</pre>
+  channel_mapping='IQ'))</pre>
       </li>
     <li>
       <p>A single-sideband receiver.
-      The <code>quadrature_as_stereo</code> option should be set to <code>False</code>, an the receiver should be in upper-sideband (USB) mode, not lower. Example:</p>
+      The <code>channel_mapping</code> option should be set to <code>1</code>, and the receiver should be in upper sideband (USB) mode, not lower sideband. Example:</p>
       <pre>from shinysdr.devices import AudioDevice
 config.devices.add(u'rig', AudioDevice(
-  rx_device='USB Audio CODEC ',  # this is how the Yaesu SCU-17 shows up on a Mac
+  rx_device='USB Audio CODEC ',  # this is how the Yaesu SCU-17 shows up on a Mac, for example
   sample_rate=8000,
-  quadrature_as_stereo=False))</pre>
+  channel_mapping=1))</pre>
     </li>
     <li>If you wish to use a microphone as an input, any settings will work and I encourage you to play with them. But in this case, you might also be interested in the <a href="/tools/audio-fft">standalone audio FFT</a>, which uses audio input directly in the browser and therefore has lower latency.</li>
   </ul>
@@ -302,6 +302,15 @@ config.devices.add(u'rig', AudioDevice(
   It defaults to being named after <code>rx_device</code>.</p>
 
   <p><code>sample_rate</code> is optional, defaults to 44100, must be an integer, and specifies the sample rate to request.</p>
+
+  <p><code>channel_mapping</code> is optional and defaults to <code>'IQ'</code>. It specifies how the audio input device's channels should be interpreted. The value may be:</p>
+  
+  <ul>
+    <li>An integer, to use a single input channel (1 = left, 2 = right).
+    <li>'IQ', for quadrature using the first channel as real and the second channel as imaginary.
+    <li>'QI', for quadrature using the second channel as real and the first channel as imaginary.
+    <li>A list of lists specifying a 2 × <var>N</var> matrix where the two rows correspond <var>I</var> and <var>Q</var> and the columns correspond to the audio device's input channels. For example, <code>[[1, 0.1], [0, 0.9]]</code> leaks some of the second channel into <var>I</var> and scales <var>Q</var> down slightly. This can be used to set an arbitrary channel mapping or to compensate for magnitude and phase errors in the analog input.
+  </ul>
 </dd>
 
 <dt><code>shinysdr.plugins.simulate.SimulatedDevice(name='Simulated RF')</code></dt>
@@ -344,7 +353,7 @@ config.devices.add(u'rtl', OsmoSDRSource('rtl=0', correction_ppm=-52))</pre>
 
 <h2 id="special">Available special-purpose devices</h2>
 
-<dl>
+<dl class="major-dl">
 
 <dt><code>shinysdr.devices.FrequencyShift(<var>shift</var>)</code></dt>
 <dd>
@@ -392,7 +401,7 @@ d = hamlib.connect_to_rig(config.reactor,
 d.addCallback(lambda rig: config.devices.add('rig',
     rig,
     shinysdr.devices.AudioDevice(
-        'USB Audio CODEC ', sample_rate=8000, quadrature_as_stereo=False)))
+        'USB Audio CODEC ', sample_rate=8000, channel_mapping=1)))
 config.wait_for(d)</pre>
 
   <p>This configuration example also demonstrates merging in an audio device, so that ShinySDR can match the input audio signal with the the VFO frequency, allowing display of an appropriate frequency scale and use of the frequency database.</p>
