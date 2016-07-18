@@ -27,7 +27,7 @@ define(['./values', './events', './network', './widget', './widgets'], function 
   
   var exports = {};
   
-  function run(url) {
+  function run(stateUrl) {
     var scheduler = new events.Scheduler();
     
     var context = new widget.Context({
@@ -35,7 +35,7 @@ define(['./values', './events', './network', './widget', './widgets'], function 
       scheduler: scheduler
     });
     
-    var remoteCell = network.connect(network.convertToWebSocketURL(url));
+    var remoteCell = network.connect(stateUrl);
     
     function connected() {
       widget.createWidgets(remoteCell, context, document);

@@ -99,5 +99,16 @@
   </div>
 </shinysdr-subwindow>
 
-<script src="/client/require.js" data-main="/client/main.js"></script>
+<script src="/client/require.js"></script>
+<script>
+  'use strict';
+  requirejs.config({
+    baseUrl: "/client",
+  });
+  requirejs(['main'], function (main) {
+    main(
+      <t:transparent t:render='quoted_state_url'/>,
+      <t:transparent t:render='quoted_audio_url'/>);
+  });
+</script>
 </body></html>

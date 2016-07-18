@@ -112,10 +112,9 @@ class _SlashedResource(Resource):
 class CellResource(Resource):
     isLeaf = True
 
-    def __init__(self, cell, noteDirty):
+    def __init__(self, cell, wcommon):
         self._cell = cell
-        # TODO: instead of needing this hook, main should use poller
-        self._noteDirty = noteDirty
+        self.__note_dirty = wcommon.note_dirty
 
     def grparse(self, value):
         raise NotImplementedError()
@@ -130,7 +129,7 @@ class CellResource(Resource):
         data = request.content.read()
         self._cell.set(self.grparse(data))
         request.setResponseCode(204)
-        self._noteDirty()
+        self.__note_dirty()
         return ''
     
     def resourceDescription(self):
@@ -138,8 +137,8 @@ class CellResource(Resource):
 
 
 class ValueCellResource(CellResource):
-    def __init__(self, cell, noteDirty):
-        CellResource.__init__(self, cell, noteDirty)
+    def __init__(self, cell, wcommon):
+        CellResource.__init__(self, cell, wcommon)
 
     def grparse(self, value):
         return json.loads(value)
@@ -155,10 +154,10 @@ def not_deletable():
 class BlockResource(Resource):
     isLeaf = False
 
-    def __init__(self, block, noteDirty, deleteSelf):
+    def __init__(self, block, wcommon, deleteSelf):
         Resource.__init__(self)
         self._block = block
-        self._noteDirty = noteDirty
+        self.__wcommon = wcommon
         self._deleteSelf = deleteSelf
         self._dynamic = block.state_is_dynamic()
         # Weak dict ensures that we don't hold references to blocks that are no longer held by this block
@@ -169,8 +168,8 @@ class BlockResource(Resource):
                 if cell.isBlock():
                     self._blockCells[key] = cell
                 else:
-                    self.putChild(key, ValueCellResource(cell, self._noteDirty))
-        self.__element = _BlockHtmlElement()
+                    self.putChild(key, ValueCellResource(cell, self.__wcommon))
+        self.__element = _BlockHtmlElement(wcommon)
     
     def getChild(self, name, request):
         if self._dynamic:
@@ -197,7 +196,7 @@ class BlockResource(Resource):
             if not IWritableCollection.providedBy(self._block):
                 raise Exception('Block is not a writable collection')
             self._block.delete_child(name)
-        return BlockResource(block, self._noteDirty, deleter)
+        return BlockResource(block, self.__wcommon, deleter)
     
     def render_GET(self, request):
         accept = request.getHeader('Accept')
@@ -216,7 +215,7 @@ class BlockResource(Resource):
         assert request.getHeader('Content-Type') == 'application/json'
         reqjson = json.load(request.content)
         key = block.create_child(reqjson)  # note may fail
-        self._noteDirty()
+        self.__wcommon.note_dirty()
         url = request.prePathURL() + '/receivers/' + urllib.quote(key, safe='')
         request.setResponseCode(201)  # Created
         request.setHeader('Location', url)
@@ -225,7 +224,7 @@ class BlockResource(Resource):
     
     def render_DELETE(self, request):
         self._deleteSelf()
-        self._noteDirty()
+        self.__wcommon.note_dirty()
         request.setResponseCode(204)  # No Content
         return ''
     
@@ -241,10 +240,18 @@ class _BlockHtmlElement(template.Element):
     Template element for HTML page for an arbitrary block.
     """
     loader = template.XMLFile(os.path.join(_templatePath, 'block.template.xhtml'))
-
+    
+    def __init__(self, wcommon):
+        self.__wcommon = wcommon
+    
     @template.renderer
-    def _block_url(self, request, tag):
-        return tag('/' + '/'.join([urllib.quote(x, safe='') for x in request.prepath]))
+    def title(self, request, tag):
+        return tag(request.prepath)
+    
+    @template.renderer
+    def quoted_state_url(self, request, tag):
+        return tag(json.dumps(self.__wcommon.make_websocket_url(request,
+            _prepath_escaped(request))))
 
 
 class FlowgraphVizResource(Resource):
@@ -694,17 +701,16 @@ def _reify(parent, name):
     return r
 
 
-def _strport_to_url(desc, scheme='http', path='/', socket_port=0):
+def _strport_to_url(desc, scheme='http', hostname='localhost', path='/', socket_port=0):
     """Construct a URL from a twisted.application.strports string."""
-    # TODO: need to know canonical domain name, not localhost; can we extract from the ssl cert?
     # TODO: strports.parse is deprecated
     (method, args, _) = strports.parse(desc, None)
     if socket_port == 0:
         socket_port = args[0]
     if method == 'TCP':
-        return scheme + '://localhost:' + str(socket_port) + path
+        return scheme + '://' + hostname + ':' + str(socket_port) + path
     elif method == 'SSL':
-        return scheme + 's://localhost:' + str(socket_port) + path
+        return scheme + 's://' + hostname + ':' + str(socket_port) + path
     else:
         # TODO better error return
         return '???'
@@ -713,19 +719,29 @@ def _strport_to_url(desc, scheme='http', path='/', socket_port=0):
 class _RadioIndexHtmlElement(template.Element):
     loader = template.XMLFile(os.path.join(_templatePath, 'index.template.xhtml'))
     
-    def __init__(self, title):
+    def __init__(self, wcommon, title):
+        self.__wcommon = wcommon
         self.__title = unicode(title)
     
     @template.renderer
     def title(self, request, tag):
         return tag(self.__title)
 
+    @template.renderer
+    def quoted_state_url(self, request, tag):
+        return tag(json.dumps(self.__wcommon.make_websocket_url(request, _prepath_escaped(request) + 'radio')))
+
+    @template.renderer
+    def quoted_audio_url(self, request, tag):
+        return tag(json.dumps(self.__wcommon.make_websocket_url(request, _prepath_escaped(request) + 'audio')))
+    
+
 
 class _RadioIndexHtmlResource(Resource):
     isLeaf = True
 
-    def __init__(self, title):
-        self.__element = _RadioIndexHtmlElement(title)
+    def __init__(self, wcommon, title):
+        self.__element = _RadioIndexHtmlElement(wcommon, title)
 
     def render_GET(self, request):
         return renderElement(request, self.__element)
@@ -754,6 +770,8 @@ class WebService(Service):
         self.__http_port = http_endpoint
         self.__ws_port = ws_endpoint
         
+        wcommon = WebServiceCommon(note_dirty=note_dirty, ws_endpoint=ws_endpoint)
+        
         # Roots of resource trees
         # - appRoot is everything stateful/authority-bearing
         # - serverRoot is the HTTP '/' and static resources are placed there
@@ -772,10 +790,10 @@ class WebService(Service):
         self.__ws_protocol = txws.WebSocketFactory(OurStreamFactory(ws_caps, note_dirty))
         
         # UI entry point
-        appRoot.putChild('', _RadioIndexHtmlResource(title))
+        appRoot.putChild('', _RadioIndexHtmlResource(wcommon=wcommon, title=title))
         
         # Exported radio control objects
-        appRoot.putChild('radio', BlockResource(root_object, note_dirty, not_deletable))
+        appRoot.putChild('radio', BlockResource(root_object, wcommon, not_deletable))
         
         # Frequency DB
         appRoot.putChild('dbs', shinysdr.db.DatabasesResource(read_only_dbs))
@@ -834,6 +852,7 @@ class WebService(Service):
         This method exists primarily for testing purposes."""
         port_num = self.__http_port_obj.socket.getsockname()[1]  # TODO touching implementation, report need for a better way (web_port_obj.port is 0 if specified port is 0, not actual port)
     
+        # TODO: need to know canonical domain name (_strport_to_url defaults to localhost); can we extract the information from the certificate when applicable?
         return _strport_to_url(self.__http_port, socket_port=port_num, path=self.get_host_relative_url())
 
     def announce(self, open_client):
@@ -876,3 +895,21 @@ def _add_plugin_resources(client_resource):
         u'js': load_list_js,
         u'modes': mode_table,
     }).encode('utf-8'), 'application/json'))
+
+
+class WebServiceCommon(object):
+    """Ugly collection of stuff web resources need which is not noteworthy authority."""
+    def __init__(self, note_dirty, ws_endpoint):
+        self.note_dirty = note_dirty
+        self.__ws_endpoint = ws_endpoint
+
+    def make_websocket_url(self, request, path):
+        return _strport_to_url(self.__ws_endpoint,
+            hostname=request.getRequestHostname(),
+            scheme='ws',
+            path=path)
+
+
+def _prepath_escaped(request):
+    """Like request.prePathURL() but without the scheme and hostname."""
+    return '/' + '/'.join([urllib.quote(x, safe='') for x in request.prepath])

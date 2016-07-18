@@ -208,15 +208,6 @@ define(['./values', './events'], function (values, events) {
     })
   }
   
-  // use same hostname and path as document, but WS instead of HTTP
-  function convertToWebSocketURL(path) {
-    // TODO needs to be more robust
-    var hostRelPath = /^\//.test(path) ? path : document.location.pathname.replace(/\/$/, '') + '/' + path;
-    var secure = document.location.protocol === 'http:' ? '' : 's';
-    return 'ws' + secure + '://' + document.location.hostname + ':' + (parseInt(document.location.port) + 1) + hostRelPath;
-  }
-  exports.convertToWebSocketURL = convertToWebSocketURL;
-  
   function openWebSocket(wsURL) {
     // TODO: Have server deliver websocket URL, remove port number requirement
     var ws = new WebSocket(wsURL);

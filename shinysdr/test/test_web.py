@@ -89,7 +89,15 @@ class TestWebSite(unittest.TestCase):
         
         return testutil.http_get(reactor, self.url).addCallback(callback)
     
-    def test_resource_page(self):
+    def test_resource_page_html(self):
+        # TODO: This ought to be a separate test of block-resources
+        def callback((response, data)):
+            self.assertEqual(response.code, http.OK)
+            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['text/html;charset=utf-8'])
+            self.assertIn('</html>', data)
+        return testutil.http_get(reactor, self.url + 'radio', accept='text/html').addCallback(callback)
+    
+    def test_resource_page_json(self):
         # TODO: This ought to be a separate test of block-resources
         def callback((response, data)):
             self.assertEqual(response.code, http.OK)
@@ -102,7 +110,6 @@ class TestWebSite(unittest.TestCase):
         return testutil.http_get(reactor, self.url + 'radio', accept='application/json').addCallback(callback)
     
     def test_flowgraph_page(self):
-        # TODO: This ought to be a separate test of block-resources
         def callback((response, data)):
             self.assertEqual(response.code, http.OK)
             self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['image/png'])

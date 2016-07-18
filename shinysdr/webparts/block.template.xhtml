@@ -22,7 +22,7 @@
     lang="en"
     class="subwindowed-page"><head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <title t:render="_block_url"></title>
+  <title t:render="title"></title>
   <link rel="stylesheet" href="/client/ui.css" />
   <link rel="stylesheet" href="/client/theme.css" />
   <meta name="viewport" content="width=device-width" />
@@ -30,7 +30,6 @@
 
 <div data-widget="PickBlock"></div>
 
-<script id="url-holder" type="text/plain" t:render="_block_url"></script> <!-- will not execute -->
 <script src="/client/require.js"></script>
 <script>
   'use strict';
@@ -38,7 +37,7 @@
     baseUrl: "/client",
   });
   requirejs(['block-page'], function (blockPage) {
-    blockPage.run(document.getElementById('url-holder').textContent);
+    blockPage.run(<t:transparent t:render='quoted_state_url'/>);
   });
 </script>
 </body></html>

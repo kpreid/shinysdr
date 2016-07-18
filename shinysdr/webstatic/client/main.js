@@ -58,26 +58,28 @@ define(['values', 'events', 'coordination', 'database', 'network', 'map-core', '
   var clientState = new coordination.ClientStateObject(clientStateStorage, databasePicker);
   var clientBlockCell = new ConstantCell(block, clientState);
   
-  log(0.4, 'Loading plugins…');
-  plugins.loadCSS();
-  requirejs(plugins.getJSModuleIds(), function (plugins) {
-    connectRadio();
-  }, function (err) {
-    log(0, 'Failed to load plugins.\n  ' + err.requireModules + '\n  ' + err.requireType);
-    // TODO: There's no reason we can't continue without the plugin. The problem is that right now there's no good way to report the failure, and silent failures are bad.
-  });
+  function main(stateUrl, audioUrl) {
+    log(0.4, 'Loading plugins…');
+    plugins.loadCSS();
+    requirejs(plugins.getJSModuleIds(), function (plugins) {
+      connectRadio(stateUrl, audioUrl);
+    }, function (err) {
+      log(0, 'Failed to load plugins.\n  ' + err.requireModules + '\n  ' + err.requireType);
+      // TODO: There's no reason we can't continue without the plugin. The problem is that right now there's no good way to report the failure, and silent failures are bad.
+    });
+  }
   
-  function connectRadio() {
+  function connectRadio(stateUrl, audioUrl) {
     log(0.5, 'Connecting to server…');
     var firstConnection = true;
     var firstFailure = true;
     initialStateReady.scheduler = scheduler;
-    var remoteCell = network.connect(network.convertToWebSocketURL('radio'), connectionCallback);
+    var remoteCell = network.connect(stateUrl, connectionCallback);
     remoteCell.n.listen(initialStateReady);
     
     var coordinator = new Coordinator(scheduler, freqDB, remoteCell);
     
-    var audioState = audio.connectAudio(network.convertToWebSocketURL('audio'));  // TODO get url from server
+    var audioState = audio.connectAudio(audioUrl);
 
     function connectionCallback(state) {
       switch (state) {
@@ -151,4 +153,6 @@ define(['values', 'events', 'coordination', 'database', 'network', 'map-core', '
       }
     }
   }
+  
+  return main;
 });
