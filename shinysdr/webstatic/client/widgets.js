@@ -356,7 +356,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
   var ComponentSet = BlockSet(PickBlock, blockSetNoHeader);
   
   // Widget for a RX driver block -- TODO break this stuff up
-  function RXDriver(config) {
+  function RXDriverWidget(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       // If we have multiple gain-related controls, do a combined UI
       // TODO: Better feature-testing strategy
@@ -433,8 +433,14 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
       ignore('output_type');
     }, true);
   }
-  widgets.RXDriver = RXDriver;
-  widgets['interface:shinysdr.devices.IRXDriver'] = RXDriver;
+  widgets['interface:shinysdr.devices.IRXDriver'] = RXDriverWidget;
+  
+  function TXDriverWidget(config) {
+    Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
+      ignore('input_type');  // TODO this should be handled by server-defined metadata
+    }, true);
+  }
+  widgets['interface:shinysdr.devices.ITXDriver'] = TXDriverWidget;
   
   // Widget for a receiver block
   function Receiver(config) {
