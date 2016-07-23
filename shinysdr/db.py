@@ -198,7 +198,8 @@ class _DbIndexResource(resource.Resource):
 
         dbdict = self.__database.records
         rkey = _LOWEST_RKEY
-        while rkey in dbdict: rkey += 1
+        while rkey in dbdict:
+            rkey += 1
         dbdict[rkey] = record
         self.__database.dirty()  # TODO: There is no test that this is done.
         self.__instantiate(rkey)
@@ -324,7 +325,7 @@ def normalize_record(record):
         record = dict(record)
         record[u'lowerFreq'] = record[u'upperFreq'] = float(record[u'freq'])
         del record[u'freq']
-    for k, v in record.iteritems():
+    for k in record:
         if k not in _json_columns:
             raise ValueError('record contains unknown key %r' % (k,))
     for k, (column_type, default) in _json_columns.iteritems():

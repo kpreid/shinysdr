@@ -160,8 +160,12 @@ __all__.append('geodesic_distance')
 # --- Everything below this point is internal helpers not yet chosen to be exposed.
 
 
-def _dsin(x): return sin(_RADIANS_PER_DEGREE * x)
-def _dcos(x): return cos(_RADIANS_PER_DEGREE * x)
+def _dsin(x):
+    return sin(_RADIANS_PER_DEGREE * x)
+
+
+def _dcos(x):
+    return cos(_RADIANS_PER_DEGREE * x)
 
 
 def _polar_degrees_to_cartesian_3d(latlon):
