@@ -1794,6 +1794,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
   
   function Knob(config) {
     var target = config.target;
+    var writable = 'set' in target; // TODO better type protocol
 
     var type = target.type;
     // TODO: use integer flag of Range, w decimal points?
@@ -1834,129 +1835,132 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
       }
       var digit = container.appendChild(document.createElement("span"));
       digit.className = "knob-digit";
-      digit.tabIndex = -1;
       var digitText = digit.appendChild(document.createTextNode('0'));
       places[i] = {element: digit, text: digitText};
       var scale = Math.pow(10, i);
-      function spin(direction) {
-        target.set(clamp(direction * scale + target.get(), direction));
-      }
-      digit.addEventListener("mousewheel", function(event) { // Not in FF
-        // TODO: deal with high-res/accelerated scrolling
-        spin(event.wheelDelta > 0 ? 1 : -1);
-        event.preventDefault();
-        event.stopPropagation();
-      }, true);
-      function focusNext() {
-        if (i > 0) {
-          places[i - 1].element.focus();
-        } else {
-          //digit.blur();
-        }
-      }
-      function focusPrev() {
-        if (i < places.length - 1) {
-          places[i + 1].element.focus();
-        } else {
-          //digit.blur();
-        }
-      }
-      digit.addEventListener('keydown', function(event) {
-        switch (event.keyCode) {  // nominally poorly compatible, but best we can do
-          case 0x08: // backspace
-          case 0x25: // left
-            focusPrev();
-            break;
-          case 0x27: // right
-            focusNext();
-            break;
-          case 0x26: // up
-            spin(1);
-            break;
-          case 0x28: // down
-            spin(-1);
-            break;
-          default:
-            return;
-        }
-        event.preventDefault();
-        event.stopPropagation();
-      }, true);
-      digit.addEventListener('keypress', function(event) {
-        var ch = String.fromCharCode(event.charCode);
-        var value = target.get();
+      if (writable) {
+        digit.tabIndex = -1;
         
-        switch (ch) {
-          case '-':
-          case '_':
-            target.set(-Math.abs(value));
-            return;
-          case '+':
-          case '=':
-            target.set(Math.abs(value));
-            return;
-          case 'z':
-          case 'Z':
-            // zero all digits here and to the right
-            // | 0 is used to round towards zero
-            var zeroFactor = scale * 10;
-            target.set(((value / zeroFactor) | 0) * zeroFactor);
-            return;
-          default:
-            break;
+        function spin(direction) {
+          target.set(clamp(direction * scale + target.get(), direction));
         }
-        
-        // TODO I hear there's a new 'input' event which is better for input-ish keystrokes, use that
-        var input = parseInt(ch, 10);
-        if (isNaN(input)) return;
-
-        var negative = value < 0 || (value === 0 && 1/value === -Infinity);
-        if (negative) { value = -value; }
-        var currentDigitValue;
-        if (scale === 1) {
-          // When setting last digit, clear any hidden fractional digits as well
-          currentDigitValue = (value / scale) % 10;
-        } else {
-          currentDigitValue = Math.floor(value / scale) % 10;
-        }
-        value += (input - currentDigitValue) * scale;
-        if (negative) { value = -value; }
-        target.set(clamp(value, 0));
-
-        focusNext();
-        event.preventDefault();
-        event.stopPropagation();
-      });
-      
-      // remember last place for tabbing
-      digit.addEventListener('focus', function (event) {
-        places.forEach(function (other) {
-          other.element.tabIndex = -1;
-        });
-        digit.tabIndex = 0;
-      }, false);
-      
-      // spin buttons
-      digit.style.position = 'relative';
-      [-1, 1].forEach(function (direction) {
-        var up = direction > 0;
-        var layoutShim = digit.appendChild(document.createElement('span'));
-        layoutShim.className = 'knob-spin-button-shim knob-spin-' + (up ? 'up' : 'down');
-        var button = layoutShim.appendChild(document.createElement('button'));
-        button.className = 'knob-spin-button knob-spin-' + (up ? 'up' : 'down');
-        button.textContent = up ? '+' : '-';
-        function pushListener(event) {
-          spin(direction);
+        digit.addEventListener("mousewheel", function(event) { // Not in FF
+          // TODO: deal with high-res/accelerated scrolling
+          spin(event.wheelDelta > 0 ? 1 : -1);
           event.preventDefault();
           event.stopPropagation();
+        }, true);
+        function focusNext() {
+          if (i > 0) {
+            places[i - 1].element.focus();
+          } else {
+            //digit.blur();
+          }
         }
-        // Using these events instead of click event allows the button to work despite the auto-hide-on-focus-loss, in Chrome.
-        button.addEventListener('touchstart', pushListener, false);
-        button.addEventListener('mousedown', pushListener, false);
-        //button.addEventListener('click', pushListener, false);
-        // If in the normal tab order, its appearing/disappearing causes trouble
-        button.tabIndex = -1;
-      });
+        function focusPrev() {
+          if (i < places.length - 1) {
+            places[i + 1].element.focus();
+          } else {
+            //digit.blur();
+          }
+        }
+        digit.addEventListener('keydown', function(event) {
+          switch (event.keyCode) {  // nominally poorly compatible, but best we can do
+            case 0x08: // backspace
+            case 0x25: // left
+              focusPrev();
+              break;
+            case 0x27: // right
+              focusNext();
+              break;
+            case 0x26: // up
+              spin(1);
+              break;
+            case 0x28: // down
+              spin(-1);
+              break;
+            default:
+              return;
+          }
+          event.preventDefault();
+          event.stopPropagation();
+        }, true);
+        digit.addEventListener('keypress', function(event) {
+          var ch = String.fromCharCode(event.charCode);
+          var value = target.get();
+        
+          switch (ch) {
+            case '-':
+            case '_':
+              target.set(-Math.abs(value));
+              return;
+            case '+':
+            case '=':
+              target.set(Math.abs(value));
+              return;
+            case 'z':
+            case 'Z':
+              // zero all digits here and to the right
+              // | 0 is used to round towards zero
+              var zeroFactor = scale * 10;
+              target.set(((value / zeroFactor) | 0) * zeroFactor);
+              return;
+            default:
+              break;
+          }
+          
+          // TODO I hear there's a new 'input' event which is better for input-ish keystrokes, use that
+          var input = parseInt(ch, 10);
+          if (isNaN(input)) return;
+
+          var negative = value < 0 || (value === 0 && 1/value === -Infinity);
+          if (negative) { value = -value; }
+          var currentDigitValue;
+          if (scale === 1) {
+            // When setting last digit, clear any hidden fractional digits as well
+            currentDigitValue = (value / scale) % 10;
+          } else {
+            currentDigitValue = Math.floor(value / scale) % 10;
+          }
+          value += (input - currentDigitValue) * scale;
+          if (negative) { value = -value; }
+          target.set(clamp(value, 0));
+
+          focusNext();
+          event.preventDefault();
+          event.stopPropagation();
+        });
+      
+        // remember last place for tabbing
+        digit.addEventListener('focus', function (event) {
+          places.forEach(function (other) {
+            other.element.tabIndex = -1;
+          });
+          digit.tabIndex = 0;
+        }, false);
+      
+        // spin buttons
+        digit.style.position = 'relative';
+        [-1, 1].forEach(function (direction) {
+          var up = direction > 0;
+          var layoutShim = digit.appendChild(document.createElement('span'));
+          layoutShim.className = 'knob-spin-button-shim knob-spin-' + (up ? 'up' : 'down');
+          var button = layoutShim.appendChild(document.createElement('button'));
+          button.className = 'knob-spin-button knob-spin-' + (up ? 'up' : 'down');
+          button.textContent = up ? '+' : '-';
+          function pushListener(event) {
+            spin(direction);
+            event.preventDefault();
+            event.stopPropagation();
+          }
+          // Using these events instead of click event allows the button to work despite the auto-hide-on-focus-loss, in Chrome.
+          button.addEventListener('touchstart', pushListener, false);
+          button.addEventListener('mousedown', pushListener, false);
+          //button.addEventListener('click', pushListener, false);
+          // If in the normal tab order, its appearing/disappearing causes trouble
+          button.tabIndex = -1;
+        });
+      } // if (writable)
     }(i));
     
     places[places.length - 1].element.tabIndex = 0; // initial tabbable digit
