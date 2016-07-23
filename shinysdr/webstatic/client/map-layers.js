@@ -167,7 +167,20 @@ define(['./map-core', './values', './network', './events'], function (mapCore, v
         var location = record.location;
         if (!location) return {};  // TODO use a filter on the db instead
         
-        var info = radioStateInfo.depend(dirty);
+        // Smarter update than just dirty(), so that we don't rerender on every change whether it affects us or not
+        function checkInfo() {
+          info = radioStateInfo.get();
+          if (
+            inSourceBand != (info.lower < record.freq && record.freq < info.upper) ||
+            isReceiving != info.receiving.has(record.freq)
+          ) {
+            dirty();
+          } else {
+            radioStateInfo.n.listen(checkInfo);
+          }
+        }
+        checkInfo.scheduler = scheduler;
+        var info = radioStateInfo.depend(checkInfo);
         var inSourceBand = info.lower < record.freq && record.freq < info.upper;
         var isReceiving = info.receiving.has(record.freq);
         
