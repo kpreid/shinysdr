@@ -608,12 +608,15 @@ define(['./types', './values', './events', './widget', './gltools', './database'
       // TODO this is currently disabled because its axis scaling is not exactly right, because it is outside the scrolling element and we haven't compensated for the height of the vertical scrollbar
       // var verticalScaleEl = outerElement.appendChild(document.createElement('div'));
       // createWidgetExt(context, VerticalScale, verticalScaleEl, {});
+
+      var parametersEl = outerElement.appendChild(document.createElement('div'));
+      createWidgetExt(context, MonitorDetailedOptions, parametersEl, config.target);
       
       ignore('scope');
       ignore('time_length');
       
       // TODO should logically be doing this -- need to support "widget with possibly multiple target elements"
-      //addWidget(null, MonitorParameters);
+      //addWidget(null, MonitorQuickOptions);
       ignore('signal_type');
       ignore('frame_rate');
       ignore('freq_resolution');
@@ -629,8 +632,7 @@ define(['./types', './values', './events', './widget', './gltools', './database'
   }
   widgets.Monitor = Monitor;
   
-  // Widget for incidental controls for a monitor block
-  function MonitorParameters(config) {
+  function MonitorQuickOptions(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       ignore('signal_type');
       ignore('fft');
@@ -648,7 +650,39 @@ define(['./types', './values', './events', './widget', './gltools', './database'
       ignore('time_length');
     });
   }
-  widgets.MonitorParameters = MonitorParameters;
+  widgets.MonitorQuickOptions = MonitorQuickOptions;
+
+  function MonitorDetailedOptions(config) {
+    Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
+      this.element.classList.remove('panel');
+      this.element.classList.remove('frame');
+      
+      var details = getAppend().appendChild(document.createElement('details'));
+      details.appendChild(document.createElement('summary'))
+          .appendChild(document.createTextNode('Options'));
+      setInsertion(details);
+      
+      addWidget(config.clientState.spectrum_split, LinSlider, 'Split view');
+      addWidget(config.clientState.spectrum_average, LogSlider, 'Averaging');
+      addWidget(config.clientState.spectrum_level_min, LinSlider, 'Lowest value');
+      addWidget(config.clientState.spectrum_level_max, LinSlider, 'Highest value');
+      addWidget(config.clientState.opengl, Toggle, 'Use OpenGL');
+      // TODO losing the special indent here
+      addWidget(config.clientState.opengl_float, Toggle, 'with float textures');
+
+      // handled by MonitorQuickOptions
+      ignore('paused');
+      ignore('frame_rate');
+      ignore('freq_resolution');
+      
+      // the data and metadata itself, handled by others or not to be shown at all
+      ignore('fft');
+      ignore('scope');
+      ignore('time_length');
+      ignore('signal_type');
+    });
+  }
+  widgets.MonitorDetailedOptions = MonitorDetailedOptions;
 
   // Abstract
   function CanvasSpectrumWidget(config, buildGL, build2D) {

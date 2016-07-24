@@ -50,7 +50,7 @@
 </shinysdr-subwindow>
 
 <shinysdr-subwindow id="section-spectrum" class="stretchy" visible="true">
-  <h2>Spectrum <span data-target="radio"><span data-target="monitor" data-widget="MonitorParameters"></span></span></h2>
+  <h2>Spectrum <span data-target="radio"><span data-target="monitor" data-widget="MonitorQuickOptions"></span></span></h2>
   <div id="spectrum-monitor" data-widget="Monitor" data-target="radio.monitor" data-is-rf-spectrum=""></div>
 </shinysdr-subwindow>
 
@@ -68,17 +68,6 @@
   <h2>Radio Config</h2>
   <div class="sidebar">
     <div data-widget="Top" data-target="radio" id="_radio"></div>
-    <div data-target="client">
-      <details class="panel frame" id="client-options">
-        <summary>Spectrum display options</summary><!-- TODO better label -->
-        <div data-target="opengl" data-widget="Toggle" title="Use OpenGL"></div>
-        <div class="panel">&#x00A0;&#x00A0;&#x00A0;<input type="checkbox" data-target="opengl_float" data-widget="Toggle"/> with float textures</div>
-        <div data-target="spectrum_split" data-widget="LinSlider" title="Split view"></div>
-        <div data-target="spectrum_average" data-widget="LogSlider" title="Averaging"></div>
-        <div data-target="spectrum_level_min" data-widget="LinSlider" title="Lowest value"></div>
-        <div data-target="spectrum_level_max" data-widget="LinSlider" title="Highest value"></div>
-      </details>
-    </div>
     <details class="panel frame" id="client-audio" data-widget="Block" data-target="audio">
       <summary>Audio stream</summary>
     </details>

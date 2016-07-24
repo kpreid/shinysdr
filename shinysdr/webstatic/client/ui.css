@@ -258,6 +258,24 @@ h2 input {
   height: 100%;
 }
 
+.widget-MonitorDetailedOptions {
+  display: block;
+  position: absolute;
+  box-sizing: border-box;
+  
+  /* TODO: This is similar to .map-layer-switcher, refactor so they can share */
+  right: 1em;
+  top: 1em;
+  padding: .2em;
+}
+.widget-MonitorDetailedOptions > details[open] {
+  /* TODO should in principle be in theme.css but we need a reset here */
+  background: white;
+  color: black;
+  
+  width: 16em;
+}
+
 /* map */
 .map-container {
   display: flex;
