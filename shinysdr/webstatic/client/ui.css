@@ -226,26 +226,30 @@ h2 input {
   margin-bottom: 0;
 }
 
-/* main visualizations */
-.hscalegroup {
+/* monitor widget */
+.widget-Monitor-outer {
+  display: flex;
+  flex: 1;
+  position: relative;  /* allow contents to absolute position relative to this */
+}
+.widget-Monitor-scrollable {
   flex: 1 1;
   display: flex;
   flex-direction: column;
-  height: 100%;
   overflow-x: scroll;
   overflow-y: hidden;
   min-width: 0px; /* cause Chrome 27.0.1453.116 to be willing to scroll the flex element rather than stretch; don't know whether this is a bug or what */
 }
-.hscale {
+.widget-Monitor-scrolled {
   display: flex; /* don't expect this to be _used_ but causes "height 100%" of its contents to use the computed shrunk size rather than the written one */
   flex-direction: column;
-  position: relative; /* allow contents to absolute position */
+  position: relative; /* allow contents to absolute position relative to this */
   overflow: hidden;
   width: 100%;
   flex: 100 100;
   height: 50%;
 }
-.overlay {
+.widget-Monitor-overlay {
   display: block;
   position: absolute;
   left: 0;

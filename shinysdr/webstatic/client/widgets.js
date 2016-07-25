@@ -568,20 +568,23 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
   // Widget for a monitor block
   function Monitor(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
-      var element = this.element = config.element;
-      element.classList.add('hscalegroup');
-      element.id = config.element.id;
+      var outerElement = this.element = config.element;
+      outerElement.classList.add('widget-Monitor-outer');
       
-      var overlayContainer = element.appendChild(document.createElement('div'));
-      overlayContainer.classList.add('hscale');
+      var scrollElement = outerElement.appendChild(document.createElement('div'));
+      scrollElement.classList.add('widget-Monitor-scrollable');
+      scrollElement.id = config.element.id + '-scrollable';
+      
+      var overlayContainer = scrollElement.appendChild(document.createElement('div'));
+      overlayContainer.classList.add('widget-Monitor-scrolled');
 
       // TODO: shouldn't need to have this declared, should be implied by context
       var isRFSpectrum = config.element.hasAttribute('data-is-rf-spectrum');
-      var context = config.context.withSpectrumView(element, overlayContainer, block, isRFSpectrum);
+      var context = config.context.withSpectrumView(scrollElement, overlayContainer, block, isRFSpectrum);
       
       function makeOverlayPiece(name) {
         var el = overlayContainer.appendChild(document.createElement(name));
-        el.classList.add('overlay');
+        el.classList.add('widget-Monitor-overlay');
         return el;
       }
       if (isRFSpectrum) createWidgetExt(context, ReceiverMarks, makeOverlayPiece('div'), block.fft);
@@ -1658,7 +1661,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
     var canvas = config.element;
     if (canvas.tagName !== 'CANVAS') {
       canvas = document.createElement('canvas');
-      canvas.classList.add('overlay');
+      canvas.classList.add('widget-Monitor-overlay');  // TODO over-coupling
     }
     this.element = canvas;
     
