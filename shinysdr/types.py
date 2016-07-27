@@ -98,23 +98,73 @@ class Constant(ValueType):
 
 
 class Enum(ValueType):
-    def __init__(self, values, strict=True, base_type=unicode):
-        """values: dict of {value: description}"""
-        self.__values = dict(values)  # paranoid copy
-        self.__strict = bool(strict)
-        self.__base_type = base_type
+    """An Enum type accepts any of a fixed set of values.
     
-    def values(self):
-        return self.__values
+    The values are normally Unicode strings but may be another type.
+    The values may have metadata such as description text different from the value itself.
+    """
+    def __init__(self, values, strict=True, base_type=unicode):
+        """values: dict of {value: metadata}.
+        
+        The metadata may be an EnumRow object, or a unicode string which will be used as the short description.
+        
+        If strict is False, then values not in the enum will be allowed, but they will still be coerced by base_type.
+        """
+        self.__strict = bool(strict)
+        self.__base_type = base_type = to_value_type(base_type)
+        self.__table = {
+            base_type(key): EnumRow(info, associated_key=key)
+            for key, info in values.iteritems()}
+    
+    def get_table(self):
+        return self.__table
     
     def type_to_json(self):
-        return {'type': 'enum', 'values': self.__values}
+        return {
+            'type': 'enum',
+            'table': {key: row.to_json() for key, row in self.__table.iteritems()},
+        }
     
     def __call__(self, specimen):
         specimen = self.__base_type(specimen)
-        if specimen not in self.__values and self.__strict:
+        if self.__strict and specimen not in self.__table:
             raise ValueError('Not a permitted value: ' + repr(specimen))
         return specimen
+
+
+class EnumRow(object):
+    # short_desc is always present, defaulting to key
+    # long_desc may be None
+    # sort_key is always present, defaulting to key
+    
+    # TODO this complicated init needs tests
+    def __init__(self, enum_row_or_string=None, sdesc=None, ldesc=None, sort_key=None, associated_key=None):
+        if isinstance(enum_row_or_string, EnumRow):
+            sdesc = sdesc or enum_row_or_string.__short_desc
+            ldesc = ldesc or enum_row_or_string.__long_desc
+            sort_key = sort_key or enum_row_or_string.__sort_key
+        else:
+            sdesc = sdesc or (unicode(enum_row_or_string) if enum_row_or_string else None)
+        
+        self.__short_desc = unicode(sdesc) if sdesc else (unicode(enum_row_or_string) if enum_row_or_string else associated_key)
+        self.__long_desc = unicode(ldesc) if ldesc else None
+        self.__sort_key = unicode(sort_key) if sort_key else unicode(associated_key) if associated_key is not None else associated_key
+    
+    def __cmp__(self, other):
+        if not isinstance(other, EnumRow):
+            return cmp(id(self), id(other))  # dummy
+        else:
+            return cmp(self.to_json(), other.to_json())
+    
+    def __hash__(self):
+        return hash(self.to_json())
+    
+    def to_json(self):
+        return {
+            u'short_desc': self.__short_desc,
+            u'long_desc': self.__long_desc,
+            u'sort_key': self.__sort_key
+        }
 
 
 class Range(ValueType):

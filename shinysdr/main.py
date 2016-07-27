@@ -157,7 +157,7 @@ def app_defaults(app):
     
     # TODO: fix fragility of assumptions
     top = app.get_receive_flowgraph()
-    sources = top.state()['source_name'].type().values()
+    sources = top.state()['source_name'].type().get_table()
     restricted = dict(sources)
     if 'audio' in restricted: del restricted['audio']  # typically not RF
     if 'sim' in restricted: del restricted['sim']  # would prefer the real thing

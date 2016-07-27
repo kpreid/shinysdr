@@ -18,8 +18,12 @@
 'use strict';
 
 describe('widgets', function () {
+  var types = shinysdr.types;
+  var widgets = shinysdr.widgets;
+  
   var ClientStateObject = shinysdr.coordination.ClientStateObject;
   var ConstantCell = shinysdr.values.ConstantCell;
+  var LocalCell = shinysdr.values.LocalCell;
   var makeBlock = shinysdr.values.makeBlock;
   
   var scheduler, widget;
@@ -83,8 +87,8 @@ describe('widgets', function () {
   
   describe('Knob', function () {
     it('should hold a negative zero', function () {
-      var cell = new shinysdr.values.LocalCell(shinysdr.types.any, 0);
-      widget = new shinysdr.widgets.Knob(mockWidgetConfig(null, cell));
+      var cell = new LocalCell(types.any, 0);
+      widget = new widgets.Knob(mockWidgetConfig(null, cell));
       
       document.body.appendChild(widget.element);
       
@@ -105,17 +109,17 @@ describe('widgets', function () {
   describe('ScopePlot', function () {
     it('should be successfully created', function () {
       // stub test to exercise the code because it's currently not in the default ui. Should have more tests.
-      var cell = new shinysdr.values.LocalCell(shinysdr.types.any, [{freq:0, rate:1}, []]);
+      var cell = new LocalCell(types.any, [{freq:0, rate:1}, []]);
       cell.subscribe = function() {} // TODO implement
-      widget = new shinysdr.widgets.ScopePlot(mockWidgetConfig(null, cell));
+      widget = new widgets.ScopePlot(mockWidgetConfig(null, cell));
     });
   });
   
   describe('PickBlock', function () {
     it('should default to Block', function () {
-      var cell = new shinysdr.values.LocalCell(shinysdr.types.block, shinysdr.values.makeBlock({}));
-      widget = new shinysdr.widgets.PickBlock(mockWidgetConfig(null, cell));
-      expect(Object.getPrototypeOf(widget)).toBe(shinysdr.widgets.Block.prototype);
+      var cell = new LocalCell(types.block, shinysdr.values.makeBlock({}));
+      widget = new widgets.PickBlock(mockWidgetConfig(null, cell));
+      expect(Object.getPrototypeOf(widget)).toBe(widgets.Block.prototype);
     });
     
     it('should match on interfaces', function () {
@@ -123,13 +127,27 @@ describe('widgets', function () {
         this.element = config.element;
       }
 
-      var cell = new shinysdr.values.LocalCell(shinysdr.types.block, shinysdr.values.makeBlock({
+      var cell = new LocalCell(types.block, shinysdr.values.makeBlock({
         _implements_Foo: true
       }));
       var config = mockWidgetConfig(null, cell);
       config.context.widgets['interface:Foo'] = TestWidget;
-      widget = new shinysdr.widgets.PickBlock(config);
+      widget = new widgets.PickBlock(config);
       expect(Object.getPrototypeOf(widget)).toBe(TestWidget.prototype);
+    });
+  });
+  
+  describe('Radio', function () {
+    it('should use the metadata', function () {
+      var cell = new LocalCell(new types.Enum({
+        'a': {'short_desc': 'A', 'long_desc': 'ALPHA', 'sort_key': '3'},
+        'b': {'short_desc': 'B', 'long_desc': 'BETA', 'sort_key': '2'},
+        'c': {'short_desc': 'C', 'long_desc': 'GAMMA', 'sort_key': '1'}
+      }), 'a');
+      widget = new widgets.Radio(mockWidgetConfig(null, cell));
+      document.body.appendChild(widget.element);
+      expect(widget.element.textContent).toBe('CBA');
+      expect(widget.element.querySelector('label').title).toBe('GAMMA');
     });
   });
   
@@ -137,15 +155,15 @@ describe('widgets', function () {
   describe('GeoMap', function () {
     function makeStubTarget() {
       // TODO stop needing this boilerplate, somehow.
-      return new ConstantCell(shinysdr.types.block, makeBlock({
-        source: new ConstantCell(shinysdr.types.block, makeBlock({
+      return new ConstantCell(types.block, makeBlock({
+        source: new ConstantCell(types.block, makeBlock({
           freq: new ConstantCell(Number, 0),
-          rx_driver: new ConstantCell(shinysdr.types.block, makeBlock({
-            output_type: new ConstantCell(shinysdr.types.any, {sample_rate: 1})
+          rx_driver: new ConstantCell(types.block, makeBlock({
+            output_type: new ConstantCell(types.any, {sample_rate: 1})
           })),
-          components: new ConstantCell(shinysdr.types.block, makeBlock({}))
+          components: new ConstantCell(types.block, makeBlock({}))
         })),
-        receivers: new ConstantCell(shinysdr.types.block, makeBlock({
+        receivers: new ConstantCell(types.block, makeBlock({
         }))
       }));
     }

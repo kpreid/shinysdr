@@ -28,15 +28,33 @@ define([], function () {
   };
   exports.Constant = Constant;
   
-  function Enum(valuesIn) {
-    var values = Object.create(null);
-    for (var k in valuesIn) {
-      values[k] = String(valuesIn[k]);
+  function Enum(tableIn) {
+    var table = Object.create(null);
+    for (var k in tableIn) {
+      var row = tableIn[k];
+      switch (typeof row) {
+        case 'string':
+          table[k] = {
+            short_desc: row,
+            long_desc: null,
+            sort_key: k
+          };
+          break;
+        case 'object':
+          table[k] = row;
+          break;
+        default:
+          throw new TypeError('enum row not string or EnumRow: ' + row);
+      }
     }
-    this.values = Object.freeze(values);
+    this._table = Object.freeze(table);
+    Object.freeze(this);
+  }
+  Enum.prototype.getTable = function () {
+    return this._table;
   }
   Enum.prototype.isSingleValued = function () {
-    return Object.keys(this.values).length <= 1;
+    return Object.keys(this._table).length <= 1;
   };
   exports.Enum = Enum;
 
@@ -144,7 +162,7 @@ define([], function () {
           case 'constant':
             return new Constant(desc.value);
           case 'enum':
-            return new Enum(desc.values);
+            return new Enum(desc.table);
           case 'range':
             return new Range(desc.subranges, desc.logarithmic, desc.integer);
           case 'notice':

@@ -20,6 +20,35 @@
 describe('types', function () {
   var types = shinysdr.types;
   
+  describe('Enum', function () {
+    var Enum = types.Enum;
+    
+    it('reports isSingleValued correctly', function () {
+      expect(new Enum({'a': 'aa', 'b': 'bb'}).isSingleValued()).toBe(false);
+      expect(new Enum({'a': 'aa'}).isSingleValued()).toBe(true);
+    });
+    
+    it('preserves metadata', function () {
+      expect(new Enum({'a': {
+        'short_desc': 'b',
+        'long_desc': 'c',
+        'sort_key': 'd'
+      }}).getTable()['a']).toEqual({
+        'short_desc': 'b',
+        'long_desc': 'c',
+        'sort_key': 'd'
+      });
+    });
+    
+    it('expands metadata', function () {
+      expect(new Enum({'a': 'b'}).getTable()['a']).toEqual({
+        'short_desc': 'b',
+        'long_desc': null,
+        'sort_key': 'a'
+      });
+    });
+  });
+  
   describe('Range', function () {
     var Range = types.Range;
     function frange(subranges) {

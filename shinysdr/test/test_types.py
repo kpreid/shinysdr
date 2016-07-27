@@ -19,7 +19,7 @@ from __future__ import absolute_import, division
 
 from twisted.trial import unittest
 
-from shinysdr.types import Constant, Enum, Range
+from shinysdr.types import Constant, Enum, EnumRow, Range
 
 
 def _testType(self, type_obj, good, bad):
@@ -67,6 +67,39 @@ class TestEnum(unittest.TestCase):
             Enum({u'a': u'a', u'b': u'b'}, strict=False),
             [(u'a', u'a'), ('a', u'a'), u'c', (999, u'999')],
             [])
+    
+    def test_values(self):
+        enum = Enum({u'a': u'adesc'})
+        self.assertEquals(enum.get_table(),
+            {u'a': EnumRow(u'adesc', associated_key=u'a')})
+    
+    def test_metadata_simple(self):
+        self.assertEquals(self.__row(u'desc').to_json(),
+            {
+                u'short_desc': u'desc',
+                u'long_desc': None,
+                u'sort_key': u'key',
+            })
+    
+    def test_metadata_partial(self):
+        self.assertEquals(self.__row(EnumRow(sdesc='a')).to_json(),
+            {
+                u'short_desc': u'a',
+                u'long_desc': None,
+                u'sort_key': u'key',
+            })
+    
+    def test_metadata_explicit(self):
+        self.assertEquals(self.__row(EnumRow(sdesc='a', ldesc='b', sort_key='c')).to_json(),
+            {
+                u'short_desc': u'a',
+                u'long_desc': u'b',
+                u'sort_key': u'c',
+            })
+    
+    def __row(self, row):
+        return Enum({u'key': row}).get_table()[u'key']
+
 
 class TestRange(unittest.TestCase):
     longMessage = True

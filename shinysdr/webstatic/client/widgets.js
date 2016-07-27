@@ -3070,11 +3070,17 @@ define(['./types', './values', './events', './widget', './gltools', './database'
     });
 
     if (type) {
-      var array = Object.keys(target.type.values || {});
-      array.sort();
+      var table = type.getTable();
+      var array = Object.keys(table);
+      array.sort(function (a, b) {
+        var aKey = table[a].sort_key;
+        var bKey = table[b].sort_key;
+        return aKey < bKey ? -1 : aKey > bKey ? 1 : 0;
+      });
       array.forEach(function (value) {
+        var metadataRow = table[value];
         if (seen[value]) return;
-        var element = createElement(type.values[value]);
+        var element = createElement(metadataRow.short_desc, metadataRow.long_desc);
         element.value = value;
       });
     }
@@ -3096,9 +3102,12 @@ define(['./types', './values', './events', './widget', './gltools', './database'
         return container.appendChild(document.createElement('select'));
       },
       function initSelect(select, target) {
-        initEnumElements(select, 'option', target, function createOption(name) {
+        initEnumElements(select, 'option', target, function createOption(name, longDesc) {
           var option = select.appendChild(document.createElement('option'));
           option.appendChild(document.createTextNode(name));
+          if (longDesc !== null) {
+            option.title = longDesc;  // TODO: This probably isn't visible.
+          }
           return option;
         })
 
@@ -3118,11 +3127,14 @@ define(['./types', './values', './events', './widget', './gltools', './database'
     var container = this.element = config.element;
     container.classList.add('panel');
 
-    initEnumElements(container, 'input[type=radio]', target, function createRadio(name) {
+    initEnumElements(container, 'input[type=radio]', target, function createRadio(name, longDesc) {
       var label = container.appendChild(document.createElement('label'));
       var rb = label.appendChild(document.createElement('input'));
       var textEl = label.appendChild(document.createElement('span'));  // styling hook
       textEl.textContent = name;
+      if (longDesc !== null) {
+        label.title = longDesc;
+      }
       rb.type = 'radio';
       if (!target.set) rb.disabled = true;
       return rb;
