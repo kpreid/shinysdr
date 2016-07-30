@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./events', './network', './values'], function (events, network, values) {
+define(['./events', './network', './types', './values'], function (events, network, types, values) {
   'use strict';
   
   var AddKeepDrop = events.AddKeepDrop;
@@ -23,7 +23,7 @@ define(['./events', './network', './values'], function (events, network, values)
   var Neverfier = events.Neverfier;
   var Notifier = events.Notifier;
   var StorageCell = values.StorageCell;
-  var any = values.any;
+  var any = types.any;
   var externalGet = network.externalGet;
   var statusCategory = network.statusCategory;
   var xhrpost = network.xhrpost;

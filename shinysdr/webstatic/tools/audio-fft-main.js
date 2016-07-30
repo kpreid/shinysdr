@@ -19,7 +19,7 @@
 require.config({
   baseUrl: '/client/'
 });
-define(['values', 'events', 'widget', 'widgets', 'network', 'database', 'coordination'], function (values, events, widget, widgets, network, database, coordination) {
+define(['types', 'values', 'events', 'widget', 'widgets', 'network', 'database', 'coordination'], function (types, values, events, widget, widgets, network, database, coordination) {
   'use strict';
   
   var ClientStateObject = coordination.ClientStateObject;
@@ -48,17 +48,17 @@ define(['values', 'events', 'widget', 'widgets', 'network', 'database', 'coordin
   });
   
   
-  var fftcell = new network.BulkDataCell('<dummy spectrum>', new values.BulkDataType('dff', 'b'));
-  var root = new ConstantCell(values.block, makeBlock({
-    source: new ConstantCell(values.block, makeBlock({
+  var fftcell = new network.BulkDataCell('<dummy spectrum>', new types.BulkDataType('dff', 'b'));
+  var root = new ConstantCell(types.block, makeBlock({
+    source: new ConstantCell(types.block, makeBlock({
       freq: new ConstantCell(Number, 0),
     })),
-    receivers: new ConstantCell(values.block, makeBlock({})),
+    receivers: new ConstantCell(types.block, makeBlock({})),
     //input_rate: new ConstantCell(Number, sampleRate),
-    monitor: new ConstantCell(values.block, makeBlock({
+    monitor: new ConstantCell(types.block, makeBlock({
       fft: fftcell,
       freq_resolution: new ConstantCell(Number, binCount),
-      signal_type: new ConstantCell(values.any, {kind: 'USB', sample_rate: sampleRate})
+      signal_type: new ConstantCell(types.any, {kind: 'USB', sample_rate: sampleRate})
     }))
   }));
   

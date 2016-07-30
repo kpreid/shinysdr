@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./values', './events', './widget', './gltools', './database', './menus', './plugins'], function (values, events, widget, gltools, database, menus, plugins) {
+define(['./types', './values', './events', './widget', './gltools', './database', './menus', './plugins'], function (types, values, events, widget, gltools, database, menus, plugins) {
   'use strict';
   
   var Cell = values.Cell;
@@ -23,14 +23,14 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
   var CommandCell = values.CommandCell;
   var ConstantCell = values.ConstantCell;
   var DerivedCell = values.DerivedCell;
-  var Enum = values.Enum;
+  var Enum = types.Enum;
   var LocalCell = values.LocalCell;
   var Menu = menus.Menu;
-  var Notice = values.Notice;
-  var Range = values.Range;
+  var Notice = types.Notice;
+  var Range = types.Range;
   var SingleQuad = gltools.SingleQuad;
-  var Timestamp = values.Timestamp;
-  var Track = values.Track;
+  var Timestamp = types.Timestamp;
+  var Track = types.Track;
   var Union = database.Union;
   var addLifecycleListener = widget.addLifecycleListener;
   var alwaysCreateReceiverFromEvent = widget.alwaysCreateReceiverFromEvent;
@@ -91,7 +91,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
           wEl.id = config.idPrefix + name;
         }
       } else {
-        targetCell = new ConstantCell(values.block, block);
+        targetCell = new ConstantCell(types.block, block);
       }
       
       if (optBoxLabel !== undefined) {
@@ -160,7 +160,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
           addWidget(name, TimestampWidget, name);
         } else if (member instanceof CommandCell) {
           addWidget(name, CommandButton, name);
-        } else if (member.type === values.block) {  // TODO colliding name
+        } else if (member.type === types.block) {  // TODO colliding name
           // TODO: Add hook to choose a widget class based on interfaces
           // Furthermore, use that for the specific block widget classes too, rather than each one knowing the types of its sub-widgets.
           addWidget(name, PickBlock);
@@ -183,7 +183,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
     var targetCell = config.target;
     var context = config.context;
     
-    var ctorCell = new DerivedCell(values.block, config.scheduler, function (dirty) {
+    var ctorCell = new DerivedCell(types.block, config.scheduler, function (dirty) {
       var block = targetCell.depend(dirty);
       
       // TODO kludgy, need better representation of interfaces
@@ -1802,7 +1802,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
     var type = target.type;
     // TODO: use integer flag of Range, w decimal points?
     function clamp(value, direction) {
-      if (type instanceof values.Range) {  // TODO: better type protocol
+      if (type instanceof types.Range) {  // TODO: better type protocol
         return type.round(value, direction);
       } else {
         return value;
@@ -2896,14 +2896,14 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
       },
       function initSmallKnob(input, target) {
         var type = target.type;
-        if (type instanceof values.Range) {
+        if (type instanceof types.Range) {
           input.min = getT(type.getMin());
           input.max = getT(type.getMax());
           input.step = (type.integer && !type.logarithmic) ? 1 : 'any';
         }
 
         input.addEventListener('input', function(event) {
-          if (type instanceof values.Range) {
+          if (type instanceof types.Range) {
             target.set(type.round(input.valueAsNumber, 0));
           } else {
             target.set(input.valueAsNumber);
@@ -2949,7 +2949,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
         var format = function(n) { return n.toFixed(2); };
 
         var type = target.type;
-        if (type instanceof values.Range) {
+        if (type instanceof types.Range) {
           slider.min = getT(type.getMin());
           slider.max = getT(type.getMax());
           slider.step = (type.integer) ? 1 : 'any';
@@ -2959,7 +2959,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
         }
 
         function listener(event) {
-          if (type instanceof values.Range) {
+          if (type instanceof types.Range) {
             target.set(type.round(setT(slider.valueAsNumber), 0));
           } else {
             target.set(setT(slider.valueAsNumber));
@@ -3014,7 +3014,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
         var format = function(n) { return n.toFixed(2); };
         
         var type = target.type;
-        if (type instanceof values.Range) {
+        if (type instanceof types.Range) {
           meter.min = type.getMin();
           meter.max = type.getMax();
           if (type.integer) {
@@ -3058,7 +3058,7 @@ define(['./values', './events', './widget', './gltools', './database', './menus'
   // Create children of 'container' according to target's enum type, unless appropriate children already exist.
   function initEnumElements(container, selector, target, createElement) {
     var type = target.type;
-    if (!(type instanceof values.Enum)) type = null;
+    if (!(type instanceof types.Enum)) type = null;
     
     var seen = Object.create(null);
     Array.prototype.forEach.call(container.querySelectorAll(selector), function (element) {

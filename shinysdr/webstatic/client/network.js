@@ -15,13 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./values', './events'], function (values, events) {
+define(['./types', './values', './events'], function (types, values, events) {
   'use strict';
   
-  var BulkDataType = values.BulkDataType;
+  var BulkDataType = types.BulkDataType;
   var Cell = values.Cell;
   var CommandCell = values.CommandCell;
-  var typeFromDesc = values.typeFromDesc;
+  var typeFromDesc = types.typeFromDesc;
   
   var exports = {};
   
@@ -274,7 +274,7 @@ define(['./values', './events'], function (values, events) {
   // TODO: too many args, figure out an object that is a sensible bundle
   function makeCell(url, setter, id, desc, idMap) {
     var cell;
-    var type = desc.kind === 'block' ? values.block : typeFromDesc(desc.type);
+    var type = desc.kind === 'block' ? types.block : typeFromDesc(desc.type);
     if (type instanceof BulkDataType) {
       // TODO can we eliminate this special case
       cell = new BulkDataCell(setter, type);
@@ -297,7 +297,7 @@ define(['./values', './events'], function (values, events) {
   function connect(rootURL, connectionStateCallback) {
     if (!connectionStateCallback) connectionStateCallback = function () {};
     
-    var rootCell = new ReadCell(null, null, values.block, identity);
+    var rootCell = new ReadCell(null, null, types.block, identity);
     
     // TODO: URL contents are no longer actually used. URL should be used to derive state stream URL
     //externalGet(rootURL, 'text', function(text) { ... });

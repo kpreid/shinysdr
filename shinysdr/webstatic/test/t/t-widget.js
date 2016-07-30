@@ -71,7 +71,7 @@ describe('widget', function () {
       var container = document.createElement('div');
       document.body.appendChild(container);
       var wEl = container.appendChild(document.createElement('div'));
-      var cell = new shinysdr.values.LocalCell(shinysdr.values.block, shinysdr.values.makeBlock({
+      var cell = new shinysdr.values.LocalCell(shinysdr.types.block, shinysdr.values.makeBlock({
         inner: new shinysdr.values.LocalCell(Number, 0)
       }));
       var widgetHandle = shinysdr.widget.createWidgetExt(context, OuterWidget, wEl, cell);

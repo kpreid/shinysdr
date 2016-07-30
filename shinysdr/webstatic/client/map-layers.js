@@ -15,16 +15,16 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./map-core', './values', './network', './events'], function (mapCore, values, network, events) {
+define(['./map-core', './types', './values', './network', './events'], function (mapCore, types, values, network, events) {
   'use strict';
   
   var sin = Math.sin;
   var cos = Math.cos;
   
-  var any = values.any;
+  var any = types.any;
   var Clock = events.Clock;
   var DerivedCell = values.DerivedCell;
-  var Enum = values.Enum;
+  var Enum = types.Enum;
   var externalGet = network.externalGet;
   var LocalReadCell = values.LocalReadCell;
   var makeBlock = values.makeBlock;

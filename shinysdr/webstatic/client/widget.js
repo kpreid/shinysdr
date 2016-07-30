@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./values', './events', './coordination'], function (values, events, coordination) {
+define(['./types', './values', './events', './coordination'], function (types, values, events, coordination) {
   'use strict';
   
   var Cell = values.Cell;
@@ -266,7 +266,7 @@ define(['./values', './events', './coordination'], function (values, events, coo
       throw new Error('createWidgetExt: missing targetCell');
     }
     return createWidget(
-      new ConstantCell(values.any, targetCell),
+      new ConstantCell(types.any, targetCell),
       String(targetCell),
       context,
       node,
@@ -279,7 +279,7 @@ define(['./values', './events', './coordination'], function (values, events, coo
   //   rootCell.get().foo.get().bar
   function evalTargetStr(rootCell, str, scheduler) {
     var steps = str.split(/\./);
-    return new DerivedCell(values.any, scheduler, function (dirty) {
+    return new DerivedCell(types.any, scheduler, function (dirty) {
       var cell = rootCell;
       steps.forEach(function (name) {
         if (cell !== undefined) cell = cell.depend(dirty)[name];
@@ -297,7 +297,7 @@ define(['./values', './events', './coordination'], function (values, events, coo
         targetCellCell = evalTargetStr(rootTargetCell, targetStr, scheduler);
       } else {
         targetStr = "<can't happen>";
-        targetCellCell = new ConstantCell(values.any, rootTargetCell);
+        targetCellCell = new ConstantCell(types.any, rootTargetCell);
       }
       
       var typename = node.getAttribute('data-widget');

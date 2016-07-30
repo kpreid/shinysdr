@@ -19,7 +19,7 @@
 require.config({
   baseUrl: '/client/'
 });
-define(['values', 'events', 'widget', 'widgets', 'network', 'database', 'coordination'], function (values, events, widget, widgets, network, database, coordination) {
+define(['types', 'values', 'events', 'widget', 'widgets', 'network', 'database', 'coordination'], function (types, values, events, widget, widgets, network, database, coordination) {
   'use strict';
 
   var ClientStateObject = coordination.ClientStateObject;
@@ -38,19 +38,19 @@ define(['values', 'events', 'widget', 'widgets', 'network', 'database', 'coordin
   var clientStateStorage = new StorageNamespace(localStorage, 'shinysdr.client.');
   var clientState = new ClientStateObject(clientStateStorage, null);
   
-  var fftcell = new network.BulkDataCell('<dummy spectrum>', new values.BulkDataType('dff', 'b'));
-  var root = new ConstantCell(values.block, makeBlock({
+  var fftcell = new network.BulkDataCell('<dummy spectrum>', new types.BulkDataType('dff', 'b'));
+  var root = new ConstantCell(types.block, makeBlock({
     unpaused: new StorageCell(clientStateStorage, Boolean, true, '_test_unpaused'),
-    source: new ConstantCell(values.block, makeBlock({
+    source: new ConstantCell(types.block, makeBlock({
       freq: new ConstantCell(Number, 0),
     })),
-    receivers: new ConstantCell(values.block, makeBlock({})),
-    client: new ConstantCell(values.block, clientState),
+    receivers: new ConstantCell(types.block, makeBlock({})),
+    client: new ConstantCell(types.block, clientState),
     //input_rate: new ConstantCell(Number, sampleRate),
-    monitor: new ConstantCell(values.block, makeBlock({
+    monitor: new ConstantCell(types.block, makeBlock({
       fft: fftcell,
       freq_resolution: new ConstantCell(Number, binCount),
-      signal_type: new ConstantCell(values.any, {kind: 'IQ', sample_rate: sampleRate})
+      signal_type: new ConstantCell(types.any, {kind: 'IQ', sample_rate: sampleRate})
     }))
   }));
   

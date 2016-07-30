@@ -15,15 +15,15 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./values', './gltools', './widget', './widgets', './events', './network'], function (values, gltools, widget, widgets, events, network) {
+define(['./types', './values', './gltools', './widget', './widgets', './events', './network'], function (types, values, gltools, widget, widgets, events, network) {
   'use strict';
   
   var sin = Math.sin;
   var cos = Math.cos;
   
   var AddKeepDrop = events.AddKeepDrop;
-  var any = values.any;
-  var block = values.block;
+  var any = types.any;
+  var block = types.block;
   var Banner = widgets.Banner;
   var Cell = values.Cell;
   var Clock = events.Clock;

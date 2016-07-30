@@ -18,7 +18,7 @@
 'use strict';
 
 describe('Coordinator', function () {
-  var block = shinysdr.values.block;
+  var block = shinysdr.types.block;
   var makeBlock = shinysdr.values.makeBlock;
   var ConstantCell = shinysdr.values.ConstantCell;
   

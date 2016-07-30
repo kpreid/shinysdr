@@ -18,6 +18,7 @@
 'use strict';
 
 describe('values', function () {
+  var types = shinysdr.types;
   var values = shinysdr.values;
   
   // TODO: duplicated code w/ other tests; move to a common library somewhere
@@ -44,41 +45,10 @@ describe('values', function () {
     s.enqueue(dummyWait);
     expectNotification(dummyWait);
   }
-
-  describe('Range', function () {
-    var Range = values.Range;
-    function frange(subranges) {
-      return new Range(subranges, false, false);
-    }
-    it('should round at the ends of simple ranges', function () {
-      expect(frange([[1, 3]]).round(0, -1)).toBe(1);
-      expect(frange([[1, 3]]).round(2, -1)).toBe(2);
-      expect(frange([[1, 3]]).round(4, -1)).toBe(3);
-      expect(frange([[1, 3]]).round(0, 1)).toBe(1);
-      expect(frange([[1, 3]]).round(2, 1)).toBe(2);
-      expect(frange([[1, 3]]).round(4, 1)).toBe(3);
-    });
-    it('should round in the gaps of split ranges', function () {
-      expect(frange([[1, 2], [3, 4]]).round(2.4, 0)).toBe(2);
-      expect(frange([[1, 2], [3, 4]]).round(2.4, -1)).toBe(2);
-      expect(frange([[1, 2], [3, 4]]).round(2.4, +1)).toBe(3);
-      expect(frange([[1, 2], [3, 4]]).round(2.6, -1)).toBe(2);
-      expect(frange([[1, 2], [3, 4]]).round(2.6, +1)).toBe(3);
-      expect(frange([[1, 2], [3, 4]]).round(2.6, 0)).toBe(3);
-    });
-    it('should round at the ends of split ranges', function () {
-      expect(frange([[1, 2], [3, 4]]).round(0,  0)).toBe(1);
-      expect(frange([[1, 2], [3, 4]]).round(0, -1)).toBe(1);
-      expect(frange([[1, 2], [3, 4]]).round(0, +1)).toBe(1);
-      expect(frange([[1, 2], [3, 4]]).round(5,  0)).toBe(4);
-      expect(frange([[1, 2], [3, 4]]).round(5, -1)).toBe(4);
-      expect(frange([[1, 2], [3, 4]]).round(5, +1)).toBe(4);
-    });
-  });
   
   describe('LocalCell', function () {
     it('should not notify immediately after its creation', function () {
-      var cell = new values.LocalCell(values.any, 'foo');
+      var cell = new values.LocalCell(types.any, 'foo');
       var l = createListenerSpy();
       cell.n.listen(l);
       waitsForNotificationCycle();
@@ -145,9 +115,9 @@ describe('values', function () {
   describe('DerivedCell', function () {
     var base, f, calls;
     beforeEach(function () {
-      base = new values.LocalCell(values.any, 1);
+      base = new values.LocalCell(types.any, 1);
       calls = 0;
-      f = new values.DerivedCell(values.any, s, function (dirty) {
+      f = new values.DerivedCell(types.any, s, function (dirty) {
         calls++;
         return base.depend(dirty) + 1;
       });
@@ -186,9 +156,9 @@ describe('values', function () {
   describe('Index', function () {
     var structure;
     beforeEach(function () {
-      structure = new values.LocalCell(values.block, values.makeBlock({
-        foo: new values.LocalCell(values.block, values.makeBlock({})),
-        bar: new values.LocalCell(values.block, values.makeBlock({}))
+      structure = new values.LocalCell(types.block, values.makeBlock({
+        foo: new values.LocalCell(types.block, values.makeBlock({})),
+        bar: new values.LocalCell(types.block, values.makeBlock({}))
       }));
       Object.defineProperty(structure.get().foo.get(), '_implements_Foo', {value:true});
     });
@@ -242,7 +212,7 @@ describe('values', function () {
       };
       Object.defineProperty(dynamic, '_reshapeNotice', {value: new shinysdr.events.Notifier()});
       
-      var index = new values.Index(s, new values.LocalCell(values.block, dynamic));
+      var index = new values.Index(s, new values.LocalCell(types.block, dynamic));
       var resultsCell = index.implementing('Foo');
       var l = createListenerSpy();
       resultsCell.n.listen(l);

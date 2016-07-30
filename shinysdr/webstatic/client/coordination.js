@@ -15,11 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./values'], function (values) {
+define(['./types', './values'], function (types, values) {
   'use strict';
 
-  var any = values.any;
-  var block = values.block;
+  var any = types.any;
+  var block = types.block;
   var ConstantCell = values.ConstantCell;
   var LocalCell = values.LocalCell;
   var makeBlock = values.makeBlock;
@@ -144,10 +144,10 @@ define(['./values'], function (values) {
     return makeBlock({
       opengl: cc('opengl', Boolean, true),
       opengl_float: cc('opengl_float', Boolean, true),
-      spectrum_split: cc('spectrum_split', new values.Range([[0, 1]], false, false), 0.6),
-      spectrum_average: cc('spectrum_average', new values.Range([[0.1, 1]], true, false), 0.15),
-      spectrum_level_min: cc('spectrum_level_min', new values.Range([[-200, -20]], false, false), -130),
-      spectrum_level_max: cc('spectrum_level_max', new values.Range([[-100, 0]], false, false), -20),
+      spectrum_split: cc('spectrum_split', new types.Range([[0, 1]], false, false), 0.6),
+      spectrum_average: cc('spectrum_average', new types.Range([[0.1, 1]], true, false), 0.15),
+      spectrum_level_min: cc('spectrum_level_min', new types.Range([[-200, -20]], false, false), -130),
+      spectrum_level_max: cc('spectrum_level_max', new types.Range([[-100, 0]], false, false), -20),
       databases: new ConstantCell(block, databasePicker)
     });
   }

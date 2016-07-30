@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./values', './events', './network'], function (values, events, network) {
+define(['./types', './values', './events', './network'], function (types, values, events, network) {
   'use strict';
   
   var exports = {};
@@ -85,9 +85,9 @@ define(['./values', './events', './network'], function (values, events, network)
       errorTime = Date.now() + 1000;
     }
     var info = values.makeBlock({
-      buffered: new values.LocalReadCell(new values.Range([[0, 2]], false, false), 0),
+      buffered: new values.LocalReadCell(new types.Range([[0, 2]], false, false), 0),
       target: new values.LocalReadCell(String, ''),  // TODO should be numeric w/ unit
-      error: new values.LocalReadCell(new values.Notice(true), ''),
+      error: new values.LocalReadCell(new types.Notice(true), ''),
       //averageSkew: new values.LocalReadCell(Number, 0),
     });
     function updateStatus() {

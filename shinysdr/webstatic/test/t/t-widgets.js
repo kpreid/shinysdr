@@ -83,7 +83,7 @@ describe('widgets', function () {
   
   describe('Knob', function () {
     it('should hold a negative zero', function () {
-      var cell = new shinysdr.values.LocalCell(shinysdr.values.any, 0);
+      var cell = new shinysdr.values.LocalCell(shinysdr.types.any, 0);
       widget = new shinysdr.widgets.Knob(mockWidgetConfig(null, cell));
       
       document.body.appendChild(widget.element);
@@ -105,7 +105,7 @@ describe('widgets', function () {
   describe('ScopePlot', function () {
     it('should be successfully created', function () {
       // stub test to exercise the code because it's currently not in the default ui. Should have more tests.
-      var cell = new shinysdr.values.LocalCell(shinysdr.values.any, [{freq:0, rate:1}, []]);
+      var cell = new shinysdr.values.LocalCell(shinysdr.types.any, [{freq:0, rate:1}, []]);
       cell.subscribe = function() {} // TODO implement
       widget = new shinysdr.widgets.ScopePlot(mockWidgetConfig(null, cell));
     });
@@ -113,7 +113,7 @@ describe('widgets', function () {
   
   describe('PickBlock', function () {
     it('should default to Block', function () {
-      var cell = new shinysdr.values.LocalCell(shinysdr.values.block, shinysdr.values.makeBlock({}));
+      var cell = new shinysdr.values.LocalCell(shinysdr.types.block, shinysdr.values.makeBlock({}));
       widget = new shinysdr.widgets.PickBlock(mockWidgetConfig(null, cell));
       expect(Object.getPrototypeOf(widget)).toBe(shinysdr.widgets.Block.prototype);
     });
@@ -123,7 +123,7 @@ describe('widgets', function () {
         this.element = config.element;
       }
 
-      var cell = new shinysdr.values.LocalCell(shinysdr.values.block, shinysdr.values.makeBlock({
+      var cell = new shinysdr.values.LocalCell(shinysdr.types.block, shinysdr.values.makeBlock({
         _implements_Foo: true
       }));
       var config = mockWidgetConfig(null, cell);
@@ -137,15 +137,15 @@ describe('widgets', function () {
   describe('GeoMap', function () {
     function makeStubTarget() {
       // TODO stop needing this boilerplate, somehow.
-      return new ConstantCell(shinysdr.values.block, makeBlock({
-        source: new ConstantCell(shinysdr.values.block, makeBlock({
+      return new ConstantCell(shinysdr.types.block, makeBlock({
+        source: new ConstantCell(shinysdr.types.block, makeBlock({
           freq: new ConstantCell(Number, 0),
-          rx_driver: new ConstantCell(shinysdr.values.block, makeBlock({
-            output_type: new ConstantCell(shinysdr.values.any, {sample_rate: 1})
+          rx_driver: new ConstantCell(shinysdr.types.block, makeBlock({
+            output_type: new ConstantCell(shinysdr.types.any, {sample_rate: 1})
           })),
-          components: new ConstantCell(shinysdr.values.block, makeBlock({}))
+          components: new ConstantCell(shinysdr.types.block, makeBlock({}))
         })),
-        receivers: new ConstantCell(shinysdr.values.block, makeBlock({
+        receivers: new ConstantCell(shinysdr.types.block, makeBlock({
         }))
       }));
     }

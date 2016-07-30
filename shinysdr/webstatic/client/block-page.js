@@ -15,10 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./values', './events', './network', './widget', './widgets'], function (values, events, network, widget, widgets) {
+define(['./types', './values', './events', './network', './widget', './widgets'], function (types, values, events, network, widget, widgets) {
   'use strict';
   
-  var any = values.any;
+  var any = types.any;
   var ConstantCell = values.ConstantCell;
   var LocalCell = values.LocalCell;
   var makeBlock = values.makeBlock;
