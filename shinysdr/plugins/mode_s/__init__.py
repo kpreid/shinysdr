@@ -43,7 +43,7 @@ from shinysdr.math import LazyRateCalculator
 from shinysdr.modes import ModeDef, IDemodulator
 from shinysdr.signals import no_signal
 from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, TelemetryStore, Track, empty_track
-from shinysdr.types import Notice, Timestamp
+from shinysdr.types import EnumRow, Notice, Timestamp
 from shinysdr.values import CollectionState, ExportedState, exported_value
 from shinysdr.web import ClientResourceDef
 
@@ -281,9 +281,8 @@ class Aircraft(ExportedState):
         return self.__track
 
 
-plugin_mode = ModeDef(
-    mode='MODE-S',
-    label='Mode S',
+plugin_mode = ModeDef(mode='MODE-S',
+    info=EnumRow(sdesc='Mode S', ldesc='Aviation telemetry found at 1090 MHz'),
     demod_class=ModeSDemodulator,
     available=_available)
 plugin_client = ClientResourceDef(

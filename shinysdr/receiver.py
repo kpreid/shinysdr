@@ -202,7 +202,7 @@ class Receiver(gr.hier_block2, ExportedState):
             self.context.changed_needed_connections(u'changed device')
     
     # type construction is deferred because we don't want loading this file to trigger loading plugins
-    @exported_value(type_fn=lambda self: Enum({d.mode: d.label for d in get_modes()}))
+    @exported_value(type_fn=lambda self: Enum({d.mode: d.info for d in get_modes()}))
     def get_mode(self):
         return self.mode
     

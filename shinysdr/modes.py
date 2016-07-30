@@ -24,6 +24,7 @@ from twisted.plugin import IPlugin, getPlugins
 from zope.interface import Interface, implements  # available via Twisted
 
 from shinysdr import plugins
+from shinysdr.types import EnumRow
 
 
 __all__ = []  # appended later
@@ -113,23 +114,24 @@ class ModeDef(object):
     # Twisted plugin system caches whether-a-plugin-class-was-found permanently, so we need to avoid _not_ having a ModeDef if the plugin has some sort of dependency it checks -- thus the 'available' flag can be used to hide a mode while still having an _IModeDef
     def __init__(self,
             mode,
-            label,
+            info,
             demod_class,
             mod_class=None,
             available=True):
         """
-        mode: String uniquely identifying this mode, typically a standard abbreviation written in uppercase letters (e.g. "USB").
-        label: String displayed to the user to identify this mode (e.g. "Broadcast FM").
+        mode: String uniquely identifying this mode, typically a standard abbreviation written in uppercase letters (e.g. "USB", "WFM").
+        info: An EnumRow object with a label for the mode, or a string.
+            The EnumRow sort key should be like the mode value but organized for sorting with space as a separator of qualifiers (e.g. "SSB U", "FM W").
         demod_class: Class to instantiate to create a demodulator for this mode.
         mod_class: Class to instantiate to create a modulator for this mode.
         (TODO: cite demodulator and modulator interface docs)
         available: If false, this mode definition will be ignored.
         """
-        self.mode = mode
-        self.label = label
+        self.mode = unicode(mode)
+        self.info = EnumRow(info)
         self.demod_class = demod_class
         self.mod_class = mod_class
-        self.available = available
+        self.available = bool(available)
 
 
 __all__.append('ModeDef')

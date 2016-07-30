@@ -35,7 +35,7 @@ from shinysdr.math import dB
 from shinysdr.modes import ModeDef, IDemodulator
 from shinysdr.signals import no_signal
 from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject
-from shinysdr.types import Timestamp
+from shinysdr.types import EnumRow, Timestamp
 from shinysdr.values import ExportedState, LooseCell, exported_value
 
 
@@ -326,8 +326,7 @@ _rtl_433_available = test_subprocess(
     shell=False)
 
 
-plugin_mode = ModeDef(
-    mode='433',
-    label='rtl_433',
+plugin_mode = ModeDef(mode='433',
+    info=EnumRow(sdesc='rtl_433', ldesc='OOK telemetry decoded by rtl_433 mostly found at 433 MHz'),
     demod_class=RTL433Demodulator,
     available=_rtl_433_available)

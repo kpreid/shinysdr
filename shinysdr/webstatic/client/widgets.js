@@ -2585,7 +2585,7 @@ define(['./types', './values', './events', './widget', './gltools', './database'
   var dbModeTable = Object.create(null);
   dbModeTable[''] = '—';
   for (var key in modeTable) {
-    dbModeTable[key] = modeTable[key].label;
+    dbModeTable[key] = modeTable[key].info_enum_row.sdesc;
   }
   
   function RecordDetails(config) {

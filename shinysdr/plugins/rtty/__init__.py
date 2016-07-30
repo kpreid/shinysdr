@@ -291,9 +291,8 @@ def _encode_rtty_alloc(char_in):
 
 
 # Plugin exports
-pluginMode = ModeDef(
-    mode='RTTY',
-    label='RTTY',
+pluginMode = ModeDef(mode='RTTY',
+    info='RTTY',
     demod_class=RTTYDemodulator,
     mod_class=RTTYModulator,
     available=_available and False)  # disabled until it works better

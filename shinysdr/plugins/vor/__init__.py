@@ -236,7 +236,10 @@ class VORModulator(gr.hier_block2, ExportedState):
 
 
 # Twisted plugin exports
-pluginMode = ModeDef('VOR', label='VOR', demod_class=VOR, mod_class=VORModulator)
+pluginMode = ModeDef(mode='VOR',
+    info='VOR',
+    demod_class=VOR,
+    mod_class=VORModulator)
 pluginClient = ClientResourceDef(
     key=__name__,
     resource=static.File(os.path.join(os.path.split(__file__)[0], 'client')),

@@ -35,6 +35,7 @@ from shinysdr.filters import make_resampler
 from shinysdr.modes import ModeDef, IDemodulator
 from shinysdr.plugins.basic_demod import NFMDemodulator
 from shinysdr.signals import SignalType
+from shinysdr.types import EnumRow
 from shinysdr.values import ExportedState, exported_block, exported_value
 
 
@@ -84,8 +85,7 @@ class DSDDemodulator(gr.hier_block2, ExportedState):
         return self.__fm_demod.get_band_filter_shape()
 
 
-_modeDef = ModeDef(
-    mode=u'DSD',  # TODO: Mode ought to build into 
-    label=u'DSD (P25,DMR,…)',
+_modeDef = ModeDef(mode=u'DSD',  # TODO: Ought to declare all the individual modes that DSD can decode -- once we have a way to not spam the mode selector with that.
+    info=EnumRow(sdesc=u'DSD', ldesc=u'All modes DSD can decode (P25, DMR, D-STAR, …)'),
     demod_class=DSDDemodulator,
     available=_available)

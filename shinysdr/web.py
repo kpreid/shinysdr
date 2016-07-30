@@ -886,7 +886,7 @@ def _add_plugin_resources(client_resource):
             load_list_js.append(plugin_resource_url + resource_def.load_js_path)
     for mode_def in get_modes():
         mode_table[mode_def.mode] = {
-            u'label': mode_def.label,
+            u'info_enum_row': mode_def.info.to_json(),
             u'can_transmit': mode_def.mod_class is not None
         }
     # Client gets info about plugins through this resource

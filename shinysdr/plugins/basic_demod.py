@@ -32,11 +32,13 @@ from shinysdr.math import dB, todB
 from shinysdr.modes import ModeDef, IDemodulator, IModulator, ITunableDemodulator
 from shinysdr.filters import MultistageChannelFilter, make_resampler, design_sawtooth_filter
 from shinysdr.signals import SignalType
-from shinysdr.types import Range
+from shinysdr.types import EnumRow, Range
 from shinysdr.values import ExportedState, exported_value, setter
 
 
 TWO_PI = math.pi * 2
+
+BASIC_MODE_SORT_PREFIX = ' '
 
 
 class Demodulator(gr.hier_block2, ExportedState):
@@ -180,7 +182,9 @@ class IQDemodulator(SimpleAudioDemodulator):
         self.connect_audio_output((self.split_block, 0), (self.split_block, 1))
 
 
-pluginDef_iq = ModeDef('IQ', label='Raw I/Q', demod_class=IQDemodulator)
+pluginDef_iq = ModeDef(mode='IQ',
+    info='Raw I/Q',
+    demod_class=IQDemodulator)
 
 
 class AMDemodulator(SimpleAudioDemodulator):
@@ -313,8 +317,13 @@ class AMModulator(gr.hier_block2, ExportedState):
         return SignalType(kind='IQ', sample_rate=self.__rate)
 
 
-pluginDef_am = ModeDef('AM', label='AM', demod_class=AMDemodulator, mod_class=AMModulator)
-pluginDef_am_entire = ModeDef('AM-unsel', label='AM unselective', demod_class=UnselectiveAMDemodulator)
+pluginDef_am = ModeDef(mode='AM',
+    info=EnumRow(sdesc='AM', sort_key=BASIC_MODE_SORT_PREFIX + 'AM'),
+    demod_class=AMDemodulator,
+    mod_class=AMModulator)
+pluginDef_am_entire = ModeDef(mode='AM-unsel',
+    info=EnumRow(sdesc='AM unselective', sort_key=BASIC_MODE_SORT_PREFIX + 'AM unsel'),
+    demod_class=UnselectiveAMDemodulator)
 
 
 class FMDemodulator(SimpleAudioDemodulator):
@@ -426,7 +435,12 @@ class NFMModulator(gr.hier_block2, ExportedState):
         return SignalType(kind='IQ', sample_rate=self.__rf_rate)
 
 
-pluginDef_nfm = ModeDef('NFM', label='Narrow FM', demod_class=NFMDemodulator, mod_class=NFMModulator)
+pluginDef_nfm = ModeDef(mode='NFM',  # TODO also declare 'FM' mode, and be consistent about narrowbanding
+    info=EnumRow(sdesc='Narrow FM',
+        ldesc='FM with 5 kHz deviation',
+        sort_key=BASIC_MODE_SORT_PREFIX + 'FM'),
+    demod_class=NFMDemodulator,
+    mod_class=NFMModulator)
 
 
 class WFMDemodulator(FMDemodulator):
@@ -522,7 +536,11 @@ class WFMDemodulator(FMDemodulator):
             self.connect_audio_output(resampler, resampler)
 
 
-pluginDef_wfm = ModeDef('WFM', label='Broadcast FM', demod_class=WFMDemodulator)
+pluginDef_wfm = ModeDef(mode='WFM',
+    info=EnumRow(sdesc='Broadcast FM',
+        ldesc='FM with 75 kHz deviation and stereo subcarrier',
+        sort_key=BASIC_MODE_SORT_PREFIX + 'FM W'),
+    demod_class=WFMDemodulator)
 
 
 _ssb_max_agc = 40
@@ -642,6 +660,23 @@ class DSBModulator(gr.hier_block2, ExportedState):
 
 
 # TODO: implement SSB, not DSB, modulator
-pluginDef_lsb = ModeDef('LSB', label='SSB (L)', demod_class=SSBDemodulator, mod_class=DSBModulator)
-pluginDef_usb = ModeDef('USB', label='SSB (U)', demod_class=SSBDemodulator, mod_class=DSBModulator)
-pluginDef_cw = ModeDef('CW', label='CW', demod_class=SSBDemodulator, mod_class=DSBModulator)
+pluginDef_lsb = ModeDef(mode='LSB',
+    info=EnumRow(
+        sdesc='LSB',
+        ldesc='Single-sideband, lower sideband',
+        sort_key=BASIC_MODE_SORT_PREFIX + 'SSB L'),
+    demod_class=SSBDemodulator,
+    mod_class=DSBModulator)
+pluginDef_usb = ModeDef(mode='USB',
+    info=EnumRow(
+        sdesc='USB',
+        ldesc='Single-sideband, upper sideband',
+        sort_key=BASIC_MODE_SORT_PREFIX + 'SSB U'),
+    demod_class=SSBDemodulator,
+    mod_class=DSBModulator)
+pluginDef_cw = ModeDef(mode='CW',
+    info=EnumRow(
+        sdesc='CW',
+        sort_key=BASIC_MODE_SORT_PREFIX + 'CW'),
+    demod_class=SSBDemodulator,
+    mod_class=DSBModulator)

@@ -256,8 +256,7 @@ class APRSProcessProtocol(ProcessProtocol):
 _multimon_available = test_subprocess('multimon-ng -h; exit 0', 'available demodulators:', shell=True)
 
 
-pluginDef_APRS = ModeDef(
-    mode='APRS',  # TODO: Rename mode to be more accurate
-    label='APRS',
+pluginDef_APRS = ModeDef(mode='APRS',  # TODO: Rename mode to be more accurate
+    info='APRS',
     demod_class=FMAPRSDemodulator,
     available=_multimon_available)
