@@ -28,7 +28,7 @@ define(['types', 'values', 'events', 'widget', 'widgets', 'network', 'database',
   
   var scheduler = new events.Scheduler();
   
-  var ctx = new webkitAudioContext();
+  var ctx = new AudioContext();
   var sampleRate = ctx.sampleRate;
   var fftnode = ctx.createAnalyser();
   fftnode.smoothingTimeConstant = 0;

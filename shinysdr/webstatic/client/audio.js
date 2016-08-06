@@ -23,8 +23,7 @@ define(['./types', './values', './events', './network'], function (types, values
   var EMPTY_CHUNK = [];
   
   function connectAudio(url) {
-    // TODO more portability
-    var audio = new (typeof AudioContext !== 'undefined' ? AudioContext : webkitAudioContext)();
+    var audio = new AudioContext();
     var sampleRate = audio.sampleRate;
     function delayToBufferSize(maxDelayInSeconds) {
       var maxBufferSize = sampleRate * maxDelayInSeconds;
