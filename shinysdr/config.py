@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
@@ -19,9 +17,9 @@
 
 
 """
-Config interface.
+Config interface and config directory management.
 
-The "public" operations on these objects are used by configuration files to specify configuration. The "private" operations are then used by main to implement the configuration.
+The "public" operations on these objects are used by configuration files to specify configuration. The "private" operations are then used by main.py to implement the configuration.
 """
 
 
@@ -29,6 +27,7 @@ from __future__ import absolute_import, division
 
 import base64
 import os
+import os.path
 import warnings
 import __builtin__
 
@@ -252,20 +251,31 @@ class _ConfigFeatures(object):
         return dict(self._state)
 
 
-def execute_config(config_obj, config_file):
-    """
-    Execute a config file with the special environment.
+def execute_config(config_obj, config_file_or_directory):
+    """Execute a config file or directory with the special environment.
+    
+    If a directory, sets the directory-based defaults.
+    
     Note: does not _wait_and_validate()
     """
     env = dict(__builtin__.__dict__)
     env.update({'shinysdr': shinysdr, 'config': config_obj})
-    execfile(config_file, env)
+    if os.path.isdir(config_file_or_directory):
+        execfile(os.path.join(config_file_or_directory, 'config.py'), env)
+        
+        if not config_obj._state_filename:
+            config_obj.persist_to_file(os.path.join(config_file_or_directory, 'state.json'))
+        dbs_dir = os.path.join(config_file_or_directory, 'dbs-read-only')
+        if os.path.isdir(dbs_dir):
+            config_obj.databases.add_directory(dbs_dir)
+    else:
+        execfile(config_file_or_directory, env)
 
 
 __all__.append('execute_config')
 
 
-def make_default_config():
+def write_default_config(new_config_path):
     # TODO: support enumerating osmosdr devices and configuring specifically for them
     # TODO: support more than one audio device (moot currently because gnuradio doesn't have a enumeration operation)
     from shinysdr.devices import find_audio_rx_names
@@ -277,7 +287,7 @@ def make_default_config():
         has_audio = False
         audio_rx_name = ''
     
-    return '''\
+    config_text = '''\
 # This is a ShinySDR configuration file. For more information about what can
 # be put here, read the manual section on it, available from the running
 # ShinySDR server at: http://localhost:8100/manual/configuration
@@ -296,12 +306,6 @@ config.devices.add(u'osmo', OsmoSDRDevice(''))
 
 # Locally generated RF signals for test purposes.
 config.devices.add(u'sim', SimulatedDevice())
-
-config.persist_to_file('state.json')
-
-# You can put CHIRP-style frequency list .csv files in this directory.
-# See http://localhost:8100/manual/dbs for more information.
-config.databases.add_directory('dbs/')
 
 config.serve_web(
     # These are in Twisted endpoint description syntax:
@@ -324,9 +328,14 @@ config.serve_web(
         'audio_comment': '' if has_audio else '# ',
         'audio_rx_name': audio_rx_name,
     }
+    
+    os.mkdir(new_config_path)
+    with open(os.path.join(new_config_path, 'config.py'), 'w') as f:
+        f.write(config_text)
+    os.mkdir(os.path.join(new_config_path, 'dbs-read-only'))
 
 
-__all__.append('make_default_config')
+__all__.append('write_default_config')
 
 
 class ConfigException(Exception):

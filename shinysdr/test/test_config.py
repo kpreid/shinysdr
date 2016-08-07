@@ -30,7 +30,7 @@ from twisted.internet import defer
 from twisted.trial import unittest
 
 from shinysdr import devices
-from shinysdr.config import Config, ConfigException, ConfigTooLateException, execute_config, make_default_config
+from shinysdr.config import Config, ConfigException, ConfigTooLateException, execute_config, write_default_config
 from shinysdr.values import ExportedState, nullExportedState
 
 
@@ -203,29 +203,75 @@ class TestConfigObject(unittest.TestCase):
     
     # TODO test config.databases.add_directory
     # TODO test config.databases.add_writable_database
-    
 
-class TestDefaultConfig(unittest.TestCase):
+
+class TestConfigFiles(unittest.TestCase):
     def setUp(self):
         self.__temp_dir = tempfile.mkdtemp(prefix='shinysdr_test_config_tmp')
         self.__config_name = os.path.join(self.__temp_dir, 'config')
+        self.__config = Config(the_reactor)
     
     def tearDown(self):
         shutil.rmtree(self.__temp_dir)
     
+    def __dirpath(self, *paths):
+        return os.path.join(self.__config_name, *paths)
+    
+    def test_config_file(self):
+        with open(self.__config_name, 'w') as f:
+            f.write('config.features.enable("_test_disabled_feature")')
+        # DB CSV file we expect NOT to be loaded
+        os.mkdir(os.path.join(self.__temp_dir, 'dbs'))
+        with open(os.path.join(self.__temp_dir, 'dbs', 'foo.csv'), 'w') as f:
+            f.write('Frequency,Name')
+
+        execute_config(self.__config, self.__config_name)
+        
+        # Config python was executed
+        self.assertTrue(self.__config.features._get('_test_disabled_feature'))
+        
+        # Config-directory-related defaults were not set
+        self.assertEquals(None, self.__config._state_filename)
+        self.assertEquals(get_default_dbs().viewkeys(), self.__config.databases._get_read_only_databases().viewkeys())
+    
+    def test_config_directory(self):
+        os.mkdir(self.__config_name)
+        with open(self.__dirpath('config.py'), 'w') as f:
+            f.write('config.features.enable("_test_disabled_feature")')
+        os.mkdir(self.__dirpath('dbs-read-only'))
+        with open(self.__dirpath('dbs-read-only', 'foo.csv'), 'w') as f:
+            f.write('Frequency,Name')
+        execute_config(self.__config, self.__config_name)
+        
+        # Config python was executed
+        self.assertTrue(self.__config.features._get('_test_disabled_feature'))
+        
+        # Config-directory-related defaults were set
+        self.assertEquals(self.__dirpath('state.json'), self.__config._state_filename)
+        self.assertIn('foo.csv', self.__config.databases._get_read_only_databases())
+    
     def test_default_config(self):
-        conf_text = make_default_config()
+        write_default_config(self.__config_name)
+        self.assertTrue(os.path.isdir(self.__config_name))
         
         # Don't try to open a real device
+        with open(self.__dirpath('config.py'), 'r') as f:
+            conf_text = f.read()
         DEFAULT_DEVICE = "OsmoSDRDevice('')"
         self.assertIn(DEFAULT_DEVICE, conf_text)
         conf_text = conf_text.replace(DEFAULT_DEVICE, "OsmoSDRDevice('file=/dev/null,rate=100000')")
-        
-        with open(self.__config_name, 'w') as f:
+        with open(self.__dirpath('config.py'), 'w') as f:
             f.write(conf_text)
-        config_obj = Config(the_reactor)
-        execute_config(config_obj, self.__config_name)
-        return config_obj._wait_and_validate()
+        
+        execute_config(self.__config, self.__config_name)
+        
+        self.assertTrue(os.path.isdir(self.__dirpath('dbs-read-only')))
+        return self.__config._wait_and_validate()
+
+
+def get_default_dbs():
+    config_obj = Config(the_reactor)
+    return config_obj.databases._get_read_only_databases()
 
 
 class DummyAppRoot(ExportedState):

@@ -27,18 +27,31 @@
 <h1><a href="./">ShinySDR Manual</a>: Configuration and devices</h1>
 
 <ol>
-  <li><a href="#introduction">Introduction</a></li>
-  <li><a href="#config">The <code>config</code> object</a></li>
+  <li><a href="#introduction">Configuration directories</a></li>
+  <li><a href="#config"><code>config.py</code> and the <code>config</code> object</a></li>
   <li><a href="#rx">Available receiving devices</a></li>
   <li><a href="#special">Available special-purpose devices</a></li>
 </ol>
 
-<h2 id="introduction">Introduction</h2>
+<h2 id="introduction">Configuration directories</h2>
 
-<p>The ShinySDR server's permanent configuration is controlled by a single file, written in Python.
-It is a Python program so that unusual configurations can be accommodated, up to and including definitions of custom drivers for special hardware.</p>
+<p>Starting the ShinySDR server requires specifying on the command line a directory containing configuration information. Such a directory can be created with example contents using the command <code>shinysdr --create <var>config-dir-name</var></code>. The contents of a configuration directory look like this:</p>
+  
+<ul class="directory-listing">
+  <li><code><var>config-dir-name</var>/</code><ul class="directory-listing">
+    <li><code>config.py</code></li>
+    <li><code>dbs-read-only/</code></li>
+    <li><code>state.json</code></li>
+  </ul></li>
+</ul>
+  
+<p><code>config.py</code> specifies the radio hardware to use and the address of the server, among other things. It is written in Python so that unusual configurations can be accommodated, including definitions of custom drivers for special hardware.</p>
 
-<p>For illustration, here is the default configuration file (created by <code>shinysdr --create <var>filename</var></code>), without the comments:</p>
+<p><code>dbs-read-only/</code> may contain frequency database <code>.csv</code> files; for information on the format of these files, see the page <a href="dbs">Frequency Databases</a>.
+
+<h2 id="config"><code>config.py</code> and the <code>config</code> object</h2>
+
+<p>As an example, here is the default <code>config.py</code>, without the comments:</p>
 
 <blockquote><pre>from shinysdr.devices import AudioDevice
 from shinysdr.plugins.osmosdr import OsmoSDRDevice
@@ -48,24 +61,17 @@ config.devices.add(u'osmo', OsmoSDRDevice(''))
 config.devices.add(u'audio', AudioDevice(rx_device=''))
 config.devices.add(u'sim', SimulatedDevice())
 
-config.persist_to_file('state.json')
-config.databases.add_directory('dbs/')
 config.serve_web(
     http_endpoint='tcp:8100',
     ws_endpoint='tcp:8101',
     root_cap='3QLxPaLD22xaAzykSVH2eg',
     title='ShinySDR')</pre></blockquote>
 
-<p>The only required parts are at least one device and <code>config.serve_web(...)</code>.</p>
+<p>The only required parts are at least one device and <code>config.serve_web(...)</code>. In addition to the usual Python builtins, there is one additional global, <dfn><code>config</code></dfn>, which contains all of the ShinySDR configuration methods.</p>
 
-<p>Note that at the beginning there are <code>import</code> statements for modules used.
-This should be done even if not apparently necessary, for slightly better forward compatibility.</p>
+<p>Note: The config object cannot be used to modify the configuration after startup has finished.</p>
 
-<p>In to the usual Python builtins, there is one additional global, <dfn><code>config</code></dfn>, which contains all of the ShinySDR configuration methods.</p>
-
-<h2 id="config">Reference for the <code>config</code> object</h2>
-
-<p>General note: The config object cannot be used to modify the configuration after startup has finished.</p>
+<p>The remainder of this section describes the methods of the <code>config</code> object.</p>
 
 <h3>Devices; <code>config.devices</code></h3>
 
@@ -79,8 +85,8 @@ See the section <a href="#rx">Available receiving devices</a> below for informat
 This is appropriate when the corresponding hardware is in fact interconnected, but has independent interfaces;
 for example, a receiver with an external downconverter or upconverter, or a device which uses a separate sound card for ADC.</p>
 
-<dl>
-
+<dl class="major-dl">
+  
   <dt><code>config.devices.add(<var>key</var>, <var>device</var>, ...)</code></dt>
   <dd>
     <p>Add a device object, making it available for use from the UI.</p>
@@ -99,8 +105,8 @@ for example, a receiver with an external downconverter or upconverter, or a devi
 
 <h3>Web server and other network interfaces</h3>
 
-<dl>
-
+<dl class="major-dl">
+  
   <dt><code>config.serve_web(http_endpoint='...', ws_endpoint='...', root_cap=u'...', title=u'...')</code></dt>
   <dd>
     <p>Enable and configure the web server.</p>
@@ -177,7 +183,9 @@ extendedKeyUsage=critical,serverAuth</pre></blockquote>
 
 <p>A frequency database is a file containing listings of frequencies and bands of interest. For information on the file format, and using them within ShinySDR, see the page <a href="dbs">Frequency Databases</a>.</p>
 
-<dl>
+<p>Some frequency databases are included with ShinySDR. Your own databases may be placed in <code><var>config-dir-name</var>/dbs-read-only/</code>, or the methods below may be used to specify additional locations.</p>
+
+<dl class="major-dl">
 
   <dt><code>config.databases.add_directory(<var>pathname</var>)</code></dt>
   <dd>
@@ -201,7 +209,9 @@ extendedKeyUsage=critical,serverAuth</pre></blockquote>
 
   <dt><code>config.persist_to_file(<var>pathname</var>)</code></dt>
   <dd>
-    <p>Use the specified pathname as the name of a file storing the state of the server (current tuning, receivers, gain, etc.) to preserve it across restarts. If <code>config.persist_to_file</code> is not called, the state will not be saved at all.</p>
+    <p><strong>Deprecated:</strong> In the future, server state will not be stored in a single file and this method will not be available. A replacement will specify a directory instead.
+    
+    <p>Use the specified pathname as the name of a file storing the state of the server (current tuning, receivers, gain, etc.) to preserve it across restarts. If <code>config.persist_to_file</code> is not called, the state will be saved in <code><var>config-dir-name</var>/state.json</code>.</p>
     
     <p>Additional names made by appending suffixes to <var>pathname</var> will be used for temporary copies and backups.</p>
     

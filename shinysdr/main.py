@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -40,7 +40,7 @@ from twisted.internet.task import react
 from twisted.python import log
 
 # Note that gnuradio-dependent modules are loaded later, to avoid the startup time if all we're going to do is give a usage message
-from shinysdr.config import Config, make_default_config, execute_config
+from shinysdr.config import Config, write_default_config, execute_config
 from shinysdr.dependencies import DependencyTester
 
 
@@ -69,8 +69,8 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
     
     # Option parsing is done before importing the main modules so as to avoid the cost of initializing gnuradio if we are aborting early. TODO: Make that happen for createConfig too.
     argParser = argparse.ArgumentParser(prog=argv[0])
-    argParser.add_argument('configFile', metavar='CONFIG',
-        help='path of configuration file')
+    argParser.add_argument('config_path', metavar='CONFIG',
+        help='path of configuration directory or file')
     argParser.add_argument('--create', dest='createConfig', action='store_true',
         help='write template configuration file to CONFIG and exit')
     argParser.add_argument('-g, --go', dest='openBrowser', action='store_true',
@@ -92,13 +92,12 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
 
     # Load config file
     if args.createConfig:
-        with open(args.configFile, 'w') as f:
-            f.write(make_default_config())
-            log.msg('Created default configuration file at: ' + args.configFile)
-            sys.exit(0)  # TODO: Consider using a return value or something instead
+        write_default_config(args.config_path)
+        log.msg('Created default configuration at: ' + args.config_path)
+        sys.exit(0)  # TODO: Consider using a return value or something instead
     else:
         configObj = Config(reactor)
-        execute_config(configObj, args.configFile)
+        execute_config(configObj, args.config_path)
         yield configObj._wait_and_validate()
         
         stateFile = configObj._state_filename

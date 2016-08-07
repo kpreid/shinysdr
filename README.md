@@ -90,27 +90,27 @@ You can do both, if you want.
 
     To run ShinySDR from the source tree, use the command `python -m shinysdr.main ...` while the current directory is the source tree.
    
-    In either case, you must specify a configuration file, as described below.
+    In either case, you must specify a configuration directory, as described below.
     The examples show `shinysdr`; substitute `python -m shinysdr.main` if appropriate.
 
 Setup
 -----
 
-The server uses a configuration file, which is Python code.
-Run this command to create an example file:
+The server needs a configuration directory.
+Run this command to create one.
 
-<pre>shinysdr --create <var>filename</var></pre>
+<pre>shinysdr --create <var>config-dir-name</var></pre>
 
-Edit it to specify your available hardware and other desired configuration (such as a HTTPS server certificate and the location of the state persistence file); instructions are provided in the comments in the example file.
+Edit <code><var>config-dir-name</var>/config.py</code> to specify your available hardware and other desired configuration (such as a HTTPS server certificate and optional features); instructions are provided in the comments in the example file.
 
-For further documentation on the configuration file, see the manual, which can be accessed at `/manual/configuration` on the running server (there is a link in the UI); or open the file directly at `shinysdr/webstatic/client/manual/configuration.html`.
+For further documentation on the contents of <code>config.py</code> and the directory, see the manual, which can be accessed at `/manual/configuration` on the running server (there is a link in the UI); or open the file directly at `shinysdr/webstatic/client/manual/configuration.html`.
 
 Running the server
 ------------------
 
-Once you have prepared a configuration file, you can run the server using
+Once you have a configuration, you can run the server using
 
-<pre>shinysdr <var>filename</var></pre>
+<pre>shinysdr <var>config-dir-name</var></pre>
 
 and access it using your browser at the displayed URL. (The `--go` option will attempt to open it in your default browser, but this is unlikely to be helpful if said browser is not Chrome.)
 
