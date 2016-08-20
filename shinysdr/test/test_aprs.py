@@ -404,25 +404,27 @@ class TestAPRSStation(unittest.TestCase):
 
 
 class TestAPRSISRXDevice(unittest.TestCase):
-    def test_smoke_nofilter(self):
+    def test_smoke(self):
         device = APRSISRXDevice(
             reactor=the_reactor,
+            aprs_filter='r/0/0/100',
             client=_StubAPRSClient())
         state_smoke_test(device)
         device.close()
         state_smoke_test(device)
     
-    def test_smoke_filter(self):
+    def test_smoke_nofilter(self):
         device = APRSISRXDevice(
             reactor=the_reactor,
-            filter='r/0/0/100',
             client=_StubAPRSClient())
-        state_smoke_test(device)
-        device.close()
         state_smoke_test(device)
 
 
 class _StubAPRSClient(object):
     """Test stub for aprs.APRS class."""
+    
+    def connect(self, aprs_filter):
+        pass
+    
     def receive(self, callback):
         callback('W6KWF-1>APOT30,WIDE2-1,qAR,W6YX-5:!/;ZI^/]m/k7UG 13.8V W6KWF')

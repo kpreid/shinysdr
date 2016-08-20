@@ -299,16 +299,15 @@ def parse_tnc2(line, receive_time):
 # TODO: This is something we want to support, but is not really appropriate as-is.
 # The data should go into the 'shared object', but right now only receivers can retrieve those. (I currently think shared objects ought to become more explicitly about telemetry-type data.) The current situation means that all of the data records get stuffed into an unfortunate part of the UI.
 # We need more support for non-RF devices, so that e.g. this can have a close callback, and perhaps so the rest of the system is aware of what this is actually doing.
-def APRSISRXDevice(reactor, client, name=None, filter=None):
+def APRSISRXDevice(reactor, client, name=None, aprs_filter=None):
     """
     client: an aprs.APRS object (see <https://pypi.python.org/pypi/aprs>)
     name: device label
-    filter: filter on incoming data (see <http://www.aprs-is.net/javAPRSFilter.aspx>)
+    aprs_filter: filter on incoming data (see <http://www.aprs-is.net/javAPRSFilter.aspx>)
     """
-    # pylint: disable=redefined-builtin
     if name is None:
-        name = 'APRS-IS ' + filter if filter else 'APRS-IS'
-    component = _APRSISComponent(reactor, client, name, filter)
+        name = 'APRS-IS ' + aprs_filter if aprs_filter else 'APRS-IS'
+    component = _APRSISComponent(reactor, client, name, aprs_filter)
     return Device(name=name, components={'aprs-is': component})
 
 
@@ -318,9 +317,11 @@ class _APRSISComponent(TelemetryStore):
     
     __alive = True
     
-    def __init__(self, reactor, client, name, filter):
-        # pylint: disable=redefined-builtin
+    def __init__(self, reactor, client, name, aprs_filter):
         super(_APRSISComponent, self).__init__()
+        
+        client.connect(aprs_filter=aprs_filter)  # TODO either expect the user to do this or forward args
+        
         def main_callback(line):
             # TODO: This print-both-formats code is duplicated from multimon.py; it should be a utility in this module instead. Also, we should maybe have a try block.
             log.msg(u'APRS: %r' % (line,))
@@ -336,7 +337,10 @@ class _APRSISComponent(TelemetryStore):
             reactor.callFromThread(main_callback, line)
         
         def thread_body():
-            client.receive(callback=threaded_callback, filter=filter)
+            try:
+                client.receive(callback=threaded_callback)
+            except StopIteration:  # thrown by callback
+                pass
     
         thread = threading.Thread(
             name='APRSISRXClient(%r) reader thread' % (name,),
