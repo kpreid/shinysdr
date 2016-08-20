@@ -31,12 +31,12 @@ from twisted.trial import unittest
 
 from shinysdr import devices
 from shinysdr.config import Config, ConfigException, ConfigTooLateException, execute_config, write_default_config
-from shinysdr.values import ExportedState, nullExportedState
+from shinysdr.values import ExportedState
 
 
 def StubDevice():
     """Return a valid trivial device."""
-    return devices.Device(components={u'c': nullExportedState})
+    return devices.Device(components={})
 
 
 class TestConfigObject(unittest.TestCase):

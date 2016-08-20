@@ -42,13 +42,14 @@ from collections import namedtuple
 from datetime import datetime
 import os.path
 import re
+import threading
 import time
 
 from twisted.python import log
 from twisted.web import static
 from zope.interface import Interface, implements  # available via Twisted
 
-from shinysdr.devices import Device
+from shinysdr.devices import Device, IComponent
 from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, TelemetryStore, Track, empty_track
 from shinysdr.types import Notice, Timestamp
 from shinysdr.values import CollectionState, ExportedState, exported_value
@@ -306,29 +307,48 @@ def APRSISRXDevice(reactor, client, name=None, filter=None):
     """
     # pylint: disable=redefined-builtin
     if name is None:
-        name = 'APRS-IS ' + filter
-    info = TelemetryStore()  # TODO this is wrong, need to be able to output_message.
+        name = 'APRS-IS ' + filter if filter else 'APRS-IS'
+    component = _APRSISComponent(reactor, client, name, filter)
+    return Device(name=name, components={'aprs-is': component})
+
+
+# TODO being a TelemetryStore is a temporary kludge. We should instead be sending messages to the main telemetry store.
+class _APRSISComponent(TelemetryStore):
+    implements(IComponent)
     
-    def main_callback(line):
-        # TODO: This print-both-formats code is duplicated from multimon.py; it should be a utility in this module instead. Also, we should maybe have a try block.
-        log.msg(u'APRS: %r' % (line,))
-        message = parse_tnc2(line, time.time())
-        log.msg(u'   -> %s' % (message,))
-        parsed = parse_tnc2(line, time.time())
-        info.receive(message)
+    __alive = True
     
-    # client blocks in a loop, so set up a thread
-    alive = True
-    def threaded_callback(line):
-        if not alive:
-            raise StopIteration()
-        reactor.callFromThread(main_callback, line)
+    def __init__(self, reactor, client, name, filter):
+        # pylint: disable=redefined-builtin
+        super(_APRSISComponent, self).__init__()
+        def main_callback(line):
+            # TODO: This print-both-formats code is duplicated from multimon.py; it should be a utility in this module instead. Also, we should maybe have a try block.
+            log.msg(u'APRS: %r' % (line,))
+            message = parse_tnc2(line, time.time())
+            log.msg(u'   -> %s' % (message,))
+            parsed = parse_tnc2(line, time.time())
+            self.receive(message)
     
-    reactor.callInThread(client.receive, callback=threaded_callback, filter=filter)
+        # client blocks in a loop, so set up a thread
+        def threaded_callback(line):
+            if not self.__alive:
+                raise StopIteration()
+            reactor.callFromThread(main_callback, line)
+        
+        def thread_body():
+            client.receive(callback=threaded_callback, filter=filter)
     
-    # TODO: Arrange so we can get close() callbacks and set alive=false
-    # TODO: Allow the filter to be changed at runtime
-    return Device(name=name, components={'aprs-is': info})
+        thread = threading.Thread(
+            name='APRSISRXClient(%r) reader thread' % (name,),
+            target=thread_body)
+        thread.daemon = True  # Allow clean process shutdown without waiting for us
+        thread.start()
+        
+        # TODO: Allow the filter to be changed at runtime
+    
+    def close(self):
+        # Note that this does not promptly stop the thread, because we cannot: the aprs.APRS.receive call is blocked on a socket read. The thread will only stop once a message has been received.
+        self.__alive = False
 
 
 def _parse_payload(facts, errors, source, destination, payload, receive_time):

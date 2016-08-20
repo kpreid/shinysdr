@@ -52,7 +52,7 @@ from twisted.protocols.basic import LineReceiver
 from twisted.python import log
 from twisted.web import static
 
-from shinysdr.devices import Device
+from shinysdr.devices import Device, IComponent
 from shinysdr.top import IHasFrequency
 from shinysdr.types import Enum, Notice, Range
 from shinysdr.values import ExportedState, LooseCell, exported_value
@@ -291,7 +291,7 @@ class _HamlibProxy(ExportedState):
     """
     Abstract class for objects which export state proxied to a hamlib daemon.
     """
-    implements(IProxy)
+    implements(IComponent, IProxy)
     
     def __init__(self, protocol):
         # info from hamlib
@@ -330,8 +330,9 @@ class _HamlibProxy(ExportedState):
         return d
     
     def close(self):
+        """implements IComponent"""
         self.__protocol.transport.loseConnection()
-        return self.when_closed()
+        return self.when_closed()  # used for tests, not part of IComponent
     
     def when_closed(self):
         return _forkDeferred(self.__disconnect_deferred)

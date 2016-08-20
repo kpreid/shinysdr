@@ -25,12 +25,10 @@ from zope.interface import implements  # available via Twisted
 
 from gnuradio import gr
 
-from shinysdr.devices import Device, IRXDriver, ITXDriver
+from shinysdr.devices import Device, IComponent, merge_devices
 from shinysdr.top import Top
 from shinysdr.plugins import simulate
-from shinysdr.signals import SignalType
 from shinysdr.test.testutil import state_smoke_test
-from shinysdr.types import Range
 from shinysdr.values import ExportedState
 
 
@@ -121,14 +119,13 @@ class TestTop(unittest.TestCase):
         top.remove_audio_queue(queue)
     
     def test_close(self):
-        l = set()
-        top = Top(devices={'m': Device(
-            rx_driver=ShutdownMockDriver(l, 'rx'),
-            tx_driver=ShutdownMockDriver(l, 'tx'),
-            components={'c': ShutdownMockDriver(l, 'c')})})
+        l = []
+        top = Top(devices={'m':
+            merge_devices([
+                simulate.SimulatedDevice(),
+                Device(components={'c': _DeviceShutdownDetector(l)})])})
         top.close_all_devices()
-        # TODO: Add support for closing non-driver components (making this set [rx,tx,c]).
-        self.assertEqual(l, set(['rx', 'tx']))
+        self.assertEqual(l, ['close'])
     
     @defer.inlineCallbacks
     def test_auto_retune(self):
@@ -166,34 +163,12 @@ class TestTop(unittest.TestCase):
         # TODO test "set to value it already has" behavior
 
 
-class ShutdownMockDriver(gr.hier_block2, ExportedState):
-    implements(IRXDriver, ITXDriver)
+class _DeviceShutdownDetector(ExportedState):
+    implements(IComponent)
 
-    def __init__(self, dest, key):
-        gr.hier_block2.__init__(
-            self, self.__class__.__name__,
-            gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
-            gr.io_signature(1, 1, gr.sizeof_gr_complex * 1))
+    def __init__(self, dest):
+        super(_DeviceShutdownDetector, self).__init__()
         self.__dest = dest
-        self.__key = key
-    
-    def get_output_type(self):
-        return SignalType(kind='IQ', sample_rate=10000)
-    
-    def get_input_type(self):
-        return SignalType(kind='IQ', sample_rate=10000)
-    
-    def get_tune_delay(self):
-        return 0.0
-    
-    def get_usable_bandwidth(self):
-        return Range([(-1, 1)])
-    
+        
     def close(self):
-        self.__dest.add(self.__key)
-    
-    def notify_reconnecting_or_restarting(self):
-        pass
-    
-    def set_transmitting(self, value, midpoint_hook):
-        pass
+        self.__dest.append('close')

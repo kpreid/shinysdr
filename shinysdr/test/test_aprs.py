@@ -23,11 +23,13 @@ from __future__ import absolute_import, division
 
 from datetime import datetime
 
+from twisted.internet import reactor as the_reactor
 from twisted.internet.task import Clock
 from twisted.trial import unittest
 
-from shinysdr.plugins.aprs import Altitude, APRSStation, APRSMessage, Capabilities, ObjectItemReport, Messaging, Position, RadioRange, Status, Symbol, Telemetry, Timestamp, Velocity, expand_aprs_message, parse_tnc2
+from shinysdr.plugins.aprs import Altitude, APRSISRXDevice, APRSStation, APRSMessage, Capabilities, ObjectItemReport, Messaging, Position, RadioRange, Status, Symbol, Telemetry, Timestamp, Velocity, expand_aprs_message, parse_tnc2
 from shinysdr.telemetry import TelemetryItem, TelemetryStore, empty_track
+from shinysdr.test.testutil import state_smoke_test
 
 
 # January 2, 2000, 12:30:30 + 1 microsecond
@@ -399,3 +401,28 @@ class TestAPRSStation(unittest.TestCase):
             Status('foo')
         ]))
         self.assertEqual('foo', self.s.get_status())
+
+
+class TestAPRSISRXDevice(unittest.TestCase):
+    def test_smoke_nofilter(self):
+        device = APRSISRXDevice(
+            reactor=the_reactor,
+            client=_StubAPRSClient())
+        state_smoke_test(device)
+        device.close()
+        state_smoke_test(device)
+    
+    def test_smoke_filter(self):
+        device = APRSISRXDevice(
+            reactor=the_reactor,
+            filter='r/0/0/100',
+            client=_StubAPRSClient())
+        state_smoke_test(device)
+        device.close()
+        state_smoke_test(device)
+
+
+class _StubAPRSClient(object):
+    """Test stub for aprs.APRS class."""
+    def receive(self, callback):
+        callback('W6KWF-1>APOT30,WIDE2-1,qAR,W6YX-5:!/;ZI^/]m/k7UG 13.8V W6KWF')

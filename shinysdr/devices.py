@@ -51,15 +51,13 @@ class IRXDriver(Interface):
     """
     
     def get_output_type():
-        """
-        Should return an instance of SignalType describing the output signal.
+        """Should return an instance of SignalType describing the output signal.
         
-        The value MUST NOT change in an incompatible way during the lifetime of the source. 
+        The value MUST NOT change in an incompatible way during the lifetime of the source.
         """
 
     def get_tune_delay():
-        """
-        Return the amount of time, in seconds, between a call to set_freq() and the new center frequency taking effect as observed at top.monitor.fft.
+        """Return the amount of time, in seconds, between a call to set_freq() and the new center frequency taking effect as observed at top.monitor.fft.
         
         TODO: We need a better strategy for this. Stream tags might help if we can get them in the right places.
         
@@ -67,8 +65,7 @@ class IRXDriver(Interface):
         """
     
     def get_usable_bandwidth():
-        """
-        Return a Range object which specifies what portion of the bandwidth of the output signal should be conidered usable, in baseband Hz.
+        """Return a Range object which specifies what portion of the bandwidth of the output signal should be conidered usable, in baseband Hz.
         
         Usable here means that it is within the filter passband and does not contain spurs (in particular, a DC offset).
         """
@@ -95,15 +92,13 @@ class ITXDriver(Interface):
     """
 
     def get_input_type():
-        """
-        Should return an instance of SignalType describing the input signal.
+        """Should return an instance of SignalType describing the input signal.
         
-        The value MUST NOT change in an incompatible way during the lifetime of the source. 
+        The value MUST NOT change in an incompatible way during the lifetime of the source.
         """
     
     def close():
-        """
-        Perform a clean shutdown.
+        """Perform a clean shutdown.
         
         This may or may not leave the driver in an unusable state.
         """
@@ -112,8 +107,7 @@ class ITXDriver(Interface):
         pass
     
     def set_transmitting(value, midpoint_hook):
-        """
-        Enable or disable actual transmission.
+        """Enable or disable actual transmission.
         
         The flowgraph will be locked or stopped before this method is called.
         
@@ -122,6 +116,18 @@ class ITXDriver(Interface):
 
 
 __all__.append('ITXDriver')
+
+
+class IComponent(Interface):
+    """A Component is an object incorporated in a Device and has no specific other role."""
+    def close():
+        """Perform a clean shutdown.
+        
+        This may or may not leave the component in an unusable state.
+        """
+
+
+__all__.append('IComponent')
 
 
 class Device(ExportedState):
@@ -155,10 +161,12 @@ class Device(ExportedState):
         assert isinstance(vfo_cell.type(), Range)
         
         self.__name = name
+        self.__vfo_cell = vfo_cell
         self.rx_driver = IRXDriver(rx_driver) if rx_driver is not nullExportedState else nullExportedState
         self.tx_driver = ITXDriver(tx_driver) if tx_driver is not nullExportedState else nullExportedState
-        self.__vfo_cell = vfo_cell
-        self.__components = components
+        self.__components = {}
+        for key, component in components.iteritems():
+            self.__components[key] = IComponent(component)
         self.__components_state = CollectionState(self.__components, dynamic=False)
         
         self.__transmitting = False
@@ -241,7 +249,9 @@ class Device(ExportedState):
         if self.tx_driver is not nullExportedState:
             self.tx_driver.close()
             self.tx_driver = nullExportedState
-        # TODO: Components should probably get close() as well, but that's a whole new interface.
+        for key, component in self.__components.iteritems():
+            component.close()
+            self.__components[key] = nullExportedState
     
     def notify_reconnecting_or_restarting(self):
         if self.rx_driver is not nullExportedState:
@@ -568,12 +578,15 @@ class IPositionedDevice(Interface):
 
 
 class _PositionedDeviceComponent(ExportedState):
-    implements(IPositionedDevice)
+    implements(IComponent, IPositionedDevice)
     
     def __init__(self, latitude, longitude):
         self.__track = empty_track._replace(
             latitude=TelemetryItem(float(latitude), None),
             longitude=TelemetryItem(float(longitude), None))
+
+    def close(self):
+        """implements IComponent"""
 
     @exported_value(type=Track)
     def get_track(self):
