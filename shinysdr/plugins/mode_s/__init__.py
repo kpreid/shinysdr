@@ -282,7 +282,7 @@ class Aircraft(ExportedState):
 
 
 plugin_mode = ModeDef(mode='MODE-S',
-    info=EnumRow(sdesc='Mode S', ldesc='Aviation telemetry found at 1090 MHz'),
+    info=EnumRow(label='Mode S', description='Aviation telemetry found at 1090 MHz'),
     demod_class=ModeSDemodulator,
     available=_available)
 plugin_client = ClientResourceDef(

@@ -327,6 +327,6 @@ _rtl_433_available = test_subprocess(
 
 
 plugin_mode = ModeDef(mode='433',
-    info=EnumRow(sdesc='rtl_433', ldesc='OOK telemetry decoded by rtl_433 mostly found at 433 MHz'),
+    info=EnumRow(label='rtl_433', description='OOK telemetry decoded by rtl_433 mostly found at 433 MHz'),
     demod_class=RTL433Demodulator,
     available=_rtl_433_available)

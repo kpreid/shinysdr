@@ -140,9 +140,9 @@ describe('widgets', function () {
   describe('Radio', function () {
     it('should use the metadata', function () {
       var cell = new LocalCell(new types.Enum({
-        'a': {'short_desc': 'A', 'long_desc': 'ALPHA', 'sort_key': '3'},
-        'b': {'short_desc': 'B', 'long_desc': 'BETA', 'sort_key': '2'},
-        'c': {'short_desc': 'C', 'long_desc': 'GAMMA', 'sort_key': '1'}
+        'a': {'label': 'A', 'description': 'ALPHA', 'sort_key': '3'},
+        'b': {'label': 'B', 'description': 'BETA', 'sort_key': '2'},
+        'c': {'label': 'C', 'description': 'GAMMA', 'sort_key': '1'}
       }), 'a');
       widget = new widgets.Radio(mockWidgetConfig(null, cell));
       document.body.appendChild(widget.element);

@@ -133,21 +133,29 @@ class Enum(ValueType):
 
 
 class EnumRow(object):
-    # short_desc is always present, defaulting to key
-    # long_desc may be None
-    # sort_key is always present, defaulting to key
+    """An EnumRow object provides information about an element of an Enum type.
+    
+    The label is a 'human-friendly' string to use in place of the enum value. If not specified it defaults to the enum value itself.
+    
+    The description is a string which provides information left out of the label (what might be presented as a 'tooltip'). It may be omitted (None) or a string.
+    
+    The sort_key is a string used to order elements for display. If not specified it defaults to the enum value itself.
+    
+    The label and sort_key default to the enum value itself, and otherwise must be unicode strings.
+    The description may be None instead.
+    """
     
     # TODO this complicated init needs tests
-    def __init__(self, enum_row_or_string=None, sdesc=None, ldesc=None, sort_key=None, associated_key=None):
+    def __init__(self, enum_row_or_string=None, label=None, description=None, sort_key=None, associated_key=None):
         if isinstance(enum_row_or_string, EnumRow):
-            sdesc = sdesc or enum_row_or_string.__short_desc
-            ldesc = ldesc or enum_row_or_string.__long_desc
+            label = label or enum_row_or_string.__label
+            description = description or enum_row_or_string.__description
             sort_key = sort_key or enum_row_or_string.__sort_key
         else:
-            sdesc = sdesc or (unicode(enum_row_or_string) if enum_row_or_string else None)
+            label = label or (unicode(enum_row_or_string) if enum_row_or_string else None)
         
-        self.__short_desc = unicode(sdesc) if sdesc else (unicode(enum_row_or_string) if enum_row_or_string else associated_key)
-        self.__long_desc = unicode(ldesc) if ldesc else None
+        self.__label = unicode(label) if label else (unicode(enum_row_or_string) if enum_row_or_string else associated_key)
+        self.__description = unicode(description) if description else None
         self.__sort_key = unicode(sort_key) if sort_key else unicode(associated_key) if associated_key is not None else associated_key
     
     def __cmp__(self, other):
@@ -161,8 +169,8 @@ class EnumRow(object):
     
     def to_json(self):
         return {
-            u'short_desc': self.__short_desc,
-            u'long_desc': self.__long_desc,
+            u'label': self.__label,
+            u'description': self.__description,
             u'sort_key': self.__sort_key
         }
 

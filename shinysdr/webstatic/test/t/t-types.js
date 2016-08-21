@@ -30,20 +30,20 @@ describe('types', function () {
     
     it('preserves metadata', function () {
       expect(new Enum({'a': {
-        'short_desc': 'b',
-        'long_desc': 'c',
+        'label': 'b',
+        'description': 'c',
         'sort_key': 'd'
       }}).getTable()['a']).toEqual({
-        'short_desc': 'b',
-        'long_desc': 'c',
+        'label': 'b',
+        'description': 'c',
         'sort_key': 'd'
       });
     });
     
     it('expands metadata', function () {
       expect(new Enum({'a': 'b'}).getTable()['a']).toEqual({
-        'short_desc': 'b',
-        'long_desc': null,
+        'label': 'b',
+        'description': null,
         'sort_key': 'a'
       });
     });

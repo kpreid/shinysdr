@@ -76,24 +76,24 @@ class TestEnum(unittest.TestCase):
     def test_metadata_simple(self):
         self.assertEquals(self.__row(u'desc').to_json(),
             {
-                u'short_desc': u'desc',
-                u'long_desc': None,
+                u'label': u'desc',
+                u'description': None,
                 u'sort_key': u'key',
             })
     
     def test_metadata_partial(self):
-        self.assertEquals(self.__row(EnumRow(sdesc='a')).to_json(),
+        self.assertEquals(self.__row(EnumRow(label='a')).to_json(),
             {
-                u'short_desc': u'a',
-                u'long_desc': None,
+                u'label': u'a',
+                u'description': None,
                 u'sort_key': u'key',
             })
     
     def test_metadata_explicit(self):
-        self.assertEquals(self.__row(EnumRow(sdesc='a', ldesc='b', sort_key='c')).to_json(),
+        self.assertEquals(self.__row(EnumRow(label='a', description='b', sort_key='c')).to_json(),
             {
-                u'short_desc': u'a',
-                u'long_desc': u'b',
+                u'label': u'a',
+                u'description': u'b',
                 u'sort_key': u'c',
             })
     

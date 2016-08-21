@@ -35,8 +35,8 @@ define([], function () {
       switch (typeof row) {
         case 'string':
           table[k] = {
-            short_desc: row,
-            long_desc: null,
+            label: row,
+            description: null,
             sort_key: k
           };
           break;

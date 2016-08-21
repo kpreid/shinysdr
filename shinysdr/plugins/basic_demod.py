@@ -318,11 +318,11 @@ class AMModulator(gr.hier_block2, ExportedState):
 
 
 pluginDef_am = ModeDef(mode='AM',
-    info=EnumRow(sdesc='AM', sort_key=BASIC_MODE_SORT_PREFIX + 'AM'),
+    info=EnumRow(label='AM', sort_key=BASIC_MODE_SORT_PREFIX + 'AM'),
     demod_class=AMDemodulator,
     mod_class=AMModulator)
 pluginDef_am_entire = ModeDef(mode='AM-unsel',
-    info=EnumRow(sdesc='AM unselective', sort_key=BASIC_MODE_SORT_PREFIX + 'AM unsel'),
+    info=EnumRow(label='AM unselective', sort_key=BASIC_MODE_SORT_PREFIX + 'AM unsel'),
     demod_class=UnselectiveAMDemodulator)
 
 
@@ -436,8 +436,8 @@ class NFMModulator(gr.hier_block2, ExportedState):
 
 
 pluginDef_nfm = ModeDef(mode='NFM',  # TODO also declare 'FM' mode, and be consistent about narrowbanding
-    info=EnumRow(sdesc='Narrow FM',
-        ldesc='FM with 5 kHz deviation',
+    info=EnumRow(label='Narrow FM',
+        description='FM with 5 kHz deviation',
         sort_key=BASIC_MODE_SORT_PREFIX + 'FM'),
     demod_class=NFMDemodulator,
     mod_class=NFMModulator)
@@ -537,8 +537,8 @@ class WFMDemodulator(FMDemodulator):
 
 
 pluginDef_wfm = ModeDef(mode='WFM',
-    info=EnumRow(sdesc='Broadcast FM',
-        ldesc='FM with 75 kHz deviation and stereo subcarrier',
+    info=EnumRow(label='Broadcast FM',
+        description='FM with 75 kHz deviation and stereo subcarrier',
         sort_key=BASIC_MODE_SORT_PREFIX + 'FM W'),
     demod_class=WFMDemodulator)
 
@@ -662,21 +662,21 @@ class DSBModulator(gr.hier_block2, ExportedState):
 # TODO: implement SSB, not DSB, modulator
 pluginDef_lsb = ModeDef(mode='LSB',
     info=EnumRow(
-        sdesc='LSB',
-        ldesc='Single-sideband, lower sideband',
+        label='LSB',
+        description='Single-sideband, lower sideband',
         sort_key=BASIC_MODE_SORT_PREFIX + 'SSB L'),
     demod_class=SSBDemodulator,
     mod_class=DSBModulator)
 pluginDef_usb = ModeDef(mode='USB',
     info=EnumRow(
-        sdesc='USB',
-        ldesc='Single-sideband, upper sideband',
+        label='USB',
+        description='Single-sideband, upper sideband',
         sort_key=BASIC_MODE_SORT_PREFIX + 'SSB U'),
     demod_class=SSBDemodulator,
     mod_class=DSBModulator)
 pluginDef_cw = ModeDef(mode='CW',
     info=EnumRow(
-        sdesc='CW',
+        label='CW',
         sort_key=BASIC_MODE_SORT_PREFIX + 'CW'),
     demod_class=SSBDemodulator,
     mod_class=DSBModulator)

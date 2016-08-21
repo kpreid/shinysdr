@@ -2633,7 +2633,7 @@ define(['./types', './values', './events', './widget', './gltools', './database'
   var dbModeTable = Object.create(null);
   dbModeTable[''] = '—';
   for (var key in modeTable) {
-    dbModeTable[key] = modeTable[key].info_enum_row.sdesc;
+    dbModeTable[key] = modeTable[key].info_enum_row.label;
   }
   
   function RecordDetails(config) {
@@ -3128,7 +3128,7 @@ define(['./types', './values', './events', './widget', './gltools', './database'
       array.forEach(function (value) {
         var metadataRow = table[value];
         if (seen[value]) return;
-        var element = createElement(metadataRow.short_desc, metadataRow.long_desc);
+        var element = createElement(metadataRow.label, metadataRow.description);
         element.value = value;
       });
     }
