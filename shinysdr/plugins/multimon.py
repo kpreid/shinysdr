@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -33,12 +33,13 @@ from gnuradio import analog
 from gnuradio import gr
 from gnuradio import blocks
 
-from shinysdr.blocks import make_sink_to_process_stdin, test_subprocess
+from shinysdr.blocks import make_sink_to_process_stdin
 from shinysdr.filters import make_resampler
 from shinysdr.modes import ModeDef, IDemodulator
 from shinysdr.plugins.basic_demod import NFMDemodulator
 from shinysdr.plugins.aprs import parse_tnc2
 from shinysdr.signals import SignalType
+from shinysdr.twisted_ext import test_subprocess
 from shinysdr.types import Enum
 from shinysdr.values import ExportedState, exported_block, exported_value, setter
 

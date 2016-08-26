@@ -1,4 +1,4 @@
-# Copyright 2013, 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -29,7 +29,6 @@ from __future__ import absolute_import, division
 
 import math
 import os
-import subprocess
 
 from gnuradio import gr
 from gnuradio import blocks
@@ -94,22 +93,6 @@ def make_sink_to_process_stdin(process, itemsize=gr.sizeof_char):
     fd_owned_by_sink = os.dup(fd_owned_by_twisted)
     process.closeStdin()
     return blocks.file_descriptor_sink(itemsize, fd_owned_by_sink)
-
-
-def test_subprocess(args, substring, shell=False):
-    """Check the stdout or stderr of the specified command for a specified string."""
-    # TODO: establish resource and output size limits
-    # TODO: Use Twisted facilities instead to avoid possible conflicts
-    try:
-        output = subprocess.check_output(
-            args=args,
-            shell=shell,
-            stderr=subprocess.STDOUT)
-        return substring in output
-    except OSError:
-        return False
-    except subprocess.CalledProcessError:
-        return False
 
 
 class _NoContext(object):

@@ -1,4 +1,4 @@
-# Copyright 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -54,6 +54,7 @@ from twisted.web import static
 
 from shinysdr.devices import Device, IComponent
 from shinysdr.top import IHasFrequency
+from shinysdr.twisted_ext import fork_deferred
 from shinysdr.types import Enum, Notice, Range
 from shinysdr.values import ExportedState, LooseCell, exported_value
 from shinysdr.web import ClientResourceDef
@@ -87,22 +88,6 @@ class IRotator(IProxy):
 
 
 __all__.append('IRotator')
-
-
-def _forkDeferred(d):
-    # No doubt this demonstrates I don't actually know how to program in Twisted
-    
-    def callback(v):
-        d2.callback(v)
-        return v
-    
-    def errback(f):
-        d2.errback(f)
-        f.trap()  # always fail
-    
-    d2 = defer.Deferred()
-    d.addCallbacks(callback, errback)
-    return d2
 
 
 # Hamlib RPRT error codes
@@ -335,7 +320,7 @@ class _HamlibProxy(ExportedState):
         return self.when_closed()  # used for tests, not part of IComponent
     
     def when_closed(self):
-        return _forkDeferred(self.__disconnect_deferred)
+        return fork_deferred(self.__disconnect_deferred)
     
     def _ehs_get(self, name_in_cmd):
         if name_in_cmd in self.__cache:
