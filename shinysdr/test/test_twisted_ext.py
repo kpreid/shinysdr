@@ -18,9 +18,11 @@
 from __future__ import absolute_import, division
 
 from twisted.trial import unittest
-from twisted.internet import defer, reactor
+from twisted.internet import defer
+from twisted.internet.interfaces import IStreamClientEndpoint
+from twisted.internet import reactor as the_reactor
 
-from shinysdr.twisted_ext import fork_deferred, test_subprocess
+from shinysdr.twisted_ext import SerialPortEndpoint, fork_deferred, test_subprocess
 
 
 class TestForkDeferred(unittest.TestCase):
@@ -47,3 +49,12 @@ class TestTestSubprocess(unittest.TestCase):
     # TODO test command-not-found
     # TODO test stderr
     # TODO test shell mode
+
+class TestSerialPortEndpoint(unittest.TestCase):
+    # We cannot rely on the existence of any serial ports or it being OK to try to open them, so this is just a smoke test: does creating the endpoint succeed?
+    
+    def test_smoke(self):
+        endpoint = SerialPortEndpoint('NOTAREALSERIALPORT', the_reactor, baudrate=115200)
+        IStreamClientEndpoint(endpoint)
+    
+    # TODO consider making an attempt to open that is known to fail

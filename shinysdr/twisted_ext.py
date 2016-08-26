@@ -26,6 +26,9 @@ from __future__ import absolute_import, division
 import subprocess
 
 from twisted.internet import defer
+from twisted.internet.interfaces import IStreamClientEndpoint
+from twisted.internet.serialport import SerialPort
+from zope.interface import implements
 
 __all__ = []  # appended later
 
@@ -72,3 +75,21 @@ def test_subprocess(args, substring, shell=False):
 
 
 __all__.append('test_subprocess')
+
+
+class SerialPortEndpoint(object):
+    """Endpoint for connecting to a serial port."""
+    implements(IStreamClientEndpoint)
+    
+    def __init__(self, port, reactor, **serial_kwargs):
+        self.__port = port
+        self.__reactor = reactor
+        self.__serial_kwargs = serial_kwargs
+  
+    def connect(self, protocol_factory):
+        protocol = protocol_factory.buildProtocol(None)
+        SerialPort(protocol, self.__port, self.__reactor, **self.__serial_kwargs)
+        return defer.succeed(protocol)
+
+
+__all__.append('SerialPortEndpoint')
