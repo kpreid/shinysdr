@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -52,6 +52,7 @@ import shinysdr.db
 from shinysdr.ephemeris import EphemerisResource
 from shinysdr.modes import get_modes
 from shinysdr.signals import SignalType
+from shinysdr.twisted_ext import FactoryWithArgs
 from shinysdr.values import ExportedState, BaseCell, BlockCell, StreamCell, IWritableCollection, the_poller
 
 
@@ -652,20 +653,6 @@ class OurStreamProtocol(protocol.Protocol):
             self.transport.write(message)
 
 
-class OurStreamFactory(protocol.Factory):
-    protocol = OurStreamProtocol
-    
-    def __init__(self, caps, noteDirty):
-        self.__caps = caps
-        self.__noteDirty = noteDirty
-    
-    def buildProtocol(self, addr):
-        """twisted Factory implementation"""
-        p = self.protocol(self.__caps, self.__noteDirty)
-        p.factory = self
-        return p
-
-
 class IClientResourceDef(Interface):
     """
     Client plugin interface object
@@ -787,7 +774,8 @@ class WebService(Service):
             self.__visit_path = '/' + urllib.quote(root_cap, safe='') + '/'
             ws_caps = {root_cap: root_object}
         
-        self.__ws_protocol = txws.WebSocketFactory(OurStreamFactory(ws_caps, note_dirty))
+        self.__ws_protocol = txws.WebSocketFactory(
+            FactoryWithArgs.forProtocol(OurStreamProtocol, ws_caps, note_dirty))
         
         # UI entry point
         appRoot.putChild('', _RadioIndexHtmlResource(wcommon=wcommon, title=title))

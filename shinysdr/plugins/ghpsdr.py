@@ -1,4 +1,4 @@
-# Copyright 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -48,6 +48,8 @@ from twisted.internet import task
 from twisted.python import log
 
 from gnuradio import gr
+
+from shinysdr.twisted_ext import FactoryWithArgs
 
 
 __all__ = ['DspserverService']
@@ -181,19 +183,6 @@ class _DspserverProtocol(protocol.Protocol):
             # self.transport.write(msg)
 
 
-class _DspserverFactory(protocol.Factory):
-    protocol = _DspserverProtocol
-    
-    def __init__(self, top):
-        self.__top = top
-    
-    def buildProtocol(self, addr):
-        """twisted Factory implementation"""
-        p = self.protocol(self.__top)
-        p.factory = self
-        return p
-
-
 class DspserverService(Service):
     def __init__(self, top, noteDirty, endpoint):
         self.__top = top
@@ -201,7 +190,7 @@ class DspserverService(Service):
         self.__port_obj = None
     
     def startService(self):
-        self.__port_obj = strports.listen(self.__endpoint, _DspserverFactory(self.__top))
+        self.__port_obj = strports.listen(self.__endpoint, FactoryWithArgs.forProtocol(_DspserverProtocol, self.__top))
     
     def stopService(self):
         return self.__port_obj.stopListening()

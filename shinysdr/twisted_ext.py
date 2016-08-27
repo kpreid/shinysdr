@@ -26,7 +26,8 @@ from __future__ import absolute_import, division
 import subprocess
 
 from twisted.internet import defer
-from twisted.internet.interfaces import IStreamClientEndpoint
+from twisted.internet.interfaces import ILoggingContext, IStreamClientEndpoint
+from twisted.internet.protocol import Factory
 from twisted.internet.serialport import SerialPort
 from zope.interface import implements
 
@@ -75,6 +76,32 @@ def test_subprocess(args, substring, shell=False):
 
 
 __all__.append('test_subprocess')
+
+
+class FactoryWithArgs(Factory):
+    """A Factory which passes constant arguments to construct a Protocol.
+    
+    Use as FactoryWithArgs.forProtocol(protocol_class, *args, **kwargs).
+    """
+    implements(ILoggingContext)
+    
+    def __init__(self, *args, **kwargs):
+        self.__args = args
+        self.__kwargs = kwargs
+    
+    def buildProtocol(self, addr):
+        """overrides Factory"""
+        p = self.protocol(*self.__args, **self.__kwargs)
+        p.factory = self
+        return p
+    
+    def logPrefix(self):
+        """implements ILoggingContext"""
+        # We're not doing the _getLogPrefix thing as seen in Twisted because both things here are class objects and not going to themselves provide ILoggingContext.
+        return '%s (%s)' % (self.protocol.__name__, self.__class__.__name__)
+
+
+__all__.append('FactoryWithArgs')
 
 
 class SerialPortEndpoint(object):
