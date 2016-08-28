@@ -90,8 +90,12 @@ define(['./types', './values', './events', './widget', './gltools', './database'
         if (config.idPrefix) {
           wEl.id = config.idPrefix + name;
         }
-      } else {
+      } else if (name === null) {
         targetCell = new ConstantCell(types.block, block);
+      } else if ('get' in name) {  // sanity check, not to be used as type discrimination
+        targetCell = name;
+      } else {
+        throw new Error('not understood target for addWidget: ' + name);
       }
       
       if (optBoxLabel !== undefined) {
