@@ -105,6 +105,9 @@ shinysdr-subwindow > h2 {
 }
 
 /* left sidebar menu which contains window show-buttons and links */
+#section-system-menu .sidebar {
+  width: 10em;  /* override default sidebar width */
+}
 ul.system-menu-list, .system-menu-list ul { /* TODO doesn't fit here, is styling for side menu */
   margin: 0;
   padding: 0;
@@ -116,7 +119,6 @@ ul.system-menu-list, .system-menu-list ul { /* TODO doesn't fit here, is styling
   padding: 0;
 
   white-space: nowrap;
-  overflow: hidden;
   text-overflow: ellipsis;
 }
 .system-menu-list li > a:first-child:last-child,
