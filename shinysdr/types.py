@@ -225,7 +225,7 @@ class Range(ValueType):
         return specimen
     
     def __repr__(self):
-        return '%s(%r, strict=%r, logarithmic=%r, integer=%r)' % (self.__class__.__name__, zip(self.__mins, self.__maxes), self.__strict, self.__logarithmic, self.__integer)
+        return '%s(%r, strict=%r, logarithmic=%r, integer=%r)' % (type(self).__name__, zip(self.__mins, self.__maxes), self.__strict, self.__logarithmic, self.__integer)
     
     def __eq__(self, other):
         # pylint: disable=unidiomatic-typecheck

@@ -54,7 +54,7 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
     
     def __init__(self, protocol, context, multimon_demod_args):
         gr.hier_block2.__init__(
-            self, '%s(%r, %r)' % (self.__class__.__name__, multimon_demod_args, protocol),
+            self, '%s(%r, %r)' % (type(self).__name__, multimon_demod_args, protocol),
             gr.io_signature(1, 1, gr.sizeof_float * 1),
             gr.io_signature(1, 1, gr.sizeof_float * 1),
         )
@@ -104,7 +104,7 @@ class APRSDemodulator(gr.hier_block2, ExportedState):
     """
     def __init__(self, context):
         gr.hier_block2.__init__(
-            self, self.__class__.__name__,
+            self, type(self).__name__,
             gr.io_signature(1, 1, gr.sizeof_float * 1),
             gr.io_signature(1, 1, gr.sizeof_float * 1),
         )

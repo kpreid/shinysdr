@@ -109,7 +109,7 @@ class MessageDistributorSink(gr.hier_block2):
     Never blocks."""
     def __init__(self, itemsize, context, migrate=None, notify=None):
         gr.hier_block2.__init__(
-            self, self.__class__.__name__,
+            self, type(self).__name__,
             gr.io_signature(1, 1, itemsize),
             gr.io_signature(0, 0, 0),
         )
@@ -186,7 +186,7 @@ class _OverlapGimmick(gr.hier_block2):
         offset = size // factor
 
         gr.hier_block2.__init__(
-            self, self.__class__.__name__,
+            self, type(self).__name__,
             gr.io_signature(1, 1, itemsize),
             gr.io_signature(1, 1, itemsize),
         )
@@ -230,7 +230,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
         
         itemsize = signal_type.get_itemsize()
         gr.hier_block2.__init__(
-            self, self.__class__.__name__,
+            self, type(self).__name__,
             gr.io_signature(1, 1, itemsize),
             gr.io_signature(0, 0, 0),
         )

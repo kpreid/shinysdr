@@ -248,7 +248,7 @@ class _ShutdownDetector(gr.hier_block2, ExportedState):
 
     def __init__(self, dest, key):
         gr.hier_block2.__init__(
-            self, self.__class__.__name__,
+            self, type(self).__name__,
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1))
         self.__dest = dest

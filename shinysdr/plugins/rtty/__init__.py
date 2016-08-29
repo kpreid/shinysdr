@@ -154,7 +154,7 @@ class RTTYModulator(gr.hier_block2, ExportedState):
     
     def __init__(self, context, mode, rtty_baud=_DEFAULT_BAUD, rtty_shift=170.0, message='\0'):
         gr.hier_block2.__init__(
-            self, self.__class__.__name__,
+            self, type(self).__name__,
             gr.io_signature(0, 0, 0),
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1))
         
@@ -275,7 +275,7 @@ def _encode_rtty_alloc(char_in):
 #   """
 #   def __init__(self):
 #       gr.basic_block.__init__(self,
-#           name=self.__class__.__name__,
+#           name=type(self).__name__,
 #           in_sig=[numpy.uint8],
 #           out_sig=[numpy.float32])
 #   
