@@ -176,6 +176,7 @@ def check_versions():
     t.check_module_attr('txws', 'Python library txWS', 'WebSocketProtocol.setBinaryMode')
     t.check_module_attr('six', 'Python library six', 'PY2')
     t.check_module('ephem', 'Python library PyEphem')
+    t.check_module('serial', 'Python library PySerial')
     t.check_jsdep_file(__file__, 'deps/require.js', 'RequireJS')
     t.check_jsdep_file(__file__, 'deps/text.js', 'RequireJS')
     t.check_jsdep_file(__file__, 'deps/jasmine', 'Jasmine')

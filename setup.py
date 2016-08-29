@@ -47,7 +47,8 @@ setup(
         #'osmosdr',  # Not PyPI
         'twisted',
         'txws',
-        'ephem'
+        'ephem',
+        'pyserial',  # undeclared dependency of twisted.internet.serialport
     ],
     dependency_links=[],
     # zip_safe: TODO: Investigate. I suspect unsafe due to serving web resources relative to __file__.
