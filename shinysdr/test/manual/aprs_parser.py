@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2014, 2016 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
