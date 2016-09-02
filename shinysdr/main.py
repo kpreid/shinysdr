@@ -43,6 +43,8 @@ from twisted.python import log
 from shinysdr.config import Config, write_default_config, execute_config
 from shinysdr.dependencies import DependencyTester
 
+__all__ = []  # appended later
+
 
 def main(argv=None, _abort_for_test=False):
     # This function is referenced by the setup.py entry point definition as well as the name=__main__ test below.
@@ -53,6 +55,9 @@ def main(argv=None, _abort_for_test=False):
         return go(singleton_reactor)
     else:
         react(go)
+
+
+__all__.append('main')
 
 
 @defer.inlineCallbacks
@@ -81,7 +86,7 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
 
     # Verify we can actually run.
     # Note that this must be done before we actually load core modules, because we might get an import error then.
-    version_report = yield check_versions()
+    version_report = yield _check_versions()
     if version_report:
         print >>sys.stderr, version_report
         sys.exit(1)
@@ -123,7 +128,7 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
     singleton_reactor.addSystemEventTrigger('during', 'shutdown', app.close_all_devices)
     
     log.msg('Restoring state...')
-    restore(app, app_defaults)
+    restore(app, _app_defaults)
     
     log.msg('Starting web server...')
     services = MultiService()
@@ -150,7 +155,7 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
         yield defer.Deferred()  # never fires
 
 
-def app_defaults(app):
+def _app_defaults(app):
     """Return a friendly initial state for the app using knowledge of the default config file."""
     state = {}
     
@@ -169,7 +174,7 @@ def app_defaults(app):
     return state
 
 
-def check_versions():
+def _check_versions():
     t = DependencyTester()
     t.check_module_attr('gnuradio.blocks', 'GNU Radio', 'rotator_cc')
     t.check_module_attr('twisted.internet.task', 'Python library Twisted', 'react')

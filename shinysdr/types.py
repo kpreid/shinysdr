@@ -15,14 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-
+# TODO explain better
 """
 Type definitions for ShinySDR value cells etc.
 """
 
-
 from __future__ import absolute_import, division
-
 
 import bisect
 import math

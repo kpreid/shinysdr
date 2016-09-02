@@ -67,7 +67,7 @@ class SignalType(object):
 __all__.append('SignalType')
 
 
-__all__.append('no_signal')
-
-
 no_signal = SignalType(kind='NONE', sample_rate=0.0)
+
+
+__all__.append('no_signal')

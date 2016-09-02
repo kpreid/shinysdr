@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+# TODO write module documentation
+
 # pylint: disable=no-init
 # (pylint is confused by interfaces)
 
