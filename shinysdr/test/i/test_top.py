@@ -26,7 +26,7 @@ from zope.interface import implements  # available via Twisted
 from gnuradio import gr
 
 from shinysdr.devices import Device, IComponent, merge_devices
-from shinysdr.top import Top
+from shinysdr.i.top import Top
 from shinysdr.plugins import simulate
 from shinysdr.test.testutil import state_smoke_test
 from shinysdr.values import ExportedState

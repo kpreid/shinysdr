@@ -32,11 +32,11 @@ from twisted.web import http
 
 from gnuradio import gr
 
-from shinysdr.db import DatabaseModel
+from shinysdr.i.db import DatabaseModel
 from shinysdr.signals import SignalType
 from shinysdr.values import ExportedState, CollectionState, NullExportedState, Poller, exported_block, exported_value, nullExportedState, setter
 # TODO: StateStreamInner is an implementation detail; arrange a better interface to test
-from shinysdr.web import StateStreamInner, WebService
+from shinysdr.i.web import StateStreamInner, WebService
 from shinysdr.test import testutil
 
 
@@ -178,7 +178,7 @@ class TestStateStream(StateStreamTestCase):
     def test_init_and_mutate(self):
         self.setUpForObject(StateSpecimen())
         self.assertEqual(self.getUpdates(), [
-            ['register_block', 1, 'urlroot', ['shinysdr.test.test_web.IFoo']],
+            ['register_block', 1, 'urlroot', ['shinysdr.test.i.test_web.IFoo']],
             ['register_cell', 2, 'urlroot/rw', self.object.state()['rw'].description()],
             ['value', 1, {'rw': 2}],
             ['value', 0, 1],
@@ -260,7 +260,7 @@ class TestStateStream(StateStreamTestCase):
         # TODO: Instead of raising, report the error associated with the connection somehow
         self.setUpForObject(StateSpecimen())
         self.assertIn(
-            ['register_block', 1, 'urlroot', ['shinysdr.test.test_web.IFoo']],
+            ['register_block', 1, 'urlroot', ['shinysdr.test.i.test_web.IFoo']],
             self.getUpdates())
         self.assertRaises(Exception, lambda:  # TODO more specific error
             self.stream.dataReceived(json.dumps(['set', 1, 100.0, 1234])))

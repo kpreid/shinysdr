@@ -41,7 +41,7 @@ from twisted.python import log
 
 # Note that gnuradio-dependent modules are loaded later, to avoid the startup time if all we're going to do is give a usage message
 from shinysdr.config import Config, write_default_config, execute_config
-from shinysdr.dependencies import DependencyTester
+from shinysdr.i.dependencies import DependencyTester
 
 __all__ = []  # appended later
 

@@ -22,7 +22,7 @@ from __future__ import absolute_import, division
 from twisted.plugin import IPlugin
 from zope.interface import Interface, implements  # available via Twisted
 
-from shinysdr.math import geodesic_distance
+from shinysdr.i.math import geodesic_distance
 
 
 __all__ = []  # appended later

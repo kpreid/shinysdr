@@ -31,8 +31,8 @@ from gnuradio import analog
 from gnuradio import gr
 from gnuradio import blocks
 
-from shinysdr.blocks import rotator_inc
-from shinysdr.math import dB, todB
+from shinysdr.i.blocks import rotator_inc
+from shinysdr.i.math import dB, todB
 from shinysdr.modes import ITunableDemodulator, get_modes, lookup_mode
 from shinysdr.signals import SignalType
 from shinysdr.types import Enum, Range

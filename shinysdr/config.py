@@ -36,7 +36,7 @@ from twisted.python import log
 
 # Note that gnuradio-dependent modules are loaded lazily, to avoid the startup time if all we're going to do is give a usage message
 import shinysdr  # put into config namespace
-from shinysdr.db import DatabaseModel, database_from_csv, databases_from_directory
+from shinysdr.i.db import DatabaseModel, database_from_csv, databases_from_directory
 
 
 __all__ = []  # appended later
@@ -73,8 +73,8 @@ class Config(object):
             warnings.warn('No network service defined!')
     
     def _create_app(self):
-        from shinysdr import session
-        return session.AppRoot(
+        from shinysdr.i.session import AppRoot
+        return AppRoot(
             devices=self.devices._values,
             audio_config=self.__server_audio,
             features=self.features._get_all())
@@ -105,7 +105,7 @@ class Config(object):
         
         def make_service(app, note_dirty):
             # TODO: This is, of course, not where session objects should be created. Working on it...
-            import shinysdr.web as lazy_web
+            import shinysdr.i.web as lazy_web
             return lazy_web.WebService(
                 reactor=self.reactor,
                 root_object=app.get_session(),

@@ -24,7 +24,7 @@ import sys
 
 from twisted.internet import reactor as the_reactor  # TODO fix
 
-from shinysdr.top import Top
+from shinysdr.i.top import Top
 from shinysdr.values import Command, ExportedState, exported_block
 
 

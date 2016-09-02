@@ -34,7 +34,7 @@ from shinysdr.devices import Device
 from shinysdr.modes import lookup_mode
 from shinysdr.plugins.simulate import SimulatedDevice
 from shinysdr.signals import SignalType
-from shinysdr.top import Top
+from shinysdr.i.top import Top
 from shinysdr.types import Range
 from shinysdr.values import ExportedState, nullExportedState
 

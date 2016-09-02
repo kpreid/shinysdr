@@ -27,9 +27,9 @@ from gnuradio import channels
 from gnuradio import gr
 from gnuradio.filter import rational_resampler
 
-from shinysdr.blocks import rotator_inc
+from shinysdr.i.blocks import rotator_inc
 from shinysdr.filters import make_resampler
-from shinysdr.math import dB, todB
+from shinysdr.i.math import dB, todB
 from shinysdr.modes import IModulator, lookup_mode
 from shinysdr.signals import SignalType, no_signal
 from shinysdr.devices import Device, IRXDriver

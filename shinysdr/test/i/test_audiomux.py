@@ -22,7 +22,7 @@ from twisted.trial import unittest
 from gnuradio import blocks
 from gnuradio import gr
 
-from shinysdr.audiomux import AudioManager
+from shinysdr.i.audiomux import AudioManager
 
 
 class TestAudioManager(unittest.TestCase):

@@ -3,8 +3,8 @@ include README.md
 
 graft shinysdr/data
 graft shinysdr/plugins
-graft shinysdr/webparts
-graft shinysdr/webstatic
+graft shinysdr/i/webparts
+graft shinysdr/i/webstatic
 
 # Tight includes to avoid packaging cruft. Don't forget to update!
 include shinysdr/deps/*.js

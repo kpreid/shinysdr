@@ -31,7 +31,7 @@ from gnuradio.filter import pfb
 from gnuradio.filter import firdes
 from gnuradio.filter import rational_resampler
 
-from shinysdr.math import factorize, small_factor_at_least
+from shinysdr.i.math import factorize, small_factor_at_least
 
 
 __all__ = []  # appended later

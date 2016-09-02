@@ -22,7 +22,7 @@ import sys
 
 from twisted.plugin import getPlugins
 
-from shinysdr.db import normalize_record, write_csv_file
+from shinysdr.i.db import normalize_record, write_csv_file
 from shinysdr.db_import import GeoFilter, IImporter, _IImporterDef
 from shinysdr import plugins
 

@@ -21,7 +21,7 @@ from math import pi
 
 from twisted.trial import unittest
 
-import shinysdr.math as smath
+import shinysdr.i.math as smath
 
 
 class TestFactorize(unittest.TestCase):

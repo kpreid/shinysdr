@@ -34,7 +34,7 @@ from twisted.web import client
 from twisted.web import http
 from twisted.web import server
 
-from shinysdr import db
+from shinysdr.i import db
 from shinysdr.test import testutil
 
 

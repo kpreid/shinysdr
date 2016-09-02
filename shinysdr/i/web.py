@@ -48,8 +48,8 @@ from gnuradio import gr
 import txws
 
 import shinysdr.plugins
-import shinysdr.db
-from shinysdr.ephemeris import EphemerisResource
+import shinysdr.i.db
+from shinysdr.i.ephemeris import EphemerisResource
 from shinysdr.modes import get_modes
 from shinysdr.signals import SignalType
 from shinysdr.twisted_ext import FactoryWithArgs
@@ -65,7 +65,8 @@ if hasattr(txws, 'WebSocketProtocol') and not hasattr(txws.WebSocketProtocol, 's
 staticResourcePath = os.path.join(os.path.dirname(__file__), 'webstatic')
 
 
-_templatePath = os.path.join(os.path.dirname(__file__), 'webparts')
+_template_path = os.path.join(os.path.dirname(__file__), 'webparts')
+_deps_path = os.path.join(os.path.dirname(__file__), '../deps')
 
 
 # Do not use this directly in general; use _serialize.
@@ -240,7 +241,7 @@ class _BlockHtmlElement(template.Element):
     """
     Template element for HTML page for an arbitrary block.
     """
-    loader = template.XMLFile(os.path.join(_templatePath, 'block.template.xhtml'))
+    loader = template.XMLFile(os.path.join(_template_path, 'block.template.xhtml'))
     
     def __init__(self, wcommon):
         self.__wcommon = wcommon
@@ -706,7 +707,7 @@ def _strport_to_url(desc, scheme='http', hostname='localhost', path='/', socket_
 
 
 class _RadioIndexHtmlElement(template.Element):
-    loader = template.XMLFile(os.path.join(_templatePath, 'index.template.xhtml'))
+    loader = template.XMLFile(os.path.join(_template_path, 'index.template.xhtml'))
     
     def __init__(self, wcommon, title):
         self.__wcommon = wcommon
@@ -786,8 +787,8 @@ class WebService(Service):
         appRoot.putChild('radio', BlockResource(root_object, wcommon, not_deletable))
         
         # Frequency DB
-        appRoot.putChild('dbs', shinysdr.db.DatabasesResource(read_only_dbs))
-        appRoot.putChild('wdb', shinysdr.db.DatabaseResource(writable_db))
+        appRoot.putChild('dbs', shinysdr.i.db.DatabasesResource(read_only_dbs))
+        appRoot.putChild('wdb', shinysdr.i.db.DatabaseResource(writable_db))
         
         # Debug graph
         appRoot.putChild('flow-graph', FlowgraphVizResource(reactor, flowgraph_for_debug))
@@ -800,13 +801,11 @@ class WebService(Service):
         jasmine = _reify(test, 'jasmine')
         for name in ['jasmine.css', 'jasmine.js', 'jasmine-html.js']:
             jasmine.putChild(name, static.File(os.path.join(
-                    os.path.dirname(__file__), 'deps/jasmine/lib/jasmine-core/', name)))
+                _deps_path, 'jasmine/lib/jasmine-core/', name)))
         
         client = _reify(serverRoot, 'client')
-        client.putChild('require.js', static.File(os.path.join(
-            os.path.dirname(__file__), 'deps/require.js')))
-        client.putChild('text.js', static.File(os.path.join(
-            os.path.dirname(__file__), 'deps/text.js')))
+        client.putChild('require.js', static.File(os.path.join(_deps_path, 'require.js')))
+        client.putChild('text.js', static.File(os.path.join(_deps_path, 'text.js')))
         
         _add_plugin_resources(client)
         

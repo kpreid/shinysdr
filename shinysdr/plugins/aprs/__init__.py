@@ -53,7 +53,7 @@ from shinysdr.devices import Device, IComponent
 from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, TelemetryStore, Track, empty_track
 from shinysdr.types import Notice, Timestamp
 from shinysdr.values import CollectionState, ExportedState, exported_value
-from shinysdr.web import ClientResourceDef
+from shinysdr.i.web import ClientResourceDef
 
 
 _SECONDS_PER_HOUR = 60 * 60

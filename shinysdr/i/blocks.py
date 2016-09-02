@@ -34,7 +34,7 @@ from gnuradio import gr
 from gnuradio import blocks
 from gnuradio.fft import logpwrfft
 
-from shinysdr.math import todB
+from shinysdr.i.math import todB
 from shinysdr.signals import SignalType
 from shinysdr.types import BulkDataType, Range
 from shinysdr.values import ExportedState, LooseCell, StreamCell, exported_value, setter

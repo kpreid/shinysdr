@@ -104,7 +104,7 @@ Run this command to create one.
 
 Edit <code><var>config-dir-name</var>/config.py</code> to specify your available hardware and other desired configuration (such as a HTTPS server certificate and optional features); instructions are provided in the comments in the example file.
 
-For further documentation on the contents of <code>config.py</code> and the directory, see the manual, which can be accessed at `/manual/configuration` on the running server (there is a link in the UI); or open the file directly at `shinysdr/webstatic/client/manual/configuration.html`.
+For further documentation on the contents of <code>config.py</code> and the directory, see the manual, which can be accessed at `/manual/configuration` on the running server (there is a link in the UI); or open the file directly at `shinysdr/i/webstatic/client/manual/configuration.html`.
 
 Running the server
 ------------------
@@ -150,5 +150,5 @@ along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 ### Additional information
 
-* The file `shinysdr/webstatic/client/basemap.geojson` was derived from [the Natural Earth data set `ne_50m_admin_0_countries`, version 2.0.0](http://www.naturalearthdata.com/downloads/50m-cultural-vectors/).
+* The file `shinysdr/i/webstatic/client/basemap.geojson` was derived from [the Natural Earth data set `ne_50m_admin_0_countries`, version 2.0.0](http://www.naturalearthdata.com/downloads/50m-cultural-vectors/).
     This data set [is in the public domain](http://www.naturalearthdata.com/about/terms-of-use/).

@@ -32,10 +32,10 @@ from zope.interface import Interface, implements  # available via Twisted
 from gnuradio import blocks
 from gnuradio import gr
 
-from shinysdr.audiomux import AudioManager
-from shinysdr.blocks import MonitorSink, RecursiveLockBlockMixin, Context
-from shinysdr.math import LazyRateCalculator
-from shinysdr.receiver import Receiver
+from shinysdr.i.audiomux import AudioManager
+from shinysdr.i.blocks import MonitorSink, RecursiveLockBlockMixin, Context
+from shinysdr.i.math import LazyRateCalculator
+from shinysdr.i.receiver import Receiver
 from shinysdr.signals import SignalType
 from shinysdr.telemetry import TelemetryStore
 from shinysdr.types import Enum, Notice

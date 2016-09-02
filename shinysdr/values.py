@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+# TODO: Break up this module into sensible internal/external parts
 
 # pylint: disable=unpacking-non-sequence, undefined-loop-variable, attribute-defined-outside-init, no-init, abstract-method, redefined-builtin, arguments-differ
 # (pylint is confused by our tuple-or-None in _MessageSplitter and by our only-used-immediately closures over loop variables in state_from_json)

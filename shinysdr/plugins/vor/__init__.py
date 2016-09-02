@@ -38,7 +38,7 @@ from shinysdr.plugins.basic_demod import SimpleAudioDemodulator, design_lofi_aud
 from shinysdr.signals import SignalType
 from shinysdr.types import Range
 from shinysdr.values import ExportedState, exported_value, setter
-from shinysdr.web import ClientResourceDef
+from shinysdr.i.web import ClientResourceDef
 
 audio_modulation_index = 0.07
 fm_subcarrier = 9960

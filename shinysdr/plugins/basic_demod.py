@@ -28,7 +28,7 @@ from gnuradio import filter as grfilter  # don't shadow builtin
 from gnuradio.analog import fm_emph
 from gnuradio.filter import firdes
 
-from shinysdr.math import dB, todB
+from shinysdr.i.math import dB, todB
 from shinysdr.modes import ModeDef, IDemodulator, IModulator, ITunableDemodulator
 from shinysdr.filters import MultistageChannelFilter, make_resampler, design_sawtooth_filter
 from shinysdr.signals import SignalType
