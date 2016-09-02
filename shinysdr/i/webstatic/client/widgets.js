@@ -567,7 +567,7 @@ define(['./types', './values', './events', './widget', './gltools', './database'
       ignore('zero_point');
     }, true);
   }
-  widgets['interface:shinysdr.modes.IDemodulator'] = Demodulator;
+  widgets['interface:shinysdr.interfaces.IDemodulator'] = Demodulator;
   
   // Widget for a monitor block
   function Monitor(config) {
@@ -1696,7 +1696,7 @@ define(['./types', './values', './events', './widget', './gltools', './database'
     /* does not use config.target */
     var view = config.view;
     var radioCell = config.radioCell;
-    var others = config.index.implementing('shinysdr.i.top.IHasFrequency');
+    var others = config.index.implementing('shinysdr.interfaces.IHasFrequency');
     // TODO: That this cell matters here is shared knowledge between this and ReceiverMarks. Should instead be managed by SpectrumView (since it already handles freq coordinates), in the form "get Y position of minLevel".
     var splitCell = config.clientState.spectrum_split;
     var minLevelCell = config.clientState.spectrum_level_min;

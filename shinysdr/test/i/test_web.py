@@ -33,8 +33,9 @@ from twisted.web import http
 from gnuradio import gr
 
 from shinysdr.i.db import DatabaseModel
+from shinysdr.i.poller import Poller
 from shinysdr.signals import SignalType
-from shinysdr.values import ExportedState, CollectionState, NullExportedState, Poller, exported_block, exported_value, nullExportedState, setter
+from shinysdr.values import ExportedState, CollectionState, NullExportedState, exported_block, exported_value, nullExportedState, setter
 # TODO: StateStreamInner is an implementation detail; arrange a better interface to test
 from shinysdr.i.web import StateStreamInner, WebService
 from shinysdr.test import testutil

@@ -31,9 +31,9 @@ from gnuradio import analog
 from gnuradio import gr
 from gnuradio import blocks
 
-from shinysdr.i.blocks import rotator_inc
-from shinysdr.i.math import dB, todB
-from shinysdr.modes import ITunableDemodulator, get_modes, lookup_mode
+from shinysdr.i.modes import get_modes, lookup_mode
+from shinysdr.interfaces import ITunableDemodulator
+from shinysdr.math import dB, rotator_inc, to_dB
 from shinysdr.signals import SignalType
 from shinysdr.types import Enum, Range
 from shinysdr.values import ExportedState, exported_block, exported_value, setter, unserialize_exported_state
@@ -292,7 +292,7 @@ class Receiver(gr.hier_block2, ExportedState):
     @exported_value(type=Range([(_audio_power_minimum_dB, 0)], strict=False))
     def get_audio_power(self):
         if self.get_is_valid():
-            return todB(max(_audio_power_minimum_amplitude, self.probe_audio.level()))
+            return to_dB(max(_audio_power_minimum_amplitude, self.probe_audio.level()))
         else:
             # will not be receiving samples, so probe's value will be meaningless
             return _audio_power_minimum_dB

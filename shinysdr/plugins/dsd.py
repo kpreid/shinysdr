@@ -32,7 +32,7 @@ except ImportError:
     _available = False
 
 from shinysdr.filters import make_resampler
-from shinysdr.modes import ModeDef, IDemodulator
+from shinysdr.interfaces import ModeDef, IDemodulator
 from shinysdr.plugins.basic_demod import NFMDemodulator
 from shinysdr.signals import SignalType
 from shinysdr.types import EnumRow

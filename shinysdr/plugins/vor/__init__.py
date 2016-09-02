@@ -33,12 +33,11 @@ from gnuradio import filter as grfilter  # don't shadow builtin
 from gnuradio.filter import firdes
 
 from shinysdr.filters import make_resampler
-from shinysdr.modes import ModeDef, IDemodulator, IModulator
+from shinysdr.interfaces import ClientResourceDef, ModeDef, IDemodulator, IModulator
 from shinysdr.plugins.basic_demod import SimpleAudioDemodulator, design_lofi_audio_filter
 from shinysdr.signals import SignalType
 from shinysdr.types import Range
 from shinysdr.values import ExportedState, exported_value, setter
-from shinysdr.i.web import ClientResourceDef
 
 audio_modulation_index = 0.07
 fm_subcarrier = 9960

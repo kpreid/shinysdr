@@ -15,19 +15,20 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-# TODO write module documentation
+"""API for plugins, and related things.
 
-# pylint: disable=no-init
-# (pylint is confused by interfaces)
+This module contains objects and interfaces used by plugins to declare
+the functionality they provide.
+"""
 
 from __future__ import absolute_import, division
 
-from twisted.plugin import IPlugin, getPlugins
-from zope.interface import Interface, implements  # available via Twisted
+from twisted.plugin import IPlugin
+from zope.interface import Interface, implements
 
-from shinysdr import plugins
+from shinysdr.i.modes import IModeDef
+from shinysdr.i.web import IClientResourceDef
 from shinysdr.types import EnumRow
-
 
 __all__ = []  # appended later
 
@@ -92,6 +93,9 @@ class IModulator(Interface):
         """
 
 
+__all__.append('IModulator')
+
+
 class ITunableDemodulator(IDemodulator):
     def set_rec_freq(freq):
         """
@@ -102,16 +106,17 @@ class ITunableDemodulator(IDemodulator):
 __all__.append('ITunableDemodulator')
 
 
-class _IModeDef(Interface):
-    """
-    Demodulator plugin interface object
-    """
-    # Only needed to make the plugin system work
-    # TODO write interface methods anyway
+class IHasFrequency(Interface):
+    # TODO: document this
+    def get_freq():
+        pass
+
+
+__all__.append('IHasFrequency')
 
 
 class ModeDef(object):
-    implements(IPlugin, _IModeDef)
+    implements(IPlugin, IModeDef)
     
     # Twisted plugin system caches whether-a-plugin-class-was-found permanently, so we need to avoid _not_ having a ModeDef if the plugin has some sort of dependency it checks -- thus the 'available' flag can be used to hide a mode while still having an _IModeDef
     def __init__(self,
@@ -139,37 +144,14 @@ class ModeDef(object):
 __all__.append('ModeDef')
 
 
-# Object for memoizing results of getPlugins(_IModeDef)
-class _ModeTable(object):
-    def __init__(self):
-        self.__modes = {p.mode: p for p in getPlugins(_IModeDef, plugins) if p.available}
+class ClientResourceDef(object):
+    implements(IPlugin, IClientResourceDef)
     
-    def get_modes(self):
-        return self.__modes.values()
-    
-    def lookup_mode(self, mode):
-        return self.__modes.get(mode)
+    def __init__(self, key, resource, load_css_path=None, load_js_path=None):
+        self.key = key
+        self.resource = resource
+        self.load_css_path = load_css_path
+        self.load_js_path = load_js_path
 
 
-_mode_table = None
-
-
-def _get_mode_table():
-    global _mode_table
-    if _mode_table is None:
-        _mode_table = _ModeTable()
-    return _mode_table
-
-
-def get_modes():
-    return _get_mode_table().get_modes()
-
-
-__all__.append('get_modes')
-
-
-def lookup_mode(mode):
-    return _get_mode_table().lookup_mode(mode)
-
-
-__all__.append('lookup_mode')
+__all__.append('ClientResourceDef')

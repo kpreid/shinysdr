@@ -28,8 +28,8 @@ from gnuradio import filter as grfilter  # don't shadow builtin
 from gnuradio.analog import fm_emph
 from gnuradio.filter import firdes
 
-from shinysdr.i.math import dB, todB
-from shinysdr.modes import ModeDef, IDemodulator, IModulator, ITunableDemodulator
+from shinysdr.interfaces import ModeDef, IDemodulator, IModulator, ITunableDemodulator
+from shinysdr.math import dB, to_dB
 from shinysdr.filters import MultistageChannelFilter, make_resampler, design_sawtooth_filter
 from shinysdr.signals import SignalType
 from shinysdr.types import EnumRow, Range
@@ -85,7 +85,7 @@ class SquelchMixin(ExportedState):
 
     @exported_value(type=Range([(-100, 0)], strict=False))
     def get_rf_power(self):
-        return todB(max(1e-10, self.rf_probe_block.level()))
+        return to_dB(max(1e-10, self.rf_probe_block.level()))
 
     @exported_value(type=Range([(-100, 0)], strict=False, logarithmic=False))
     def get_squelch_threshold(self):
@@ -632,7 +632,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
     
     @exported_value(type=Range([(-20, _ssb_max_agc)]))
     def get_agc_gain(self):
-        return todB(self.agc_block.gain())
+        return to_dB(self.agc_block.gain())
 
 
 class DSBModulator(gr.hier_block2, ExportedState):

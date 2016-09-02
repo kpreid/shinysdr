@@ -39,13 +39,12 @@ except ImportError:
     _available = False
 
 from shinysdr.filters import MultistageChannelFilter
-from shinysdr.i.math import LazyRateCalculator
-from shinysdr.modes import ModeDef, IDemodulator
+from shinysdr.interfaces import ClientResourceDef, IDemodulator, ModeDef
+from shinysdr.math import LazyRateCalculator
 from shinysdr.signals import no_signal
 from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, TelemetryStore, Track, empty_track
 from shinysdr.types import EnumRow, Notice, Timestamp
 from shinysdr.values import CollectionState, ExportedState, exported_value
-from shinysdr.i.web import ClientResourceDef
 
 
 

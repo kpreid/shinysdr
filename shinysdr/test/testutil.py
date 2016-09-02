@@ -31,10 +31,10 @@ from twisted.web import http
 from twisted.web.http_headers import Headers
 
 from shinysdr.devices import Device
-from shinysdr.modes import lookup_mode
+from shinysdr.i.modes import lookup_mode
+from shinysdr.i.top import Top
 from shinysdr.plugins.simulate import SimulatedDevice
 from shinysdr.signals import SignalType
-from shinysdr.i.top import Top
 from shinysdr.types import Range
 from shinysdr.values import ExportedState, nullExportedState
 

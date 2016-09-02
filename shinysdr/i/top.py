@@ -27,14 +27,14 @@ import time
 
 from twisted.internet import reactor
 from twisted.python import log
-from zope.interface import Interface, implements  # available via Twisted
+from zope.interface import implements  # available via Twisted
 
 from gnuradio import blocks
 from gnuradio import gr
 
 from shinysdr.i.audiomux import AudioManager
 from shinysdr.i.blocks import MonitorSink, RecursiveLockBlockMixin, Context
-from shinysdr.i.math import LazyRateCalculator
+from shinysdr.math import LazyRateCalculator
 from shinysdr.i.receiver import Receiver
 from shinysdr.signals import SignalType
 from shinysdr.telemetry import TelemetryStore
@@ -484,12 +484,6 @@ class ContextForReceiver(Context):
     
     def output_message(self, message):
         self.__top.get_telemetry_store().receive(message)
-
-
-class IHasFrequency(Interface):
-    # TODO: better module placement for this
-    def get_freq():
-        pass
 
 
 class MaxProbe(gr.hier_block2):

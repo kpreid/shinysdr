@@ -39,7 +39,7 @@ except ImportError:
     _available = False
 
 from shinysdr.filters import MultistageChannelFilter
-from shinysdr.modes import ModeDef, IDemodulator, IModulator
+from shinysdr.interfaces import ModeDef, IDemodulator, IModulator
 from shinysdr.signals import SignalType, no_signal
 from shinysdr.types import Range
 from shinysdr.values import ExportedState, exported_block, exported_value

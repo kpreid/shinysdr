@@ -37,11 +37,11 @@ from twisted.application.service import Service
 from twisted.internet import defer
 from twisted.internet import protocol
 from twisted.internet import reactor as the_reactor  # TODO fix
-from twisted.plugin import IPlugin, getPlugins
+from twisted.plugin import getPlugins
 from twisted.python import log
 from twisted.web import http, static, server, template
 from twisted.web.resource import Resource
-from zope.interface import Interface, implements, providedBy  # available via Twisted
+from zope.interface import Interface, providedBy
 
 from gnuradio import gr
 
@@ -50,10 +50,11 @@ import txws
 import shinysdr.plugins
 import shinysdr.i.db
 from shinysdr.i.ephemeris import EphemerisResource
-from shinysdr.modes import get_modes
+from shinysdr.i.modes import get_modes
+from shinysdr.i.poller import the_poller
 from shinysdr.signals import SignalType
 from shinysdr.twisted_ext import FactoryWithArgs
-from shinysdr.values import ExportedState, BaseCell, BlockCell, StreamCell, IWritableCollection, the_poller
+from shinysdr.values import ExportedState, BaseCell, BlockCell, StreamCell, IWritableCollection
 
 
 # temporary kludge until upstream takes our patch
@@ -662,16 +663,6 @@ class IClientResourceDef(Interface):
     """
     # Only needed to make the plugin system work
     # TODO write interface methods anyway
-
-
-class ClientResourceDef(object):
-    implements(IPlugin, IClientResourceDef)
-    
-    def __init__(self, key, resource, load_css_path=None, load_js_path=None):
-        self.key = key
-        self.resource = resource
-        self.load_css_path = load_css_path
-        self.load_js_path = load_js_path
 
 
 def _make_static(filePath):

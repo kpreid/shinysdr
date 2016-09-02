@@ -24,9 +24,7 @@ interface.
 
 from __future__ import absolute_import, division
 
-from math import acos, cos, log10, pi, sin
-import time
-
+from math import acos, cos, pi, sin
 
 __all__ = []  # appended later
 
@@ -95,50 +93,6 @@ def small_factor_at_least(n, limit, _force_approx=False):
 
 
 __all__.append('small_factor_at_least')
-
-
-def dB(x):
-    """Convert dB value to multiplicative value."""
-    return 10 ** (0.1 * x)
-
-
-__all__.append('dB')
-
-
-def todB(x):
-    """Convert multiplicative value to dB value."""
-    return 10 * log10(x)
-
-
-__all__.append('todB')
-
-
-class LazyRateCalculator(object):
-    # TODO: Not strictly a math thing.
-    """
-    Given a monotonically increasing value, allow polling its rate of increase.
-    """
-    def __init__(self, value_getter, min_interval=0.5):
-        self.__value_getter = value_getter
-        self.__min_interval = min_interval
-        
-        self.__time = time.time()
-        self.__last_value = value_getter()
-        self.__last_rate = 0
-
-    def get(self):
-        cur_wall_time = time.time()
-        elapsed_wall = cur_wall_time - self.__time
-        if elapsed_wall > self.__min_interval:
-            cur_value = self.__value_getter()
-            delta = cur_value - self.__last_value
-            self.__time = cur_wall_time
-            self.__last_value = cur_value
-            self.__last_rate = round(delta / elapsed_wall, 2)
-        return self.__last_rate
-
-
-__all__.append('LazyRateCalculator')
 
 
 def geodesic_distance(a, b):

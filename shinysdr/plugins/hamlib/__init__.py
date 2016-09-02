@@ -53,11 +53,10 @@ from twisted.python import log
 from twisted.web import static
 
 from shinysdr.devices import Device, IComponent
-from shinysdr.i.top import IHasFrequency
+from shinysdr.interfaces import ClientResourceDef, IHasFrequency
 from shinysdr.twisted_ext import fork_deferred
 from shinysdr.types import Enum, Notice, Range
 from shinysdr.values import ExportedState, LooseCell, exported_value
-from shinysdr.i.web import ClientResourceDef
 
 
 __all__ = []  # appended later

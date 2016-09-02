@@ -27,10 +27,10 @@ from gnuradio import channels
 from gnuradio import gr
 from gnuradio.filter import rational_resampler
 
-from shinysdr.i.blocks import rotator_inc
 from shinysdr.filters import make_resampler
-from shinysdr.i.math import dB, todB
-from shinysdr.modes import IModulator, lookup_mode
+from shinysdr.interfaces import IModulator
+from shinysdr.math import dB, rotator_inc, to_dB
+from shinysdr.i.modes import lookup_mode
 from shinysdr.signals import SignalType, no_signal
 from shinysdr.devices import Device, IRXDriver
 from shinysdr.types import Range
@@ -228,7 +228,7 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
     
     @exported_value(type=Range([(-50.0, 0.0)], strict=False))
     def get_gain(self):
-        return todB(self.__mult.k().real)
+        return to_dB(self.__mult.k().real)
     
     @setter
     def set_gain(self, value):

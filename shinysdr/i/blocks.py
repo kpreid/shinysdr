@@ -34,7 +34,7 @@ from gnuradio import gr
 from gnuradio import blocks
 from gnuradio.fft import logpwrfft
 
-from shinysdr.i.math import todB
+from shinysdr.math import to_dB
 from shinysdr.signals import SignalType
 from shinysdr.types import BulkDataType, Range
 from shinysdr.values import ExportedState, LooseCell, StreamCell, exported_value, setter
@@ -77,16 +77,7 @@ class Context(object):
         self.__top._recursive_unlock()
 
 
-def rotator_inc(rate, shift):
-    """
-    Calculation for using gnuradio.blocks.rotator_cc or other interfaces wanting radians/sample input.
-    
-    rate: sample rate
-    shift: frequency shift in Hz
-    """
-    return (2 * math.pi) * (shift / rate)
-
-
+# TODO: This function is used by plugins. Put it in an appropriate module.
 def make_sink_to_process_stdin(process, itemsize=gr.sizeof_char):
     """Given a twisted Process, connect a sink to its stdin."""
     fd_owned_by_twisted = process.pipes[0].fileno()  # TODO: More public way to do this?
@@ -299,7 +290,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
             itemsize=self.__itemsize)
         
         # Adjusts units so displayed level is independent of resolution and sample rate. Also throw in the packing offset
-        compensation = todB(input_length / sample_rate) + self.__power_offset
+        compensation = to_dB(input_length / sample_rate) + self.__power_offset
         # TODO: Consider not using the logpwrfft block
         
         self.__logpwrfft = logpwrfft.logpwrfft_c(

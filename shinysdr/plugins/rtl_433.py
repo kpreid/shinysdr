@@ -31,8 +31,8 @@ from gnuradio import gr
 
 from shinysdr.i.blocks import make_sink_to_process_stdin
 from shinysdr.filters import MultistageChannelFilter
-from shinysdr.i.math import dB
-from shinysdr.modes import ModeDef, IDemodulator
+from shinysdr.math import dB
+from shinysdr.interfaces import ModeDef, IDemodulator
 from shinysdr.signals import no_signal
 from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject
 from shinysdr.twisted_ext import test_subprocess
