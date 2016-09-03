@@ -453,6 +453,8 @@ class StateStreamInner(object):
         root_registration.send_now_if_needed()
     
     def connectionLost(self, reason):
+        # pylint: disable=consider-iterating-dictionary
+        # dict is mutated during iteration
         for obj in self._registered_objs.keys():
             self.__drop(obj)
     
