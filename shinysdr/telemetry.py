@@ -124,7 +124,7 @@ class ITelemetryObject(Interface):
         """
 
 
-__all__.append('ITelemetryMessage')
+__all__.append('ITelemetryObject')
 
 
 class ITelemetryMessage(Interface):
@@ -152,7 +152,7 @@ class ITelemetryStore(Interface):
     """
 
 
-__all__.append('ITelemetryMessage')
+__all__.append('ITelemetryStore')
 
 
 class TelemetryStore(CollectionState):
