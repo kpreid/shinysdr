@@ -57,11 +57,6 @@ from shinysdr.twisted_ext import FactoryWithArgs
 from shinysdr.values import ExportedState, BaseCell, BlockCell, StreamCell, IWritableCollection
 
 
-# temporary kludge until upstream takes our patch
-if hasattr(txws, 'WebSocketProtocol') and not hasattr(txws.WebSocketProtocol, 'setBinaryMode'):
-    raise ImportError('The installed version of txWS does not support sending binary messages and cannot be used.')
-
-
 # used externally
 staticResourcePath = os.path.join(os.path.dirname(__file__), 'webstatic')
 
