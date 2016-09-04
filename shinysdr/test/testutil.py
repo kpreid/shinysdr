@@ -15,9 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-# pylint: disable=signature-differs
-# (signature-differs: twisted is inconsistent about connectionMade/connectionLost)
-
 import json
 import StringIO
 
@@ -214,4 +211,5 @@ class _Accumulator(Protocol):
         self.data += chunk
     
     def connectionLost(self, reason):
+        # pylint: disable=signature-differs
         self.finished.callback(self.data)

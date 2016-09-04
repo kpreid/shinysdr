@@ -15,10 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-# pylint: disable=no-init, attribute-defined-outside-init
-# (no-init: pylint is confused by interfaces)
-# (attribute-defined-outside-init: on purpose)
-
 from __future__ import absolute_import, division
 
 import json
@@ -152,6 +148,7 @@ class StateStreamTestCase(unittest.TestCase):
     object = None  # should be set in subclass setUp
     
     def setUpForObject(self, obj):
+        # pylint: disable=attribute-defined-outside-init
         self.object = obj
         self.updates = []
         self.poller = Poller()
@@ -167,6 +164,8 @@ class StateStreamTestCase(unittest.TestCase):
             poller=self.poller)
     
     def getUpdates(self):
+        # pylint: disable=attribute-defined-outside-init
+        
         # warning: implementation poking
         self.poller.poll()
         self.stream._flush()

@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-
 """
 This is a adapter to allow ghpsdr3-alex clients such as "glSDR" for
 Android to connect to ShinySDR as a "dspserver"; references:
@@ -28,13 +27,6 @@ by the glSDR client, resulting in the following messages being
 misparsed. No success yet in figuring out where the discrepancy is.
 Patches welcome.
 """
-
-
-# pylint: disable=maybe-no-member, attribute-defined-outside-init, signature-differs
-# (maybe-no-member is incorrect)
-# (attribute-defined-outside-init is a Twisted convention for protocol objects)
-# (signature-differs: twisted is inconsistent about connectionMade/connectionLost)
-
 
 from __future__ import absolute_import, division
 
@@ -132,6 +124,7 @@ class _DspserverProtocol(protocol.Protocol):
             impl(self, argstr)
     
     def connectionLost(self, reason):
+        # pylint: disable=signature-differs
         self._top.remove_audio_queue(self.__audio_queue)
         self._poller.stop()
         self.__splitter.close()
@@ -161,6 +154,7 @@ class _DspserverProtocol(protocol.Protocol):
         # audio
         aqueue = self.__audio_queue
         while not aqueue.empty_p():
+            # pylint: disable=no-member
             grmessage = aqueue.delete_head()
             if grmessage.length() > 0:  # avoid crash bug
                 self.__audio_buffer += grmessage.to_string()

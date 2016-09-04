@@ -16,8 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-# pylint: disable=dangerous-default-value
-
 from __future__ import absolute_import, division
 
 from collections import Counter
@@ -150,6 +148,7 @@ class Device(ExportedState):
             tx_driver=nullExportedState,
             vfo_cell=None,
             components={}):
+        # pylint: disable=dangerous-default-value
         """
         rx_driver -- may be nullExportedState
         tx_driver -- may be nullExportedState

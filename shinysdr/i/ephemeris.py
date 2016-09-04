@@ -15,14 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-# pylint: disable=maybe-no-member, attribute-defined-outside-init, no-init, method-hidden, signature-differs
-# (maybe-no-member is incorrect)
-# (attribute-defined-outside-init is a Twisted convention for protocol objects)
-# (no-init is pylint being confused by interfaces)
-# (method-hidden: done on purpose)
-# (signature-differs: twisted is inconsistent about connectionMade/connectionLost)
-
-
 from __future__ import absolute_import, division
 
 import json
@@ -46,6 +38,8 @@ class EphemerisResource(Resource):
         pass
     
     def render_GET(self, request):
+        # pylint: disable=no-member
+        
         # This will eventually take satellite parameters and return current position/velocity. For now, it does the sun.
         o = ephem.Observer()
         o.date = ephem.now()

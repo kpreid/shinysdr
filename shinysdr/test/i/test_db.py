@@ -15,9 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-# pylint: disable=no-member
-# (pylint is confused by listenTCP)
-
 from __future__ import absolute_import, division
 
 import json
@@ -245,6 +242,7 @@ class TestDBWeb(unittest.TestCase):
     }
     
     def setUp(self):
+        # pylint: disable=no-member
         db_model = db.DatabaseModel(reactor, dict(self.test_records), writable=True)
         dbResource = db.DatabaseResource(db_model)
         self.port = reactor.listenTCP(0, server.Site(dbResource), interface="127.0.0.1")

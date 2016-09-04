@@ -15,10 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-
-# pylint: disable=no-member, attribute-defined-outside-init
-
-
 from __future__ import absolute_import, division
 
 import unittest
@@ -29,22 +25,22 @@ from shinysdr.values import ExportedState, CollectionState, LooseCell, ViewCell,
 
 class TestExportedState(unittest.TestCase):
     def test_persistence_basic(self):
-        self.object = ValueAndBlockSpecimen(ValueAndBlockSpecimen(ExportedState()))
-        self.assertEqual(self.object.state_to_json(), {
+        o = ValueAndBlockSpecimen(ValueAndBlockSpecimen(ExportedState()))
+        self.assertEqual(o.state_to_json(), {
             u'value': 0,
             u'block': {
                 u'value': 0,
                 u'block': {},
             },
         })
-        self.object.state_from_json({
+        o.state_from_json({
             u'value': 1,
             u'block': {
                 u'value': 2,
                 u'block': {},
             },
         })
-        self.assertEqual(self.object.state_to_json(), {
+        self.assertEqual(o.state_to_json(), {
             u'value': 1,
             u'block': {
                 u'value': 2,
@@ -55,13 +51,13 @@ class TestExportedState(unittest.TestCase):
     # TODO: test persistence error cases like unknown or wrong-typed properties
     
     def test_persistence_args(self):
-        self.object = unserialize_exported_state(
+        o = unserialize_exported_state(
             ctor=ValueAndBlockSpecimen,
             kwargs={u'block': ValueAndBlockSpecimen(ExportedState())},
             state={
                 u'value': 1,
             })
-        self.assertEqual(self.object.state_to_json(), {
+        self.assertEqual(o.state_to_json(), {
             u'value': 1,
             u'block': {
                 u'value': 0,

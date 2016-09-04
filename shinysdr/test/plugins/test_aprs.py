@@ -15,10 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-# pylint: disable=too-many-public-methods, unused-variable
-# (too-many-public-methods: bogus reports for TestCase)
-# (unused-variable: unused parse tuple results)
-
 from __future__ import absolute_import, division
 
 from datetime import datetime

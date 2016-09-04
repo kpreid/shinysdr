@@ -22,9 +22,6 @@ This module is not an external API and not guaranteed to have a stable
 interface.
 """
 
-# pylint: disable=attribute-defined-outside-init
-# (attribute-defined-outside-init: doing it carefully)
-
 from __future__ import absolute_import, division
 
 import math

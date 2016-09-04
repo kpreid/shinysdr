@@ -15,11 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-# pylint: disable=dangerous-default-value, no-init, method-hidden
-# (the default values in question are not mutated)
-# (pylint is confused by interfaces)
-# (method-hidden: done on purpose)
-
 from __future__ import absolute_import, division
 
 import math
@@ -68,6 +63,7 @@ _stub_features = {'stereo': True}
 class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 
     def __init__(self, devices={}, audio_config=None, features=_stub_features):
+        # pylint: disable=dangerous-default-value
         if len(devices) <= 0:
             raise ValueError('Must have at least one RF device')
         
@@ -499,6 +495,7 @@ class MaxProbe(gr.hier_block2):
         self.set_window_and_reconnect(window)
     
     def level(self):
+        # pylint: disable=method-hidden
         # overridden in instances
         raise Exception('This placeholder should never get called')
     

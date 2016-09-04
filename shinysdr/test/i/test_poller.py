@@ -15,10 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-
-# pylint: disable=no-member, attribute-defined-outside-init
-
-
 from __future__ import absolute_import, division
 
 import unittest
@@ -60,6 +56,7 @@ class TestPoller(unittest.TestCase):
         def callback():
             called[0] += 1
         
+        # pylint: disable=no-member
         sub = self.poller.subscribe(cell, callback)
         self.assertEqual(0, self.poller._Poller__targets.count_keys(), 'no polling')
         self.assertEqual(0, called[0], 'initial')

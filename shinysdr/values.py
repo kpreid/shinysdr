@@ -17,11 +17,8 @@
 
 # TODO: Document this module.
 
-# pylint: disable=unpacking-non-sequence, undefined-loop-variable, attribute-defined-outside-init, no-init, abstract-method, redefined-builtin, arguments-differ
-# (pylint is confused by our tuple-or-None in _MessageSplitter and by our only-used-immediately closures over loop variables in state_from_json)
-# (abstract-method: pylint is confused by the cell type hierarchy)
-# (redefined-builtin: we want named args named "type")
-# (arguments-differ: pylint is confused, don't know why)
+# pylint: disable=redefined-builtin
+# (we have keyword args named 'type')
 
 from __future__ import absolute_import, division
 
@@ -95,6 +92,9 @@ class BaseCell(object):
 
 
 class ValueCell(BaseCell):
+    # pylint: disable=abstract-method
+    # (we are also abstract)
+    
     def __init__(self, target, key, type, **kwargs):
         BaseCell.__init__(self, target, key, **kwargs)
         self._value_type = to_value_type(type)
@@ -221,6 +221,9 @@ class StreamCell(ValueCell):
 
 
 class BaseBlockCell(BaseCell):
+    # pylint: disable=abstract-method
+    # (we are also abstract)
+    
     def __init__(self, target, key, persists=True):
         BaseCell.__init__(self, target, key, writable=False, persists=persists)
     
@@ -268,6 +271,9 @@ class CollectionMemberCell(BaseBlockCell):
 
 
 class ISubscribableCell(Interface):
+    # pylint: disable=arguments-differ
+    # (pylint is confused)
+    
     def subscribe(callback):
         """
         (TODO main doc)
@@ -431,6 +437,7 @@ class ExportedState(object):
         return False
     
     def state(self):
+        # pylint: disable=attribute-defined-outside-init
         if self.state_is_dynamic() or not hasattr(self, '_ExportedState__cache'):
             cache = {}
             self.__cache = cache
@@ -469,7 +476,7 @@ class ExportedState(object):
         dynamic = self.state_is_dynamic()
         defer = []
         for key in state:
-            # pylint: disable=cell-var-from-loop
+            # pylint: disable=cell-var-from-loop, undefined-loop-variable
             def err(adjective, suffix):
                 # TODO ship to client
                 log.msg('Warning: Discarding ' + adjective + ' state', str(self) + '.' + key, '=', state[key], suffix)

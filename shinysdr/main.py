@@ -17,12 +17,8 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-
-# pylint: disable=unused-variable
 # pylint: disable=no-member
-# (unused-variable: placeholder imports)
-# (no-member: pylint is confused by reactor)
-
+# (no-member: Twisted reactor)
 
 from __future__ import absolute_import, division
 
@@ -92,6 +88,7 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
         sys.exit(1)
 
     # We don't actually use shinysdr.devices directly, but we want it to be guaranteed available in the context of the config file.
+    # pylint: disable=unused-variable
     import shinysdr.devices as lazy_devices
     import shinysdr.source as lazy_source  # legacy shim
 

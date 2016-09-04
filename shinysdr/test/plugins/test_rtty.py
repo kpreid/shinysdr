@@ -15,9 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-# pylint: disable=no-member
-# (no-member: pylint is confused by numpy)
-
 from __future__ import absolute_import, division
 
 from twisted.trial import unittest
@@ -29,11 +26,11 @@ from shinysdr.plugins import rtty
 #from shinysdr.test.testutil import DemodulatorTester
 
 # disable: mode is disabled so we can't test it
-#class TestRTTY(unittest.TestCase):
-#    def __make(self):
-#    def test_common(self):
-#        with DemodulatorTester('RTTY'):
-#            pass
+# class TestRTTY(unittest.TestCase):
+#     def __make(self):
+#     def test_common(self):
+#         with DemodulatorTester('RTTY'):
+#             pass
 
 
 class TestRTTYEncoder(unittest.TestCase):

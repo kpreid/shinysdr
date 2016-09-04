@@ -15,9 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-# pylint: disable=no-member
-# (no-member: pylint is confused by numpy)
-
 from __future__ import absolute_import, division
 
 import math
@@ -134,6 +131,7 @@ class RTTYDemodulator(gr.hier_block2, ExportedState):
 
     @exported_value(type=unicode)
     def get_text(self):
+        # pylint: disable=no-member
         queue = self.__char_queue
         # we would use .delete_head_nowait() but it returns a crashy wrapper instead of a sensible value like None. So implement a test (which is safe as long as we're the only reader)
         if not queue.empty_p():
@@ -231,6 +229,7 @@ def _to_bits(code):
     l.append(1)
     l.append(1)
     l.append(1)
+    # pylint: disable=no-member
     return numpy.array(l, dtype=numpy.float32)
 
 
@@ -261,6 +260,7 @@ def _encode_rtty(char_in, bits_out):
 
 
 def _encode_rtty_alloc(char_in):
+    # pylint: disable=no-member
     # TODO: should not need the + 1
     out = numpy.full([(len(char_in) + 1) * _HALF_BITS_PER_CODE * 2], 0, dtype=numpy.float32)
     count_in, count_out = _encode_rtty(char_in, out)

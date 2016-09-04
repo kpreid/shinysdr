@@ -28,13 +28,6 @@ config.devices.add('my-other-radio',
 TODO explain how to link up with soundcard devices
 """
 
-# pylint: disable=no-init, no-member, signature-differs, raising-bad-type
-# (no-init: pylint confused by interfaces)
-# (no-member: pylint confused by abstract non-methods)
-# (signature-differs: twisted is inconsistent about connectionMade/connectionLost)
-# (raising-bad-type: pylint static analysis failure)
-
-
 from __future__ import absolute_import, division
 
 import os.path
@@ -250,7 +243,7 @@ def _connect_to_device(reactor, options, port, daemon, connect_func):
     
     # Retry connecting with exponential backoff, because the daemon process won't tell us when it's started listening.
     proxy_device = None
-    refused = None
+    refused = Exception('this shouldn\'t be raised')
     for i in xrange(0, 5):
         try:
             proxy_device = yield connect_func(
@@ -272,6 +265,7 @@ def _connect_to_device(reactor, options, port, daemon, connect_func):
 
 
 class _HamlibProxy(ExportedState):
+    # pylint: disable=no-member
     """
     Abstract class for objects which export state proxied to a hamlib daemon.
     """
@@ -423,6 +417,12 @@ class _HamlibProxy(ExportedState):
                 return u'%s: %s' % (cmd, error_number)
             else:
                 return u''
+    
+    def poll_fast(self, send):
+        raise NotImplementedError()
+    
+    def poll_slow(self, send):
+        raise NotImplementedError()
 
 
 def _install_cell(self, name, is_level, writable, callback, caps):
@@ -604,6 +604,7 @@ class _HamlibClientProtocol(Protocol):
         self.__connected_deferred.callback(self)
     
     def connectionLost(self, reason):
+        # pylint: disable=signature-differs
         if self.__proxy_obj is not None:
             self.__proxy_obj._clientConnectionLost(reason)
     

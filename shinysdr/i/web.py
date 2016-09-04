@@ -15,14 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-# pylint: disable=maybe-no-member, attribute-defined-outside-init, no-init, method-hidden, signature-differs
-# (maybe-no-member is incorrect)
-# (attribute-defined-outside-init is a Twisted convention for protocol objects)
-# (no-init is pylint being confused by interfaces)
-# (method-hidden: done on purpose)
-# (signature-differs: twisted is inconsistent about connectionMade/connectionLost)
-
-
 from __future__ import absolute_import, division
 
 import json
@@ -337,6 +329,7 @@ class _StateStreamObjectRegistration(object):
         """kludge to get initial state sent"""
     
     def send_now_if_needed(self):
+        # pylint: disable=method-hidden
         # should be overridden in instance
         raise Exception('This placeholder should never get called')
     
@@ -549,6 +542,7 @@ class AudioStreamInner(object):
         pass
     
     def connectionLost(self, reason):
+        # pylint: disable=no-member
         self._block.remove_audio_queue(self._queue)
         self.__running[0] = False
         # Insert a dummy message to ensure the loop thread unblocks; otherwise it will sit around forever, including preventing process shutdown.
@@ -634,6 +628,7 @@ class OurStreamProtocol(protocol.Protocol):
         # Unfortunately, txWS calls this too soon for transport.location to be available
     
     def connectionLost(self, reason):
+        # pylint: disable=signature-differs
         """twisted Protocol implementation"""
         if self.inner is not None:
             self.inner.connectionLost(reason)

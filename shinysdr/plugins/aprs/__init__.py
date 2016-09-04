@@ -30,12 +30,6 @@ APRS support plugin. This does not provide a complete APRS receiver, but only an
 # <http://www.aprs.org/aprs12.html>
 
 
-# pylint: disable=bad-whitespace, too-many-locals, too-many-return-statements, too-many-branches, unused-variable
-# (bad-whitespace: we have a column-aligned data table)
-# (too-many-*: parsers are hairy)
-# (unused-variable: parser tuples)
-
-
 from __future__ import absolute_import, division
 
 from collections import namedtuple
@@ -67,9 +61,6 @@ drop_unheard_timeout_seconds = 60 * 30
 
 
 def expand_aprs_message(message, store):
-    def f(message):
-        store.receive(message)
-    
     store.receive(message)
     for fact in message.facts:
         if isinstance(fact, ObjectItemReport):
@@ -327,7 +318,6 @@ class _APRSISComponent(TelemetryStore):
             log.msg(u'APRS: %r' % (line,))
             message = parse_tnc2(line, time.time())
             log.msg(u'   -> %s' % (message,))
-            parsed = parse_tnc2(line, time.time())
             self.receive(message)
     
         # client blocks in a loop, so set up a thread
@@ -356,6 +346,9 @@ class _APRSISComponent(TelemetryStore):
 
 
 def _parse_payload(facts, errors, source, destination, payload, receive_time):
+    # pylint: disable=unused-variable
+    # (variables for information we're not yet using)
+    
     if len(payload) < 1:
         errors.append('zero length information')
         return payload
@@ -491,6 +484,7 @@ def _parse_payload(facts, errors, source, destination, payload, receive_time):
 
 
 _mic_e_addr_decode_table = {
+    # pylint: disable=bad-whitespace
     # per APRS 1.1 http://www.aprs.org/doc/APRS101.PDF page 44
     # (lat digit, message bit, lat dir, lon offset, lon dir)
     '0': ('0', 0, 'S',   0, +1),
@@ -593,6 +587,9 @@ def _parse_position_and_symbol(facts, errors, data):
 
 
 def _parse_data_extension(facts, errors, data, symbol):
+    # pylint: disable=unused-variable
+    # (variables for information we're not yet using)
+    
     if len(data) < 7:
         return data
     

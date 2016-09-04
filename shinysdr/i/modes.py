@@ -17,9 +17,6 @@
 
 # TODO write module documentation, or revisit whether this module needs to exist
 
-# pylint: disable=no-init
-# (pylint is confused by interfaces)
-
 from __future__ import absolute_import, division
 
 from twisted.plugin import getPlugins
