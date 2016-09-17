@@ -35,6 +35,7 @@ define(['./types', './values', './events', './widget', './gltools', './database'
   var addLifecycleListener = widget.addLifecycleListener;
   var alwaysCreateReceiverFromEvent = widget.alwaysCreateReceiverFromEvent;
   var createWidgetExt = widget.createWidgetExt;
+  var emptyDatabase = database.empty;
   var modeTable = plugins.getModeTable();
   
   // contains *only* widget types and can be used as a lookup namespace
@@ -609,10 +610,12 @@ define(['./types', './values', './events', './widget', './gltools', './database'
       ignore('fft');
       
       // TODO this is clunky. (Note we're not just using rebuildMe because we don't want to lose waterfall history and reinit GL and and and...)
-      var radioCell = config.radioCell;
-      var freqCell = new DerivedCell(Number, config.scheduler, function (dirty) {
-        return radioCell.depend(dirty).source.depend(dirty).freq.depend(dirty);
-      });
+      var freqCell = isRFSpectrum ? (function() {
+        var radioCell = config.radioCell;
+        return new DerivedCell(Number, config.scheduler, function (dirty) {
+          return radioCell.depend(dirty).source.depend(dirty).freq.depend(dirty);
+        });
+      }()) : new ConstantCell(Number, 0);
       var freqScaleEl = overlayContainer.appendChild(document.createElement('div'));
       createWidgetExt(context, FreqScale, freqScaleEl, freqCell);
       
@@ -2365,8 +2368,8 @@ define(['./types', './values', './events', './widget', './gltools', './database'
   
   function FreqScale(config) {
     var tunerSource = config.target;
-    var dataSource = config.freqDB.groupSameFreq();
     var view = config.view;
+    var dataSource = config.view.isRFSpectrum() ? config.freqDB.groupSameFreq() : emptyDatabase;
     var tune = config.actions.tune;
     var menuContext = config.context;
 

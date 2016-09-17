@@ -512,6 +512,8 @@ define(['./events', './network', './types', './values'], function (events, netwo
   }
   exports.DatabasePicker = DatabasePicker;
   
+  exports.empty = new Table('(none)', false, function (init) {});
+  
   // Generic FM broadcast channels
   exports.fm = (function () {
     // Wikipedia currently says FM channels are numbered like so, but no one uses the numbers. Well, I'll use the numbers, just to start from integers. http://en.wikipedia.org/wiki/FM_broadcasting_in_the_USA

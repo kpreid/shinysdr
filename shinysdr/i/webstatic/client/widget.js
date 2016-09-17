@@ -357,8 +357,7 @@ define(['./types', './values', './events', './coordination'], function (types, v
   // TODO: Revisit whether this should be in widgets.js -- it is closely tied to the spectrum widgets, but also managed by the widget framework.
   var MAX_ZOOM_BINS = 60; // Maximum zoom shows this many FFT bins
   function SpectrumView(config) {
-    // TODO: It should be the case that radioCell is used only if isRFSpectrum is true. This is not quite true.
-    var radioCell = config.radioCell;
+    var radioCell = config.isRFSpectrum ? config.radioCell : null;
     var container = config.outerElement;
     var innerElement = config.innerElement;
     var scheduler = config.scheduler;
@@ -454,6 +453,9 @@ define(['./types', './values', './events', './coordination'], function (types, v
     // exported for the sake of createWidgets -- TODO proper factoring?
     this.scheduler = scheduler;
     
+    this.isRFSpectrum = function () {
+      return isRFSpectrum;
+    };
     this.isRealFFT = function isRealFFT(freq) {
       // When posible, prefer the coordinate-conversion functions to this one. But sometimes this is much more direct.
       return !analytic;
@@ -494,7 +496,9 @@ define(['./types', './values', './events', './coordination'], function (types, v
         1,  // at least min zoom,
         Math.max(
           nyquist / 10e3, // at least 10 kHz
-          radioCell.get().monitor.get().freq_resolution.get() / MAX_ZOOM_BINS));
+          radioCell
+            ? radioCell.get().monitor.get().freq_resolution.get() / MAX_ZOOM_BINS
+            : 0));
       return Math.min(maxZoom, Math.max(1.0, zoomValue));
     }
     function clampScroll(scrollValue) {

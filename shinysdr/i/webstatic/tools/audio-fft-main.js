@@ -56,11 +56,6 @@ define(['types', 'values', 'events', 'widget', 'widgets', 'network', 'database',
   
   var fftcell = new network.BulkDataCell('<dummy spectrum>', new types.BulkDataType('dff', 'b'));
   var root = new ConstantCell(types.block, makeBlock({
-    source: new ConstantCell(types.block, makeBlock({
-      freq: new ConstantCell(Number, 0),
-    })),
-    receivers: new ConstantCell(types.block, makeBlock({})),
-    //input_rate: new ConstantCell(Number, sampleRate),
     monitor: new ConstantCell(types.block, makeBlock({
       fft: fftcell,
       freq_resolution: new ConstantCell(Number, binCount),
@@ -70,7 +65,6 @@ define(['types', 'values', 'events', 'widget', 'widgets', 'network', 'database',
   
   var context = new widget.Context({
     widgets: widgets,
-    radioCell: root,  // TODO: 'radio' name is bogus
     clientState: new ClientStateObject(sessionStorage, null),  // TODO: using sessionStorage as an approximation for "no storage".
     spectrumView: null,
     freqDB: new database.Union(),
