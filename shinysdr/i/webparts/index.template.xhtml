@@ -37,7 +37,7 @@
   document.getElementById('loading-information-progress').value = 0.01;
 </script>
 
-<shinysdr-subwindow id="section-system-menu">
+<shinysdr-subwindow id="section-system-menu" visible="true">
   <h2>ShinySDR</h2>
   <div class="sidebar frame">
     <ul class="system-menu-list" id="shinysdr-subwindow-list">
@@ -46,15 +46,21 @@
       <li><a href="/manual/">ShinySDR Manual</a></li>
       <li><a href="flow-graph">Debug: flow graph</a></li>
     </ul>
-    <details class="panel frame" id="client-audio" data-widget="Block" data-target="audio">
+    <details class="panel frame" id="client-audio" data-widget="PickBlock" data-target="audio">
       <summary>Audio stream</summary>
+      <!-- ignore: monitor -->
     </details>
   </div>
 </shinysdr-subwindow>
 
 <shinysdr-subwindow id="section-spectrum" class="stretchy" visible="true">
-  <h2>Spectrum <span data-target="radio"><span data-target="monitor" data-widget="MonitorQuickOptions"></span></span></h2>
-  <div id="spectrum-monitor" data-widget="Monitor" data-target="radio.monitor" data-is-rf-spectrum=""></div>
+  <h2>RF Spectrum <span data-target="radio"><span data-target="monitor" data-widget="MonitorQuickOptions"></span></span></h2>
+  <div id="rf-spectrum-monitor" data-widget="Monitor" data-target="radio.monitor" data-is-rf-spectrum=""></div>
+</shinysdr-subwindow>
+
+<shinysdr-subwindow id="section-audio-spectrum" class="stretchy" visible="false">
+  <h2>Audio Spectrum</h2>
+  <div id="audio-spectrum-monitor" data-widget="Monitor" data-target="audio.monitor"></div>
 </shinysdr-subwindow>
 
 <shinysdr-subwindow id="section-map" class="stretchy" visible="false">

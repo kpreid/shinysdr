@@ -23,6 +23,7 @@ define(['./types', './values', './events', './network'], function (types, values
   var BulkDataType = types.BulkDataType;
   var Cell = values.Cell;
   var ConstantCell = values.ConstantCell;
+  var LocalReadCell = values.LocalReadCell;
   var Neverfier = events.Neverfier;
   
   var EMPTY_CHUNK = [];
@@ -75,6 +76,12 @@ define(['./types', './values', './events', './network'], function (types, values
     //  }
     //}
     
+    // Analyzer for display
+    var analyzerNode = audio.createAnalyser();
+    analyzerNode.smoothingTimeConstant = 0;
+    analyzerNode.fftSize = 16384;
+    var analyzerAdapter = new AudioAnalyzerAdapter(analyzerNode, analyzerNode.frequencyBinCount / 2);
+    
     // User-facing status display
     // TODO should be faceted read-only when exported
     var errorTime = 0;
@@ -83,10 +90,11 @@ define(['./types', './values', './events', './network'], function (types, values
       errorTime = Date.now() + 1000;
     }
     var info = values.makeBlock({
-      buffered: new values.LocalReadCell(new types.Range([[0, 2]], false, false), 0),
-      target: new values.LocalReadCell(String, ''),  // TODO should be numeric w/ unit
-      error: new values.LocalReadCell(new types.Notice(true), ''),
-      //averageSkew: new values.LocalReadCell(Number, 0),
+      buffered: new LocalReadCell(new types.Range([[0, 2]], false, false), 0),
+      target: new LocalReadCell(String, ''),  // TODO should be numeric w/ unit
+      error: new LocalReadCell(new types.Notice(true), ''),
+      //averageSkew: new LocalReadCell(Number, 0),
+      monitor: new ConstantCell(types.block, analyzerAdapter)
     });
     function updateStatus() {
       // TODO: I think we are mixing up per-channel and total samples here  (queueSampleCount counts both channels individually)
@@ -288,11 +296,13 @@ define(['./types', './values', './events', './network'], function (types, values
           
           started = true;
           nodeBeforeDestination.connect(audio.destination);
+          nodeBeforeDestination.connect(analyzerNode);
         }
       } else {
         if (started) {
           started = false;
           nodeBeforeDestination.disconnect(audio.destination);
+          nodeBeforeDestination.disconnect(analyzerNode);
         }
       }
     }
