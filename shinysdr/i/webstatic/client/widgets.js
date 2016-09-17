@@ -647,6 +647,7 @@ define(['./types', './values', './events', './widget', './gltools', './database'
     });
   }
   widgets.Monitor = Monitor;
+  widgets['interface:shinysdr.i.blocks.IMonitor'] = Monitor;
   
   function MonitorQuickOptions(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {

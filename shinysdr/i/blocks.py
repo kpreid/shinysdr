@@ -27,6 +27,8 @@ from __future__ import absolute_import, division
 import math
 import os
 
+from zope.interface import Interface, implements
+
 from gnuradio import gr
 from gnuradio import blocks
 from gnuradio.fft import logpwrfft
@@ -198,7 +200,15 @@ class _OverlapGimmick(gr.hier_block2):
                     (interleave, i))
 
 
+class IMonitor(Interface):
+    """Marker interface for client UI.
+    
+    Note that this is also implemented on the client for the local audio monitor.
+    """
+
+
 class MonitorSink(gr.hier_block2, ExportedState):
+    implements(IMonitor)
     """
     Convenience wrapper around all the bits and pieces to display the signal spectrum to the client.
     

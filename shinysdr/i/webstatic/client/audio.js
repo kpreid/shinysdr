@@ -20,6 +20,11 @@ define(['./types', './values', './events', './network'], function (types, values
   
   var exports = {};
   
+  var BulkDataType = types.BulkDataType;
+  var Cell = values.Cell;
+  var ConstantCell = values.ConstantCell;
+  var Neverfier = events.Neverfier;
+  
   var EMPTY_CHUNK = [];
   
   function connectAudio(url) {
@@ -263,6 +268,86 @@ define(['./types', './values', './events', './network'], function (types, values
   }
   
   exports.connectAudio = connectAudio;
+
+  // TODO adapter should have gui settable parameters and include these
+  // These options create a less meaningful and more 'decorative' result.
+  var FREQ_ADJ = false;    // Compensate for typical frequency dependence in music so peaks are equal.
+  var TIME_ADJ = false;    // Subtract median amplitude; hides strong beats.
   
+  // Takes frequency data from an AnalyzerNode and provides an interface like a MonitorSink
+  function AudioAnalyzerAdapter(analyzerNode, length) {
+    // Constants
+    var effectiveSampleRate = analyzerNode.context.sampleRate * (length / analyzerNode.frequencyBinCount);
+    var info = Object.freeze({freq: 0, rate: effectiveSampleRate});
+    
+    // State
+    var fftBuffer = new Float32Array(length);
+    var lastValue = [info, fftBuffer];
+    var subscriptions = [];
+    var isScheduled = false;
+    
+    function update() {
+      isScheduled = false;
+      analyzerNode.getFloatFrequencyData(fftBuffer);
+    
+      var absolute_adj;
+      if (TIME_ADJ) {
+        var medianBuffer = Array.prototype.slice.call(fftBuffer);
+        medianBuffer.sort(function(a, b) {return a - b; });
+        absolute_adj = -100 - medianBuffer[length / 2];
+      } else {
+        absolute_adj = 0;
+      }
+      
+      var freq_adj;
+      if (FREQ_ADJ) {
+        freq_adj = 1;
+      } else {
+        freq_adj = 0;
+      }
+      
+      for (var i = 0; i < length; i++) {
+        fftBuffer[i] = fftBuffer[i] + absolute_adj + freq_adj * Math.pow(i, 0.5);
+      }
+      
+      var newValue = [info, fftBuffer];  // fresh array, same contents, good enough.
+    
+      // Deliver value
+      lastValue = newValue;
+      if (subscriptions.length && !isScheduled) {
+        isScheduled = true;
+        // TODO should call a Scheduler instead but we don't have one.
+        // (Though also, a basic rAF loop seems to be about the right rate to poll the AnalyzerNode for new data.)
+        requestAnimationFrame(update);
+      }
+      // TODO replace this with something async
+      for (var i = 0; i < subscriptions.length; i++) {
+        (0,subscriptions[i])(newValue);
+      }
+    }
+    
+    // Output cell
+    this.fft = new Cell(new types.BulkDataType('dff', 'b'));  // TODO BulkDataType really isn't properly involved here
+    this.fft.get = function () {
+      return lastValue;
+    };
+    // TODO: put this on a more general and sound framework (same as BulkDataCell)
+    this.fft.subscribe = function (callback) {
+      subscriptions.push(callback);
+      if (!isScheduled) {
+        requestAnimationFrame(update);
+      }
+    };
+    
+    // Other elements expected by Monitor widget
+    Object.defineProperty(this, '_implements_shinysdr.i.blocks.IMonitor', {enumerable: false});
+    this.freq_resolution = new ConstantCell(Number, length);
+    this.signal_type = new ConstantCell(types.any, {kind: 'USB', sample_rate: effectiveSampleRate});
+  }
+  Object.defineProperty(AudioAnalyzerAdapter.prototype, '_reshapeNotice', {value: new Neverfier()});
+  Object.freeze(AudioAnalyzerAdapter.prototype);
+  Object.freeze(AudioAnalyzerAdapter);
+  exports.AudioAnalyzerAdapter = AudioAnalyzerAdapter;
+    
   return Object.freeze(exports);
 });
