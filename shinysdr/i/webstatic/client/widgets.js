@@ -128,6 +128,19 @@ define(['./types', './values', './events', './widget', './gltools', './database'
       appendTarget = 'details';
     }
     
+    // Ignore anything named in an "ignore: <name>" comment as an immediate child node.
+    // TODO: Write a test for this feature
+    (function() {
+      for (var node = config.element.firstChild; node; node = node.nextSibling) {
+        if (node.nodeType == 8 /* comment */) {
+          var match = /^\s*ignore:\s*(\S*)\s*$/.exec(node.nodeValue);
+          if (match) {
+            ignore(match[1]);
+          }
+        }
+      }
+    }());
+    
     if (optSpecial) {
       optSpecial.call(this, block, addWidget, ignore, setInsertion, setToDetails, getAppend);
     }
