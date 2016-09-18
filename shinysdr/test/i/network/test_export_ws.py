@@ -26,122 +26,13 @@ from twisted.trial import unittest
 from twisted.internet import reactor
 from twisted.web import http
 
-from gnuradio import gr
-
 from shinysdr.i.db import DatabaseModel
+from shinysdr.i.network.export_ws import StateStreamInner
 from shinysdr.i.poller import Poller
 from shinysdr.signals import SignalType
 from shinysdr.values import ExportedState, CollectionState, NullExportedState, exported_block, exported_value, nullExportedState, setter
 # TODO: StateStreamInner is an implementation detail; arrange a better interface to test
-from shinysdr.i.web import StateStreamInner, WebService
 from shinysdr.test import testutil
-
-
-class TestWebSite(unittest.TestCase):
-    # note: this test has a subclass
-
-    def setUp(self):
-        # TODO: arrange so we don't need to pass as many bogus strings
-        self._service = WebService(
-            reactor=reactor,
-            http_endpoint='tcp:0',
-            ws_endpoint='tcp:0',
-            root_cap='ROOT',
-            read_only_dbs={},
-            writable_db=DatabaseModel(reactor, {}),
-            root_object=SiteStateStub(),
-            flowgraph_for_debug=gr.top_block(),
-            title='test title',
-            note_dirty=_noop)
-        self._service.startService()
-        self.url = self._service.get_url()
-    
-    def tearDown(self):
-        return self._service.stopService()
-    
-    def test_expected_url(self):
-        self.assertEqual('/ROOT/', self._service.get_host_relative_url())
-    
-    def test_app_redirect(self):
-        if 'ROOT' not in self.url:
-            return  # test does not apply
-            
-        url_without_slash = self.url[:-1]
-        
-        def callback((response, data)):
-            self.assertEqual(response.code, http.MOVED_PERMANENTLY)
-            self.assertEqual(self.url,
-                urlparse.urljoin(url_without_slash,
-                    'ONLYONE'.join(response.headers.getRawHeaders('Location'))))
-        
-        return testutil.http_get(reactor, url_without_slash).addCallback(callback)
-    
-    def test_index_page(self):
-        def callback((response, data)):
-            self.assertEqual(response.code, http.OK)
-            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['text/html'])
-            self.assertIn('</html>', data)  # complete
-            self.assertIn('<title>test title</title>', data)
-            # TODO: Probably not here, add an end-to-end test for page title _default_.
-        
-        return testutil.http_get(reactor, self.url).addCallback(callback)
-    
-    def test_resource_page_html(self):
-        # TODO: This ought to be a separate test of block-resources
-        def callback((response, data)):
-            self.assertEqual(response.code, http.OK)
-            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['text/html;charset=utf-8'])
-            self.assertIn('</html>', data)
-        return testutil.http_get(reactor, self.url + 'radio', accept='text/html').addCallback(callback)
-    
-    def test_resource_page_json(self):
-        # TODO: This ought to be a separate test of block-resources
-        def callback((response, data)):
-            self.assertEqual(response.code, http.OK)
-            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
-            description_json = json.loads(data)
-            self.assertEqual(description_json, {
-                u'kind': u'block',
-                u'children': {},
-            })
-        return testutil.http_get(reactor, self.url + 'radio', accept='application/json').addCallback(callback)
-    
-    def test_flowgraph_page(self):
-        def callback((response, data)):
-            self.assertEqual(response.code, http.OK)
-            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['image/png'])
-            # TODO ...
-        return testutil.http_get(reactor, self.url + 'flow-graph').addCallback(callback)
-
-
-class TestSiteWithoutRootCap(TestWebSite):
-    """Like TestWebSite but with root_cap set to None."""
-    def setUp(self):
-        # TODO: arrange so we don't need to pass as many bogus strings
-        self._service = WebService(
-            reactor=reactor,
-            http_endpoint='tcp:0',
-            ws_endpoint='tcp:0',
-            root_cap=None,
-            read_only_dbs={},
-            writable_db=DatabaseModel(reactor, {}),
-            root_object=SiteStateStub(),
-            flowgraph_for_debug=gr.top_block(),
-            title='test title',
-            note_dirty=_noop)
-        self._service.startService()
-        self.url = self._service.get_url()
-    
-    def test_expected_url(self):
-        self.assertEqual('/', self._service.get_host_relative_url())
-
-
-def _noop():
-    pass
-
-
-class SiteStateStub(ExportedState):
-    pass
 
 
 class StateStreamTestCase(unittest.TestCase):
@@ -178,7 +69,7 @@ class TestStateStream(StateStreamTestCase):
     def test_init_and_mutate(self):
         self.setUpForObject(StateSpecimen())
         self.assertEqual(self.getUpdates(), [
-            ['register_block', 1, 'urlroot', ['shinysdr.test.i.test_web.IFoo']],
+            ['register_block', 1, 'urlroot', ['shinysdr.test.i.network.test_export_ws.IFoo']],
             ['register_cell', 2, 'urlroot/rw', self.object.state()['rw'].description()],
             ['value', 1, {'rw': 2}],
             ['value', 0, 1],
@@ -260,7 +151,7 @@ class TestStateStream(StateStreamTestCase):
         # TODO: Instead of raising, report the error associated with the connection somehow
         self.setUpForObject(StateSpecimen())
         self.assertIn(
-            ['register_block', 1, 'urlroot', ['shinysdr.test.i.test_web.IFoo']],
+            ['register_block', 1, 'urlroot', ['shinysdr.test.i.network.test_export_ws.IFoo']],
             self.getUpdates())
         self.assertRaises(Exception, lambda:  # TODO more specific error
             self.stream.dataReceived(json.dumps(['set', 1, 100.0, 1234])))

@@ -27,7 +27,7 @@ from twisted.plugin import IPlugin
 from zope.interface import Interface, implements
 
 from shinysdr.i.modes import IModeDef
-from shinysdr.i.web import IClientResourceDef
+from shinysdr.i.network.app import IClientResourceDef
 from shinysdr.types import EnumRow
 
 __all__ = []  # appended later

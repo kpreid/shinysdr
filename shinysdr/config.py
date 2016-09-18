@@ -105,8 +105,8 @@ class Config(object):
         
         def make_service(app, note_dirty):
             # TODO: This is, of course, not where session objects should be created. Working on it...
-            import shinysdr.i.web as lazy_web
-            return lazy_web.WebService(
+            import shinysdr.i.network.app as lazy_app
+            return lazy_app.WebService(
                 reactor=self.reactor,
                 root_object=app.get_session(),
                 flowgraph_for_debug=app.get_receive_flowgraph(),  # TODO: Once we have the diagnostics or admin page however that turns out to work, this goes away
