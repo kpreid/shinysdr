@@ -28,6 +28,7 @@ from twisted.web import http
 from gnuradio import gr
 
 from shinysdr.i.db import DatabaseModel
+from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT
 from shinysdr.i.network.app import WebService
 from shinysdr.values import ExportedState
 from shinysdr.test import testutil
@@ -87,7 +88,7 @@ class TestWebSite(unittest.TestCase):
             self.assertEqual(response.code, http.OK)
             self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['text/html;charset=utf-8'])
             self.assertIn('</html>', data)
-        return testutil.http_get(reactor, self.url + 'radio', accept='text/html').addCallback(callback)
+        return testutil.http_get(reactor, self.url + CAP_OBJECT_PATH_ELEMENT, accept='text/html').addCallback(callback)
     
     def test_resource_page_json(self):
         # TODO: This ought to be a separate test of block-resources
@@ -99,7 +100,7 @@ class TestWebSite(unittest.TestCase):
                 u'kind': u'block',
                 u'children': {},
             })
-        return testutil.http_get(reactor, self.url + 'radio', accept='application/json').addCallback(callback)
+        return testutil.http_get(reactor, self.url + CAP_OBJECT_PATH_ELEMENT, accept='application/json').addCallback(callback)
     
     def test_flowgraph_page(self):
         def callback((response, data)):

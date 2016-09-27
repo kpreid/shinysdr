@@ -31,7 +31,7 @@ from zope.interface import providedBy
 
 from gnuradio import gr
 
-from shinysdr.i.network.base import serialize
+from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, serialize
 from shinysdr.i.poller import the_subscription_context
 from shinysdr.signals import SignalType
 from shinysdr.types import Reference
@@ -386,7 +386,7 @@ class OurStreamProtocol(Protocol):
         if len(path) == 1 and path[0].startswith('audio?rate='):
             rate = int(json.loads(urllib.unquote(path[0][len('audio?rate='):])))
             self.inner = AudioStreamInner(the_reactor, self.__send, root_object, rate)
-        elif len(path) >= 1 and path[0] == 'radio':
+        elif len(path) >= 1 and path[0] == CAP_OBJECT_PATH_ELEMENT:
             # note _lookup_block may throw. TODO: Better error reporting
             root_object = _lookup_block(root_object, path[1:])
             self.inner = StateStreamInner(self.__send, root_object, loc)  # note reuse of loc as HTTP path; probably will regret this

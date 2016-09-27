@@ -38,7 +38,7 @@ import txws
 import shinysdr.i.db
 from shinysdr.i.ephemeris import EphemerisResource
 from shinysdr.i.modes import get_modes
-from shinysdr.i.network.base import SlashedResource, deps_path, prepath_escaped, renderElement, serialize, static_resource_path, strport_to_url, template_path
+from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, SlashedResource, deps_path, prepath_escaped, renderElement, serialize, static_resource_path, strport_to_url, template_path
 from shinysdr.i.network.export_http import BlockResource, FlowgraphVizResource
 from shinysdr.i.network.export_ws import OurStreamProtocol
 from shinysdr.twisted_ext import FactoryWithArgs
@@ -80,7 +80,7 @@ class _RadioIndexHtmlElement(template.Element):
 
     @template.renderer
     def quoted_state_url(self, request, tag):
-        return tag(serialize(self.__wcommon.make_websocket_url(request, prepath_escaped(request) + 'radio')))
+        return tag(serialize(self.__wcommon.make_websocket_url(request, prepath_escaped(request) + CAP_OBJECT_PATH_ELEMENT)))
 
     @template.renderer
     def quoted_audio_url(self, request, tag):
@@ -232,7 +232,7 @@ def _put_session(container_resource, session, wcommon, reactor, title, read_only
     container_resource.putChild('', _RadioIndexHtmlResource(wcommon=wcommon, title=title))
     
     # Exported radio control objects
-    container_resource.putChild('radio', BlockResource(session, wcommon, not_deletable))
+    container_resource.putChild(CAP_OBJECT_PATH_ELEMENT, BlockResource(session, wcommon, not_deletable))
     
     # Frequency DB
     container_resource.putChild('dbs', shinysdr.i.db.DatabasesResource(read_only_dbs))

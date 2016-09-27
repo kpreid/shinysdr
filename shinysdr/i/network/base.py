@@ -32,6 +32,10 @@ from twisted.web.server import NOT_DONE_YET
 from shinysdr.signals import SignalType
 
 
+# TODO: Change this constant to something more generic, but save that for when we're changing the URL layout for other reasons anyway.
+CAP_OBJECT_PATH_ELEMENT = 'radio'
+
+
 static_resource_path = os.path.join(os.path.dirname(__file__), '../webstatic')
 template_path = os.path.join(os.path.dirname(__file__), '../webparts')
 deps_path = os.path.join(os.path.dirname(__file__), '../../deps')
