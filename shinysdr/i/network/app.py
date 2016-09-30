@@ -58,20 +58,12 @@ class IClientResourceDef(Interface):
     # TODO write interface methods anyway
 
 
-def _make_static(filePath):
-    r = static.File(filePath)
+def _make_static_resource(pathname):
+    r = static.File(pathname,
+        defaultType='text/plain',
+        ignoredExts=['.html'])
     r.contentTypes['.csv'] = 'text/csv'
     r.indexNames = ['index.html']
-    r.ignoreExt('.html')
-    return r
-
-
-def _reify(parent, name):
-    """
-    Construct an explicit twisted.web.static.File child identical to the implicit one so that non-filesystem children can be added to it.
-    """
-    r = parent.createSimilarFile(parent.child(name).path)
-    parent.putChild(name, r)
     return r
 
 
@@ -99,6 +91,7 @@ class _RadioIndexHtmlResource(Resource):
     isLeaf = True
 
     def __init__(self, wcommon, title):
+        Resource.__init__(self)
         self.__element = _RadioIndexHtmlElement(wcommon, title)
 
     def render_GET(self, request):
@@ -108,59 +101,34 @@ class _RadioIndexHtmlResource(Resource):
 class WebService(Service):
     # TODO: Too many parameters
     def __init__(self, reactor, root_object, note_dirty, read_only_dbs, writable_db, http_endpoint, ws_endpoint, root_cap, title, flowgraph_for_debug):
+        # Constants
         self.__http_port = http_endpoint
         self.__ws_port = ws_endpoint
         
         wcommon = WebServiceCommon(note_dirty=note_dirty, ws_endpoint=ws_endpoint)
         
         # Roots of resource trees
-        # - appRoot is everything stateful/authority-bearing
-        # - serverRoot is the HTTP '/' and static resources are placed there
-        serverRoot = _make_static(static_resource_path)
+        # - app_root is everything stateful/authority-bearing
+        # - server_root is the HTTP '/' and static resources are placed there
+        server_root = Resource()
         if root_cap is None:
-            appRoot = serverRoot
+            app_root = server_root
             self.__visit_path = '/'
             ws_caps = {None: root_object}
         else:
-            serverRoot = _make_static(static_resource_path)
-            appRoot = SlashedResource()
-            serverRoot.putChild(root_cap, appRoot)
+            app_root = SlashedResource()
+            server_root.putChild(root_cap, app_root)
             self.__visit_path = '/' + urllib.quote(root_cap, safe='') + '/'
             ws_caps = {root_cap: root_object}
         
+        # Note: in the root_cap = None case, it matters that the session is done second as it overwrites the definition of /.
+        _put_root_static(server_root)
+        _put_session(app_root, root_object, wcommon, reactor, title, read_only_dbs, writable_db, flowgraph_for_debug)
+        
         self.__ws_protocol = txws.WebSocketFactory(
             FactoryWithArgs.forProtocol(OurStreamProtocol, ws_caps, note_dirty))
+        self.__site = server.Site(server_root)
         
-        # UI entry point
-        appRoot.putChild('', _RadioIndexHtmlResource(wcommon=wcommon, title=title))
-        
-        # Exported radio control objects
-        appRoot.putChild('radio', BlockResource(root_object, wcommon, not_deletable))
-        
-        # Frequency DB
-        appRoot.putChild('dbs', shinysdr.i.db.DatabasesResource(read_only_dbs))
-        appRoot.putChild('wdb', shinysdr.i.db.DatabaseResource(writable_db))
-        
-        # Debug graph
-        appRoot.putChild('flow-graph', FlowgraphVizResource(reactor, flowgraph_for_debug))
-        
-        # Ephemeris
-        appRoot.putChild('ephemeris', EphemerisResource())
-        
-        # Construct explicit resources for merge.
-        test = _reify(serverRoot, 'test')
-        jasmine = _reify(test, 'jasmine')
-        for name in ['jasmine.css', 'jasmine.js', 'jasmine-html.js']:
-            jasmine.putChild(name, static.File(os.path.join(
-                deps_path, 'jasmine/lib/jasmine-core/', name)))
-        
-        client = _reify(serverRoot, 'client')
-        client.putChild('require.js', static.File(os.path.join(deps_path, 'require.js')))
-        client.putChild('text.js', static.File(os.path.join(deps_path, 'text.js')))
-        
-        _add_plugin_resources(client)
-        
-        self.__site = server.Site(serverRoot)
         self.__ws_port_obj = None
         self.__http_port_obj = None
     
@@ -206,7 +174,29 @@ class WebService(Service):
             log.msg('Visit ' + url)
 
 
-def _add_plugin_resources(client_resource):
+def _put_root_static(container_resource):
+    """Place all the simple static files."""
+    
+    for name in ['', 'client', 'test', 'manual', 'tools']:
+        container_resource.putChild(name, _make_static_resource(os.path.join(static_resource_path, name if name != '' else 'index.html')))
+    
+    # Link deps into /client/.
+    client = container_resource.children['client']
+    client.putChild('require.js', _make_static_resource(os.path.join(deps_path, 'require.js')))
+    client.putChild('text.js', _make_static_resource(os.path.join(deps_path, 'text.js')))
+    
+    # Link deps into /test/.
+    test = container_resource.children['test']
+    jasmine = SlashedResource()
+    test.putChild('jasmine', jasmine)
+    for name in ['jasmine.css', 'jasmine.js', 'jasmine-html.js']:
+        jasmine.putChild(name, _make_static_resource(os.path.join(
+            deps_path, 'jasmine/lib/jasmine-core/', name)))
+    
+    _put_plugin_resources(client)
+
+
+def _put_plugin_resources(client_resource):
     # Plugin resources and plugin info
     load_list_css = []
     load_list_js = []
@@ -235,6 +225,24 @@ def _add_plugin_resources(client_resource):
         u'js': load_list_js,
         u'modes': mode_table,
     }).encode('utf-8'), 'application/json'))
+
+
+def _put_session(container_resource, session, wcommon, reactor, title, read_only_dbs, writable_db, flowgraph_for_debug):
+    # UI entry point
+    container_resource.putChild('', _RadioIndexHtmlResource(wcommon=wcommon, title=title))
+    
+    # Exported radio control objects
+    container_resource.putChild('radio', BlockResource(session, wcommon, not_deletable))
+    
+    # Frequency DB
+    container_resource.putChild('dbs', shinysdr.i.db.DatabasesResource(read_only_dbs))
+    container_resource.putChild('wdb', shinysdr.i.db.DatabaseResource(writable_db))
+    
+    # Debug graph
+    container_resource.putChild('flow-graph', FlowgraphVizResource(reactor, flowgraph_for_debug))
+    
+    # Ephemeris
+    container_resource.putChild('ephemeris', EphemerisResource())
 
 
 class WebServiceCommon(object):

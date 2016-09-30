@@ -37,6 +37,7 @@ class _CellResource(Resource):
     isLeaf = True
 
     def __init__(self, cell, wcommon):
+        Resource.__init__(self)
         self._cell = cell
         self.__note_dirty = wcommon.note_dirty
 
@@ -179,6 +180,7 @@ class FlowgraphVizResource(Resource):
     isLeaf = True
     
     def __init__(self, reactor, block):
+        Resource.__init__(self)
         self.__reactor = reactor
         self.__block = block
     
