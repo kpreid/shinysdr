@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -17,7 +17,7 @@
 
 """Foundational ShinySDR HTTP/WebSocket API components."""
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import os
 import urllib
@@ -29,7 +29,8 @@ from twisted.web.server import NOT_DONE_YET
 from twisted.internet import endpoints
 
 # TODO: Change this constant to something more generic, but save that for when we're changing the URL layout for other reasons anyway.
-CAP_OBJECT_PATH_ELEMENT = 'radio'
+CAP_OBJECT_PATH_ELEMENT = b'radio'
+UNIQUE_PUBLIC_CAP = 'public'
 
 
 static_resource_path = os.path.join(os.path.dirname(__file__), '../webstatic')
@@ -41,9 +42,9 @@ class SlashedResource(Resource):
     """Redirects /.../this to /.../this/."""
     
     def render(self, request):
-        request.setHeader('Location', request.childLink(''))
+        request.setHeader(b'Location', request.childLink(b''))
         request.setResponseCode(http.MOVED_PERMANENTLY)
-        return ''
+        return b''
 
 
 def endpoint_string_to_url(desc, scheme='http', hostname='localhost', path='/', listening_port=None):
@@ -70,7 +71,7 @@ def renderElement(request, element):
     # should be replaced with twisted.web.template.renderElement once we have Twisted >= 12.1.0 available in MacPorts.
     
     # TODO: Instead of this kludge (here because it would be a syntax error in the XHTML template}, serve XHTML and fix the client-side issues that pop up due to element-name capitalization.
-    request.write('<!doctype html>')
+    request.write(b'<!doctype html>')
     
     d = template.flatten(request, element, request.write)
     

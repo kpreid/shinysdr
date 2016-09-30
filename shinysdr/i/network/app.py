@@ -31,6 +31,7 @@ from twisted.web import static
 from twisted.web import server
 from twisted.web import template
 from twisted.web.resource import Resource
+from twisted.web.util import Redirect
 from zope.interface import Interface
 
 import txws
@@ -39,8 +40,8 @@ import shinysdr.i.db
 from shinysdr.i.ephemeris import EphemerisResource
 from shinysdr.i.json import serialize
 from shinysdr.i.modes import get_modes
-from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, SlashedResource, deps_path, prepath_escaped, renderElement, static_resource_path, endpoint_string_to_url, template_path
-from shinysdr.i.network.export_http import BlockResource, FlowgraphVizResource
+from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, SlashedResource, UNIQUE_PUBLIC_CAP, deps_path, prepath_escaped, renderElement, static_resource_path, endpoint_string_to_url, template_path
+from shinysdr.i.network.export_http import BlockResource, CapAccessResource, FlowgraphVizResource
 from shinysdr.i.network.export_ws import OurStreamProtocol
 from shinysdr.twisted_ext import FactoryWithArgs
 
@@ -101,34 +102,27 @@ class _RadioIndexHtmlResource(Resource):
 
 class WebService(Service):
     # TODO: Too many parameters
-    def __init__(self, reactor, root_object, read_only_dbs, writable_db, http_endpoint, ws_endpoint, root_cap, title, flowgraph_for_debug):
+    def __init__(self, reactor, cap_table, read_only_dbs, writable_db, http_endpoint, ws_endpoint, root_cap, title, flowgraph_for_debug):
         # Constants
         self.__http_endpoint_string = http_endpoint
         self.__http_endpoint = endpoints.serverFromString(reactor, http_endpoint)
         self.__ws_endpoint = endpoints.serverFromString(reactor, ws_endpoint)
+        self.__visit_path = _make_cap_url(root_cap)
         
         wcommon = WebServiceCommon(ws_endpoint_string=ws_endpoint)
         
-        # Roots of resource trees
-        # - app_root is everything stateful/authority-bearing
-        # - server_root is the HTTP '/' and static resources are placed there
-        server_root = Resource()
-        if root_cap is None:
-            app_root = server_root
-            self.__visit_path = '/'
-            ws_caps = {None: root_object}
-        else:
-            app_root = SlashedResource()
-            server_root.putChild(root_cap, app_root)
-            self.__visit_path = '/' + urllib.quote(root_cap, safe='') + '/'
-            ws_caps = {root_cap: root_object}
+        def BoundSessionResource(session):
+            return SessionResource(session, wcommon, reactor, title, read_only_dbs, writable_db, flowgraph_for_debug)
         
-        # Note: in the root_cap = None case, it matters that the session is done second as it overwrites the definition of /.
+        server_root = CapAccessResource(cap_table=cap_table, resource_ctor=BoundSessionResource)
         _put_root_static(server_root)
-        _put_session(app_root, root_object, wcommon, reactor, title, read_only_dbs, writable_db, flowgraph_for_debug)
         
+        if UNIQUE_PUBLIC_CAP in cap_table:
+            # TODO: consider factoring out "generate URL for cap"
+            server_root.putChild('', Redirect(_make_cap_url(UNIQUE_PUBLIC_CAP)))
+            
         self.__ws_protocol = txws.WebSocketFactory(
-            FactoryWithArgs.forProtocol(OurStreamProtocol, ws_caps))
+            FactoryWithArgs.forProtocol(OurStreamProtocol, cap_table))
         self.__site = _SiteWithHeaders(server_root)
         
         self.__ws_port_obj = None
@@ -230,22 +224,26 @@ def _put_plugin_resources(client_resource):
     }).encode('utf-8'), 'application/json'))
 
 
-def _put_session(container_resource, session, wcommon, reactor, title, read_only_dbs, writable_db, flowgraph_for_debug):
-    # UI entry point
-    container_resource.putChild('', _RadioIndexHtmlResource(wcommon=wcommon, title=title))
-    
-    # Exported radio control objects
-    container_resource.putChild(CAP_OBJECT_PATH_ELEMENT, BlockResource(session, wcommon, not_deletable))
-    
-    # Frequency DB
-    container_resource.putChild('dbs', shinysdr.i.db.DatabasesResource(read_only_dbs))
-    container_resource.putChild('wdb', shinysdr.i.db.DatabaseResource(writable_db))
-    
-    # Debug graph
-    container_resource.putChild('flow-graph', FlowgraphVizResource(reactor, flowgraph_for_debug))
-    
-    # Ephemeris
-    container_resource.putChild('ephemeris', EphemerisResource())
+class SessionResource(SlashedResource):
+    # TODO Too many parameters; some of this stuff shouldn't be per-session in the same way
+    def __init__(self, session, wcommon, reactor, title, read_only_dbs, writable_db, flowgraph_for_debug):
+        SlashedResource.__init__(self)
+        
+        # UI entry point
+        self.putChild('', _RadioIndexHtmlResource(wcommon=wcommon, title=title))
+        
+        # Exported radio control objects
+        self.putChild(CAP_OBJECT_PATH_ELEMENT, BlockResource(session, wcommon, not_deletable))
+        
+        # Frequency DB
+        self.putChild('dbs', shinysdr.i.db.DatabasesResource(read_only_dbs))
+        self.putChild('wdb', shinysdr.i.db.DatabaseResource(writable_db))
+        
+        # Debug graph
+        self.putChild('flow-graph', FlowgraphVizResource(reactor, flowgraph_for_debug))
+        
+        # Ephemeris
+        self.putChild('ephemeris', EphemerisResource())
 
 
 class _SiteWithHeaders(server.Site):
@@ -279,3 +277,8 @@ class WebServiceCommon(object):
             hostname=request.getRequestHostname(),
             scheme='ws',
             path=path)
+
+
+def _make_cap_url(cap):
+    assert isinstance(cap, unicode)
+    return '/' + urllib.quote(cap.encode('utf-8'), safe='') + '/'

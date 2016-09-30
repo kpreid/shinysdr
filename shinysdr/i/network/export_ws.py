@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -377,10 +377,8 @@ class OurStreamProtocol(Protocol):
         assert path[0] == ''
         path[0:1] = []
         if path[0] in self._caps:
-            root_object = self._caps[path[0]]
+            root_object = self._caps[path[0].decode('utf-8')]
             path[0:1] = []
-        elif None in self._caps:
-            root_object = self._caps[None]
         else:
             raise Exception('Unknown cap')  # TODO better error reporting
         if len(path) == 1 and path[0].startswith('audio?rate='):

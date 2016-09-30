@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -177,6 +177,23 @@ class _BlockHtmlElement(template.Element):
     def quoted_state_url(self, request, tag):
         return tag(serialize(self.__wcommon.make_websocket_url(request,
             prepath_escaped(request))))
+
+
+class CapAccessResource(Resource):
+    def __init__(self, cap_table, resource_ctor):
+        Resource.__init__(self)
+        self.__cap_table = cap_table
+        self.__resource_ctor = resource_ctor
+    
+    def getChild(self, name, request):
+        """override Resource"""
+        # TODO: Either add a cache here or throw out the cache in BlockResource which this is defeating, depending on a performance comparison
+        name = name.decode('utf-8')  # TODO centralize this 'urls are utf-8'
+        if name in self.__cap_table:
+            return self.__resource_ctor(self.__cap_table[name])
+        else:
+            # old-style-class super call
+            return Resource.getChild(self, name, request)
 
 
 class FlowgraphVizResource(Resource):

@@ -17,8 +17,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import random
-
 from twisted.trial import unittest
 from zope.interface import implements
 
@@ -94,7 +92,6 @@ class BaseEntryPointStub(ExportedState):
     @exported_value(type=int, persists=True, parameter='serial_number', changes='never')
     def get_serial_number(self):
         return self.__serial_number
-    
 
 
 class DeletableStub(BaseEntryPointStub):

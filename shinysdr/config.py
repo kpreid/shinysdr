@@ -35,7 +35,8 @@ from twisted.python import log
 
 # Note that gnuradio-dependent modules are loaded lazily, to avoid the startup time if all we're going to do is give a usage message
 from shinysdr.i.db import DatabaseModel, database_from_csv, databases_from_directory
-from shinysdr.i.roots import generate_cap
+from shinysdr.i.network.base import UNIQUE_PUBLIC_CAP
+from shinysdr.i.roots import CapTable, generate_cap
 
 
 __all__ = []  # appended later
@@ -108,17 +109,26 @@ class Config(object):
                 raise ConfigException('config.serve_web: root_cap must be None or a nonempty string')
         
         def make_service(app):
-            # TODO: This is, of course, not where session objects should be created. Working on it...
-            import shinysdr.i.network.app as lazy_app
-            return lazy_app.WebService(
+            # TODO: Temporary glue while we refactor for multisession
+            session = app.get_session()
+            cap_table = CapTable(lambda bogus: bogus)
+            if root_cap is None:
+                cap_table.add(session, cap=UNIQUE_PUBLIC_CAP)
+                root_cap_subst = UNIQUE_PUBLIC_CAP
+            else:
+                cap_table.add(session, cap=root_cap)
+                root_cap_subst = root_cap
+            
+            from shinysdr.i.network.app import WebService
+            return WebService(
                 reactor=self.reactor,
-                root_object=app.get_session(),
+                cap_table=cap_table.as_unenumerable_collection(),
                 flowgraph_for_debug=app.get_receive_flowgraph(),  # TODO: Once we have the diagnostics or admin page however that turns out to work, this goes away
                 read_only_dbs=self.databases._get_read_only_databases(),
                 writable_db=self.databases._get_writable_database(),
                 http_endpoint=http_endpoint,
                 ws_endpoint=ws_endpoint,
-                root_cap=root_cap,
+                root_cap=root_cap_subst,
                 title=title)
         
         self._service_makers.append(make_service)

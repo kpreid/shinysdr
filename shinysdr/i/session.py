@@ -19,6 +19,9 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from zope.interface import implements
+
+from shinysdr.i.roots import IEntryPoint
 from shinysdr.i.top import Top
 from shinysdr.types import ReferenceT
 from shinysdr.values import ExportedState, exported_value
@@ -56,6 +59,8 @@ class AppRoot(ExportedState):
 
 
 class Session(ExportedState):
+    implements(IEntryPoint)
+    
     def __init__(self, receive_flowgraph, features):
         self.__receive_flowgraph = receive_flowgraph
     
@@ -70,6 +75,16 @@ class Session(ExportedState):
         callback(rxfs['telemetry_store'])
         callback(rxfs['source_name'])
         callback(rxfs['clip_warning'])
+
+    def get_type(self):
+        """implements IEntryPoint"""
+        # TODO stub for multisession refactoring
+        raise NotImplementedError()
+    
+    def entry_point_is_deleted(self):
+        """implements IEntryPoint"""
+        # TODO stub for multisession refactoring
+        return False
     
     def add_audio_queue(self, queue, queue_rate):
         return self.__receive_flowgraph.add_audio_queue(queue, queue_rate)

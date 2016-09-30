@@ -23,12 +23,14 @@ import urlparse
 from twisted.trial import unittest
 from twisted.internet import reactor
 from twisted.web import http
+from zope.interface import implements
 
 from gnuradio import gr
 
 from shinysdr.i.db import DatabaseModel
-from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT
+from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, UNIQUE_PUBLIC_CAP
 from shinysdr.i.network.app import WebService
+from shinysdr.i.roots import IEntryPoint
 from shinysdr.values import ExportedState
 from shinysdr.test import testutil
 
@@ -42,14 +44,14 @@ class TestWebSite(unittest.TestCase):
             reactor=reactor,
             http_endpoint='tcp:0',
             ws_endpoint='tcp:0',
-            root_cap='ROOT',
+            root_cap=u'ROOT',
             read_only_dbs={},
             writable_db=DatabaseModel(reactor, {}),
-            root_object=SiteStateStub(),
+            cap_table={u'ROOT': SiteStateStub()},
             flowgraph_for_debug=gr.top_block(),
             title='test title')
         self._service.startService()
-        self.url = self._service.get_url()
+        self.url = str(self._service.get_url())
     
     def tearDown(self):
         return self._service.stopService()
@@ -122,24 +124,24 @@ class TestWebSite(unittest.TestCase):
 
 
 class TestSiteWithoutRootCap(TestWebSite):
-    """Like TestWebSite but with root_cap set to None."""
+    """Like TestWebSite but with the 'public' configuration."""
     def setUp(self):
         # TODO: arrange so we don't need to pass as many bogus strings
         self._service = WebService(
             reactor=reactor,
             http_endpoint='tcp:0',
             ws_endpoint='tcp:0',
-            root_cap=None,
+            root_cap=UNIQUE_PUBLIC_CAP,
             read_only_dbs={},
             writable_db=DatabaseModel(reactor, {}),
-            root_object=SiteStateStub(),
+            cap_table={UNIQUE_PUBLIC_CAP: SiteStateStub()},
             flowgraph_for_debug=gr.top_block(),
             title='test title')
         self._service.startService()
-        self.url = self._service.get_url()
+        self.url = str(self._service.get_url())
     
     def test_expected_url(self):
-        self.assertEqual('/', self._service.get_host_relative_url())
+        self.assertEqual('/' + UNIQUE_PUBLIC_CAP + '/', self._service.get_host_relative_url())
 
 
 def assert_common(self, url):
@@ -174,4 +176,4 @@ def assert_common(self, url):
 
 
 class SiteStateStub(ExportedState):
-    pass
+    implements(IEntryPoint)
