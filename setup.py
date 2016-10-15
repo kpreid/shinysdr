@@ -56,7 +56,7 @@ setup(
     entry_points={
         'console_scripts': {
             'shinysdr = shinysdr.main:main',
-            'shinysdr-import = shinysdr.db_import:import_main'
+            'shinysdr-import = shinysdr.db_import.tool:import_main'
         }
     }
 )
