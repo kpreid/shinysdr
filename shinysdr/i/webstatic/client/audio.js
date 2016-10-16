@@ -117,42 +117,54 @@ define(['./types', './values', './events', './network'], function (types, values
         ws.close(4000);  // first "application-specific" error code
       }
       ws.onmessage = function(event) {
-        if (queue.length > 100) {
-          console.log('Extreme audio overrun.');
-          queue.length = 0;
-          queueSampleCount = 0;
-          return;
-        }
-        var chunk;
-        if (typeof event.data === 'string') {
-          if (numAudioChannels !== null) {
-            console.log('audio: Got string message when already initialized');
+        var wsDataValue = event.data;
+        if (wsDataValue instanceof ArrayBuffer) {
+          // Audio data.
+          
+          // Don't buffer huge amounts of data.
+          if (queue.length > 100) {
+            console.log('Extreme audio overrun.');
+            queue.length = 0;
+            queueSampleCount = 0;
             return;
-          } else {
-            var info = JSON.parse(event.data);
-            if (typeof info !== 'number') {
-              lose('Message was not a number');
-            }
-            numAudioChannels = info;
           }
-          return;
-        } else if (event.data instanceof ArrayBuffer) {
+          
           // TODO think about float format portability (endianness only...?)
-          chunk = new Float32Array(event.data);
-        } else {
-          // TODO handle in general
-          lose('bad WS data');
-          return;
-        }
+          var chunk = new Float32Array(event.data);
         
-        if (numAudioChannels === null) {
-          lose('Missing number-of-channels message');
-        }
-        queue.push(chunk);
-        queueSampleCount += chunk.length;
-        inputChunkSizeSample = chunk.length;
-        updateParameters();
-        if (!started) startStop();
+          if (numAudioChannels === null) {
+            lose('Did not receive number-of-channels message before first chunk');
+          }
+          queue.push(chunk);
+          queueSampleCount += chunk.length;
+          inputChunkSizeSample = chunk.length;
+          updateParameters();
+          if (!started) startStop();
+          
+        } else if (typeof wsDataValue === 'string') {
+          // Metadata.
+          
+          var message;
+          try {
+            message = JSON.parse(wsDataValue);
+          } catch (e) {
+            if (e instanceof SyntaxError) {
+              lose(e);
+              return;
+            } else {
+              throw e;
+            }
+          }
+          if (typeof message !== 'number') {
+            lose('Message was not a number');
+            return;
+          }
+          numAudioChannels = message;
+          
+        } else {
+          lose('Unexpected type from WebSocket message event: ' + wsDataValue);
+          return;
+        }        
       };
       ws.addEventListener('close', function (event) {
         error('Disconnected.');
