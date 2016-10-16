@@ -29,15 +29,16 @@ define(['./types', './values', './events', './network'], function (types, values
   
   function connectAudio(url) {
     var audio = new AudioContext();
-    var sampleRate = audio.sampleRate;
+    var nativeSampleRate = audio.sampleRate;
     
     // Stream parameters
     var numAudioChannels = null;
+    var streamSampleRate = null;
     
     // Queue size management
     // The queue should be large to avoid underruns due to bursty processing/delivery.
     // The queue should be small to minimize latency.
-    var targetQueueSize = Math.round(0.2 * sampleRate);  // units: sample count
+    var targetQueueSize = Math.round(0.2 * nativeSampleRate);  // units: sample count
     // Circular buffer of queue fullness history.
     var queueHistory = new Int32Array(200);
     var queueHistoryPtr = 0;
@@ -70,7 +71,7 @@ define(['./types', './values', './events', './network'], function (types, values
     //function fake(arr) {
     //  for (var i = 0; i < arr.length; i++) {
     //    arr[i] = Math.sin(fakePhase) * 0.1;
-    //    fakePhase += (Math.PI * 2) * (600 / sampleRate);
+    //    fakePhase += (Math.PI * 2) * (600 / nativeSampleRate);
     //  }
     //}
     
@@ -88,8 +89,9 @@ define(['./types', './values', './events', './network'], function (types, values
       //averageSkew: new values.LocalReadCell(Number, 0),
     });
     function updateStatus() {
-      var buffered = (queueSampleCount + audioStreamChunk.length - chunkIndex) / sampleRate;
-      var target = targetQueueSize / sampleRate;
+      // TODO: I think we are mixing up per-channel and total samples here  (queueSampleCount counts both channels individually)
+      var buffered = (queueSampleCount + audioStreamChunk.length - chunkIndex) / nativeSampleRate;
+      var target = targetQueueSize / nativeSampleRate;
       info.buffered._update(buffered / target);
       info.target._update(target.toFixed(2) + ' s');
       //info.averageSkew._update(averageSkew);
@@ -110,7 +112,11 @@ define(['./types', './values', './events', './network'], function (types, values
       updateStatus();
     }
     
-    network.retryingConnection(url + '?rate=' + encodeURIComponent(JSON.stringify(sampleRate)), null, function (ws) {
+    // Note that this filter's frequency is updated from the network
+    var antialiasFilter = audio.createBiquadFilter();
+    antialiasFilter.type = 'lowpass';
+    
+    network.retryingConnection(url + '?rate=' + encodeURIComponent(JSON.stringify(nativeSampleRate)), null, function (ws) {
       ws.binaryType = 'arraybuffer';
       function lose(reason) {
         // TODO: Arrange to trigger exponential backoff if we get this kind of error promptly (maybe retryingConnection should just have a time threshold)
@@ -130,15 +136,28 @@ define(['./types', './values', './events', './network'], function (types, values
             return;
           }
           
-          // TODO think about float format portability (endianness only...?)
-          var chunk = new Float32Array(event.data);
-        
           if (numAudioChannels === null) {
             lose('Did not receive number-of-channels message before first chunk');
           }
-          queue.push(chunk);
-          queueSampleCount += chunk.length;
-          inputChunkSizeSample = chunk.length;
+          
+          // Read in floats and zero-stuff.
+          var interpolation = nativeSampleRate / streamSampleRate;  // TODO fail if not integer
+          var streamRateChunk = new Float32Array(event.data);
+          var nSamples = streamRateChunk.length / numAudioChannels;
+          
+          // Insert zeros to change sample rate, e.g. with interpolation = 3,
+          //     [l r l r l r] becomes [l r 0 0 0 0 l r 0 0 0 0 l r 0 0 0 0]
+          var nativeRateChunk = new Float32Array(nSamples * numAudioChannels * interpolation);  // TODO: With partial-chunk processing we could avoid allocating new buffers all the time -- use a circular buffer? (But we can't be allocation-free anyway since the WebSocket isn't.)
+          var rightChannelIndex = numAudioChannels - 1;
+          var step = interpolation * numAudioChannels;
+          for (var i = 0; i < nSamples; i++) {
+            nativeRateChunk[i * step] = streamRateChunk[i * numAudioChannels];
+            nativeRateChunk[i * step + rightChannelIndex] = streamRateChunk[i * numAudioChannels + 1];
+          }
+          
+          queue.push(nativeRateChunk);
+          queueSampleCount += nativeRateChunk.length;
+          inputChunkSizeSample = nativeRateChunk.length;
           updateParameters();
           if (!started) startStop();
           
@@ -161,6 +180,11 @@ define(['./types', './values', './events', './network'], function (types, values
             return;
           }
           numAudioChannels = message.signal_type.kind === 'STEREO' ? 2 : 1;
+          streamSampleRate = message.signal_type.sample_rate;
+          
+          // TODO: We should not update this now, but when the audio callback starts reading the new-rate samples. (This could be done by stuffing the message into the queue.) But unless it's a serious problem, let's not bother until Audio Workers are available at which time we'll need to rewrite much of this anyway.
+          antialiasFilter.frequency.value = streamSampleRate * 0.45;  // TODO justify choice of 0.45
+          console.log('Streaming', streamSampleRate, numAudioChannels + 'ch', 'audio and converting to', nativeSampleRate);
           
         } else {
           lose('Unexpected type from WebSocket message event: ' + wsDataValue);
@@ -175,7 +199,7 @@ define(['./types', './values', './events', './network'], function (types, values
       // Starting the audio ScriptProcessor will be taken care of by the onmessage handler
     });
     
-    var rxBufferSize = delayToBufferSize(sampleRate, 0.15);
+    var rxBufferSize = delayToBufferSize(nativeSampleRate, 0.15);
     
     var ascr = audio.createScriptProcessor(rxBufferSize, 0, 2);
     ascr.onaudioprocess = function audioCallback(event) {
@@ -252,6 +276,9 @@ define(['./types', './values', './events', './network'], function (types, values
     window['__dummy_audio_node_reference_' + Math.random()] = ascr;
     //console.log('audio init done');
     
+    ascr.connect(antialiasFilter);    
+    var nodeBeforeDestination = antialiasFilter;
+    
     function startStop() {
       startStopTickle = false;
       if (queue.length > 0 || audioStreamChunk !== EMPTY_CHUNK) {
@@ -260,12 +287,12 @@ define(['./types', './values', './events', './network'], function (types, values
           fillL = fillR = 0;
           
           started = true;
-          ascr.connect(audio.destination);
+          nodeBeforeDestination.connect(audio.destination);
         }
       } else {
         if (started) {
           started = false;
-          ascr.disconnect(audio.destination);
+          nodeBeforeDestination.disconnect(audio.destination);
         }
       }
     }
