@@ -113,6 +113,7 @@ define(['./types', './values', './events', './network'], function (types, values
     network.retryingConnection(url + '?rate=' + encodeURIComponent(JSON.stringify(sampleRate)), null, function (ws) {
       ws.binaryType = 'arraybuffer';
       function lose(reason) {
+        // TODO: Arrange to trigger exponential backoff if we get this kind of error promptly (maybe retryingConnection should just have a time threshold)
         console.error('audio:', reason);
         ws.close(4000);  // first "application-specific" error code
       }
@@ -155,11 +156,11 @@ define(['./types', './values', './events', './network'], function (types, values
               throw e;
             }
           }
-          if (typeof message !== 'number') {
-            lose('Message was not a number');
+          if (!(typeof message === 'object' && message.type === 'audio_stream_metadata')) {
+            lose('Message was not properly formatted');
             return;
           }
-          numAudioChannels = message;
+          numAudioChannels = message.signal_type.kind === 'STEREO' ? 2 : 1;
           
         } else {
           lose('Unexpected type from WebSocket message event: ' + wsDataValue);

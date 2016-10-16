@@ -33,6 +33,7 @@ from gnuradio import gr
 
 from shinysdr.i.network.base import serialize
 from shinysdr.i.poller import the_poller
+from shinysdr.signals import SignalType
 from shinysdr.values import BaseCell, BlockCell, ExportedState, StreamCell
 
 
@@ -282,7 +283,16 @@ class AudioStreamInner(object):
         self._block = block
         self._block.add_audio_queue(self._queue, audio_rate)
         
-        send(unicode(self._block.get_audio_queue_channels()))
+        # We don't actually benefit specifically from using a SignalType in this context but it avoids reinventing vocabulary.
+        signal_type = SignalType(
+            kind='STEREO' if self._block.get_audio_queue_channels() == 2 else 'MONO',
+            sample_rate=audio_rate)
+        
+        send(serialize({
+            # Not used to discriminate, but it seems worth applying the convention in general.
+            u'type': u'audio_stream_metadata',
+            u'signal_type': signal_type,
+        }))
         
         reactor.callInThread(_AudioStream_read_loop, reactor, self._queue, self.__deliver, self.__running)
     
