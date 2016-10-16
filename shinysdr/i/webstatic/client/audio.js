@@ -30,13 +30,6 @@ define(['./types', './values', './events', './network'], function (types, values
   function connectAudio(url) {
     var audio = new AudioContext();
     var sampleRate = audio.sampleRate;
-    function delayToBufferSize(maxDelayInSeconds) {
-      var maxBufferSize = sampleRate * maxDelayInSeconds;
-      var powerOfTwoBufferSize = 1 << Math.floor(Math.log(maxBufferSize) / Math.LN2);
-      // Specification-defined limits
-      powerOfTwoBufferSize = Math.max(256, Math.min(16384, powerOfTwoBufferSize));
-      return powerOfTwoBufferSize;
-    }
     
     // Stream parameters
     var numAudioChannels = null;
@@ -169,7 +162,7 @@ define(['./types', './values', './events', './network'], function (types, values
       // Starting the audio ScriptProcessor will be taken care of by the onmessage handler
     });
     
-    var rxBufferSize = delayToBufferSize(0.15);
+    var rxBufferSize = delayToBufferSize(sampleRate, 0.15);
     
     var ascr = audio.createScriptProcessor(rxBufferSize, 0, 2);
     ascr.onaudioprocess = function audioCallback(event) {
@@ -348,6 +341,16 @@ define(['./types', './values', './events', './network'], function (types, values
   Object.freeze(AudioAnalyzerAdapter.prototype);
   Object.freeze(AudioAnalyzerAdapter);
   exports.AudioAnalyzerAdapter = AudioAnalyzerAdapter;
+  
+  // Given a maximum acceptable delay, calculate the largest power-of-two buffer size for a ScriptProcessorNode which does not result in more than that delay.
+  function delayToBufferSize(sampleRate, maxDelayInSeconds) {
+    var maxBufferSize = sampleRate * maxDelayInSeconds;
+    var powerOfTwoBufferSize = 1 << Math.floor(Math.log(maxBufferSize) / Math.LN2);
+    // Size limits defined by the Web Audio API specification.
+    powerOfTwoBufferSize = Math.max(256, Math.min(16384, powerOfTwoBufferSize));
+    return powerOfTwoBufferSize;
+  }
+  
     
   return Object.freeze(exports);
 });
