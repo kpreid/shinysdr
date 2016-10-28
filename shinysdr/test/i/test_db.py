@@ -99,8 +99,8 @@ class TestCSV(unittest.TestCase):
     
     def __parse(self, s, expect_records, expect_diagnostics):
         read_records, diagnostics = db._parse_csv_file(StringIO.StringIO(s))
-        self.assertEqual(expect_records, read_records)
         self.__assertDiag(diagnostics, expect_diagnostics)
+        self.assertEqual(expect_records, read_records)
     
     def __roundtrip(self, records, expect_diagnostics):
         file_obj = StringIO.StringIO()
@@ -115,6 +115,12 @@ class TestCSV(unittest.TestCase):
             'Name,Frequency\na,1\nb',
             {1: db.normalize_record({'freq': 1e6, 'label': 'a'})},
             [(3, Warning, 'Record contains no value for Frequency column; line discarded.')])
+    
+    def test_frequency_syntax(self):
+        self.__parse(
+            'Name,Frequency\na,100.000.000',
+            {},
+            [(2, Warning, 'Frequency value is not a decimal number or range; line discarded.')])
     
     def test_short_line(self):
         self.__parse(

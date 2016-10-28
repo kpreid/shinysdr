@@ -251,7 +251,6 @@ def _parse_csv_file(csvfile):
     reader = csv.DictReader(csvfile)
     for strcsvrec in reader:
         # csv does not deal in unicode itself
-        # TODO: Warn if one of the CSV rows has too many columns (DictReader indicates this as k is None)
         csvrec = {}
         for k, v in strcsvrec.iteritems():
             if k is None:
@@ -273,13 +272,17 @@ def _parse_csv_file(csvfile):
         if record['mode'] == u'FM':
             record['mode'] = u'NFM'
         freq_str = csvrec['Frequency']
-        if '-' in freq_str:
-            # extension of format: bands
-            record[u'type'] = u'band'
-            record[u'lowerFreq'], record[u'upperFreq'] = map(_parse_freq, freq_str.split('-'))
-        else:
-            record[u'type'] = u'channel'
-            record[u'lowerFreq'] = record[u'upperFreq'] = _parse_freq(freq_str)
+        try:
+            if '-' in freq_str:
+                # extension of format: bands
+                record[u'type'] = u'band'
+                record[u'lowerFreq'], record[u'upperFreq'] = map(_parse_freq, freq_str.split('-'))
+            else:
+                record[u'type'] = u'channel'
+                record[u'lowerFreq'] = record[u'upperFreq'] = _parse_freq(freq_str)
+        except ValueError:
+            diagnostics.append(Warning(reader.line_num, 'Frequency value is not a decimal number or range; line discarded.'))
+            continue
         # extension of format: location
         if csvrec.get('Latitude', '') != '' and csvrec.get('Longitude', '') != '':
             record[u'location'] = [float(csvrec['Latitude']), float(csvrec['Longitude'])]
