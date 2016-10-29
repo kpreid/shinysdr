@@ -316,7 +316,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
             sample_rate=sample_rate)
         self.__usable_bandwidth = tuning.calc_usable_bandwidth(sample_rate)
     
-    @exported_value(type=SignalType)
+    @exported_value(type=SignalType, changes='never')
     def get_output_type(self):
         return self.__signal_type
     
@@ -333,7 +333,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         self._stop_rx()
         self.__tuning = None
     
-    @exported_value(type=float)
+    @exported_value(type=float, changes='this_setter')
     def get_correction_ppm(self):
         return self.__tuning.get_correction_ppm()
     
@@ -341,12 +341,14 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     def set_correction_ppm(self, value):
         self.__tuning.set_correction_ppm(value)
     
-    @exported_block()
+    @exported_block(changes='never')
     def get_gains(self):
         return self.__gains
     
-    @exported_value(type_fn=lambda self: convert_osmosdr_range(
-            self.__source.get_gain_range(ch), strict=False))
+    @exported_value(
+        type_fn=lambda self: convert_osmosdr_range(
+            self.__source.get_gain_range(ch), strict=False),
+        changes='this_setter')
     def get_gain(self):
         if self.__source is None: return 0.0
         return self.__source.get_gain(ch)
@@ -355,7 +357,9 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     def set_gain(self, value):
         self.__source.set_gain(float(value), ch)
     
-    @exported_value(type_fn=lambda self: bool if self.__profile.agc else Constant(False))
+    @exported_value(
+        type_fn=lambda self: bool if self.__profile.agc else Constant(False),
+        changes='this_setter')
     def get_agc(self):
         if self.__source is None: return False
         return bool(self.__source.get_gain_mode(ch))
@@ -364,7 +368,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     def set_agc(self, value):
         self.__source.set_gain_mode(bool(value), ch)
     
-    @exported_value(type_fn=lambda self: self.__antenna_type)
+    @exported_value(type_fn=lambda self: self.__antenna_type, changes='this_setter')
     def get_antenna(self):
         if self.__source is None: return ''
         return unicode(self.__source.get_antenna(ch))
@@ -375,7 +379,9 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         self.__source.set_antenna(str(self.__antenna_type(value)), ch)
     
     # Note: dc_cancel has a 'manual' mode we are not yet exposing
-    @exported_value(type_fn=lambda self: bool if self.__profile.dc_cancel else Constant(False))
+    @exported_value(
+        type_fn=lambda self: bool if self.__profile.dc_cancel else Constant(False),
+        changes='this_setter')
     def get_dc_cancel(self):
         return bool(self.dc_state)
     
@@ -388,7 +394,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         self.dc_state = self.__source.set_dc_offset_mode(mode, ch)
     
     # Note: iq_balance has a 'manual' mode we are not yet exposing
-    @exported_value(type=bool)  # TODO: detect gr-iqbal
+    @exported_value(type=bool, changes='this_setter')  # TODO: detect gr-iqbal
     def get_iq_balance(self):
         return bool(self.iq_state)
 
@@ -402,8 +408,10 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     
     # add_zero because zero means automatic setting based on sample rate.
     # TODO: Display automaticness in the UI rather than having a zero value.
-    @exported_value(type_fn=lambda self: convert_osmosdr_range(
-        self.__source.get_bandwidth_range(ch), add_zero=True))
+    @exported_value(
+        type_fn=lambda self: convert_osmosdr_range(
+            self.__source.get_bandwidth_range(ch), add_zero=True),
+        changes='this_setter')
     def get_bandwidth(self):
         if self.__source is None: return 0.0
         return self.__source.get_bandwidth(ch)
@@ -529,7 +537,7 @@ def _install_gain_cell(self, sourceref, name, callback):
     # TODO: There should be a type of Cell such that we don't have to setattr
     setattr(self, 'get_' + name, gain_getter)
     setattr(self, 'set_' + name, gain_setter)
-    callback(Cell(self, name, type=gain_range, writable=True, persists=True))
+    callback(Cell(self, name, type=gain_range, writable=True, persists=True, changes='this_setter'))
 
 
 def convert_osmosdr_range(meta_range, add_zero=False, transform=lambda f: f, **kwargs):

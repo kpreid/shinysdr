@@ -407,7 +407,7 @@ class _HamlibProxy(ExportedState):
         p = self.__protocol
         self.poll_slow(p.rc_send)
     
-    @exported_value(type=Notice(always_visible=False))
+    @exported_value(type=Notice(always_visible=False), changes='placeholder_slow')
     def get_errors(self):
         if self.__communication_error:
             return 'Rig not responding.'

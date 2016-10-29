@@ -121,7 +121,7 @@ class RTL433Demodulator(gr.hier_block2, ExportedState):
         """implements IDemodulator"""
         return False
     
-    @exported_value()
+    @exported_value(changes='never')
     def get_band_filter_shape(self):
         """implements IDemodulator"""
         if self.__band_filter:
@@ -315,7 +315,7 @@ class RTL433MsgGroup(ExportedState):
         """implement ITelemetryObject"""
         return self.__last_heard_time + drop_unheard_timeout_seconds
     
-    @exported_value(type=Timestamp())
+    @exported_value(type=Timestamp(), changes='placeholder_slow')
     def get_last_heard_time(self):
         return self.__last_heard_time
 

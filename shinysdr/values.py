@@ -34,6 +34,17 @@ from gnuradio import gr
 from shinysdr.types import BulkDataType, Reference, to_value_type
 
 
+# TODO move this decl somewhere sensible once the code exists
+_cell_value_change_schedules = [
+    u'never',  # immutable value.
+    u'continuous',  # a different value almost every time
+    u'this_setter',  # the setter for this cell
+    u'this_object',  # any setter for any cell on this object
+    u'global',  # might depend on any other non-continuous cell in the system
+    u'placeholder_slow',  # things we want to replace, but for now are polled slow
+]
+
+
 class BaseCell(object):
     def __init__(self, target, key, type, persists=True, writable=False):
         # The exact relationship of target and key depends on the subtype
@@ -120,11 +131,23 @@ class ValueCell(BaseCell):
 
 # TODO this name is historical and should be changed
 class Cell(ValueCell):
-    def __init__(self, target, key, type=object, writable=False, persists=None):
+    def __init__(self, target, key, changes, type=object, writable=False, persists=None):
+        assert changes in _cell_value_change_schedules  # TODO actually use value
         type = to_value_type(type)
         if persists is None:
             persists = writable or type.is_reference()
+        
+        if changes == u'continuous' and persists:
+            raise ValueError('persists=True changes={!r} is not allowed'.format(changes))
+        if changes == u'never' and writable:
+            raise ValueError('writable=True changes={!r} doesn\'t make sense'.format(changes))
+        
         ValueCell.__init__(self, target, key, writable=writable, persists=persists, type=type)
+        
+        self.__changes = changes
+        if changes == u'explicit':
+            self.__explicit_subscriptions = set()
+            self.__last_polled_value = object()
         self._getter = getattr(self._target, 'get_' + key)
         if writable:
             self._setter = getattr(self._target, 'set_' + key)
@@ -550,8 +573,13 @@ def command():
 
 
 class ExportedGetter(object):
-    """Descriptor for a getter exported using @exported_value."""
+    """Descriptor for a getter exported using @exported_value or @exported_block."""
     def __init__(self, f, parameter, cell_kwargs):
+        # early error for debugging
+        if 'changes' not in cell_kwargs:
+            raise TypeError('changes parameter missing')
+        assert cell_kwargs['changes'] in _cell_value_change_schedules, cell_kwargs['changes']
+        
         if 'type_fn' in cell_kwargs and 'type' in cell_kwargs:
             raise ValueError('cannot specify both "type" and "type_fn"')
         if 'type_fn' in cell_kwargs and parameter:

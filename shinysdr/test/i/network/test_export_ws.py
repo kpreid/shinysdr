@@ -173,7 +173,7 @@ class StateSpecimen(ExportedState):
     def __init__(self):
         self.rw = 1.0
     
-    @exported_value(type=float)
+    @exported_value(type=float, changes='this_setter')
     def get_rw(self):
         return self.rw
     
@@ -188,11 +188,11 @@ class DuplicateReferenceSpecimen(ExportedState):
     def __init__(self):
         self.foo = self.bar = nullExportedState
     
-    @exported_block()
+    @exported_block(changes='placeholder_slow')
     def get_foo(self):
         return self.foo
     
-    @exported_block()
+    @exported_block(changes='placeholder_slow')
     def get_bar(self):
         return self.bar
 
@@ -217,6 +217,6 @@ class SerializationSpecimen(ExportedState):
     def __init__(self):
         self.st = None
     
-    @exported_value(type=SignalType)
+    @exported_value(type=SignalType, changes='placeholder_slow')
     def get_st(self):
         return self.st

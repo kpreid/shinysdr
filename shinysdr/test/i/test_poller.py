@@ -88,7 +88,7 @@ class PollerCellsSpecimen(ExportedState):
     def state_is_dynamic(self):
         return True
     
-    @exported_value()
+    @exported_value(changes='continuous', persists=False)
     def get_foo(self):
         return self.foo
 

@@ -147,7 +147,7 @@ class APRSDemodulator(gr.hier_block2, ExportedState):
     def get_output_type(self):
         return self.__mm_demod.get_output_type()
     
-    @exported_value(type=_aprs_squelch_type)
+    @exported_value(type=_aprs_squelch_type, changes='this_setter')
     def get_squelch(self):
         return self.__squelch_mode
     
@@ -207,14 +207,14 @@ class FMAPRSDemodulator(gr.hier_block2, ExportedState):
     def can_set_mode(self, mode):
         return False
     
-    @exported_value()
+    @exported_value(changes='never')
     def get_band_filter_shape(self):
         return self.fm_demod.get_band_filter_shape()
     
     def get_output_type(self):
         return self.mm_demod.get_output_type()
     
-    @exported_block()
+    @exported_block(changes='never')
     def get_mm_demod(self):
         return self.mm_demod
 

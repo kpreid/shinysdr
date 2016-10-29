@@ -112,7 +112,7 @@ class RTTYDemodulator(gr.hier_block2, ExportedState):
         """implement IDemodulator"""
         return False
     
-    @exported_value()
+    @exported_value(changes='never')
     def get_band_filter_shape(self):
         """implement IDemodulator"""
         return {
@@ -125,11 +125,11 @@ class RTTYDemodulator(gr.hier_block2, ExportedState):
         """implement IDemodulator"""
         return SignalType(kind='MONO', sample_rate=self.samp_rate)
 
-    @exported_block()
+    @exported_block(changes='never')
     def get_fsk_demod(self):
         return self.fsk_demod
 
-    @exported_value(type=unicode)
+    @exported_value(type=unicode, changes='continuous')
     def get_text(self):
         # pylint: disable=no-member
         queue = self.__char_queue
@@ -212,7 +212,7 @@ class RTTYFSKDemodulator(gr.hier_block2, ExportedState):
             self)
         self.connect(self.__dc_blocker, self.__freq_probe)
 
-    @exported_value(type=Range([(-2, 2)]))
+    @exported_value(type=Range([(-2, 2)]), changes='continuous')
     def get_probe(self):
         return abs(self.__freq_probe.level())
 

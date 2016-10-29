@@ -140,33 +140,33 @@ class APRSStation(ExportedState):
         """implement ITelemetryObject"""
         return self.__last_heard_time + drop_unheard_timeout_seconds
     
-    @exported_value(type=Timestamp())
+    @exported_value(type=Timestamp(), changes='placeholder_slow')
     def get_last_heard_time(self):
         return self.__last_heard_time
     
-    @exported_value(type=unicode)
+    @exported_value(type=unicode, changes='placeholder_slow')
     def get_address(self):
         return self.__address
 
-    @exported_value(type=Track)
+    @exported_value(type=Track, changes='placeholder_slow')
     def get_track(self):
         return self.__track
 
-    @exported_value(type=unicode)
+    @exported_value(type=unicode, changes='placeholder_slow')
     def get_symbol(self):
         """APRS symbol table identifier and symbol."""
         return self.__symbol
 
-    @exported_value(type=unicode)
+    @exported_value(type=unicode, changes='placeholder_slow')
     def get_status(self):
         """String status text."""
         return self.__status
 
-    @exported_value(type=unicode)
+    @exported_value(type=unicode, changes='placeholder_slow')
     def get_last_comment(self):
         return self.__last_comment
 
-    @exported_value(type=Notice(always_visible=False))
+    @exported_value(type=Notice(always_visible=False), changes='placeholder_slow')
     def get_last_parse_error(self):
         return self.__last_parse_error
 

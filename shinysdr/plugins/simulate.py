@@ -143,12 +143,12 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
         self.__usable_bandwidth = Range([(-rf_rate / 2, rf_rate / 2)])
         
     
-    @exported_block()
+    @exported_block(changes='never')
     def get_transmitters(self):
         return self.__transmitters_cs
 
     # implement IRXDriver
-    @exported_value(type=SignalType)
+    @exported_value(type=SignalType, changes='never')
     def get_output_type(self):
         return self.__signal_type
         
@@ -167,7 +167,7 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
     def close(self):
         pass
     
-    @exported_value(type=Range([(-50, 0)]))
+    @exported_value(type=Range([(-50, 0)]), changes='this_setter')
     def get_noise_level(self):
         return self.__noise_level
     
@@ -213,11 +213,13 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
         self.__mult = blocks.multiply_const_cc(dB(-10))
         self.connect(modulator, rf_resampler, self.__rotator, self.__mult, self)
     
-    @exported_block()
+    @exported_block(changes='never')
     def get_modulator(self):
         return self.__modulator
 
-    @exported_value(type_fn=lambda self: Range([(-self.__rf_rate / 2, self.__rf_rate / 2)], strict=False))
+    @exported_value(
+        type_fn=lambda self: Range([(-self.__rf_rate / 2, self.__rf_rate / 2)], strict=False),
+        changes='this_setter')
     def get_freq(self):
         return self.__freq
     
@@ -226,7 +228,7 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
         self.__freq = float(value)
         self.__rotator.set_phase_inc(rotator_inc(rate=self.__rf_rate, shift=self.__freq))
     
-    @exported_value(type=Range([(-50.0, 0.0)], strict=False))
+    @exported_value(type=Range([(-50.0, 0.0)], strict=False), changes='this_setter')
     def get_gain(self):
         return to_dB(self.__mult.k().real)
     
@@ -261,7 +263,10 @@ class ChirpModulator(gr.hier_block2, ExportedState):
     def get_output_type(self):
         return SignalType(kind='IQ', sample_rate=self.__output_rate)
     
-    @exported_value(parameter='chirp_rate', type=Range([(-10.0, 10.0)], strict=False))
+    @exported_value(
+        parameter='chirp_rate', 
+        type=Range([(-10.0, 10.0)], strict=False),
+        changes='this_setter')
     def get_chirp_rate(self):
         return self.__chirp_rate
     

@@ -301,27 +301,27 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
             self.__needs_reconnect.append(u'receiver %s validity changed' % (key,))
             self._do_connect()
     
-    @exported_block()
+    @exported_block(changes='never')
     def get_monitor(self):
         return self.monitor
     
-    @exported_block(persists=False)
+    @exported_block(persists=False, changes='never')
     def get_sources(self):
         return self.sources
     
-    @exported_block(persists=False)
+    @exported_block(persists=False, changes='this_object')
     def get_source(self):
         return self.source  # TODO no need for this now...?
     
-    @exported_block()
+    @exported_block(changes='never')
     def get_receivers(self):
         return self.receivers
     
-    @exported_block(persists=False)
+    @exported_block(persists=False, changes='never')
     def get_accessories(self):
         return self.accessories
     
-    @exported_block()
+    @exported_block(changes='never')
     def get_telemetry_store(self):
         return self.__telemetry_store
     
@@ -370,7 +370,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.stop()
         self.wait()
 
-    @exported_value(type_fn=lambda self: self.__rx_device_type)
+    @exported_value(type_fn=lambda self: self.__rx_device_type, changes='this_setter')
     def get_source_name(self):
         return self.source_name
     
@@ -383,7 +383,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.source_name = value
         self._do_connect()
     
-    @exported_value(type=Notice(always_visible=False))
+    @exported_value(type=Notice(always_visible=False), changes='continuous')
     def get_clip_warning(self):
         level = self.__clip_probe.level()
         # We assume that our sample source's absolute limits on I and Q values are the range -1.0 to 1.0. This is a square region; therefore the magnitude observed can be up to sqrt(2) = 1.414 above this, allowing us some opportunity to measure the amount of excess, and also to detect clipping even if the device doesn't produce exactly +-1.0 valus.
@@ -393,7 +393,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
             return u''
     
     # TODO: This becomes useless w/ Session fix
-    @exported_value(type=float)
+    @exported_value(type=float, changes='continuous')
     def get_cpu_use(self):
         return round(self.__cpu_calculator.get(), 2)
     

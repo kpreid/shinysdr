@@ -179,11 +179,11 @@ class Receiver(gr.hier_block2, ExportedState):
         self.__update_rotator()
         # note does not revalidate() because the caller will handle that
 
-    @exported_block()
+    @exported_block(changes='placeholder_slow')
     def get_demodulator(self):
         return self.__demodulator
 
-    @exported_value(type_fn=lambda self: self.context.get_rx_device_type())
+    @exported_value(type_fn=lambda self: self.context.get_rx_device_type(), changes='this_setter')
     def get_device_name(self):
         return self.__device_name
     
@@ -197,7 +197,7 @@ class Receiver(gr.hier_block2, ExportedState):
             self.context.changed_needed_connections(u'changed device')
     
     # type construction is deferred because we don't want loading this file to trigger loading plugins
-    @exported_value(type_fn=lambda self: Enum({d.mode: d.info for d in get_modes()}))
+    @exported_value(type_fn=lambda self: Enum({d.mode: d.info for d in get_modes()}), changes='this_setter')
     def get_mode(self):
         return self.mode
     
@@ -212,7 +212,7 @@ class Receiver(gr.hier_block2, ExportedState):
             self._rebuild_demodulator(mode=mode, reason=u'changed mode')
 
     # TODO: rename rec_freq to just freq
-    @exported_value(type=float, parameter='freq_absolute')
+    @exported_value(type=float, parameter='freq_absolute', changes='global')
     def get_rec_freq(self):
         return self.__freq_absolute
     
@@ -235,7 +235,7 @@ class Receiver(gr.hier_block2, ExportedState):
         else:
             self.context.revalidate(tuning=True)
     
-    @exported_value(type=bool)
+    @exported_value(type=bool, changes='this_setter')
     def get_freq_linked_to_device(self):
         return self.__freq_linked_to_device
     
@@ -244,7 +244,10 @@ class Receiver(gr.hier_block2, ExportedState):
         self.__freq_linked_to_device = bool(value)
     
     # TODO: support non-audio demodulators at which point these controls should be optional
-    @exported_value(parameter='audio_gain', type=Range([(-30, 20)], strict=False))
+    @exported_value(
+        parameter='audio_gain',
+        type=Range([(-30, 20)], strict=False),
+        changes='this_setter')
     def get_audio_gain(self):
         return self.audio_gain
 
@@ -253,7 +256,9 @@ class Receiver(gr.hier_block2, ExportedState):
         self.audio_gain = value
         self.__update_audio_gain()
     
-    @exported_value(type_fn=lambda self: Range([(-1, 1)] if self.__audio_channels > 1 else [(0, 0)], strict=True))
+    @exported_value(
+        type_fn=lambda self: Range([(-1, 1)] if self.__audio_channels > 1 else [(0, 0)], strict=True),
+        changes='this_setter')
     def get_audio_pan(self):
         return self.audio_pan
     
@@ -262,7 +267,9 @@ class Receiver(gr.hier_block2, ExportedState):
         self.audio_pan = value
         self.__update_audio_gain()
     
-    @exported_value(type_fn=lambda self: self.context.get_audio_destination_type())
+    @exported_value(
+        type_fn=lambda self: self.context.get_audio_destination_type(),
+        changes='this_setter')
     def get_audio_destination(self):
         return self.__audio_destination
     
@@ -272,7 +279,7 @@ class Receiver(gr.hier_block2, ExportedState):
             self.__audio_destination = value
             self.context.changed_needed_connections(u'changed destination')
     
-    @exported_value(type=bool)
+    @exported_value(type=bool, changes='global')
     def get_is_valid(self):
         if self.__demodulator is None:
             return False
@@ -284,7 +291,7 @@ class Receiver(gr.hier_block2, ExportedState):
                valid_bandwidth_upper >= max(0, demod_shape['high'])
     
     # Note that the receiver cannot measure RF power because we don't know what the channel bandwidth is; we have to leave that to the demodulator.
-    @exported_value(type=Range([(_audio_power_minimum_dB, 0)], strict=False))
+    @exported_value(type=Range([(_audio_power_minimum_dB, 0)], strict=False), changes='continuous')
     def get_audio_power(self):
         if self.get_is_valid():
             return to_dB(max(_audio_power_minimum_amplitude, self.probe_audio.level()))

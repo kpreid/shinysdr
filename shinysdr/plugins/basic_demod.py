@@ -83,11 +83,11 @@ class SquelchMixin(ExportedState):
         self.rf_squelch_block = analog.simple_squelch_cc(squelch_threshold, alpha)
         self.rf_probe_block = analog.probe_avg_mag_sqrd_c(0, alpha=alpha)
 
-    @exported_value(type=Range([(-100, 0)], strict=False))
+    @exported_value(type=Range([(-100, 0)], strict=False), changes='continuous')
     def get_rf_power(self):
         return to_dB(max(1e-10, self.rf_probe_block.level()))
 
-    @exported_value(type=Range([(-100, 0)], strict=False, logarithmic=False))
+    @exported_value(type=Range([(-100, 0)], strict=False, logarithmic=False), changes='this_setter')
     def get_squelch_threshold(self):
         return self.rf_squelch_block.threshold()
 
@@ -120,7 +120,7 @@ class SimpleAudioDemodulator(Demodulator, SquelchMixin):
             cutoff_freq=band_filter,
             transition_width=band_filter_transition)
     
-    @exported_value()
+    @exported_value(changes='never')  # TODO not sure if this is the right change policy
     def get_band_filter_shape(self):
         """Implements IDemodulator."""
         return self.band_filter_block.get_shape()
@@ -219,7 +219,7 @@ class AMDemodulator(SimpleAudioDemodulator):
         
         self.__do_connect()
     
-    @exported_value(type=_am_demod_method_type, parameter='demod_method')
+    @exported_value(type=_am_demod_method_type, parameter='demod_method', changes='this_setter')
     def get_demod_method(self):
         return self.__demod_method
     
@@ -359,7 +359,7 @@ class UnselectiveAMDemodulator(gr.hier_block2, ExportedState):
         """implement IDemodulator"""
         return False
     
-    @exported_value()
+    @exported_value(changes='global')
     def get_band_filter_shape(self):
         """implement IDemodulator"""
         halfbw = self.__input_rate * 0.5
@@ -547,7 +547,7 @@ class WFMDemodulator(FMDemodulator):
             no_audio_filter=True,  # disable highpass
             **kwargs)
 
-    @exported_value(type=bool)
+    @exported_value(type=bool, changes='this_setter')
     def get_stereo(self):
         return self.stereo
     
@@ -712,7 +712,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
         self.connect_audio_output(ssb_demod_block)
     
     # override
-    @exported_value()
+    @exported_value(changes='never')
     def get_band_filter_shape(self):
         return self.__filter_shape
     
@@ -720,7 +720,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
     def set_rec_freq(self, freq):
         super(SSBDemodulator, self).set_rec_freq(freq - self.__offset)
     
-    @exported_value(type=Range([(-20, _ssb_max_agc)]))
+    @exported_value(type=Range([(-20, _ssb_max_agc)]), changes='continuous')
     def get_agc_gain(self):
         return to_dB(self.agc_block.gain())
 

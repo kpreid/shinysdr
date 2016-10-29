@@ -72,11 +72,11 @@ class ValueAndBlockSpecimen(ExportedState):
         self.__value = value
         self.__block = block
     
-    @exported_block()
+    @exported_block(changes='never')
     def get_block(self):
         return self.__block
     
-    @exported_value(type=float, parameter='value')
+    @exported_value(type=float, parameter='value', changes='this_setter')
     def get_value(self):
         return self.__value
     
@@ -101,7 +101,7 @@ class TestDecoratorInheritance(unittest.TestCase):
 
 class DecoratorInheritanceSpecimenSuper(ExportedState):
     """Helper for TestDecorator"""
-    @exported_value(type=float)
+    @exported_value(type=float, changes='never')
     def get_inherited(self):
         return 9
 
@@ -111,7 +111,7 @@ class DecoratorInheritanceSpecimen(DecoratorInheritanceSpecimenSuper):
     def __init__(self):
         self.rw = 0.0
     
-    @exported_value(type=Range([(0.0, 10.0)]))
+    @exported_value(type=Range([(0.0, 10.0)]), changes='this_setter')
     def get_rw(self):
         return self.rw
     
@@ -138,7 +138,7 @@ class BlockCellSpecimen(ExportedState):
     def __init__(self, block):
         self.__block = block
     
-    @exported_block()
+    @exported_block(changes='never')
     def get_block(self):
         return self.__block
 
@@ -274,10 +274,10 @@ class CellIdentitySpecimen(ExportedState):
     def state_is_dynamic(self):
         return True
     
-    @exported_value()
+    @exported_value(changes='never')
     def get_value(self):
         return 9
 
-    @exported_block()
+    @exported_block(changes='never')
     def get_block(self):
         return self.__block

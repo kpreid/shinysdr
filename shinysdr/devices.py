@@ -186,15 +186,15 @@ class Device(ExportedState):
     def can_tune(self):
         return self.__vfo_cell is not _stub_vfo
     
-    @exported_block()
+    @exported_block(changes='never')
     def get_rx_driver(self):
         return self.rx_driver
     
-    @exported_block()
+    @exported_block(changes='never')
     def get_tx_driver(self):
         return self.tx_driver
     
-    @exported_block()
+    @exported_block(changes='never')
     def get_components(self):
         return self.__components_state
     
@@ -489,7 +489,7 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
         self.connect(combine, self)
     
     # implement IRXDriver
-    @exported_value(type=SignalType)
+    @exported_value(type=SignalType, changes='never')
     def get_output_type(self):
         return self.__signal_type
 
@@ -543,7 +543,7 @@ class _AudioTXDriver(ExportedState, gr.hier_block2):
         self.connect(self, split, (sink, 0))
         self.connect((split, 1), (sink, 1))
 
-    @exported_value(type=SignalType)
+    @exported_value(type=SignalType, changes='never')
     def get_input_type(self):
         return self.__signal_type
 
@@ -587,6 +587,6 @@ class _PositionedDeviceComponent(ExportedState):
     def close(self):
         """implements IComponent"""
 
-    @exported_value(type=Track)
+    @exported_value(type=Track, changes='never')
     def get_track(self):
         return self.__track

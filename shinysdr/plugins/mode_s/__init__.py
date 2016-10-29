@@ -121,7 +121,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
     def __del__(self):
         self.__msgq_runner.stop()
     
-    @exported_value(type=Range([(0, 30)]))
+    @exported_value(type=Range([(0, 30)]), changes='this_setter')
     def get_decode_threshold(self):
         return self.__demod.get_threshold(None)
     
@@ -129,7 +129,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
     def set_decode_threshold(self, value):
         self.__demod.set_threshold(float(value))
     
-    @exported_value(float)
+    @exported_value(float, changes='placeholder_slow')
     def get_message_rate(self):
         return round(self.__message_rate_calc.get(), 1)
     
@@ -139,7 +139,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
     def get_output_type(self):
         return no_signal
     
-    @exported_value()
+    @exported_value(changes='never')
     def get_band_filter_shape(self):
         return self.__band_filter.get_shape()
 
@@ -267,23 +267,23 @@ class Aircraft(ExportedState):
         """implement ITelemetryObject"""
         return self.__last_heard_time + drop_unheard_timeout_seconds
     
-    @exported_value(type=Timestamp())
+    @exported_value(type=Timestamp(), changes='placeholder_slow')
     def get_last_heard_time(self):
         return self.__last_heard_time
     
-    @exported_value(type=unicode)
+    @exported_value(type=unicode, changes='placeholder_slow')
     def get_call(self):
         return self.__call
     
-    @exported_value(type=int)
+    @exported_value(type=int, changes='placeholder_slow')
     def get_ident(self):
         return self.__ident
     
-    @exported_value(type=unicode)
+    @exported_value(type=unicode, changes='placeholder_slow')
     def get_aircraft_type(self):
         return self.__aircraft_type
     
-    @exported_value(type=Track)
+    @exported_value(type=Track, changes='placeholder_slow')
     def get_track(self):
         return self.__track
 

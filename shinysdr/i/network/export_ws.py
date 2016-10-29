@@ -181,7 +181,7 @@ class StateStreamInner(object):
         self.__poller = poller
         self._send = send
         self.__root_object = root_object
-        self._cell = Cell(self, '_root_object', type=Reference())
+        self._cell = Cell(self, '_root_object', type=Reference(), changes='never')
         self._lastSerial = 0
         root_registration = _StateStreamObjectRegistration(ssi=self, poller=self.__poller, obj=self._cell, serial=0, url=root_url, refcount=0)
         self._registered_objs = {self._cell: root_registration}

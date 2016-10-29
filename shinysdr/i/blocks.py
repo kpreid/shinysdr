@@ -351,7 +351,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
             self.__fft_sink.get_subscription_count() > 0 or
             self.__scope_sink.get_subscription_count() > 0))
     
-    @exported_value()
+    @exported_value(changes='global')
     def get_signal_type(self):
         return self.__signal_type
     
@@ -367,7 +367,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
     def set_input_center_freq(self, value):
         self.__input_center_freq = float(value) 
     
-    @exported_value(type=Range([(2, 4096)], logarithmic=True, integer=True))
+    @exported_value(type=Range([(2, 4096)], logarithmic=True, integer=True), changes='this_setter')
     def get_freq_resolution(self):
         return self.__freq_resolution
 
@@ -377,7 +377,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__rebuild()
         self.__connect()
 
-    @exported_value(type=Range([(1, 4096)], logarithmic=True, integer=True))
+    @exported_value(type=Range([(1, 4096)], logarithmic=True, integer=True), changes='this_setter')
     def get_time_length(self):
         return self.__time_length
 
@@ -387,7 +387,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__rebuild()
         self.__connect()
 
-    @exported_value(type=Range([(1, _maximum_fft_rate)], logarithmic=True, integer=False))
+    @exported_value(type=Range([(1, _maximum_fft_rate)], logarithmic=True, integer=False), changes='this_setter')
     def get_frame_rate(self):
         return self.__frame_rate
 
@@ -396,7 +396,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__logpwrfft.set_vec_rate(float(value))
         self.__frame_rate = self.__logpwrfft.frame_rate()
     
-    @exported_value(type=bool)
+    @exported_value(type=bool, changes='this_setter')
     def get_paused(self):
         return self.__paused
 

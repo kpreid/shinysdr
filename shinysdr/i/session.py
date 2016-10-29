@@ -39,11 +39,11 @@ class AppRoot(ExportedState):
             receive_flowgraph=self.__receive_flowgraph,
             features=features)
     
-    @exported_block()
+    @exported_block(changes='never')
     def get_receive_flowgraph(self):  # TODO needs to go away
         return self.__receive_flowgraph
     
-    @exported_block(persists=True)
+    @exported_block(persists=True, changes='never')
     def get_devices(self):
         """Return all existant devices.
         

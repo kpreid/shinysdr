@@ -70,7 +70,7 @@ class DSDDemodulator(gr.hier_block2, ExportedState):
             dsd_block_ff(),
             self)
     
-    @exported_block()
+    @exported_block(changes='never')
     def get_fm_demod(self):
         return self.__fm_demod
     
@@ -80,7 +80,7 @@ class DSDDemodulator(gr.hier_block2, ExportedState):
     def get_output_type(self):
         return self.__output_type
     
-    @exported_value()
+    @exported_value(changes='never')
     def get_band_filter_shape(self):
         return self.__fm_demod.get_band_filter_shape()
 
