@@ -1239,6 +1239,8 @@ define(['./types', './values', './events', './widget', './gltools', './database'
       gl.bindTexture(gl.TEXTURE_2D, null);
 
       function configureTexture() {
+        // TODO: If fftSize > gl.getParameter(gl.MAX_TEXTURE_SIZE) (or rather, if we fail to allocate a texture of that size), we have a problem. We can fix that by instead allocating a narrower texture and storing the fft data in multiple rows. (Or is that actually necessary -- do any WebGL implementations support squarish-but-not-long textures?)
+        // If we fail due to total size, we can reasonably reduce the historyCount.
         if (useFloatTexture) {
           var init = new Float32Array(fftSize*historyCount);
           for (var i = 0; i < fftSize*historyCount; i++) {

@@ -495,7 +495,7 @@ define(['./types', './values', './events', './coordination'], function (types, v
       var maxZoom = Math.max(
         1,  // at least min zoom,
         Math.max(
-          nyquist / 10e3, // at least 10 kHz
+          nyquist / 3e3, // at least 3 kHz
           radioCell
             ? radioCell.get().monitor.get().freq_resolution.get() / MAX_ZOOM_BINS
             : 0));

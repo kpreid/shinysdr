@@ -34,8 +34,6 @@ define(['audio', 'types', 'values', 'events', 'widget', 'widgets', 'network', 'd
   var fftnode = ctx.createAnalyser();
   fftnode.smoothingTimeConstant = 0;
   fftnode.fftSize = 16384;
-  // ignore mostly useless high freq bins
-  var binCount = fftnode.frequencyBinCount / 4;
   
   var getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozUserMedia || navigator.msGetUserMedia;
   getUserMedia.call(navigator, {audio: true}, function getUserMediaSuccess(stream) {
@@ -48,7 +46,7 @@ define(['audio', 'types', 'values', 'events', 'widget', 'widgets', 'network', 'd
     d.show();
   });
   
-  var adapter = new AudioAnalyzerAdapter(fftnode, binCount);
+  var adapter = new AudioAnalyzerAdapter(fftnode, fftnode.frequencyBinCount);
   
   var root = new ConstantCell(types.block, makeBlock({
     monitor: new ConstantCell(types.block, adapter)
