@@ -46,8 +46,7 @@ class RecursiveLockBlockMixin(object):
     __lock_count = 0
     
     def _recursive_lock_hook(self):
-        """ override"""
-        pass
+        """To override."""
     
     def _recursive_lock(self):
         # gnuradio uses a non-recursive lock, which is not adequate for our purposes because we want to make changes locally or globally without worrying about having a single lock entry point
@@ -208,12 +207,11 @@ class IMonitor(Interface):
 
 
 class MonitorSink(gr.hier_block2, ExportedState):
-    implements(IMonitor)
-    """
-    Convenience wrapper around all the bits and pieces to display the signal spectrum to the client.
+    """Convenience wrapper around all the bits and pieces to display the signal spectrum to the client.
     
     The units of the FFT output are dB power/Hz (power spectral density) relative to unit amplitude (i.e. dBFS assuming the source clips at +/-1). Note this is different from the standard logpwrfft result of power _per bin_, which would be undesirably dependent on the sample rate and bin size.
     """
+    implements(IMonitor)
     def __init__(self,
             signal_type=None,
             enable_scope=False,

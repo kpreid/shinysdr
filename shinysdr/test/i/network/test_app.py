@@ -20,7 +20,6 @@ from __future__ import absolute_import, division
 import json
 import urlparse
 
-from zope.interface import Interface, implements  # available via Twisted
 
 from twisted.trial import unittest
 from twisted.internet import reactor
@@ -30,9 +29,7 @@ from gnuradio import gr
 
 from shinysdr.i.db import DatabaseModel
 from shinysdr.i.network.app import WebService
-from shinysdr.i.poller import Poller
-from shinysdr.signals import SignalType
-from shinysdr.values import ExportedState, CollectionState, NullExportedState, exported_block, exported_value, nullExportedState, setter
+from shinysdr.values import ExportedState
 from shinysdr.test import testutil
 
 
@@ -141,5 +138,3 @@ def _noop():
 
 class SiteStateStub(ExportedState):
     pass
-
-

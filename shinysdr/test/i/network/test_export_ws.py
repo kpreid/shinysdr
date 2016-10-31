@@ -18,21 +18,16 @@
 from __future__ import absolute_import, division
 
 import json
-import urlparse
 
 from zope.interface import Interface, implements  # available via Twisted
 
 from twisted.trial import unittest
-from twisted.internet import reactor
-from twisted.web import http
 
-from shinysdr.i.db import DatabaseModel
+# TODO: StateStreamInner is an implementation detail; arrange a better interface to test
 from shinysdr.i.network.export_ws import StateStreamInner
 from shinysdr.i.poller import Poller
 from shinysdr.signals import SignalType
 from shinysdr.values import ExportedState, CollectionState, NullExportedState, exported_block, exported_value, nullExportedState, setter
-# TODO: StateStreamInner is an implementation detail; arrange a better interface to test
-from shinysdr.test import testutil
 
 
 class StateStreamTestCase(unittest.TestCase):
