@@ -373,7 +373,11 @@ def ViewCell(base, get_transform, set_transform, **kwargs):
     
     sub = base.subscribe(reverse)
     weakref.ref(self, lambda: sub.unsubscribe())
-        
+
+    # Allows the cell to be put back in sync if the transform changes.
+    # Not intended to be called except by the creator of the cell, but mostly harmless.
+    self.changed_transform = reverse  # pylint: disable=attribute-defined-outside-init
+    
     return self
 
 

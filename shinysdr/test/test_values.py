@@ -145,12 +145,15 @@ class BlockCellSpecimen(ExportedState):
 class TestViewCell(unittest.TestCase):
     def setUp(self):
         self.lc = LooseCell(value=0, key='a', type=int)
+        self.delta = 1
         self.vc = ViewCell(
             base=self.lc,
-            get_transform=lambda x: x + 1,
-            set_transform=lambda x: x - 1,
+            get_transform=lambda x: x + self.delta,
+            set_transform=lambda x: x - self.delta,
             key='b',
             type=int)
+    
+    # TODO: Add tests for behavior when the transform is not perfectly one-to-one (such as due to floating-point error).
     
     def test_get_set(self):
         self.assertEqual(0, self.lc.get())
@@ -161,6 +164,11 @@ class TestViewCell(unittest.TestCase):
         self.lc.set(3)
         self.assertEqual(3, self.lc.get())
         self.assertEqual(4, self.vc.get())
+        
+        self.delta = 10
+        self.vc.changed_transform()
+        self.assertEqual(3, self.lc.get())
+        self.assertEqual(13, self.vc.get())
     
     def test_subscription(self):
         fired = []
@@ -171,6 +179,11 @@ class TestViewCell(unittest.TestCase):
         self.vc.subscribe(f)
         self.lc.set(1)
         self.assertEqual([2], fired)
+        
+        self.delta = 10
+        self.vc.changed_transform()
+        self.assertEqual(1, self.lc.get())
+        self.assertEqual([2, 11], fired)
 
 
 class TestCommandCell(unittest.TestCase):
