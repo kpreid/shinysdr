@@ -62,10 +62,13 @@ def _parse_args(argv):
     return parser.parse_args(args=argv[1:])
 
 
-def import_main():
-    # NOTE: This function is referenced from setup.py entry_points
-    """Entry point for the offline import command."""
-    options = _parse_args(sys.argv)
+def import_main(argv=None, out=None):
+    # NOTE: This function is referenced from setup.py entry_points.
+    """Entry point for the offline import command.
+    
+    Optional arguments are for testing.
+    """
+    options = _parse_args(argv if argv is not None else sys.argv)
     importer_name = options.importer_name
     filenames = options.filenames
     
@@ -96,7 +99,7 @@ def import_main():
     importer.create_database(
         add_record,
         warning_callback=_general_warning_callback)
-    write_csv_file(sys.stdout, records)
+    write_csv_file(out or sys.stdout, dict(enumerate(records)))
 
 
 if __name__ == '__main__':
