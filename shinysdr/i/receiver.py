@@ -385,3 +385,9 @@ class ContextForDemodulator(object):
     
     def output_message(self, message):
         self._receiver.context.output_message(message)
+    
+    def get_absolute_frequency(self):
+        """Return the original RF carrier frequency of the signal to be demodulated.
+        
+        This method is for information display or data interpretation purposes and does not relate to the spectrum of the signal entering the demodulator."""
+        return self._receiver.get_rec_freq()

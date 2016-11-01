@@ -17,7 +17,7 @@
 
 from __future__ import absolute_import, division
 
-import math
+from math import pi
 
 from zope.interface import implements
 
@@ -32,11 +32,11 @@ from shinysdr.interfaces import ModeDef, IDemodulator, IModulator, ITunableDemod
 from shinysdr.math import dB, to_dB
 from shinysdr.filters import MultistageChannelFilter, make_resampler, design_sawtooth_filter
 from shinysdr.signals import SignalType
-from shinysdr.types import EnumRow, Range
+from shinysdr.types import Enum, EnumRow, Range
 from shinysdr.values import ExportedState, exported_value, setter
 
 
-TWO_PI = math.pi * 2
+TWO_PI = pi * 2
 
 BASIC_MODE_SORT_PREFIX = ' '
 
@@ -187,37 +187,127 @@ pluginDef_iq = ModeDef(mode='IQ',
     demod_class=IQDemodulator)
 
 
+_am_lower_cutoff_freq = 40
+_am_audio_bandwidth = 7500
+_am_demod_method_type = Enum({
+    u'async': u'Asynchronous',
+    u'lsb': u'Lower sideband',
+    u'usb': u'Upper sideband',
+    u'stereo': u'ISB stereo',
+})
+
+
 class AMDemodulator(SimpleAudioDemodulator):
-    """
-    Amplitude modulation (AM) demodulator.
-    """
+    """Amplitude modulation (AM) demodulator."""
     
-    def __init__(self, **kwargs):
-        demod_rate = 10000
-        
+    __demod_rate = 16000    
+    
+    def __init__(self, context, demod_method=u'async', **kwargs):
         SimpleAudioDemodulator.__init__(self,
-            audio_rate=demod_rate,
-            demod_rate=demod_rate,
-            band_filter=5000,
-            band_filter_transition=5000,
+            context=context,
+            stereo=True,
+            audio_rate=self.__demod_rate,
+            demod_rate=self.__demod_rate,
+            band_filter=_am_audio_bandwidth,
+            band_filter_transition=1000,
             **kwargs)
         
+        self.__context = context
+        
+        self.__demod_method = _am_demod_method_type(demod_method)
+        self.__pll = None
+        
+        self.__do_connect()
+    
+    @exported_value(type=_am_demod_method_type, parameter='demod_method')
+    def get_demod_method(self):
+        return self.__demod_method
+    
+    @setter
+    def set_demod_method(self, value):
+        value = _am_demod_method_type(value)
+        if value == self.__demod_method:
+            return
+        self.__demod_method = value
+        self.__context.lock()
+        self.__do_connect()
+        self.__context.unlock()
+    
+    def __do_connect(self):
         inherent_gain = 0.5  # fudge factor so that our output is similar level to narrow FM
-        self.agc_block = analog.feedforward_agc_cc(int(.02 * demod_rate), inherent_gain)
-        self.demod_block = blocks.complex_to_mag(1)
+        if self.__demod_method != 'async':
+            inherent_gain *= 2
         
-        # assuming below 40Hz is not of interest
-        self.dc_blocker = grfilter.dc_blocker_ff(demod_rate // 40, False)
+        agc_block = analog.feedforward_agc_cc(int(.005 * self.__demod_rate), inherent_gain)
         
+        # non-method-specific elements
+        self.disconnect_all()
         self.connect(
             self,
-            self.band_filter_block,
-            self.rf_squelch_block,
-            self.agc_block,
-            self.demod_block,
-            self.dc_blocker)
+            self.band_filter_block,  # from SimpleAudioDemodulator
+            self.rf_squelch_block,  # from SquelchMixin
+            agc_block)
         self.connect(self.band_filter_block, self.rf_probe_block)
-        self.connect_audio_output(self.dc_blocker)
+        before_demod = agc_block
+        
+        if self.__demod_method == u'async':
+            dc_blocker = self.__make_dc_blocker()
+            self.connect(
+                before_demod,
+                blocks.complex_to_mag(1),
+                dc_blocker)
+            self.connect_audio_output(dc_blocker, dc_blocker)
+            self.__pll = None
+        else:
+            # all other methods use carrier tracking
+            # TODO: refine PLL parameters further
+            pll = self.__pll = analog.pll_carriertracking_cc(.01 * pi, .1 * pi, -.1 * pi)
+            pll.set_lock_threshold(dB(-20))
+            #pll.squelch_enable(True)
+            self.connect(before_demod, pll)
+            
+            if self.__demod_method == u'stereo':
+                left_input, left_output = self.__make_sideband_demod(False)
+                right_input, right_output = self.__make_sideband_demod(True)
+                self.connect(pll, left_input)
+                self.connect(pll, right_input)
+                self.connect_audio_output(left_output, right_output)
+            else:
+                (demod_input, demod_output) = self.__make_sideband_demod(self.__demod_method == u'usb')
+                self.connect(pll, demod_input)
+                self.connect_audio_output(demod_output, demod_output)
+    
+    def __make_sideband_demod(self, upper):
+        first = grfilter.fir_filter_ccc(
+            1,
+            firdes.complex_band_pass(1.0, self.__demod_rate,
+                _am_lower_cutoff_freq if upper else -_am_audio_bandwidth,
+                _am_audio_bandwidth if upper else -_am_lower_cutoff_freq,
+                1000,
+                firdes.WIN_HAMMING))
+        last = self.__make_dc_blocker()
+        self.connect(first, blocks.complex_to_real(), last)
+        return first, last
+    
+    def __make_dc_blocker(self):
+        # We use the DC blocker even when we also have a band pass filter because it is (TODO verify) cheaper than a sharp filter.
+        return grfilter.dc_blocker_ff(self.__demod_rate // _am_lower_cutoff_freq, False)
+    
+    # this needs UI cleanup before we want to expose it
+    #@exported_value(type=float)
+    #def get_pll_frequency(self):
+    #    if self.__pll:
+    #        return self.__pll.get_frequency() * (self.input_rate / TWO_PI) + self.context.get_absolute_frequency()
+    #    else:
+    #        return 0
+    
+    # disabled because I haven't found any combination of parameters which makes the lock detector reliably useful
+    #@exported_value(type=Notice())
+    #def get_pll_locked(self):
+    #    if self.__pll and not self.__pll.lock_detector():
+    #        return u'No carrier!'
+    #    else:
+    #        return u''
 
 
 class UnselectiveAMDemodulator(gr.hier_block2, ExportedState):
