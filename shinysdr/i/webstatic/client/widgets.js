@@ -165,7 +165,8 @@ define(['./types', './values', './events', './widget', './gltools', './database'
             addWidget(name, Meter, name);
           }
         } else if (member.type instanceof Enum) {
-          addWidget(name, Radio, name);
+          // This could be Radio instead of Select, but Select is a better default for _arbitrary_ lists.
+          addWidget(name, Select, name);
         } else if (member.type === Boolean) {
           addWidget(name, Toggle, name);
         } else if (member.type === String && member.set) {
