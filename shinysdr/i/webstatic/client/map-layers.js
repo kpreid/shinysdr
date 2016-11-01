@@ -15,30 +15,27 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./map-core', './types', './values', './network', './events'], function (mapCore, types, values, network, events) {
+define(['./map-core', './types', './values', './math', './network', './events'], function (mapCore, types, values, math, network, events) {
   'use strict';
   
   var sin = Math.sin;
   var cos = Math.cos;
   
-  var any = types.any;
   var Clock = events.Clock;
   var DerivedCell = values.DerivedCell;
   var Enum = types.Enum;
-  var externalGet = network.externalGet;
   var LocalReadCell = values.LocalReadCell;
+  var StorageCell = values.StorageCell;
+  var any = types.any;
+  var externalGet = network.externalGet;
   var makeBlock = values.makeBlock;
+  var mod = math.mod;
   var registerMapPlugin = mapCore.register;
   var renderTrackFeature = mapCore.renderTrackFeature;
-  var StorageCell = values.StorageCell;
   
   var RADIANS_PER_DEGREE = Math.PI / 180;
   function dcos(x) { return cos(RADIANS_PER_DEGREE * x); }
   function dsin(x) { return sin(RADIANS_PER_DEGREE * x); }
-  
-  function mod(a, b) {
-    return ((a % b) + b) % b;
-  }
   
   // TODO: Instead of using a blank icon, provide a way to skip the geometry entirely
   var blank = 'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22/%3E';

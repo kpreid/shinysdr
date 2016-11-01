@@ -16,14 +16,14 @@
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 // TODO: May be using the wrong relative module id -- otherwise this should have ..s
-define(['widgets'], function (widgets) {
+define(['widgets', 'widgets/basic'], function (widgets, widgets_basic) {
   'use strict';
   
-  var Banner = widgets.Banner;
-  var Block = widgets.Block;
-  var Knob = widgets.Knob;
-  var Meter = widgets.Meter;
-  var Radio = widgets.Radio;
+  var Banner = widgets_basic.Banner;
+  var Block = widgets_basic.Block;
+  var Knob = widgets_basic.Knob;
+  var Meter = widgets_basic.Meter;
+  var Radio = widgets_basic.Radio;
   
   var exports = {};
   

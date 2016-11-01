@@ -16,17 +16,15 @@
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 // TODO: May be using the wrong relative module id -- otherwise this should have ..s
-define(['map-core', 'widgets'], function (mapCore, widgets) {
+define(['map-core', 'widgets', 'math'], function (mapCore, widgets, math) {
   'use strict';
+  
+  var mod = math.mod;
   
   var exports = {};
   
   var TAU = Math.PI * 2;
   var RAD_TO_DEG = 360 / TAU;
-  
-  function mod(value, modulus) {
-    return (value % modulus + modulus) % modulus;
-  }
   
   function Angle(config) {
     var target = config.target;

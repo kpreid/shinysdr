@@ -20,6 +20,12 @@ define([], function () {
   
   var exports = {};
   
+  function isSingleValued(type) {
+    // TODO: Stop using Boolean etc. as type objects and remove the need for this feature test
+    return type.isSingleValued && type.isSingleValued();
+  }
+  exports.isSingleValued = isSingleValued;
+  
   function Constant(value) {
     this.value = value;
   }

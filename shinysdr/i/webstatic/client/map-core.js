@@ -15,27 +15,28 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./types', './values', './gltools', './widget', './widgets', './events', './network'], function (types, values, gltools, widget, widgets, events, network) {
+define(['./types', './values', './gltools', './widget', './widgets/basic', './events', './math', './network'], function (types, values, gltools, widget, widgets_basic, events, math, network) {
   'use strict';
   
   var sin = Math.sin;
   var cos = Math.cos;
   
   var AddKeepDrop = events.AddKeepDrop;
-  var any = types.any;
-  var block = types.block;
-  var Banner = widgets.Banner;
+  var Banner = widgets_basic.Banner;
   var Cell = values.Cell;
   var Clock = events.Clock;
   var ConstantCell = values.ConstantCell;
-  var createWidgetExt = widget.createWidgetExt;
   var DerivedCell = values.DerivedCell;
-  var makeBlock = values.makeBlock;
-  var PickBlock = widgets.PickBlock;
-  var SmallKnob = widgets.SmallKnob;
+  var PickBlock = widgets_basic.PickBlock;
+  var SmallKnob = widgets_basic.SmallKnob;
   var StorageCell = values.StorageCell;
-  var Toggle = widgets.Toggle;
+  var Toggle = widgets_basic.Toggle;
+  var any = types.any;
+  var block = types.block;
+  var createWidgetExt = widget.createWidgetExt;
   var externalGet = network.externalGet;
+  var makeBlock = values.makeBlock;
+  var mod = math.mod;
   
   var exports = {};
   
@@ -46,9 +47,6 @@ define(['./types', './values', './gltools', './widget', './widgets', './events',
   function dcos(x) { return cos(RADIANS_PER_DEGREE * x); }
   function dsin(x) { return sin(RADIANS_PER_DEGREE * x); }
   
-  function mod(a, b) {
-    return ((a % b) + b) % b;
-  }
   function mean(array) {
     return array.reduce(function (a, b) { return a + b; }, 0) / array.length;
   }

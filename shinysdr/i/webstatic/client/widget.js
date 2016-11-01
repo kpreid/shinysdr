@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./types', './values', './events', './coordination'], function (types, values, events, coordination) {
+define(['./coordination', './events', './math', './types', './values'], function (coordination, events, math, types, values) {
   'use strict';
   
   var Cell = values.Cell;
@@ -23,15 +23,12 @@ define(['./types', './values', './events', './coordination'], function (types, v
   var Coordinator = coordination.Coordinator;
   var DerivedCell = values.DerivedCell;
   var StorageNamespace = values.StorageNamespace;
+  var mod = math.mod;
   
   var exports = {};
   
   // contains *only* widget types and can be used as a lookup namespace
   var widgets = Object.create(null);
-  
-  function mod(value, modulus) {
-    return (value % modulus + modulus) % modulus;
-  }
   
   function alwaysCreateReceiverFromEvent(event) {
     return event.shiftKey;
