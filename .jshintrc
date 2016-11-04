@@ -1,0 +1,15 @@
+{
+  "undef": true,
+  "unused": true,
+
+  "strict": true,
+  "esversion": 6,
+  
+  "browser": true,
+  "devel": true,
+  "predef": [
+    "define",
+    "AudioContext",
+    "requirejs"
+  ]
+}
