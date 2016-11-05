@@ -23,12 +23,13 @@ define(['./types', './values', './events', './network'], function (types, values
   var BulkDataType = types.BulkDataType;
   var Cell = values.Cell;
   var ConstantCell = values.ConstantCell;
+  var LocalCell = values.LocalCell;
   var LocalReadCell = values.LocalReadCell;
   var Neverfier = events.Neverfier;
   
   var EMPTY_CHUNK = [];
   
-  function connectAudio(url) {
+  function connectAudio(scheduler, url) {
     var audio = new AudioContext();
     var nativeSampleRate = audio.sampleRate;
     
@@ -80,7 +81,7 @@ define(['./types', './values', './events', './network'], function (types, values
     var analyzerNode = audio.createAnalyser();
     analyzerNode.smoothingTimeConstant = 0;
     analyzerNode.fftSize = 16384;
-    var analyzerAdapter = new AudioAnalyzerAdapter(analyzerNode, analyzerNode.frequencyBinCount / 2);
+    var analyzerAdapter = new AudioAnalyzerAdapter(scheduler, analyzerNode, analyzerNode.frequencyBinCount / 2);
     
     // User-facing status display
     // TODO should be faceted read-only when exported
@@ -297,12 +298,14 @@ define(['./types', './values', './events', './network'], function (types, values
           started = true;
           nodeBeforeDestination.connect(audio.destination);
           nodeBeforeDestination.connect(analyzerNode);
+          analyzerAdapter.setLockout(false);
         }
       } else {
         if (started) {
           started = false;
           nodeBeforeDestination.disconnect(audio.destination);
           nodeBeforeDestination.disconnect(analyzerNode);
+          analyzerAdapter.setLockout(true);
         }
       }
     }
@@ -318,7 +321,7 @@ define(['./types', './values', './events', './network'], function (types, values
   var TIME_ADJ = false;    // Subtract median amplitude; hides strong beats.
   
   // Takes frequency data from an AnalyzerNode and provides an interface like a MonitorSink
-  function AudioAnalyzerAdapter(analyzerNode, length) {
+  function AudioAnalyzerAdapter(scheduler, analyzerNode, length) {
     // Constants
     var effectiveSampleRate = analyzerNode.context.sampleRate * (length / analyzerNode.frequencyBinCount);
     var info = Object.freeze({freq: 0, rate: effectiveSampleRate});
@@ -328,6 +331,8 @@ define(['./types', './values', './events', './network'], function (types, values
     var lastValue = [info, fftBuffer];
     var subscriptions = [];
     var isScheduled = false;
+    var pausedCell = this.paused = new LocalCell(Boolean, true);
+    var lockout = false;
     
     function update() {
       isScheduled = false;
@@ -357,17 +362,32 @@ define(['./types', './values', './events', './network'], function (types, values
     
       // Deliver value
       lastValue = newValue;
-      if (subscriptions.length && !isScheduled) {
-        isScheduled = true;
-        // TODO should call a Scheduler instead but we don't have one.
-        // (Though also, a basic rAF loop seems to be about the right rate to poll the AnalyzerNode for new data.)
-        requestAnimationFrame(update);
-      }
+      maybeScheduleUpdate();
       // TODO replace this with something async
       for (var i = 0; i < subscriptions.length; i++) {
         (0,subscriptions[i])(newValue);
       }
     }
+    
+    function maybeScheduleUpdate() {
+      if (!isScheduled && subscriptions.length && !lockout) {
+        if (pausedCell.get()) {
+          pausedCell.n.listen(maybeScheduleUpdate);
+        } else {
+          isScheduled = true;
+          // A basic rAF loop seems to be about the right rate to poll the AnalyzerNode for new data. Using the Scheduler instead would try to run faster.
+          requestAnimationFrame(update);
+        }
+      }
+    }
+    maybeScheduleUpdate.scheduler = scheduler;
+    
+    Object.defineProperty(this, 'setLockout', {value: function (value) {
+      lockout = !!value;
+      if (!lockout) {
+        maybeScheduleUpdate();
+      }
+    }});
     
     // Output cell
     this.fft = new Cell(new types.BulkDataType('dff', 'b'));  // TODO BulkDataType really isn't properly involved here
@@ -377,9 +397,7 @@ define(['./types', './values', './events', './network'], function (types, values
     // TODO: put this on a more general and sound framework (same as BulkDataCell)
     this.fft.subscribe = function (callback) {
       subscriptions.push(callback);
-      if (!isScheduled) {
-        requestAnimationFrame(update);
-      }
+      maybeScheduleUpdate();
     };
     
     // Other elements expected by Monitor widget

@@ -46,7 +46,8 @@ define(['audio', 'types', 'values', 'events', 'widget', 'widgets', 'network', 'd
     d.show();
   });
   
-  var adapter = new AudioAnalyzerAdapter(fftnode, fftnode.frequencyBinCount);
+  var adapter = new AudioAnalyzerAdapter(scheduler, fftnode, fftnode.frequencyBinCount);
+  adapter.paused.set(false);
   
   var root = new ConstantCell(types.block, makeBlock({
     monitor: new ConstantCell(types.block, adapter)

@@ -79,7 +79,7 @@ define(['types', 'values', 'events', 'coordination', 'database', 'network', 'map
     
     var coordinator = new Coordinator(scheduler, freqDB, remoteCell);
     
-    var audioState = audio.connectAudio(audioUrl);
+    var audioState = audio.connectAudio(scheduler, audioUrl);
 
     function connectionCallback(state) {
       switch (state) {

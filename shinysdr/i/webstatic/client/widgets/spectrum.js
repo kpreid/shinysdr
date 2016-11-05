@@ -123,7 +123,11 @@ define(['./basic', './dbui', '../types', '../values', '../events', '../widget', 
       ignore('fft');
       ignore('scope');
       addWidget('frame_rate', LogSlider, 'Rate');
-      addWidget('freq_resolution', LogSlider, 'Resolution');
+      if (block.freq_resolution && block.freq_resolution.set) {  // for audio monitor
+        addWidget('freq_resolution', LogSlider, 'Resolution');
+      } else {
+        ignore('freq_resolution');
+      }
       if ('paused' in block) {
         var pausedLabel = getAppend().appendChild(document.createElement('label'));
         var pausedEl = pausedLabel.appendChild(document.createElement('input'));
