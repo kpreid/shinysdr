@@ -84,6 +84,9 @@ define(['./basic', './dbui', '../types', '../values', '../events', '../widget', 
       var freqScaleEl = overlayContainer.appendChild(document.createElement('div'));
       createWidgetExt(context, FreqScale, freqScaleEl, freqCell);
       
+      var splitHandleEl = overlayContainer.appendChild(document.createElement('div'));
+      createWidgetExt(context, VerticalSplitHandle, splitHandleEl, config.clientState.spectrum_split);
+      
       // Not in overlayContainer because it does not scroll.
       // Works with zero height as the top-of-scale reference.
       // TODO this is currently disabled because its axis scaling is not exactly right, because it is outside the scrolling element and we haven't compensated for the height of the vertical scrollbar
@@ -1645,6 +1648,44 @@ define(['./basic', './dbui', '../types', '../values', '../events', '../widget', 
       if (active.length !== count || active.length !== cache.size) throw new Error('oops3');
       count = 0;
     };
+  }
+  
+  function VerticalSplitHandle(config) {
+    var target = config.target;
+    
+    var positioner = this.element = document.createElement('div');
+    positioner.classList.add('widget-VerticalSplitHandle-positioner');
+    var handle = positioner.appendChild(document.createElement('div'));
+    handle.classList.add('widget-VerticalSplitHandle-handle');
+    
+    function draw() {
+      positioner.style.bottom = (100 * target.depend(draw)) + '%';
+    }
+    draw.scheduler = config.scheduler;
+    draw();
+    
+    // TODO refactor into something generic that handles x or y and touch-event drags too
+    // this code is similar to the ScopePlot drag code
+    var dragScreenOrigin = 0;
+    var dragValueOrigin = 0;
+    var dragScale = 0;
+    function drag(event) {
+      var draggedTo = dragValueOrigin + (event.clientY - dragScreenOrigin) * dragScale;
+      target.set(Math.max(0, Math.min(1, draggedTo)));
+      event.stopPropagation();
+      event.preventDefault();  // no drag selection
+    }
+    handle.addEventListener('mousedown', function(event) {
+      if (event.button !== 0) return;  // don't react to right-clicks etc.
+      dragScreenOrigin = event.clientY;
+      dragValueOrigin = target.get();
+      dragScale = -1 / positioner.parentElement.offsetHeight;  // kludge
+      event.preventDefault();
+      document.addEventListener('mousemove', drag, true);
+      document.addEventListener('mouseup', function(event) {
+        document.removeEventListener('mousemove', drag, true);
+      }, true);
+    }, false);
   }
   
   return Object.freeze(exports);

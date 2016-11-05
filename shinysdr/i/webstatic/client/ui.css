@@ -473,6 +473,25 @@ h2 input {
   border-top: 1px solid;
 }
 
+.widget-VerticalSplitHandle-positioner {
+  position: absolute;
+  height: 0;  
+  width: 100%;
+}
+.widget-VerticalSplitHandle-handle {
+  margin: -0.3em 0 0 0;
+  border: 0.3em dotted rgba(255, 255, 255, 0.5);
+  height: 0;
+  width: 100%;
+
+  cursor: ns-resize;
+  
+  opacity: 0;
+}
+.widget-VerticalSplitHandle-handle:hover {
+  opacity: 1;
+}
+
 /* widgets: frequency database list */
 .widget-FreqList {
   min-height: 10em;
