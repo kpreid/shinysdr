@@ -329,6 +329,8 @@ define(['../types', '../values', '../events', '../widget', '../gltools', '../dat
         return input;
       },
       function initTextBox(input, target) {
+        input.readOnly = !target.set;
+        
         input.addEventListener('input', function(event) {
           target.set(input.value);
         }, false);
@@ -581,7 +583,9 @@ define(['../types', '../values', '../events', '../widget', '../gltools', '../dat
           input.max = getT(type.getMax());
           input.step = (type.integer && !type.logarithmic) ? 1 : 'any';
         }
-
+        
+        input.readonly = !target.set;
+        
         input.addEventListener('input', function(event) {
           if (type instanceof types.Range) {
             target.set(type.round(input.valueAsNumber, 0));
@@ -637,7 +641,10 @@ define(['../types', '../values', '../events', '../widget', '../gltools', '../dat
             format = function(n) { return '' + n; };
           }
         }
-
+        
+        // readOnly is not available for input type=range
+        slider.disabled = !target.set;
+        
         function listener(event) {
           if (type instanceof types.Range) {
             target.set(type.round(setT(slider.valueAsNumber), 0));
@@ -653,7 +660,6 @@ define(['../types', '../values', '../events', '../widget', '../gltools', '../dat
           if (!isFinite(sValue)) {
             sValue = 0;
           }
-          slider.disabled = false;
           slider.valueAsNumber = sValue;
           if (text) {
             text.data = format(value);
@@ -725,6 +731,7 @@ define(['../types', '../values', '../events', '../widget', '../gltools', '../dat
         return checkbox;
       },
       function initToggle(checkbox, target) {
+        checkbox.disabled = !target.set;
         checkbox.addEventListener('change', function(event) {
           target.set(checkbox.checked);
         }, false);
@@ -782,6 +789,7 @@ define(['../types', '../values', '../events', '../widget', '../gltools', '../dat
         return container.appendChild(document.createElement('select'));
       },
       function initSelect(select, target) {
+        select.disabled = !target.set;
         initEnumElements(select, 'option', target, function createOption(name, longDesc) {
           var option = select.appendChild(document.createElement('option'));
           option.appendChild(document.createTextNode(name));
