@@ -22,7 +22,9 @@ define(['./coordination', './events', './math', './types', './values'], function
   var ConstantCell = values.ConstantCell;
   var Coordinator = coordination.Coordinator;
   var DerivedCell = values.DerivedCell;
+  var StorageCell = values.StorageCell;
   var StorageNamespace = values.StorageNamespace;
+  var makeBlock = values.makeBlock;
   var mod = math.mod;
   
   var exports = {};
@@ -714,6 +716,16 @@ define(['./coordination', './events', './math', './types', './values'], function
         clickTune(event);
       }, false);
     }.bind(this);
+    
+    function cc(key, type, value) {
+      return new StorageCell(storage, type, value, key);
+    }
+    this.parameters = makeBlock({
+      spectrum_split: cc('spectrum_split', new types.Range([[0, 1]], false, false), 0.6),
+      spectrum_average: cc('spectrum_average', new types.Range([[0.1, 1]], true, false), 0.15),
+      spectrum_level_min: cc('spectrum_level_min', new types.Range([[-200, -20]], false, false), -130),
+      spectrum_level_max: cc('spectrum_level_max', new types.Range([[-100, 0]], false, false), -20)
+    });
     
     lifecycleInit(container);
   }

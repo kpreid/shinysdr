@@ -144,10 +144,6 @@ define(['./types', './values'], function (types, values) {
     return makeBlock({
       opengl: cc('opengl', Boolean, true),
       opengl_float: cc('opengl_float', Boolean, true),
-      spectrum_split: cc('spectrum_split', new types.Range([[0, 1]], false, false), 0.6),
-      spectrum_average: cc('spectrum_average', new types.Range([[0.1, 1]], true, false), 0.15),
-      spectrum_level_min: cc('spectrum_level_min', new types.Range([[-200, -20]], false, false), -130),
-      spectrum_level_max: cc('spectrum_level_max', new types.Range([[-100, 0]], false, false), -20),
       databases: new ConstantCell(block, databasePicker)
     });
   }

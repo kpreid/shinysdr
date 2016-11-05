@@ -85,7 +85,7 @@ define(['./basic', './dbui', '../types', '../values', '../events', '../widget', 
       createWidgetExt(context, FreqScale, freqScaleEl, freqCell);
       
       var splitHandleEl = overlayContainer.appendChild(document.createElement('div'));
-      createWidgetExt(context, VerticalSplitHandle, splitHandleEl, config.clientState.spectrum_split);
+      createWidgetExt(context, VerticalSplitHandle, splitHandleEl, context.spectrumView.parameters.spectrum_split);
       
       // Not in overlayContainer because it does not scroll.
       // Works with zero height as the top-of-scale reference.
@@ -147,10 +147,10 @@ define(['./basic', './dbui', '../types', '../values', '../events', '../widget', 
           .appendChild(document.createTextNode('Options'));
       setInsertion(details);
       
-      addWidget(config.clientState.spectrum_split, LinSlider, 'Split view');
-      addWidget(config.clientState.spectrum_average, LogSlider, 'Averaging');
-      addWidget(config.clientState.spectrum_level_min, LinSlider, 'Lowest value');
-      addWidget(config.clientState.spectrum_level_max, LinSlider, 'Highest value');
+      addWidget(config.view.parameters.spectrum_split, LinSlider, 'Split view');
+      addWidget(config.view.parameters.spectrum_average, LogSlider, 'Averaging');
+      addWidget(config.view.parameters.spectrum_level_min, LinSlider, 'Lowest value');
+      addWidget(config.view.parameters.spectrum_level_max, LinSlider, 'Highest value');
       addWidget(config.clientState.opengl, Toggle, 'Use OpenGL');
       // TODO losing the special indent here
       addWidget(config.clientState.opengl_float, Toggle, 'with float textures');
@@ -397,10 +397,10 @@ define(['./basic', './dbui', '../types', '../values', '../events', '../widget', 
     var self = this;
     var fftCell = config.target;
     var view = config.view;
-    var avgAlphaCell = config.clientState.spectrum_average;
+    var avgAlphaCell = view.parameters.spectrum_average;
     
-    var minLevelCell = config.clientState.spectrum_level_min;
-    var maxLevelCell = config.clientState.spectrum_level_max;
+    var minLevelCell = view.parameters.spectrum_level_min;
+    var maxLevelCell = view.parameters.spectrum_level_max;
     
     // I have read recommendations that color gradient scales should not involve more than two colors, as certain transitions between colors read as overly significant. However, in this case (1) we are not intending the waterfall chart to be read quantitatively, and (2) we want to have distinguishable small variations across a large dynamic range.
     var colors = [
@@ -889,7 +889,7 @@ define(['./basic', './dbui', '../types', '../values', '../events', '../widget', 
         performDraw: function (didResize) {
           commonBeforeDraw(draw);
           var viewCenterFreq = view.getCenterFreq();
-          var split = Math.round(canvas.height * config.clientState.spectrum_split.depend(draw));
+          var split = Math.round(canvas.height * view.parameters.spectrum_split.depend(draw));
           
           // common calculations
           var fs = 1.0 / (view.rightFreq() - view.leftFreq());
@@ -1014,7 +1014,7 @@ define(['./basic', './dbui', '../types', '../values', '../events', '../widget', 
         xTranslateFreq = viewLVF - view.leftFreq();
         pixelWidthOfFFT = view.getTotalPixelWidth();
 
-        var split = Math.round(canvas.height * config.clientState.spectrum_split.depend(changedSplit));
+        var split = Math.round(canvas.height * view.parameters.spectrum_split.depend(changedSplit));
         var topOfWaterfall = h - split;
         var heightOfWaterfall = split;
 
@@ -1185,9 +1185,9 @@ define(['./basic', './dbui', '../types', '../values', '../events', '../widget', 
     var radioCell = config.radioCell;
     var others = config.index.implementing('shinysdr.interfaces.IHasFrequency');
     // TODO: That this cell matters here is shared knowledge between this and ReceiverMarks. Should instead be managed by SpectrumView (since it already handles freq coordinates), in the form "get Y position of minLevel".
-    var splitCell = config.clientState.spectrum_split;
-    var minLevelCell = config.clientState.spectrum_level_min;
-    var maxLevelCell = config.clientState.spectrum_level_max;
+    var splitCell = view.parameters.spectrum_split;
+    var minLevelCell = view.parameters.spectrum_level_min;
+    var maxLevelCell = view.parameters.spectrum_level_max;
     
     var canvas = config.element;
     if (canvas.tagName !== 'CANVAS') {
@@ -1328,9 +1328,9 @@ define(['./basic', './dbui', '../types', '../values', '../events', '../widget', 
   // Waterfall overlay printing amplitude labels.
   // TODO this is currently not used because its axis scaling is not exactly right, because it is positioned outside the scrolling element and we haven't compensated for the height of the vertical scrollbar
   function VerticalScale(config) {
-    var splitCell = config.clientState.spectrum_split;
-    var minLevelCell = config.clientState.spectrum_level_min;
-    var maxLevelCell = config.clientState.spectrum_level_max;
+    var splitCell = view.parameters.spectrum_split;
+    var minLevelCell = view.parameters.spectrum_level_min;
+    var maxLevelCell = view.parameters.spectrum_level_max;
     
     var minLevel = 0, maxLevel = 0;  // updated in draw()
     
@@ -1398,7 +1398,7 @@ define(['./basic', './dbui', '../types', '../values', '../events', '../widget', 
     outer.style.position = 'absolute';
     function doLayout() {
       // TODO: This is shared knowledge between this, WaterfallPlot, and ReceiverMarks. Should instead be managed by SpectrumView (since it already handles freq coordinates), in the form "get Y position of minLevel".
-      outer.style.bottom = (config.clientState.spectrum_split.depend(doLayout) * 100).toFixed(2) + '%';
+      outer.style.bottom = (view.parameters.spectrum_split.depend(doLayout) * 100).toFixed(2) + '%';
     }
     doLayout.scheduler = config.scheduler;
     doLayout();
