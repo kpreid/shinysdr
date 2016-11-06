@@ -23,6 +23,7 @@
 from __future__ import absolute_import, division
 
 import array
+from collections import namedtuple
 import struct
 import weakref
 
@@ -43,6 +44,10 @@ _cell_value_change_schedules = [
     u'global',  # might depend on any other non-continuous cell in the system
     u'placeholder_slow',  # things we want to replace, but for now are polled slow
 ]
+
+
+# TODO: probably not the right thing, placeholder till subscriptions are more worked out
+SubscriptionContext = namedtuple('SubscriptionContext', ['reactor', 'poller'])
 
 
 class BaseCell(object):
@@ -97,6 +102,16 @@ class BaseCell(object):
             self.get().state_from_json(state)
         else:
             self.set(state)
+    
+    def subscribe2(self, callback, context):
+        # TODO: 'subscribe2' name is temporary for easy distinguishing this from other 'subscribe' protocols.
+        """Request to be notified when this cell's value changes.
+        
+        The 'callback' will be called repeatedly with successive new cell values; never immediately.
+        
+        The return value is an object with a 'unsubscribe' method which will remove the subscription.
+        """
+        raise NotImplementedError(self)
     
     def isWritable(self):  # TODO underscore naming
         return self._writable
@@ -165,6 +180,9 @@ class Cell(ValueCell):
         if not self.isWritable():
             raise Exception('Not writable.')
         return self._setter(self._value_type(value))
+    
+    def subscribe2(self, callback, context):
+        return context.poller.subscribe(self, lambda: callback(self.get()))
 
 
 class _MessageSplitter(object):
@@ -227,7 +245,12 @@ class StreamCell(ValueCell):
         self.__dgetter = getattr(self._target, 'get_' + key + '_distributor')
         self.__igetter = getattr(self._target, 'get_' + key + '_info')
     
-    def subscribe(self):
+    def subscribe2(self, callback, context):
+        # poller does StreamCell-specific things, including passing a value where most subscriptions don't. TODO: make Poller uninvolved
+        return context.poller.subscribe(self, callback)
+    
+    # TODO: eliminate this specialized protocol used by Poller
+    def subscribe_to_stream(self):
         queue = gr.msg_queue()
         self.__dgetter().subscribe(queue)
         
@@ -258,25 +281,14 @@ class CollectionMemberCell(ValueCell):
     def set(self, value):
         raise Exception('CollectionMemberCell is not writable.')
 
-
-class ISubscribableCell(Interface):
-    # pylint: disable=arguments-differ
-    # (pylint is confused)
-    
-    def subscribe(callback):
-        """
-        (TODO main doc)
-        
-        Note that the callback may be called _immediately_ upon value change; the callback should therefore avoid taking significant actions until later.
-        """
-        pass
+    def subscribe2(self, callback, context):
+        return context.poller.subscribe(self, lambda: callback(self.get()))
 
 
 class LooseCell(ValueCell):
     """
     A cell which stores a value and does not get it from another object; it can therefore reliably provide update notifications.
     """
-    implements(ISubscribableCell)
     
     def __init__(self, key, value, type, persists=True, writable=False, post_hook=None):
         """
@@ -320,8 +332,15 @@ class LooseCell(ValueCell):
             # TODO: in sync with Poller, add passing the value in here
             subscription._fire()
     
-    def subscribe(self, callback):
-        subscription = _LooseCellSubscription(self, callback)
+    def subscribe2(self, callback, context):
+        subscription = _LooseCellSubscription(self, callback, context.reactor)
+        self.__subscriptions.add(subscription)
+        return subscription
+    
+    def _subscribe_immediate(self, callback):
+        """for use by ViewCell only"""
+        # TODO: replace this with a better mechanism
+        subscription = _LooseCellImmediateSubscription(self, callback)
         self.__subscriptions.add(subscription)
         return subscription
     
@@ -331,10 +350,23 @@ class LooseCell(ValueCell):
 
 
 class _LooseCellSubscription(object):
+    def __init__(self, cell, callback, reactor):
+        self.__callback = callback
+        self.__reactor = reactor
+        self.__cell = cell
+    
+    def _fire(self):
+        # TODO: This is calling with a stale value. Do we want to tighten up and prohibit that in the specification of subscribe?
+        self.__reactor.callLater(0, self.__callback, self.__cell.get())
+    
+    def unsubscribe(self):
+        self.__cell._unsubscribe(self)
+
+
+class _LooseCellImmediateSubscription(object):
     def __init__(self, cell, callback):
         self._fire = callback
-        self.__cell = cell
-
+    
     def unsubscribe(self):
         self.__cell._unsubscribe(self)
 
@@ -360,7 +392,7 @@ def ViewCell(base, get_transform, set_transform, **kwargs):
         post_hook=forward,
         **kwargs)
     
-    sub = base.subscribe(reverse)
+    sub = base._subscribe_immediate(reverse)
     weakref.ref(self, lambda: sub.unsubscribe())
 
     # Allows the cell to be put back in sync if the transform changes.
@@ -406,6 +438,15 @@ class Command(BaseCell):
         # raise Exception('Not writable.')
         # TODO: Make a separate command-triggering path, because this is a HORRIBLE KLUDGE.
         self.__function()
+    
+    def subscribe2(self, callback, context):
+        """implements BaseCell"""
+        return _NeverSubscription()
+
+
+class _NeverSubscription(object):
+    def unsubscribe(self):
+        pass
 
 
 class ExportedState(object):

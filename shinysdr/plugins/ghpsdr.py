@@ -85,7 +85,7 @@ class _DspserverProtocol(protocol.Protocol):
         self._req_width = None
         self.__msgbuf = ''
         self._poller = task.LoopingCall(self.__poll)
-        self.__splitter = top.monitor.state()['fft'].subscribe()
+        self.__splitter = top.monitor.state()['fft'].subscribe_to_stream()
         self.__audio_queue = gr.msg_queue(limit=100)
         self.__audio_buffer = ''
         self._top.add_audio_queue(self.__audio_queue, 8000)

@@ -19,8 +19,11 @@ from __future__ import absolute_import, division
 
 import unittest
 
+from twisted.internet.task import Clock
+
+from shinysdr.i.poller import Poller
 from shinysdr.types import Range
-from shinysdr.values import ExportedState, CollectionState, LooseCell, ViewCell, command, exported_block, exported_value, setter, unserialize_exported_state
+from shinysdr.values import Cell, CollectionState, ExportedState, LooseCell, SubscriptionContext, ViewCell, command, exported_block, exported_value, nullExportedState, setter, unserialize_exported_state
 
 
 class TestExportedState(unittest.TestCase):
@@ -68,7 +71,7 @@ class TestExportedState(unittest.TestCase):
 
 class ValueAndBlockSpecimen(ExportedState):
     """Helper for TestExportedState"""
-    def __init__(self, block, value=0):
+    def __init__(self, block=nullExportedState, value=0):
         self.__value = value
         self.__block = block
     
@@ -120,6 +123,52 @@ class DecoratorInheritanceSpecimen(DecoratorInheritanceSpecimenSuper):
         self.rw = value
 
 
+class TestCell(unittest.TestCase):
+    # TODO write other tests, as appropriate - this is the 'normal' cell type which most other stuff wouldn't work without
+    
+    def __test_subscription(self, changes):
+        o = NoInherentCellSpecimen()
+        cell = Cell(o, 'value', changes=changes)
+        st = SubscriptionTester(cell)
+        o.value = 1
+        st.expect_now(1)
+        st.unsubscribe()
+        o.value = 2
+        st.advance()  # check for unwanted callbacks
+    
+    # TODO: These subscription tests will require adjustment as the different 'changes' policies get actually implemented.
+    
+    def test_subscription_never(self):
+        o = NoInherentCellSpecimen()
+        cell = Cell(o, 'value', changes='never')
+        st = SubscriptionTester(cell)
+        o.value = 1
+        st.advance()  # expected no callback even if we lie
+    
+    def test_subscription_continuous(self):
+        self.__test_subscription('continuous')
+    
+    def test_subscription_this_setter(self):
+        self.__test_subscription('this_setter')
+    
+    def test_subscription_this_object(self):
+        self.__test_subscription('this_object')
+    
+    def test_subscription_global(self):
+        self.__test_subscription('global')
+    
+    def test_subscription_placeholder_slow(self):
+        self.__test_subscription('placeholder_slow')
+
+
+class NoInherentCellSpecimen(object):
+    def __init__(self):
+        self.value = 0
+    
+    def get_value(self):
+        return self.value
+
+
 # TODO: BlockCell no longer exists, but this test still tests something; rename appropriately
 class TestBlockCell(unittest.TestCase):
     def setUp(self):
@@ -129,6 +178,16 @@ class TestBlockCell(unittest.TestCase):
     def test_block_cell_value(self):
         cell = self.object.state()['block']
         self.assertEqual(cell.get(), self.obj_value)
+    
+    def test_subscription(self):
+        o = BlockCellSpecimen(self.obj_value)
+        st = SubscriptionTester(o.state()['block'])
+        new = ExportedState()
+        o.replace_block(new)
+        st.expect_now(new)
+        st.unsubscribe()
+        o.replace_block(self.obj_value)
+        st.advance()  # check for unwanted callbacks
 
 
 class BlockCellSpecimen(ExportedState):
@@ -138,9 +197,32 @@ class BlockCellSpecimen(ExportedState):
     def __init__(self, block):
         self.__block = block
     
-    @exported_block(changes='never')
+    @exported_block(changes='global')
     def get_block(self):
         return self.__block
+    
+    def replace_block(self, block):
+        self.__block = block
+
+
+class TestLooseCell(unittest.TestCase):
+    def setUp(self):
+        self.lc = LooseCell(value=0, key='a', type=int)
+    
+    def test_get_set(self):
+        self.assertEqual(0, self.lc.get())
+        self.lc.set(1)
+        self.assertEqual(1, self.lc.get())
+        self.lc.set(2.1)
+        self.assertEqual(2, self.lc.get())
+    
+    def test_subscription(self):
+        st = SubscriptionTester(self.lc)
+        self.lc.set(1)
+        st.expect_now(1)
+        st.unsubscribe()
+        self.lc.set(2)
+        st.advance()  # check for unwanted callbacks
 
 
 class TestViewCell(unittest.TestCase):
@@ -172,19 +254,18 @@ class TestViewCell(unittest.TestCase):
         self.assertEqual(13, self.vc.get())
     
     def test_subscription(self):
-        fired = []
+        st = SubscriptionTester(self.vc)
         
-        def f():
-            fired.append(self.vc.get())
-        
-        self.vc.subscribe(f)
         self.lc.set(1)
-        self.assertEqual([2], fired)
+        st.expect_now(2)
         
         self.delta = 10
         self.vc.changed_transform()
         self.assertEqual(1, self.lc.get())
-        self.assertEqual([2, 11], fired)
+        st.expect_now(11)
+        st.unsubscribe()
+        self.lc.set(2)
+        st.advance()
 
 
 class TestCommandCell(unittest.TestCase):
@@ -281,3 +362,48 @@ class CellIdentitySpecimen(ExportedState):
     @exported_block(changes='never')
     def get_block(self):
         return self.__block
+
+
+class SubscriptionTester(object):
+    def __init__(self, cell):
+        self.clock = Clock()
+        self.context = SubscriptionContext(
+            reactor=self.clock,
+            poller=Poller())
+        self.cell = cell
+        self.expected = []
+        self.seen = []
+        self.subscription = cell.subscribe2(self.__callback, self.context)
+        if not self.subscription:
+            raise Exception('missing subscription object')
+        self.unsubscribed = False
+    
+    def advance(self):
+        # support both 'real' subscriptions and poller subscriptions
+        self.clock.advance(1)
+        self.context.poller.poll()
+    
+    def __callback(self, value):
+        if self.unsubscribed:
+            raise Exception('unexpected subscription callback after unsubscribe from {!r}, with value {!r}'.format(self.cell, value))
+        self.seen.append(value)
+    
+    def expect_now(self, expected_value):
+        if len(self.seen) > len(self.expected):
+            raise Exception('too-soon callback from {!r}; saw {!r}'.format(self.cell, actual_value))
+        self.advance()
+        self.should_have_seen(expected_value)
+    
+    def should_have_seen(self, expected_value):
+        i = len(self.expected)
+        self.expected.append(expected_value)
+        if len(self.seen) < len(self.expected):
+            raise Exception('no subscription callback from {!r}; expected {!r}'.format(self.cell, expected_value))
+        actual_value = self.seen[i]
+        if actual_value != expected_value:
+            raise Exception('expected {!r} from {!r}; saw {!r}'.format(expected_value, self.cell, actual_value))
+    
+    def unsubscribe(self):
+        assert not self.unsubscribed
+        self.subscription.unsubscribe()
+        self.unsubscribed = True

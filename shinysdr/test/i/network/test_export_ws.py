@@ -27,7 +27,7 @@ from twisted.trial import unittest
 from shinysdr.i.network.export_ws import StateStreamInner
 from shinysdr.i.poller import Poller
 from shinysdr.signals import SignalType
-from shinysdr.values import ExportedState, CollectionState, NullExportedState, exported_block, exported_value, nullExportedState, setter
+from shinysdr.values import CollectionState, ExportedState, NullExportedState, SubscriptionContext, exported_block, exported_value, nullExportedState, setter
 
 
 class StateStreamTestCase(unittest.TestCase):
@@ -47,7 +47,7 @@ class StateStreamTestCase(unittest.TestCase):
             self.object,
             'urlroot',
             lambda: None,  # TODO test noteDirty or make it unnecessary
-            poller=self.poller)
+            subscription_context=SubscriptionContext(reactor=None, poller=self.poller))
     
     def getUpdates(self):
         # pylint: disable=attribute-defined-outside-init

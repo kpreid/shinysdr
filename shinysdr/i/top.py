@@ -29,8 +29,9 @@ from gnuradio import gr
 
 from shinysdr.i.audiomux import AudioManager
 from shinysdr.i.blocks import MonitorSink, RecursiveLockBlockMixin, Context
-from shinysdr.math import LazyRateCalculator
+from shinysdr.i.poller import the_subscription_context
 from shinysdr.i.receiver import Receiver
+from shinysdr.math import LazyRateCalculator
 from shinysdr.signals import SignalType
 from shinysdr.telemetry import TelemetryStore
 from shinysdr.types import Enum, Notice
@@ -92,7 +93,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.monitor = MonitorSink(
             signal_type=SignalType(sample_rate=10000, kind='IQ'),  # dummy value will be updated in _do_connect
             context=Context(self))
-        self.monitor.get_interested_cell().subscribe(self.__start_or_stop_later)
+        self.monitor.get_interested_cell().subscribe2(lambda value: self.__start_or_stop_later, the_subscription_context)
         self.__clip_probe = MaxProbe()
         
         # Receiver blocks (multiple, eventually)
@@ -116,7 +117,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         # Initialization
         
         def hookup_vfo_callback(k, d):  # function so as to not close over loop variable
-            d.get_vfo_cell().subscribe(lambda: self.__device_vfo_callback(k))
+            d.get_vfo_cell().subscribe2(lambda value: self.__device_vfo_callback(k), the_subscription_context)
         
         for k, d in devices.iteritems():
             hookup_vfo_callback(k, d)
@@ -278,7 +279,6 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.__in_reconnect = False
 
     def __device_vfo_callback(self, device_key):
-        # Note that in addition to the flow graph delay, the callLater is also needed in order to ensure we don't do our reconfiguration in the middle of the source's own workings.
         reactor.callLater(
             self._sources[device_key].get_rx_driver().get_tune_delay(),
             self.__device_vfo_changed,

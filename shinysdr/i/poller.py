@@ -21,7 +21,7 @@ import bisect
 
 from twisted.internet import task, reactor as the_reactor
 
-from shinysdr.values import BaseCell, ExportedState, ISubscribableCell, StreamCell
+from shinysdr.values import BaseCell, ExportedState, StreamCell, SubscriptionContext
 
 __all__ = []  # appended later
 
@@ -40,8 +40,6 @@ class Poller(object):
         if not isinstance(cell, BaseCell):
             # we're not actually against duck typing here; this is a sanity check
             raise TypeError('Poller given a non-cell %r' % (cell,))
-        if ISubscribableCell.providedBy(cell):
-            return _NonPollingSubscription(self, cell, callback)
         if isinstance(cell, StreamCell):  # TODO kludge; use generic interface
             return _PollerSubscription(self, _PollerStreamTarget(cell), callback)
         else:
@@ -116,19 +114,6 @@ class _PollerSubscription(object):
         self._poller._remove_subscription(self._target, self)
 
 
-class _NonPollingSubscription(object):
-    def __init__(self, poller, cell, callback):
-        self._poller = poller
-        self._callback = callback
-        self._cell_subscription = cell.subscribe(self._fire)
-    
-    def unsubscribe(self):
-        self._cell_subscription.unsubscribe()
-    
-    def _fire(self):
-        self._poller.queue_function(self._callback)
-
-
 class _PollerTarget(object):
     def __init__(self, obj):
         self._obj = obj
@@ -183,7 +168,7 @@ class _PollerStreamTarget(_PollerTarget):
     # TODO there are no tests for stream subscriptions
     def __init__(self, cell):
         _PollerTarget.__init__(self, cell)
-        self.__subscription = cell.subscribe()
+        self.__subscription = cell.subscribe_to_stream()
 
     def poll(self, fire):
         subscription = self.__subscription
@@ -258,3 +243,6 @@ class _SortedMultimap(object):
 # this is done last for load order
 the_poller = AutomaticPoller()
 __all__.append('the_poller')
+
+the_subscription_context = SubscriptionContext(reactor=the_reactor, poller=the_poller)
+__all__.append('the_subscription_context')

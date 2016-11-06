@@ -32,15 +32,18 @@ from zope.interface import providedBy
 from gnuradio import gr
 
 from shinysdr.i.network.base import serialize
-from shinysdr.i.poller import the_poller
+from shinysdr.i.poller import the_subscription_context
 from shinysdr.signals import SignalType
 from shinysdr.types import Reference
 from shinysdr.values import BaseCell, Cell, ExportedState, StreamCell
 
 
+_NOT_SPECIFIED_PUMPKIN = object()
+
+
 class _StateStreamObjectRegistration(object):
     # TODO messy
-    def __init__(self, ssi, poller, obj, serial, url, refcount):
+    def __init__(self, ssi, subscription_context, obj, serial, url, refcount):
         self.__ssi = ssi
         self.obj = obj
         self.serial = serial
@@ -52,14 +55,15 @@ class _StateStreamObjectRegistration(object):
         if isinstance(obj, BaseCell):
             self.__obj_is_cell = True
             if isinstance(obj, StreamCell):  # TODO kludge
-                self.__poller_registration = poller.subscribe(obj, self.__listen_binary_stream)
+                self.__subscription = obj.subscribe2(self.__listen_binary_stream, subscription_context)
                 self.send_now_if_needed = lambda: None
             else:
-                self.__poller_registration = poller.subscribe(obj, self.__listen_cell)
+                self.__subscription = obj.subscribe2(self.__listen_cell, subscription_context)
                 self.send_now_if_needed = self.__listen_cell
         else:
             self.__obj_is_cell = False
-            self.__poller_registration = poller.subscribe_state(obj, self.__listen_state)
+            # TODO get rid of subscribe_state and then we can drop poller entirely
+            self.__subscription = subscription_context.poller.subscribe_state(obj, self.__listen_state)
             self.send_now_if_needed = lambda: self.__listen_state(self.obj.state())
         self.__refcount = refcount
     
@@ -88,7 +92,10 @@ class _StateStreamObjectRegistration(object):
             raise Exception('This object is not a cell')
         return self.obj
     
-    def __listen_cell(self):
+    def __listen_cell(self, value=_NOT_SPECIFIED_PUMPKIN):
+        # TODO: get rid of the optional arg and make calls consistent
+        if value is _NOT_SPECIFIED_PUMPKIN:
+            value = self.obj.get()
         if self.__dead:
             return
         obj = self.obj
@@ -142,8 +149,8 @@ class _StateStreamObjectRegistration(object):
     
     def drop(self):
         # TODO this should go away in refcount world
-        if self.__poller_registration is not None:
-            self.__poller_registration.unsubscribe()
+        if self.__subscription is not None:
+            self.__subscription.unsubscribe()
     
     def inc_refcount(self):
         if self.__dead:
@@ -177,13 +184,13 @@ class _StateStreamObjectRegistration(object):
 
 # TODO: Better name for this category of object
 class StateStreamInner(object):
-    def __init__(self, send, root_object, root_url, noteDirty, poller=the_poller):
-        self.__poller = poller
+    def __init__(self, send, root_object, root_url, noteDirty, subscription_context=the_subscription_context):
+        self.__subscription_context = subscription_context
         self._send = send
         self.__root_object = root_object
         self._cell = Cell(self, '_root_object', type=Reference(), changes='never')
         self._lastSerial = 0
-        root_registration = _StateStreamObjectRegistration(ssi=self, poller=self.__poller, obj=self._cell, serial=0, url=root_url, refcount=0)
+        root_registration = _StateStreamObjectRegistration(ssi=self, subscription_context=self.__subscription_context, obj=self._cell, serial=0, url=root_url, refcount=0)
         self._registered_objs = {self._cell: root_registration}
         self.__registered_serials = {root_registration.serial: root_registration}
         self._send_batch = []
@@ -238,7 +245,7 @@ class StateStreamInner(object):
         else:
             self._lastSerial += 1
             serial = self._lastSerial
-            registration = _StateStreamObjectRegistration(ssi=self, poller=self.__poller, obj=obj, serial=serial, url=url, refcount=0)
+            registration = _StateStreamObjectRegistration(ssi=self, subscription_context=self.__subscription_context, obj=obj, serial=serial, url=url, refcount=0)
             self._registered_objs[obj] = registration
             self.__registered_serials[serial] = registration
             if isinstance(obj, BaseCell):

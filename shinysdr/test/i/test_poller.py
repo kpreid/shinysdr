@@ -48,28 +48,6 @@ class TestPoller(unittest.TestCase):
         self.cells.set_subscribable('b')
         self.poller.poll()
         self.assertEqual(1, called[0], 'no poll after unsubscribe')
-    
-    def test_subscription_support(self):
-        cell = self.cells.state()['subscribable']
-        called = [0]
-        
-        def callback():
-            called[0] += 1
-        
-        # pylint: disable=no-member
-        sub = self.poller.subscribe(cell, callback)
-        self.assertEqual(0, self.poller._Poller__targets.count_keys(), 'no polling')
-        self.assertEqual(0, called[0], 'initial')
-        self.cells.set_subscribable('a')
-        self.assertEqual(0, called[0], 'after set')
-        self.assertEqual('a', self.cells.get_subscribable())
-        self.poller.poll()
-        self.assertEqual(1, called[0], 'poll after set')
-        
-        sub.unsubscribe()
-        self.cells.set_subscribable('b')
-        self.poller.poll()
-        self.assertEqual(1, called[0], 'no poll after unsubscribe')
 
 
 class PollerCellsSpecimen(ExportedState):
