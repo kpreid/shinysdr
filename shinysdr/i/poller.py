@@ -32,36 +32,41 @@ class Poller(object):
     """
     
     def __init__(self):
+        # first level key is polling speed (True=fast)
         # sorting provides determinism for testing etc.
-        self.__targets = _SortedMultimap()
+        self.__targets = {
+            False: _SortedMultimap(),
+            True: _SortedMultimap()
+        }
         self.__functions = []
     
-    def subscribe(self, cell, callback):
+    def subscribe(self, cell, callback, fast):
         if not isinstance(cell, BaseCell):
             # we're not actually against duck typing here; this is a sanity check
             raise TypeError('Poller given a non-cell %r' % (cell,))
         if isinstance(cell, StreamCell):  # TODO kludge; use generic interface
-            return _PollerSubscription(self, _PollerStreamTarget(cell), callback)
+            target = _PollerStreamTarget(cell)
         else:
-            return _PollerSubscription(self, _PollerValueTarget(cell), callback)
+            target = _PollerValueTarget(cell)
+        return _PollerSubscription(self, target, callback, fast)
     
     # TODO: consider replacing this with a special derived cell
     def subscribe_state(self, obj, callback):
         if not isinstance(obj, ExportedState):
             # we're not actually against duck typing here; this is a sanity check
             raise TypeError('Poller given a non-ES %r' % (obj,))
-        return _PollerSubscription(self, _PollerStateTarget(obj), callback)
+        return _PollerSubscription(self, _PollerStateTarget(obj), callback, False)
     
     def _add_subscription(self, target, subscription):
-        self.__targets.add(target, subscription)
+        self.__targets[subscription.fast].add(target, subscription)
     
     def _remove_subscription(self, target, subscription):
-        last_out = self.__targets.remove(target, subscription)
+        last_out = self.__targets[subscription.fast].remove(target, subscription)
         if last_out:
             target.unsubscribe()
     
-    def poll(self):
-        for target, subscriptions in self.__targets.iter_snapshot():
+    def poll(self, rate_key):
+        for target, subscriptions in self.__targets[rate_key].iter_snapshot():
             # pylint: disable=cell-var-from-loop
             def fire(*args, **kwargs):
                 for s in subscriptions:
@@ -74,6 +79,10 @@ class Poller(object):
             self.__functions = []
             for function in functions:
                 function()
+    
+    def poll_all(self):
+        self.poll(False)
+        self.poll(True)
     
     def queue_function(self, function, *args, **kwargs):
         """Queue a function to be called on the same schedule as the poller would."""
@@ -90,7 +99,8 @@ class AutomaticPoller(Poller):
     def __init__(self):
         # not paramterized with reactor because LoopingCall isn't anyway
         Poller.__init__(self)
-        self.__loop = task.LoopingCall(self.poll)
+        self.__loop_slow = task.LoopingCall(self.poll, False)
+        self.__loop_fast = task.LoopingCall(self.poll, True)
         self.__started = False
     
     def _add_subscription(self, target, subscription):
@@ -99,15 +109,17 @@ class AutomaticPoller(Poller):
         if not self.__started:
             self.__started = True
             # TODO: eventually there should be selectable schedules for different cells / clients
-            # using callLater because start will call _immediately_ :(
-            the_reactor.callLater(0, self.__loop.start, 1.0 / 61)
+            # using callLater because start() will do the first call _immediately_ :(
+            the_reactor.callLater(0, self.__loop_fast.start, 1.0 / 61)
+            the_reactor.callLater(0, self.__loop_slow.start, 0.5)
 
 
 class _PollerSubscription(object):
-    def __init__(self, poller, target, callback):
+    def __init__(self, poller, target, callback, fast):
         self._fire = callback
         self._target = target
         self._poller = poller
+        self.fast = fast
         poller._add_subscription(target, self)
     
     def unsubscribe(self):

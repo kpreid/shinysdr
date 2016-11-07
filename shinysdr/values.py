@@ -163,6 +163,7 @@ class Cell(ValueCell):
         if changes == u'explicit':
             self.__explicit_subscriptions = set()
             self.__last_polled_value = object()
+        
         self._getter = getattr(self._target, 'get_' + key)
         if writable:
             self._setter = getattr(self._target, 'set_' + key)
@@ -182,7 +183,15 @@ class Cell(ValueCell):
         return self._setter(self._value_type(value))
     
     def subscribe2(self, callback, context):
-        return context.poller.subscribe(self, lambda: callback(self.get()))
+        changes = self.__changes
+        if changes == u'never':
+            return _NeverSubscription()
+        elif changes == u'continuous':
+            return context.poller.subscribe(self, lambda: callback(self.get()), fast=True)
+        elif changes == u'this_setter' or changes == u'this_object' or changes == u'global' or changes == u'placeholder_slow':
+            return context.poller.subscribe(self, lambda: callback(self.get()), fast=False)
+        else:
+            raise ValueError('shouldn\'t happen unrecognized changes value: {!r}'.format(changes))
 
 
 class _MessageSplitter(object):
@@ -247,7 +256,7 @@ class StreamCell(ValueCell):
     
     def subscribe2(self, callback, context):
         # poller does StreamCell-specific things, including passing a value where most subscriptions don't. TODO: make Poller uninvolved
-        return context.poller.subscribe(self, callback)
+        return context.poller.subscribe(self, callback, fast=True)
     
     # TODO: eliminate this specialized protocol used by Poller
     def subscribe_to_stream(self):
@@ -282,7 +291,7 @@ class CollectionMemberCell(ValueCell):
         raise Exception('CollectionMemberCell is not writable.')
 
     def subscribe2(self, callback, context):
-        return context.poller.subscribe(self, lambda: callback(self.get()))
+        return context.poller.subscribe(self, lambda: callback(self.get()), fast=False)
 
 
 class LooseCell(ValueCell):

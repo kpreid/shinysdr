@@ -381,7 +381,7 @@ class SubscriptionTester(object):
     def advance(self):
         # support both 'real' subscriptions and poller subscriptions
         self.clock.advance(1)
-        self.context.poller.poll()
+        self.context.poller.poll_all()
     
     def __callback(self, value):
         if self.unsubscribed:

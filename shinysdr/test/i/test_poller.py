@@ -35,18 +35,18 @@ class TestPoller(unittest.TestCase):
         def callback():
             called[0] += 1
         
-        sub = self.poller.subscribe(cell, callback)
+        sub = self.poller.subscribe(cell, callback, fast=True)
         self.assertEqual(0, called[0], 'initial')
-        self.poller.poll()
+        self.poller.poll(True)
         self.assertEqual(0, called[0], 'noop poll')
         self.cells.set_foo('a')
         self.assertEqual(0, called[0], 'after set')
-        self.poller.poll()
+        self.poller.poll(True)
         self.assertEqual(1, called[0], 'poll after set')
         
         sub.unsubscribe()
         self.cells.set_subscribable('b')
-        self.poller.poll()
+        self.poller.poll(True)
         self.assertEqual(1, called[0], 'no poll after unsubscribe')
 
 

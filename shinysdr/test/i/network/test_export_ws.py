@@ -53,7 +53,7 @@ class StateStreamTestCase(unittest.TestCase):
         # pylint: disable=attribute-defined-outside-init
         
         # warning: implementation poking
-        self.poller.poll()
+        self.poller.poll_all()
         self.stream._flush()
         u = self.updates
         self.updates = []
