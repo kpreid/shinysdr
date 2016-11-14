@@ -43,8 +43,8 @@ from shinysdr.interfaces import ClientResourceDef, IDemodulator, ModeDef
 from shinysdr.math import LazyRateCalculator
 from shinysdr.signals import no_signal
 from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, TelemetryStore, Track, empty_track
-from shinysdr.types import EnumRow, Notice, Timestamp
-from shinysdr.values import CollectionState, ExportedState, exported_value
+from shinysdr.types import EnumRow, Notice, Range, Timestamp
+from shinysdr.values import CollectionState, ExportedState, exported_value, setter
 
 
 
@@ -120,6 +120,14 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
 
     def __del__(self):
         self.__msgq_runner.stop()
+    
+    @exported_value(type=Range([(0, 30)]))
+    def get_decode_threshold(self):
+        return self.__demod.get_threshold(None)
+    
+    @setter
+    def set_decode_threshold(self, value):
+        self.__demod.set_threshold(float(value))
     
     @exported_value(float)
     def get_message_rate(self):
