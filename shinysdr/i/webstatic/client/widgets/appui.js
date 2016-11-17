@@ -325,6 +325,13 @@ define(['./basic', './spectrum', '../types', '../values', '../events', '../widge
       createWidgetExt(config.context, Knob, knobContainer, block.rec_freq);
       ignore('rec_freq');
       
+      var outOfRangeNotice = new DerivedCell(Notice, config.scheduler, function(dirty) {
+        return block.is_valid.depend(dirty)
+          ? ''
+          : 'Outside of device bandwidth; disabled.';
+      });
+      addWidget(outOfRangeNotice, Banner);
+      
       addWidget('mode', Radio);
       addWidget('demodulator', Demodulator);
       
