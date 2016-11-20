@@ -131,6 +131,8 @@ class TestCell(unittest.TestCase):
         cell = Cell(o, 'value', changes=changes)
         st = SubscriptionTester(cell)
         o.value = 1
+        if changes == 'explicit':
+            cell.poll_for_change(specific_cell=True)
         st.expect_now(1)
         st.unsubscribe()
         o.value = 2
@@ -147,6 +149,9 @@ class TestCell(unittest.TestCase):
     
     def test_subscription_continuous(self):
         self.__test_subscription('continuous')
+    
+    def test_subscription_explicit(self):
+        self.__test_subscription('explicit')
     
     def test_subscription_this_setter(self):
         self.__test_subscription('this_setter')

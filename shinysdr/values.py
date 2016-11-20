@@ -39,6 +39,7 @@ from shinysdr.types import BulkDataType, Reference, to_value_type
 _cell_value_change_schedules = [
     u'never',  # immutable value.
     u'continuous',  # a different value almost every time
+    u'explicit',  # implementation will self-report via .state_changed()
     u'this_setter',  # the setter for this cell
     u'this_object',  # any setter for any cell on this object
     u'global',  # might depend on any other non-continuous cell in the system
@@ -112,6 +113,9 @@ class BaseCell(object):
         The return value is an object with a 'unsubscribe' method which will remove the subscription.
         """
         raise NotImplementedError(self)
+    
+    def poll_for_change(self, specific_cell):
+        pass
     
     def isWritable(self):  # TODO underscore naming
         return self._writable
@@ -188,10 +192,22 @@ class Cell(ValueCell):
             return _NeverSubscription()
         elif changes == u'continuous':
             return context.poller.subscribe(self, lambda: callback(self.get()), fast=True)
+        elif changes == u'explicit':
+            return _SimpleSubscription(self, callback, context, self.__explicit_subscriptions)
         elif changes == u'this_setter' or changes == u'this_object' or changes == u'global' or changes == u'placeholder_slow':
             return context.poller.subscribe(self, lambda: callback(self.get()), fast=False)
         else:
             raise ValueError('shouldn\'t happen unrecognized changes value: {!r}'.format(changes))
+
+    def poll_for_change(self, specific_cell):
+        if self.__changes != u'explicit':
+            return
+        value = self.get()
+        if value != self.__last_polled_value:
+            self.__last_polled_value = value
+            for subscription in self.__explicit_subscriptions:
+                subscription._fire(value)
+    
 
 
 class _MessageSplitter(object):
@@ -337,13 +353,12 @@ class LooseCell(ValueCell):
         self._fire()
     
     def _fire(self):
+        value = self.get()
         for subscription in self.__subscriptions:
-            # TODO: in sync with Poller, add passing the value in here
-            subscription._fire()
+            subscription._fire(value)
     
     def subscribe2(self, callback, context):
-        subscription = _LooseCellSubscription(self, callback, context.reactor)
-        self.__subscriptions.add(subscription)
+        subscription = _SimpleSubscription(self, callback, context, self.__subscriptions)
         return subscription
     
     def _subscribe_immediate(self, callback):
@@ -352,24 +367,22 @@ class LooseCell(ValueCell):
         subscription = _LooseCellImmediateSubscription(self, callback)
         self.__subscriptions.add(subscription)
         return subscription
-    
-    def _unsubscribe(self, subscription):
-        """for use by the subscription only"""
-        self.__subscriptions.remove(subscription)
 
 
-class _LooseCellSubscription(object):
-    def __init__(self, cell, callback, reactor):
+class _SimpleSubscription(object):
+    def __init__(self, cell, callback, context, subscription_set):
         self.__callback = callback
-        self.__reactor = reactor
+        self.__reactor = context.reactor
         self.__cell = cell
+        self.__subscription_set = subscription_set
+        subscription_set.add(self)
     
-    def _fire(self):
-        # TODO: This is calling with a stale value. Do we want to tighten up and prohibit that in the specification of subscribe?
-        self.__reactor.callLater(0, self.__callback, self.__cell.get())
+    def _fire(self, value):
+        # TODO: This is calling with a maybe-stale-when-it-arrives value. Do we want to tighten up and prohibit that in the specification of subscribe2?
+        self.__reactor.callLater(0, self.__callback, value)
     
     def unsubscribe(self):
-        self.__cell._unsubscribe(self)
+        self.__subscription_set.remove(self)
 
 
 class _LooseCellImmediateSubscription(object):
@@ -393,8 +406,8 @@ def ViewCell(base, get_transform, set_transform, **kwargs):
         if base_value != base.get():
             reverse()
     
-    def reverse():
-        self.set(get_transform(base.get()))
+    def reverse(base_value):
+        self.set(get_transform(base_value))
     
     self = LooseCell(
         value=get_transform(base.get()),
@@ -406,7 +419,10 @@ def ViewCell(base, get_transform, set_transform, **kwargs):
 
     # Allows the cell to be put back in sync if the transform changes.
     # Not intended to be called except by the creator of the cell, but mostly harmless.
-    self.changed_transform = reverse  # pylint: disable=attribute-defined-outside-init
+    def changed_transform():
+        reverse(base.get())
+    
+    self.changed_transform = changed_transform  # pylint: disable=attribute-defined-outside-init
     
     return self
 
@@ -496,6 +512,18 @@ class ExportedState(object):
                     cache[k] = v.make_cell(self, k)
             
         return self.__cache
+    
+    def state_changed(self, key=None):
+        """To be called by the object's implementation when a cell value has been changed.
+        
+        if key is given, it is the key of the relevant cell; otherwise all cells are polled.
+        """
+        state = self.state()
+        if key is None:
+            for cell in state.itervalues():
+                cell.poll_for_change(specific_cell=False)
+        else:
+            state[key].poll_for_change(specific_cell=True)
     
     def state_to_json(self):
         state = {}
