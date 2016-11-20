@@ -34,7 +34,8 @@ from gnuradio import gr
 from shinysdr.i.network.base import serialize
 from shinysdr.i.poller import the_poller
 from shinysdr.signals import SignalType
-from shinysdr.values import BaseCell, BlockCell, ExportedState, StreamCell
+from shinysdr.types import Reference
+from shinysdr.values import BaseCell, Cell, ExportedState, StreamCell
 
 
 class _StateStreamObjectRegistration(object):
@@ -180,7 +181,7 @@ class StateStreamInner(object):
         self.__poller = poller
         self._send = send
         self.__root_object = root_object
-        self._cell = BlockCell(self, '_root_object')
+        self._cell = Cell(self, '_root_object', type=Reference())
         self._lastSerial = 0
         root_registration = _StateStreamObjectRegistration(ssi=self, poller=self.__poller, obj=self._cell, serial=0, url=root_url, refcount=0)
         self._registered_objs = {self._cell: root_registration}

@@ -120,6 +120,7 @@ class DecoratorInheritanceSpecimen(DecoratorInheritanceSpecimenSuper):
         self.rw = value
 
 
+# TODO: BlockCell no longer exists, but this test still tests something; rename appropriately
 class TestBlockCell(unittest.TestCase):
     def setUp(self):
         self.obj_value = ExportedState()

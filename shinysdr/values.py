@@ -117,8 +117,10 @@ class ValueCell(BaseCell):
 
 # TODO this name is historical and should be changed
 class Cell(ValueCell):
-    def __init__(self, target, key, type=to_value_type(object), writable=False, persists=None):
-        if persists is None: persists = writable
+    def __init__(self, target, key, type=object, writable=False, persists=None):
+        type = to_value_type(type)
+        if persists is None:
+            persists = writable or type.is_reference()
         ValueCell.__init__(self, target, key, writable=writable, persists=persists, type=type)
         self._getter = getattr(self._target, 'get_' + key)
         if writable:
@@ -127,7 +129,11 @@ class Cell(ValueCell):
             self._setter = None
     
     def get(self):
-        return self._getter()
+        value = self._getter()
+        if self.type().is_reference():
+            # informative-failure debugging aid
+            assert isinstance(value, ExportedState), (self._target, self._key)
+        return value
     
     def set(self, value):
         if not self.isWritable():
@@ -210,18 +216,6 @@ class StreamCell(ValueCell):
     
     def set(self, value):
         raise Exception('StreamCell is not writable.')
-
-
-# TODO: get() code is same as Cell (value-type cell). Refactoring in progress to make block cells less magic.
-class BlockCell(ValueCell):
-    def __init__(self, target, key, persists=True):
-        ValueCell.__init__(self, target, key, type=Reference(), writable=False, persists=persists)
-        self._getter = getattr(self._target, 'get_' + key)
-    
-    def get(self):
-        block = self._getter()
-        assert isinstance(block, ExportedState), (self._target, self._key)
-        return block
 
 
 # TODO: It's unclear whether or not the Cell design makes sense in light of this. We seem to have conflated the index in the container and the type of the contained into one object.
@@ -529,16 +523,14 @@ class IWritableCollection(Interface):
 def exported_value(parameter=None, **cell_kwargs):
     """Returns a decorator for exported state; takes Cell's kwargs."""
     def decorator(f):
-        return ExportedGetter(f, parameter, False, cell_kwargs)
+        return ExportedGetter(f, parameter, cell_kwargs)
     return decorator
 
 
-# TODO: @exported_block() maybe should become @exported_value(type=block), depending on how cell types get refactored.
+# TODO: Maybe inline uses of this
 def exported_block(parameter=None, **cell_kwargs):
-    """Returns a decorator for exported state; takes BlockCell's kwargs."""
-    def decorator(f):
-        return ExportedGetter(f, parameter, True, cell_kwargs)
-    return decorator
+    """Returns a decorator for exported state; takes Cell's kwargs."""
+    return exported_value(type=Reference(), **cell_kwargs)
 
 
 def setter(f):
@@ -553,7 +545,7 @@ def command():
 
 class ExportedGetter(object):
     """Descriptor for a getter exported using @exported_value."""
-    def __init__(self, f, parameter, is_block, cell_kwargs):
+    def __init__(self, f, parameter, cell_kwargs):
         if 'type_fn' in cell_kwargs and 'type' in cell_kwargs:
             raise ValueError('cannot specify both "type" and "type_fn"')
         if 'type_fn' in cell_kwargs and parameter:
@@ -561,7 +553,6 @@ class ExportedGetter(object):
         
         self.__function = f
         self.__parameter = parameter
-        self.__is_block = is_block
         self.__cell_kwargs = cell_kwargs
     
     def __get__(self, obj, type=None):
@@ -579,11 +570,7 @@ class ExportedGetter(object):
             del kwargs['type_fn']
         # TODO kludgy introspection, figure out what is better
         writable = hasattr(obj, 'set_' + attr) and isinstance(getattr(type(obj), 'set_' + attr), ExportedSetter)
-        if self.__is_block:
-            assert not writable
-            return BlockCell(obj, attr, **kwargs)
-        else:
-            return Cell(obj, attr, writable=writable, **kwargs)
+        return Cell(obj, attr, writable=writable, **kwargs)
     
     def state_to_kwargs(self, value):
         # clunky: invoked by unserialize_exported_state via a type test
