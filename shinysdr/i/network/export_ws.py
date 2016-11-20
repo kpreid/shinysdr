@@ -93,10 +93,10 @@ class _StateStreamObjectRegistration(object):
         obj = self.obj
         if isinstance(obj, StreamCell):
             raise Exception("shouldn't happen: StreamCell here")
-        if obj.isBlock():
-            block = obj.get()
-            self.__ssi._lookup_or_register(block, self.url)
-            self.__maybesend_reference({u'value': block}, True)
+        value = obj.get()
+        if obj.type().is_reference():
+            self.__ssi._lookup_or_register(value, self.url)
+            self.__maybesend_reference({u'value': value}, True)
         else:
             value = obj.get()
             self.__maybesend(value, value)
@@ -244,7 +244,7 @@ class StateStreamInner(object):
                 self._send1(False, ('register_cell', serial, url, obj.description()))
                 if isinstance(obj, StreamCell):  # TODO kludge
                     pass
-                elif not obj.isBlock():  # TODO condition is a kludge due to block cell values being gook
+                elif not obj.type().is_reference():  # TODO condition is a kludge due to block cell values being gook
                     registration.set_previous({u'value': obj.get()}, False)
             elif isinstance(obj, ExportedState):
                 self._send1(False, ('register_block', serial, url, _get_interfaces(obj)))
@@ -330,8 +330,8 @@ def _lookup_block(block, path):
         cell = block.state().get(path_elem)
         if cell is None:
             raise Exception('Not found: %r in %r' % (path[:i + 1], path))
-        elif not cell.isBlock():
-            raise Exception('Not a block: %r in %r' % (path[:i + 1], path))
+        elif not cell.type().is_reference():
+            raise Exception('Not a reference: %r in %r' % (path[:i + 1], path))
         block = cell.get()
     return block
 

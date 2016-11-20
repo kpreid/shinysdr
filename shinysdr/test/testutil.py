@@ -44,7 +44,7 @@ def state_smoke_test(value):
     assert isinstance(value, ExportedState)
     for cell in value.state().itervalues():
         value = cell.get()
-        if cell.isBlock():
+        if cell.type().is_reference():
             state_smoke_test(value)
 
 

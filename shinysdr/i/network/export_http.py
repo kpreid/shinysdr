@@ -86,7 +86,7 @@ class BlockResource(Resource):
         if not self._dynamic:  # currently dynamic blocks can only have block children
             self._blockCells = {}
             for key, cell in block.state().iteritems():
-                if cell.isBlock():
+                if cell.type().is_reference():
                     self._blockCells[key] = cell
                 else:
                     self.putChild(key, ValueCellResource(cell, self.__wcommon))
@@ -97,7 +97,7 @@ class BlockResource(Resource):
             curstate = self._block.state()
             if name in curstate:
                 cell = curstate[name]
-                if cell.isBlock():
+                if cell.type().is_reference():
                     return self.__getBlockChild(name, cell.get())
         else:
             if name in self._blockCells:

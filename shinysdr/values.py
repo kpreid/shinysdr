@@ -31,16 +31,17 @@ from zope.interface import Interface, implements  # available via Twisted
 
 from gnuradio import gr
 
-from shinysdr.types import BulkDataType, to_value_type
+from shinysdr.types import BulkDataType, Reference, to_value_type
 
 
 class BaseCell(object):
-    def __init__(self, target, key, persists=True, writable=False):
+    def __init__(self, target, key, type, persists=True, writable=False):
         # The exact relationship of target and key depends on the subtype
         self._target = target
         self._key = key
         self._persists = persists
         self._writable = writable
+        self._value_type = to_value_type(type)
     
     def __cmp__(self, other):
         if not isinstance(other, BaseCell):
@@ -58,9 +59,8 @@ class BaseCell(object):
     def __hash__(self):
         return hash(self._target) ^ hash(self._key)
 
-    def isBlock(self):  # TODO underscore naming
-        # TODO this should be moved into the type
-        raise NotImplementedError()
+    def type(self):
+        return self._value_type
     
     def key(self):
         return self._key
@@ -96,11 +96,7 @@ class ValueCell(BaseCell):
     # (we are also abstract)
     
     def __init__(self, target, key, type, **kwargs):
-        BaseCell.__init__(self, target, key, **kwargs)
-        self._value_type = to_value_type(type)
-    
-    def isBlock(self):
-        return False
+        BaseCell.__init__(self, target, key, type=type, **kwargs)
     
     # implement abstract
     def get_state(self):
@@ -110,13 +106,10 @@ class ValueCell(BaseCell):
     def set_state(self, value):
         return self.set(value)
     
-    def type(self):
-        return self._value_type
-    
     def description(self):
         return {
             'kind': 'value',
-            'type': self._value_type.type_to_json(),
+            'type': self.type().type_to_json(),
             'writable': self.isWritable(),
             'current': self.get()
         }
@@ -145,8 +138,7 @@ class Cell(ValueCell):
 class _MessageSplitter(object):
     def __init__(self, queue, info_getter, close, type):
         """
-        info_format: format string as used by the struct module
-        array_format: type code as used by the array module
+        type: must be a BulkDataType
         """
         # config
         self.__queue = queue
@@ -199,7 +191,7 @@ class _MessageSplitter(object):
 class StreamCell(ValueCell):
     def __init__(self, target, key, type=None):
         assert isinstance(type, BulkDataType)
-        ValueCell.__init__(self, target, key, writable=False, persists=False, type=type)
+        ValueCell.__init__(self, target, key, type=type, writable=False, persists=False)
         self.__dgetter = getattr(self._target, 'get_' + key + '_distributor')
         self.__igetter = getattr(self._target, 'get_' + key + '_info')
     
@@ -224,11 +216,10 @@ class BaseBlockCell(BaseCell):
     # pylint: disable=abstract-method
     # (we are also abstract)
     
-    def __init__(self, target, key, persists=True):
-        BaseCell.__init__(self, target, key, writable=False, persists=persists)
+    # TODO is BaseBlockCell unnecessary yet
     
-    def isBlock(self):
-        return True
+    def __init__(self, target, key, persists=True):
+        BaseCell.__init__(self, target, key, type=Reference(), writable=False, persists=persists)
     
     # get() is still abstract
     
@@ -391,11 +382,13 @@ class Command(BaseCell):
     
     def __init__(self, target, key, function):
         # TODO: remove writable=true when we have a proper invoke path
-        BaseCell.__init__(self, target=target, key=key, persists=False, writable=True)
+        BaseCell.__init__(self,
+            target=target,
+            key=key,
+            type=type(None),
+            persists=False,
+            writable=True)
         self.__function = function
-    
-    def isBlock(self):
-        return False
     
     def get_state(self):
         """implements BaseCell"""
@@ -404,10 +397,6 @@ class Command(BaseCell):
     def set_state(self, value):
         """implements BaseCell"""
         return self.set(value)
-    
-    def type(self):
-        """implements BaseCell"""
-        return to_value_type(type(None))
     
     def description(self):
         """implements BaseCell"""
@@ -498,7 +487,7 @@ class ExportedState(object):
                     doTry(lambda: self.state_insert(key, state[key]))
                 else:
                     err('nonexistent', '')
-            elif cell.isBlock():
+            elif cell.type().is_reference():
                 defer.append(key)
             elif not cell.isWritable():
                 err('non-writable', '')

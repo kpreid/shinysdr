@@ -55,6 +55,9 @@ class ValueType(object):
         If the specimen is of a suitable type but out of range and this type does not choose to make it in range, raise ValueError.
         """
         raise NotImplementedError()
+    
+    def is_reference(self):
+        return False
 
 
 class BareType(ValueType):
@@ -93,6 +96,19 @@ class Constant(ValueType):
     
     def __call__(self, specimen):
         return self.__value
+
+
+class Reference(ValueType):
+    def type_to_json(self):
+        # client does not actually use this yet
+        return u'placeholder_block'
+    
+    def __call__(self, specimen):
+        # In the future there might be subtypes which have some criterion for accepting values
+        raise TypeError('generic Reference type does not coerce anything')
+    
+    def is_reference(self):
+        return True
 
 
 class Enum(ValueType):
