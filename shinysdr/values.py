@@ -75,11 +75,17 @@ class BaseCell(object):
     
     def get_state(self):
         """Return the value, or state of the object, held by this cell."""
-        raise NotImplementedError()
+        if self.type().is_reference():
+            return self.get().state_to_json()
+        else:
+            return self.get()
     
     def set_state(self, state):
         """Set the value held by this cell, or set the state of the object held by this cell, as appropriate."""
-        raise NotImplementedError()
+        if self.type().is_reference():
+            self.get().state_from_json(state)
+        else:
+            self.set(state)
     
     def isWritable(self):  # TODO underscore naming
         return self._writable
@@ -97,14 +103,6 @@ class ValueCell(BaseCell):
     
     def __init__(self, target, key, type, **kwargs):
         BaseCell.__init__(self, target, key, type=type, **kwargs)
-    
-    # implement abstract
-    def get_state(self):
-        return self.get()
-    
-    # implement abstract
-    def set_state(self, value):
-        return self.set(value)
     
     def description(self):
         return {
@@ -225,12 +223,6 @@ class BaseBlockCell(BaseCell):
     
     def set(self, value):
         raise Exception('BaseBlockCell is not writable.')
-    
-    def get_state(self):
-        return self.get().state_to_json()
-    
-    def set_state(self, value):
-        return self.get().state_from_json(value)
     
     def description(self):
         return self.get().state_description()
@@ -389,14 +381,6 @@ class Command(BaseCell):
             persists=False,
             writable=True)
         self.__function = function
-    
-    def get_state(self):
-        """implements BaseCell"""
-        return self.get()
-    
-    def set_state(self, value):
-        """implements BaseCell"""
-        return self.set(value)
     
     def description(self):
         """implements BaseCell"""
