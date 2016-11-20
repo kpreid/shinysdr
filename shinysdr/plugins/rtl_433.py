@@ -272,7 +272,7 @@ class RTL433MessageWrapper(object):
         return RTL433MsgGroup
 
 
-# TODO: It would make sense to make this a CollectionState object to have simple dynamic fields. But that is not possible because CollectionState is hardcoded to use block cells. Refactoring so "block cells" are not a thing is in the plan.
+# TODO: It would make sense to make this a CollectionState object to have simple dynamic fields.
 class RTL433MsgGroup(ExportedState):
     implements(ITelemetryObject)
     

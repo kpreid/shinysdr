@@ -218,17 +218,19 @@ class StreamCell(ValueCell):
         raise Exception('StreamCell is not writable.')
 
 
-# TODO: It's unclear whether or not the Cell design makes sense in light of this. We seem to have conflated the index in the container and the type of the contained into one object.
 class CollectionMemberCell(ValueCell):
-    def __init__(self, target, key, persists=True):
-        ValueCell.__init__(self, target, key, type=Reference(), writable=False, persists=persists)
-        self.__last_seen = nullExportedState
+    def __init__(self, target, key, type, persists=True):
+        ValueCell.__init__(self, target, key, type=type, writable=False, persists=persists)
+        self.__last_seen = nullExportedState  # TODO: no longer the best choice
     
     def get(self):
         # fallback to old value so that if we become invalid in a dynamic collection we don't break
         value = self._target._collection.get(self._key, self.__last_seen)
         self.__last_seen = value
         return value
+    
+    def set(self, value):
+        raise Exception('CollectionMemberCell is not writable.')
 
 
 class ISubscribableCell(Interface):
@@ -497,11 +499,12 @@ nullExportedState = NullExportedState()
 
 class CollectionState(ExportedState):
     """Wrapper around a plain Python collection."""
-    def __init__(self, collection, dynamic=False):
+    def __init__(self, collection, member_type=Reference(), dynamic=False):
         self._collection = collection  # accessed by CollectionMemberCell
         self.__keys = collection.keys()
         self.__cells = {}
         self.__dynamic = dynamic
+        self.__member_type = to_value_type(member_type)
     
     def state_is_dynamic(self):
         return self.__dynamic
@@ -510,7 +513,7 @@ class CollectionState(ExportedState):
         super(CollectionState, self).state_def(callback)
         for key in self._collection:
             if key not in self.__cells:
-                self.__cells[key] = CollectionMemberCell(self, key)
+                self.__cells[key] = CollectionMemberCell(self, key, self.__member_type)
             callback(self.__cells[key])
 
 
