@@ -56,9 +56,6 @@ class _CellResource(Resource):
         request.setResponseCode(204)
         self.__note_dirty()
         return ''
-    
-    def resourceDescription(self):
-        return self._cell.description()
 
 
 class ValueCellResource(_CellResource):
@@ -123,7 +120,7 @@ class BlockResource(Resource):
         accept = request.getHeader('Accept')
         if accept is not None and 'application/json' in accept:  # TODO: Implement or obtain correct Accept interpretation
             request.setHeader('Content-Type', 'application/json')
-            return serialize(self.resourceDescription()).encode('utf-8')
+            return serialize(self.__describe_block()).encode('utf-8')
         else:
             request.setHeader('Content-Type', 'text/html;charset=utf-8')
             return renderElement(request, self.__element)
@@ -149,8 +146,18 @@ class BlockResource(Resource):
         request.setResponseCode(204)  # No Content
         return ''
     
-    def resourceDescription(self):
-        return self._block.state_description()
+    def __describe_block(self):
+        # note: this JSON format is legacy and not actually used by anything (but occasionally useful for debugging)
+        block = self._block
+        childDescs = {}
+        description = {
+            'kind': 'block',
+            'children': childDescs
+        }
+        for key, cell in block.state().iteritems():
+            # TODO: include URLs explicitly in desc format
+            childDescs[key] = cell.description()
+        return description
     
     def isForBlock(self, block):
         return self._block is block

@@ -153,6 +153,8 @@ define([], function () {
     switch (typeof desc) {
       case 'string':
         switch (desc) {
+          case 'block':
+            return block;
           case 'boolean':
             return Boolean; // will do till we need something fancier
           case 'shinysdr.telemetry.Track':

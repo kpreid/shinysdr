@@ -101,7 +101,7 @@ class Constant(ValueType):
 class Reference(ValueType):
     def type_to_json(self):
         # client does not actually use this yet
-        return u'placeholder_block'
+        return u'block'
     
     def __call__(self, specimen):
         # In the future there might be subtypes which have some criterion for accepting values

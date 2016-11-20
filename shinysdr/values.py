@@ -105,12 +105,14 @@ class ValueCell(BaseCell):
         BaseCell.__init__(self, target, key, type=type, **kwargs)
     
     def description(self):
-        return {
+        d = {
             'kind': 'value',
             'type': self.type().type_to_json(),
-            'writable': self.isWritable(),
-            'current': self.get()
+            'writable': self.isWritable()
         }
+        if not self.type().is_reference():  # TODO kludge
+            d[u'current'] = self.get()
+        return d
 
 
 # TODO this name is historical and should be changed
@@ -210,28 +212,10 @@ class StreamCell(ValueCell):
         raise Exception('StreamCell is not writable.')
 
 
-class BaseBlockCell(BaseCell):
-    # pylint: disable=abstract-method
-    # (we are also abstract)
-    
-    # TODO is BaseBlockCell unnecessary yet
-    
-    def __init__(self, target, key, persists=True):
-        BaseCell.__init__(self, target, key, type=Reference(), writable=False, persists=persists)
-    
-    # get() is still abstract
-    
-    def set(self, value):
-        raise Exception('BaseBlockCell is not writable.')
-    
-    def description(self):
-        return self.get().state_description()
-
-
 # TODO: get() code is same as Cell (value-type cell). Refactoring in progress to make block cells less magic.
-class BlockCell(BaseBlockCell):
+class BlockCell(ValueCell):
     def __init__(self, target, key, persists=True):
-        BaseBlockCell.__init__(self, target, key, persists=persists)
+        ValueCell.__init__(self, target, key, type=Reference(), writable=False, persists=persists)
         self._getter = getattr(self._target, 'get_' + key)
     
     def get(self):
@@ -241,9 +225,9 @@ class BlockCell(BaseBlockCell):
 
 
 # TODO: It's unclear whether or not the Cell design makes sense in light of this. We seem to have conflated the index in the container and the type of the contained into one object.
-class CollectionMemberCell(BaseBlockCell):
+class CollectionMemberCell(ValueCell):
     def __init__(self, target, key, persists=True):
-        BaseBlockCell.__init__(self, target, key, persists=persists)
+        ValueCell.__init__(self, target, key, type=Reference(), writable=False, persists=persists)
         self.__last_seen = nullExportedState
     
     def get(self):
@@ -480,17 +464,6 @@ class ExportedState(object):
         # blocks are deferred because the specific blocks may depend on other keys
         for key in defer:
             cells[key].set_state(state[key])
-
-    def state_description(self):
-        childDescs = {}
-        description = {
-            'kind': 'block',
-            'children': childDescs
-        }
-        for key, cell in self.state().iteritems():
-            # TODO: include URLs explicitly in desc format
-            childDescs[key] = cell.description()
-        return description
 
 
 def unserialize_exported_state(ctor, kwargs=None, state=None):
