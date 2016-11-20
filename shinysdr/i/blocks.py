@@ -351,7 +351,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
             self.__fft_sink.get_subscription_count() > 0 or
             self.__scope_sink.get_subscription_count() > 0))
     
-    @exported_value(changes='global')
+    @exported_value(type=SignalType, changes='explicit')
     def get_signal_type(self):
         return self.__signal_type
     
@@ -362,6 +362,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__signal_type = value
         self.__rebuild()
         self.__connect()
+        self.state_changed('signal_type')
     
     # non-exported
     def set_input_center_freq(self, value):

@@ -155,15 +155,6 @@ class TestCell(unittest.TestCase):
     
     def test_subscription_this_setter(self):
         self.__test_subscription('this_setter')
-    
-    def test_subscription_this_object(self):
-        self.__test_subscription('this_object')
-    
-    def test_subscription_global(self):
-        self.__test_subscription('global')
-    
-    def test_subscription_placeholder_slow(self):
-        self.__test_subscription('placeholder_slow')
 
 
 class NoInherentCellSpecimen(object):
@@ -202,12 +193,13 @@ class BlockCellSpecimen(ExportedState):
     def __init__(self, block):
         self.__block = block
     
-    @exported_block(changes='global')
+    @exported_block(changes='explicit')
     def get_block(self):
         return self.__block
     
     def replace_block(self, block):
         self.__block = block
+        self.state_changed('block')
 
 
 class TestLooseCell(unittest.TestCase):

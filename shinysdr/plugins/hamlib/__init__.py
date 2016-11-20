@@ -359,6 +359,7 @@ class _HamlibProxy(ExportedState):
                 self.__communication_error = True
                 return
         self.__last_error = (time.time(), cmd, error_number)
+        self.state_changed('errors')
     
     def __update_cache_and_cells(self, key, value):
         self.__cache[key] = value
@@ -407,7 +408,7 @@ class _HamlibProxy(ExportedState):
         p = self.__protocol
         self.poll_slow(p.rc_send)
     
-    @exported_value(type=Notice(always_visible=False), changes='placeholder_slow')
+    @exported_value(type=Notice(always_visible=False), changes='explicit')
     def get_errors(self):
         if self.__communication_error:
             return 'Rig not responding.'

@@ -19,9 +19,9 @@ from __future__ import absolute_import, division
 
 import json
 
-from zope.interface import Interface, implements  # available via Twisted
-
+from twisted.internet.task import Clock
 from twisted.trial import unittest
+from zope.interface import Interface, implements  # available via Twisted
 
 # TODO: StateStreamInner is an implementation detail; arrange a better interface to test
 from shinysdr.i.network.export_ws import StateStreamInner
@@ -37,6 +37,7 @@ class StateStreamTestCase(unittest.TestCase):
         # pylint: disable=attribute-defined-outside-init
         self.object = obj
         self.updates = []
+        self.clock = Clock()
         self.poller = Poller()
         
         def send(value):
@@ -47,14 +48,14 @@ class StateStreamTestCase(unittest.TestCase):
             self.object,
             'urlroot',
             lambda: None,  # TODO test noteDirty or make it unnecessary
-            subscription_context=SubscriptionContext(reactor=None, poller=self.poller))
+            subscription_context=SubscriptionContext(reactor=self.clock, poller=self.poller))
     
     def getUpdates(self):
         # pylint: disable=attribute-defined-outside-init
         
-        # warning: implementation poking
+        self.clock.advance(1)
         self.poller.poll_all()
-        self.stream._flush()
+        self.stream._flush()  # warning: implementation poking
         u = self.updates
         self.updates = []
         return u
@@ -92,6 +93,7 @@ class TestStateStream(StateStreamTestCase):
         replacement = NullExportedState()
         # becomes distinct
         self.object.bar = replacement
+        self.object.state_changed()
         self.assertEqual(self.getUpdates(), [
             [u'register_block', 5, u'urlroot/bar', [u'shinysdr.values.INull']],
             [u'value', 5, {}],
@@ -99,6 +101,7 @@ class TestStateStream(StateStreamTestCase):
         ])
         # old value should be deleted
         self.object.foo = replacement
+        self.object.state_changed()
         self.assertEqual(self.getUpdates(), [
             [u'value', 2, 5],
             [u'delete', 3]
@@ -188,11 +191,11 @@ class DuplicateReferenceSpecimen(ExportedState):
     def __init__(self):
         self.foo = self.bar = nullExportedState
     
-    @exported_block(changes='placeholder_slow')
+    @exported_block(changes='explicit')
     def get_foo(self):
         return self.foo
     
-    @exported_block(changes='placeholder_slow')
+    @exported_block(changes='explicit')
     def get_bar(self):
         return self.bar
 
@@ -202,6 +205,7 @@ class TestSerialization(StateStreamTestCase):
         self.setUpForObject(SerializationSpecimen())
         self.getUpdates()  # ignore initialization
         self.object.st = SignalType(kind='USB', sample_rate=1234.0)
+        self.object.state_changed()
         self.assertEqual(self.getUpdates(), [
             ['value', 2, {
                 u'kind': 'USB',
@@ -217,6 +221,6 @@ class SerializationSpecimen(ExportedState):
     def __init__(self):
         self.st = None
     
-    @exported_value(type=SignalType, changes='placeholder_slow')
+    @exported_value(type=SignalType, changes='explicit')
     def get_st(self):
         return self.st

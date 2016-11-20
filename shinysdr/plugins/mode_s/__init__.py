@@ -129,7 +129,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
     def set_decode_threshold(self, value):
         self.__demod.set_threshold(float(value))
     
-    @exported_value(float, changes='placeholder_slow')
+    @exported_value(float, changes='continuous')
     def get_message_rate(self):
         return round(self.__message_rate_calc.get(), 1)
     
@@ -251,6 +251,7 @@ class Aircraft(ExportedState):
         else:
             # TODO report
             pass
+        self.state_changed()
     
     def is_interesting(self):
         """
@@ -267,23 +268,23 @@ class Aircraft(ExportedState):
         """implement ITelemetryObject"""
         return self.__last_heard_time + drop_unheard_timeout_seconds
     
-    @exported_value(type=Timestamp(), changes='placeholder_slow')
+    @exported_value(type=Timestamp(), changes='explicit')
     def get_last_heard_time(self):
         return self.__last_heard_time
     
-    @exported_value(type=unicode, changes='placeholder_slow')
+    @exported_value(type=unicode, changes='explicit')
     def get_call(self):
         return self.__call
     
-    @exported_value(type=int, changes='placeholder_slow')
+    @exported_value(type=int, changes='explicit')
     def get_ident(self):
         return self.__ident
     
-    @exported_value(type=unicode, changes='placeholder_slow')
+    @exported_value(type=unicode, changes='explicit')
     def get_aircraft_type(self):
         return self.__aircraft_type
     
-    @exported_value(type=Track, changes='placeholder_slow')
+    @exported_value(type=Track, changes='explicit')
     def get_track(self):
         return self.__track
 

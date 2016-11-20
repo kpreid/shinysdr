@@ -178,8 +178,10 @@ class Receiver(gr.hier_block2, ExportedState):
             self.__freq_relative = self.__freq_absolute - self.__get_device().get_freq()
         self.__update_rotator()
         # note does not revalidate() because the caller will handle that
+        self.state_changed('rec_freq')
+        self.state_changed('is_valid')
 
-    @exported_block(changes='placeholder_slow')
+    @exported_block(changes='explicit')
     def get_demodulator(self):
         return self.__demodulator
 
@@ -212,7 +214,7 @@ class Receiver(gr.hier_block2, ExportedState):
             self._rebuild_demodulator(mode=mode, reason=u'changed mode')
 
     # TODO: rename rec_freq to just freq
-    @exported_value(type=float, parameter='freq_absolute', changes='global')
+    @exported_value(type=float, parameter='freq_absolute', changes='explicit')
     def get_rec_freq(self):
         return self.__freq_absolute
     
@@ -234,6 +236,8 @@ class Receiver(gr.hier_block2, ExportedState):
             self.__get_device().set_freq(self.__freq_absolute - self.__freq_relative)
         else:
             self.context.revalidate(tuning=True)
+        self.state_changed('rec_freq')
+        self.state_changed('is_valid')
     
     @exported_value(type=bool, changes='this_setter')
     def get_freq_linked_to_device(self):
@@ -279,7 +283,7 @@ class Receiver(gr.hier_block2, ExportedState):
             self.__audio_destination = value
             self.context.changed_needed_connections(u'changed destination')
     
-    @exported_value(type=bool, changes='global')
+    @exported_value(type=bool, changes='explicit')
     def get_is_valid(self):
         if self.__demodulator is None:
             return False
@@ -315,8 +319,9 @@ class Receiver(gr.hier_block2, ExportedState):
     def _rebuild_demodulator(self, mode=None, reason='<unspecified>'):
         self.__rebuild_demodulator_nodirty(mode)
         self.__do_connect(reason=u'demodulator rebuilt: %s' % (reason,))
-        # TODO write a test for this!
-        #self.context.revalidaate(tuning=False)  # in case our bandwidth changed
+        # TODO write a test showing that revalidate is needed and works
+        self.context.revalidate(tuning=False)  # in case our bandwidth changed
+        self.state_changed('is_valid')
 
     def __rebuild_demodulator_nodirty(self, mode=None):
         if self.__demodulator is None:
@@ -329,6 +334,7 @@ class Receiver(gr.hier_block2, ExportedState):
         self.__update_demodulator_info()
         self.__update_rotator()
         self.mode = mode
+        self.state_changed('demodulator')
         
         # Replace blocks downstream of the demodulator so as to flush samples that are potentially at a different sample rate and would therefore be audibly wrong. Caller will handle reconnection.
         self.__audio_gain_blocks = [blocks.multiply_const_ff(0.0) for _ in xrange(self.__audio_channels)]

@@ -41,9 +41,6 @@ _cell_value_change_schedules = [
     u'continuous',  # a different value almost every time
     u'explicit',  # implementation will self-report via .state_changed()
     u'this_setter',  # the setter for this cell
-    u'this_object',  # any setter for any cell on this object
-    u'global',  # might depend on any other non-continuous cell in the system
-    u'placeholder_slow',  # things we want to replace, but for now are polled slow
 ]
 
 
@@ -194,7 +191,7 @@ class Cell(ValueCell):
             return context.poller.subscribe(self, lambda: callback(self.get()), fast=True)
         elif changes == u'explicit':
             return _SimpleSubscription(self, callback, context, self.__explicit_subscriptions)
-        elif changes == u'this_setter' or changes == u'this_object' or changes == u'global' or changes == u'placeholder_slow':
+        elif changes == u'this_setter':
             return context.poller.subscribe(self, lambda: callback(self.get()), fast=False)
         else:
             raise ValueError('shouldn\'t happen unrecognized changes value: {!r}'.format(changes))

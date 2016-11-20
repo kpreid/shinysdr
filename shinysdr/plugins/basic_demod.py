@@ -359,7 +359,7 @@ class UnselectiveAMDemodulator(gr.hier_block2, ExportedState):
         """implement IDemodulator"""
         return False
     
-    @exported_value(changes='global')
+    @exported_value(changes='explicit')
     def get_band_filter_shape(self):
         """implement IDemodulator"""
         halfbw = self.__input_rate * 0.5
@@ -377,8 +377,9 @@ class UnselectiveAMDemodulator(gr.hier_block2, ExportedState):
 
     def set_rec_freq(self, freq):
         """implement ITunableDemodulator"""
-        # By implementing ITunableDemodulator and doing
+        # By implementing ITunableDemodulator and doing nothing, we use the hardware frequency without changes.
         self.__rec_freq_input = freq
+        self.state_changed('band_filter_shape')
 
 
 

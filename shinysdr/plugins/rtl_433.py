@@ -306,6 +306,7 @@ class RTL433MsgGroup(ExportedState):
                     writable=False,
                     persists=False)
             self.__cells[k].set_internal(v)
+        self.state_changed()
     
     def is_interesting(self):
         """Implements ITelemetryObject."""
@@ -315,7 +316,7 @@ class RTL433MsgGroup(ExportedState):
         """implement ITelemetryObject"""
         return self.__last_heard_time + drop_unheard_timeout_seconds
     
-    @exported_value(type=Timestamp(), changes='placeholder_slow')
+    @exported_value(type=Timestamp(), changes='explicit')
     def get_last_heard_time(self):
         return self.__last_heard_time
 

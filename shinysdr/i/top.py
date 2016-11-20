@@ -218,6 +218,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
             this_source = self._sources[self.source_name]
             
             self.source = this_source
+            self.state_changed('source')
             self.__monitor_rx_driver = this_source.get_rx_driver()
             monitor_signal_type = self.__monitor_rx_driver.get_output_type()
             self.monitor.set_signal_type(monitor_signal_type)
@@ -309,7 +310,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
     def get_sources(self):
         return self.sources
     
-    @exported_block(persists=False, changes='this_object')
+    @exported_block(persists=False, changes='explicit')
     def get_source(self):
         return self.source  # TODO no need for this now...?
     
