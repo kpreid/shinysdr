@@ -35,14 +35,14 @@ from shinysdr.math import LazyRateCalculator
 from shinysdr.signals import SignalType
 from shinysdr.telemetry import TelemetryStore
 from shinysdr.types import Enum, Notice
-from shinysdr.values import ExportedState, CollectionState, exported_block, exported_value, setter, IWritableCollection, unserialize_exported_state
+from shinysdr.values import CellDict, ExportedState, CollectionState, exported_block, exported_value, setter, IWritableCollection, unserialize_exported_state
 
 
 class ReceiverCollection(CollectionState):
     implements(IWritableCollection)
     
     def __init__(self, table, top):
-        CollectionState.__init__(self, table, dynamic=True)
+        CollectionState.__init__(self, table)
         self.__top = top
     
     def state_insert(self, key, desc):
@@ -74,9 +74,12 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 
         # Configuration
         # TODO: device refactoring: Remove vestigial 'accessories'
-        self._sources = {k: d for k, d in devices.iteritems() if d.can_receive()}
+        self._sources = CellDict({k: d for k, d in devices.iteritems() if d.can_receive()})
         self._accessories = accessories = {k: d for k, d in devices.iteritems() if not d.can_receive()}
-        self.source_name = self._sources.keys()[0]  # arbitrary valid initial value
+        for key in self._sources:
+            # arbitrary valid initial value
+            self.source_name = key
+            break
         self.__rx_device_type = Enum({k: v.get_name() or k for (k, v) in self._sources.iteritems()})
         
         # Audio early setup
@@ -97,14 +100,14 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.__clip_probe = MaxProbe()
         
         # Receiver blocks (multiple, eventually)
-        self._receivers = {}
+        self._receivers = CellDict(dynamic=True)
         self._receiver_valid = {}
         
         # collections
         # TODO: No longer necessary to have these non-underscore names
-        self.sources = CollectionState(self._sources)
+        self.sources = CollectionState(CellDict(self._sources))
         self.receivers = ReceiverCollection(self._receivers, self)
-        self.accessories = CollectionState(accessories)
+        self.accessories = CollectionState(CellDict(accessories))
         self.__telemetry_store = TelemetryStore()
         
         # Flags, other state

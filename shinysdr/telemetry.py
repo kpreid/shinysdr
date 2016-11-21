@@ -29,7 +29,7 @@ from twisted.internet.interfaces import IReactorTime
 from zope.interface import Interface, implements
 
 from shinysdr.types import bare_type_registry
-from shinysdr.values import CollectionState
+from shinysdr.values import CellDict, CollectionState
 
 
 __all__ = []  # appended later
@@ -162,8 +162,8 @@ class TelemetryStore(CollectionState):
     implements(ITelemetryStore)
         
     def __init__(self, time_source=the_reactor):
-        self.__interesting_objects = {}
-        CollectionState.__init__(self, self.__interesting_objects, dynamic=True)
+        self.__interesting_objects = CellDict(dynamic=True)
+        CollectionState.__init__(self, self.__interesting_objects)
         self.__objects = {}
         self.__expiry_times = {}
         self.__time_source = IReactorTime(time_source)

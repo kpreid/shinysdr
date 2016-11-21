@@ -29,7 +29,7 @@ from gnuradio import gr
 from shinysdr.signals import SignalType
 from shinysdr.telemetry import TelemetryItem, Track, empty_track
 from shinysdr.types import Range
-from shinysdr.values import CollectionState, ExportedState, LooseCell, ViewCell, exported_block, exported_value, nullExportedState
+from shinysdr.values import CellDict, CollectionState, ExportedState, LooseCell, ViewCell, exported_block, exported_value, nullExportedState
 
 
 __all__ = []
@@ -163,10 +163,11 @@ class Device(ExportedState):
         self.__vfo_cell = vfo_cell
         self.rx_driver = IRXDriver(rx_driver) if rx_driver is not nullExportedState else nullExportedState
         self.tx_driver = ITXDriver(tx_driver) if tx_driver is not nullExportedState else nullExportedState
-        self.__components = {}
+        coerced_components = {}
         for key, component in components.iteritems():
-            self.__components[key] = IComponent(component)
-        self.__components_state = CollectionState(self.__components, dynamic=False)
+            coerced_components[key] = IComponent(component)
+        self.__components = CellDict(initial_state=coerced_components)
+        self.__components_state = CollectionState(self.__components)
         
         self.__transmitting = False
     
@@ -284,10 +285,10 @@ def merge_devices(devices):
         rx_drivers = [d.get_rx_driver() for d in devices if d.can_receive()]
         tx_drivers = [d.get_tx_driver() for d in devices if d.can_transmit()]
         vfo_cells = [d.get_vfo_cell() for d in devices if d.can_tune()]
-        component_names = Counter(k for d in devices for k in d.get_components_dict().keys())
+        component_names = Counter(k for d in devices for k in d.get_components_dict())
         merged_components = {}
         for i, d in enumerate(devices):
-            if any(component_names[k] > 1 for k in d.get_components_dict().keys()):
+            if any(component_names[k] > 1 for k in d.get_components_dict()):
                 prefix = u'%i-' % i
             else:
                 prefix = ''

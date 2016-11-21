@@ -60,11 +60,15 @@ class _StateStreamObjectRegistration(object):
             else:
                 self.__subscription = obj.subscribe2(self.__listen_cell, subscription_context)
                 self.send_now_if_needed = self.__listen_cell
-        else:
+        elif isinstance(obj, ExportedState):
             self.__obj_is_cell = False
-            # TODO get rid of subscribe_state and then we can drop poller entirely
-            self.__subscription = subscription_context.poller.subscribe_state(obj, self.__listen_state)
+            if obj.state_is_dynamic():
+                self.__subscription = obj.state_subscribe(self.__listen_state, subscription_context)
+            else:
+                self.__subscription = None
             self.send_now_if_needed = lambda: self.__listen_state(self.obj.state())
+        else:
+            raise TypeError('not a cell or ExportedState: {!r}'.format(obj))
         self.__refcount = refcount
     
     def __str__(self):

@@ -34,7 +34,7 @@ from shinysdr.i.modes import lookup_mode
 from shinysdr.signals import SignalType, no_signal
 from shinysdr.devices import Device, IRXDriver
 from shinysdr.types import Range
-from shinysdr.values import CollectionState, ExportedState, LooseCell, exported_block, exported_value, setter
+from shinysdr.values import CellDict, CollectionState, ExportedState, LooseCell, exported_block, exported_value, setter
 
 
 __all__ = []  # appended later
@@ -79,9 +79,9 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
         audio_rate = self.audio_rate
         
         self.__noise_level = -22
-        self.__transmitters = {}
+        self.__transmitters = CellDict(dynamic=True)
         
-        self.__transmitters_cs = CollectionState(self.__transmitters, dynamic=True)
+        self.__transmitters_cs = CollectionState(self.__transmitters)
         
         self.__bus = blocks.add_vcc(1)
         self.__channel_model = channels.channel_model(

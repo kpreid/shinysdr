@@ -295,10 +295,12 @@ class RTL433MsgGroup(ExportedState):
     def receive(self, message_wrapper):
         """Implements ITelemetryObject."""
         self.__last_heard_time = message_wrapper.receive_time
+        shape_changed = False
         for k, v in message_wrapper.message.iteritems():
             if _message_field_is_id.get(k, False) or k == u'time':
                 continue
             if k not in self.__cells:
+                shape_changed = True
                 self.__cells[k] = LooseCell(
                     key=k,
                     value=None,
@@ -307,6 +309,8 @@ class RTL433MsgGroup(ExportedState):
                     persists=False)
             self.__cells[k].set_internal(v)
         self.state_changed()
+        if shape_changed:
+            self.state_shape_changed()
     
     def is_interesting(self):
         """Implements ITelemetryObject."""

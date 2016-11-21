@@ -44,7 +44,7 @@ from shinysdr.math import LazyRateCalculator
 from shinysdr.signals import no_signal
 from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, TelemetryStore, Track, empty_track
 from shinysdr.types import EnumRow, Notice, Range, Timestamp
-from shinysdr.values import CollectionState, ExportedState, exported_value, setter
+from shinysdr.values import ExportedState, exported_value, setter
 
 
 

@@ -21,7 +21,7 @@ import bisect
 
 from twisted.internet import task, reactor as the_reactor
 
-from shinysdr.values import BaseCell, ExportedState, StreamCell, SubscriptionContext
+from shinysdr.values import BaseCell, StreamCell, SubscriptionContext
 
 __all__ = []  # appended later
 
@@ -49,13 +49,6 @@ class Poller(object):
         else:
             target = _PollerValueTarget(cell)
         return _PollerSubscription(self, target, callback, fast)
-    
-    # TODO: consider replacing this with a special derived cell
-    def subscribe_state(self, obj, callback):
-        if not isinstance(obj, ExportedState):
-            # we're not actually against duck typing here; this is a sanity check
-            raise TypeError('Poller given a non-ES %r' % (obj,))
-        return _PollerSubscription(self, _PollerStateTarget(obj), callback, False)
     
     def _add_subscription(self, target, subscription):
         self.__targets[subscription.fast].add(target, subscription)
@@ -159,21 +152,6 @@ class _PollerValueTarget(_PollerTarget):
             self.__previous_value = value
             # TODO should pass value in to avoid redundant gets
             fire()
-
-
-class _PollerStateTarget(_PollerTarget):
-    def __init__(self, block):
-        _PollerTarget.__init__(self, block)
-        self.__previous_structure = None  # unequal to any state dict
-        self.__dynamic = block.state_is_dynamic()
-
-    def poll(self, fire):
-        obj = self._obj
-        if self.__dynamic or self.__previous_structure is None:
-            now = obj.state()
-            if now != self.__previous_structure:
-                self.__previous_structure = now
-                fire(now)
 
 
 class _PollerStreamTarget(_PollerTarget):

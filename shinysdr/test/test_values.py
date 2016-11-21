@@ -23,7 +23,7 @@ from twisted.internet.task import Clock
 
 from shinysdr.i.poller import Poller
 from shinysdr.types import Range
-from shinysdr.values import Cell, CollectionState, ExportedState, LooseCell, SubscriptionContext, ViewCell, command, exported_block, exported_value, nullExportedState, setter, unserialize_exported_state
+from shinysdr.values import Cell, CellDict, CollectionState, ExportedState, LooseCell, SubscriptionContext, ViewCell, command, exported_block, exported_value, nullExportedState, setter, unserialize_exported_state
 
 
 class TestExportedState(unittest.TestCase):
@@ -315,7 +315,7 @@ class TestStateInsert(unittest.TestCase):
     
     def test_undefined(self):
         """no state_insert method defined"""
-        self.object = CollectionState({}, dynamic=True)
+        self.object = CollectionState(CellDict(dynamic=True))
         self.object.state_from_json({'foo': {'fail': True}})
         # throws but exception is caught
         self.assertEqual([], self.object.state().keys())
@@ -324,8 +324,8 @@ class TestStateInsert(unittest.TestCase):
 class InsertFailSpecimen(CollectionState):
     """Helper for TestStateInsert"""
     def __init__(self):
-        self.table = {}
-        CollectionState.__init__(self, self.table, dynamic=True)
+        self.table = CellDict(dynamic=True)
+        CollectionState.__init__(self, self.table)
     
     def state_insert(self, key, desc):
         if desc['fail']:

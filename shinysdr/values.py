@@ -290,24 +290,6 @@ class StreamCell(ValueCell):
         raise Exception('StreamCell is not writable.')
 
 
-class CollectionMemberCell(ValueCell):
-    def __init__(self, target, key, type, persists=True):
-        ValueCell.__init__(self, target, key, type=type, writable=False, persists=persists)
-        self.__last_seen = nullExportedState  # TODO: no longer the best choice
-    
-    def get(self):
-        # fallback to old value so that if we become invalid in a dynamic collection we don't break
-        value = self._target._collection.get(self._key, self.__last_seen)
-        self.__last_seen = value
-        return value
-    
-    def set(self, value):
-        raise Exception('CollectionMemberCell is not writable.')
-
-    def subscribe2(self, callback, context):
-        return context.poller.subscribe(self, lambda: callback(self.get()), fast=False)
-
-
 class LooseCell(ValueCell):
     """
     A cell which stores a value and does not get it from another object; it can therefore reliably provide update notifications.
@@ -519,6 +501,16 @@ class ExportedState(object):
             
         return self.__cache
     
+    def state_subscribe(self, callback, context):
+        try:
+            self.__shape_subscriptions
+        except AttributeError:
+            self.__shape_subscriptions = set()
+        if self.state_is_dynamic():
+            return _SimpleSubscription(self, callback, context, self.__shape_subscriptions)
+        else:
+            return _NeverSubscription()
+    
     def state__setter_called(self, setter_descriptor):
         """Called by ExportedSetter when the setter method is called."""
         try:
@@ -539,6 +531,19 @@ class ExportedState(object):
                 cell.poll_for_change(specific_cell=False)
         else:
             state[key].poll_for_change(specific_cell=True)
+    
+    def state_shape_changed(self):
+        """To be called by the object's implementation when it has gained, lost, or replaced a cell.
+        
+        This only applies to objects which return True from state_is_dynamic().
+        """
+        new_state = self.state()
+        try:
+            subscriptions = self.__shape_subscriptions
+        except AttributeError:
+            return
+        for subscription in subscriptions:
+            subscription._fire(new_state)
     
     def state_to_json(self):
         state = {}
@@ -616,24 +621,83 @@ class NullExportedState(ExportedState):
 nullExportedState = NullExportedState()
 
 
-class CollectionState(ExportedState):
-    """Wrapper around a plain Python collection."""
-    def __init__(self, collection, member_type=Reference(), dynamic=False):
-        self._collection = collection  # accessed by CollectionMemberCell
-        self.__keys = collection.keys()
+class CellDict(object):
+    """A dictionary-like object which holds its contents in cells."""
+    
+    def __init__(self, initial_state={}, dynamic=False, member_type=Reference()):
+        self.__member_type = member_type
         self.__cells = {}
-        self.__dynamic = dynamic
-        self.__member_type = to_value_type(member_type)
+        self._shape_subscription = lambda: None
+        
+        self._dynamic = True
+        for key in initial_state:
+            self[key] = initial_state[key]
+        self._dynamic = dynamic
+    
+    def __len__(self):
+        return len(self.__cells)
+    
+    def __contains(self, key):
+        return key in self.__cells
+    
+    def __getitem__(self, key):
+        return self.__cells[key].get()
+    
+    def __setitem__(self, key, value):
+        if key in self.__cells:
+            self.__cells[key].set_internal(value)
+        else:
+            assert self._dynamic
+            self.__cells[key] = LooseCell(
+                key=key,
+                value=value,
+                type=self.__member_type,
+                persists=True,
+                writable=False)
+            self._shape_subscription()
+    
+    def __delitem__(self, key):
+        assert self._dynamic
+        if key in self.__cells:
+            del self.__cells[key]
+            self._shape_subscription()
+    
+    def __iter__(self):
+        return self.iterkeys()
+    
+    def iterkeys(self):
+        return self.__cells.iterkeys()
+    
+    def itervalues(self):
+        for key in self:
+            yield self[key]
+    
+    def iteritems(self):
+        for key in self:
+            yield key, self[key]
+    
+    def get_cell(self, key):
+        return self.__cells[key]
+
+
+class CollectionState(ExportedState):
+    """Wrapper around a CellDict which exports its contents.
+    
+    Suitable for use as a superclass or mixin as well as by itself."""
+    
+    def __init__(self, cell_dict):
+        self.__collection = cell_dict
+        self.__dynamic = cell_dict._dynamic
+        
+        cell_dict._shape_subscription = self.state_shape_changed
     
     def state_is_dynamic(self):
         return self.__dynamic
     
     def state_def(self, callback):
         super(CollectionState, self).state_def(callback)
-        for key in self._collection:
-            if key not in self.__cells:
-                self.__cells[key] = CollectionMemberCell(self, key, self.__member_type)
-            callback(self.__cells[key])
+        for key in self.__collection:
+            callback(self.__collection.get_cell(key))
 
 
 class IWritableCollection(Interface):

@@ -27,7 +27,7 @@ from zope.interface import Interface, implements  # available via Twisted
 from shinysdr.i.network.export_ws import StateStreamInner
 from shinysdr.i.poller import Poller
 from shinysdr.signals import SignalType
-from shinysdr.values import CollectionState, ExportedState, NullExportedState, SubscriptionContext, exported_block, exported_value, nullExportedState, setter
+from shinysdr.values import CellDict, CollectionState, ExportedState, NullExportedState, SubscriptionContext, exported_block, exported_value, nullExportedState, setter
 
 
 class StateStreamTestCase(unittest.TestCase):
@@ -108,8 +108,8 @@ class TestStateStream(StateStreamTestCase):
         ])
     
     def test_collection_delete(self):
-        d = {'a': ExportedState()}
-        self.setUpForObject(CollectionState(d, dynamic=True))
+        d = CellDict({'a': ExportedState()}, dynamic=True)
+        self.setUpForObject(CollectionState(d))
         
         self.assertEqual(self.getUpdates(), [
             ['register_block', 1, 'urlroot', []],
