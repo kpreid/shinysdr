@@ -67,6 +67,16 @@ class TestExportedState(unittest.TestCase):
                 u'block': {},
             },
         })
+    
+    # see TestCell for other subscription cases
+    def test_subscription_this_setter(self):
+        o = ValueAndBlockSpecimen()
+        st = SubscriptionTester(o.state()['value'])
+        o.set_value(1)
+        st.expect_now(1)
+        st.unsubscribe()
+        o.set_value(2)
+        st.advance()  # check for unwanted callbacks
 
 
 class ValueAndBlockSpecimen(ExportedState):
@@ -153,8 +163,7 @@ class TestCell(unittest.TestCase):
     def test_subscription_explicit(self):
         self.__test_subscription('explicit')
     
-    def test_subscription_this_setter(self):
-        self.__test_subscription('this_setter')
+    # this_setter is handled in TestExportedState because it involves the decorators
 
 
 class NoInherentCellSpecimen(object):

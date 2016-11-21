@@ -161,7 +161,7 @@ class Cell(ValueCell):
         ValueCell.__init__(self, target, key, writable=writable, persists=persists, type=type)
         
         self.__changes = changes
-        if changes == u'explicit':
+        if changes == u'explicit' or changes == u'this_setter':
             self.__explicit_subscriptions = set()
             self.__last_polled_value = object()
         
@@ -189,15 +189,13 @@ class Cell(ValueCell):
             return _NeverSubscription()
         elif changes == u'continuous':
             return context.poller.subscribe(self, lambda: callback(self.get()), fast=True)
-        elif changes == u'explicit':
+        elif changes == u'explicit' or changes == u'this_setter':
             return _SimpleSubscription(self, callback, context, self.__explicit_subscriptions)
-        elif changes == u'this_setter':
-            return context.poller.subscribe(self, lambda: callback(self.get()), fast=False)
         else:
             raise ValueError('shouldn\'t happen unrecognized changes value: {!r}'.format(changes))
 
     def poll_for_change(self, specific_cell):
-        if self.__changes != u'explicit':
+        if not hasattr(self, '_Cell__explicit_subscriptions'):
             return
         value = self.get()
         if value != self.__last_polled_value:
@@ -205,6 +203,9 @@ class Cell(ValueCell):
             for subscription in self.__explicit_subscriptions:
                 subscription._fire(value)
     
+    def poll_for_change_from_setter(self):
+        if self.__changes == u'this_setter':
+            self.poll_for_change(specific_cell=True)
 
 
 class _MessageSplitter(object):
@@ -487,6 +488,7 @@ class ExportedState(object):
         if self.state_is_dynamic() or not hasattr(self, '_ExportedState__cache'):
             cache = {}
             self.__cache = cache
+            self.__setter_cells = {}
 
             def callback(cell):
                 cache[cell.key()] = cell
@@ -494,21 +496,37 @@ class ExportedState(object):
             
             # decorator support
             # TODO kludgy introspection, figure out what is better
-            for k in dir(type(self)):
+            class_obj = type(self)
+            for k in dir(class_obj):
                 if not hasattr(self, k): continue
-                v = getattr(type(self), k)
+                v = getattr(class_obj, k)
                 # TODO use an interface here and move the check inside
                 if isinstance(v, ExportedGetter):
                     if not k.startswith('get_'):
-                        # TODO factor out attribute name usage in Cell so this restriction is moot
+                        # TODO factor out attribute name usage in Cell so this restriction is moot for non-settable cells
                         raise LookupError('Bad getter name', k)
                     else:
                         k = k[len('get_'):]
-                    cache[k] = v.make_cell(self, k)
+                    setter_descriptor = getattr(class_obj, 'set_' + k, None)
+                    if not isinstance(setter_descriptor, ExportedSetter):
+                        # e.g. a non-exported setter method
+                        setter_descriptor = None
+                    cell = v.make_cell(self, k, writable=setter_descriptor is not None)
+                    self.__setter_cells[setter_descriptor] = cell
+                    cache[k] = cell
                 elif isinstance(v, ExportedCommand):
                     cache[k] = v.make_cell(self, k)
             
         return self.__cache
+    
+    def state__setter_called(self, setter_descriptor):
+        """Called by ExportedSetter when the setter method is called."""
+        try:
+            table = self.__setter_cells
+        except AttributeError:
+            # state() has not yet been called, so the cell has not been created, so there are no possible subscriptions to notify, so we don't need to do anything.
+            return
+        table[setter_descriptor].poll_for_change_from_setter()
     
     def state_changed(self, key=None):
         """To be called by the object's implementation when a cell value has been changed.
@@ -671,14 +689,12 @@ class ExportedGetter(object):
         else:
             return self.__function.__get__(obj, type)
     
-    def make_cell(self, obj, attr):
+    def make_cell(self, obj, attr, writable):
         kwargs = self.__cell_kwargs
         if 'type_fn' in kwargs:
             kwargs = kwargs.copy()
             kwargs['type'] = kwargs['type_fn'](obj)
             del kwargs['type_fn']
-        # TODO kludgy introspection, figure out what is better
-        writable = hasattr(obj, 'set_' + attr) and isinstance(getattr(type(obj), 'set_' + attr), ExportedSetter)
         return Cell(obj, attr, writable=writable, **kwargs)
     
     def state_to_kwargs(self, value):
@@ -693,7 +709,6 @@ class ExportedSetter(object):
     # This has no relevant behavior of its own; it is merely searched for by its paired ExportedGetter.
     
     def __init__(self, f):
-        # TODO: Coerce with value type?
         self.__function = f
     
     def __get__(self, obj, type=None):
@@ -701,7 +716,12 @@ class ExportedSetter(object):
         if obj is None:
             return self
         else:
-            return self.__function.__get__(obj, type)
+            bound_method = self.__function.__get__(obj, type)
+            def exported_setter_wrapper(value):
+                # TODO: Also coerce with value type? Requires tighter association with cell, may be overly restrictive in some cases.
+                bound_method(value)
+                obj.state__setter_called(self)
+            return exported_setter_wrapper
 
 
 class ExportedCommand(object):
