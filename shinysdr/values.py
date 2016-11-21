@@ -95,6 +95,9 @@ class BaseCell(object):
         
     def description(self):
         raise NotImplementedError()
+    
+    def __repr__(self):
+        return '<{type} {self._target!r}.{self._key}>'.format(type=type(self).__name__, self=self)
 
 
 class ValueCell(BaseCell):
