@@ -476,30 +476,37 @@ class ExportedState(object):
                 cache[cell.key()] = cell
             self.state_def(callback)
             
-            # decorator support
-            # TODO kludgy introspection, figure out what is better
-            class_obj = type(self)
-            for k in dir(class_obj):
-                if not hasattr(self, k): continue
-                v = getattr(class_obj, k)
-                # TODO use an interface here and move the check inside
-                if isinstance(v, ExportedGetter):
-                    if not k.startswith('get_'):
-                        # TODO factor out attribute name usage in Cell so this restriction is moot for non-settable cells
-                        raise LookupError('Bad getter name', k)
-                    else:
-                        k = k[len('get_'):]
-                    setter_descriptor = getattr(class_obj, 'set_' + k, None)
-                    if not isinstance(setter_descriptor, ExportedSetter):
-                        # e.g. a non-exported setter method
-                        setter_descriptor = None
-                    cell = v.make_cell(self, k, writable=setter_descriptor is not None)
-                    self.__setter_cells[setter_descriptor] = cell
-                    cache[k] = cell
-                elif isinstance(v, ExportedCommand):
-                    cache[k] = v.make_cell(self, k)
+            for cell in self.__decorator_cells():
+                callback(cell)
             
         return self.__cache
+    
+    def __decorator_cells(self):
+        # this is separate from state_def so that if state_is_dynamic we don't recreate these every time, forgetting subscriptions
+        if hasattr(self, '_ExportedState__decorator_cells_cache'):
+            return self.__decorator_cells_cache
+        self.__decorator_cells_cache = []
+        class_obj = type(self)
+        for k in dir(class_obj):
+            if not hasattr(self, k): continue
+            v = getattr(class_obj, k)
+            # TODO use an interface here and move the check inside
+            if isinstance(v, ExportedGetter):
+                if not k.startswith('get_'):
+                    # TODO factor out attribute name usage in Cell so this restriction is moot for non-settable cells
+                    raise LookupError('Bad getter name', k)
+                else:
+                    k = k[len('get_'):]
+                setter_descriptor = getattr(class_obj, 'set_' + k, None)
+                if not isinstance(setter_descriptor, ExportedSetter):
+                    # e.g. a non-exported setter method
+                    setter_descriptor = None
+                cell = v.make_cell(self, k, writable=setter_descriptor is not None)
+                self.__setter_cells[setter_descriptor] = cell
+                self.__decorator_cells_cache.append(cell)
+            elif isinstance(v, ExportedCommand):
+                self.__decorator_cells_cache.append(v.make_cell(self, k))
+        return self.__decorator_cells_cache
     
     def state_subscribe(self, callback, context):
         try:
