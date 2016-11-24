@@ -188,7 +188,7 @@ class _StateStreamObjectRegistration(object):
 
 # TODO: Better name for this category of object
 class StateStreamInner(object):
-    def __init__(self, send, root_object, root_url, noteDirty, subscription_context=the_subscription_context):
+    def __init__(self, send, root_object, root_url, subscription_context=the_subscription_context):
         self.__subscription_context = subscription_context
         self._send = send
         self.__root_object = root_object
@@ -200,7 +200,6 @@ class StateStreamInner(object):
         self._send_batch = []
         self.__batch_delay = None
         self.__root_url = root_url
-        self.__noteDirty = noteDirty
         root_registration.send_now_if_needed()
     
     def connectionLost(self, reason):
@@ -224,7 +223,6 @@ class StateStreamInner(object):
             t1 = time.time()
             # TODO: Define self.__str__ or similar such that we can easily log which client is sending the command
             log.msg('set %s to %r (%1.2fs)' % (registration, value, t1 - t0))
-            self.__noteDirty()  # TODO fix things so noteDirty is not needed
         else:
             log.msg('Unrecognized state stream op received: %r' % (command,))
             
@@ -353,11 +351,10 @@ class OurStreamProtocol(Protocol):
     
     This protocol's transport should be a txWS WebSocket transport.
     """
-    def __init__(self, caps, noteDirty):
+    def __init__(self, caps):
         self._caps = caps
         self._seenValues = {}
         self.inner = None
-        self.__noteDirty = noteDirty
     
     def dataReceived(self, data):
         """Twisted Protocol implementation.
@@ -392,7 +389,7 @@ class OurStreamProtocol(Protocol):
         elif len(path) >= 1 and path[0] == 'radio':
             # note _lookup_block may throw. TODO: Better error reporting
             root_object = _lookup_block(root_object, path[1:])
-            self.inner = StateStreamInner(self.__send, root_object, loc, self.__noteDirty)  # note reuse of loc as HTTP path; probably will regret this
+            self.inner = StateStreamInner(self.__send, root_object, loc)  # note reuse of loc as HTTP path; probably will regret this
         else:
             raise Exception('Unknown path: %r' % (path,))
     

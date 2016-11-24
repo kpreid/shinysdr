@@ -100,12 +100,12 @@ class _RadioIndexHtmlResource(Resource):
 
 class WebService(Service):
     # TODO: Too many parameters
-    def __init__(self, reactor, root_object, note_dirty, read_only_dbs, writable_db, http_endpoint, ws_endpoint, root_cap, title, flowgraph_for_debug):
+    def __init__(self, reactor, root_object, read_only_dbs, writable_db, http_endpoint, ws_endpoint, root_cap, title, flowgraph_for_debug):
         # Constants
         self.__http_port = http_endpoint
         self.__ws_port = ws_endpoint
         
-        wcommon = WebServiceCommon(note_dirty=note_dirty, ws_endpoint=ws_endpoint)
+        wcommon = WebServiceCommon(ws_endpoint=ws_endpoint)
         
         # Roots of resource trees
         # - app_root is everything stateful/authority-bearing
@@ -126,7 +126,7 @@ class WebService(Service):
         _put_session(app_root, root_object, wcommon, reactor, title, read_only_dbs, writable_db, flowgraph_for_debug)
         
         self.__ws_protocol = txws.WebSocketFactory(
-            FactoryWithArgs.forProtocol(OurStreamProtocol, ws_caps, note_dirty))
+            FactoryWithArgs.forProtocol(OurStreamProtocol, ws_caps))
         self.__site = server.Site(server_root)
         
         self.__ws_port_obj = None
@@ -247,8 +247,7 @@ def _put_session(container_resource, session, wcommon, reactor, title, read_only
 
 class WebServiceCommon(object):
     """Ugly collection of stuff web resources need which is not noteworthy authority."""
-    def __init__(self, note_dirty, ws_endpoint):
-        self.note_dirty = note_dirty
+    def __init__(self, ws_endpoint):
         self.__ws_endpoint = ws_endpoint
 
     def make_websocket_url(self, request, path):

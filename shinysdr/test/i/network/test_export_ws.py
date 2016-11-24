@@ -45,7 +45,6 @@ class StateStreamTestCase(unittest.TestCase):
             send,
             self.object,
             'urlroot',
-            lambda: None,  # TODO test noteDirty or make it unnecessary
             subscription_context=self.st.context)
     
     def getUpdates(self):

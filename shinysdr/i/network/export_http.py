@@ -39,7 +39,6 @@ class _CellResource(Resource):
     def __init__(self, cell, wcommon):
         Resource.__init__(self)
         self._cell = cell
-        self.__note_dirty = wcommon.note_dirty
 
     def grparse(self, value):
         raise NotImplementedError()
@@ -54,7 +53,6 @@ class _CellResource(Resource):
         data = request.content.read()
         self._cell.set(self.grparse(data))
         request.setResponseCode(204)
-        self.__note_dirty()
         return ''
 
 
@@ -133,7 +131,6 @@ class BlockResource(Resource):
         assert request.getHeader('Content-Type') == 'application/json'
         reqjson = json.load(request.content)
         key = block.create_child(reqjson)  # note may fail
-        self.__wcommon.note_dirty()
         url = request.prePathURL() + '/receivers/' + urllib.quote(key, safe='')
         request.setResponseCode(201)  # Created
         request.setHeader('Location', url)
@@ -142,7 +139,6 @@ class BlockResource(Resource):
     
     def render_DELETE(self, request):
         self._deleteSelf()
-        self.__wcommon.note_dirty()
         request.setResponseCode(204)  # No Content
         return ''
     

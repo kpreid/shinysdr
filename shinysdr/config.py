@@ -103,14 +103,13 @@ class Config(object):
             if len(root_cap) <= 0:
                 raise ConfigException('config.serve_web: root_cap must be None or a nonempty string')
         
-        def make_service(app, note_dirty):
+        def make_service(app):
             # TODO: This is, of course, not where session objects should be created. Working on it...
             import shinysdr.i.network.app as lazy_app
             return lazy_app.WebService(
                 reactor=self.reactor,
                 root_object=app.get_session(),
                 flowgraph_for_debug=app.get_receive_flowgraph(),  # TODO: Once we have the diagnostics or admin page however that turns out to work, this goes away
-                note_dirty=note_dirty,
                 read_only_dbs=self.databases._get_read_only_databases(),
                 writable_db=self.databases._get_writable_database(),
                 http_endpoint=http_endpoint,
@@ -124,9 +123,9 @@ class Config(object):
         self._not_finished()
         # TODO: Alternate services should be provided using getPlugins rather than hardcoded
         
-        def make_service(app, note_dirty):
+        def make_service(app):
             import shinysdr.plugins.ghpsdr as lazy_ghpsdr
-            return lazy_ghpsdr.DspserverService(app.get_receive_flowgraph(), note_dirty, 'tcp:8000')
+            return lazy_ghpsdr.DspserverService(app.get_receive_flowgraph(), 'tcp:8000')
         
         self._service_makers.append(make_service)
     

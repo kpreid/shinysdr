@@ -109,10 +109,6 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
         
         stateFile = configObj._state_filename
     
-    def noteDirty():
-        # TODO delete this function
-        pass
-    
     def restore(root, get_defaults):
         if stateFile is not None:
             if os.path.isfile(stateFile):
@@ -151,7 +147,7 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
     log.msg('Starting web server...')
     services = MultiService()
     for maker in configObj._service_makers:
-        IService(maker(app, noteDirty)).setServiceParent(services)
+        IService(maker(app)).setServiceParent(services)
     services.startService()
     
     log.msg('ShinySDR is ready.')
@@ -168,7 +164,7 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
     
     if _abort_for_test:
         services.stopService()
-        defer.returnValue((app, noteDirty))
+        defer.returnValue(app)
     else:
         yield defer.Deferred()  # never fires
 

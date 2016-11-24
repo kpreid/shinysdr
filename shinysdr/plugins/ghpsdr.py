@@ -178,7 +178,7 @@ class _DspserverProtocol(protocol.Protocol):
 
 
 class DspserverService(Service):
-    def __init__(self, top, noteDirty, endpoint):
+    def __init__(self, top, endpoint):
         self.__top = top
         self.__endpoint = endpoint
         self.__port_obj = None

@@ -142,7 +142,7 @@ class TestConfigObject(unittest.TestCase):
         self.config.serve_web(http_endpoint='tcp:0', ws_endpoint='tcp:0')
         self.assertEqual(1, len(self.config._service_makers))
         # Actually instantiating the service. We need to do this to check if the root_cap value was processed correctly.
-        service = self.config._service_makers[0](DummyAppRoot(), lambda: None)
+        service = self.config._service_makers[0](DummyAppRoot())
         self.assertEqual('/', service.get_host_relative_url())
     
     # --- serve_ghpsdr ---

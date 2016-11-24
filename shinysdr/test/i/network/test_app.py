@@ -47,8 +47,7 @@ class TestWebSite(unittest.TestCase):
             writable_db=DatabaseModel(reactor, {}),
             root_object=SiteStateStub(),
             flowgraph_for_debug=gr.top_block(),
-            title='test title',
-            note_dirty=_noop)
+            title='test title')
         self._service.startService()
         self.url = self._service.get_url()
     
@@ -123,17 +122,12 @@ class TestSiteWithoutRootCap(TestWebSite):
             writable_db=DatabaseModel(reactor, {}),
             root_object=SiteStateStub(),
             flowgraph_for_debug=gr.top_block(),
-            title='test title',
-            note_dirty=_noop)
+            title='test title')
         self._service.startService()
         self.url = self._service.get_url()
     
     def test_expected_url(self):
         self.assertEqual('/', self._service.get_host_relative_url())
-
-
-def _noop():
-    pass
 
 
 class SiteStateStub(ExportedState):
