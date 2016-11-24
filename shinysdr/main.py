@@ -38,8 +38,13 @@ from twisted.python import log
 # Note that gnuradio-dependent modules are loaded later, to avoid the startup time if all we're going to do is give a usage message
 from shinysdr.config import Config, write_default_config, execute_config
 from shinysdr.i.dependencies import DependencyTester
+from shinysdr.i.poller import the_subscription_context
+from shinysdr.values import PersistenceChangeDetector
 
 __all__ = []  # appended later
+
+
+_PERSISTENCE_DELAY = 0.5
 
 
 def main(argv=None, _abort_for_test=False):
@@ -105,10 +110,8 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
         stateFile = configObj._state_filename
     
     def noteDirty():
-        if stateFile is not None:
-            # just immediately write (revisit this when more performance is needed)
-            with open(stateFile, 'w') as f:
-                json.dump(app.state_to_json(), f)
+        # TODO delete this function
+        pass
     
     def restore(root, get_defaults):
         if stateFile is not None:
@@ -126,6 +129,24 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
     
     log.msg('Restoring state...')
     restore(app, _app_defaults)
+    
+    # Set up persistence
+    if stateFile is not None:
+        def eventually_write():
+            log.msg('Scheduling state write.')
+            def actually_write():
+                log.msg('Performing state write...')
+                current_state = pcd.get()
+                with open(stateFile, 'w') as f:
+                    json.dump(current_state, f)
+                log.msg('...done')
+            
+            reactor.callLater(_PERSISTENCE_DELAY, actually_write)
+            
+        pcd = PersistenceChangeDetector(app, eventually_write, the_subscription_context)
+        # Start implicit write-to-disk loop, but don't actually write.
+        # This is because it is useful in some failure modes to not immediately overwrite a good state file with a bad one on startup.
+        pcd.get()
     
     log.msg('Starting web server...')
     services = MultiService()

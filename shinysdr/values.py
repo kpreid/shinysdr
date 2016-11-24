@@ -87,10 +87,13 @@ class BaseCell(object):
         """Set the value held by this cell."""
         raise NotImplementedError()
     
-    def get_state(self):
-        """Return the value, or state of the object, held by this cell."""
+    def get_state(self, subscriber=lambda _: None):
+        """Return the value, or state of the object, held by this cell.
+        
+        If 'subscriber' is provided, then it will be called with each relevant 'subscribe2' or 'state_subscribe' method as a parameter."""
+        subscriber(self.subscribe2)
         if self.type().is_reference():
-            return self.get().state_to_json()
+            return self.get().state_to_json(subscriber=subscriber)
         else:
             return self.get()
     
@@ -552,11 +555,12 @@ class ExportedState(object):
         for subscription in subscriptions:
             subscription._fire(new_state)
     
-    def state_to_json(self):
+    def state_to_json(self, subscriber=lambda _: None):
+        subscriber(self.state_subscribe)
         state = {}
         for key, cell in self.state().iteritems():
             if cell.persists():
-                state[key] = cell.get_state()
+                state[key] = cell.get_state(subscriber=subscriber)
         return state
     
     def state_from_json(self, state):
@@ -614,6 +618,42 @@ def unserialize_exported_state(ctor, kwargs=None, state=None):
     if len(not_yet_set_state) > 0:
         obj.state_from_json(not_yet_set_state)
     return obj
+
+
+# TODO: This may not really belong in the 'public' modules
+class PersistenceChangeDetector(object):
+    """Wrap state_to_json() so as to be notified when its result would change.
+    
+    root_object: Object to call .state_to_json() on.
+    callback: Called exactly once after each .get() when the result changes.
+    """
+    
+    # This is not itself a cell because we want to be able to be lazy and not do the potentially expensive state_to_json() immediately every time there is a change, whereas subscribe2 requires that the callback be given the current value. TODO revisit.
+    
+    def __init__(self, root_object, callback, subscription_context):
+        self.__root = root_object
+        self.__callback = callback
+        self.__subscription_context = subscription_context
+        self.__subscriptions = []
+    
+    def get(self):
+        self.__clear_subscriptions()
+        return self.__root.state_to_json(subscriber=self.__add_subscription)
+    
+    def __clear_subscriptions(self):
+        subs = self.__subscriptions
+        self.__subscriptions = []
+        for subscription in subs:
+            subscription.unsubscribe()
+    
+    def __add_subscription(self, subscribe_fn):
+        # TODO: It would be a reasonable strengthening to arrange so that even if the subscriptions misbehave, we do not ever 
+        self.__subscriptions.append(subscribe_fn(self.__do_callback, self.__subscription_context))
+    
+    def __do_callback(self, _value):
+        # ignore value because it is from an arbitrary element
+        self.__clear_subscriptions()
+        self.__callback()
 
 
 class INull(Interface):
