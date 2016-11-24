@@ -22,6 +22,7 @@ from gnuradio import gr
 
 from twisted.internet.defer import Deferred
 from twisted.internet.protocol import Protocol
+from twisted.internet.task import Clock
 from twisted.trial import unittest
 from twisted.web import client
 from twisted.web import http
@@ -29,11 +30,12 @@ from twisted.web.http_headers import Headers
 
 from shinysdr.devices import Device
 from shinysdr.i.modes import lookup_mode
+from shinysdr.i.poller import Poller
 from shinysdr.i.top import Top
 from shinysdr.plugins.simulate import SimulatedDevice
 from shinysdr.signals import SignalType
 from shinysdr.types import Range
-from shinysdr.values import ExportedState, nullExportedState
+from shinysdr.values import ExportedState, SubscriptionContext, nullExportedState
 
 
 # --- Values/types/state test utilities
@@ -46,6 +48,58 @@ def state_smoke_test(value):
         value = cell.get()
         if cell.type().is_reference():
             state_smoke_test(value)
+
+
+class SubscriptionTester(object):
+    """Manages a mock SubscriptionContext."""
+    def __init__(self):
+        self.__clock = Clock()
+        self.context = SubscriptionContext(
+            reactor=self.__clock,
+            poller=Poller())
+    
+    def advance(self):
+        # support both 'real' subscriptions and poller subscriptions
+        self.__clock.advance(1)
+        self.context.poller.poll_all()
+
+
+class CellSubscriptionTester(SubscriptionTester):
+    """Subscribes to a single cell and checks the subscription's behavior."""
+    def __init__(self, cell):
+        SubscriptionTester.__init__(self)
+        self.cell = cell
+        self.expected = []
+        self.seen = []
+        self.subscription = cell.subscribe2(self.__callback, self.context)
+        if not self.subscription:
+            raise Exception('missing subscription object')
+        self.unsubscribed = False
+    
+    def __callback(self, value):
+        if self.unsubscribed:
+            raise Exception('unexpected subscription callback after unsubscribe from {!r}, with value {!r}'.format(self.cell, value))
+        self.seen.append(value)
+    
+    def expect_now(self, expected_value):
+        if len(self.seen) > len(self.expected):
+            raise Exception('too-soon callback from {!r}; saw {!r}'.format(self.cell, actual_value))
+        self.advance()
+        self.should_have_seen(expected_value)
+    
+    def should_have_seen(self, expected_value):
+        i = len(self.expected)
+        self.expected.append(expected_value)
+        if len(self.seen) < len(self.expected):
+            raise Exception('no subscription callback from {!r}; expected {!r}'.format(self.cell, expected_value))
+        actual_value = self.seen[i]
+        if actual_value != expected_value:
+            raise Exception('expected {!r} from {!r}; saw {!r}'.format(expected_value, self.cell, actual_value))
+    
+    def unsubscribe(self):
+        assert not self.unsubscribed
+        self.subscription.unsubscribe()
+        self.unsubscribed = True
 
 
 # --- Radio test utilities ---

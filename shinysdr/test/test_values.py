@@ -19,11 +19,10 @@ from __future__ import absolute_import, division
 
 import unittest
 
-from twisted.internet.task import Clock
-
 from shinysdr.i.poller import Poller
+from shinysdr.test.testutil import CellSubscriptionTester
 from shinysdr.types import Range
-from shinysdr.values import Cell, CellDict, CollectionState, ExportedState, LooseCell, SubscriptionContext, ViewCell, command, exported_block, exported_value, nullExportedState, setter, unserialize_exported_state
+from shinysdr.values import Cell, CellDict, CollectionState, ExportedState, LooseCell, ViewCell, command, exported_block, exported_value, nullExportedState, setter, unserialize_exported_state
 
 
 class TestExportedState(unittest.TestCase):
@@ -71,7 +70,7 @@ class TestExportedState(unittest.TestCase):
     # see TestCell for other subscription cases
     def test_subscription_this_setter(self):
         o = ValueAndBlockSpecimen()
-        st = SubscriptionTester(o.state()['value'])
+        st = CellSubscriptionTester(o.state()['value'])
         o.set_value(1)
         st.expect_now(1)
         st.unsubscribe()
@@ -139,7 +138,7 @@ class TestCell(unittest.TestCase):
     def __test_subscription(self, changes):
         o = NoInherentCellSpecimen()
         cell = Cell(o, 'value', changes=changes)
-        st = SubscriptionTester(cell)
+        st = CellSubscriptionTester(cell)
         o.value = 1
         if changes == 'explicit':
             cell.poll_for_change(specific_cell=True)
@@ -153,7 +152,7 @@ class TestCell(unittest.TestCase):
     def test_subscription_never(self):
         o = NoInherentCellSpecimen()
         cell = Cell(o, 'value', changes='never')
-        st = SubscriptionTester(cell)
+        st = CellSubscriptionTester(cell)
         o.value = 1
         st.advance()  # expected no callback even if we lie
     
@@ -186,7 +185,7 @@ class TestBlockCell(unittest.TestCase):
     
     def test_subscription(self):
         o = BlockCellSpecimen(self.obj_value)
-        st = SubscriptionTester(o.state()['block'])
+        st = CellSubscriptionTester(o.state()['block'])
         new = ExportedState()
         o.replace_block(new)
         st.expect_now(new)
@@ -223,7 +222,7 @@ class TestLooseCell(unittest.TestCase):
         self.assertEqual(2, self.lc.get())
     
     def test_subscription(self):
-        st = SubscriptionTester(self.lc)
+        st = CellSubscriptionTester(self.lc)
         self.lc.set(1)
         st.expect_now(1)
         st.unsubscribe()
@@ -260,7 +259,7 @@ class TestViewCell(unittest.TestCase):
         self.assertEqual(13, self.vc.get())
     
     def test_subscription(self):
-        st = SubscriptionTester(self.vc)
+        st = CellSubscriptionTester(self.vc)
         
         self.lc.set(1)
         st.expect_now(2)
@@ -368,48 +367,3 @@ class CellIdentitySpecimen(ExportedState):
     @exported_block(changes='never')
     def get_block(self):
         return self.__block
-
-
-class SubscriptionTester(object):
-    def __init__(self, cell):
-        self.clock = Clock()
-        self.context = SubscriptionContext(
-            reactor=self.clock,
-            poller=Poller())
-        self.cell = cell
-        self.expected = []
-        self.seen = []
-        self.subscription = cell.subscribe2(self.__callback, self.context)
-        if not self.subscription:
-            raise Exception('missing subscription object')
-        self.unsubscribed = False
-    
-    def advance(self):
-        # support both 'real' subscriptions and poller subscriptions
-        self.clock.advance(1)
-        self.context.poller.poll_all()
-    
-    def __callback(self, value):
-        if self.unsubscribed:
-            raise Exception('unexpected subscription callback after unsubscribe from {!r}, with value {!r}'.format(self.cell, value))
-        self.seen.append(value)
-    
-    def expect_now(self, expected_value):
-        if len(self.seen) > len(self.expected):
-            raise Exception('too-soon callback from {!r}; saw {!r}'.format(self.cell, actual_value))
-        self.advance()
-        self.should_have_seen(expected_value)
-    
-    def should_have_seen(self, expected_value):
-        i = len(self.expected)
-        self.expected.append(expected_value)
-        if len(self.seen) < len(self.expected):
-            raise Exception('no subscription callback from {!r}; expected {!r}'.format(self.cell, expected_value))
-        actual_value = self.seen[i]
-        if actual_value != expected_value:
-            raise Exception('expected {!r} from {!r}; saw {!r}'.format(expected_value, self.cell, actual_value))
-    
-    def unsubscribe(self):
-        assert not self.unsubscribed
-        self.subscription.unsubscribe()
-        self.unsubscribed = True

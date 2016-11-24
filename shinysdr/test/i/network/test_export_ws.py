@@ -19,14 +19,13 @@ from __future__ import absolute_import, division
 
 import json
 
-from twisted.internet.task import Clock
 from twisted.trial import unittest
 from zope.interface import Interface, implements  # available via Twisted
 
 # TODO: StateStreamInner is an implementation detail; arrange a better interface to test
 from shinysdr.i.network.export_ws import StateStreamInner
-from shinysdr.i.poller import Poller
 from shinysdr.signals import SignalType
+from shinysdr.test.testutil import SubscriptionTester
 from shinysdr.values import CellDict, CollectionState, ExportedState, NullExportedState, SubscriptionContext, exported_block, exported_value, nullExportedState, setter
 
 
@@ -37,8 +36,7 @@ class StateStreamTestCase(unittest.TestCase):
         # pylint: disable=attribute-defined-outside-init
         self.object = obj
         self.updates = []
-        self.clock = Clock()
-        self.poller = Poller()
+        self.st = SubscriptionTester()
         
         def send(value):
             self.updates.extend(json.loads(value))
@@ -48,13 +46,12 @@ class StateStreamTestCase(unittest.TestCase):
             self.object,
             'urlroot',
             lambda: None,  # TODO test noteDirty or make it unnecessary
-            subscription_context=SubscriptionContext(reactor=self.clock, poller=self.poller))
+            subscription_context=self.st.context)
     
     def getUpdates(self):
         # pylint: disable=attribute-defined-outside-init
         
-        self.clock.advance(1)
-        self.poller.poll_all()
+        self.st.advance()
         self.stream._flush()  # warning: implementation poking
         u = self.updates
         self.updates = []
