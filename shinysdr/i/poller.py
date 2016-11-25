@@ -93,11 +93,12 @@ __all__.append('Poller')
 
 
 class AutomaticPoller(Poller):
-    def __init__(self):
-        # not paramterized with reactor because LoopingCall isn't anyway
+    def __init__(self, reactor):
         Poller.__init__(self)
         self.__loop_slow = task.LoopingCall(self.poll, False)
+        self.__loop_slow.clock = reactor
         self.__loop_fast = task.LoopingCall(self.poll, True)
+        self.__loop_fast.clock = reactor
         self.__running = False
     
     def _add_subscription(self, target, subscription):
@@ -107,8 +108,8 @@ class AutomaticPoller(Poller):
             print 'Poller starting'
             self.__running = True
             # using callLater because start() will do the first call _immediately_ :(
-            the_reactor.callLater(0, self.__loop_fast.start, 1.0 / 61)
-            the_reactor.callLater(0, self.__loop_slow.start, 0.5)
+            self.__loop_fast.clock.callLater(0, self.__loop_fast.start, 1.0 / 61)
+            self.__loop_slow.clock.callLater(0, self.__loop_slow.start, 0.5)
     
     def _remove_subscription(self, target, subscription):
         # Hook to stop call
@@ -244,7 +245,7 @@ class _SortedMultimap(object):
 
 
 # this is done last for load order
-the_poller = AutomaticPoller()
+the_poller = AutomaticPoller(reactor=the_reactor)
 __all__.append('the_poller')
 
 the_subscription_context = SubscriptionContext(reactor=the_reactor, poller=the_poller)
