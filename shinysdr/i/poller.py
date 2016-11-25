@@ -54,7 +54,8 @@ class Poller(object):
         self.__targets[subscription.fast].add(target, subscription)
     
     def _remove_subscription(self, target, subscription):
-        last_out = self.__targets[subscription.fast].remove(target, subscription)
+        table = self.__targets[subscription.fast]
+        last_out = table.remove(target, subscription)
         if last_out:
             target.unsubscribe()
     
@@ -83,6 +84,9 @@ class Poller(object):
             function(*args, **kwargs)
         
         self.__functions.append(thunk)
+    
+    def count_subscriptions(self):
+        return sum(multimap.count_values() for multimap in self.__targets.itervalues())
 
 
 __all__.append('Poller')
@@ -94,17 +98,26 @@ class AutomaticPoller(Poller):
         Poller.__init__(self)
         self.__loop_slow = task.LoopingCall(self.poll, False)
         self.__loop_fast = task.LoopingCall(self.poll, True)
-        self.__started = False
+        self.__running = False
     
     def _add_subscription(self, target, subscription):
         # Hook to start call
         super(AutomaticPoller, self)._add_subscription(target, subscription)
-        if not self.__started:
-            self.__started = True
-            # TODO: eventually there should be selectable schedules for different cells / clients
+        if not self.__running:
+            print 'Poller starting'
+            self.__running = True
             # using callLater because start() will do the first call _immediately_ :(
             the_reactor.callLater(0, self.__loop_fast.start, 1.0 / 61)
             the_reactor.callLater(0, self.__loop_slow.start, 0.5)
+    
+    def _remove_subscription(self, target, subscription):
+        # Hook to stop call
+        super(AutomaticPoller, self)._remove_subscription(target, subscription)
+        if self.__running and self.count_subscriptions() == 0:
+            print 'Poller stopping'
+            self.__running = False
+            self.__loop_fast.stop()
+            self.__loop_slow.stop()
 
 
 class _PollerSubscription(object):
