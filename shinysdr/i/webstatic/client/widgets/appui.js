@@ -34,7 +34,7 @@ define(['./basic', './spectrum', '../types', '../values', '../events', '../widge
   var Meter = widgets_basic.Meter;
   var Notice = types.Notice;
   var NumberWidget = widgets_basic.Number;
-  var PickBlock = widgets_basic.PickBlock;
+  var PickWidget = widgets_basic.PickWidget;
   var Radio = widgets_basic.Radio;
   var Range = types.Range;
   var Select = widgets_basic.Select;
@@ -186,8 +186,8 @@ define(['./basic', './spectrum', '../types', '../values', '../events', '../widge
   
   var DeviceSet = exports.DeviceSet = BlockSet(Device, BlockSetInFrameEntryBuilder('Device'));
   var ReceiverSet = exports.ReceiverSet = BlockSet(Receiver, BlockSetInFrameEntryBuilder('Receiver'));
-  var AccessorySet = exports.AccessorySet = BlockSet(PickBlock, BlockSetInFrameEntryBuilder('Accessory'));
-  exports.WindowBlocks = BlockSet(PickBlock, windowEntryBuilder);
+  var AccessorySet = exports.AccessorySet = BlockSet(PickWidget, BlockSetInFrameEntryBuilder('Accessory'));
+  exports.WindowBlocks = BlockSet(PickWidget, windowEntryBuilder);
   
   // Widget for a device
   function Device(config) {
@@ -196,13 +196,13 @@ define(['./basic', './spectrum', '../types', '../values', '../events', '../widge
       if (!isSingleValued(freqCell.type)) {
         addWidget('freq', Knob, 'Center frequency');
       }
-      addWidget('rx_driver', PickBlock);
-      addWidget('tx_driver', PickBlock);
+      addWidget('rx_driver', PickWidget);
+      addWidget('tx_driver', PickWidget);
       addWidget('components', ComponentSet);
     });
   }
   exports['interface:shinysdr.devices.IDevice'] = Device;
-  var ComponentSet = BlockSet(PickBlock, blockSetNoHeader);
+  var ComponentSet = BlockSet(PickWidget, blockSetNoHeader);
   
   // Widget for a RX driver block -- TODO break this stuff up
   function RXDriverWidget(config) {
@@ -448,7 +448,7 @@ define(['./basic', './spectrum', '../types', '../values', '../events', '../widge
   exports.SaveButton = SaveButton;
   
   // TODO: Needs to be more than just a BlockSet: eventually a table with grouped headings and sorting, maybe
-  var TelemetryStoreWidget = BlockSet(PickBlock, BlockSetInFrameEntryBuilder(''));
+  var TelemetryStoreWidget = BlockSet(PickWidget, BlockSetInFrameEntryBuilder(''));
   exports['interface:shinysdr.telemetry.ITelemetryStore'] = TelemetryStoreWidget;
   
   return Object.freeze(exports);

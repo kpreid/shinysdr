@@ -34,7 +34,7 @@ define(['./basic', './spectrum', '../types', '../values', '../events', '../widge
   var Meter = widgets_basic.Meter;
   var Notice = types.Notice;
   var NumberWidget = widgets_basic.Number;
-  var PickBlock = widgets_basic.PickBlock;
+  var PickWidget = widgets_basic.PickWidget;
   var Radio = widgets_basic.Radio;
   var Range = types.Range;
   var Select = widgets_basic.Select;

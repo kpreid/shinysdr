@@ -27,7 +27,7 @@ define(['./types', './values', './gltools', './widget', './widgets/basic', './ev
   var Clock = events.Clock;
   var ConstantCell = values.ConstantCell;
   var DerivedCell = values.DerivedCell;
-  var PickBlock = widgets_basic.PickBlock;
+  var PickWidget = widgets_basic.PickWidget;
   var SmallKnob = widgets_basic.SmallKnob;
   var StorageCell = values.StorageCell;
   var Toggle = widgets_basic.Toggle;
@@ -1508,7 +1508,7 @@ define(['./types', './values', './gltools', './widget', './widgets/basic', './ev
       createWidgetExt(config.context, Toggle, checkbox, visibilityCell);
       var controlsOuter = layerSwitcherContainer.appendChild(document.createElement('div'));
       var controlsInner = controlsOuter.appendChild(document.createElement('div'));
-      createWidgetExt(config.context, PickBlock, controlsInner, controlsCell);
+      createWidgetExt(config.context, PickWidget, controlsInner, controlsCell);
       
       function layerControlsVisibilityHook() {
         controlsOuter.style.display = visibilityCell.depend(layerControlsVisibilityHook) ? 'block' : 'none';

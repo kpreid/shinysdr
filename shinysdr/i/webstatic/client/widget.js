@@ -214,6 +214,7 @@ define(['./coordination', './events', './math', './types', './values'], function
       } catch (error) {
         console.error('Error creating widget: ', error);
         console.log(error.stack);
+        // TODO: Arrange so that if widgetCtor is widgets_basic.PickWidget it can give the more-specific name.
         widget = new ErrorWidget(config, widgetCtor, error);
       }
       
@@ -222,7 +223,7 @@ define(['./coordination', './events', './math', './types', './values'], function
       var newEl = widget.element;
       var placeMark = newSourceEl.nextSibling;
       if (newSourceEl.hasAttribute('title') && newSourceEl.getAttribute('title') === originalStash.getAttribute('title')) {
-        console.warn('Widget ' + widgetCtor.name + ' did not handle title attribute');
+        console.warn('Widget ' + widget.constructor.name + ' did not handle title attribute');
       }
       
       if (newSourceEl.parentNode === container) {

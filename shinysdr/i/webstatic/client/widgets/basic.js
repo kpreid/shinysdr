@@ -148,35 +148,7 @@ define(['../types', '../values', '../events', '../widget', '../gltools', '../dat
         if (isSingleValued(member.type)) {
           return;
         }
-        // TODO: Add a dispatch table of some sort to de-centralize this
-        if (member.type instanceof Range) {
-          if (member.set) {
-            addWidget(name, member.type.logarithmic ? LogSlider : LinSlider, name);
-          } else {
-            addWidget(name, Meter, name);
-          }
-        } else if (member.type instanceof Enum) {
-          // This could be Radio instead of Select, but Select is a better default for _arbitrary_ lists.
-          addWidget(name, Select, name);
-        } else if (member.type === Boolean) {
-          addWidget(name, Toggle, name);
-        } else if (member.type === String && member.set) {
-          addWidget(name, TextBox, name);
-        } else if (member.type === Track) {
-          addWidget(name, TrackWidget, name);
-        } else if (member.type instanceof Notice) {
-          addWidget(name, Banner, name);
-        } else if (member.type instanceof Timestamp) {
-          addWidget(name, TimestampWidget, name);
-        } else if (member instanceof CommandCell) {
-          addWidget(name, CommandButton, name);
-        } else if (member.type === types.block) {  // TODO colliding name
-          // TODO: Add hook to choose a widget class based on interfaces
-          // Furthermore, use that for the specific block widget classes too, rather than each one knowing the types of its sub-widgets.
-          addWidget(name, PickBlock);
-        } else {
-          addWidget(name, Generic, name);
-        }
+        addWidget(name, PickWidget, name);
       } else {
         console.warn('Block scan got unexpected object:', member);
       }
@@ -184,36 +156,64 @@ define(['../types', '../values', '../events', '../widget', '../gltools', '../dat
   }
   exports.Block = Block;
   
-  // Delegate to a block widget based on the block's interfaces, or default to Block.
-  function PickBlock(config) {
-    if (Object.getPrototypeOf(this) !== PickBlock.prototype) {
-      throw new Error('cannot inherit from PickBlock');
+  // Delegate to a widget based on the target's cell type or interfaces.
+  function PickWidget(config) {
+    if (Object.getPrototypeOf(this) !== PickWidget.prototype) {
+      throw new Error('cannot inherit from PickWidget');
     }
     
     var targetCell = config.target;
     var context = config.context;
+    var cellType = targetCell.type;
     
-    var ctorCell = new DerivedCell(types.block, config.scheduler, function (dirty) {
-      var block = targetCell.depend(dirty);
+    var ctorCell = new DerivedCell(types.any, config.scheduler, function (dirty) {
+      if (cellType == types.block) {
+        var block = targetCell.depend(dirty);
       
-      // TODO kludgy, need better representation of interfaces
-      var ctor;
-      Object.getOwnPropertyNames(block).some(function (key) {
-        var match = /^_implements_(.*)$/.exec(key);
-        if (match) {
-          var interface_ = match[1];
-          // TODO better scheme for registering widgets for interfaces
-          ctor = context.widgets['interface:' + interface_];
-          if (ctor) return true;
+        // TODO kludgy, need better representation of interfaces. At least pull this into a function itself.
+        var ctor;
+        Object.getOwnPropertyNames(block).some(function (key) {
+          var match = /^_implements_(.*)$/.exec(key);
+          if (match) {
+            var interface_ = match[1];
+            // TODO better scheme for registering widgets for interfaces
+            ctor = context.widgets['interface:' + interface_];
+            if (ctor) return true;
+          }
+        });
+      
+        return ctor || Block;
+        
+      // TODO: Figure out how to have a dispatch table for this.
+      } else if (cellType instanceof Range) {
+        if (targetCell.set) {
+          return cellType.logarithmic ? LogSlider : LinSlider;
+        } else {
+          return Meter;
         }
-      });
-      
-      return ctor || Block;
+      } else if (cellType instanceof Enum) {
+        // Our Enum-type widgets are Radio and Select; Select is a better default for arbitrarily-long lists.
+        return Select;
+      } else if (cellType === Boolean) {
+        return Toggle;
+      } else if (cellType === String && targetCell.set) {
+        return TextBox;
+      } else if (cellType === Track) {
+        return TrackWidget;
+      } else if (cellType instanceof Notice) {
+        return Banner;
+      } else if (cellType instanceof Timestamp) {
+        return TimestampWidget;
+      } else if (targetCell instanceof CommandCell) {
+        return CommandButton;
+      } else {
+        return Generic;
+      }
     });
     
     return new (ctorCell.depend(config.rebuildMe))(config);
   }
-  exports.PickBlock = PickBlock;
+  exports.PickWidget = PickWidget;
   
   // TODO: lousy name
   // This abstract widget class is for widgets which use an INPUT or similar element and optionally wrap it in a panel.

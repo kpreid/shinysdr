@@ -115,10 +115,11 @@ describe('widgets', function () {
     });
   });
   
-  describe('PickBlock', function () {
+  describe('PickWidget', function () {
+    // TODO: PickWidget used to be PickBlock. Add tests for its cell-type-based selection.
     it('should default to Block', function () {
       var cell = new LocalCell(types.block, shinysdr.values.makeBlock({}));
-      widget = new widgets.PickBlock(mockWidgetConfig(null, cell));
+      widget = new widgets.PickWidget(mockWidgetConfig(null, cell));
       expect(Object.getPrototypeOf(widget)).toBe(widgets.Block.prototype);
     });
     
@@ -132,7 +133,7 @@ describe('widgets', function () {
       }));
       var config = mockWidgetConfig(null, cell);
       config.context.widgets['interface:Foo'] = TestWidget;
-      widget = new widgets.PickBlock(config);
+      widget = new widgets.PickWidget(config);
       expect(Object.getPrototypeOf(widget)).toBe(TestWidget.prototype);
     });
   });
