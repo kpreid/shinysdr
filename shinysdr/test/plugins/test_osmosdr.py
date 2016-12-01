@@ -111,4 +111,4 @@ class TestOsmoSDRRange(unittest.TestCase):
         myrange = convert_osmosdr_range(orange)
         self.assertEqual(
             [(min_val, max_val) for (min_val, max_val, _) in range_argses],
-            myrange.type_to_json()['subranges'])
+            myrange.to_json()['subranges'])

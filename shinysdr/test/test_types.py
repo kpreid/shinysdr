@@ -39,7 +39,7 @@ class TestConstant(unittest.TestCase):
     longMessage = True
     
     def test_serial(self):
-        self.assertEqual({u'type': u'constant', u'value': 1}, Constant(1).type_to_json())
+        self.assertEqual({u'type': u'constant', u'value': 1}, Constant(1).to_json())
     
     def test_run(self):
         _testType(self,
@@ -76,6 +76,7 @@ class TestEnum(unittest.TestCase):
     def test_metadata_simple(self):
         self.assertEquals(self.__row(u'desc').to_json(),
             {
+                u'type': u'EnumRow',
                 u'label': u'desc',
                 u'description': None,
                 u'sort_key': u'key',
@@ -84,6 +85,7 @@ class TestEnum(unittest.TestCase):
     def test_metadata_partial(self):
         self.assertEquals(self.__row(EnumRow(label='a')).to_json(),
             {
+                u'type': u'EnumRow',
                 u'label': u'a',
                 u'description': None,
                 u'sort_key': u'key',
@@ -92,6 +94,7 @@ class TestEnum(unittest.TestCase):
     def test_metadata_explicit(self):
         self.assertEquals(self.__row(EnumRow(label='a', description='b', sort_key='c')).to_json(),
             {
+                u'type': u'EnumRow',
                 u'label': u'a',
                 u'description': u'b',
                 u'sort_key': u'c',

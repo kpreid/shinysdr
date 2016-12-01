@@ -22,6 +22,7 @@ import json
 from twisted.trial import unittest
 from zope.interface import Interface, implements  # available via Twisted
 
+from shinysdr.i.network.base import transform_for_json
 # TODO: StateStreamInner is an implementation detail; arrange a better interface to test
 from shinysdr.i.network.export_ws import StateStreamInner
 from shinysdr.signals import SignalType
@@ -61,12 +62,12 @@ class StateStreamTestCase(unittest.TestCase):
 class TestStateStream(StateStreamTestCase):
     def test_init_and_mutate(self):
         self.setUpForObject(StateSpecimen())
-        self.assertEqual(self.getUpdates(), [
+        self.assertEqual(self.getUpdates(), transform_for_json([
             ['register_block', 1, 'urlroot', ['shinysdr.test.i.network.test_export_ws.IFoo']],
             ['register_cell', 2, 'urlroot/rw', self.object.state()['rw'].description()],
             ['value', 1, {'rw': 2}],
             ['value', 0, 1],
-        ])
+        ]))
         self.assertEqual(self.getUpdates(), [])
         self.object.set_rw(2.0)
         self.assertEqual(self.getUpdates(), [
@@ -76,7 +77,7 @@ class TestStateStream(StateStreamTestCase):
     def test_two_references(self):
         """Two references are handled correctly, including not deleting until both are gone."""
         self.setUpForObject(DuplicateReferenceSpecimen())
-        self.assertEqual(self.getUpdates(), [
+        self.assertEqual(self.getUpdates(), transform_for_json([
             [u'register_block', 1, u'urlroot', []],
             [u'register_cell', 2, u'urlroot/foo', self.object.state()['foo'].description()],
             [u'register_block', 3, u'urlroot/foo', [u'shinysdr.values.INull']],
@@ -86,7 +87,7 @@ class TestStateStream(StateStreamTestCase):
             [u'value', 4, 3],
             [u'value', 1, {u'bar': 4, u'foo': 2}],
             [u'value', 0, 1],
-        ])
+        ]))
         replacement = NullExportedState()
         # becomes distinct
         self.object.bar = replacement
@@ -108,7 +109,7 @@ class TestStateStream(StateStreamTestCase):
         d = CellDict({'a': ExportedState()}, dynamic=True)
         self.setUpForObject(CollectionState(d))
         
-        self.assertEqual(self.getUpdates(), [
+        self.assertEqual(self.getUpdates(), transform_for_json([
             ['register_block', 1, 'urlroot', []],
             ['register_cell', 2, 'urlroot/a', self.object.state()['a'].description()],
             ['register_block', 3, 'urlroot/a', []],
@@ -116,7 +117,7 @@ class TestStateStream(StateStreamTestCase):
             ['value', 2, 3],
             ['value', 1, {'a': 2}],
             ['value', 0, 1],
-        ])
+        ]))
         self.assertEqual(self.getUpdates(), [])
         del d['a']
         self.assertEqual(self.getUpdates(), [
@@ -128,7 +129,7 @@ class TestStateStream(StateStreamTestCase):
     def test_send_set_normal(self):
         self.setUpForObject(StateSpecimen())
         self.assertIn(
-            ['register_cell', 2, 'urlroot/rw', self.object.state()['rw'].description()],
+            transform_for_json(['register_cell', 2, 'urlroot/rw', self.object.state()['rw'].description()]),
             self.getUpdates())
         self.stream.dataReceived(json.dumps(['set', 2, 100.0, 1234]))
         self.assertEqual(self.getUpdates(), [
@@ -146,7 +147,7 @@ class TestStateStream(StateStreamTestCase):
         # TODO: Instead of raising, report the error associated with the connection somehow
         self.setUpForObject(StateSpecimen())
         self.assertIn(
-            ['register_block', 1, 'urlroot', ['shinysdr.test.i.network.test_export_ws.IFoo']],
+            transform_for_json(['register_block', 1, 'urlroot', ['shinysdr.test.i.network.test_export_ws.IFoo']]),
             self.getUpdates())
         self.assertRaises(Exception, lambda:  # TODO more specific error
             self.stream.dataReceived(json.dumps(['set', 1, 100.0, 1234])))
@@ -198,6 +199,7 @@ class DuplicateReferenceSpecimen(ExportedState):
 
 
 class TestSerialization(StateStreamTestCase):
+    # TODO we should probably do this more directly
     def test_signal_type(self):
         self.setUpForObject(SerializationSpecimen())
         self.getUpdates()  # ignore initialization
@@ -205,8 +207,9 @@ class TestSerialization(StateStreamTestCase):
         self.object.state_changed()
         self.assertEqual(self.getUpdates(), [
             ['value', 2, {
-                u'kind': 'USB',
-                u'sample_rate': 1234.0,
+                #u'type': u'SignalType',
+                u'kind': u'USB',
+                u'sample_rate': 1234.0
             }],
         ])
 

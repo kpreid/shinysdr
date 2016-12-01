@@ -134,7 +134,7 @@ class ValueCell(BaseCell):
     def description(self):
         d = {
             'kind': 'value',
-            'type': self.type().type_to_json(),
+            'type': self.type(),
             'writable': self.isWritable()
         }
         if not self.type().is_reference():  # TODO kludge
@@ -436,7 +436,7 @@ class Command(BaseCell):
         # TODO: This is identicalish to ValueCell.description except for the kind.
         return {
             'kind': 'command',
-            'type': self.type().type_to_json(),
+            'type': self.type(),
             'writable': self.isWritable(),
             'current': self.get(),
         }

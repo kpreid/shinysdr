@@ -17,7 +17,11 @@
 
 from __future__ import absolute_import, division
 
+from zope.interface import implements
+
 from gnuradio import gr
+
+from shinysdr.types import IJsonSerializable
 
 
 # TODO: It is unclear whether this module is a sensible division of the program. Think about it some more.
@@ -27,6 +31,8 @@ __all__ = []  # appended later
 
 
 class SignalType(object):
+    implements(IJsonSerializable)
+    
     def __init__(self, sample_rate, kind):
         self.__sample_rate = float(sample_rate)
         self.__kind = unicode(kind)
@@ -62,6 +68,13 @@ class SignalType(object):
     def compatible_items(self, other):
         assert isinstance(other, SignalType)
         return self.get_itemsize() == other.get_itemsize()
+    
+    def to_json(self):
+        return {
+            u'kind': u'SignalType',
+            u'kind': self.get_kind(),
+            u'sample_rate': self.get_sample_rate(),
+        }
 
 
 __all__.append('SignalType')

@@ -22,8 +22,23 @@ Type definitions for ShinySDR value cells etc.
 
 from __future__ import absolute_import, division
 
+from zope.interface import Interface, implements
+
 import bisect
 import math
+
+
+# not itself a type in the sense meant here, but the least-wrong-so-far place to put this as it is used by types
+class IJsonSerializable(Interface):
+    """Value objects which can be serialized as JSON structures.
+    
+    Only value objects, not things like ExportedState, should implement this interface.
+    """
+    def to_json(self):
+        """Return a JSON representation of this object.
+        
+        The representation should be a JSON object (dict) which has a key u'type' whose value is a string uniquely identifying the class (loosely speaking) being represented. No well-defined namespace organization has yet been established for these type strings.
+        """
 
 
 def to_value_type(typeoid):
@@ -37,13 +52,12 @@ def to_value_type(typeoid):
 
 
 class ValueType(object):
+    implements(IJsonSerializable)
     """
     A type in the sense of "set of values", plus coercion and other hints.
     """
-    def type_to_json(self):
-        """
-        Serialize this type for the client.
-        """
+    def to_json(self):
+        """See IJsonSerializable."""
         raise NotImplementedError()
     
     def __call__(self, specimen):
@@ -67,7 +81,7 @@ class BareType(ValueType):
     def __init__(self, python_type):
         self.__python_type = python_type
     
-    def type_to_json(self):
+    def to_json(self):
         return bare_type_registry.get(self.__python_type, None)
     
     def __call__(self, specimen):
@@ -88,7 +102,7 @@ class Constant(ValueType):
     def __init__(self, value):
         self.__value = value
     
-    def type_to_json(self):
+    def to_json(self):
         return {
             u'type': u'constant',
             u'value': self.__value
@@ -99,8 +113,7 @@ class Constant(ValueType):
 
 
 class Reference(ValueType):
-    def type_to_json(self):
-        # client does not actually use this yet
+    def to_json(self):
         return u'block'
     
     def __call__(self, specimen):
@@ -133,10 +146,10 @@ class Enum(ValueType):
     def get_table(self):
         return self.__table
     
-    def type_to_json(self):
+    def to_json(self):
         return {
             'type': 'enum',
-            'table': {key: row.to_json() for key, row in self.__table.iteritems()},
+            'table': self.__table,
         }
     
     def __call__(self, specimen):
@@ -158,6 +171,7 @@ class EnumRow(object):
     The label and sort_key default to the enum value itself, and otherwise must be unicode strings.
     The description may be None instead.
     """
+    implements(IJsonSerializable)
     
     # TODO this complicated init needs tests
     def __init__(self, enum_row_or_string=None, label=None, description=None, sort_key=None, associated_key=None):
@@ -183,6 +197,7 @@ class EnumRow(object):
     
     def to_json(self):
         return {
+            u'type': u'EnumRow',
             u'label': self.__label,
             u'description': self.__description,
             u'sort_key': self.__sort_key
@@ -198,7 +213,7 @@ class Range(ValueType):
         self.__logarithmic = logarithmic
         self.__integer = integer
     
-    def type_to_json(self):
+    def to_json(self):
         return {
             'type': 'range',
             'subranges': zip(self.__mins, self.__maxes),
@@ -291,7 +306,7 @@ class Notice(ValueType):
     def __init__(self, always_visible=False):
         self.__always_visible = always_visible
     
-    def type_to_json(self):
+    def to_json(self):
         return {
             'type': 'notice',
             'always_visible': self.__always_visible
@@ -305,7 +320,7 @@ class Timestamp(ValueType):
     def __init__(self):
         pass
     
-    def type_to_json(self):
+    def to_json(self):
         return {
             'type': 'Timestamp'
         }
@@ -319,7 +334,7 @@ class BulkDataType(ValueType):
         self.__info_format = info_format
         self.__array_format = array_format
     
-    def type_to_json(self):
+    def to_json(self):
         return {
             u'type': u'bulk_data',
             u'info_format': self.__info_format,

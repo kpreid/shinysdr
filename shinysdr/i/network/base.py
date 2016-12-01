@@ -29,7 +29,7 @@ from twisted.web import template
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
-from shinysdr.signals import SignalType
+from shinysdr.types import IJsonSerializable
 
 
 # TODO: Change this constant to something more generic, but save that for when we're changing the URL layout for other reasons anyway.
@@ -43,7 +43,7 @@ deps_path = os.path.join(os.path.dirname(__file__), '../../deps')
 
 def serialize(obj):
     """JSON-encode values for clients, both HTTP and state stream WebSocket."""
-    structure = _transform_for_json(obj)
+    structure = transform_for_json(obj)
     return _json_encoder_for_serial.encode(structure)
 
 
@@ -57,22 +57,20 @@ _json_encoder_for_serial = json.JSONEncoder(
     separators=(',', ':'))
 
 
-def _transform_for_json(obj):
-    """Transforms values before JSON serialization for ShinySDR API use.
+def transform_for_json(obj):
+    """Replaces serializable objects in a data structure with JSON-compatible representations.
 
-    Do not use this directly; use serialize() instead."""
-    # Cannot implement this using the default hook in JSONEncoder because we want to override the behavior for namedtuples, which cannot be done otherwise.
-    if isinstance(obj, SignalType):
-        return {
-            u'kind': obj.get_kind(),
-            u'sample_rate': obj.get_sample_rate(),
-        }
-    elif isinstance(obj, tuple) and hasattr(obj, '_asdict'):  # namedtuple -- TODO better recognition?
-        return {k: _transform_for_json(v) for k, v in obj._asdict().iteritems()}
+    Use serialize() to produce a JSON string instead of this, unless this is what you need."""
+    # Cannot implement this using the default hook in JSONEncoder because we want to override the behavior for namedtuples (normally treated as tuples), which cannot be done otherwise.
+    if IJsonSerializable.providedBy(obj):
+        return transform_for_json(obj.to_json())
+    elif isinstance(obj, tuple) and hasattr(obj, '_asdict'):  # namedtuple
+        # TODO: Consider replreplacing all uses of this generic namedtuple handling with IJsonSerializable now that we have that.
+        return {k: transform_for_json(v) for k, v in obj._asdict().iteritems()}
     elif isinstance(obj, dict):
-        return {k: _transform_for_json(v) for k, v in obj.iteritems()}
+        return {k: transform_for_json(v) for k, v in obj.iteritems()}
     elif isinstance(obj, (list, tuple)):
-        return map(_transform_for_json, obj)
+        return map(transform_for_json, obj)
     else:
         return obj
 
