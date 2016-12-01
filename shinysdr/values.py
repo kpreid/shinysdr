@@ -35,15 +35,6 @@ from gnuradio import gr
 from shinysdr.types import BulkDataType, Reference, to_value_type
 
 
-# TODO move this decl somewhere sensible once the code exists
-_cell_value_change_schedules = [
-    u'never',  # immutable value.
-    u'continuous',  # a different value almost every time
-    u'explicit',  # implementation will self-report via .state_changed()
-    u'this_setter',  # the setter for this cell
-]
-
-
 class SubscriptionContext(namedtuple('SubscriptionContext', ['reactor', 'poller'])):
     """A SubscriptionContext is used when subscribing to a cell.
     
@@ -149,6 +140,15 @@ class ValueCell(BaseCell):
         if not self.type().is_reference():  # TODO kludge
             d[u'current'] = self.get()
         return d
+
+
+# The possible values of the 'changes' parameter to a cell of type Cell, which determine when the cell's getter is polled to check for changes.
+_cell_value_change_schedules = [
+    u'never',  # never changes at all for the lifetime of the cell
+    u'continuous',  # a different value almost every time
+    u'explicit',  # implementation will self-report via ExportedState.state_changed
+    u'this_setter',  # changes when and only when the setter for this cell is called
+]
 
 
 # TODO this name is historical and should be changed
