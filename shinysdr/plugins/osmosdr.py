@@ -26,8 +26,8 @@ import osmosdr
 
 from shinysdr.devices import Device, IRXDriver, ITXDriver
 from shinysdr.signals import SignalType
-from shinysdr.types import Constant, Enum, Range
-from shinysdr.values import Cell, ExportedState, LooseCell, exported_block, exported_value, nullExportedState, setter
+from shinysdr.types import Constant, Enum, Range, Reference
+from shinysdr.values import Cell, ExportedState, LooseCell, exported_value, nullExportedState, setter
 
 
 __all__ = []
@@ -341,7 +341,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     def set_correction_ppm(self, value):
         self.__tuning.set_correction_ppm(value)
     
-    @exported_block(changes='never')
+    @exported_value(type=Reference(), changes='never')
     def get_gains(self):
         return self.__gains
     

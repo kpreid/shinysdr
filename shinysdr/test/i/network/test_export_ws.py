@@ -26,7 +26,8 @@ from zope.interface import Interface, implements  # available via Twisted
 from shinysdr.i.network.export_ws import StateStreamInner
 from shinysdr.signals import SignalType
 from shinysdr.test.testutil import SubscriptionTester
-from shinysdr.values import CellDict, CollectionState, ExportedState, NullExportedState, SubscriptionContext, exported_block, exported_value, nullExportedState, setter
+from shinysdr.types import Reference
+from shinysdr.values import CellDict, CollectionState, ExportedState, NullExportedState, SubscriptionContext, exported_value, nullExportedState, setter
 
 
 class StateStreamTestCase(unittest.TestCase):
@@ -187,11 +188,11 @@ class DuplicateReferenceSpecimen(ExportedState):
     def __init__(self):
         self.foo = self.bar = nullExportedState
     
-    @exported_block(changes='explicit')
+    @exported_value(type=Reference(), changes='explicit')
     def get_foo(self):
         return self.foo
     
-    @exported_block(changes='explicit')
+    @exported_value(type=Reference(), changes='explicit')
     def get_bar(self):
         return self.bar
 

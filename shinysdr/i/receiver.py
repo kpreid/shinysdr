@@ -30,8 +30,8 @@ from shinysdr.i.modes import get_modes, lookup_mode
 from shinysdr.interfaces import ITunableDemodulator
 from shinysdr.math import dB, rotator_inc, to_dB
 from shinysdr.signals import SignalType
-from shinysdr.types import Enum, Range
-from shinysdr.values import ExportedState, exported_block, exported_value, setter, unserialize_exported_state
+from shinysdr.types import Enum, Range, Reference
+from shinysdr.values import ExportedState, exported_value, setter, unserialize_exported_state
 
 
 # arbitrary non-infinite limit
@@ -181,7 +181,7 @@ class Receiver(gr.hier_block2, ExportedState):
         self.state_changed('rec_freq')
         self.state_changed('is_valid')
 
-    @exported_block(changes='explicit')
+    @exported_value(type=Reference(), changes='explicit')
     def get_demodulator(self):
         return self.__demodulator
 

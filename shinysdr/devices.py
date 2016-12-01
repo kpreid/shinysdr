@@ -28,8 +28,8 @@ from gnuradio import gr
 
 from shinysdr.signals import SignalType
 from shinysdr.telemetry import TelemetryItem, Track, empty_track
-from shinysdr.types import Range
-from shinysdr.values import CellDict, CollectionState, ExportedState, LooseCell, ViewCell, exported_block, exported_value, nullExportedState
+from shinysdr.types import Range, Reference
+from shinysdr.values import CellDict, CollectionState, ExportedState, LooseCell, ViewCell, exported_value, nullExportedState
 
 
 __all__ = []
@@ -187,15 +187,15 @@ class Device(ExportedState):
     def can_tune(self):
         return self.__vfo_cell is not _stub_vfo
     
-    @exported_block(changes='never')
+    @exported_value(type=Reference(), changes='never')
     def get_rx_driver(self):
         return self.rx_driver
     
-    @exported_block(changes='never')
+    @exported_value(type=Reference(), changes='never')
     def get_tx_driver(self):
         return self.tx_driver
     
-    @exported_block(changes='never')
+    @exported_value(type=Reference(), changes='never')
     def get_components(self):
         return self.__components_state
     

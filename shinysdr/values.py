@@ -760,12 +760,6 @@ def exported_value(parameter=None, **cell_kwargs):
     return decorator
 
 
-# TODO: Maybe inline uses of this
-def exported_block(parameter=None, **cell_kwargs):
-    """Returns a decorator for exported state; takes Cell's kwargs."""
-    return exported_value(type=Reference(), **cell_kwargs)
-
-
 def setter(f):
     """Decorator for setters of exported state; must be paired with an @exported_value getter."""
     return ExportedSetter(f)
@@ -777,7 +771,7 @@ def command():
 
 
 class ExportedGetter(object):
-    """Descriptor for a getter exported using @exported_value or @exported_block."""
+    """Descriptor for a getter exported using @exported_value."""
     def __init__(self, f, parameter, cell_kwargs):
         # early error for debugging
         if 'changes' not in cell_kwargs:

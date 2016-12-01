@@ -38,8 +38,8 @@ except ImportError:
 from shinysdr.filters import MultistageChannelFilter
 from shinysdr.interfaces import ModeDef, IDemodulator, IModulator
 from shinysdr.signals import SignalType, no_signal
-from shinysdr.types import Range
-from shinysdr.values import ExportedState, exported_block, exported_value
+from shinysdr.types import Range, Reference
+from shinysdr.values import ExportedState, exported_value
 
 
 # note: this string is ordered so that the first bit (on the air) is the least significant bit of the index in the string
@@ -125,7 +125,7 @@ class RTTYDemodulator(gr.hier_block2, ExportedState):
         """implement IDemodulator"""
         return SignalType(kind='MONO', sample_rate=self.samp_rate)
 
-    @exported_block(changes='never')
+    @exported_value(type=Reference(), changes='never')
     def get_fsk_demod(self):
         return self.fsk_demod
 

@@ -40,8 +40,8 @@ from shinysdr.plugins.basic_demod import NFMDemodulator
 from shinysdr.plugins.aprs import parse_tnc2
 from shinysdr.signals import SignalType
 from shinysdr.twisted_ext import test_subprocess
-from shinysdr.types import Enum
-from shinysdr.values import ExportedState, exported_block, exported_value, setter
+from shinysdr.types import Enum, Reference
+from shinysdr.values import ExportedState, exported_value, setter
 
 pipe_rate = 22050  # what multimon-ng expects
 _maxint32 = 2 ** 15 - 1
@@ -214,7 +214,7 @@ class FMAPRSDemodulator(gr.hier_block2, ExportedState):
     def get_output_type(self):
         return self.mm_demod.get_output_type()
     
-    @exported_block(changes='never')
+    @exported_value(type=Reference(), changes='never')
     def get_mm_demod(self):
         return self.mm_demod
 

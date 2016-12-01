@@ -35,8 +35,8 @@ from shinysdr.filters import make_resampler
 from shinysdr.interfaces import ModeDef, IDemodulator
 from shinysdr.plugins.basic_demod import NFMDemodulator
 from shinysdr.signals import SignalType
-from shinysdr.types import EnumRow
-from shinysdr.values import ExportedState, exported_block, exported_value
+from shinysdr.types import EnumRow, Reference
+from shinysdr.values import ExportedState, exported_value
 
 
 _demod_rate = 48000  # hardcoded in gr-dsd
@@ -70,7 +70,7 @@ class DSDDemodulator(gr.hier_block2, ExportedState):
             dsd_block_ff(),
             self)
     
-    @exported_block(changes='never')
+    @exported_value(type=Reference(), changes='never')
     def get_fm_demod(self):
         return self.__fm_demod
     

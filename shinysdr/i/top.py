@@ -34,8 +34,8 @@ from shinysdr.i.receiver import Receiver
 from shinysdr.math import LazyRateCalculator
 from shinysdr.signals import SignalType
 from shinysdr.telemetry import TelemetryStore
-from shinysdr.types import Enum, Notice
-from shinysdr.values import CellDict, ExportedState, CollectionState, exported_block, exported_value, setter, IWritableCollection, unserialize_exported_state
+from shinysdr.types import Enum, Notice, Reference
+from shinysdr.values import CellDict, ExportedState, CollectionState, exported_value, setter, IWritableCollection, unserialize_exported_state
 
 
 class ReceiverCollection(CollectionState):
@@ -305,27 +305,27 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
             self.__needs_reconnect.append(u'receiver %s validity changed' % (key,))
             self._do_connect()
     
-    @exported_block(changes='never')
+    @exported_value(type=Reference(), changes='never')
     def get_monitor(self):
         return self.monitor
     
-    @exported_block(persists=False, changes='never')
+    @exported_value(type=Reference(), persists=False, changes='never')
     def get_sources(self):
         return self.sources
     
-    @exported_block(persists=False, changes='explicit')
+    @exported_value(type=Reference(), persists=False, changes='explicit')
     def get_source(self):
         return self.source  # TODO no need for this now...?
     
-    @exported_block(changes='never')
+    @exported_value(type=Reference(), changes='never')
     def get_receivers(self):
         return self.receivers
     
-    @exported_block(persists=False, changes='never')
+    @exported_value(type=Reference(), persists=False, changes='never')
     def get_accessories(self):
         return self.accessories
     
-    @exported_block(changes='never')
+    @exported_value(type=Reference(), changes='never')
     def get_telemetry_store(self):
         return self.__telemetry_store
     

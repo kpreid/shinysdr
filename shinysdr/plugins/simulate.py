@@ -33,8 +33,8 @@ from shinysdr.math import dB, rotator_inc, to_dB
 from shinysdr.i.modes import lookup_mode
 from shinysdr.signals import SignalType, no_signal
 from shinysdr.devices import Device, IRXDriver
-from shinysdr.types import Range
-from shinysdr.values import CellDict, CollectionState, ExportedState, LooseCell, exported_block, exported_value, setter
+from shinysdr.types import Range, Reference
+from shinysdr.values import CellDict, CollectionState, ExportedState, LooseCell, exported_value, setter
 
 
 __all__ = []  # appended later
@@ -143,7 +143,7 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
         self.__usable_bandwidth = Range([(-rf_rate / 2, rf_rate / 2)])
         
     
-    @exported_block(changes='never')
+    @exported_value(type=Reference(), changes='never')
     def get_transmitters(self):
         return self.__transmitters_cs
 
@@ -213,7 +213,7 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
         self.__mult = blocks.multiply_const_cc(dB(-10))
         self.connect(modulator, rf_resampler, self.__rotator, self.__mult, self)
     
-    @exported_block(changes='never')
+    @exported_value(type=Reference(), changes='never')
     def get_modulator(self):
         return self.__modulator
 

@@ -21,8 +21,8 @@ import unittest
 
 from shinysdr.i.poller import Poller
 from shinysdr.test.testutil import CellSubscriptionTester, SubscriptionTester
-from shinysdr.types import Range
-from shinysdr.values import Cell, CellDict, CollectionState, ExportedState, LooseCell, PersistenceChangeDetector, ViewCell, command, exported_block, exported_value, nullExportedState, setter, unserialize_exported_state
+from shinysdr.types import Range, Reference
+from shinysdr.values import Cell, CellDict, CollectionState, ExportedState, LooseCell, PersistenceChangeDetector, ViewCell, command, exported_value, nullExportedState, setter, unserialize_exported_state
 
 
 class TestExportedState(unittest.TestCase):
@@ -84,7 +84,7 @@ class ValueAndBlockSpecimen(ExportedState):
         self.__value = value
         self.__block = block
     
-    @exported_block(changes='never')
+    @exported_value(type=Reference(), changes='never')
     def get_block(self):
         return self.__block
     
@@ -201,7 +201,7 @@ class BlockCellSpecimen(ExportedState):
     def __init__(self, block):
         self.__block = block
     
-    @exported_block(changes='explicit')
+    @exported_value(type=Reference(), changes='explicit')
     def get_block(self):
         return self.__block
     
@@ -364,7 +364,7 @@ class CellIdentitySpecimen(ExportedState):
     def get_value(self):
         return 9
 
-    @exported_block(changes='never')
+    @exported_value(type=Reference(), changes='never')
     def get_block(self):
         return self.__block
 
