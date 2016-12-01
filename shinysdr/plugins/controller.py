@@ -79,8 +79,9 @@ class Command(object):
             text = self.__text.encode(encoding)
         else:
             text = self.__text
-        # TODO: Use cell metadata (once that idea exists) to specify the label, so it isn't required to be unique.
-        callback(CommandCell(self, self.__label, functools.partial(send, text)))
+        # TODO: Autogenerate unique keys instead of requiring the label to be unique.
+        callback(CommandCell(self, self.__label, functools.partial(send, text),
+            label=self.__label))
 
 
 __all__.append('Command')
@@ -100,12 +101,14 @@ class Selector(object):
     
     def _install_cells(self, callback, send, encoding):
         callback(LooseCell(
+        # TODO: Autogenerate unique keys instead of requiring __name to be unique.
             key=self.__name,
             type=self.__type,
             value=u'',
             writable=True,
             persists=True,
-            post_hook=lambda value: send(unicode(value).encode(encoding))))
+            post_hook=lambda value: send(unicode(value).encode(encoding)),
+            label=self.__name))
 
 
 __all__.append('Selector')

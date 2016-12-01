@@ -468,7 +468,14 @@ def _install_cell(self, name, is_level, writable, callback, caps):
         else:
             self._ehs_set(name, str(vtype(value)))
     
-    cell = LooseCell(key=cell_name, value='placeholder', type=vtype, writable=writable, persists=False, post_hook=actually_write_value)
+    cell = LooseCell(
+        key=cell_name,
+        value='placeholder',
+        type=vtype,
+        writable=writable,
+        persists=False,
+        post_hook=actually_write_value,
+        label=name)  # TODO: supply label values from _info table
     self._cell_updaters[name] = updater
     updater(self._ehs_get(name))
     callback(cell)

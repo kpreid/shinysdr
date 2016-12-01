@@ -262,8 +262,12 @@ class MonitorSink(gr.hier_block2, ExportedState):
     def state_def(self, callback):
         super(MonitorSink, self).state_def(callback)
         # TODO make this possible to be decorator style
-        callback(StreamCell(self, 'fft', type=BulkDataType(array_format='b', info_format='dff')))
-        callback(StreamCell(self, 'scope', type=BulkDataType(array_format='f', info_format='d')))
+        callback(StreamCell(self, 'fft',
+            type=BulkDataType(array_format='b', info_format='dff'),
+            label='Spectrum'))
+        callback(StreamCell(self, 'scope',
+            type=BulkDataType(array_format='f', info_format='d'),
+            label='Scope'))
 
     def __rebuild(self):
         if self.__signal_type.is_analytic():
@@ -368,7 +372,11 @@ class MonitorSink(gr.hier_block2, ExportedState):
     def set_input_center_freq(self, value):
         self.__input_center_freq = float(value) 
     
-    @exported_value(type=Range([(2, 4096)], logarithmic=True, integer=True), changes='this_setter')
+    @exported_value(
+        type=Range([(2, 4096)], logarithmic=True, integer=True),
+        changes='this_setter',
+        label='Resolution',
+        description='Frequency domain resolution; number of FFT bins.')
     def get_freq_resolution(self):
         return self.__freq_resolution
 
@@ -388,7 +396,12 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__rebuild()
         self.__connect()
 
-    @exported_value(type=Range([(1, _maximum_fft_rate)], logarithmic=True, integer=False), changes='this_setter')
+    @exported_value(
+        type=Range([(1, _maximum_fft_rate)],
+        logarithmic=True, integer=False),
+        changes='this_setter',
+        label='Rate',
+        description='Number of FFT frames per second.')
     def get_frame_rate(self):
         return self.__frame_rate
 
@@ -397,7 +410,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__logpwrfft.set_vec_rate(float(value))
         self.__frame_rate = self.__logpwrfft.frame_rate()
     
-    @exported_value(type=bool, changes='this_setter')
+    @exported_value(type=bool, changes='this_setter', label='Pause')
     def get_paused(self):
         return self.__paused
 

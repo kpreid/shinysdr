@@ -147,7 +147,10 @@ class APRSDemodulator(gr.hier_block2, ExportedState):
     def get_output_type(self):
         return self.__mm_demod.get_output_type()
     
-    @exported_value(type=_aprs_squelch_type, changes='this_setter')
+    @exported_value(
+        type=_aprs_squelch_type,
+        changes='this_setter',
+        label='APRS squelch mode')
     def get_squelch(self):
         return self.__squelch_mode
     

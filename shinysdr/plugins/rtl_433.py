@@ -306,7 +306,8 @@ class RTL433MsgGroup(ExportedState):
                     value=None,
                     type=object,
                     writable=False,
-                    persists=False)
+                    persists=False,
+                    label=k)
             self.__cells[k].set_internal(v)
         self.state_changed()
         if shape_changed:
@@ -320,7 +321,7 @@ class RTL433MsgGroup(ExportedState):
         """implement ITelemetryObject"""
         return self.__last_heard_time + drop_unheard_timeout_seconds
     
-    @exported_value(type=Timestamp(), changes='explicit')
+    @exported_value(type=Timestamp(), changes='explicit', label='Last heard')
     def get_last_heard_time(self):
         return self.__last_heard_time
 

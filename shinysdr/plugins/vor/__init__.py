@@ -137,7 +137,7 @@ class VOR(SimpleAudioDemodulator):
             self.zeroer,
             self.probe)
 
-    @exported_value(type=float, changes='this_setter')
+    @exported_value(type=float, changes='this_setter', label='Zero')
     def get_zero_point(self):
         return self.zero_point
 
@@ -146,7 +146,7 @@ class VOR(SimpleAudioDemodulator):
         self.zero_point = zero_point
         self.zeroer.set_k((self.zero_point * (math.pi / 180), ))
 
-    @exported_value(type=float, changes='continuous')
+    @exported_value(type=float, changes='continuous', label='Bearing')
     def get_angle(self):
         return self.probe.level()
 
@@ -213,7 +213,7 @@ class VORModulator(gr.hier_block2, ExportedState):
         # calculate and initialize delay
         self.set_angle(angle)
     
-    @exported_value(type=Range([(0, 2 * math.pi)], strict=False), changes='this_setter')
+    @exported_value(type=Range([(0, 2 * math.pi)], strict=False), changes='this_setter', label='Bearing')
     def get_angle(self):
         return self.__angle
     

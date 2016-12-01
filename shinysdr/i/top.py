@@ -321,11 +321,12 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
     def get_receivers(self):
         return self.receivers
     
+    # TODO the concept of 'accessories' is old and needs to go away, but we don't have a flexible enough UI to replace it with just devices since only one device can be looked-at at a time so far.
     @exported_value(type=Reference(), persists=False, changes='never')
     def get_accessories(self):
         return self.accessories
     
-    @exported_value(type=Reference(), changes='never')
+    @exported_value(type=Reference(), changes='never', label='Telemetry')
     def get_telemetry_store(self):
         return self.__telemetry_store
     
@@ -374,7 +375,10 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.stop()
         self.wait()
 
-    @exported_value(type_fn=lambda self: self.__rx_device_type, changes='this_setter')
+    @exported_value(
+        type_fn=lambda self: self.__rx_device_type,
+        changes='this_setter',
+        label='RF source')
     def get_source_name(self):
         return self.source_name
     

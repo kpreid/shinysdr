@@ -78,8 +78,8 @@ class Session(ExportedState):
         callback(rxfs['clip_warning'])
         if self.__enable_reboot:
             # TODO kludge
-            callback(Command(self, 'reboot', self.reboot))
-            callback(Command(self, 'kill', self.kill))
+            callback(Command(self, 'reboot', self.reboot, label='Restart server'))
+            callback(Command(self, 'kill', self.kill, label='Kill server'))
     
     def add_audio_queue(self, queue, queue_rate):
         return self.__receive_flowgraph.add_audio_queue(queue, queue_rate)

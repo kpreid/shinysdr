@@ -167,7 +167,7 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
     def close(self):
         pass
     
-    @exported_value(type=Range([(-50, 0)]), changes='this_setter')
+    @exported_value(type=Range([(-50, 0)]), changes='this_setter', label='White noise')
     def get_noise_level(self):
         return self.__noise_level
     
@@ -219,7 +219,8 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
 
     @exported_value(
         type_fn=lambda self: Range([(-self.__rf_rate / 2, self.__rf_rate / 2)], strict=False),
-        changes='this_setter')
+        changes='this_setter',
+        label='Frequency')
     def get_freq(self):
         return self.__freq
     
@@ -228,7 +229,10 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
         self.__freq = float(value)
         self.__rotator.set_phase_inc(rotator_inc(rate=self.__rf_rate, shift=self.__freq))
     
-    @exported_value(type=Range([(-50.0, 0.0)], strict=False), changes='this_setter')
+    @exported_value(
+        type=Range([(-50.0, 0.0)], strict=False),
+        changes='this_setter',
+        label='Gain')
     def get_gain(self):
         return to_dB(self.__mult.k().real)
     
@@ -266,7 +270,8 @@ class ChirpModulator(gr.hier_block2, ExportedState):
     @exported_value(
         parameter='chirp_rate', 
         type=Range([(-10.0, 10.0)], strict=False),
-        changes='this_setter')
+        changes='this_setter',
+        label='Chirp rate')
     def get_chirp_rate(self):
         return self.__chirp_rate
     

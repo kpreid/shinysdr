@@ -158,6 +158,7 @@ class Device(ExportedState):
             vfo_cell = _stub_vfo
         assert vfo_cell.key() == 'freq'
         assert isinstance(vfo_cell.type(), Range)
+        # TODO: Consider using an unconditional wrapper around the VFO cell which sets the cell metadata consistently.
         
         self.__name = name
         self.__vfo_cell = vfo_cell
@@ -588,6 +589,6 @@ class _PositionedDeviceComponent(ExportedState):
     def close(self):
         """implements IComponent"""
 
-    @exported_value(type=Track, changes='never')
+    @exported_value(type=Track, changes='never', label='Antenna location')
     def get_track(self):
         return self.__track

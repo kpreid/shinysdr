@@ -333,7 +333,10 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         self._stop_rx()
         self.__tuning = None
     
-    @exported_value(type=float, changes='this_setter')
+    @exported_value(
+        type=float,
+        changes='this_setter',
+        label='Freq.corr. (PPM)')  # TODO: Once we have formal units, remove them from the label
     def get_correction_ppm(self):
         return self.__tuning.get_correction_ppm()
     
@@ -348,7 +351,8 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     @exported_value(
         type_fn=lambda self: convert_osmosdr_range(
             self.__source.get_gain_range(ch), strict=False),
-        changes='this_setter')
+        changes='this_setter',
+        label='Gain')
     def get_gain(self):
         if self.__source is None: return 0.0
         return self.__source.get_gain(ch)
@@ -359,7 +363,8 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     
     @exported_value(
         type_fn=lambda self: bool if self.__profile.agc else Constant(False),
-        changes='this_setter')
+        changes='this_setter',
+        label='AGC on')
     def get_agc(self):
         if self.__source is None: return False
         return bool(self.__source.get_gain_mode(ch))
@@ -368,7 +373,10 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     def set_agc(self, value):
         self.__source.set_gain_mode(bool(value), ch)
     
-    @exported_value(type_fn=lambda self: self.__antenna_type, changes='this_setter')
+    @exported_value(
+        type_fn=lambda self: self.__antenna_type,
+        changes='this_setter',
+        label='Antenna')
     def get_antenna(self):
         if self.__source is None: return ''
         return unicode(self.__source.get_antenna(ch))
@@ -381,7 +389,8 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     # Note: dc_cancel has a 'manual' mode we are not yet exposing
     @exported_value(
         type_fn=lambda self: bool if self.__profile.dc_cancel else Constant(False),
-        changes='this_setter')
+        changes='this_setter',
+        label='Use DC cancellation')
     def get_dc_cancel(self):
         return bool(self.dc_state)
     
@@ -394,7 +403,9 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         self.dc_state = self.__source.set_dc_offset_mode(mode, ch)
     
     # Note: iq_balance has a 'manual' mode we are not yet exposing
-    @exported_value(type=bool, changes='this_setter')  # TODO: detect gr-iqbal
+    @exported_value(type=bool,    # TODO: detect gr-iqbal
+        changes='this_setter',
+        label='Use IQ balancer')
     def get_iq_balance(self):
         return bool(self.iq_state)
 
@@ -411,7 +422,9 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     @exported_value(
         type_fn=lambda self: convert_osmosdr_range(
             self.__source.get_bandwidth_range(ch), add_zero=True),
-        changes='this_setter')
+        changes='this_setter',
+        label='Analog bandwidth',
+        description='Bandwidth of the analog antialiasing filter.')
     def get_bandwidth(self):
         if self.__source is None: return 0.0
         return self.__source.get_bandwidth(ch)
@@ -534,10 +547,15 @@ def _install_gain_cell(self, sourceref, name, callback):
     
     gain_range = convert_osmosdr_range(sourceref[0].get_gain_range(name, ch))
     
-    # TODO: There should be a type of Cell such that we don't have to setattr
+    # TODO: There should be a type of Cell such that we don't have to setattr but still implement the storage unlike LooseCell
     setattr(self, 'get_' + name, gain_getter)
     setattr(self, 'set_' + name, gain_setter)
-    callback(Cell(self, name, type=gain_range, writable=True, persists=True, changes='this_setter'))
+    callback(Cell(self, name,
+        type=gain_range,
+        writable=True,
+        persists=True,
+        changes='this_setter',
+        label=name))
 
 
 def convert_osmosdr_range(meta_range, add_zero=False, transform=lambda f: f, **kwargs):

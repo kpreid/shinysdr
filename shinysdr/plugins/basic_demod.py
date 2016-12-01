@@ -83,11 +83,17 @@ class SquelchMixin(ExportedState):
         self.rf_squelch_block = analog.simple_squelch_cc(squelch_threshold, alpha)
         self.rf_probe_block = analog.probe_avg_mag_sqrd_c(0, alpha=alpha)
 
-    @exported_value(type=Range([(-100, 0)], strict=False), changes='continuous')
+    @exported_value(
+        type=Range([(-100, 0)], strict=False),
+        changes='continuous',
+        label='Channel power')
     def get_rf_power(self):
         return to_dB(max(1e-10, self.rf_probe_block.level()))
 
-    @exported_value(type=Range([(-100, 0)], strict=False, logarithmic=False), changes='this_setter')
+    @exported_value(
+        type=Range([(-100, 0)], strict=False, logarithmic=False),
+        changes='this_setter',
+        label='Squelch')
     def get_squelch_threshold(self):
         return self.rf_squelch_block.threshold()
 
@@ -219,7 +225,11 @@ class AMDemodulator(SimpleAudioDemodulator):
         
         self.__do_connect()
     
-    @exported_value(type=_am_demod_method_type, parameter='demod_method', changes='this_setter')
+    @exported_value(
+        type=_am_demod_method_type,
+        parameter='demod_method',
+        changes='this_setter',
+        label='AM demodulation')
     def get_demod_method(self):
         return self.__demod_method
     
@@ -548,7 +558,7 @@ class WFMDemodulator(FMDemodulator):
             no_audio_filter=True,  # disable highpass
             **kwargs)
 
-    @exported_value(type=bool, changes='this_setter')
+    @exported_value(type=bool, changes='this_setter', label='Stereo')
     def get_stereo(self):
         return self.stereo
     
@@ -721,7 +731,10 @@ class SSBDemodulator(SimpleAudioDemodulator):
     def set_rec_freq(self, freq):
         super(SSBDemodulator, self).set_rec_freq(freq - self.__offset)
     
-    @exported_value(type=Range([(-20, _ssb_max_agc)]), changes='continuous')
+    @exported_value(
+        type=Range([(-20, _ssb_max_agc)]),
+        changes='continuous',
+        label='AGC')
     def get_agc_gain(self):
         return to_dB(self.agc_block.gain())
 

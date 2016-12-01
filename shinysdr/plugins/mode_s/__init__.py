@@ -121,7 +121,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
     def __del__(self):
         self.__msgq_runner.stop()
     
-    @exported_value(type=Range([(0, 30)]), changes='this_setter')
+    @exported_value(type=Range([(0, 30)]), changes='this_setter', label='Decode threshold')
     def get_decode_threshold(self):
         return self.__demod.get_threshold(None)
     
@@ -129,7 +129,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
     def set_decode_threshold(self, value):
         self.__demod.set_threshold(float(value))
     
-    @exported_value(float, changes='continuous')
+    @exported_value(float, changes='continuous', label='Messages/sec decoded')
     def get_message_rate(self):
         return round(self.__message_rate_calc.get(), 1)
     
@@ -268,23 +268,23 @@ class Aircraft(ExportedState):
         """implement ITelemetryObject"""
         return self.__last_heard_time + drop_unheard_timeout_seconds
     
-    @exported_value(type=Timestamp(), changes='explicit')
+    @exported_value(type=Timestamp(), changes='explicit', sort_key='100', label='Last heard')
     def get_last_heard_time(self):
         return self.__last_heard_time
     
-    @exported_value(type=unicode, changes='explicit')
+    @exported_value(type=unicode, changes='explicit', sort_key='020', label='Call')  # TODO naming may be wrong
     def get_call(self):
         return self.__call
     
-    @exported_value(type=int, changes='explicit')
+    @exported_value(type=int, changes='explicit', sort_key='050', label='Ident')  # TODO naming may be wrong
     def get_ident(self):
         return self.__ident
     
-    @exported_value(type=unicode, changes='explicit')
+    @exported_value(type=unicode, changes='explicit', sort_key='020', label='Aircraft type')
     def get_aircraft_type(self):
         return self.__aircraft_type
     
-    @exported_value(type=Track, changes='explicit')
+    @exported_value(type=Track, changes='explicit', sort_key='010', label='')
     def get_track(self):
         return self.__track
 
