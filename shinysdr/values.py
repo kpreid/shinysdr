@@ -44,8 +44,11 @@ _cell_value_change_schedules = [
 ]
 
 
-# TODO: probably not the right thing, placeholder till subscriptions are more worked out
-SubscriptionContext = namedtuple('SubscriptionContext', ['reactor', 'poller'])
+class SubscriptionContext(namedtuple('SubscriptionContext', ['reactor', 'poller'])):
+    """A SubscriptionContext is used when subscribing to a cell.
+    
+    The context's reactor and poller determine how and when the subscription callback is invoked once the cell value has changed.
+    """
 
 
 class BaseCell(object):
