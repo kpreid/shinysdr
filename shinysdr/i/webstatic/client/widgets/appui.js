@@ -95,7 +95,10 @@ define(['./basic', './spectrum', '../types', '../values', '../events', '../widge
       var block = config.target.depend(config.rebuildMe);
       var idPrefix = config.idPrefix;
       var childContainer = this.element = config.element;
-
+      
+      // TODO: We ought to display these in some way.
+      config.element.removeAttribute('title');
+      
       // Keys are block keys
       var childWidgetElements = Object.create(null);
 
@@ -232,7 +235,9 @@ define(['./basic', './spectrum', '../types', '../values', '../events', '../widge
         var singleGainPanel;
         if (hasSingleGain) {
           singleGainPanel = gainPanel.appendChild(document.createElement('div'));
-          createWidgetExt(config.context, LinSlider, singleGainPanel.appendChild(document.createElement('div')), block.gain);
+          let singleGainSliderWidgetEl = singleGainPanel.appendChild(document.createElement('div'));
+          singleGainSliderWidgetEl.title = '';
+          createWidgetExt(config.context, LinSlider, singleGainSliderWidgetEl, block.gain);
           ignore('gain');
         }
         var multipleGainPanel;

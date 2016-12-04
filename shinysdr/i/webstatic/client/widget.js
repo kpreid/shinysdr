@@ -190,6 +190,11 @@ define(['./coordination', './events', './math', './types', './values'], function
       var newSourceEl = originalStash.cloneNode(true);
       container.replaceChild(newSourceEl, currentWidgetEl);
       
+      // TODO: Better interface to the metadata
+      if (!newSourceEl.hasAttribute('title') && targetCell.metadata.naming.label != null) {
+        newSourceEl.setAttribute('title', targetCell.metadata.naming.label);
+      }
+      
       var config = Object.freeze({
         scheduler: scheduler,
         target: targetCell,

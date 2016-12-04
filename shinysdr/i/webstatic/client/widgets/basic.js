@@ -55,6 +55,9 @@ define(['../types', '../values', '../events', '../widget', '../gltools', '../dat
       container.classList.add('panel');
     }
     
+    // TODO: We ought to display these in some way. But right now the only labels-for-blocks are displayed separately using explicit code...
+    container.removeAttribute('title');
+    
     function getAppend() {
       if (appendTarget === 'details') {
         appendTarget = container.appendChild(document.createElement('details'));
@@ -137,18 +140,20 @@ define(['../types', '../values', '../events', '../widget', '../gltools', '../dat
       optSpecial.call(this, block, addWidget, ignore, setInsertion, setToDetails, getAppend);
     }
     
-    var names = [];
-    for (var name in block) names.push(name);
-    names.sort();
-    names.forEach(function (name) {
-      if (claimed[name]) return;
+    var keys = [];
+    for (let key in block) keys.push(key);
+    keys.sort();
+    keys.forEach(function (key) {
+      if (claimed[key]) return;
       
-      var member = block[name];
+      var member = block[key];
       if (member instanceof Cell) {
         if (isSingleValued(member.type)) {
           return;
         }
-        addWidget(name, PickWidget, name);
+        // TODO: gimmick to support local metadata-less cells; stop passing key once metadata usage is more established.
+        let label = member.metadata.naming.label ? undefined : key;
+        addWidget(key, PickWidget, label);
       } else {
         console.warn('Block scan got unexpected object:', member);
       }
