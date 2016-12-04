@@ -282,8 +282,6 @@ define(['./basic', './spectrum', '../types', '../values', '../events', '../widge
       
       setToDetails();
       
-      addWidget('correction_ppm', SmallKnob, 'Freq.corr. (PPM)');
-      
       ignore('output_type');
     }, true);
   }
