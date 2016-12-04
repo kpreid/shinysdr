@@ -100,6 +100,16 @@ class TestEnum(unittest.TestCase):
                 u'sort_key': u'c',
             })
     
+    def test_metadata_empty_label(self):
+        self.assertEquals(self.__row(EnumRow(label='')).to_json(),
+            {
+                u'type': u'EnumRow',
+                u'label': u'',
+                u'description': None,
+                u'sort_key': u'key',
+            })
+    
+    
     def __row(self, row):
         return Enum({u'key': row}).get_table()[u'key']
 

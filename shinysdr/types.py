@@ -172,7 +172,7 @@ class Enum(ValueType):
 
 
 class EnumRow(object):
-    """An EnumRow object provides information about an element of an Enum type.
+    """An EnumRow object provides information about an element of an Enum type, and is also used for similar non-Enum-related purposes.
     
     The label is a 'human-friendly' string to use in place of the enum value. If not specified it defaults to the enum value itself.
     
@@ -185,18 +185,29 @@ class EnumRow(object):
     """
     implements(IJsonSerializable)
     
-    # TODO this complicated init needs tests
+    # TODO this complicated init needs more tests
     def __init__(self, enum_row_or_string=None, label=None, description=None, sort_key=None, associated_key=None):
         if isinstance(enum_row_or_string, EnumRow):
-            label = label or enum_row_or_string.__label
-            description = description or enum_row_or_string.__description
-            sort_key = sort_key or enum_row_or_string.__sort_key
+            if label is None:
+                label = enum_row_or_string.__label
+            if description is None:
+                description = enum_row_or_string.__description
+            if sort_key is None:
+                sort_key = enum_row_or_string.__sort_key
         else:
-            label = label or (unicode(enum_row_or_string) if enum_row_or_string else None)
+            if label is None:
+                label = unicode(enum_row_or_string) if enum_row_or_string else None
         
-        self.__label = unicode(label) if label else (unicode(enum_row_or_string) if enum_row_or_string else associated_key)
-        self.__description = unicode(description) if description else None
-        self.__sort_key = unicode(sort_key) if sort_key else unicode(associated_key) if associated_key is not None else associated_key
+        self.__label = (
+            unicode(label) if label is not None else
+            unicode(enum_row_or_string) if enum_row_or_string is not None else
+            associated_key)
+        self.__description = (
+            unicode(description) if description is not None else None)
+        self.__sort_key = (
+            unicode(sort_key) if sort_key is not None else
+            unicode(associated_key) if associated_key is not None
+            else associated_key)
     
     def __cmp__(self, other):
         if not isinstance(other, EnumRow):
