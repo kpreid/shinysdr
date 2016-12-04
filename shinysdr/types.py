@@ -81,6 +81,15 @@ class BareType(ValueType):
     def __init__(self, python_type):
         self.__python_type = python_type
     
+    def __cmp__(self, other):
+        if not isinstance(other, BareType):
+            return cmp(id(self), id(other))  # dummy
+        else:
+            return cmp(self.__python_type, other.__python_type)
+    
+    def __hash__(self):
+        return hash(self.__python_type) ^ hash(self.__python_type)
+
     def to_json(self):
         return bare_type_registry.get(self.__python_type, None)
     

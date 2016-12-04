@@ -21,7 +21,7 @@ import unittest
 
 from shinysdr.i.poller import Poller
 from shinysdr.test.testutil import CellSubscriptionTester, SubscriptionTester
-from shinysdr.types import Range, Reference
+from shinysdr.types import EnumRow, Range, Reference, to_value_type
 from shinysdr.values import Cell, CellDict, CollectionState, ExportedState, LooseCell, PersistenceChangeDetector, ViewCell, command, exported_value, nullExportedState, setter, unserialize_exported_state
 
 
@@ -130,6 +130,25 @@ class DecoratorInheritanceSpecimen(DecoratorInheritanceSpecimenSuper):
     @setter
     def set_rw(self, value):
         self.rw = value
+
+
+class TestBaseCell(unittest.TestCase):
+    def test_specify_all_metadata(self):
+        # using LooseCell as an arbitrary concrete subclass
+        cell = LooseCell(
+            value=0,
+            key='k',
+            type=int,
+            persists=False,  # the non-default value
+            label='mylabel',
+            description='mydescription',
+            sort_key='mysortkey')
+        self.assertEqual(cell.metadata().value_type, to_value_type(int))
+        self.assertEqual(cell.metadata().persists, False)
+        self.assertEqual(cell.metadata().naming, EnumRow(
+            label='mylabel',
+            description='mydescription',
+            sort_key='mysortkey'))
 
 
 class TestCell(unittest.TestCase):

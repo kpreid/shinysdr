@@ -32,12 +32,13 @@ from zope.interface import Interface, implements  # available via Twisted
 
 from gnuradio import gr
 
-from shinysdr.types import BulkDataType, Reference, to_value_type
+from shinysdr.types import BulkDataType, EnumRow, Reference, to_value_type
 
 
 class CellMetadata(namedtuple('CellMetadata', [
         'value_type',  # ValueType
         'persists',  # boolean
+        'naming',  # EnumRow  (TODO rename EnumRow given this is the third alternate use)
     ])):
     """Information about a cell object.
     
@@ -46,6 +47,8 @@ class CellMetadata(namedtuple('CellMetadata', [
     
     persists: a boolean.
     Whether the value of this cell will be considered as part of the persistent state of the containing object for use across server restarts and such.
+    
+    naming: an EnumRow giving the 'human-readable' name of the cell and related information.
     """
 
 
@@ -57,7 +60,15 @@ class SubscriptionContext(namedtuple('SubscriptionContext', ['reactor', 'poller'
 
 
 class BaseCell(object):
-    def __init__(self, target, key, type, persists=True, writable=False):
+    def __init__(self,
+            target,
+            key,
+            type,
+            persists=True,
+            writable=False,
+            label=None,
+            description=None,
+            sort_key=None):
         # The exact relationship of target and key depends on the subtype
         self._target = target
         self._key = key
@@ -65,7 +76,12 @@ class BaseCell(object):
         # TODO: Also allow specifying metadata object directly.
         self.__metadata = CellMetadata(
             value_type=to_value_type(type),
-            persists=bool(persists))
+            persists=bool(persists),
+            naming=EnumRow(
+                associated_key=key,
+                label=label,
+                description=description,
+                sort_key=sort_key))
     
     def __cmp__(self, other):
         if not isinstance(other, BaseCell):
@@ -169,7 +185,7 @@ _cell_value_change_schedules = [
 
 # TODO this name is historical and should be changed
 class Cell(ValueCell):
-    def __init__(self, target, key, changes, type=object, writable=False, persists=None):
+    def __init__(self, target, key, changes, type=object, writable=False, persists=None, **kwargs):
         assert changes in _cell_value_change_schedules  # TODO actually use value
         type = to_value_type(type)
         if persists is None:
@@ -180,7 +196,13 @@ class Cell(ValueCell):
         if changes == u'never' and writable:
             raise ValueError('writable=True changes={!r} doesn\'t make sense'.format(changes))
         
-        ValueCell.__init__(self, target, key, writable=writable, persists=persists, type=type)
+        ValueCell.__init__(self,
+            target,
+            key,
+            type=type,
+            persists=persists,
+            writable=writable,
+            **kwargs)
         
         self.__changes = changes
         if changes == u'explicit' or changes == u'this_setter':
@@ -284,9 +306,9 @@ class _MessageSplitter(object):
 
 
 class StreamCell(ValueCell):
-    def __init__(self, target, key, type=None):
+    def __init__(self, target, key, type, **kwargs):
         assert isinstance(type, BulkDataType)
-        ValueCell.__init__(self, target, key, type=type, writable=False, persists=False)
+        ValueCell.__init__(self, target, key, type=type, writable=False, persists=False, **kwargs)
         self.__dgetter = getattr(self._target, 'get_' + key + '_distributor')
         self.__igetter = getattr(self._target, 'get_' + key + '_info')
     
@@ -317,7 +339,7 @@ class LooseCell(ValueCell):
     A cell which stores a value and does not get it from another object; it can therefore reliably provide update notifications.
     """
     
-    def __init__(self, key, value, type, persists=True, writable=False, post_hook=None):
+    def __init__(self, key, value, post_hook=None, **kwargs):
         """
         The key is not used by the cell itself.
         """
@@ -325,9 +347,7 @@ class LooseCell(ValueCell):
             self,
             target=object(),
             key=key,
-            type=type,
-            persists=persists,
-            writable=writable)
+            **kwargs)
         self.__value = value
         self.__subscriptions = set()
         self.__post_hook = post_hook
@@ -437,14 +457,15 @@ class Command(BaseCell):
     Its value is (TODO should be something generically useful).
     """
     
-    def __init__(self, target, key, function):
+    def __init__(self, target, key, function, **kwargs):
         # TODO: remove writable=true when we have a proper invoke path
         BaseCell.__init__(self,
             target=target,
             key=key,
             type=type(None),
             persists=False,
-            writable=True)
+            writable=True,
+            **kwargs)
         self.__function = function
     
     def description(self):
