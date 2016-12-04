@@ -90,7 +90,10 @@ class BareType(ValueType):
 
 # TODO: Replace this raw object with a proper API
 bare_type_registry = {
-    bool: u'boolean'
+    bool: u'boolean',
+    float: u'float64',
+    int: u'integer',
+    long: u'integer',
 }
 
 

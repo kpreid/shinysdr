@@ -150,6 +150,7 @@ define([], function () {
   exports.Track = Track;
 
   function typeFromDesc(desc) {
+    // TODO if the type is unknown have a warning and fallback instead, or make network.js handle the failure more gracefully
     switch (typeof desc) {
       case 'string':
         switch (desc) {
@@ -157,6 +158,10 @@ define([], function () {
             return block;
           case 'boolean':
             return Boolean; // will do till we need something fancier
+          case 'float64':
+            return Number;
+          case 'integer':
+            return Number;
           case 'shinysdr.telemetry.Track':
             return Track;
           default:
