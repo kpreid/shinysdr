@@ -140,23 +140,33 @@ define(['../types', '../values', '../events', '../widget', '../gltools', '../dat
       optSpecial.call(this, block, addWidget, ignore, setInsertion, setToDetails, getAppend);
     }
     
-    var keys = [];
-    for (let key in block) keys.push(key);
-    keys.sort();
-    keys.forEach(function (key) {
-      if (claimed[key]) return;
+    const sortTable = [];
+    for (const key in block) {
+      if (claimed[key]) continue;
       
-      var member = block[key];
+      const member = block[key];
       if (member instanceof Cell) {
         if (isSingleValued(member.type)) {
-          return;
+          continue;
         }
-        // TODO: gimmick to support local metadata-less cells; stop passing key once metadata usage is more established.
-        let label = member.metadata.naming.label ? undefined : key;
-        addWidget(key, PickWidget, label);
+        sortTable.push({
+          key: key,
+          cell: member,
+          sortKey: typeof(member.metadata.naming.sort_key) === 'string' ? member.metadata.naming.sort_key : key
+        });
       } else {
         console.warn('Block scan got unexpected object:', member);
       }
+    }
+    
+    sortTable.sort((a, b) => {
+      return a.sortKey < b.sortKey ? -1 : a.sortKey > b.sortKey ? 1 : 0;
+    });
+    
+    sortTable.forEach(function ({key, cell}) {
+      // TODO: gimmick to support local metadata-less cells; stop passing key once metadata usage is more established.
+      let label = cell.metadata.naming.label ? undefined : key;
+      addWidget(key, PickWidget, label);
     });
   }
   exports.Block = Block;
