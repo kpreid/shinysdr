@@ -82,8 +82,8 @@ define(['./types', './values', './events'], function (types, values, events) {
   }
   exports.externalGet = externalGet;
   
-  function ReadWriteCell(setter, assumed, type) {
-    Cell.call(this, type);
+  function ReadWriteCell(setter, assumed, metadata) {
+    Cell.call(this, metadata);
     var value = assumed;
     var remoteValue = assumed;
     var inhibitTime = 0;
@@ -116,10 +116,9 @@ define(['./types', './values', './events'], function (types, values, events) {
     }.bind(this);
   }
   ReadWriteCell.prototype = Object.create(Cell.prototype, {constructor: {value: ReadWriteCell}});
-  exports.ReadWriteCell = ReadWriteCell;
   
-  function ReadCell(setter, /* initial */ value, type, transform) {
-    Cell.call(this, type);
+  function ReadCell(setter, /* initial */ value, metadata, transform) {
+    Cell.call(this, metadata);
     
     this._update = function(data) {
       value = transform(data);
@@ -131,19 +130,20 @@ define(['./types', './values', './events'], function (types, values, events) {
     };
   }
   ReadCell.prototype = Object.create(Cell.prototype, {constructor: {value: ReadCell}});
-  exports.ReadCell = ReadCell;
   
-  function RemoteCommandCell(setter, type) {
+  function RemoteCommandCell(setter, metadata) {
     // TODO: type is kind of useless, make it useful or make it explicitly stubbed out
     function setterAdapter(callback) {
       setter(null, callback);
     }
-    CommandCell.call(this, setterAdapter, type);
+    CommandCell.call(this, setterAdapter, metadata);
   }
   RemoteCommandCell.prototype = Object.create(CommandCell.prototype, {constructor: {value: RemoteCommandCell}});
   //exports.CommandCell = CommandCell;  // not yet needed, params in flux, so not exported yet
   
-  function BulkDataCell(setter, type) {
+  function BulkDataCell(setter, metadata) {
+    let type = metadata.value_type;
+    
     var fft = new Float32Array(1);
     fft[0] = -1e50;
     var VSIZE = Float32Array.BYTES_PER_ELEMENT;
@@ -190,7 +190,7 @@ define(['./types', './values', './events'], function (types, values, events) {
       return newValue;
     }
     
-    ReadCell.call(this, setter, lastValue, type, transform);
+    ReadCell.call(this, setter, lastValue, metadata, transform);
     
     this.subscribe = function(callback) {
       // TODO need to provide for unsubscribing
@@ -273,22 +273,27 @@ define(['./types', './values', './events'], function (types, values, events) {
   
   // TODO: too many args, figure out an object that is a sensible bundle
   function makeCell(url, setter, id, desc, idMap) {
+    const type = typeFromDesc(desc.metadata.value_type);
+    const metadata = {
+      value_type: type,
+      // deliberately discarding persists field — shouldn't be used on client
+      naming: desc.metadata.naming,
+    };
     var cell;
-    var type = typeFromDesc(desc.metadata.value_type);
     if (type === types.block) {
       // TODO eliminate special case by making server block cells less special?
       // TODO blocks should not need urls (switch http op to websocket)
-      cell = new ReadCell(setter, /* dummy */ makeBlock(url, []), type,
+      cell = new ReadCell(setter, /* dummy */ makeBlock(url, []), metadata,
         function (id) { return idMap[id]; });
     } else if (type instanceof BulkDataType) {
       // TODO can we eliminate this special case
-      cell = new BulkDataCell(setter, type);
+      cell = new BulkDataCell(setter, metadata);
     } else if (desc.type === 'command_cell') {
-      cell = new RemoteCommandCell(setter, type);
+      cell = new RemoteCommandCell(setter, metadata);
     } else if (desc.writable) {
-      cell = new ReadWriteCell(setter, desc.current, type);
+      cell = new ReadWriteCell(setter, desc.current, metadata);
     } else {
-      cell = new ReadCell(setter, desc.current, type, identity);
+      cell = new ReadCell(setter, desc.current, metadata, identity);
     }
     return [cell, cell._update];
   }

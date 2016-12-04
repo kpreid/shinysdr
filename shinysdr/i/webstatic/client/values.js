@@ -25,9 +25,25 @@ define(['./events', './types'], function (events, types) {
   
   var exports = {};
 
-  function Cell(type) {
-    if (type === undefined) { throw new Error('oops type: ' + this.constructor.name); }
+  function Cell(type_or_metadata) {
+    let type;
+    let metadata;
+    if (type_or_metadata === undefined) {
+      throw new Error('Cell constructed without metadata: ' + this.constructor.name);
+    } else if (type_or_metadata.value_type && type_or_metadata.naming) {
+      type = type_or_metadata.value_type;
+      metadata = type_or_metadata;
+    } else {
+      // TODO: Once we have an actual superclass for client-side ValueTypes, check for it here.
+      type = type_or_metadata;
+      metadata = {
+        value_type: type_or_metadata,
+        naming: {}
+      };
+    }
+    // TODO: .metadata was added after .type, and .type is now redundant. Look at whether we want to remove it -- probably not.
     this.type = type;
+    this.metadata = metadata;
     this.n = new Notifier();
   }
   Cell.prototype.depend = function(listener) {
@@ -48,8 +64,8 @@ define(['./events', './types'], function (events, types) {
   }
   
   // Cell whose state is not persistent
-  function LocalCell(type, initialValue) {
-    Cell.call(this, type);
+  function LocalCell(type_or_metadata, initialValue) {
+    Cell.call(this, type_or_metadata);
     this._value = initialValue;
   }
   LocalCell.prototype = Object.create(Cell.prototype, {constructor: {value: LocalCell}});
@@ -65,8 +81,8 @@ define(['./events', './types'], function (events, types) {
   exports.LocalCell = LocalCell;
   
   // Cell whose state is not settable
-  function LocalReadCell(type, initialValue) {
-    Cell.call(this, type);
+  function LocalReadCell(type_or_metadata, initialValue) {
+    Cell.call(this, type_or_metadata);
     this._value = initialValue;
     // TODO use facets instead
     this._update = function(v) {
@@ -83,8 +99,8 @@ define(['./events', './types'], function (events, types) {
   exports.LocalReadCell = LocalReadCell;
   
   // Cell which cannot be set
-  function ConstantCell(type, value) {
-    Cell.call(this, type);
+  function ConstantCell(type_or_metadata, value) {
+    Cell.call(this, type_or_metadata);
     this._value = value;
     this.n = new Neverfier();  // TODO throwing away super's value, unclean
   }
@@ -94,8 +110,8 @@ define(['./events', './types'], function (events, types) {
   };
   exports.ConstantCell = ConstantCell;
   
-  function DerivedCell(type, scheduler, compute) {
-    Cell.call(this, type);
+  function DerivedCell(type_or_metadata, scheduler, compute) {
+    Cell.call(this, type_or_metadata);
     
     this._compute = compute;
     this._needsCompute = false;
@@ -135,9 +151,9 @@ define(['./events', './types'], function (events, types) {
   exports.DerivedCell = DerivedCell;
   
   // Cell which does not really hold a value, but 
-  function CommandCell(fn, type) {
+  function CommandCell(fn, type_or_metadata) {
     // TODO: type is kind of useless, make it useful or make it explicitly stubbed out
-    Cell.call(this, type);
+    Cell.call(this, type_or_metadata);
     this.n = new Neverfier();  // TODO throwing away super's value, unclean
     this.invoke = function commandProxy(callback) {
       if (!callback) {
@@ -181,10 +197,10 @@ define(['./events', './types'], function (events, types) {
   // Presents a Storage (localStorage) entry as a cell; the value must be representable as JSON.
   // Warning: Only one cell should exist per unique key, or notifications may not occur; also, creating cells repeatedly will leak.
   // TODO: Fix that by interning cells.
-  function StorageCell(storage, type, initialValue, key) {
+  function StorageCell(storage, type_or_metadata, initialValue, key) {
     key = String(key);
 
-    Cell.call(this, type);
+    Cell.call(this, type_or_metadata);
 
     this._storage = storage;
     this._key = key;
