@@ -191,6 +191,8 @@ define(['../types', '../values', '../events', '../widget', '../gltools', '../dat
         } else {
           return Meter;
         }
+      } else if (cellType === Number) {
+        return SmallKnob;
       } else if (cellType instanceof Enum) {
         // Our Enum-type widgets are Radio and Select; Select is a better default for arbitrarily-long lists.
         return Select;

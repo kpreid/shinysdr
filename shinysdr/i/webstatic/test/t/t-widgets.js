@@ -85,6 +85,35 @@ describe('widgets', function () {
     };
   }
   
+  describe('PickWidget', function () {
+    // TODO more tests
+    
+    function t(widgetClass, type, value) {
+      var cell = new LocalCell(type, value);
+      widget = new widgets.PickWidget(mockWidgetConfig(null, cell));
+      
+      // Loose but more informative on failure
+      if (widget.constructor.name && widgetClass.name) {
+        expect(widget.constructor.name).toBe(widgetClass.name);
+      }
+      
+      expect(Object.getPrototypeOf(widget)).toBe(widgetClass.prototype);
+    }
+    
+    // TODO add tests of the cell-is-read-only case.
+    it('should pick for Block', () => t(widgets.Block, types.block, makeBlock({})));
+    it('should pick for Boolean', () => t(widgets.Toggle, Boolean, false));
+    it('should pick for Enum', () => t(widgets.Select, new types.Enum({}), 0));
+    it('should pick for Notice', () => t(widgets.Banner, new types.Notice(), ''));
+    it('should pick for Number', () => t(widgets.SmallKnob, Number, 0));
+    //TODO it('should pick for Range', () => t(widgets.LinSlider, new types.Range([(0, 0)]), 0));
+    it('should pick for String', () => t(widgets.TextBox, String, ''));
+    it('should pick for Timestamp', () => t(widgets.TimestampWidget, new types.Timestamp(), 0));
+    //TODO it('should pick for Track', () => t(widgets.TrackWidget, types.Track, {}));
+
+    it('should pick for unknown', () => t(widgets.Generic, function sometype() {}, 1));
+  })
+  
   describe('Knob', function () {
     it('should hold a negative zero', function () {
       var cell = new LocalCell(types.any, 0);
