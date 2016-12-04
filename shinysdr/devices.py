@@ -340,7 +340,7 @@ def _merge_vfos(vfos):
                 key='freq',
                 type=variable_one.type().shifted_by(fixed),
                 writable=True,
-                persists=variable_one.persists())
+                persists=variable_one.metadata().persists)
     else:
         raise ValueError('Multiple non-stub VFOs not yet supported.')
 

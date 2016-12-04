@@ -274,7 +274,7 @@ define(['./types', './values', './events'], function (types, values, events) {
   // TODO: too many args, figure out an object that is a sensible bundle
   function makeCell(url, setter, id, desc, idMap) {
     var cell;
-    var type = typeFromDesc(desc.type);
+    var type = typeFromDesc(desc.metadata.value_type);
     if (type === types.block) {
       // TODO eliminate special case by making server block cells less special?
       // TODO blocks should not need urls (switch http op to websocket)
@@ -283,7 +283,7 @@ define(['./types', './values', './events'], function (types, values, events) {
     } else if (type instanceof BulkDataType) {
       // TODO can we eliminate this special case
       cell = new BulkDataCell(setter, type);
-    } else if (desc.kind === 'command') {
+    } else if (desc.type === 'command_cell') {
       cell = new RemoteCommandCell(setter, type);
     } else if (desc.writable) {
       cell = new ReadWriteCell(setter, desc.current, type);

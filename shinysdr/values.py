@@ -35,6 +35,20 @@ from gnuradio import gr
 from shinysdr.types import BulkDataType, Reference, to_value_type
 
 
+class CellMetadata(namedtuple('CellMetadata', [
+        'value_type',  # ValueType
+        'persists',  # boolean
+    ])):
+    """Information about a cell object.
+    
+    value_type: a ValueType object defining the possible values of the cell.
+    The type may also be relevant to interpreting the value.
+    
+    persists: a boolean.
+    Whether the value of this cell will be considered as part of the persistent state of the containing object for use across server restarts and such.
+    """
+
+
 class SubscriptionContext(namedtuple('SubscriptionContext', ['reactor', 'poller'])):
     """A SubscriptionContext is used when subscribing to a cell.
     
@@ -47,9 +61,11 @@ class BaseCell(object):
         # The exact relationship of target and key depends on the subtype
         self._target = target
         self._key = key
-        self._persists = persists
         self._writable = writable
-        self._value_type = to_value_type(type)
+        # TODO: Also allow specifying metadata object directly.
+        self.__metadata = CellMetadata(
+            value_type=to_value_type(type),
+            persists=bool(persists))
     
     def __cmp__(self, other):
         if not isinstance(other, BaseCell):
@@ -67,8 +83,11 @@ class BaseCell(object):
     def __hash__(self):
         return hash(self._target) ^ hash(self._key)
 
+    def metadata(self):
+        return self.__metadata
+
     def type(self):
-        return self._value_type
+        return self.__metadata.value_type
     
     def key(self):
         return self._key
@@ -114,9 +133,6 @@ class BaseCell(object):
     def isWritable(self):  # TODO underscore naming
         return self._writable
     
-    def persists(self):
-        return self._persists
-        
     def description(self):
         raise NotImplementedError()
     
@@ -133,9 +149,9 @@ class ValueCell(BaseCell):
     
     def description(self):
         d = {
-            'kind': 'value',
-            'type': self.type(),
-            'writable': self.isWritable()
+            u'type': u'value_cell',
+            u'metadata': self.metadata(),
+            u'writable': self.isWritable()
         }
         if not self.type().is_reference():  # TODO kludge
             d[u'current'] = self.get()
@@ -187,7 +203,7 @@ class Cell(ValueCell):
     def set(self, value):
         if not self.isWritable():
             raise Exception('Not writable.')
-        return self._setter(self._value_type(value))
+        return self._setter(self.metadata().value_type(value))
     
     def subscribe2(self, callback, context):
         changes = self.__changes
@@ -320,7 +336,7 @@ class LooseCell(ValueCell):
         return self.__value
     
     def set(self, value):
-        value = self._value_type(value)
+        value = self.metadata().value_type(value)
         if self.__value == value:
             return
         
@@ -435,10 +451,10 @@ class Command(BaseCell):
         """implements BaseCell"""
         # TODO: This is identicalish to ValueCell.description except for the kind.
         return {
-            'kind': 'command',
-            'type': self.type(),
-            'writable': self.isWritable(),
-            'current': self.get(),
+            u'type': 'command_cell',
+            u'metadata': self.metadata(),
+            u'writable': self.isWritable(),
+            u'current': self.get(),
         }
     
     def get(self):
@@ -562,7 +578,7 @@ class ExportedState(object):
         subscriber(self.state_subscribe)
         state = {}
         for key, cell in self.state().iteritems():
-            if cell.persists():
+            if cell.metadata().persists:
                 state[key] = cell.get_state(subscriber=subscriber)
         return state
     
