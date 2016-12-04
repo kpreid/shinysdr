@@ -568,7 +568,7 @@ define(['../types', '../values', '../events', '../widget', '../gltools', '../dat
         if (container.hasAttribute('title')) {
           var labelEl = container.appendChild(document.createElement('span'));
           labelEl.classList.add('widget-SmallKnob-label');
-          labelEl.appendChild(document.createTextNode(container.getAttribute('title')));
+          labelEl.appendChild(document.createTextNode(container.getAttribute('title') + '\u00A0'));
           container.removeAttribute('title');
         }
         
@@ -586,7 +586,7 @@ define(['../types', '../values', '../events', '../widget', '../gltools', '../dat
           input.step = (type.integer && !type.logarithmic) ? 1 : 'any';
         }
         
-        input.readonly = !target.set;
+        input.readOnly = !target.set;
         
         input.addEventListener('input', function(event) {
           if (type instanceof types.Range) {
