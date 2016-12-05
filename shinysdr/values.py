@@ -234,7 +234,7 @@ class Cell(ValueCell):
         elif changes == u'continuous':
             return context.poller.subscribe(self, lambda: callback(self.get()), fast=True)
         elif changes == u'explicit' or changes == u'this_setter':
-            return _SimpleSubscription(self, callback, context, self.__explicit_subscriptions)
+            return _SimpleSubscription(callback, context, self.__explicit_subscriptions)
         else:
             raise ValueError('shouldn\'t happen unrecognized changes value: {!r}'.format(changes))
 
@@ -380,22 +380,20 @@ class LooseCell(ValueCell):
             subscription._fire(value)
     
     def subscribe2(self, callback, context):
-        subscription = _SimpleSubscription(self, callback, context, self.__subscriptions)
+        subscription = _SimpleSubscription(callback, context, self.__subscriptions)
         return subscription
     
     def _subscribe_immediate(self, callback):
         """for use by ViewCell only"""
         # TODO: replace this with a better mechanism
-        subscription = _LooseCellImmediateSubscription(self, callback)
-        self.__subscriptions.add(subscription)
+        subscription = _LooseCellImmediateSubscription(callback, self.__subscriptions)
         return subscription
 
 
 class _SimpleSubscription(object):
-    def __init__(self, cell, callback, context, subscription_set):
+    def __init__(self, callback, context, subscription_set):
         self.__callback = callback
         self.__reactor = context.reactor
-        self.__cell = cell
         self.__subscription_set = subscription_set
         subscription_set.add(self)
     
@@ -408,11 +406,13 @@ class _SimpleSubscription(object):
 
 
 class _LooseCellImmediateSubscription(object):
-    def __init__(self, cell, callback):
+    def __init__(self, callback, subscription_set):
         self._fire = callback
+        self.__subscription_set = subscription_set
+        subscription_set.add(self)
     
     def unsubscribe(self):
-        self.__cell._unsubscribe(self)
+        self.__subscription_set.remove(self)
 
 
 def ViewCell(base, get_transform, set_transform, **kwargs):
@@ -560,7 +560,7 @@ class ExportedState(object):
         except AttributeError:
             self.__shape_subscriptions = set()
         if self.state_is_dynamic():
-            return _SimpleSubscription(self, callback, context, self.__shape_subscriptions)
+            return _SimpleSubscription(callback, context, self.__shape_subscriptions)
         else:
             return _NeverSubscription()
     
