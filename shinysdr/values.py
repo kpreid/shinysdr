@@ -525,6 +525,7 @@ class ExportedState(object):
         return self.__cache
     
     def __decorator_cells(self):
+        # pylint: disable=attribute-defined-outside-init, access-member-before-definition
         # this is separate from state_def so that if state_is_dynamic we don't recreate these every time, forgetting subscriptions
         if hasattr(self, '_ExportedState__decorator_cells_cache'):
             return self.__decorator_cells_cache
@@ -552,6 +553,7 @@ class ExportedState(object):
         return self.__decorator_cells_cache
     
     def state_subscribe(self, callback, context):
+        # pylint: disable=attribute-defined-outside-init, access-member-before-definition
         try:
             self.__shape_subscriptions
         except AttributeError:
@@ -712,6 +714,7 @@ class CellDict(object):
     """A dictionary-like object which holds its contents in cells."""
     
     def __init__(self, initial_state={}, dynamic=False, member_type=Reference()):
+        # pylint: disable=dangerous-default-value
         self.__member_type = member_type
         self.__cells = {}
         self._shape_subscription = lambda: None

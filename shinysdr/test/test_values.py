@@ -19,7 +19,6 @@ from __future__ import absolute_import, division
 
 import unittest
 
-from shinysdr.i.poller import Poller
 from shinysdr.test.testutil import CellSubscriptionTester, SubscriptionTester
 from shinysdr.types import EnumRow, Range, Reference, to_value_type
 from shinysdr.values import Cell, CellDict, CollectionState, ExportedState, LooseCell, PersistenceChangeDetector, ViewCell, command, exported_value, nullExportedState, setter, unserialize_exported_state
@@ -423,7 +422,7 @@ class TestPersistenceChangeDetector(unittest.TestCase):
         })
         self.st.advance()
         self.assertEqual(1, self.calls)
-        self.o.get_block().set_value(3)
+        self.o.get_block().set_value(3)  # pylint: disable=no-member
         self.st.advance()
         self.assertEqual(2, self.calls)
         self.assertEqual(self.d.get(), {

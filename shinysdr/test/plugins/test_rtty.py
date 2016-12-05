@@ -53,6 +53,9 @@ class TestRTTYEncoder(unittest.TestCase):
             numpy.array(map(ord, input_chars), dtype=numpy.uint8))
     
     def test_basic(self):
+        # pylint: disable=no-member
+        # (pylint glitch)
+        
         # TODO wrong assert
         numpy.testing.assert_array_equal(self.__run_encoder('QE'), numpy.array(
             self.__wrap([1, 1, 1, 0, 1]) +

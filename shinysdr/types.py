@@ -22,10 +22,10 @@ Type definitions for ShinySDR value cells etc.
 
 from __future__ import absolute_import, division
 
-from zope.interface import Interface, implements
-
 import bisect
 import math
+
+from zope.interface import Interface, implements
 
 
 # not itself a type in the sense meant here, but the least-wrong-so-far place to put this as it is used by types
@@ -52,10 +52,10 @@ def to_value_type(typeoid):
 
 
 class ValueType(object):
-    implements(IJsonSerializable)
     """
     A type in the sense of "set of values", plus coercion and other hints.
     """
+    implements(IJsonSerializable)
     def to_json(self):
         """See IJsonSerializable."""
         raise NotImplementedError()

@@ -28,7 +28,7 @@ from shinysdr.i.network.export_ws import StateStreamInner
 from shinysdr.signals import SignalType
 from shinysdr.test.testutil import SubscriptionTester
 from shinysdr.types import Reference
-from shinysdr.values import CellDict, CollectionState, ExportedState, NullExportedState, SubscriptionContext, exported_value, nullExportedState, setter
+from shinysdr.values import CellDict, CollectionState, ExportedState, NullExportedState, exported_value, nullExportedState, setter
 
 
 class StateStreamTestCase(unittest.TestCase):
@@ -207,7 +207,7 @@ class TestSerialization(StateStreamTestCase):
         self.object.state_changed()
         self.assertEqual(self.getUpdates(), [
             ['value', 2, {
-                #u'type': u'SignalType',
+                u'type': u'SignalType',
                 u'kind': u'USB',
                 u'sample_rate': 1234.0
             }],

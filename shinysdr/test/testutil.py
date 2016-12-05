@@ -83,6 +83,7 @@ class CellSubscriptionTester(SubscriptionTester):
     
     def expect_now(self, expected_value):
         if len(self.seen) > len(self.expected):
+            actual_value = self.seen[len(self.expected)]
             raise Exception('too-soon callback from {!r}; saw {!r}'.format(self.cell, actual_value))
         self.advance()
         self.should_have_seen(expected_value)

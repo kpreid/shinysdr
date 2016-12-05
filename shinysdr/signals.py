@@ -71,7 +71,7 @@ class SignalType(object):
     
     def to_json(self):
         return {
-            u'kind': u'SignalType',
+            u'type': u'SignalType',
             u'kind': self.get_kind(),
             u'sample_rate': self.get_sample_rate(),
         }
