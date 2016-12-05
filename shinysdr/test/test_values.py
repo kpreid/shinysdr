@@ -250,7 +250,7 @@ class TestLooseCell(unittest.TestCase):
 
 class TestViewCell(unittest.TestCase):
     def setUp(self):
-        self.lc = LooseCell(value=0, key='a', type=int)
+        self.lc = LooseCell(value=0, key='a', type=Range([(-100, 100)]))
         self.delta = 1
         self.vc = ViewCell(
             base=self.lc,
@@ -289,6 +289,10 @@ class TestViewCell(unittest.TestCase):
         st.unsubscribe()
         self.lc.set(2)
         st.advance()
+    
+    def test_coerced_base_value(self):
+        self.vc.set(999)  # out of base cell's range, gets clamped
+        self.assertEqual(100 + self.delta, self.vc.get())
 
 
 class TestCommandCell(unittest.TestCase):

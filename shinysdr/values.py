@@ -425,8 +425,9 @@ def ViewCell(base, get_transform, set_transform, **kwargs):
     def forward(view_value):
         base_value = set_transform(view_value)
         base.set(base_value)
-        if base_value != base.get():
-            reverse()
+        actual_base_value = base.get()
+        if base_value != actual_base_value:
+            reverse(actual_base_value)
     
     def reverse(base_value):
         self.set(get_transform(base_value))
