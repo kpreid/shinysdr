@@ -294,8 +294,6 @@ define(['./basic', './spectrum', '../types', '../values', '../events', '../widge
   // Widget for a receiver block
   function Receiver(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
-      ignore('is_valid');
-      
       var deviceAndFreqPanel = getAppend().appendChild(document.createElement('div'));
       deviceAndFreqPanel.classList.add('panel');
 
@@ -331,6 +329,7 @@ define(['./basic', './spectrum', '../types', '../values', '../events', '../widge
           : 'Outside of device bandwidth; disabled.';
       });
       addWidget(outOfRangeNotice, Banner);
+      ignore('is_valid');
       
       addWidget('mode', Radio);
       addWidget('demodulator', Demodulator);
