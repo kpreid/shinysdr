@@ -40,7 +40,8 @@ define(['audio', 'types', 'values', 'events', 'widget', 'widgets', 'network', 'd
     source.connect(fftnode);
   }, function getUserMediaFailure(e) {
     var d = document.createElement('dialog');
-    d.textContent = e;
+    // e is a DOMException
+    d.textContent = 'Failed to get audio input: ' + e.name;
     document.body.appendChild(d);
     d.show();
   });
