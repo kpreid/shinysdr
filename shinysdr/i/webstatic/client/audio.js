@@ -502,7 +502,16 @@ define(['./types', './values', './events', './network'], function (types, values
   // Wrapper around getUserMedia which sets our desired parameters and displays an error message if it fails.
   function getUserMediaForAudioTools(audioContext) {
     return navigator.mediaDevices.getUserMedia({
-      audio: true
+      audio: {
+        // See https://bugs.chromium.org/p/chromium/issues/detail?id=387737
+        // for why we are asking for no echoCancellation in particular; I'm not
+        // sure why it needs to be put inside 'mandatory' because having
+        // 'mandatory' as a key here isn't documented elsewhere than that suggestion.
+        // In any case, this doesn't seem to harm our success at getting stereo.
+        mandatory: { 
+          echoCancellation : false,
+        }
+      }
     }).then((stream) => {
       // TODO: There is supposedly a better version of this in the future (MediaStreamTrackSource)
       return audioContext.createMediaStreamSource(stream);
