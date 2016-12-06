@@ -35,8 +35,7 @@ define(['audio', 'types', 'values', 'events', 'widget', 'widgets', 'network', 'd
   fftnode.smoothingTimeConstant = 0;
   fftnode.fftSize = 16384;
   
-  var getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozUserMedia || navigator.msGetUserMedia;
-  getUserMedia.call(navigator, {audio: true}, function getUserMediaSuccess(stream) {
+  navigator.mediaDevices.getUserMedia({audio: true}).then(function getUserMediaSuccess(stream) {
     var source = ctx.createMediaStreamSource(stream);
     source.connect(fftnode);
   }, function getUserMediaFailure(e) {
