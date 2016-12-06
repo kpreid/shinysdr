@@ -78,10 +78,7 @@ define(['./types', './values', './events', './network'], function (types, values
     //}
     
     // Analyser for display
-    var analyserNode = audio.createAnalyser();
-    analyserNode.smoothingTimeConstant = 0;
-    analyserNode.fftSize = 16384;
-    var analyserAdapter = new AudioAnalyserAdapter(scheduler, analyserNode, analyserNode.frequencyBinCount / 2);
+    var analyserAdapter = new AudioAnalyserAdapter(scheduler, audio);
     
     // User-facing status display
     // TODO should be faceted read-only when exported
@@ -297,14 +294,14 @@ define(['./types', './values', './events', './network'], function (types, values
           
           started = true;
           nodeBeforeDestination.connect(audio.destination);
-          nodeBeforeDestination.connect(analyserNode);
+          analyserAdapter.connectFrom(nodeBeforeDestination);
           analyserAdapter.setLockout(false);
         }
       } else {
         if (started) {
           started = false;
           nodeBeforeDestination.disconnect(audio.destination);
-          nodeBeforeDestination.disconnect(analyserNode);
+          analyserAdapter.disconnectFrom(nodeBeforeDestination);
           analyserAdapter.setLockout(true);
         }
       }
@@ -321,8 +318,16 @@ define(['./types', './values', './events', './network'], function (types, values
   var TIME_ADJ = false;    // Subtract median amplitude; hides strong beats.
   
   // Takes frequency data from an AnalyserNode and provides an interface like a MonitorSink
-  function AudioAnalyserAdapter(scheduler, analyserNode, length) {
-    // Constants
+  function AudioAnalyserAdapter(scheduler, audioContext) {
+    // Construct analyser.
+    var analyserNode = audioContext.createAnalyser();
+    analyserNode.smoothingTimeConstant = 0;
+    analyserNode.fftSize = 16384;
+    
+    // Used to have the option to reduce this to remove empty high-freq bins from the view. Leaving that out for now.
+    var length = analyserNode.frequencyBinCount;
+    
+    // Constant parameters for MonitorSink interface
     var effectiveSampleRate = analyserNode.context.sampleRate * (length / analyserNode.frequencyBinCount);
     var info = Object.freeze({freq: 0, rate: effectiveSampleRate});
     
@@ -387,6 +392,13 @@ define(['./types', './values', './events', './network'], function (types, values
       if (!lockout) {
         maybeScheduleUpdate();
       }
+    }});
+    // This interface allows us to in the future have per-channel analysers without requiring the caller to deal with that.
+    Object.defineProperty(this, 'connectFrom', {value: function (inputNode) {
+      inputNode.connect(analyserNode);
+    }});
+    Object.defineProperty(this, 'disconnectFrom', {value: function (inputNode) {
+      inputNode.disconnect(analyserNode);
     }});
     
     // Output cell

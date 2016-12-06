@@ -31,13 +31,13 @@ define(['audio', 'types', 'values', 'events', 'widget', 'widgets', 'network', 'd
   
   var ctx = new AudioContext();
   var sampleRate = ctx.sampleRate;
-  var fftnode = ctx.createAnalyser();
-  fftnode.smoothingTimeConstant = 0;
-  fftnode.fftSize = 16384;
+  
+  var adapter = new AudioAnalyserAdapter(scheduler, ctx);
+  adapter.paused.set(false);
   
   navigator.mediaDevices.getUserMedia({audio: true}).then(function getUserMediaSuccess(stream) {
     var source = ctx.createMediaStreamSource(stream);
-    source.connect(fftnode);
+    adapter.connectFrom(source);
   }, function getUserMediaFailure(e) {
     var d = document.createElement('dialog');
     // e is a DOMException
@@ -45,9 +45,6 @@ define(['audio', 'types', 'values', 'events', 'widget', 'widgets', 'network', 'd
     document.body.appendChild(d);
     d.show();
   });
-  
-  var adapter = new AudioAnalyserAdapter(scheduler, fftnode, fftnode.frequencyBinCount);
-  adapter.paused.set(false);
   
   var root = new ConstantCell(types.block, makeBlock({
     monitor: new ConstantCell(types.block, adapter)
