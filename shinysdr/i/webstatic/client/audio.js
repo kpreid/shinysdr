@@ -77,11 +77,11 @@ define(['./types', './values', './events', './network'], function (types, values
     //  }
     //}
     
-    // Analyzer for display
-    var analyzerNode = audio.createAnalyser();
-    analyzerNode.smoothingTimeConstant = 0;
-    analyzerNode.fftSize = 16384;
-    var analyzerAdapter = new AudioAnalyzerAdapter(scheduler, analyzerNode, analyzerNode.frequencyBinCount / 2);
+    // Analyser for display
+    var analyserNode = audio.createAnalyser();
+    analyserNode.smoothingTimeConstant = 0;
+    analyserNode.fftSize = 16384;
+    var analyserAdapter = new AudioAnalyserAdapter(scheduler, analyserNode, analyserNode.frequencyBinCount / 2);
     
     // User-facing status display
     // TODO should be faceted read-only when exported
@@ -95,7 +95,7 @@ define(['./types', './values', './events', './network'], function (types, values
       target: new LocalReadCell(String, ''),  // TODO should be numeric w/ unit
       error: new LocalReadCell(new types.Notice(true), ''),
       //averageSkew: new LocalReadCell(Number, 0),
-      monitor: new ConstantCell(types.block, analyzerAdapter)
+      monitor: new ConstantCell(types.block, analyserAdapter)
     });
     function updateStatus() {
       // TODO: I think we are mixing up per-channel and total samples here  (queueSampleCount counts both channels individually)
@@ -297,15 +297,15 @@ define(['./types', './values', './events', './network'], function (types, values
           
           started = true;
           nodeBeforeDestination.connect(audio.destination);
-          nodeBeforeDestination.connect(analyzerNode);
-          analyzerAdapter.setLockout(false);
+          nodeBeforeDestination.connect(analyserNode);
+          analyserAdapter.setLockout(false);
         }
       } else {
         if (started) {
           started = false;
           nodeBeforeDestination.disconnect(audio.destination);
-          nodeBeforeDestination.disconnect(analyzerNode);
-          analyzerAdapter.setLockout(true);
+          nodeBeforeDestination.disconnect(analyserNode);
+          analyserAdapter.setLockout(true);
         }
       }
     }
@@ -320,10 +320,10 @@ define(['./types', './values', './events', './network'], function (types, values
   var FREQ_ADJ = false;    // Compensate for typical frequency dependence in music so peaks are equal.
   var TIME_ADJ = false;    // Subtract median amplitude; hides strong beats.
   
-  // Takes frequency data from an AnalyzerNode and provides an interface like a MonitorSink
-  function AudioAnalyzerAdapter(scheduler, analyzerNode, length) {
+  // Takes frequency data from an AnalyserNode and provides an interface like a MonitorSink
+  function AudioAnalyserAdapter(scheduler, analyserNode, length) {
     // Constants
-    var effectiveSampleRate = analyzerNode.context.sampleRate * (length / analyzerNode.frequencyBinCount);
+    var effectiveSampleRate = analyserNode.context.sampleRate * (length / analyserNode.frequencyBinCount);
     var info = Object.freeze({freq: 0, rate: effectiveSampleRate});
     
     // State
@@ -336,7 +336,7 @@ define(['./types', './values', './events', './network'], function (types, values
     
     function update() {
       isScheduled = false;
-      analyzerNode.getFloatFrequencyData(fftBuffer);
+      analyserNode.getFloatFrequencyData(fftBuffer);
     
       var absolute_adj;
       if (TIME_ADJ) {
@@ -375,7 +375,7 @@ define(['./types', './values', './events', './network'], function (types, values
           pausedCell.n.listen(maybeScheduleUpdate);
         } else {
           isScheduled = true;
-          // A basic rAF loop seems to be about the right rate to poll the AnalyzerNode for new data. Using the Scheduler instead would try to run faster.
+          // A basic rAF loop seems to be about the right rate to poll the AnalyserNode for new data. Using the Scheduler instead would try to run faster.
           requestAnimationFrame(update);
         }
       }
@@ -405,10 +405,10 @@ define(['./types', './values', './events', './network'], function (types, values
     this.freq_resolution = new ConstantCell(Number, length);
     this.signal_type = new ConstantCell(types.any, {kind: 'USB', sample_rate: effectiveSampleRate});
   }
-  Object.defineProperty(AudioAnalyzerAdapter.prototype, '_reshapeNotice', {value: new Neverfier()});
-  Object.freeze(AudioAnalyzerAdapter.prototype);
-  Object.freeze(AudioAnalyzerAdapter);
-  exports.AudioAnalyzerAdapter = AudioAnalyzerAdapter;
+  Object.defineProperty(AudioAnalyserAdapter.prototype, '_reshapeNotice', {value: new Neverfier()});
+  Object.freeze(AudioAnalyserAdapter.prototype);
+  Object.freeze(AudioAnalyserAdapter);
+  exports.AudioAnalyserAdapter = AudioAnalyserAdapter;
   
   // Given a maximum acceptable delay, calculate the largest power-of-two buffer size for a ScriptProcessorNode which does not result in more than that delay.
   function delayToBufferSize(sampleRate, maxDelayInSeconds) {

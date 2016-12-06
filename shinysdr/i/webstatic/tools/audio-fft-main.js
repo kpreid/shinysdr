@@ -22,7 +22,7 @@ require.config({
 define(['audio', 'types', 'values', 'events', 'widget', 'widgets', 'network', 'database', 'coordination'], function (audio, types, values, events, widget, widgets, network, database, coordination) {
   'use strict';
   
-  var AudioAnalyzerAdapter = audio.AudioAnalyzerAdapter;
+  var AudioAnalyserAdapter = audio.AudioAnalyserAdapter;
   var ClientStateObject = coordination.ClientStateObject;
   var ConstantCell = values.ConstantCell;
   var makeBlock = values.makeBlock;
@@ -46,7 +46,7 @@ define(['audio', 'types', 'values', 'events', 'widget', 'widgets', 'network', 'd
     d.show();
   });
   
-  var adapter = new AudioAnalyzerAdapter(scheduler, fftnode, fftnode.frequencyBinCount);
+  var adapter = new AudioAnalyserAdapter(scheduler, fftnode, fftnode.frequencyBinCount);
   adapter.paused.set(false);
   
   var root = new ConstantCell(types.block, makeBlock({
