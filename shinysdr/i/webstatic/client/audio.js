@@ -422,6 +422,83 @@ define(['./types', './values', './events', './network'], function (types, values
   Object.freeze(AudioAnalyserAdapter);
   exports.AudioAnalyserAdapter = AudioAnalyserAdapter;
   
+  // Extract time-domain samples from an audio context suitable for the ScopePlot widget.
+  // This is not based on AnalyserNode because AnalyserNode is single-channel and using multiple AnalyserNodes will not give time-alignment (TODO verify that).
+  function AudioScopeAdapter(scheduler, audioContext) {
+    // Parameters
+    const bufferSize = delayToBufferSize(audioContext.sampleRate, 1/60);
+    console.log('bufferSize given', audioContext.sampleRate, 'is', bufferSize);
+    const nChannels = 2;
+    
+    // Buffers
+    const copyL = new Float32Array(bufferSize);
+    const copyR = new Float32Array(bufferSize);
+    const outputBuffer = new Float32Array(bufferSize * 2);
+    
+    const captureProcessor = audioContext.createScriptProcessor(bufferSize, nChannels, nChannels);
+    captureProcessor.onaudioprocess = function scopeCallback(event) {
+      const buffer = event.inputBuffer;
+      buffer.copyFromChannel(copyL, 0);
+      buffer.copyFromChannel(copyR, 1);
+      requestAnimationFrame(notify);
+    };
+    captureProcessor.connect(audioContext.destination);
+    
+    // Cell handling and other state
+    const info = {};  // dummy
+    var lastValue = [info, outputBuffer];
+    var subscriptions = [];
+    var isScheduled = false;
+    
+    function notify() {
+      // Do this processing now rather than in callback to minimize work done in audio callback.
+      for (var i = 0; i < bufferSize; i++) {
+        outputBuffer[i * 2] = copyL[i];
+        outputBuffer[i * 2 + 1] = copyR[i];
+      }
+      
+      var newValue = [info, outputBuffer];  // fresh array, same contents, good enough.
+    
+      // Deliver value
+      lastValue = newValue;
+      // TODO replace this with something async
+      for (var i = 0; i < subscriptions.length; i++) {
+        (0,subscriptions[i])(newValue);
+      }
+    }
+    
+    // Workaround for Chromium bug https://code.google.com/p/chromium/issues/detail?id=82795 -- ScriptProcessor nodes are not kept live
+    window['__dummy_audio_node_reference_' + Math.random()] = captureProcessor;
+
+    // TODO: Also disconnect processor when nobody's subscribed.
+    
+    Object.defineProperty(this, 'connectFrom', {value: function (inputNode) {
+      inputNode.connect(captureProcessor);
+    }});
+    Object.defineProperty(this, 'disconnectFrom', {value: function (inputNode) {
+      inputNode.disconnect(captureProcessor);
+    }});
+    
+    // Output cell
+    this.scope = new Cell(new types.BulkDataType('d', 'f'));  // TODO BulkDataType really isn't properly involved here
+    this.scope.get = function () {
+      return lastValue;
+    };
+    // TODO: put this on a more general and sound framework (same as BulkDataCell)
+    this.scope.subscribe = function (callback) {
+      subscriptions.push(callback);
+    };
+    
+    // Other elements expected by Monitor widget
+    Object.defineProperty(this, '_implements_shinysdr.i.blocks.IMonitor', {enumerable: false});
+    this.freq_resolution = new ConstantCell(Number, length);
+    this.signal_type = new ConstantCell(types.any, {kind: 'USB', sample_rate: audioContext.sampleRate});
+  }
+  Object.defineProperty(AudioScopeAdapter.prototype, '_reshapeNotice', {value: new Neverfier()});
+  Object.freeze(AudioScopeAdapter.prototype);
+  Object.freeze(AudioScopeAdapter);
+  exports.AudioScopeAdapter = AudioScopeAdapter;
+  
   // Wrapper around getUserMedia which sets our desired parameters and displays an error message if it fails.
   function getUserMediaForAudioTools(audioContext) {
     return navigator.mediaDevices.getUserMedia({
