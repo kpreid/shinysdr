@@ -141,7 +141,7 @@ define(['../types', '../values', '../events', '../widget', '../gltools', '../dat
     }
     
     const sortTable = [];
-    for (const key in block) {
+    for (var key in block) {
       if (claimed[key]) continue;
       
       const member = block[key];
