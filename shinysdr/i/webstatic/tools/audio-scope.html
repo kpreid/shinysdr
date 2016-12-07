@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  Copyright 2015 Kevin Reid <kpreid@switchb.org>
+  Copyright 2016 Kevin Reid <kpreid@switchb.org>
   
   This file is part of ShinySDR.
   
@@ -17,23 +17,20 @@
   You should have received a copy of the GNU General Public License
   along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 -->
-<html lang="en"><head>
+
+<html lang="en" class="subwindowed-page"><head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <title>ShinySDR</title>
+  <title>Audio Oscilloscope — ShinySDR</title>
+  <link rel="stylesheet" href="/client/ui.css">
+  <link rel="stylesheet" href="/client/theme.css">
   <meta name="viewport" content="width=device-width">
-  <link rel="stylesheet" href="/manual/manual-style.css">
 </head><body>
 
-<h1>ShinySDR</h1>
+<canvas id="scope"
+   data-widget="ScopePlot"
+   data-target="scope"
+   style="display: block; height: 100%; width: 100%;">
+</canvas>
 
-<p>This is a private ShinySDR installation. Use the URL provided on server startup to get access.</p>
-
-<hr>
-
-<ul>
-  <li><a href="/manual/">ShinySDR Manual</a></li>
-  <li><a href="/test/">Client tests</a></li>
-  <li>Standalone audio tools: <a href="/tools/audio-fft">FFT</a>, <a href="/tools/audio-scope">oscilloscope</a></li>
-</ul>
-
+<script src="/client/require.js" data-main="audio-scope-main.js"></script>
 </body></html>
