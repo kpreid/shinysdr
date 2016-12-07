@@ -422,6 +422,24 @@ define(['./types', './values', './events', './network'], function (types, values
   Object.freeze(AudioAnalyserAdapter);
   exports.AudioAnalyserAdapter = AudioAnalyserAdapter;
   
+  // Wrapper around getUserMedia which sets our desired parameters and displays an error message if it fails.
+  function getUserMediaForAudioTools(audioContext) {
+    return navigator.mediaDevices.getUserMedia({
+      audio: true
+    }).then((stream) => {
+      // TODO: There is supposedly a better version of this in the future (MediaStreamTrackSource)
+      return audioContext.createMediaStreamSource(stream);
+    }, (error) => {
+      const dialog = document.createElement('dialog');
+      // e is a DOMException
+      dialog.textContent = 'Could not access audio input: ' + e.name;
+      document.body.appendChild(dialog);
+      dialog.show();
+      return null;
+    });
+  }
+  exports.getUserMediaForAudioTools = getUserMediaForAudioTools;
+  
   // Given a maximum acceptable delay, calculate the largest power-of-two buffer size for a ScriptProcessorNode which does not result in more than that delay.
   function delayToBufferSize(sampleRate, maxDelayInSeconds) {
     var maxBufferSize = sampleRate * maxDelayInSeconds;

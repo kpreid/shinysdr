@@ -28,16 +28,13 @@ define(['audio', 'coordination', 'events', 'types', 'values', 'widget', 'widgets
   const adapter = new audio.AudioAnalyserAdapter(scheduler, audioContext);
   adapter.paused.set(false);
   
-  navigator.mediaDevices.getUserMedia({audio: true}).then(function getUserMediaSuccess(stream) {
-    const source = audioContext.createMediaStreamSource(stream);
+  audio.getUserMediaForAudioTools(audioContext).then((source) => {
+    if (source === null) { 
+      // Error reporting already handled.
+      return;
+    }
     adapter.connectFrom(source);
-  }, function getUserMediaFailure(e) {
-    const d = document.createElement('dialog');
-    // e is a DOMException
-    d.textContent = 'Failed to get audio input: ' + e.name;
-    document.body.appendChild(d);
-    d.show();
-  });
+  })
   
   const root = new values.ConstantCell(types.block, adapter);
   
