@@ -84,33 +84,30 @@ define(['./types', './values', './events'], function (types, values, events) {
   
   function ReadWriteCell(setter, assumed, metadata) {
     Cell.call(this, metadata);
-    var value = assumed;
-    var remoteValue = assumed;
-    var inhibitTime = 0;
-    var inhibitCount = 0;
-    var resetTimeout = undefined;
+    let value = assumed;
+    let remoteValue = assumed;
+    let inhibitCount = 0;
     this.get = function() { return value; },
     this.set = function(newValue) {
       value = newValue;
       this.n.notify();
-      inhibitTime = Date.now() + 1000;  // TODO adjust value to observed latency
       setter(newValue, decAndAccept);
       inhibitCount++;
     };
     this._update = function _update(newValue) {
       remoteValue = newValue;
-      // If we don't receive a response promptly from the server, then the old value is more accurate than the value we've sent.
-      if (resetTimeout) clearTimeout(resetTimeout);
-      resetTimeout = setTimeout(acceptFromNetwork, Math.max(0, inhibitTime - Date.now()));
-    };
-    var decAndAccept = function decAndAccept() {
-      // If there are now no outstanding set requests, then the last value we got is the correct valu.
-      inhibitCount--;
       if (inhibitCount == 0) {
         acceptFromNetwork();
       }
     };
-    var acceptFromNetwork = function acceptFromNetwork() {
+    const decAndAccept = function decAndAccept() {
+      inhibitCount--;
+      if (inhibitCount == 0) {
+        // If there are now no outstanding set requests, then the last value we got is the correct value.
+        acceptFromNetwork();
+      }
+    };
+    const acceptFromNetwork = function acceptFromNetwork() {
       value = remoteValue;
       this.n.notify();
     }.bind(this);
