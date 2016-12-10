@@ -277,10 +277,6 @@ define(['./types', './values', './events', './network'], function (types, values
 
       updateParameters();
     };
-
-    // Workaround for Chromium bug https://code.google.com/p/chromium/issues/detail?id=82795 -- ScriptProcessor nodes are not kept live
-    window['__dummy_audio_node_reference_' + Math.random()] = ascr;
-    //console.log('audio init done');
     
     ascr.connect(antialiasFilter);    
     var nodeBeforeDestination = antialiasFilter;
@@ -467,9 +463,6 @@ define(['./types', './values', './events', './network'], function (types, values
       }
     }
     
-    // Workaround for Chromium bug https://code.google.com/p/chromium/issues/detail?id=82795 -- ScriptProcessor nodes are not kept live
-    window['__dummy_audio_node_reference_' + Math.random()] = captureProcessor;
-
     // TODO: Also disconnect processor when nobody's subscribed.
     
     Object.defineProperty(this, 'connectFrom', {value: function (inputNode) {
