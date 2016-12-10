@@ -17,11 +17,59 @@
 
 from __future__ import absolute_import, division
 
+import os.path
+import shutil
+import tempfile
+
+#from twisted.internet import defer
+from twisted.internet.task import Clock
 from twisted.trial import unittest
 
-from shinysdr.i.persistence import PersistenceChangeDetector
+from shinysdr.i.persistence import _PERSISTENCE_DELAY, PersistenceFileGlue, PersistenceChangeDetector
 from shinysdr.test.testutil import SubscriptionTester
 from shinysdr.values import ExportedState, Reference, exported_value, nullExportedState, setter
+
+
+class TestPersistenceFileGlue(unittest.TestCase):
+    def setUp(self):
+        self.__clock = Clock()
+        self.__temp_dir = tempfile.mkdtemp(prefix='shinysdr_test_persistence_tmp')
+        self.__state_name = os.path.join(self.__temp_dir, 'state')
+        self.__reset()
+    
+    def tearDown(self):
+        shutil.rmtree(self.__temp_dir)
+    
+    def __reset(self):
+        """Recreate the object for write-then-read tests."""
+        self.__root = ValueAndBlockSpecimen()
+    
+    def __start(self, **kwargs):
+        return PersistenceFileGlue(
+            reactor=self.__clock,
+            root_object=self.__root,
+            filename=self.__state_name,
+            **kwargs)
+    
+    def test_no_defaults(self):
+        self.__start()
+        # It would be surprising if this assertion failed; this test is mainly just to test the initialization succeeds
+        self.assertEqual(self.__root.get_value(), 0)
+    
+    def test_defaults(self):
+        self.__start(get_defaults=lambda _: {u'value': 1})
+        self.assertEqual(self.__root.get_value(), 1)
+
+    def test_persistence(self):
+        """Test that state persists."""
+        self.__start()
+        self.assertEqual(self.__root.get_value(), 0)  # check initial assumption
+        self.__root.set_value(1)
+        self.__clock.advance(0.01)  # let change detector detect change
+        self.__clock.advance(_PERSISTENCE_DELAY + 0.01)
+        self.__reset()
+        self.__start()
+        self.assertEqual(self.__root.get_value(), 1)  # check persistence
 
 
 class TestPersistenceChangeDetector(unittest.TestCase):

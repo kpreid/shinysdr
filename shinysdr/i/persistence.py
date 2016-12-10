@@ -25,17 +25,20 @@ import shutil
 
 from twisted.python import log
 
-from shinysdr.i.poller import the_subscription_context
-from shinysdr.values import ExportedState
+from shinysdr.values import ExportedState, SubscriptionContext
 
 
 _PERSISTENCE_DELAY = 0.5
 
 
+def _no_defaults(_root):
+    return {}
+
+
 # TODO: Think about a better name. The better name must not include "Manager".
 # This is a class because I expect that it will have methods to control it in more detail in the future.
 class PersistenceFileGlue(object):
-    def __init__(self, reactor, root_object, filename, get_defaults):
+    def __init__(self, reactor, root_object, filename, get_defaults=_no_defaults):
         """
         root_object: Object to persist.
         filename: path to state file to read/write, or None to not actually do persistence.
@@ -64,7 +67,8 @@ class PersistenceFileGlue(object):
         
             reactor.callLater(_PERSISTENCE_DELAY, actually_write)
         
-        pcd = PersistenceChangeDetector(root_object, eventually_write, the_subscription_context)
+        pcd = PersistenceChangeDetector(root_object, eventually_write,
+            SubscriptionContext(reactor=reactor, poller=None))
         # Start implicit write-to-disk loop, but don't actually write.
         # This is because it is useful in some failure modes to not immediately overwrite a good state file with a bad one on startup.
         pcd.get()
