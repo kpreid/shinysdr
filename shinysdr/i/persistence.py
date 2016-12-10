@@ -45,7 +45,14 @@ class PersistenceFileGlue(object):
         get_defaults: function accepting root_object and returning state dict to use if file does not exist.
         """
         assert isinstance(root_object, ExportedState)
+        
+        self.__reactor = reactor
+        self.__filename = filename
+        self.__delayed_write_call = None
+        
         if filename is None:
+            self.__pcd = None
+            self.__scheduled = False
             return
         
         if os.path.isfile(filename):
@@ -55,23 +62,28 @@ class PersistenceFileGlue(object):
         else:
             root_object.state_from_json(get_defaults(root_object))
         
-        def eventually_write():
-            # TODO: factor out the logging?
-            log.msg('Scheduling state write.')
-            def actually_write():
-                log.msg('Performing state write...')
-                current_state = pcd.get()
-                with open(filename, 'w') as f:
-                    json.dump(current_state, f)
-                log.msg('...done')
-        
-            reactor.callLater(_PERSISTENCE_DELAY, actually_write)
-        
-        pcd = PersistenceChangeDetector(root_object, eventually_write,
+        self.__pcd = PersistenceChangeDetector(root_object, self.__write_later,
             SubscriptionContext(reactor=reactor, poller=None))
+        
         # Start implicit write-to-disk loop, but don't actually write.
         # This is because it is useful in some failure modes to not immediately overwrite a good state file with a bad one on startup.
-        pcd.get()
+        self.__pcd.get()
+    
+    def __write_later(self):
+        # TODO: Surely there is some utility in Twisted to do this better.
+        if not (self.__delayed_write_call and self.__delayed_write_call.active()):
+            # TODO: factor out the logging?
+            log.msg('Scheduling state write.')
+            self.__delayed_write_call = self.__reactor.callLater(_PERSISTENCE_DELAY, self.__write_immediately)
+    
+    def __write_immediately(self):
+        log.msg('Performing state write...')
+        current_state = self.__pcd.get()
+        with open(self.__filename, 'w') as f:
+            json.dump(current_state, f)
+        log.msg('...done')
+        if self.__delayed_write_call and self.__delayed_write_call.active():
+            self.__delayed_write_call.cancel()
 
 
 class PersistenceChangeDetector(object):

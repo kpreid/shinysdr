@@ -70,6 +70,8 @@ class TestPersistenceFileGlue(unittest.TestCase):
         self.__reset()
         self.__start()
         self.assertEqual(self.__root.get_value(), 1)  # check persistence
+    
+    # TODO: Add a test that multiple changes don't trigger multiple writes -- needs a reasonable design for a hook to observe the write.
 
 
 class TestPersistenceChangeDetector(unittest.TestCase):
