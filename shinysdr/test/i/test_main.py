@@ -34,6 +34,7 @@ from twisted.internet.task import deferLater
 from twisted.trial import unittest
 
 from shinysdr import main
+from shinysdr.i.persistence import _PERSISTENCE_DELAY
 
 
 class TestMain(unittest.TestCase):
@@ -76,7 +77,7 @@ class TestMain(unittest.TestCase):
         self.assertEqual(rxf.get_source_name(), 'sim_bar')  # check initial assumption
         rxf.set_source_name('sim_foo')
         # TODO: use Clock so we don't have to make a real delay
-        yield deferLater(the_reactor, main._PERSISTENCE_DELAY + 0.01, lambda: None)
+        yield deferLater(the_reactor, _PERSISTENCE_DELAY + 0.01, lambda: None)
         app = yield self.__run_main()
         rxf = app.get_receive_flowgraph()
         self.assertEqual(rxf.get_source_name(), 'sim_foo')  # check persistence
@@ -95,7 +96,7 @@ class TestMain(unittest.TestCase):
         rxf = app.get_receive_flowgraph()
         self.assertEqual(rxf.get_source_name(), 'sim_bar')  # check initial assumption
         rxf.set_source_name('sim_foo')
-        yield deferLater(the_reactor, main._PERSISTENCE_DELAY + 0.01, lambda: None)
+        yield deferLater(the_reactor, _PERSISTENCE_DELAY + 0.01, lambda: None)
         app = yield self.__run_main()
         rxf = app.get_receive_flowgraph()
         self.assertEqual(rxf.get_source_name(), 'sim_bar')  # expect NO persistence

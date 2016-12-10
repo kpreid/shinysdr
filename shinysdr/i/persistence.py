@@ -19,7 +19,55 @@
 
 from __future__ import absolute_import, division
 
+import json
+import os.path
+import shutil
+
+from twisted.python import log
+
+from shinysdr.i.poller import the_subscription_context
 from shinysdr.values import ExportedState
+
+
+_PERSISTENCE_DELAY = 0.5
+
+
+# TODO: Think about a better name. The better name must not include "Manager".
+# This is a class because I expect that it will have methods to control it in more detail in the future.
+class PersistenceFileGlue(object):
+    def __init__(self, reactor, root_object, filename, get_defaults):
+        """
+        root_object: Object to persist.
+        filename: path to state file to read/write, or None to not actually do persistence.
+        get_defaults: function accepting root_object and returning state dict to use if file does not exist.
+        """
+        assert isinstance(root_object, ExportedState)
+        if filename is None:
+            return
+        
+        if os.path.isfile(filename):
+            root_object.state_from_json(json.load(open(filename, 'r')))
+            # make a backup in case this code version misreads the state and loses things on save (but only if the load succeeded, in case the file but not its backup is bad)
+            shutil.copyfile(filename, filename + '~')
+        else:
+            root_object.state_from_json(get_defaults(root_object))
+        
+        def eventually_write():
+            # TODO: factor out the logging?
+            log.msg('Scheduling state write.')
+            def actually_write():
+                log.msg('Performing state write...')
+                current_state = pcd.get()
+                with open(filename, 'w') as f:
+                    json.dump(current_state, f)
+                log.msg('...done')
+        
+            reactor.callLater(_PERSISTENCE_DELAY, actually_write)
+        
+        pcd = PersistenceChangeDetector(root_object, eventually_write, the_subscription_context)
+        # Start implicit write-to-disk loop, but don't actually write.
+        # This is because it is useful in some failure modes to not immediately overwrite a good state file with a bad one on startup.
+        pcd.get()
 
 
 class PersistenceChangeDetector(object):
