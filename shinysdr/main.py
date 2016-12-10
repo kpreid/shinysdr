@@ -38,8 +38,8 @@ from twisted.python import log
 # Note that gnuradio-dependent modules are loaded later, to avoid the startup time if all we're going to do is give a usage message
 from shinysdr.config import Config, write_default_config, execute_config
 from shinysdr.i.dependencies import DependencyTester
+from shinysdr.i.persistence import PersistenceChangeDetector
 from shinysdr.i.poller import the_subscription_context
-from shinysdr.values import PersistenceChangeDetector
 
 __all__ = []  # appended later
 

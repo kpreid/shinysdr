@@ -21,7 +21,7 @@ import unittest
 
 from shinysdr.test.testutil import CellSubscriptionTester, SubscriptionTester
 from shinysdr.types import EnumRow, Range, Reference, to_value_type
-from shinysdr.values import Cell, CellDict, CollectionState, ExportedState, LooseCell, PersistenceChangeDetector, ViewCell, command, exported_value, nullExportedState, setter, unserialize_exported_state
+from shinysdr.values import Cell, CellDict, CollectionState, ExportedState, LooseCell, ViewCell, command, exported_value, nullExportedState, setter, unserialize_exported_state
 
 
 class TestExportedState(unittest.TestCase):
@@ -389,50 +389,3 @@ class CellIdentitySpecimen(ExportedState):
     @exported_value(type=Reference(), changes='never')
     def get_block(self):
         return self.__block
-
-
-class TestPersistenceChangeDetector(unittest.TestCase):
-    def setUp(self):
-        self.st = SubscriptionTester()
-        self.o = ValueAndBlockSpecimen(ValueAndBlockSpecimen(ExportedState()))
-        self.calls = 0
-        self.d = PersistenceChangeDetector(self.o, self.__callback, subscription_context=self.st.context)
-    
-    def __callback(self):
-        self.calls += 1
-    
-    def test_1(self):
-        self.assertEqual(self.d.get(), {
-            u'value': 0,
-            u'block': {
-                u'value': 0,
-                u'block': {},
-            },
-        })
-        self.assertEqual(0, self.calls)
-        self.o.set_value(1)
-        self.assertEqual(0, self.calls)
-        self.st.advance()
-        self.assertEqual(1, self.calls)
-        self.o.set_value(2)
-        self.st.advance()
-        self.assertEqual(1, self.calls) # only fires once
-        self.assertEqual(self.d.get(), {
-            u'value': 2,
-            u'block': {
-                u'value': 0,
-                u'block': {},
-            },
-        })
-        self.st.advance()
-        self.assertEqual(1, self.calls)
-        self.o.get_block().set_value(3)  # pylint: disable=no-member
-        self.st.advance()
-        self.assertEqual(2, self.calls)
-        self.assertEqual(self.d.get(), {
-            u'value': 2,
-            u'block': {
-                u'value': 3,
-                u'block': {},
-            },
-        })
