@@ -15,29 +15,36 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['types', 'values', 'events', 'coordination', 'database', 'network', 'map/map-core', 'map/map-layers', 'widget', 'widgets', 'audio', 'window-manager', 'plugins'], function (types, values, events, coordination, database, network, mapCore, mapLayers, widget, widgets, audio, windowManager, plugins) {
+define(['types', 'values', 'events', 'coordination', 'database', 'network', 'map/map-core', 'map/map-layers', 'widget', 'widgets', 'audio', 'window-manager', 'plugins'], (types, values, events, coordination, database, network, mapCore, mapLayers, widget, widgets, audio, windowManager, plugins) => {
   'use strict';
   
   function log(progressAmount, msg) {
     console.log(msg);
     document.getElementById('loading-information-text')
         .appendChild(document.createTextNode('\n' + msg));
-    var progress = document.getElementById('loading-information-progress');
+    const progress = document.getElementById('loading-information-progress');
     progress.value += (1 - progress.value) * progressAmount;
   }
   
-  var any = types.any;
-  var block = types.block;
-  var ConstantCell = values.ConstantCell;
-  var Coordinator = coordination.Coordinator;
-  var createWidgetExt = widget.createWidgetExt;
-  var LocalCell = values.LocalCell;
-  var makeBlock = values.makeBlock;
-  var StorageCell = values.StorageCell;
-  var StorageNamespace = values.StorageNamespace;
-  var Index = values.Index;
+  const ClientStateObject = coordination.ClientStateObject;
+  const ConstantCell = values.ConstantCell;
+  const Context = widget.Context;
+  const Coordinator = coordination.Coordinator;
+  const DatabasePicker = database.DatabasePicker;
+  const GeoMap = mapCore.GeoMap;
+  const LocalCell = values.LocalCell;
+  const Scheduler = events.Scheduler;
+  const StorageNamespace = values.StorageNamespace;
+  const Index = values.Index;
+  const any = types.any;
+  const block = types.block;
+  const connect = network.connect;
+  const connectAudio = audio.connectAudio;
+  const createWidgetExt = widget.createWidgetExt;
+  const createWidgets = widget.createWidgets;
+  const makeBlock = values.makeBlock;
   
-  var scheduler = new events.Scheduler();
+  const scheduler = new Scheduler();
 
   var clientStateStorage = new StorageNamespace(localStorage, 'shinysdr.client.');
   
@@ -48,14 +55,14 @@ define(['types', 'values', 'events', 'coordination', 'database', 'network', 'map
   database.arrayFromCatalog('dbs/', function (dbs) {   // TODO get url from server
     databasesCell.set(databasesCell.get().concat(dbs));
   })
-  var databasePicker = new database.DatabasePicker(
+  var databasePicker = new DatabasePicker(
     scheduler,
     databasesCell,
     new StorageNamespace(clientStateStorage, 'databases.'));
   var freqDB = databasePicker.getUnion();
   
   // TODO(kpreid): Client state should be more closely associated with the components that use it.
-  var clientState = new coordination.ClientStateObject(clientStateStorage, databasePicker);
+  var clientState = new ClientStateObject(clientStateStorage, databasePicker);
   var clientBlockCell = new ConstantCell(block, clientState);
   
   function main(stateUrl, audioUrl) {
@@ -74,12 +81,12 @@ define(['types', 'values', 'events', 'coordination', 'database', 'network', 'map
     var firstConnection = true;
     var firstFailure = true;
     initialStateReady.scheduler = scheduler;
-    var remoteCell = network.connect(stateUrl, connectionCallback);
+    var remoteCell = connect(stateUrl, connectionCallback);
     remoteCell.n.listen(initialStateReady);
     
     var coordinator = new Coordinator(scheduler, freqDB, remoteCell);
     
-    var audioState = audio.connectAudio(scheduler, audioUrl);
+    var audioState = connectAudio(scheduler, audioUrl);
 
     function connectionCallback(state) {
       switch (state) {
@@ -100,7 +107,8 @@ define(['types', 'values', 'events', 'coordination', 'database', 'network', 'map
     }
 
     function initialStateReady() {
-      var radio = remoteCell.depend(initialStateReady);
+      // TODO: Is this necessary any more, or is it just a gratuitous rebuild? We're not depending on the value of the cell here.
+      remoteCell.n.listen(initialStateReady);
       
       if (firstConnection) {
         firstConnection = false;
@@ -114,7 +122,7 @@ define(['types', 'values', 'events', 'coordination', 'database', 'network', 'map
       
         var index = new Index(scheduler, everything);
       
-        var context = new widget.Context({
+        var context = new Context({
           // TODO all of this should be narrowed down, read-only, replaced with other means to get it to the widgets that need it, etc.
           widgets: widgets,
           radioCell: remoteCell,
@@ -128,10 +136,10 @@ define(['types', 'values', 'events', 'coordination', 'database', 'network', 'map
         });
       
         // generic control UI widget tree
-        widget.createWidgets(everything, context, document);
+        createWidgets(everything, context, document);
         
         // Map (all geographic data)
-        widget.createWidgetExt(context, mapCore.GeoMap, document.getElementById('map'), remoteCell);
+        createWidgetExt(context, GeoMap, document.getElementById('map'), remoteCell);
       
         // Now that the widgets are live, show the full UI, with a tiny pause for progress display completion and in case of last-minute jank
         log(1.0, 'Ready.');

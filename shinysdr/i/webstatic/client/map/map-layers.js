@@ -520,16 +520,12 @@ define(['./map-core',
     });
   });
   
-  registerMapPlugin(function (mapPluginConfig) {
-    var addLayer = mapPluginConfig.addLayer;
-    var index = mapPluginConfig.index;
-    
+  registerMapPlugin(({addLayer, index}) => {
     addLayer('Station Position', {
       featuresCell: index.implementing('shinysdr.devices.IPositionedDevice'),
       featureRenderer: function (devicePositioning, dirty) {
         // TODO: Because devicePositioning is a device component, we don't have the device itself in order to display the device's name. However, the Index is in a position to provide "containing object" information and arguably should.
-        var track = devicePositioning.track.depend(dirty);
-        var f = renderTrackFeature(dirty, devicePositioning.track, '');
+        const f = renderTrackFeature(dirty, devicePositioning.track, '');
         f.iconURL = '/client/map/icons/station-user.svg';
         return f;
       }

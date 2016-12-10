@@ -15,13 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./types', './values', './events', './network'], function (types, values, events, network) {
+define(['./events', './network', './types', './values'],
+       (   events,     network,     types,     values) => {
   'use strict';
   
   const BulkDataType = types.BulkDataType;
   const Cell = values.Cell;
   const ConstantCell = values.ConstantCell;
-  const DerivedCell = values.DerivedCell;
   const Enum = types.Enum;
   const LocalCell = values.LocalCell;
   const LocalReadCell = values.LocalReadCell;
@@ -31,6 +31,7 @@ define(['./types', './values', './events', './network'], function (types, values
   const StorageCell = values.StorageCell;
   const cellPropOfBlock = values.cellPropOfBlock;
   const makeBlock = values.makeBlock;
+  const retryingConnection = network.retryingConnection;
   
   const exports = {};
   
@@ -129,7 +130,7 @@ define(['./types', './values', './events', './network'], function (types, values
     var antialiasFilter = audio.createBiquadFilter();
     antialiasFilter.type = 'lowpass';
     
-    network.retryingConnection(url + '?rate=' + encodeURIComponent(JSON.stringify(nativeSampleRate)), null, function (ws) {
+    retryingConnection(url + '?rate=' + encodeURIComponent(JSON.stringify(nativeSampleRate)), null, function (ws) {
       ws.binaryType = 'arraybuffer';
       function lose(reason) {
         // TODO: Arrange to trigger exponential backoff if we get this kind of error promptly (maybe retryingConnection should just have a time threshold)
@@ -405,7 +406,7 @@ define(['./types', './values', './events', './network'], function (types, values
     }});
     
     // Output cell
-    this.fft = new Cell(new types.BulkDataType('dff', 'b'));  // TODO BulkDataType really isn't properly involved here
+    this.fft = new Cell(new BulkDataType('dff', 'b'));  // TODO BulkDataType really isn't properly involved here
     this.fft.get = function () {
       return lastValue;
     };
@@ -472,7 +473,6 @@ define(['./types', './values', './events', './network'], function (types, values
     const info = {};  // dummy
     var lastValue = [info, new Float32Array(bufferSize)];
     var subscriptions = [];
-    var isScheduled = false;
     
     function sendBuffer(copyBufferSet) {
       // Do this processing now rather than in callback to minimize work done in audio callback.
@@ -504,7 +504,7 @@ define(['./types', './values', './events', './network'], function (types, values
     }});
     
     // Output cell
-    this.scope = new Cell(new types.BulkDataType('d', 'f'));  // TODO BulkDataType really isn't properly involved here
+    this.scope = new Cell(new BulkDataType('d', 'f'));  // TODO BulkDataType really isn't properly involved here
     this.scope.get = function () {
       return lastValue;
     };

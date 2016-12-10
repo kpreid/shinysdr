@@ -27,9 +27,7 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
   const Enum = types.Enum;
   const Radio = widgets_basic.Radio;
   const Range = types.Range;
-  const SingleQuad = gltools.SingleQuad;
   const StorageCell = values.StorageCell;
-  const Toggle = widgets_basic.Toggle;
   const dB = math.dB;
   const makeBlock = values.makeBlock;
   const mod = math.mod;
@@ -62,7 +60,6 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
   exports.ScopeParameters = ScopeParameters;
   
   function ScopePlot(config) {
-    const storage = config.storage;
     const scheduler = config.scheduler;
     const scopeAndParams = config.target.depend(config.rebuildMe);
     const parameters = scopeAndParams.parameters.depend(config.rebuildMe);

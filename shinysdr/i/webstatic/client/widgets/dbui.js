@@ -15,40 +15,15 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./basic', './spectrum', '../types', '../values', '../events', '../widget', '../gltools', '../database', '../math', '../menus', '../plugins'], function (widgets_basic, widgets_spectrum, types, values, events, widget, gltools, database, math, menus, plugins) {
+define(['./basic', '../types', '../values', '../events', '../widget', '../database', '../math', '../menus', '../plugins'], function (widgets_basic, types, values, events, widget, database, math, menus, plugins) {
   'use strict';
   
-  var Banner = widgets_basic.Banner;
   var Block = widgets_basic.Block;
   var Cell = values.Cell;
-  var Clock = events.Clock;
-  var CommandCell = values.CommandCell;
-  var ConstantCell = values.ConstantCell;
-  var DerivedCell = values.DerivedCell;
-  var Enum = types.Enum;
-  var Generic = widgets_basic.Generic;
-  var Knob = widgets_basic.Knob;
-  var LinSlider = widgets_basic.LinSlider;
-  var LocalCell = values.LocalCell;
-  var Menu = menus.Menu;
-  var Meter = widgets_basic.Meter;
-  var Notice = types.Notice;
-  var NumberWidget = widgets_basic.Number;
-  var PickWidget = widgets_basic.PickWidget;
-  var Radio = widgets_basic.Radio;
-  var Range = types.Range;
-  var Select = widgets_basic.Select;
-  var SmallKnob = widgets_basic.SmallKnob;
-  var Timestamp = types.Timestamp;
   var Toggle = widgets_basic.Toggle;
-  var Track = types.Track;
-  var Union = database.Union;
-  var addLifecycleListener = widget.addLifecycleListener;
   var alwaysCreateReceiverFromEvent = widget.alwaysCreateReceiverFromEvent;
   var createWidgetExt = widget.createWidgetExt;
-  var emptyDatabase = database.empty;
   var formatFreqMHz = math.formatFreqMHz;
-  var isSingleValued = types.isSingleValued;
   var modeTable = plugins.getModeTable();
 
   var exports = Object.create(null);
@@ -101,7 +76,6 @@ define(['./basic', './spectrum', '../types', '../values', '../events', '../widge
       }
       
       info = createRecordTableRows(record, tune);
-      var elements = info.element;
       recordElAndDrawTable.set(record, info);
       
       function draw() {
@@ -161,7 +135,6 @@ define(['./basic', './spectrum', '../types', '../values', '../events', '../widge
   // Like FreqList, but with no controls, no live updating, and taking an array rather than the freqDB. For FreqScale disambiguation menus.
   function BareFreqList(config) {
     var records = config.target.get();
-    var scheduler = config.scheduler;
     var actionCompleted = config.context.actionCompleted;  // TODO should have direct access not through context
     var tune = config.actions.tune;  // TODO: Wrap with close-containing-menu
     function tuneWrapper(options) {
@@ -281,7 +254,6 @@ define(['./basic', './spectrum', '../types', '../values', '../events', '../widge
   
   function RecordDetails(config) {
     var recordCell = config.target;
-    var scheduler = config.scheduler;
     var container = this.element = config.element;
     
     var inner = container.appendChild(document.createElement('div'));

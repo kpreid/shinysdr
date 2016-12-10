@@ -15,20 +15,18 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./events', './network', './types', './values'], function (events, network, types, values) {
+define(['./events', './network', './types', './values'],
+       (   events,     network,     types,     values) => {
   'use strict';
   
-  var AddKeepDrop = events.AddKeepDrop;
-  var DerivedCell = values.DerivedCell;
-  var Neverfier = events.Neverfier;
-  var Notifier = events.Notifier;
-  var StorageCell = values.StorageCell;
-  var any = types.any;
-  var externalGet = network.externalGet;
-  var statusCategory = network.statusCategory;
-  var xhrpost = network.xhrpost;
+  const AddKeepDrop = events.AddKeepDrop;
+  const Notifier = events.Notifier;
+  const StorageCell = values.StorageCell;
+  const externalGet = network.externalGet;
+  const statusCategory = network.statusCategory;
+  const xhrpost = network.xhrpost;
   
-  var exports = {};
+  const exports = Object.create(null);
   
   function Source() {
     
@@ -73,7 +71,7 @@ define(['./events', './network', './types', './values'], function (events, netwo
     this.getAll().forEach(f);
   };
   
-  function View(db, filter) {
+  function View(db) {
     this._viewGeneration = NaN;
     this._entries = [];
     this._db = db;
@@ -84,7 +82,6 @@ define(['./events', './network', './types', './values'], function (events, netwo
     return this._viewGeneration === this._db.getGeneration() && this._db._isUpToDate();
   };
   View.prototype.getAll = function () {
-    var entries;
     if (!this._isUpToDate()) {
       this._entries = Object.freeze(this._execute(this._db.getAll()));
       this._viewGeneration = this._db.getGeneration();
@@ -257,7 +254,6 @@ define(['./events', './network', './types', './values'], function (events, netwo
     return '[shinysdr.database.Table ' + this._label + ']';
   };
   Table.prototype.getAll = function () {
-    var entries;
     if (!this._needsSort) {
       this._entries.sort(compareRecord);
     }

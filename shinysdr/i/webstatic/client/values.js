@@ -18,12 +18,12 @@
 define(['./events', './types'], function (events, types) {
   'use strict';
   
-  var Neverfier = events.Neverfier;
-  var Notifier = events.Notifier;
-  var any = types.any;
-  var block = types.block;
+  const Neverfier = events.Neverfier;
+  const Notifier = events.Notifier;
+  const any = types.any;
+  const block = types.block;
   
-  var exports = {};
+  const exports = Object.create(null);
 
   function Cell(type_or_metadata) {
     let type;
@@ -322,7 +322,6 @@ define(['./events', './types'], function (events, types) {
         return;
       }
       
-      var i = cells.length;
       cells.push(cell);
       
       var propCells = Object.create(null);

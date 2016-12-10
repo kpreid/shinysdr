@@ -15,10 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(function () {
+define(() => {
   'use strict';
   
-  var exports = {};
+  const exports = Object.create(null);
   
   // little abstraction to make the scheduler simpler
   function Queue() {
@@ -153,7 +153,6 @@ define(function () {
       clockRunningFor.delete(f);
       f.scheduler.enqueue(f);
     }
-    var i = 0;
     function fireClock() {
       clockRunningFor.forEach(enq);
     }

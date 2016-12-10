@@ -1,6 +1,6 @@
 {
   "undef": true,
-  "unused": true,
+  "unused": "vars",
 
   "strict": true,
   "esversion": 6,

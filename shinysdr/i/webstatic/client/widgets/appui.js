@@ -15,43 +15,30 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./basic', './spectrum', '../types', '../values', '../events', '../widget', '../gltools', '../database', '../math', '../menus', '../plugins'], function (widgets_basic, widgets_spectrum, types, values, events, widget, gltools, database, math, menus, plugins) {
+define(['./basic', './spectrum',
+        '../database', '../events', '../types', '../values', '../widget'],
+       (widgets_basic, widgets_spectrum,
+            database,      events,      types,      values,      widget) => {
   'use strict';
   
-  var Banner = widgets_basic.Banner;
-  var Block = widgets_basic.Block;
-  var Cell = values.Cell;
-  var Clock = events.Clock;
-  var CommandCell = values.CommandCell;
-  var ConstantCell = values.ConstantCell;
-  var DerivedCell = values.DerivedCell;
-  var Enum = types.Enum;
-  var Generic = widgets_basic.Generic;
-  var Knob = widgets_basic.Knob;
-  var LinSlider = widgets_basic.LinSlider;
-  var LocalCell = values.LocalCell;
-  var Menu = menus.Menu;
-  var Meter = widgets_basic.Meter;
-  var Notice = types.Notice;
-  var NumberWidget = widgets_basic.Number;
-  var PickWidget = widgets_basic.PickWidget;
-  var Radio = widgets_basic.Radio;
-  var Range = types.Range;
-  var Select = widgets_basic.Select;
-  var SmallKnob = widgets_basic.SmallKnob;
-  var Timestamp = types.Timestamp;
-  var Toggle = widgets_basic.Toggle;
-  var Track = types.Track;
-  var Union = database.Union;
-  var addLifecycleListener = widget.addLifecycleListener;
-  var alwaysCreateReceiverFromEvent = widget.alwaysCreateReceiverFromEvent;
-  var createWidgetExt = widget.createWidgetExt;
-  var emptyDatabase = database.empty;
-  var formatFreqMHz = math.formatFreqMHz;
-  var isSingleValued = types.isSingleValued;
-  var modeTable = plugins.getModeTable();
+  const Banner = widgets_basic.Banner;
+  const Block = widgets_basic.Block;
+  const DerivedCell = values.DerivedCell;
+  const Enum = types.Enum;
+  const Knob = widgets_basic.Knob;
+  const LinSlider = widgets_basic.LinSlider;
+  const LocalCell = values.LocalCell;
+  const Meter = widgets_basic.Meter;
+  const Notice = types.Notice;
+  const NumberWidget = widgets_basic.Number;
+  const PickWidget = widgets_basic.PickWidget;
+  const Radio = widgets_basic.Radio;
+  const Select = widgets_basic.Select;
+  const Toggle = widgets_basic.Toggle;
+  const createWidgetExt = widget.createWidgetExt;
+  const isSingleValued = types.isSingleValued;
 
-  var exports = Object.create(null);
+  const exports = Object.create(null);
 
   // Suppresses all visibility of null objects
   function NullWidget(config) {
@@ -104,9 +91,6 @@ define(['./basic', './spectrum', '../types', '../values', '../events', '../widge
       var createChild = function (name) {
         var toolbar;
         var widgetContainer = childContainer;
-        function setInsertion(element) {
-          widgetContainer = element;
-        }
         // buildContainer must append exactly one child. TODO: cleaner
         var widgetPlaceholder = buildEntry(childContainer, block, name);
         if (idPrefix) {
@@ -186,7 +170,8 @@ define(['./basic', './spectrum', '../types', '../values', '../events', '../widge
     return setElement.appendChild(document.createElement('div'));
   }
   
-  var DeviceSet = exports.DeviceSet = BlockSet(Device, BlockSetInFrameEntryBuilder('Device'));
+  // TODO: This is unused but won't be once 'Accessory' is dead
+  //exports.DeviceSet = BlockSet(Device, BlockSetInFrameEntryBuilder('Device'));
   var ReceiverSet = exports.ReceiverSet = BlockSet(Receiver, BlockSetInFrameEntryBuilder('Receiver'));
   var AccessorySet = exports.AccessorySet = BlockSet(PickWidget, BlockSetInFrameEntryBuilder('Accessory'));
   exports.WindowBlocks = BlockSet(PickWidget, windowEntryBuilder);

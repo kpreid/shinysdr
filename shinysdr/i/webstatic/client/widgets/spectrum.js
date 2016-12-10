@@ -169,7 +169,6 @@ define(['./basic', './dbui',
 
   // Abstract
   function CanvasSpectrumWidget(config, buildGL, build2D) {
-    var self = this;
     var fftCell = config.target;
     var view = config.view;
     
@@ -196,13 +195,11 @@ define(['./basic', './dbui',
       view.n.listen(draw);
       
       // Update canvas position and dimensions.
-      var cleared = false;
-      var lvf = view.leftVisibleFreq();
-      var rvf = view.rightVisibleFreq();
-      canvas.style.marginLeft = view.freqToCSSLeft(lvf);
+      let cleared = false;
+      canvas.style.marginLeft = view.freqToCSSLeft(view.leftVisibleFreq());
       canvas.style.width = view.freqToCSSLength(view.rightVisibleFreq() - view.leftVisibleFreq());
-      var w = canvas.offsetWidth;
-      var h = canvas.offsetHeight;
+      let w = canvas.offsetWidth;
+      let h = canvas.offsetHeight;
       if (canvas.width !== w || canvas.height !== h) {
         // implicitly clears
         canvas.width = w;
@@ -242,7 +239,6 @@ define(['./basic', './dbui',
   
   function WaterfallPlot(config) {
     var self = this;
-    var fftCell = config.target;
     var view = config.view;
     var avgAlphaCell = view.parameters.spectrum_average;
     
@@ -1110,7 +1106,6 @@ define(['./basic', './dbui',
       var isGroup = record.type === 'group';
       var channel = isGroup ? record.grouped[0] : record;
       var freq = record.freq;
-      var mode = channel.mode;
       var el = document.createElement('button');
       el.className = 'freqscale-channel';
       el.textContent =
@@ -1182,9 +1177,7 @@ define(['./basic', './dbui',
     var scale_fine2 = 2;
     
     var draw = config.boundedFn(function drawImpl() {
-      var centerFreq = tunerSource.depend(draw);
       view.n.listen(draw);
-      
       lower = view.leftFreq();
       upper = view.rightFreq();
       

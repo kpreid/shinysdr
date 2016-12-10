@@ -143,7 +143,6 @@ define(['./types', './values', './events'], function (types, values, events) {
     
     var fft = new Float32Array(1);
     fft[0] = -1e50;
-    var VSIZE = Float32Array.BYTES_PER_ELEMENT;
     var lastValue = [{freq:0, rate:1}, fft];
 
     // kludge to ensure that widgets get all of the frames
@@ -322,7 +321,7 @@ define(['./types', './values', './events'], function (types, values, events) {
       function oneMessage(message) {
         var op = message[0];
         var id = message[1];
-        switch (message[0]) {
+        switch (op) {
           case 'register_block':
             var url = message[2];
             var interfaces = message[3];

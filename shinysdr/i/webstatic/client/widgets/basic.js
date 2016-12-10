@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-// TODO post split, reduce deps here
-define(['../types', '../values', '../events', '../widget', '../gltools', '../database', '../menus'], function (types, values, events, widget, gltools, database, menus) {
+define(['../events', '../types', '../values', '../widget'],
+       (    events,      types,      values,      widget) => {
   'use strict';
   
   var Cell = values.Cell;
@@ -25,17 +25,11 @@ define(['../types', '../values', '../events', '../widget', '../gltools', '../dat
   var ConstantCell = values.ConstantCell;
   var DerivedCell = values.DerivedCell;
   var Enum = types.Enum;
-  var LocalCell = values.LocalCell;
-  var Menu = menus.Menu;
   var Notice = types.Notice;
   var Range = types.Range;
   var Timestamp = types.Timestamp;
   var Track = types.Track;
-  var Union = database.Union;
-  var addLifecycleListener = widget.addLifecycleListener;
-  var alwaysCreateReceiverFromEvent = widget.alwaysCreateReceiverFromEvent;
   var createWidgetExt = widget.createWidgetExt;
-  var emptyDatabase = database.empty;
   var isSingleValued = types.isSingleValued;
   
   var exports = Object.create(null);
@@ -746,7 +740,6 @@ define(['../types', '../values', '../events', '../widget', '../gltools', '../dat
   exports.Meter = Meter;
   
   function Toggle(config) {
-    var text;
     SimpleElementWidget.call(this, config, 'INPUT',
       function buildPanelForToggle(container) {
         var label = container.appendChild(document.createElement('label'));

@@ -25,25 +25,24 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
         shader_points_f, shader_curves_f) => {
   'use strict';
   
-  var sin = Math.sin;
-  var cos = Math.cos;
+  const sin = Math.sin;
+  const cos = Math.cos;
   
-  var AddKeepDrop = events.AddKeepDrop;
-  var Banner = widgets_basic.Banner;
-  var Cell = values.Cell;
-  var Clock = events.Clock;
-  var ConstantCell = values.ConstantCell;
-  var DerivedCell = values.DerivedCell;
-  var PickWidget = widgets_basic.PickWidget;
-  var SmallKnob = widgets_basic.SmallKnob;
-  var StorageCell = values.StorageCell;
-  var Toggle = widgets_basic.Toggle;
-  var any = types.any;
-  var block = types.block;
-  var createWidgetExt = widget.createWidgetExt;
-  var externalGet = network.externalGet;
-  var makeBlock = values.makeBlock;
-  var mod = math.mod;
+  const AddKeepDrop = events.AddKeepDrop;
+  const Banner = widgets_basic.Banner;
+  const Cell = values.Cell;
+  const Clock = events.Clock;
+  const ConstantCell = values.ConstantCell;
+  const DerivedCell = values.DerivedCell;
+  const PickWidget = widgets_basic.PickWidget;
+  const SmallKnob = widgets_basic.SmallKnob;
+  const StorageCell = values.StorageCell;
+  const Toggle = widgets_basic.Toggle;
+  const any = types.any;
+  const block = types.block;
+  const createWidgetExt = widget.createWidgetExt;
+  const externalGet = network.externalGet;
+  const makeBlock = values.makeBlock;
   
   var exports = {};
   
@@ -216,24 +215,6 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
     mat[matInd(1, 3)] = 0;
     mat[matInd(2, 3)] = 0;
     mat[matInd(3, 3)] = 1;
-  }
-  function setScaleMat(mat, scale) {
-    mat[0] = scale;
-    mat[1] = 0;
-    mat[2] = 0;
-    mat[3] = 0;
-    mat[4] = 0;
-    mat[5] = scale;
-    mat[6] = 0;
-    mat[7] = 0;
-    mat[8] = 0;
-    mat[9] = 0;
-    mat[10] = scale;
-    mat[11] = 0;
-    mat[12] = 0;
-    mat[13] = 0;
-    mat[14] = 0;
-    mat[15] = 1;
   }
   function multMat(out, a, b) {
     for (var i = 0; i < 4; i++) {
@@ -576,7 +557,6 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
       ctx.stroke();
     });
     
-    var textLabelCache = Object.create(null);
     this.refTextLabel = function refTextLabel(xanchor, xoff, yoff, text) {
       var textWidth = labelRenderCtx.measureText(text).width;
       xoff += textWidth / 2 * xanchor;
@@ -899,8 +879,6 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
             anchor === 'bottom' ? -textRowHeight : anchor === 'top' ? textRowHeight : 0,
             rendered.label);
           var iconLabel = labelTextureManager.refIconLabel(0, 0, iconURL);
-          var lat = rendered.position[0];
-          var lon = rendered.position[1];
           var animated = isRenderedAnimatedDirectly(rendered);
           writeQuad(labelsByIndex, writeVertex, info.iconIndex, rendered, iconLabel, pickingColor);
           writeQuad(labelsByIndex, writeVertex, info.textIndex, rendered, textLabel, pickingColor);

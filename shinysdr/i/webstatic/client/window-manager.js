@@ -222,7 +222,7 @@ define(['./values'], function (values) {
     }.bind(this));
     globalUpdate();
   };
-  var Subwindow = document.registerElement(ELEMENT, {
+  /* const Subwindow = */ document.registerElement(ELEMENT, {
     prototype: Subwindow_prototype
     // extends: 'section'   // for some reason doing this breaks callbacks
   });

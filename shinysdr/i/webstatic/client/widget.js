@@ -18,7 +18,6 @@
 define(['./coordination', './events', './math', './types', './values'], function (coordination, events, math, types, values) {
   'use strict';
   
-  var Cell = values.Cell;
   var ConstantCell = values.ConstantCell;
   var Coordinator = coordination.Coordinator;
   var DerivedCell = values.DerivedCell;
@@ -28,9 +27,6 @@ define(['./coordination', './events', './math', './types', './values'], function
   var mod = math.mod;
   
   var exports = {};
-  
-  // contains *only* widget types and can be used as a lookup namespace
-  var widgets = Object.create(null);
   
   function alwaysCreateReceiverFromEvent(event) {
     return event.shiftKey;
@@ -541,7 +537,6 @@ define(['./coordination', './events', './math', './types', './values'], function
       var cursorFreq = this.leftVisibleFreq() * (1-cursor01) + this.rightVisibleFreq() * cursor01;
       
       // Adjust and clamp zoom
-      var oldZoom = zoom;
       zoom *= Math.exp(-delta * 0.0005);
       zoom = clampZoom(zoom);
       
