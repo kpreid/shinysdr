@@ -60,16 +60,19 @@ describe('values', function () {
   
   describe('StorageCell', function () {
     // TODO: break up this into individual tests
-    it('should function as a cell', function () {
+    beforeEach(function () {
       // TODO: use a mock storage instead of abusing sessionStorage
       sessionStorage.clear();
-      var ns = new values.StorageNamespace(sessionStorage, 'foo.');
-      var cell = new values.StorageCell(ns, String, 'default', 'bar');
+    })
+
+    it('should function as a cell', function () {
+      const ns = new values.StorageNamespace(sessionStorage, 'foo.');
+      const cell = new values.StorageCell(ns, String, 'default', 'bar');
       expect(cell.get()).toBe('default');
       cell.set('a');
       expect(cell.get()).toBe('a');
       expect(ns.getItem('bar')).toBe('"a"');
-      var l = createListenerSpy();
+      const l = createListenerSpy();
       cell.n.listen(l);
       cell.set('b');
       expect(cell.get()).toBe('b');
@@ -77,16 +80,15 @@ describe('values', function () {
     });
     
     function fireStorageEvent() {
-      var event = document.createEvent('Event');
+      const event = document.createEvent('Event');
       event.initEvent('storage', false, false);
       window.dispatchEvent(event);
     }
     
     it('should notify if a storage event occurs', function () {
-      sessionStorage.clear();
-      var ns = new values.StorageNamespace(sessionStorage, 'foo.');
-      var cell = new values.StorageCell(ns, String, 'default', 'bar');
-      var l = createListenerSpy();
+      const ns = new values.StorageNamespace(sessionStorage, 'foo.');
+      const cell = new values.StorageCell(ns, String, 'default', 'bar');
+      const l = createListenerSpy();
       cell.n.listen(l);
       
       sessionStorage.setItem('foo.bar', '"sval"');
@@ -96,10 +98,9 @@ describe('values', function () {
     });
     
     it('should not notify if an unrelated storage event occurs', function () {
-      sessionStorage.clear();
-      var ns = new values.StorageNamespace(sessionStorage, 'foo.');
-      var cell = new values.StorageCell(ns, String, 'default', 'bar');
-      var l = createListenerSpy();
+      const ns = new values.StorageNamespace(sessionStorage, 'foo.');
+      const cell = new values.StorageCell(ns, String, 'default', 'bar');
+      const l = createListenerSpy();
       cell.n.listen(l);
       
       sessionStorage.setItem('unrelated', '"sval"');
@@ -109,6 +110,13 @@ describe('values', function () {
         expect(l).not.toHaveBeenCalled();
         expect(cell.get()).toBe('default');
       });
+    });
+    
+    it('should tolerate garbage found in storage', function () {
+      sessionStorage.setItem('foo.bar', '}');
+      const ns = new values.StorageNamespace(sessionStorage, 'foo.');
+      const cell = new values.StorageCell(ns, String, 'default', 'bar');
+      expect(cell.get()).toBe('default');
     });
   });
   

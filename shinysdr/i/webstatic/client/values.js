@@ -225,7 +225,18 @@ define(['./events', './types'], function (events, types) {
       return this._lastSeenValue;
     }
     
-    var value = storedString ? JSON.parse(storedString) : this._initialValue;
+    let value = this._initialValue;
+    if (storedString) {
+      try {
+        value = JSON.parse(storedString);
+      } catch (e) {
+        if (e instanceof SyntaxError) {
+          console.warn('Malformed JSON found in Storage (ignored): ' + JSON.stringify(storedString));
+        } else {
+          throw e;
+        }
+      }
+    }
     this._lastSeenValue = value;
     return value;
   };
