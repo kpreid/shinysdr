@@ -24,17 +24,17 @@ define(['audio', 'coordination', 'events', 'types', 'values', 'widget', 'widgets
   
   const scheduler = new events.Scheduler();
   const audioContext = new AudioContext();
+  const storage = sessionStorage;  // TODO persistent and namespaced-from-other-pages
   
+  const selector = new audio.UserMediaSelector(scheduler, audioContext, navigator.mediaDevices,
+    new values.StorageNamespace(storage, 'input-selector.'));
   const adapter = new audio.AudioAnalyserAdapter(scheduler, audioContext);
+  adapter.connectFrom(selector.source);
   adapter.paused.set(false);
   
-  audio.getUserMediaForAudioTools(audioContext).then((source) => {
-    if (source === null) { 
-      // Error reporting already handled.
-      return;
-    }
-    adapter.connectFrom(source);
-  })
+  // kludge: stick extra property on adapter so it gets in the options menu UI.
+  // TODO: Replace this by adding flexibility to the UI system.
+  adapter.input = new values.ConstantCell(types.block, selector);
   
   const root = new values.ConstantCell(types.block, adapter);
   

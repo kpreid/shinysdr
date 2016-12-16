@@ -18,14 +18,21 @@
 define(['./types', './values', './events', './network'], function (types, values, events, network) {
   'use strict';
   
-  var exports = {};
+  const BulkDataType = types.BulkDataType;
+  const Cell = values.Cell;
+  const ConstantCell = values.ConstantCell;
+  const DerivedCell = values.DerivedCell;
+  const Enum = types.Enum;
+  const LocalCell = values.LocalCell;
+  const LocalReadCell = values.LocalReadCell;
+  const Notice = types.Notice;
+  const Notifier = events.Notifier;
+  const Neverfier = events.Neverfier;
+  const StorageCell = values.StorageCell;
+  const cellPropOfBlock = values.cellPropOfBlock;
+  const makeBlock = values.makeBlock;
   
-  var BulkDataType = types.BulkDataType;
-  var Cell = values.Cell;
-  var ConstantCell = values.ConstantCell;
-  var LocalCell = values.LocalCell;
-  var LocalReadCell = values.LocalReadCell;
-  var Neverfier = events.Neverfier;
+  const exports = {};
   
   var EMPTY_CHUNK = [];
   
@@ -87,10 +94,10 @@ define(['./types', './values', './events', './network'], function (types, values
       info.error._update(String(s));
       errorTime = Date.now() + 1000;
     }
-    var info = values.makeBlock({
+    var info = makeBlock({
       buffered: new LocalReadCell(new types.Range([[0, 2]], false, false), 0),
       target: new LocalReadCell(String, ''),  // TODO should be numeric w/ unit
-      error: new LocalReadCell(new types.Notice(true), ''),
+      error: new LocalReadCell(new Notice(true), ''),
       //averageSkew: new LocalReadCell(Number, 0),
       monitor: new ConstantCell(types.block, analyserAdapter)
     });
@@ -515,6 +522,115 @@ define(['./types', './values', './events', './network'], function (types, values
   Object.freeze(AudioScopeAdapter.prototype);
   Object.freeze(AudioScopeAdapter);
   exports.AudioScopeAdapter = AudioScopeAdapter;
+  
+  function handleUserMediaError(e, showMessage, whatWeWereDoing) {
+    // Note: Empirically, e is a NavigatorUserMediaError but that ctor is not exposed so we can't say instanceof.
+    if (e && e.name === 'PermissionDeniedError') {
+      // Permission error.
+      // Note: Empirically, e.message is empty but it exists, so let's mention it in case it helps.
+      showMessage('Failed to ' + whatWeWereDoing + ' (permission denied). ' + e.message);
+    } else if (e.name) {
+      showMessage(e.name);
+    } else if (e) {
+      showMessage(String(e));
+      throw e;
+    } else {
+      throw e;
+    }
+  }
+  
+  function MediaDeviceSelector(mediaDevices, storage) {
+    let shapeNotifier = new Notifier();
+    let selectorCell = null;  // set by enumerate()
+    let errorCell = this.error = new LocalReadCell(new Notice(false), '');
+    
+    Object.defineProperty(this, '_reshapeNotice', {value: shapeNotifier});
+    
+    let enumerate = () => {
+      mediaDevices.enumerateDevices().then(deviceInfos => {
+        const deviceEnumTable = {};
+        let defaultDeviceId = 'default';
+        Array.from(deviceInfos).forEach(deviceInfo => {
+          if (deviceInfo.kind != 'audioinput') return;
+          if (!defaultDeviceId) {
+            defaultDeviceId = deviceInfo.deviceId;
+          }
+          deviceEnumTable[deviceInfo.deviceId] = String(deviceInfo.label || deviceInfo.deviceId);
+          // TODO use deviceInfo.groupId as part of enum sort key
+        });
+        // TODO: StorageCell isn't actually meant to be re-created in this fashion and will leak stuff. Fix StorageCell.
+        this.device = selectorCell = new StorageCell(storage, new Enum(deviceEnumTable), defaultDeviceId, 'device');
+        shapeNotifier.notify();
+        errorCell._update('');
+      }, e => {
+        handleUserMediaError(e, errorCell._update.bind(errorCell), 'list audio devices');
+      });
+    }
+    // Note: Have not managed to see this event fired in practice (Chrome and Firefox on Mac).
+    mediaDevices.addEventListener('devicechange', event => enumerate(), false);
+    enumerate();
+  }
+  
+  function UserMediaOpener(scheduler, audioContext, deviceIdCell) {
+    // TODO: Does not need to be an unbreakable notify loop; have something which is a generalization of DerivedCell that handles async computations.
+    const output = audioContext.createGain();  // dummy node to be switchable
+    
+    makeBlock(this);
+    let errorCell = this.error = new LocalReadCell(new Notice(false), '');
+    Object.defineProperty(this, 'source', {value: output});
+    
+    let previousSource = null;
+    function setOutput(newSource) {
+      if (newSource !== previousSource && previousSource !== null) {
+        previousSource.disconnect(output);
+      }
+      if (newSource !== null) {
+        newSource.connect(output);
+      }
+      previousSource = newSource;
+    }
+    
+    function update() {
+      const deviceId = deviceIdCell.depend(update);
+      if (typeof deviceId !== 'string') {
+        setOutput(null);
+      } else {
+        navigator.mediaDevices.getUserMedia({
+          audio: {
+            deviceId: { exact: deviceId },
+            // If we do not disable default-enabled echoCancellation then we get mono
+            // audio on Chrome. See:
+            //    https://bugs.chromium.org/p/chromium/issues/detail?id=387737
+            echoCancellation: { exact: false }  // using 'ideal:' doesn't help.
+          }
+        }).then((stream) => {
+          // TODO: There is supposedly a better version of this in the future (MediaStreamTrackSource)
+          // TODO: In case selector gets changed multiple times, have a token to cancel earlier requests
+          setOutput(audioContext.createMediaStreamSource(stream));
+          errorCell._update('');
+        }, (e) => {
+          setOutput(null);
+          handleUserMediaError(e, errorCell._update.bind(errorCell),
+              'open audio device ' + JSON.stringify(deviceId));
+        });
+      }
+    }
+    update.scheduler = scheduler;
+    update();
+  }
+
+  function UserMediaSelector(scheduler, audioContext, mediaDevices, storage) {
+    const mediaDeviceSelector = new MediaDeviceSelector(mediaDevices, storage);
+    const userMediaOpener = new UserMediaOpener(scheduler, audioContext,
+        cellPropOfBlock(scheduler, mediaDeviceSelector, 'device', false));
+    
+    // TODO: this is not a good block/cell structure, we are exposing our implementation organization.
+    makeBlock(this);
+    this.selector = new ConstantCell(types.block, mediaDeviceSelector);
+    this.opener = new ConstantCell(types.block, userMediaOpener);
+    Object.defineProperty(this, 'source', {value: userMediaOpener.source});
+  }
+  exports.UserMediaSelector = UserMediaSelector;
   
   // Wrapper around getUserMedia which sets our desired parameters and displays an error message if it fails.
   function getUserMediaForAudioTools(audioContext) {

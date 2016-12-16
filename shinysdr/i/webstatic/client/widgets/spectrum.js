@@ -94,15 +94,11 @@ define(['./basic', './dbui',
       var parametersEl = outerElement.appendChild(document.createElement('div'));
       createWidgetExt(context, MonitorDetailedOptions, parametersEl, config.target);
       
-      ignore('scope');
-      ignore('time_length');
-      
       // TODO should logically be doing this -- need to support "widget with possibly multiple target elements"
       //addWidget(null, MonitorQuickOptions);
-      ignore('signal_type');
-      ignore('frame_rate');
-      ignore('freq_resolution');
-      ignore('paused');
+      
+      // MonitorDetailedOptions will handle what we don't.
+      ignore('*');
       
       // kludge to trigger SpectrumView layout computations after it's added to the DOM :(
       setTimeout(function() {

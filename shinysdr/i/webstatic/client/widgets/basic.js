@@ -42,11 +42,12 @@ define(['../types', '../values', '../events', '../widget', '../gltools', '../dat
 
   // Superclass for a sub-block widget
   function Block(config, optSpecial, optEmbed) {
-    var block = config.target.depend(config.rebuildMe);
+    const block = config.target.depend(config.rebuildMe);
     block._reshapeNotice.listen(config.rebuildMe);
-    var container = this.element = config.element;
-    var appendTarget = container;
-    var claimed = Object.create(null);
+    const container = this.element = config.element;
+    let appendTarget = container;
+    const claimed = Object.create(null);
+    let claimedEverything = false;
     
     //container.textContent = '';
     container.classList.add('frame');
@@ -114,7 +115,11 @@ define(['../types', '../values', '../events', '../widget', '../gltools', '../dat
     }
     
     function ignore(name) {
-      claimed[name] = true;
+      if (name === '*') {
+        claimedEverything = true;
+      } else {
+        claimed[name] = true;
+      }
     }
     
     // TODO be less imperative
@@ -146,7 +151,7 @@ define(['../types', '../values', '../events', '../widget', '../gltools', '../dat
     
     const sortTable = [];
     for (var key in block) {
-      if (claimed[key]) continue;
+      if (claimed[key] || claimedEverything) continue;
       
       const member = block[key];
       if (member instanceof Cell) {

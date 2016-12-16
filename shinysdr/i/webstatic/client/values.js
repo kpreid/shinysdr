@@ -264,9 +264,11 @@ define(['./events', './types'], function (events, types) {
   }
   exports.getInterfaces = getInterfaces;
   
-  function cellProp(scheduler, cell, prop) {
+  // Creates a cell whose value is cell.get()[prop].get() if that expression is valid and undefined otherwise.
+  // TODO: Write tests of this because it is hairy.
+  function cellPropOfBlockCell(scheduler, cell, prop, restrictToBlock) {
     // TODO: technically need a block-or-undefined type
-    return new DerivedCell(block, scheduler, function (dirty) {
+    return new DerivedCell(restrictToBlock ? block : any, scheduler, function (dirty) {
       var object = cell.depend(dirty);
       if (object === undefined) {
         return;
@@ -276,12 +278,18 @@ define(['./events', './types'], function (events, types) {
       }
       object._reshapeNotice.listen(dirty);
       var propCell = object[prop];
-      if (propCell === undefined || propCell.type !== block) {
+      if (!(propCell !== undefined && (!restrictToBlock || propCell.type === block))) {
         return undefined;
       }
       return propCell.depend(dirty);
     });
   }
+  exports.cellPropOfBlockCell = cellPropOfBlockCell;
+  
+  function cellPropOfBlock(scheduler, obj, prop, restrictToBlock) {
+    return cellPropOfBlockCell(scheduler, new ConstantCell(block, obj), prop, restrictToBlock);
+  }
+  exports.cellPropOfBlock = cellPropOfBlock;
   
   // Maintain an index of objects, by interface name, in a tree
   function Index(scheduler, rootCell) {
@@ -357,7 +365,7 @@ define(['./events', './types'], function (events, types) {
           
           // memoized
           if (!propCells[key]) {
-            insert(propCells[key] = cellProp(scheduler, cell, key));
+            insert(propCells[key] = cellPropOfBlockCell(scheduler, cell, key, true));
           }
         }
         if ('_reshapeNotice' in object) {  // TODO mandatory
@@ -385,7 +393,7 @@ define(['./events', './types'], function (events, types) {
   }
   exports.Index = Index;
   
-  // make an object which is like a remote object (called block for legacy reasons)
+  // Turn the provided object into one which is like a remote object (called block for legacy reasons) and return it.
   function makeBlock(obj) {
     Object.defineProperty(obj, '_reshapeNotice', {value: new Neverfier()});
     return obj;

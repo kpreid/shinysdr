@@ -26,21 +26,19 @@ define(['audio', 'coordination', 'events', 'types', 'values', 'widget',
   
   const scheduler = new events.Scheduler();
   const audioContext = new AudioContext();
+  const storage = sessionStorage;  // TODO persistent and namespaced-from-other-pages
   
+  const selector = new audio.UserMediaSelector(scheduler, audioContext, navigator.mediaDevices,
+    new values.StorageNamespace(storage, 'input-selector.'));
   const adapter = new audio.AudioScopeAdapter(scheduler, audioContext);
-  
-  audio.getUserMediaForAudioTools(audioContext).then((source) => {
-    if (source === null) { 
-      // Error reporting already handled.
-      return;
-    }
-    adapter.connectFrom(source);
-  })
+  adapter.connectFrom(selector.source);
   
   const root = new values.ConstantCell(types.block, values.makeBlock({
+    input: new values.ConstantCell(types.block, selector),
     scope: adapter.scope,
     parameters: new values.ConstantCell(types.block,
-      new widgets_scope.ScopeParameters(sessionStorage)),
+      new widgets_scope.ScopeParameters(
+        new values.StorageNamespace(storage, 'scope-parameters.'))),
   }));
   
   const context = new widget.Context({
