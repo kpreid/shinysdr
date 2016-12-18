@@ -93,15 +93,20 @@ define(['../types', '../values', '../events', '../widget', '../gltools', '../dat
         throw new Error('not understood target for addWidget: ' + name);
       }
       
-      if (optBoxLabel !== undefined) {
-        wEl.setAttribute('title', optBoxLabel);
-      }
-      
-      var widgetCtor;
+      let widgetCtor;
       if (typeof widgetType === 'string') {
         throw new Error('string widget types being deprecated, not supported here');
-      } else {
+      } else if (typeof widgetType === 'function') {
         widgetCtor = widgetType;
+      } else if (widgetType === undefined || widgetType === null) {
+        widgetCtor = PickWidget;
+        optBoxLabel = name;  // TODO kludge; this is not the right thing
+      } else {
+        throw new Error('bad widgetType: ' + widgetType);
+      }
+      
+      if (optBoxLabel !== undefined) {
+        wEl.setAttribute('title', optBoxLabel);
       }
       
       getAppend().appendChild(wEl);
