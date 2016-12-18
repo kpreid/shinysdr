@@ -16,9 +16,15 @@
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 define(['./basic', './dbui',
-        '../database', '../gltools', '../math', '../menus', '../values', '../widget'], 
+        '../database', '../gltools', '../math', '../menus', '../values', '../widget',
+        'text!./spectrum-common.glsl',
+        'text!./spectrum-graph-f.glsl', 'text!./spectrum-graph-v.glsl',
+        'text!./spectrum-waterfall-f.glsl', 'text!./spectrum-waterfall-v.glsl'], 
        (widgets_basic, widgets_dbui,
-            database,      gltools,      math,      menus,      values,      widget) => {
+        database, gltools, math, menus, values, widget,
+        shader_common,
+        shader_graph_f, shader_graph_v,
+        shader_waterfall_f, shader_waterfall_v) => {
   'use strict';
   
   const BareFreqList = widgets_dbui.BareFreqList;
@@ -302,165 +308,20 @@ define(['./basic', './dbui',
         !!gl.getExtension('OES_texture_float') &&
         !!gl.getExtension('OES_texture_float_linear');
 
-      var commonShaderCode = ''
-        + 'uniform sampler2D centerFreqHistory;\n'
-        + 'uniform highp float currentFreq;\n'
-        + 'uniform mediump float freqScale;\n'
-        + 'highp float getFreqOffset(highp vec2 c) {\n'
-        + '  c = vec2(0.0, mod(c.t, 1.0));\n'
-        + (useFloatTexture
-              ? '  return currentFreq - texture2D(centerFreqHistory, c).r;\n'
-              : '  highp vec4 hFreqVec = texture2D(centerFreqHistory, c);\n'
-              + '  return currentFreq - (((hFreqVec.a * 255.0 * 256.0 + hFreqVec.b * 255.0) * 256.0 + hFreqVec.g * 255.0) * 256.0 + hFreqVec.r * 255.0);\n')
-        + '}\n'
+      var shaderPrefix =
+        '#define USE_FLOAT_TEXTURE ' + (useFloatTexture ? '1' : '0') + '\n'
+        + '#line 1 0\n' + shader_common
+        + '\n#line 1 1\n';
 
       var graphProgram = gltools.buildProgram(gl, 
-        // vertex shader
-        commonShaderCode
-          + 'attribute vec4 position;\n'
-          + 'uniform mediump float xZero, xScale;\n'
-          + 'varying highp vec2 v_position;\n'
-          + 'void main(void) {\n'
-          + '  gl_Position = position;\n'
-          + '  mediump vec2 basePos = (position.xy + vec2(1.0)) / 2.0;\n'
-          + '  v_position = vec2(xScale * basePos.x + xZero, basePos.y);\n'
-          + '}\n',
-        // fragment shader
-        commonShaderCode
-          + 'uniform sampler2D data;\n'
-          + 'uniform mediump float xScale, xRes, yRes, valueZero, valueScale;\n'
-          + 'uniform highp float scroll;\n'
-          + 'uniform highp float historyStep;\n'
-          + 'uniform lowp float avgAlpha;\n'
-          + 'varying highp vec2 v_position;\n'
-          + 'const int stepRange = 2;\n'
-          + 'highp vec2 stepStep;\n'  // initialized in main
-          + 'const lowp float stepSumScale = 1.0/(float(stepRange) * 2.0 + 1.0);\n'
-          + 'const int averaging = 32;\n'
-          + 'mediump vec4 cmix(mediump vec4 before, mediump vec4 after, mediump float a) {\n'
-          + '  return mix(before, after, clamp(a, 0.0, 1.0));\n'
-          + '}\n'
-          + 'mediump vec4 cut(mediump float boundary, mediump float offset, mediump vec4 before, mediump vec4 after) {\n'
-          + '  mediump float case = (boundary - v_position.y) * yRes + offset;\n'
-          + '  return cmix(before, after, case);\n'
-          + '}\n'
-          + 'lowp float filler(highp float value) {\n'
-          + '  return cmix(vec4(0.0), vec4(value), value).r;\n'
-          + '}\n'
-          + 'mediump vec4 line(lowp float plus, lowp float average, lowp float intensity, mediump vec4 bg, mediump vec4 fg) {\n'
-          + '  return cmix(bg, cut(average + plus, 0.5, bg, cut(average, -0.5, fg, bg)), intensity);\n'
-          + '}\n'
-          + 'highp vec2 coords(highp float framesBack) {\n'
-          + '  // compute texture coords -- must be moduloed aterward\n'
-          + '  return vec2(v_position.x, scroll - (framesBack + 0.5) * historyStep);\n'
-          + '}\n'
-          + 'highp float pointValueAt(highp vec2 c) {\n'
-          + '  return valueZero + valueScale * texture2D(data, mod(c, 1.0)).r;\n'
-          + '}\n'
-          + 'highp float shiftedPointValueAt(highp vec2 c) {\n'
-          + '  highp float offset = getFreqOffset(c) * freqScale;\n'
-          + '  return pointValueAt(c + vec2(offset, 0.0));\n'
-          + '}\n'
-          + 'highp float pointAverageAt(highp vec2 c) {\n'
-          + '  lowp float average = 0.0;\n'
-          + '  for (int t = averaging - 1; t >= 0; t--) {\n'
-          // note: FIR emulation of IIR filter because IIR is what the non-GL version uses
-          + '      average = mix(average, shiftedPointValueAt(c + vec2(0.0, -float(t) * historyStep)), t >= averaging - 1 ? 1.0 : avgAlpha);\n'
-          + '    }\n'
-          + '  return average;\n'
-          + '}\n'
-          + 'void fetchSmoothValueAt(highp float t, out mediump float plus, out mediump float average) {\n'
-          + '  highp vec2 texLookup = coords(t);\n'
-          + '  average = 0.0;\n'
-          + '  mediump float peak = -1.0;\n'
-          + '  mediump float valley = 2.0;\n'
-          + '  for (int i = -stepRange; i <= stepRange; i++) {\n'
-          + '    mediump float value = shiftedPointValueAt(texLookup + stepStep * float(i));\n'
-          + '    average += value;\n'
-          + '    peak = max(peak, value);\n'
-          + '    valley = min(valley, value);\n'
-          + '  }\n'
-          + '  average *= stepSumScale;\n'
-          + '  plus = peak - average;\n'
-          + '}\n'
-          + 'void fetchSmoothAverageValueAt(out mediump float plus, out mediump float average) {\n'
-          + '  highp vec2 texLookup = coords(0.0);\n'
-          + '  average = 0.0;\n'
-          + '  mediump float peak = -1.0;\n'
-          + '  mediump float valley = 2.0;\n'
-          + '  for (int i = -stepRange; i <= stepRange; i++) {\n'
-          + '    mediump float value = pointAverageAt(texLookup + stepStep * float(i));\n'
-          + '    average += value;\n'
-          + '    peak = max(peak, value);\n'
-          + '    valley = min(valley, value);\n'
-          + '  }\n'
-          + '  average *= stepSumScale;\n'
-          + '  plus = peak - average;\n'
-          + '}\n'
-          + 'lowp float accumFillIntensity() {\n'
-          + '  lowp float accumFill = 0.0;\n'
-          + '  for (highp float i = 0.0; i < float(averaging); i += 1.0) {\n'
-          + '    lowp float average;\n'
-          + '    lowp float plus;\n'
-          + '    fetchSmoothValueAt(i, plus, average);\n'
-          + '    accumFill += cut(average, 1.0, vec4(0.0), vec4(average)).r;\n'
-          + '  }\n'
-          + '  return accumFill * (1.0 / float(averaging));'
-          + '}\n'
-          + 'void main(void) {\n'
-          + '  // initialize globals\n'
-          + '  stepStep = vec2(xScale / xRes * (1.0 / float(stepRange)), 0.0);\n'
-          + '  \n'
-          + '  mediump float aaverage;\n'
-          + '  mediump float aplus;\n'
-          + '  fetchSmoothAverageValueAt(aplus, aaverage);\n'
-          + '  mediump float laverage;\n'
-          + '  mediump float lplus;\n'
-          + '  fetchSmoothValueAt(0.0, lplus, laverage);\n'
-          + '  gl_FragColor = vec4(0.0, 0.5, 1.0, 1.0) * accumFillIntensity() * 3.0;\n'
-          + '  gl_FragColor = line(aplus, aaverage, 0.75, gl_FragColor, vec4(0.0, 1.0, 0.6, 1.0));\n'
-          + '  gl_FragColor = line(lplus, laverage, max(0.0, laverage - aaverage) * 4.0, gl_FragColor, vec4(1.0, 0.2, 0.2, 1.0));\n'
-        + '}\n');
+        shaderPrefix + shader_graph_v,
+        shaderPrefix + shader_graph_f);
       var graphQuad = new SingleQuad(gl, -1, 1, -1, 1, gl.getAttribLocation(graphProgram, 'position'));
 
       var waterfallProgram = gltools.buildProgram(gl,
-        // vertex shader
-        commonShaderCode
-          + 'attribute vec4 position;\n'
-          + 'varying highp vec2 v_position;\n'
-          + 'uniform highp float scroll;\n'
-          + 'uniform highp float xTranslate, xScale;\n'
-          + 'uniform highp float yScale;\n'
-          + 'void main(void) {\n'
-          // TODO use a single input matrix instead of this
-          + '  mat3 viewToTexture = mat3(0.5, 0.0, 0.0, 0.0, 0.5, 0.0, 0.5, 0.5, 1.0);\n'
-          + '  mat3 zoom = mat3(xScale, 0.0, 0.0, 0.0, 1.0, 0.0, xTranslate, 0.0, 1.0);\n'
-          + '  mat3 applyYScale = mat3(1.0, 0.0, 0.0, 0.0, yScale, 0.0, 0.0, -yScale, 1.0);\n'
-          + '  mat3 viewMatrix = applyYScale * zoom * viewToTexture;\n'
-          + '  gl_Position = position;\n'
-          + '  v_position = (viewMatrix * position.xyw).xy + vec2(0.0, scroll);\n'
-          + '}\n',
-        // fragment shader
-        commonShaderCode
-          + 'uniform sampler2D data;\n'
-          + 'uniform sampler2D gradient;\n'
-          + 'uniform mediump float gradientZero;\n'
-          + 'uniform mediump float gradientScale;\n'
-          + 'varying mediump vec2 v_position;\n'
-          + 'uniform highp float textureRotation;\n'
-          + 'void main(void) {\n'
-          + '  highp vec2 texLookup = mod(v_position, 1.0);\n'
-          + '  highp float freqOffset = getFreqOffset(texLookup) * freqScale;\n'
-          + '  mediump vec2 shift = texLookup + vec2(freqOffset, 0.0);\n'
-          + '  if (shift.x < 0.0 || shift.x > 1.0) {\n'
-          + '    gl_FragColor = ' + backgroundColorGLSL + ';\n'
-          + '  } else {\n'
-          + '    mediump float data = texture2D(data, shift + vec2(textureRotation, 0.0)).r;\n'
-          + '    gl_FragColor = texture2D(gradient, vec2(0.5, gradientZero + gradientScale * data));\n'
-          //+ '    gl_FragColor = texture2D(gradient, vec2(0.5, v_position.x));\n'
-          //+ '    gl_FragColor = vec4(gradientZero + gradientScale * data * 4.0 - 0.5);\n'
-          + '  }\n'
-          + '}\n');
+        shaderPrefix + shader_waterfall_v,
+        '#define BACKGROUND_COLOR ' + backgroundColorGLSL + '\n'
+            + shaderPrefix + shader_waterfall_f);
       var waterfallQuad = new SingleQuad(gl, -1, 1, -1, 1, gl.getAttribLocation(waterfallProgram, 'position'));
       
       var u_scroll = gl.getUniformLocation(waterfallProgram, 'scroll');

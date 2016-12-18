@@ -16,8 +16,10 @@
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 // TODO post split, reduce deps here
-define(['./basic', '../events', '../gltools', '../math', '../types', '../values'],
-       (widgets_basic, events, gltools, math, types, values) => {
+define(['./basic', '../events', '../gltools', '../math', '../types', '../values',
+        'text!./scope-v.glsl', 'text!./scope-f.glsl', 'text!./scope-pp1.glsl', 'text!./scope-pp2.glsl'],
+       (widgets_basic, events, gltools, math, types, values,
+        shader_dot_vertex, shader_dot_fragment, shader_pp1, shader_pp2) => {
   'use strict';
   
   const Block = widgets_basic.Block;
@@ -127,73 +129,16 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
       // This is not ideal: since we just want to accumulate dots, the least wasteful would be a 16 or 32-bit integer single-component (LUMINANCE) buffer. But neither larger than 8-bit integers nor LUMINANCE are allowed by WebGL for a framebuffer texture.
       format: gl.RGBA,
       type: gl.FLOAT,
-      fragmentShader: ''
-        + 'const int radius = ' + kernelRadius + ';\n'
-        + 'const int diameter = radius * 2 + 1;\n'
-        + 'uniform mediump float kernel[diameter];\n'
-        + 'void main(void) {\n'
-        + '  highp vec3 sum = vec3(0.0);\n'
-        + '  for (int kx = 0; kx < diameter; kx++) {\n'
-      + '      sum += kernel[kx] * texture2D(pp_texture, pp_texcoord + vec2(float(kx - radius), 0.0) / pp_size).rgb;'
-        + '  }\n'
-        + '  gl_FragColor = vec4(sum, 1.0);'
-        + '}'
+      fragmentShader: 'const int radius = ' + kernelRadius + '; ' + shader_pp1
     });
     
     const postProcessor2 = new gltools.PostProcessor(gl, {
       format: gl.RGBA,
       type: gl.FLOAT,
-      fragmentShader: ''
-        + 'uniform mediump float intensity;\n'
-        + 'uniform mediump float invgamma;\n'
-        + 'const int radius = ' + kernelRadius + ';\n'
-        + 'const int diameter = radius * 2 + 1;\n'
-        + 'uniform mediump float kernel[diameter];\n'
-        + 'void main(void) {\n'
-        + '  highp vec3 sum = vec3(0.0);\n'
-        + '  for (int ky = 0; ky < diameter; ky++) {\n'
-        + '    sum += kernel[ky] * texture2D(pp_texture, pp_texcoord + vec2(0.0, float(ky - radius)) / pp_size).rgb;'
-        + '  }\n'
-        + '  gl_FragColor = vec4(pow(intensity * sum, vec3(invgamma)) * vec3(0.1, 1.0, 0.5), 1.0);'
-        + '}'
+      fragmentShader: 'const int radius = ' + kernelRadius + '; ' + shader_pp2
     });
-    
-    // vertex shader scraps for FIR filtering -- couldn't get it to work but this should still be the skeleton of it
-    //  + 'uniform mediump float filter[37];\n'
-    //  + 'mediump vec2 rawsignal(mediump float tsub) {\n'  // zero-stuffed signal
-    //  + '  return mod(tsub / interpStep, 10.0) < 1.00\n'
-    //  + '      ? texture2D(scopeData, vec2(tsub, 0.5)).ra\n'
-    //  + '      : vec2(0.0);\n'
-    //  + '}\n'
-    //  + '  for (int i = -18; i <= 18; i++) {\n'
-    //  + '    signal += filter[i] * rawsignal(time + float(i) * interpStep);\n'
-    //  + '  }\n'
-    
-    const vertexShaderSource = ''
-      + 'attribute mediump float relativeTime;\n'
-      + 'uniform float interpStep;\n'
-      + 'uniform mat4 projection;\n'
-      + 'uniform mediump float bufferCutPoint;\n'
-      + 'uniform sampler2D scopeData;\n'
-      + 'varying lowp float v_z;\n'
-      + 'void main(void) {\n'
-      + '  mediump float bufferTime = mod(bufferCutPoint + relativeTime, 1.0);\n'
-      + '  gl_PointSize = 1.0;\n'
-      + '  mediump vec2 signal = texture2D(scopeData, vec2(bufferTime, 0.5)).ra;\n'
-      + '  vec4 basePos = vec4(signal, relativeTime * 2.0 - 1.0, 1.0);\n'
-      + '  vec4 projected = basePos * projection;\n'
-      + '  gl_Position = vec4(clamp(projected.x, -0.999, 0.999), clamp(projected.y, -0.999, 0.999), 0.0, projected.w);\n' // show over-range in x and y and don't clip to z
-      + '  v_z = (projected.z / projected.w) / 2.0 + 0.5;\n'  // 0-1 range instead of -1-1
-      + '}\n';
-    const fragmentShaderSource = ''
-      + 'varying lowp float v_z;\n'
-      + 'uniform mediump float persistence_gamma;\n'
-      + 'void main(void) {\n'
-      // TODO: Experiment with ways we can use the currently-wasted three different components.
-      // Note: the pow() here (rather than exponential decay) is not realistic but seems to produce good results.
-      + '  gl_FragColor = vec4(vec3(pow(v_z, persistence_gamma)), 1.0);\n'
-      + '}\n';
-    const program = gltools.buildProgram(gl, vertexShaderSource, fragmentShaderSource);
+        
+    const program = gltools.buildProgram(gl, shader_dot_vertex, shader_dot_fragment);
     const att_relativeTime = gl.getAttribLocation(program, 'relativeTime');
     gl.uniform1i(gl.getUniformLocation(program, 'scopeData'), 0);  // texture
     
