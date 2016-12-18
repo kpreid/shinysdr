@@ -123,7 +123,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
     
     @exported_value(type=Range([(0, 30)]), changes='this_setter', label='Decode threshold')
     def get_decode_threshold(self):
-        return self.__demod.get_threshold(None)
+        return self.__demod.get_threshold()
     
     @setter
     def set_decode_threshold(self, value):
