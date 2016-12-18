@@ -739,7 +739,8 @@ define(['./coordination', './events', './math', './types', './values'], function
   
   function ErrorWidget(config, widgetCtor, error) {
     this.element = document.createElement('div');
-    this.element.appendChild(document.createTextNode('An error occurred preparing what should occupy this space (' + widgetCtor.name + ' named ' + config.element.getAttribute('title') + '). '));
+    let widgetCtorName = widgetCtor ? widgetCtor.name : '<unknown widget type>';
+    this.element.appendChild(document.createTextNode('An error occurred preparing what should occupy this space (' + widgetCtorName + ' named ' + config.element.getAttribute('title') + '). '));
     this.element.appendChild(document.createElement('code')).textContent = String(error);
   }
   
