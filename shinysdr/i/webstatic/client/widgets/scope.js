@@ -68,7 +68,7 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
     const parameters = scopeAndParams.parameters.depend(config.rebuildMe);
     const scopeCell = scopeAndParams.scope;
     
-    const canvas = config.element;
+    let canvas = config.element;
     if (canvas.tagName !== 'CANVAS') {
       canvas = document.createElement('canvas');
     }

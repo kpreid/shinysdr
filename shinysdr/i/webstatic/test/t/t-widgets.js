@@ -19,6 +19,7 @@
 
 describe('widgets', function () {
   var types = shinysdr.types;
+  var values = shinysdr.values;
   var widgets = shinysdr.widgets;
   
   var ClientStateObject = shinysdr.coordination.ClientStateObject;
@@ -138,9 +139,16 @@ describe('widgets', function () {
   describe('ScopePlot', function () {
     it('should be successfully created', function () {
       // stub test to exercise the code because it's currently not in the default ui. Should have more tests.
+      
       var cell = new LocalCell(types.any, [{freq:0, rate:1}, []]);
       cell.subscribe = function() {} // TODO implement
-      widget = new widgets.ScopePlot(mockWidgetConfig(null, cell));
+      const root = new values.ConstantCell(types.block, values.makeBlock({
+        scope: cell,
+        parameters: new values.ConstantCell(types.block,
+          new shinysdr['widgets/scope'].ScopeParameters(sessionStorage)),
+      }));
+      
+      widget = new widgets.ScopePlot(mockWidgetConfig(null, root));
     });
   });
   
