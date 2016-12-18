@@ -15,7 +15,14 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./types', './values', './gltools', './widget', './widgets/basic', './events', './math', './network'], function (types, values, gltools, widget, widgets_basic, events, math, network) {
+define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
+        'widgets/basic',
+        'text!./sphere-v.glsl', 'text!./sphere-f.glsl', 'text!./features-v.glsl',
+        'text!./points-f.glsl', 'text!./curves-f.glsl'],
+       ( events,   gltools,   math,   network,   types,   values,   widget,
+        widgets_basic,
+        shader_sphere_v, shader_sphere_f, shader_features_v,
+        shader_points_f, shader_curves_f) => {
   'use strict';
   
   var sin = Math.sin;
@@ -359,28 +366,7 @@ define(['./types', './values', './gltools', './widget', './widgets/basic', './ev
   }
   
   function GLSphere(gl, redrawCallback) {
-    var vertexShaderSource = ''
-      + 'attribute mediump vec3 position;\n'
-      + 'attribute highp vec2 lonlat;\n'
-      + 'uniform highp mat4 projection;\n'
-      + 'varying highp vec2 v_lonlat;\n'
-      + 'varying highp vec3 v_position;\n'
-      + 'void main(void) {\n'
-      + '  gl_Position = vec4(position, 1.0) * projection;\n'
-      + '  v_lonlat = lonlat;\n'
-      + '  v_position = position;\n'
-      + '}\n';
-    var fragmentShaderSource = ''
-      + 'varying highp vec2 v_lonlat;\n'
-      + 'varying highp vec3 v_position;\n'
-      + 'uniform sampler2D texture;\n'
-      + 'uniform lowp vec3 sun;\n'
-      + 'void main(void) {\n'
-      + '  lowp vec4 texture = texture2D(texture, mod(v_lonlat + vec2(180.0, 90.0), 360.0) * vec2(1.0/360.0, -1.0/180.0) + vec2(0.0, 1.0));\n'
-      + '   lowp float light = mix(1.0, clamp(dot(v_position, sun) * 10.0 + 1.0, 0.0, 1.0), 0.25);'
-      + '   gl_FragColor = vec4(texture.rgb * light, texture.a);\n'
-      + '}\n';
-    var program = gltools.buildProgram(gl, vertexShaderSource, fragmentShaderSource);
+    var program = gltools.buildProgram(gl, shader_sphere_v, shader_sphere_f);
     var att_position = gl.getAttribLocation(program, 'position');
     var att_lonlat = gl.getAttribLocation(program, 'lonlat');
     gl.uniform1i(gl.getUniformLocation(program, 'texture'), 0);
@@ -671,30 +657,7 @@ define(['./types', './values', './gltools', './widget', './widgets/basic', './ev
   }
 
   function GLFeatureLayers(gl, scheduler, primitive, pickingColorAllocator, specialization) {
-    var vertexShaderSource = ''
-      + 'attribute vec3 position;\n'
-      + 'attribute vec4 velocityAndTimestamp;\n'
-      + 'attribute vec3 billboard;\n'
-      + 'attribute vec3 texcoordAndOpacity;\n'
-      + 'attribute vec4 pickingColor;\n'
-      + 'uniform highp float time;\n'
-      + 'uniform mat4 projection;\n'
-      + 'uniform vec3 billboardScale;\n'
-      + 'varying lowp vec3 v_texcoordAndOpacity;\n'
-      + 'varying mediump vec4 v_pickingColor;\n'  // TODO figure out necessary resolution
-      + 'void main(void) {\n'
-      + '  vec3 velocity = velocityAndTimestamp.xyz;\n'
-      + '  highp float timestamp = velocityAndTimestamp.w;\n'
-      + '  highp float speed = length(velocity);\n'
-      + '  vec3 forward = speed > 0.0 ? normalize(velocity) : vec3(0.0);\n'
-      + '  highp float distance = speed * (time - timestamp);\n'
-      + '  vec3 currentPosition = cos(distance) * position + sin(distance) * forward;\n'
-      + '  gl_Position = vec4(currentPosition, 1.0) * projection + vec4(billboard * billboardScale, 0.0);\n'
-      + '  v_texcoordAndOpacity = texcoordAndOpacity;\n'
-      + '  v_pickingColor = pickingColor;\n'
-      + '  velocity;\n'
-      + '}\n';
-    var program = gltools.buildProgram(gl, vertexShaderSource, specialization.fragmentShader);
+    var program = gltools.buildProgram(gl, shader_features_v, specialization.fragmentShader);
     var attLayout = new gltools.AttributeLayout(gl, program, [
       { name: 'position', components: 3 },
       { name: 'velocityAndTimestamp', components: 4 },
@@ -896,17 +859,7 @@ define(['./types', './values', './gltools', './widget', './widgets/basic', './ev
     }
     var base = new GLFeatureLayers(gl, scheduler, gl.TRIANGLES, pickingColorAllocator, {
       VERTS_PER_INDEX: 6,  // TODO: use index buffers
-      fragmentShader: ''
-        + 'varying lowp vec3 v_texcoordAndOpacity;\n'
-        + 'varying mediump vec4 v_pickingColor;\n'
-        + 'uniform sampler2D labels;\n'
-        + 'uniform bool picking;\n'
-        + 'void main(void) {\n'
-        + '  lowp vec2 texcoord = v_texcoordAndOpacity.xy;\n'
-        + '  lowp float opacity = v_texcoordAndOpacity.z;\n'
-        + '  gl_FragColor = picking ? v_pickingColor : opacity * texture2D(labels, texcoord);\n'
-        + '  if ((picking ? v_texcoordAndOpacity.z : gl_FragColor.a) < 0.01) discard;'
-        + '}\n',
+      fragmentShader: shader_points_f,
       createLayer: function () {
         return {labelsByIndex: []};
       },
@@ -938,7 +891,7 @@ define(['./types', './values', './gltools', './widget', './widgets/basic', './ev
         var labelsByIndex = layerState.labelsByIndex;
         var rendered = checkRendered(renderer(feature, dirty));
         if (rendered.position) {
-          var iconURL = rendered.iconURL || '/client/map-icons/default.svg';
+          var iconURL = rendered.iconURL || '/client/map/icons/default.svg';
           var anchor = rendered.labelSide || 'top';
           var textLabel = labelTextureManager.refTextLabel(
             anchor === 'left' ? -1 : anchor === 'right' ? 1 : 0,
@@ -968,16 +921,7 @@ define(['./types', './values', './gltools', './widget', './widgets/basic', './ev
   function GLCurveLayers(gl, scheduler, pickingColorAllocator) {
     var base = new GLFeatureLayers(gl, scheduler, gl.LINES, pickingColorAllocator, {
       VERTS_PER_INDEX: 2,
-      fragmentShader: ''
-        + 'varying lowp vec3 v_texcoordAndOpacity;\n'
-        + 'varying mediump vec4 v_pickingColor;\n'
-        + 'uniform sampler2D labels;\n'
-        + 'uniform bool picking;\n'
-        + 'void main(void) {\n'
-        + '  lowp float lineBrightness = v_texcoordAndOpacity.x;\n'
-        + '  lowp float opacity = v_texcoordAndOpacity.z;\n'
-        + '  gl_FragColor = picking ? v_pickingColor : v_texcoordAndOpacity.z * vec4(vec3(1.0 - lineBrightness), 1.0);\n'
-        + '}\n',
+      fragmentShader: shader_curves_f,
       createLayer: function () {
         return {};
       },

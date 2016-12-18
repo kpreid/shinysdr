@@ -15,7 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./map-core', './types', './values', './math', './network', './events'], function (mapCore, types, values, math, network, events) {
+define(['./map-core',
+        'events', 'math', 'network', 'types', 'values'],
+       (mapCore,
+         events,   math,   network,   types,   values) => {
   'use strict';
   
   var sin = Math.sin;
@@ -195,7 +198,7 @@ define(['./map-core', './types', './values', './math', './network', './events'],
         
         // TODO: style for isReceiving
         return {
-          iconURL: '/client/map-icons/station-generic.svg',
+          iconURL: '/client/map/icons/station-generic.svg',
           position: location,
           label: record.label,
           opacity: inSourceBand ? 1.0 : 0.25,
@@ -527,7 +530,7 @@ define(['./map-core', './types', './values', './math', './network', './events'],
         // TODO: Because devicePositioning is a device component, we don't have the device itself in order to display the device's name. However, the Index is in a position to provide "containing object" information and arguably should.
         var track = devicePositioning.track.depend(dirty);
         var f = renderTrackFeature(dirty, devicePositioning.track, '');
-        f.iconURL = '/client/map-icons/station-user.svg';
+        f.iconURL = '/client/map/icons/station-user.svg';
         return f;
       }
     });

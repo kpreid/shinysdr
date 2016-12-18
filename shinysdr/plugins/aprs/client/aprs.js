@@ -15,8 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-// TODO: May be using the wrong relative module id -- otherwise this should have ..s
-define(['widgets', 'map-core', 'events'], function (widgets, mapCore, events) {
+define(['widgets', 'map/map-core', 'events'], function (widgets, mapCore, events) {
   'use strict';
   
   var Block = widgets.Block;

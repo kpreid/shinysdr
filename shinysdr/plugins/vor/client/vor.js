@@ -15,8 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-// TODO: May be using the wrong relative module id -- otherwise this should have ..s
-define(['map-core', 'widgets', 'math'], function (mapCore, widgets, math) {
+define(['map/map-core', 'widgets', 'math'], function (mapCore, widgets, math) {
   'use strict';
   
   var mod = math.mod;

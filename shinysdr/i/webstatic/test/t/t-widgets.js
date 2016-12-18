@@ -199,13 +199,13 @@ describe('widgets', function () {
     }
     
     it('exists', function () {
-      expect(typeof shinysdr['map-core'].GeoMap).toBe('function');
+      expect(typeof shinysdr['map/map-core'].GeoMap).toBe('function');
     });
     
     it('should be successfully created', function () {
       var cell = makeStubTarget();
       var config = mockWidgetConfig(null, cell);
-      widget = new shinysdr['map-core'].GeoMap(config);
+      widget = new shinysdr['map/map-core'].GeoMap(config);
       expect(config.storage.getItem('viewCenterLat')).toBe('0');  // TODO: test against public interface -- of some sort -- rather than storage
       expect(config.storage.getItem('viewCenterLon')).toBe('0');
       expect(config.storage.getItem('viewZoom')).toBe('1');
