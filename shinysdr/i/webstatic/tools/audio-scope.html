@@ -24,13 +24,20 @@
   <link rel="stylesheet" href="/client/ui.css">
   <link rel="stylesheet" href="/client/theme.css">
   <meta name="viewport" content="width=device-width">
-</head><body>
+</head><body class="subwindowed">
 
-<canvas id="scope"
-   data-widget="ScopePlot"
-   data-target="scope"
-   style="display: block; height: 100%; width: 100%;">
-</canvas>
+<shinysdr-subwindow id="section-controls" visible="true">
+  <div class="sidebar">
+    <div data-widget="ScopeControls" data-target="parameters"></div>
+  </div>
+</shinysdr-subwindow>
+
+<shinysdr-subwindow id="section-audio-spectrum" class="stretchy">
+  <canvas id="scope"
+     data-widget="ScopePlot"
+     style="display: block; height: 100%; width: 100%;">
+  </canvas>
+</shinysdr-subwindow>
 
 <script src="/client/require.js" data-main="audio-scope-main.js"></script>
 </body></html>

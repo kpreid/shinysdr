@@ -26,6 +26,12 @@ define(function () {
   }
   exports.mod = mod;
   
+  // Convert dB to factor.
+  function dB(x) {
+    return Math.pow(10, 0.1 * x);
+  }
+  exports.dB = dB;
+  
   function formatFreqMHz(freq) {
     return (freq / 1e6).toFixed(2);
   }

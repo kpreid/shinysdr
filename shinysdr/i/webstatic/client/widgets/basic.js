@@ -29,7 +29,6 @@ define(['../types', '../values', '../events', '../widget', '../gltools', '../dat
   var Menu = menus.Menu;
   var Notice = types.Notice;
   var Range = types.Range;
-  var SingleQuad = gltools.SingleQuad;
   var Timestamp = types.Timestamp;
   var Track = types.Track;
   var Union = database.Union;

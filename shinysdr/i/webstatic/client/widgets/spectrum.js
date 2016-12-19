@@ -15,38 +15,30 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-// TODO post split, reduce deps here
-define(['./basic', './dbui', '../types', '../values', '../events', '../widget', '../gltools', '../database', '../math', '../menus'], function (widgets_basic, widgets_dbui, types, values, events, widget, gltools, database, math, menus) {
+define(['./basic', './dbui',
+        '../database', '../gltools', '../math', '../menus', '../values', '../widget'], 
+       (widgets_basic, widgets_dbui,
+            database,      gltools,      math,      menus,      values,      widget) => {
   'use strict';
   
-  var BareFreqList = widgets_dbui.BareFreqList;
-  var Block = widgets_basic.Block;
-  var Cell = values.Cell;
-  var Clock = events.Clock;
-  var CommandCell = values.CommandCell;
-  var ConstantCell = values.ConstantCell;
-  var DerivedCell = values.DerivedCell;
-  var Enum = types.Enum;
-  var LinSlider = widgets_basic.LinSlider;
-  var LocalCell = values.LocalCell;
-  var LogSlider = widgets_basic.LogSlider;
-  var Menu = menus.Menu;
-  var Notice = types.Notice;
-  var Range = types.Range;
-  var SingleQuad = gltools.SingleQuad;
-  var Timestamp = types.Timestamp;
-  var Toggle = widgets_basic.Toggle;
-  var Track = types.Track;
-  var Union = database.Union;
-  var addLifecycleListener = widget.addLifecycleListener;
-  var alwaysCreateReceiverFromEvent = widget.alwaysCreateReceiverFromEvent;
-  var createWidgetExt = widget.createWidgetExt;
-  var emptyDatabase = database.empty;
-  var formatFreqExact = math.formatFreqExact;
-  var formatFreqInexactVerbose = math.formatFreqInexactVerbose;
-  var mod = math.mod;
+  const BareFreqList = widgets_dbui.BareFreqList;
+  const Block = widgets_basic.Block;
+  const ConstantCell = values.ConstantCell;
+  const DerivedCell = values.DerivedCell;
+  const LinSlider = widgets_basic.LinSlider;
+  const LogSlider = widgets_basic.LogSlider;
+  const Menu = menus.Menu;
+  const SingleQuad = gltools.SingleQuad;
+  const Toggle = widgets_basic.Toggle;
+  const addLifecycleListener = widget.addLifecycleListener;
+  const alwaysCreateReceiverFromEvent = widget.alwaysCreateReceiverFromEvent;
+  const createWidgetExt = widget.createWidgetExt;
+  const emptyDatabase = database.empty;
+  const formatFreqExact = math.formatFreqExact;
+  const formatFreqInexactVerbose = math.formatFreqInexactVerbose;
+  const mod = math.mod;
   
-  var exports = Object.create(null);
+  const exports = Object.create(null);
   
   // Widget for a monitor block
   function Monitor(config) {
@@ -245,157 +237,6 @@ define(['./basic', './dbui', '../types', '../values', '../events', '../widget', 
     fftCell.subscribe(newFFTFrame);
     draw();
   }
-  
-  function ScopePlot(config) {
-    var self = this;
-    var scopeCell = config.target;
-    var storage = config.storage;
-    var scheduler = config.scheduler;
-    
-    var canvas = config.element;
-    if (canvas.tagName !== 'CANVAS') {
-      canvas = document.createElement('canvas');
-    }
-    this.element = canvas;
-    
-    var viewAngle = storage ? (+storage.getItem('angle')) || 0 : 0;
-    
-    var bufferToDraw = null;
-    var lastLength = NaN;
-    
-    var gl = gltools.getGL(config, canvas, {
-      alpha: false,
-      depth: true,
-      stencil: false,
-      antialias: true,
-      preserveDrawingBuffer: false
-    });
-    gl.enable(gl.DEPTH_TEST);
-    
-    var att_time;
-    var att_signal;
-    
-    var timeBuffer = gl.createBuffer();
-    var signalBuffer = gl.createBuffer();
-    
-    var vertexShaderSource = ''
-      + 'attribute float time;\n'
-      + 'attribute vec2 signal;\n'
-      + 'uniform mat4 projection;\n'
-      + 'uniform bool channel;\n'
-      + 'varying mediump float v_time;\n'
-      + 'varying mediump vec2 v_signal;\n'
-      + 'void main(void) {\n'
-      + '  float y = channel ? signal.x : signal.y;\n'
-      + '  //gl_Position = vec4(time * 2.0 - 1.0, y, 0.0, 1.0);\n'
-      + '  vec4 basePos = vec4(signal, time * 2.0 - 1.0, 1.0);\n'
-      + '  gl_Position = basePos * projection;\n'
-      + '  v_time = time;\n'
-      + '  v_signal = signal;\n'
-      + '}\n';
-    var fragmentShaderSource = ''
-      + 'varying mediump float v_time;\n'
-      + 'void main(void) {\n'
-      + '  gl_FragColor = vec4(v_time, 1.0 - v_time, 0.0, 1.0);\n'
-      + '}\n';
-    var program = gltools.buildProgram(gl, vertexShaderSource, fragmentShaderSource);
-    var att_time = gl.getAttribLocation(program, 'time');
-    var att_signal = gl.getAttribLocation(program, 'signal');
-    gl.enableVertexAttribArray(att_time);
-    gl.enableVertexAttribArray(att_signal);
-    gl.bindBuffer(gl.ARRAY_BUFFER, timeBuffer);
-    gl.vertexAttribPointer(
-      att_time,
-      1, // components
-      gl.FLOAT,
-      false,
-      0,
-      0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, signalBuffer);
-    gl.vertexAttribPointer(
-      att_signal,
-      2, // components
-      gl.FLOAT,
-      false,
-      0,
-      0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    
-    gltools.handleContextLoss(canvas, config.rebuildMe);
-    
-    // dragging
-    function drag(event) {
-      viewAngle += event.movementX * 0.01;
-      viewAngle = Math.min(Math.PI / 2, Math.max(0, viewAngle));
-      if (storage) storage.setItem('angle', viewAngle);
-      scheduler.enqueue(draw);
-      event.stopPropagation();
-      event.preventDefault(); // no drag selection
-    }
-    canvas.addEventListener('mousedown', function(event) {
-      if (event.button !== 0) return;  // don't react to right-clicks etc.
-      event.preventDefault();
-      document.addEventListener('mousemove', drag, true);
-      document.addEventListener('mouseup', function(event) {
-        document.removeEventListener('mousemove', drag, true);
-      }, true);
-    }, false);
-    
-    var draw = config.boundedFn(function drawImpl() {
-      if (!bufferToDraw) return;
-      
-      var w, h;
-      // Fit current layout
-      w = canvas.offsetWidth;
-      h = canvas.offsetHeight;
-      if (canvas.width !== w || canvas.height !== h) {
-        // implicitly clears
-        canvas.width = w;
-        canvas.height = h;
-      }
-      var aspect = w / h;
-      gl.viewport(0, 0, w, h);
-      
-      if (lastLength != bufferToDraw.length / 2) {
-        lastLength = bufferToDraw.length / 2;
-        gl.bindBuffer(gl.ARRAY_BUFFER, timeBuffer);
-        var timeIndexes = new Float32Array(lastLength);
-        for (var i = 0; i < lastLength; i++) {
-          timeIndexes[i] = i / lastLength;
-        }
-        if (bufferToDraw) gl.bufferData(gl.ARRAY_BUFFER, timeIndexes, gl.STREAM_DRAW);
-      }
-      
-      if (bufferToDraw) {
-        gl.bindBuffer(gl.ARRAY_BUFFER, signalBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, bufferToDraw, gl.STREAM_DRAW);
-        gl.bindBuffer(gl.ARRAY_BUFFER, null);
-      }
-
-      gl.uniformMatrix4fv(gl.getUniformLocation(program, 'projection'), false, new Float32Array([
-        Math.cos(viewAngle) / aspect, 0, -Math.sin(viewAngle), 0,
-        0, 1, 0, 0,
-        Math.sin(viewAngle) / aspect, 0, Math.cos(viewAngle), 0,
-        0, 0, 0, 1,
-      ]));
-      
-      gl.uniform1f(gl.getUniformLocation(program, 'channel'), 0);
-      gl.drawArrays(gl.LINE_STRIP, 0, lastLength);
-      gl.uniform1f(gl.getUniformLocation(program, 'channel'), 1);
-      gl.drawArrays(gl.LINE_STRIP, 0, lastLength);
-    });
-    draw.scheduler = config.scheduler;
-    
-    function newScopeFrame(bundle) {
-      bufferToDraw = bundle[1];
-      draw.scheduler.enqueue(draw);
-    }
-    newScopeFrame.scheduler = config.scheduler;
-
-    scopeCell.subscribe(newScopeFrame);
-    draw();
-  }
-  exports.ScopePlot = ScopePlot;
   
   function WaterfallPlot(config) {
     var self = this;

@@ -38,7 +38,6 @@ define(['./basic', './spectrum', '../types', '../values', '../events', '../widge
   var Radio = widgets_basic.Radio;
   var Range = types.Range;
   var Select = widgets_basic.Select;
-  var SingleQuad = gltools.SingleQuad;
   var SmallKnob = widgets_basic.SmallKnob;
   var Timestamp = types.Timestamp;
   var Toggle = widgets_basic.Toggle;

@@ -423,42 +423,66 @@ define(['./types', './values', './events', './network'], function (types, values
   function AudioScopeAdapter(scheduler, audioContext) {
     // Parameters
     const bufferSize = delayToBufferSize(audioContext.sampleRate, 1/60);
-    console.log('bufferSize given', audioContext.sampleRate, 'is', bufferSize);
+    console.log('AudioScopeAdapter buffer size at', audioContext.sampleRate, 'Hz is', bufferSize);
     const nChannels = 2;
     
     // Buffers
-    const copyL = new Float32Array(bufferSize);
-    const copyR = new Float32Array(bufferSize);
-    const outputBuffer = new Float32Array(bufferSize * 2);
+    // We don't want to be constantly allocating new buffers or having an unbounded queue size, but we also don't want to require prompt efficient processing inside the audio callback. Therefore, have a circular buffer of buffers to hand off.
+    const bufferBuffer = [1, 2, 3, 4].map(unused => {
+      // TODO: It would be nice to have something reusable here. However, this is different from events.Notifier in that it doesn't require repeated re-subscription.
+      let notifyScheduled = false;
+      const notifyFn = () => {
+        notifyScheduled = false;
+        sendBuffer(copyBufferSet);
+      };
+      const copyBufferSet = {
+        copyL: new Float32Array(bufferSize),
+        copyR: new Float32Array(bufferSize),
+        outputBuffer: new Float32Array(bufferSize * nChannels),
+        notify: () => {
+          if (!notifyScheduled) {
+            notifyScheduled = true;
+            requestAnimationFrame(notifyFn);
+          }
+        }
+      };
+      return copyBufferSet;
+    });
+    let bufferBufferPtr = 0;
     
     const captureProcessor = audioContext.createScriptProcessor(bufferSize, nChannels, nChannels);
     captureProcessor.onaudioprocess = function scopeCallback(event) {
-      const buffer = event.inputBuffer;
-      buffer.copyFromChannel(copyL, 0);
-      buffer.copyFromChannel(copyR, 1);
-      requestAnimationFrame(notify);
+      const inputBuffer = event.inputBuffer;
+      const cellBuffer = bufferBuffer[bufferBufferPtr];
+      bufferBufferPtr = (bufferBufferPtr + 1) % bufferBuffer.length;
+      inputBuffer.copyFromChannel(cellBuffer.copyL, 0);
+      inputBuffer.copyFromChannel(cellBuffer.copyR, 1);
+      cellBuffer.notify();
     };
     captureProcessor.connect(audioContext.destination);
     
     // Cell handling and other state
     const info = {};  // dummy
-    var lastValue = [info, outputBuffer];
+    var lastValue = [info, new Float32Array(bufferSize)];
     var subscriptions = [];
     var isScheduled = false;
     
-    function notify() {
+    function sendBuffer(copyBufferSet) {
       // Do this processing now rather than in callback to minimize work done in audio callback.
-      for (var i = 0; i < bufferSize; i++) {
+      const copyL = copyBufferSet.copyL;
+      const copyR = copyBufferSet.copyR;
+      const outputBuffer = copyBufferSet.outputBuffer;
+      for (let i = 0; i < bufferSize; i++) {
         outputBuffer[i * 2] = copyL[i];
         outputBuffer[i * 2 + 1] = copyR[i];
       }
       
-      var newValue = [info, outputBuffer];  // fresh array, same contents, good enough.
+      const newValue = [info, outputBuffer];
     
       // Deliver value
       lastValue = newValue;
       // TODO replace this with something async
-      for (var i = 0; i < subscriptions.length; i++) {
+      for (let i = 0; i < subscriptions.length; i++) {
         (0,subscriptions[i])(newValue);
       }
     }

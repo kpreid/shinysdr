@@ -18,8 +18,10 @@
 require.config({
   baseUrl: '/client/'
 });
-define(['audio', 'coordination', 'events', 'types', 'values', 'widget', 'widgets'],
-       ( audio,   coordination,   events,   types,   values,   widget,   widgets ) => {
+define(['audio', 'coordination', 'events', 'types', 'values', 'widget',
+        'widgets', 'widgets/scope'],
+       ( audio,   coordination,   events,   types,   values,   widget,
+         widgets,   widgets_scope) => {
   'use strict';
   
   const scheduler = new events.Scheduler();
@@ -35,7 +37,11 @@ define(['audio', 'coordination', 'events', 'types', 'values', 'widget', 'widgets
     adapter.connectFrom(source);
   })
   
-  const root = new values.ConstantCell(types.block, adapter);
+  const root = new values.ConstantCell(types.block, values.makeBlock({
+    scope: adapter.scope,
+    parameters: new values.ConstantCell(types.block,
+      new widgets_scope.ScopeParameters(sessionStorage)),
+  }));
   
   const context = new widget.Context({
     widgets: widgets,

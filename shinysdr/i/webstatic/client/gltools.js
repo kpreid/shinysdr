@@ -25,7 +25,8 @@ define(function () {
     return !useWebGL ? null : canvas.getContext('webgl', options) || canvas.getContext('experimental-webgl', options);
   };
   
-  exports.buildProgram = function buildProgram(gl, vertexShaderSource, fragmentShaderSource) {
+  const buildProgram = exports.buildProgram =
+      function buildProgram(gl, vertexShaderSource, fragmentShaderSource) {
     function compileShader(type, source) {
       var shader = gl.createShader(type);
       gl.shaderSource(shader, source);
@@ -109,9 +110,7 @@ define(function () {
   exports.AttributeLayout = AttributeLayout;
   
   function SingleQuad(gl, nx, px, ny, py, positionAttribute) {
-    // TODO move
-    
-    var quadBuffer = gl.createBuffer();
+    const  quadBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
       // full screen triangle strip
@@ -138,6 +137,82 @@ define(function () {
     };
   }
   exports.SingleQuad = SingleQuad;
+  
+  // Sets up render-to-texture then texture-to-screen-via-shader.
+  //
+  // Calling this constructor overwrites texture unit 0 binding and bindFramebuffer.
+  function PostProcessor(gl, {format, type, fragmentShader}) {
+    const framebuffer = gl.createFramebuffer();
+    
+    const framebufferTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, framebufferTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, framebufferTexture, 0);
+    // console.log(WebGLDebugUtils.glEnumToString(gl.checkFramebufferStatus(gl.FRAMEBUFFER)));
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    
+    const postProcessProgram = buildProgram(gl,
+      // vertex shader
+      ''
+      + 'attribute highp vec4 position;\n'
+      + 'varying highp vec2 pp_texcoord;\n'
+      + 'void main(void) {\n'
+      + '  gl_Position = position;\n'
+      + '  pp_texcoord = position.xy * vec2(0.5) + vec2(0.5);\n'
+      + '}\n',
+      // fragment shader
+      ''
+      + 'uniform sampler2D pp_texture;\n'
+      + 'uniform highp vec2 pp_size;\n'
+      + 'varying highp vec2 pp_texcoord;\n'
+      + fragmentShader);
+    const positionAttribute = gl.getAttribLocation(postProcessProgram, 'position');
+    gl.uniform1i(gl.getUniformLocation(postProcessProgram, 'pp_texture'), 0);
+    
+    const quad = new SingleQuad(gl, -1, +1, -1, +1, positionAttribute);
+    
+    let w = 1;
+    let h = 1;
+    // Calling this method overwrites texture unit 0 binding.
+    this.setSize = function setSize(newW, newH) {
+      w = newW;
+      h = newH;
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, framebufferTexture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, format, w, h, 0, format, type, null);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+    };
+    
+    // For use to set uniforms on the postprocessing program.
+    this.getProgram = function getProgram() {
+      return postProcessProgram;
+    };
+    
+    this.beginInput = function beginInput() {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    };
+    
+    this.endInput = function endInput() {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    };
+    
+    // Calling this method overwrites texture unit 0 binding, the current program, and ARRAY_BUFFER binding.
+    this.drawOutput = function drawOutput() {
+      gl.useProgram(postProcessProgram);
+      gl.uniform2f(gl.getUniformLocation(postProcessProgram, 'pp_size'), w, h);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, framebufferTexture);
+      quad.draw();
+      gl.bindTexture(gl.TEXTURE_2D, null);
+    };
+  }
+  exports.PostProcessor = PostProcessor;
 
   return Object.freeze(exports);
 });
