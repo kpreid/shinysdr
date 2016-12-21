@@ -339,6 +339,17 @@ h2 input {
   stroke: #00FFAA;
 }
 
+.widget-ScopePlot {
+  position: relative;    /* abs position root */
+}
+.widget-ScopePlot-data, .widget-ScopePlot-graticule {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 100%;
+}
+
 /* map */
 .map-container {
   display: flex;

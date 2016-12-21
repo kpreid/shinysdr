@@ -63,10 +63,147 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
       intensity: sc('intensity', new RangeT([[0.01, 100.0]], true, false), 1.0),
       focus_falloff: sc('focus_falloff', new RangeT([[0.1, 3]], false, false), 0.8),
       persistence_gamma: sc('persistence_gamma', new RangeT([[1, 100]], true, false), 10.0),
-      invgamma: sc('invgamma', new RangeT([[0.5, 2]], false, false), 1.0)
+      invgamma: sc('invgamma', new RangeT([[0.5, 2]], false, false), 1.0),
+      graticule_intensity: sc('graticule_intensity', new RangeT([[0, 1]], false, false), 0.25),
     });
   }
   exports.ScopeParameters = ScopeParameters;
+  
+  function multAddVector(ka, a, kb, b) {
+    const result = [];
+    for (let i = 0; i < a.length; i++) {
+      result[i] = ka * a[i] + kb * b[i];
+    }
+    return result;
+  }
+  function scaleVector(ka, a) {
+    const result = [];
+    for (let i = 0; i < a.length; i++) {
+      result[i] = ka * a[i];
+    }
+    return result;
+  }
+  
+  // This does not follow the widget protocol; it is a subsection of ScopePlot's implementation.
+  function ScopeGraticule(config, canvas, parameters, projectionCell) {
+    const scheduler = config.scheduler;
+    const ctx = canvas.getContext('2d');
+    
+    const draw = config.boundedFn(function drawImpl() {
+      const w = canvas.offsetWidth;
+      const h = canvas.offsetHeight;
+      if (canvas.width !== w || canvas.height !== h) {
+        // implicitly clears
+        canvas.width = w;
+        canvas.height = h;
+      } else {
+        ctx.clearRect(0, 0, w, h);
+      }
+      
+      const intensity = parameters.graticule_intensity.depend(draw);
+      if (intensity <= 0) {
+        return;
+      }
+      
+      const hscale = (h / w) / 2;
+      const vscale = 1 / 2;
+      
+      const projectionInfo = projectionCell.depend(draw);
+      const projection = projectionInfo.projection;
+      function project(x, y, t) {
+        const newVector = [0, 0, 0, 0];
+        for (let i = 0; i < 4; i++) {
+          newVector[i] += projection[i * 4 + 0] * x;
+          newVector[i] += projection[i * 4 + 1] * y;
+          newVector[i] += projection[i * 4 + 2] * t;
+          newVector[i] += projection[i * 4 + 3] * 1;
+        }
+        //console.log(vector, projection, newVector);
+        const projectedX = newVector[0] / newVector[3];
+        const projectedY = -newVector[1] / newVector[3];  // flip Y to match GL
+        return [(projectedX * hscale + 0.5) * w, (projectedY * vscale + 0.5) * h];
+      }
+
+      ctx.strokeStyle = 'rgba(255, 200, 200, ' + intensity.toFixed(4) + ')';  // applies to lines
+      ctx.fillStyle = 'rgba(255, 200, 200, ' + (intensity * 2.0).toFixed(4) + ')';  // applies to text
+      
+      const viewportOuterRadius = Math.hypot(h / 2, w / 2);  // Bounding circle of region we need to paint
+      const viewportInnerRadius = Math.min(h / 2, w / 2);  // Box/circle guaranteed to be visible 
+      const screenZeroPos = project(0, 0, 0);
+      function paintAxis(unitVector, divisions, showLabels, labelScale) {
+        const valueSizeOfDivision = Math.hypot(...unitVector) / divisions;
+        
+        const screenUnitPos = project(...unitVector);
+        const projectedUnitVector = multAddVector(1, screenUnitPos, -1, screenZeroPos);
+        const projectedUnitLength = Math.hypot(...projectedUnitVector);
+        if (projectedUnitLength / divisions <= 2) {
+          // Don't draw anything less than 2 pixels per step.
+          // TODO: Make this a fade-out instead.
+          return;
+        }
+
+        const unitVectorsToEdge = viewportOuterRadius / projectedUnitLength;
+        const divisionsToEdge = Math.ceil(unitVectorsToEdge * divisions);
+
+        const perpendicularUnit = [-projectedUnitVector[1], projectedUnitVector[0]];
+        const perpendicularOffscreen = scaleVector(unitVectorsToEdge, perpendicularUnit);
+        
+        const textOffset = scaleVector(
+          ((viewportInnerRadius - 60/* pixels */) / projectedUnitLength)
+          * (unitVector[0] ? -1 : 1),
+          perpendicularUnit);
+
+        for (let i = -divisionsToEdge; i <= divisionsToEdge; i++) {
+          const vecScale = i / divisions;
+          const value = valueSizeOfDivision * i;
+          const step = multAddVector(1, screenZeroPos, vecScale, projectedUnitVector);
+          
+          ctx.beginPath();
+          ctx.moveTo(...multAddVector(1, step, -1, perpendicularOffscreen));
+          ctx.lineTo(...multAddVector(1, step, 1, perpendicularOffscreen));
+          ctx.stroke();
+          
+          if (showLabels && i % 2 === 0) {
+            const labelText = (value * labelScale).toFixed(Math.max(0, Math.round(-Math.log10(valueSizeOfDivision * labelScale))));
+            const textWidth = ctx.measureText(labelText).width;
+            let [tx, ty] = multAddVector(1, step, 1, textOffset);
+            ctx.save();
+            ctx.translate(tx, ty);
+            const angle = Math.atan2(projectedUnitVector[0], -projectedUnitVector[1]);
+            ctx.rotate(angle);
+            ctx.fillText(labelText, (angle > Math.PI / 8 ? - textWidth - 5 : 5), 3);
+            ctx.restore();
+          }
+        }
+      }
+      
+      function paintValueAxis(unitVector) {
+        const baseExponent = Math.floor(1.5 + 0.1 * parameters.gain.depend(draw));
+        paintAxis(unitVector, Math.pow(10, baseExponent), true, 1);
+        paintAxis(unitVector, Math.pow(10, (baseExponent - 1)), false, 1);
+      }
+      function paintTimeAxis() {
+        // divide by 2 because the coordinate span is -1 to 1
+        const labelScale = parameters.history_samples.depend(draw) / 2;
+        const divsScale = labelScale / parameters.time_scale.depend(draw);
+        const baseExponent = 4 + Math.floor(Math.log2(divsScale));
+        paintAxis([0, 0, 1], Math.pow(2, baseExponent), true, labelScale);
+      }
+      
+      paintValueAxis([1, 0, 0]);
+      paintValueAxis([0, 1, 0]);
+      paintTimeAxis();
+    });
+    draw.scheduler = scheduler;
+    
+    // TODO: This is a kludge and will never get properly removed; we need a general solution for this and other pixel-layout-dependent stuff
+    window.addEventListener('resize', event => {
+      // immediate to ensure smooth animation
+      scheduler.callNow(draw);
+    });
+    
+    scheduler.enqueue(draw);
+  }
   
   function ScopePlot(config) {
     const scheduler = config.scheduler;
@@ -74,11 +211,13 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
     const parameters = scopeAndParams.parameters.depend(config.rebuildMe);
     const scopeCell = scopeAndParams.scope;
     
-    let canvas = config.element;
-    if (canvas.tagName !== 'CANVAS') {
-      canvas = document.createElement('canvas');
-    }
-    this.element = canvas;
+    const container = config.element;
+    this.element = container;
+    const canvas = container.appendChild(document.createElement('canvas'));
+    canvas.classList.add('widget-ScopePlot-data');
+    
+    const graticuleCanvas = container.appendChild(document.createElement('canvas'));
+    graticuleCanvas.classList.add('widget-ScopePlot-graticule');
     
     const fakeDataMode = false;
     
@@ -458,6 +597,8 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
       draw.scheduler.enqueue(draw);
     }
     newScopeFrame.scheduler = config.scheduler;
+
+    new ScopeGraticule(config, graticuleCanvas, parameters, projectionCell);
 
     scopeCell.subscribe(newScopeFrame);
     draw();
