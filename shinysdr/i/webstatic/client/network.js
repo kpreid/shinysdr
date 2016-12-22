@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -72,7 +72,7 @@ define(['./types', './values', './events'],
     r.responseType = responseType;
     r.onreadystatechange = function() {
       if (r.readyState === 4) {
-        if (statusCategory(r.status) == 2) {
+        if (statusCategory(r.status) === 2) {
           callback(r.response);
         } else {
           //TODO error handling in UI
@@ -97,13 +97,13 @@ define(['./types', './values', './events'],
     };
     this._update = function _update(newValue) {
       remoteValue = newValue;
-      if (inhibitCount == 0) {
+      if (inhibitCount === 0) {
         acceptFromNetwork();
       }
     };
     const decAndAccept = function decAndAccept() {
       inhibitCount--;
-      if (inhibitCount == 0) {
+      if (inhibitCount === 0) {
         // If there are now no outstanding set requests, then the last value we got is the correct value.
         acceptFromNetwork();
       }

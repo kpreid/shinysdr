@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -557,7 +557,7 @@ define(['./events', './network', './types', './values'],
         const deviceEnumTable = {};
         let defaultDeviceId = 'default';
         Array.from(deviceInfos).forEach(deviceInfo => {
-          if (deviceInfo.kind != 'audioinput') return;
+          if (deviceInfo.kind !== 'audioinput') return;
           if (!defaultDeviceId) {
             defaultDeviceId = deviceInfo.deviceId;
           }

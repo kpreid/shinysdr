@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -172,8 +172,8 @@ define(['./map-core',
         function checkInfo() {
           info = radioStateInfo.get();
           if (
-            inSourceBand != (info.lower < record.freq && record.freq < info.upper) ||
-            isReceiving != info.receiving.has(record.freq)
+            inSourceBand !== (info.lower < record.freq && record.freq < info.upper) ||
+            isReceiving !== info.receiving.has(record.freq)
           ) {
             dirty();
           } else {

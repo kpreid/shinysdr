@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -210,7 +210,7 @@ define(['./basic', '../types', '../values', '../events', '../widget', '../databa
     var firstRow = document.createElement('tr');
     rowCommon(firstRow, record.lowerFreq);
     var secondRow;
-    if (record.upperFreq != record.lowerFreq) {
+    if (record.upperFreq !== record.lowerFreq) {
       secondRow = document.createElement('tr');
       rowCommon(secondRow, record.upperFreq);
     }

@@ -1,4 +1,4 @@
-// Copyright 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+// Copyright 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -218,8 +218,8 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
           case 'ch1': v0 = gainLin; break;
           case 'ch2': v1 = gainLin; break;
           case 't': 
-            v2 = index == 2 ? 1 : tAxisStretch;
-            if (index != 2) usesTrigger = true;  // TODO kludgy
+            v2 = index === 2 ? 1 : tAxisStretch;
+            if (index !== 2) usesTrigger = true;  // TODO kludgy
           break;
           case '1+2': v0 = gainLin; v1 = gainLin; break;
           case '1-2': v0 = gainLin; v1 = -gainLin; break;
@@ -335,7 +335,7 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
       if (staticProjectionInfo.usesTrigger) {
         for (let i = triggerSampleIndexes.length - 1; i >= 0; i--) {
           const index = triggerSampleIndexes[mod(triggerAddPtr + i, triggerSampleIndexes.length)];
-          if (index != NO_TRIGGER) {
+          if (index !== NO_TRIGGER) {
             const relativeTime = mod((index - circularBufferPtr) / numberOfSamples, 1);
             setProjection(staticProjectionInfo.projection, aspect, relativeTime, i / triggerSampleIndexes.length - 1);
             // TODO: Only draw a suitable surrounding range of points.
@@ -405,7 +405,7 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
       } else if (remainingSpace < newDataArray.length) {
         // write to end and loop back to beginning
         contiguousWrite(newDataArray.subarray(0, remainingSpace));
-        //if (circularBufferPtr != 0) { throw new Error('oops'); }
+        //if (circularBufferPtr !== 0) { throw new Error('oops'); }
         contiguousWrite(newDataArray.subarray(remainingSpace));
       } else {
         contiguousWrite(newDataArray);
@@ -418,7 +418,7 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
       // Erase trigger indexes pointing into old samples we are about to overwrite
       for (let i = 0; i < triggerSampleIndexes.length; i++) {
         const tsi = triggerSampleIndexes[i];
-        if (tsi != NO_TRIGGER && mod(tsi - newDataStart, numberOfSamples) + newDataStart < newDataEnd) {
+        if (tsi !== NO_TRIGGER && mod(tsi - newDataStart, numberOfSamples) + newDataStart < newDataEnd) {
           triggerSampleIndexes[i] = NO_TRIGGER;
           nrem++;
         }

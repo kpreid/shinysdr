@@ -133,7 +133,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
     // TODO: Write a test for this feature
     (function() {
       for (var node = config.element.firstChild; node; node = node.nextSibling) {
-        if (node.nodeType == 8 /* comment */) {
+        if (node.nodeType === 8 /* comment */) {
           var match = /^\s*ignore:\s*(\S*)\s*$/.exec(node.nodeValue);
           if (match) {
             ignore(match[1]);
@@ -418,7 +418,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
     const places = [];
     const marks = [];
     for (let i = 9; i >= 0; i--) (function(i) {
-      if (i % 3 == 2) {
+      if (i % 3 === 2) {
         var mark = container.appendChild(document.createElement("span"));
         mark.className = "knob-mark";
         mark.textContent = ",";

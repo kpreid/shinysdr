@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -76,7 +76,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
       // Prevent mouse-emulation handling
       event.preventDefault();
 
-      touchCanBeTap = Object.keys(activeTouches).length === 0 && event.changedTouches.length == 1;
+      touchCanBeTap = Object.keys(activeTouches).length === 0 && event.changedTouches.length === 1;
       
       if (Object.keys(activeTouches).length === 0) {  // is first touch
         stateAtStart = view.captureState();
@@ -1440,7 +1440,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
     mapCamera.addDragListeners(canvas);
     
     var pickingColorAllocatorBase = new FreeListAllocator(1, function() {});
-    pickingColorAllocatorBase.allocate();  // reserve 0 == NO_PICKING_COLOR for not-an-object
+    pickingColorAllocatorBase.allocate();  // reserve 0 === NO_PICKING_COLOR for not-an-object
     var pickingObjects = [null];
     var pickingColorAllocator = {
       allocate: function () {
@@ -1610,7 +1610,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
       position = [lat, lon];
     }
     
-    if (position && (!lastHistory || (position[0] != lastHistory[0] && position[1] != lastHistory[1]))) {
+    if (position && (!lastHistory || (position[0] !== lastHistory[0] && position[1] !== lastHistory[1]))) {
       history.push({position: position});
     }
     

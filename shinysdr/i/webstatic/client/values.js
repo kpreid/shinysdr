@@ -38,7 +38,12 @@ define(['./events', './types'], function (events, types) {
       type = type_or_metadata;
       metadata = {
         value_type: type_or_metadata,
-        naming: {}
+        naming: {
+            'type': 'EnumRow',
+            'label': null,
+            'description': null,
+            'sort_key': null
+        }
       };
     }
     if (!(type instanceof ValueType)) {
@@ -378,7 +383,7 @@ define(['./events', './types'], function (events, types) {
         for (var key in object) {
           var childCell = object[key];
           // TODO: centralize this is-a-cell test and any others like it
-          if (!(childCell !== null && typeof childCell == 'object' && 'get' in childCell)) {
+          if (!(childCell !== null && typeof childCell === 'object' && 'get' in childCell)) {
             if (typeof childCell === 'function') {
               // allow methods. TODO revisit what the contract of a blockT is
               continue;

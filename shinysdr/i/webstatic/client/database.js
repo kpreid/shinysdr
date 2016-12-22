@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -132,7 +132,7 @@ define(['./events', './network', './types', './values'],
     }
     baseEntries.forEach(function (record) {
       // TODO: not grouping bands is not on principle, it's just because FreqScale, the only user of this, doesn't want it. Revisit the design.
-      if (record.type == 'band' || record.lowerFreq !== lastFreqL || record.upperFreq !== lastFreqH) {
+      if (record.type === 'band' || record.lowerFreq !== lastFreqL || record.upperFreq !== lastFreqH) {
         flush();
         lastFreqL = record.lowerFreq;
         lastFreqH = record.upperFreq;

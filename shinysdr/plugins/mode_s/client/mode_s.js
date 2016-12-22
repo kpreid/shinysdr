@@ -1,4 +1,4 @@
-// Copyright 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+// Copyright 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -42,13 +42,13 @@ define(['map/map-core', 'widgets'], function (mapCore, widgets) {
         var ident = aircraft.ident.depend(dirty);
         var altitude = trackCell.depend(dirty).altitude.value;
         var labelParts = [];
-        if (callsign != null) {
+        if (callsign !== null) {
           labelParts.push(callsign.replace(/^ | $/g, ''));
         }
-        if (ident != null) {
+        if (ident !== null) {
           labelParts.push(ident);
         }
-        if (altitude != null) {
+        if (altitude !== null) {
           labelParts.push(altitude.toFixed(0) + ' m');
         }
         var f = renderTrackFeature(dirty, trackCell,

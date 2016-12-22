@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -741,7 +741,7 @@ define(['./basic', './dbui',
             var record = slices[slicePtr];
             slicePtr = mod(slicePtr + 1, historyCount);
             ibuf = record[0];
-            if (ibuf.width != fftLength) {
+            if (ibuf.width !== fftLength) {
               ibuf = record[0] = ctx.createImageData(fftLength, 1);
             }
             record[1] = bufferCenterFreq;
@@ -966,7 +966,7 @@ define(['./basic', './dbui',
         var device_name_now = receiver.device_name.depend(draw);
         var rec_freq_now = receiver.rec_freq.depend(draw);
         
-        if (!(lvf <= rec_freq_now && rec_freq_now <= rvf && device_name_now == visibleDevice)) {
+        if (!(lvf <= rec_freq_now && rec_freq_now <= rvf && device_name_now === visibleDevice)) {
           continue;
         }
         

@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -91,7 +91,7 @@ define(['./values'], function (values) {
       // Don't grab events from controls in headers
       // There doesn't seem to be a better more composable way to handle this --
       // http://stackoverflow.com/questions/15657776/detect-default-event-handling
-      if (event.target != showButton &&
+      if (event.target !== showButton &&
           (event.target.tagName === 'INPUT'
            || event.target.tagName === 'LABEL'
            || event.target.tagName === 'BUTTON')) {
@@ -219,7 +219,7 @@ define(['./values'], function (values) {
   Subwindow_prototype.attachedCallback = enroll;
   Subwindow_prototype.detachedCallback = function() {
     allWindows = allWindows.filter(function (record) {
-      return record.element != this;
+      return record.element !== this;
     }.bind(this));
     globalUpdate();
   };

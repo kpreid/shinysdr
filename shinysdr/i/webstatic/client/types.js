@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -114,7 +114,7 @@ define([], () => {
       // algorithm is inefficient but adequate
       const length = this.mins.length;
       let bestFit = Infinity;
-      let bestIndex = direction == -1 ? 0 : direction == 1 ? length - 1 : undefined;
+      let bestIndex = direction === -1 ? 0 : direction === 1 ? length - 1 : undefined;
       for (let i = 0; i < length; i++) {
         const min = this.mins[i];
         const max = this.maxes[i];
@@ -161,9 +161,9 @@ define([], () => {
     constructor(info_format, array_format) {
       super();
       // TODO: redesign things so that we have the semantic info from the server
-      if (info_format == 'dff' && array_format == 'b') {
+      if (info_format === 'dff' && array_format === 'b') {
         this.dataFormat = 'spectrum-byte';
-      } else if (info_format == 'd' && array_format == 'f') {
+      } else if (info_format === 'd' && array_format === 'f') {
         this.dataFormat = 'scope-float';
       } else {
         throw new Error('Unexpected bulk data format: ' + info_format + ' ' + array_format);

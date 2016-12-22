@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -187,7 +187,7 @@ define(['./coordination', './events', './math', './types', './values'], function
       container.replaceChild(newSourceEl, currentWidgetEl);
       
       // TODO: Better interface to the metadata
-      if (!newSourceEl.hasAttribute('title') && targetCell.metadata.naming.label != null) {
+      if (!newSourceEl.hasAttribute('title') && targetCell.metadata.naming.label !== null) {
         newSourceEl.setAttribute('title', targetCell.metadata.naming.label);
       }
       
@@ -405,7 +405,7 @@ define(['./coordination', './events', './math', './types', './values'], function
         centerFreq = 0;
       }
       nyquist = sourceType.sample_rate / 2;
-      analytic = sourceType.kind == 'IQ';  // TODO have glue code
+      analytic = sourceType.kind === 'IQ';  // TODO have glue code
       leftFreq = analytic ? centerFreq - nyquist : centerFreq;
       rightFreq = centerFreq + nyquist;
       pixelsPerHertz = pixelWidth / (rightFreq - leftFreq) * zoom;
@@ -417,7 +417,7 @@ define(['./coordination', './events', './math', './types', './values'], function
       
       // Adjust scroll to match possible viewport size change.
       // (But if we are hidden or zero size, then the new scroll position would be garbage, so keep the old state.)
-      if (container.offsetWidth > 0 && pixelWidth != container.offsetWidth) {
+      if (container.offsetWidth > 0 && pixelWidth !== container.offsetWidth) {
         // Compute change (with case for first time initialization)
         var scaleChange = isFinite(pixelWidth) ? container.offsetWidth / pixelWidth : 1;
         var scrollValue = (cacheScrollLeft + fractionalScroll) * scaleChange;
@@ -595,7 +595,7 @@ define(['./coordination', './events', './math', './types', './values'], function
       event.preventDefault();
       
       // Tap-to-tune requires exactly one touch just starting
-      mayTapToTune = Object.keys(activeTouches) == 0 && event.changedTouches.length == 1;
+      mayTapToTune = Object.keys(activeTouches) === 0 && event.changedTouches.length === 1;
       
       // Record the frequency the user has touched
       Array.prototype.forEach.call(event.changedTouches, function (touch) {

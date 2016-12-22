@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -200,7 +200,7 @@ define(['./basic', './spectrum',
         var gainModes = {};
         if (hasAGC) { gainModes['auto'] = 'AGC On'; ignore('agc'); }
         if (hasSingleGain) { gainModes['single'] = 'Manual Gain'; }
-        if (hasMultipleGain && !(hasSingleGain && Object.keys(block.gains.depend(config.rebuildMe)).length == 1)) {
+        if (hasMultipleGain && !(hasSingleGain && Object.keys(block.gains.depend(config.rebuildMe)).length === 1)) {
           // show gain stages UI only if there's more than one
           gainModes['stages'] = 'Stages';
         }
