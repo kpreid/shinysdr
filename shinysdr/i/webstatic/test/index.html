@@ -30,56 +30,33 @@
       baseUrl: '/client/'
     });
     
-    // TODO: kludge to use old style namespaces
-    var shinysdr = {};
-    var load_names = ['audio', 'coordination', 'database', 'events', 'map/map-core', 'map/map-layers', 'network', 'types', 'window-manager', 'values', 'widget', 'widgets', 'widgets/scope'];
-    require(load_names, function() {
-      var args = arguments;
-      console.log(args);
-      load_names.forEach(function (name, i) {
-        shinysdr[name] = args[i];
-      });
-      
+    require(['network'], network => {
       // recipe from Jasmine docs
       var jasmineEnv = jasmine.getEnv();
       jasmineEnv.updateInterval = 250;
       var htmlReporter = new jasmine.HtmlReporter();
       jasmineEnv.addReporter(htmlReporter);
       jasmineEnv.specFilter = htmlReporter.specFilter.bind(htmlReporter);
-      
-      shinysdr.network.externalGet('t/', 'document', function(indexDoc) {
-        var anchors = indexDoc.querySelectorAll('a[href]');
-        
-        // Number of test scripts that have not yet fired a load event
-        var pendingLoad = 0;
-        // Number of test scripts that have not yet called testScriptFinished()
-        var pendingFinish = 0;
-        
-        window.testScriptFinished = function() { pendingFinish--; }
-        
-        describe('test suite', function() {
-          it('should not have any loading errors', function() {
-            expect(pendingFinish).toBe(0);
-          });
-        });
-        
-        Array.prototype.forEach.call(anchors, function (anchor) {
+  
+      network.externalGet('t/', 'document', indexDoc => {
+        const testUrls = [];
+        Array.prototype.forEach.call(indexDoc.querySelectorAll('a[href]'), anchor => {
           var url = anchor.href;
           if (/\/t-.*\.js$/.test(url)) {
-            console.log('Loading tests ' + url);
-            var loader = document.createElement('script');
-            loader.src = url;
-            pendingLoad++;
-            pendingFinish++;
-            // TODO: Syntax errors in tests are not noted
-            loader.onload = function() {
-              if (--pendingLoad == 0) {
-                console.log('All loaded, executing.');
-                jasmineEnv.execute();
-              }
-            };
-            document.body.appendChild(loader);
+            testUrls.push(url);
           }
+        });
+        require(testUrls, (...results) => {
+          // requirejs doesn't tell us about e.g. syntax errors in the file. So check for a token return value.
+          describe('test suite', () => {
+            testUrls.forEach((url, index) => {
+              it(url + ' should have loaded successfully', () => {
+                expect(results[index]).toBe('ok');
+              });
+            });
+          });
+          
+          jasmineEnv.execute();
         });
       });
     });

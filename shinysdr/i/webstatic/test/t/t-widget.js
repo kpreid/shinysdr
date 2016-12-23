@@ -15,78 +15,84 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-'use strict';
+define(['events', 'types', 'values', 'widget', 'widgets/basic'],
+       ( events,   types,   values,   widget,   widgets_basic) => {
+  'use strict';
+  
+  const Block = widgets_basic.Block;
+  const Scheduler = events.Scheduler;
+  
+  describe('widget', function () {
+    let context;
+    let scheduler;
+    beforeEach(function () {
+      scheduler = new Scheduler(window);
+      context = new widget.Context({
+        widgets: {},
+        scheduler: scheduler
+      });
+    });
+  
+    describe('createWidget', function () {
+      it('should handle a broken widget', function() {
+        function TestWidget(config) {
+          throw new Error('bang');
+        }
+      
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const wEl = container.appendChild(document.createElement('div'));
+        const cell = new values.LocalCell(Number, 0);
+        const widgetHandle = widget.createWidgetExt(context, TestWidget, wEl, cell);
+        // implicitly expect not to throw
+        expect(container.firstChild.className).toBe('widget-ErrorWidget');
+      });
 
-describe('widget', function () {
-  var context;
-  var scheduler;
-  beforeEach(function () {
-    scheduler = new shinysdr.events.Scheduler(window);
-    context = new shinysdr.widget.Context({
-      widgets: {},
-      scheduler: scheduler
+      it('should call lifecycle callbacks', function() {
+        let calledInit = 0;
+        let calledDestroy = 0;
+        let poked = 0;
+        let poke;
+      
+        function OuterWidget(config) {
+          widgets_basic.Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
+            addWidget('inner', TestWidget);
+          });
+        }
+        function TestWidget(config) {
+          console.log('TestWidget instantiated');
+          this.element = config.element;
+          widget.addLifecycleListener(this.element, 'init', function() {
+            calledInit++;
+          });
+          widget.addLifecycleListener(this.element, 'destroy', function() {
+            calledDestroy++;
+          });
+          poke = config.boundedFn(function() {
+            poked++;
+          });
+        }
+      
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const wEl = container.appendChild(document.createElement('div'));
+        const cell = new values.LocalCell(types.block, values.makeBlock({
+          inner: new values.LocalCell(Number, 0)
+        }));
+        const widgetHandle = widget.createWidgetExt(context, OuterWidget, wEl, cell);
+        expect(calledInit).toBe(1);
+        expect(calledDestroy).toBe(0);
+        expect(poked).toBe(0);
+        poke();
+        expect(poked).toBe(1);
+        widgetHandle.destroy();
+        expect(calledInit).toBe(1);
+        expect(calledDestroy).toBe(1);
+        poke();
+        expect(poked).toBe(1);
+      });
     });
   });
   
-  describe('createWidget', function () {
-    it('should handle a broken widget', function() {
-      function TestWidget(config) {
-        throw new Error('bang');
-      }
-      
-      var container = document.createElement('div');
-      document.body.appendChild(container);
-      var wEl = container.appendChild(document.createElement('div'));
-      var cell = new shinysdr.values.LocalCell(Number, 0);
-      var widgetHandle = shinysdr.widget.createWidgetExt(context, TestWidget, wEl, cell);
-      // implicitly expect not to throw
-      expect(container.firstChild.className).toBe('widget-ErrorWidget');
-    });
-
-    it('should call lifecycle callbacks', function() {
-      var calledInit = 0;
-      var calledDestroy = 0;
-      var poked = 0;
-      var poke;
-      
-      function OuterWidget(config) {
-        shinysdr.widgets.Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
-          addWidget('inner', TestWidget);
-        });
-      }
-      function TestWidget(config) {
-        console.log('TestWidget instantiated');
-        this.element = config.element;
-        shinysdr.widget.addLifecycleListener(this.element, 'init', function() {
-          calledInit++;
-        });
-        shinysdr.widget.addLifecycleListener(this.element, 'destroy', function() {
-          calledDestroy++;
-        });
-        poke = config.boundedFn(function() {
-          poked++;
-        });
-      }
-      
-      var container = document.createElement('div');
-      document.body.appendChild(container);
-      var wEl = container.appendChild(document.createElement('div'));
-      var cell = new shinysdr.values.LocalCell(shinysdr.types.block, shinysdr.values.makeBlock({
-        inner: new shinysdr.values.LocalCell(Number, 0)
-      }));
-      var widgetHandle = shinysdr.widget.createWidgetExt(context, OuterWidget, wEl, cell);
-      expect(calledInit).toBe(1);
-      expect(calledDestroy).toBe(0);
-      expect(poked).toBe(0);
-      poke();
-      expect(poked).toBe(1);
-      widgetHandle.destroy();
-      expect(calledInit).toBe(1);
-      expect(calledDestroy).toBe(1);
-      poke();
-      expect(poked).toBe(1);
-    });
-  });
+  return 'ok';
 });
-
-testScriptFinished();
