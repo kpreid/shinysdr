@@ -36,7 +36,7 @@ define(['events', 'types', 'values', 'widget', 'widgets/basic'],
     describe('createWidget', function () {
       it('should handle a broken widget', function() {
         function TestWidget(config) {
-          throw new Error('bang');
+          throw new Error('Widget construction error for testing.');
         }
       
         const container = document.createElement('div');

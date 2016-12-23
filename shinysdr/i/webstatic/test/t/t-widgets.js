@@ -169,9 +169,9 @@ define(['coordination', 'database', 'events', 'map/map-core',
           this.element = config.element;
         }
 
-        const cell = new LocalCell(types.block, makeBlock({
-          _implements_Foo: true
-        }));
+        const block = makeBlock({});
+        Object.defineProperty(block, '_implements_Foo', {value: true});  // non-enum
+        const cell = new LocalCell(types.block, block);
         const config = mockWidgetConfig(null, cell);
         config.context.widgets['interface:Foo'] = TestWidget;
         widget = new widgets.PickWidget(config);

@@ -49,7 +49,10 @@ define(['events'], (events) => {
         const cb1 = jasmine.createSpy('cb1');
         cb1.scheduler = scheduler;
         const cb2base = jasmine.createSpy('cb2');
-        const cb2 = function () { cb2base(); throw new Error('Dummy uncaught error.'); }
+        const cb2 = function () {
+          cb2base();
+          throw new Error('Uncaught error for testing.');
+        };
         cb2.scheduler = scheduler;
         const cb3 = jasmine.createSpy('cb3');
         cb3.scheduler = scheduler;

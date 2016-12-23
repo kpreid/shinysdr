@@ -115,7 +115,7 @@ define(['events', 'types', 'values'],
       });
     
       it('should tolerate garbage found in storage', function () {
-        sessionStorage.setItem('foo.bar', '}');
+        sessionStorage.setItem('foo.bar', '}Non-JSON for testing');
         const ns = new values.StorageNamespace(sessionStorage, 'foo.');
         const cell = new values.StorageCell(ns, String, 'default', 'bar');
         expect(cell.get()).toBe('default');
