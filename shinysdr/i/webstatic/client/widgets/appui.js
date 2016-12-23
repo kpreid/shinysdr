@@ -78,36 +78,33 @@ define(['./basic', './spectrum',
   function BlockSet(widgetCtor, buildEntry) {
     return function TypeSetInst(config) {
       // We do not inherit from Block, because we don't want the rebuild-on-reshape behavior (so we can do something more efficient) and we don't need the rest of it.
-      var block = config.target.depend(config.rebuildMe);
-      var idPrefix = config.idPrefix;
-      var childContainer = this.element = config.element;
+      const block = config.target.depend(config.rebuildMe);
+      const idPrefix = config.idPrefix;
+      const childContainer = this.element = config.element;
       
       // TODO: We ought to display these in some way.
       config.element.removeAttribute('title');
       
       // Keys are block keys
-      var childWidgetElements = Object.create(null);
+      const childWidgetElements = Object.create(null);
 
-      var createChild = function (name) {
-        var toolbar;
-        var widgetContainer = childContainer;
+      const createChild = name => {
         // buildContainer must append exactly one child. TODO: cleaner
-        var widgetPlaceholder = buildEntry(childContainer, block, name);
+        const widgetPlaceholder = buildEntry(childContainer, block, name);
         if (idPrefix) {
           widgetPlaceholder.id = idPrefix + name;
         }
-        var widgetContainer = childContainer.lastChild;
-        var widgetHandle = createWidgetExt(config.context, widgetCtor, widgetPlaceholder, block[name]);
+        const widgetContainer = childContainer.lastChild;
+        const widgetHandle = createWidgetExt(config.context, widgetCtor, widgetPlaceholder, block[name]);
         return {
-          toolbar: toolbar,
           widgetHandle: widgetHandle,
           element: widgetContainer
         };
-      }.bind(this);
+      };
 
       function handleReshape() {
         block._reshapeNotice.listen(handleReshape);
-        Object.keys(block).forEach(function (name) {
+        Object.keys(block).forEach(name => {
           if (!childWidgetElements[name]) {
             childWidgetElements[name] = createChild(name);
           }

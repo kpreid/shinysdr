@@ -30,7 +30,7 @@
       baseUrl: '/client/'
     });
     
-    require(['network'], network => {
+    requirejs(['network'], network => {
       // recipe from Jasmine docs
       var jasmineEnv = jasmine.getEnv();
       jasmineEnv.updateInterval = 250;
@@ -46,7 +46,7 @@
             testUrls.push(url);
           }
         });
-        require(testUrls, (...results) => {
+        requirejs(testUrls, (...results) => {
           // requirejs doesn't tell us about e.g. syntax errors in the file. So check for a token return value.
           describe('test suite', () => {
             testUrls.forEach((url, index) => {

@@ -47,11 +47,12 @@ define(() => {
   
   // internal function of Scheduler
   function schedulerRAFCallback() {
+    // jshint validthis: true
+    const queue = this._queue;
+    let limit = 1000;
     try {
-      var limit = 1000;
-      var queue = this._queue;
       while (queue.nonempty() && limit-- > 0) {
-        var queued = queue.dequeue();
+        const queued = queue.dequeue();
         if (queued._scheduler_scheduled) {
           queued._scheduler_scheduled = false;
           queued();
@@ -178,30 +179,30 @@ define(() => {
   // Utility for turning "this list was updated" into "these items were added and removed".
   // TODO: Doesn't really fit with the rest of this module.
   function AddKeepDrop(addCallback, removeCallback) {
-    var have = new Map();
-    var keep = new Set();
+    const have = new Map();
+    const keep = new Set();
     return {
-      begin: function() {
+      begin: function () {
         keep.clear();
       },
-      add: function(key) {
+      add: function (key) {
         keep.add(key);
       },
       end: function() {
-        have.forEach(function (value, key) {
+        have.forEach((value, key) => {
           if (!keep.has(key)) {
             removeCallback(key, value);
             have.delete(key);
           }
         });
-        keep.forEach(function (key) {
+        keep.forEach(key => {
           if (!have.has(key)) {
             have.set(key, addCallback(key));
           }
         });
         keep.clear();
       }
-    }
+    };
   }
   exports.AddKeepDrop = AddKeepDrop;
 

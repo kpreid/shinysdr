@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-require.config({
+requirejs.config({
   baseUrl: '/client/'
 });
 define(['audio', 'coordination', 'events', 'types', 'values', 'widget',

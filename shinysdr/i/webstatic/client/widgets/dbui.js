@@ -29,30 +29,30 @@ define(['./basic', '../types', '../values', '../events', '../widget', '../databa
   var exports = Object.create(null);
 
   function FreqList(config) {
-    var radioCell = config.radioCell;
-    var scheduler = config.scheduler;
-    var tune = config.actions.tune;
-    var configKey = 'filterString';
-    var dataSource = config.freqDB;  // TODO optionally filter to available receive hardware
+    const radioCell = config.radioCell;
+    const scheduler = config.scheduler;
+    const tune = config.actions.tune;
+    const configKey = 'filterString';
+    const dataSource = config.freqDB;  // TODO optionally filter to available receive hardware
     
-    var container = this.element = document.createElement('div');
+    const container = this.element = document.createElement('div');
     container.classList.add('panel');
     
-    var filterBox = container.appendChild(document.createElement('input'));
+    const filterBox = container.appendChild(document.createElement('input'));
     filterBox.type = 'search';
     filterBox.placeholder = 'Filter channels...';
     filterBox.value = (config.storage && config.storage.getItem(configKey)) || '';
     filterBox.addEventListener('input', refilter, false);
     
-    var listOuter = container.appendChild(document.createElement('div'))
+    const listOuter = container.appendChild(document.createElement('div'));
     listOuter.className = 'freqlist-box';
-    var list = listOuter.appendChild(document.createElement('table'))
+    const list = listOuter.appendChild(document.createElement('table'))
       .appendChild(document.createElement('tbody'));
     
-    var receiveAllButton = container.appendChild(document.createElement('button'));
+    const receiveAllButton = container.appendChild(document.createElement('button'));
     receiveAllButton.textContent = 'Receive all in search';
     receiveAllButton.addEventListener('click', function (event) {
-      var receivers = radioCell.get().receivers.get();
+      const receivers = radioCell.get().receivers.get();
       for (var key in receivers) {
         receivers.delete(key);
       }
@@ -65,17 +65,17 @@ define(['./basic', '../types', '../values', '../events', '../widget', '../databa
       });
     }, false);
     
-    var recordElAndDrawTable = new WeakMap();
-    var redrawHooks = new WeakMap();
+    const recordElAndDrawTable = new WeakMap();
+    const redrawHooks = new WeakMap();
     
     function getElementsForRecord(record) {
-      var info = recordElAndDrawTable.get(record);
-      if (info) {
-        redrawHooks.get(info)();
-        return info.elements;
+      const existingInfo = recordElAndDrawTable.get(record);
+      if (existingInfo) {
+        redrawHooks.get(existingInfo)();
+        return existingInfo.elements;
       }
       
-      info = createRecordTableRows(record, tune);
+      const info = createRecordTableRows(record, tune);
       recordElAndDrawTable.set(record, info);
       
       function draw() {
@@ -91,8 +91,8 @@ define(['./basic', '../types', '../values', '../events', '../widget', '../databa
       return info.elements;
     }
     
-    var currentFilter = dataSource;
-    var lastFilterText = null;
+    let currentFilter = dataSource;
+    let lastFilterText = null;
     function refilter() {
       if (lastFilterText !== filterBox.value) {
         lastFilterText = filterBox.value;
@@ -102,24 +102,24 @@ define(['./basic', '../types', '../values', '../events', '../widget', '../databa
       }
     }
     
-    var draw = config.boundedFn(function drawImpl() {
+    const draw = config.boundedFn(function drawImpl() {
       //console.group('draw');
       //console.log(currentFilter.getAll().map(function (r) { return r.label; }));
       currentFilter.n.listen(draw);
       //console.groupEnd();
       list.textContent = '';  // clear
-      var deferredSecondHalves = [];
+      const deferredSecondHalves = [];
       currentFilter.forEach(function (record) {
         // the >= rather than = comparison is critical to get abutting band edges in the ending-then-starting order
         while (deferredSecondHalves.length && record.lowerFreq >= deferredSecondHalves[0].freq) {
           list.appendChild(deferredSecondHalves.shift().el);
         }
-        var elements = getElementsForRecord(record);
+        const elements = getElementsForRecord(record);
         list.appendChild(elements[0]);
         if (elements[1]) {
           // TODO: Use an insert algorithm instead of sorting the whole
           deferredSecondHalves.push({freq: record.upperFreq, el: elements[1]});
-          deferredSecondHalves.sort(function (a, b) { return a.freq - b.freq });
+          deferredSecondHalves.sort((a, b) => a.freq - b.freq);
         }
       });
       // sanity check
@@ -134,9 +134,9 @@ define(['./basic', '../types', '../values', '../events', '../widget', '../databa
 
   // Like FreqList, but with no controls, no live updating, and taking an array rather than the freqDB. For FreqScale disambiguation menus.
   function BareFreqList(config) {
-    var records = config.target.get();
-    var actionCompleted = config.context.actionCompleted;  // TODO should have direct access not through context
-    var tune = config.actions.tune;  // TODO: Wrap with close-containing-menu
+    const records = config.target.get();
+    const actionCompleted = config.context.actionCompleted;  // TODO should have direct access not through context
+    const tune = config.actions.tune;  // TODO: Wrap with close-containing-menu
     function tuneWrapper(options) {
       tune(options);
       actionCompleted();
@@ -145,7 +145,7 @@ define(['./basic', '../types', '../values', '../events', '../widget', '../databa
     var container = this.element = document.createElement('div');
     container.classList.add('panel');
     
-    var listOuter = container.appendChild(document.createElement('div'))
+    var listOuter = container.appendChild(document.createElement('div'));
     listOuter.className = 'freqlist-box';
     var list = listOuter.appendChild(document.createElement('table'))
       .appendChild(document.createElement('tbody'));
@@ -325,10 +325,11 @@ define(['./basic', '../types', '../values', '../events', '../widget', '../databa
       for (var key in block) {
         var match = /^enabled_(.*)$/.exec(key);
         if (match) {
-          var label = list.appendChild(document.createElement('div')).appendChild(document.createElement('label'));
-          var input = label.appendChild(document.createElement('input'));
+          const label = list.appendChild(document.createElement('div'))
+              .appendChild(document.createElement('label'));
+          const input = label.appendChild(document.createElement('input'));
           input.type = 'checkbox';
-          label.appendChild(document.createTextNode(match[1]))
+          label.appendChild(document.createTextNode(match[1]));
           createWidgetExt(config.context, Toggle, input, block[key]);
           ignore(key);
         }

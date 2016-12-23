@@ -5,11 +5,26 @@
   "strict": true,
   "esversion": 6,
   
+  // style options noted as "deprecated" (the corresponding warnings will be removed)
+  "sub": true,
+  "laxbreak": true,
+  
   "browser": true,
   "devel": true,
   "predef": [
-    "define",
     "AudioContext",
-    "requirejs"
+    
+    "define",
+    "requirejs",
+
+    "jasmine",
+    "afterEach",
+    "beforeEach",
+    "describe",
+    "expect",
+    "it",
+    "runs",
+    "waits",
+    "waitsFor"
   ]
 }

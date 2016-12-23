@@ -87,8 +87,8 @@ define(['./types', './values', './events'], function (types, values, events) {
     let value = assumed;
     let remoteValue = assumed;
     let inhibitCount = 0;
-    this.get = function() { return value; },
-    this.set = function(newValue) {
+    this.get = function () { return value; };
+    this.set = function (newValue) {
       value = newValue;
       this.n.notify();
       setter(newValue, decAndAccept);
@@ -151,27 +151,29 @@ define(['./types', './values', './events'], function (types, values, events) {
     
     // infoAndFFT is of the format [{freq:<number>, rate:<number>}, <Float32Array>]
     function transform(buffer) {
-      var newValue;
-      var view = new DataView(buffer);
+      let newValue;
+      const view = new DataView(buffer);
       // starts at 4 due to cell-ID field
       switch (type.dataFormat) {
-        case 'spectrum-byte':
-          var freq = view.getFloat64(4, true);
-          var rate = view.getFloat32(4+8, true);
-          var offset = view.getFloat32(4+8+4, true);
-          var packed_data = new Int8Array(buffer, 4+8+4+4);
-          var unpacked_data = new Float32Array(packed_data.length);
-          for (var i = packed_data.length - 1; i >= 0; i--) {
+        case 'spectrum-byte': {
+          const freq = view.getFloat64(4, true);
+          const rate = view.getFloat32(4+8, true);
+          const offset = view.getFloat32(4+8+4, true);
+          const packed_data = new Int8Array(buffer, 4+8+4+4);
+          const unpacked_data = new Float32Array(packed_data.length);
+          for (let i = packed_data.length - 1; i >= 0; i--) {
             unpacked_data[i] = packed_data[i] - offset;
           }
           //console.log(id, freq, rate, data.length);
           newValue = [{freq:freq, rate:rate}, unpacked_data];
           break;
-        case 'scope-float':
-          var rate = view.getFloat64(4+8, true);
-          var data = new Float32Array(buffer, 4+8);
+        }
+        case 'scope-float': {
+          const rate = view.getFloat64(4+8, true);
+          const data = new Float32Array(buffer, 4+8);
           newValue = [{rate:rate}, data];
           break;
+        }
         default:
           throw new Error('Unknown bulk data format');
       }
@@ -179,7 +181,7 @@ define(['./types', './values', './events'], function (types, values, events) {
       // Deliver value
       lastValue = newValue;
       // TODO replace this with something async
-      for (var i = 0; i < subscriptions.length; i++) {
+      for (let i = 0; i < subscriptions.length; i++) {
         (0,subscriptions[i])(newValue);
       }
       
@@ -201,7 +203,7 @@ define(['./types', './values', './events'], function (types, values, events) {
     Object.defineProperty(o, p, {
       value: v,
       configurable: true
-    })
+    });
   }
   
   function openWebSocket(wsURL) {
@@ -213,9 +215,9 @@ define(['./types', './values', './events'], function (types, values, events) {
     return ws;
   }
   
-  var minRetryTime = 1000;
-  var maxRetryTime = 20000;
-  var backoff = 1.05;
+  const minRetryTime = 1000;
+  const maxRetryTime = 20000;
+  const backoff = 1.05;
   function retryingConnection(wsURL, connectionStateCallback, callback) {
     if (!connectionStateCallback) connectionStateCallback = function () {};
 
@@ -242,7 +244,7 @@ define(['./types', './values', './events'], function (types, values, events) {
       callback(ws);
     }
     go();
-  };
+  }
   exports.retryingConnection = retryingConnection;
   
   function makeBlock(url, interfaces) {
@@ -298,40 +300,38 @@ define(['./types', './values', './events'], function (types, values, events) {
   function connect(rootURL, connectionStateCallback) {
     if (!connectionStateCallback) connectionStateCallback = function () {};
     
-    var rootCell = new ReadCell(null, null, types.block, identity);
+    const rootCell = new ReadCell(null, null, types.block, identity);
     
-    // TODO: URL contents are no longer actually used. URL should be used to derive state stream URL
-    //externalGet(rootURL, 'text', function(text) { ... });
-
-    retryingConnection(rootURL, connectionStateCallback, function(ws) {
+    retryingConnection(rootURL, connectionStateCallback, function (ws) {
       ws.binaryType = 'arraybuffer';
 
       // indexed by object ids chosen by server
-      var idMap = Object.create(null);
-      var updaterMap = Object.create(null);
-      var isCellMap = Object.create(null);
+      const idMap = Object.create(null);
+      const updaterMap = Object.create(null);
+      const isCellMap = Object.create(null);
       
-      var callbackMap = Object.create(null);
-      var nextCallbackId = 0;
+      const callbackMap = Object.create(null);
+      let nextCallbackId = 0;
       
       idMap[0] = rootCell;
       updaterMap[0] = function (id) { rootCell._update(idMap[id]); };
       isCellMap[0] = true;
       
       function oneMessage(message) {
-        var op = message[0];
-        var id = message[1];
+        const op = message[0];
+        const id = message[1];
         switch (op) {
-          case 'register_block':
-            var url = message[2];
-            var interfaces = message[3];
+          case 'register_block': {
+            const url = message[2];
+            const interfaces = message[3];
             updaterMap[id] = idMap[id] = makeBlock(url, interfaces);
             isCellMap[id] = false;
             break;
-          case 'register_cell':
-            var url = message[2];
-            var desc = message[3];
-            var pair = (function () {
+          }
+          case 'register_cell': {
+            const url = message[2];
+            const desc = message[3];
+            const pair = (function () {
               function setter(value, callback) {
                 var cbid = nextCallbackId++;
                 callbackMap[cbid] = callback;
@@ -343,8 +343,9 @@ define(['./types', './values', './events'], function (types, values, events) {
             updaterMap[id] = pair[1];
             isCellMap[id] = true;
             break;
-          case 'value':
-            var value = message[2];
+          }
+          case 'value': {
+            const value = message[2];
             if (!(id in idMap)) {
               console.error('Undefined id in state stream message', message);
               return;
@@ -353,7 +354,7 @@ define(['./types', './values', './events'], function (types, values, events) {
               (0, updaterMap[id])(value);
             } else {
               // is block
-              var block = idMap[id];
+              const block = idMap[id];
               for (var k in block) { delete block[k]; }
               for (var k in value) {
                 block[k] = idMap[value[k]];
@@ -361,16 +362,19 @@ define(['./types', './values', './events'], function (types, values, events) {
               block._reshapeNotice.notify();
             }
             break;
-          case 'delete':
+          }
+          case 'delete': {
             // TODO: explicitly invalidate the objects so we catch hanging on to them too long
             delete idMap[id];
             delete updaterMap[id];
             delete isCellMap[id];
             break;
-          case 'done':
+          }
+          case 'done': {
             callbackMap[id]();
             delete callbackMap[id];
             break;
+          }
           default:
             console.error('unknown state stream message', message);
         }

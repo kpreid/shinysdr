@@ -65,7 +65,7 @@ define(['events', 'types', 'values'],
       beforeEach(function () {
         // TODO: use a mock storage instead of abusing sessionStorage
         sessionStorage.clear();
-      })
+      });
 
       it('should function as a cell', function () {
         const ns = new values.StorageNamespace(sessionStorage, 'foo.');
@@ -131,7 +131,7 @@ define(['events', 'types', 'values'],
           calls++;
           return base.depend(dirty) + 1;
         });
-      })
+      });
     
       it('should return a computed value', function () {
         expect(f.get()).toEqual(2);
@@ -213,7 +213,7 @@ define(['events', 'types', 'values'],
         expectNotification(l);
         runs(function () {
           expect(resultsCell.get().length).toBe(0);
-        })
+        });
       });
     
       it('should forget an old cell', function () {
@@ -233,7 +233,7 @@ define(['events', 'types', 'values'],
         expectNotification(l);
         runs(function () {
           expect(resultsCell.get().length).toBe(0);
-        })
+        });
       });
     });
   });

@@ -15,10 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define([], function () {
+define([], () => {
   'use strict';
   
-  var exports = {};
+  var exports = Object.create(null);
   
   function isSingleValued(type) {
     // TODO: Stop using Boolean etc. as type objects and remove the need for this feature test
@@ -58,7 +58,7 @@ define([], function () {
   }
   Enum.prototype.getTable = function () {
     return this._table;
-  }
+  };
   Enum.prototype.isSingleValued = function () {
     return Object.keys(this._table).length <= 1;
   };
@@ -83,20 +83,20 @@ define([], function () {
     // direction is -1, 0, or 1 indicating preferred rounding direction (0 round to nearest)
     value = +value;
     // algorithm is inefficient but adequate
-    var length = this.mins.length;
-    var bestFit = Infinity;
-    var bestIndex = direction == -1 ? 0 : direction == 1 ? length - 1 : undefined;
-    for (var i = 0; i < length; i++) {
-      var min = this.mins[i];
-      var max = this.maxes[i];
-      var fit;
-      var upwardFit = value > max ? Infinity : min - value;
-      var downwardFit = value < min ? Infinity : value - max;
+    const length = this.mins.length;
+    let bestFit = Infinity;
+    let bestIndex = direction == -1 ? 0 : direction == 1 ? length - 1 : undefined;
+    for (let i = 0; i < length; i++) {
+      const min = this.mins[i];
+      const max = this.maxes[i];
+      const upwardFit = value > max ? Infinity : min - value;
+      const downwardFit = value < min ? Infinity : value - max;
+      let fit;
       switch (direction) {
         case 0: fit = Math.min(upwardFit, downwardFit); break;
         case 1: fit = upwardFit; break;
         case -1: fit = downwardFit; break;
-        default: throw new Error('bad rounding direction'); break;
+        default: throw new Error('bad rounding direction');
       }
       //console.log('fit for ', min, max, ' is ', fit);
       if (fit < bestFit) {
@@ -105,8 +105,8 @@ define([], function () {
       }
     }
     if (bestIndex === undefined) throw new Error("can't happen");
-    min = this.mins[bestIndex];
-    max = this.maxes[bestIndex];
+    const min = this.mins[bestIndex];
+    const max = this.maxes[bestIndex];
     //console.log(value, direction, min, max);
     if (value < min) value = min;
     if (value > max) value = max;
@@ -167,6 +167,7 @@ define([], function () {
           default:
             throw new TypeError('unknown type desc value: ' + desc);
         }
+        break;  // satisfy lint (actually unreachable)
       case 'object':
         if (desc === null) {
           return any;
@@ -187,6 +188,7 @@ define([], function () {
           default:
             throw new TypeError('unknown type desc tag: ' + desc.type);
         }
+        break;  // satisfy lint (actually unreachable)
       default:
         throw new TypeError('unknown type desc value: ' + desc);
     }

@@ -68,7 +68,7 @@ define(['coordination', 'database', 'events', 'map/map-core',
         actions: {
           _registerMap: function () {}  // TODO this is a stub of a kludge and should go away when the kludge does
         }
-      }
+      };
       const storage = new StorageNamespace(sessionStorage, Math.random() + '.');
       return {
         storage: storage,
@@ -117,7 +117,7 @@ define(['coordination', 'database', 'events', 'map/map-core',
       //TODO it('should pick for Track', () => t(widgets.TrackWidget, types.Track, {}));
 
       it('should pick for unknown', () => t(widgets.Generic, function sometype() {}, 1));
-    })
+    });
   
     describe('Knob', function () {
       it('should hold a negative zero', function () {
@@ -145,7 +145,7 @@ define(['coordination', 'database', 'events', 'map/map-core',
         // stub test to exercise the code because it's currently not in the default ui. Should have more tests.
       
         const cell = new LocalCell(types.any, [{freq:0, rate:1}, []]);
-        cell.subscribe = function() {} // TODO implement
+        cell.subscribe = function() {}; // TODO implement
         const root = new values.ConstantCell(types.block, values.makeBlock({
           scope: cell,
           parameters: new values.ConstantCell(types.block,

@@ -408,63 +408,71 @@ define(['./basic', './dbui',
         // TODO: If fftSize > gl.getParameter(gl.MAX_TEXTURE_SIZE) (or rather, if we fail to allocate a texture of that size), we have a problem. We can fix that by instead allocating a narrower texture and storing the fft data in multiple rows. (Or is that actually necessary -- do any WebGL implementations support squarish-but-not-long textures?)
         // If we fail due to total size, we can reasonably reduce the historyCount.
         if (useFloatTexture) {
-          var init = new Float32Array(fftSize*historyCount);
-          for (var i = 0; i < fftSize*historyCount; i++) {
-            init[i] = -1000;  // well below minimum display level
+          {
+            const init = new Float32Array(fftSize*historyCount);
+            for (let i = 0; i < fftSize*historyCount; i++) {
+              init[i] = -1000;  // well below minimum display level
+            }
+            gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
+            gl.texImage2D(
+              gl.TEXTURE_2D,
+              0, // level
+              gl.LUMINANCE, // internalformat
+              fftSize, // width (= fft size)
+              historyCount, // height (= history size)
+              0, // border
+              gl.LUMINANCE, // format
+              gl.FLOAT, // type -- TODO use non-float textures if needed
+              init);
           }
-          gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
-          gl.texImage2D(
-            gl.TEXTURE_2D,
-            0, // level
-            gl.LUMINANCE, // internalformat
-            fftSize, // width (= fft size)
-            historyCount, // height (= history size)
-            0, // border
-            gl.LUMINANCE, // format
-            gl.FLOAT, // type -- TODO use non-float textures if needed
-            init);
-
-          var init = new Float32Array(historyCount);
-          for (var i = 0; i < historyCount; i++) {
-            init[i] = -1e20;  // dummy value which we hope will not land within the viewport
+          
+          {
+            const init = new Float32Array(historyCount);
+            for (let i = 0; i < historyCount; i++) {
+              init[i] = -1e20;  // dummy value which we hope will not land within the viewport
+            }
+            gl.bindTexture(gl.TEXTURE_2D, historyFreqTexture);
+            gl.texImage2D(
+              gl.TEXTURE_2D,
+              0, // level
+              gl.LUMINANCE, // internalformat
+              1, // width
+              historyCount, // height (= history size)
+              0, // border
+              gl.LUMINANCE, // format
+              gl.FLOAT, // type
+              init);
           }
-          gl.bindTexture(gl.TEXTURE_2D, historyFreqTexture);
-          gl.texImage2D(
-            gl.TEXTURE_2D,
-            0, // level
-            gl.LUMINANCE, // internalformat
-            1, // width
-            historyCount, // height (= history size)
-            0, // border
-            gl.LUMINANCE, // format
-            gl.FLOAT, // type
-            init);
         } else {
-          var init = new Uint8Array(fftSize*historyCount*4);
-          gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
-          gl.texImage2D(
-            gl.TEXTURE_2D,
-            0, // level
-            gl.LUMINANCE, // internalformat
-            fftSize, // width (= fft size)
-            historyCount, // height (= history size)
-            0, // border
-            gl.LUMINANCE, // format
-            gl.UNSIGNED_BYTE, // type
-            init);
-
-          var init = new Uint8Array(historyCount*4);
-          gl.bindTexture(gl.TEXTURE_2D, historyFreqTexture);
-          gl.texImage2D(
-            gl.TEXTURE_2D,
-            0, // level
-            gl.RGBA, // internalformat
-            1, // width
-            historyCount, // height (= history size)
-            0, // border
-            gl.RGBA, // format
-            gl.UNSIGNED_BYTE,
-            init);
+          {
+            const init = new Uint8Array(fftSize*historyCount*4);
+            gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
+            gl.texImage2D(
+              gl.TEXTURE_2D,
+              0, // level
+              gl.LUMINANCE, // internalformat
+              fftSize, // width (= fft size)
+              historyCount, // height (= history size)
+              0, // border
+              gl.LUMINANCE, // format
+              gl.UNSIGNED_BYTE, // type
+              init);
+          }
+          
+          {
+            const init = new Uint8Array(historyCount*4);
+            gl.bindTexture(gl.TEXTURE_2D, historyFreqTexture);
+            gl.texImage2D(
+              gl.TEXTURE_2D,
+              0, // level
+              gl.RGBA, // internalformat
+              1, // width
+              historyCount, // height (= history size)
+              0, // border
+              gl.RGBA, // format
+              gl.UNSIGNED_BYTE,
+              init);
+          }
         }
 
         gl.bindTexture(gl.TEXTURE_2D, null);
@@ -586,11 +594,15 @@ define(['./basic', './dbui',
         },
         performDraw: function (didResize) {
           commonBeforeDraw(draw);
-          var viewCenterFreq = view.getCenterFreq();
-          var split = Math.round(canvas.height * view.parameters.spectrum_split.depend(draw));
+          const viewCenterFreq = view.getCenterFreq();
+          const split = Math.round(canvas.height * view.parameters.spectrum_split.depend(draw));
           
           // common calculations
-          var fs = 1.0 / (view.rightFreq() - view.leftFreq());
+          const lsf = view.leftFreq();
+          const rsf = view.rightFreq();
+          const bandwidth = rsf - lsf;
+          const fs = 1.0 / bandwidth;
+          const xScale = (rvf-lvf) * fs;
           
           gl.viewport(0, split, w, h - split);
           
@@ -601,14 +613,9 @@ define(['./basic', './dbui',
           gl.uniform1f(gu_currentFreq, viewCenterFreq);
           gl.uniform1f(gl.getUniformLocation(graphProgram, 'avgAlpha'), avgAlphaCell.depend(draw));
           // Adjust drawing region
-          var viewCenterFreq = view.getCenterFreq();
-          var lsf = view.leftFreq();
-          var rsf = view.rightFreq();
-          var bandwidth = rsf - lsf;
-          var halfBinWidth = bandwidth / fftSize / 2;
-          var xScale = (rvf-lvf)/(rsf-lsf);
+          const halfBinWidth = bandwidth / fftSize / 2;
           // The half bin width correction is because OpenGL texture coordinates put (0,0) between texels, not centered on one.
-          var xZero = (lvf - viewCenterFreq + halfBinWidth)/(rsf-lsf);
+          const xZero = (lvf - viewCenterFreq + halfBinWidth)/(rsf-lsf);
           gl.uniform1f(gl.getUniformLocation(graphProgram, 'xZero'), xZero);
           gl.uniform1f(gl.getUniformLocation(graphProgram, 'xScale'), xScale);
           gl.uniform1f(gl.getUniformLocation(graphProgram, 'scroll'), slicePtr / historyCount);
@@ -623,7 +630,6 @@ define(['./basic', './dbui',
           gl.uniform1f(u_yScale, split / historyCount);
           gl.uniform1f(wu_freqScale, fs);
           gl.uniform1f(wu_currentFreq, viewCenterFreq);
-          var xScale = (view.rightVisibleFreq() - view.leftVisibleFreq()) * fs;
           gl.uniform1f(u_xTranslate, (view.leftVisibleFreq() - view.leftFreq()) * fs);
           gl.uniform1f(u_xScale, xScale);
 
@@ -716,7 +722,7 @@ define(['./basic', './dbui',
         var topOfWaterfall = h - split;
         var heightOfWaterfall = split;
 
-        var buffer, bufferCenterFreq;
+        let buffer, bufferCenterFreq, ibuf;
         if (dataToDraw) {
           buffer = dataToDraw[1];
           bufferCenterFreq = dataToDraw[0].freq;
@@ -728,7 +734,6 @@ define(['./basic', './dbui',
           }
 
           // Find slice to write into
-          var ibuf;
           if (slices.length < historyCount) {
             slices.push([ibuf = ctx.createImageData(fftLength, 1), bufferCenterFreq]);
           } else {
@@ -757,7 +762,7 @@ define(['./basic', './dbui',
 
         ctx.fillStyle = backgroundColorCSS;
 
-        var sameView = lastDrawnLeftVisibleFreq === viewLVF && lastDrawnRightVisibleFreq === viewRVF;
+        const sameView = lastDrawnLeftVisibleFreq === viewLVF && lastDrawnRightVisibleFreq === viewRVF;
         if (dataToDraw && sameView && !cleared) {
           // Scroll
           ctx.drawImage(ctx.canvas,
@@ -779,10 +784,11 @@ define(['./basic', './dbui',
           // fill background so scrolling is of an opaque image
           ctx.fillRect(0, 0, w, h);
           
-          var sliceCount = slices.length;
+          const sliceCount = slices.length;
+          let y;
           for (var i = sliceCount - 1; i >= 0; i--) {
-            var slice = slices[mod(i + slicePtr, sliceCount)];
-            var y = topOfWaterfall + sliceCount - i - 1;
+            const slice = slices[mod(i + slicePtr, sliceCount)];
+            y = topOfWaterfall + sliceCount - i - 1;
             if (y >= h) break;
 
             // paint slice
@@ -963,15 +969,16 @@ define(['./basic', './dbui',
           continue;
         }
         
-        var band_filter_cell = receiver.demodulator.depend(draw).band_filter_shape;
+        const band_filter_cell = receiver.demodulator.depend(draw).band_filter_shape;
+        let band_filter_now;
         if (band_filter_cell) {
-          var band_filter_now = band_filter_cell.depend(draw);
+          band_filter_now = band_filter_cell.depend(draw);
         }
 
         if (band_filter_now) {
-          var fl = band_filter_now.low;
-          var fh = band_filter_now.high;
-          var fhw = band_filter_now.width / 2;
+          const fl = band_filter_now.low;
+          const fh = band_filter_now.high;
+          const fhw = band_filter_now.width / 2;
           ctx.fillStyle = '#3A3A3A';
           drawBand(rec_freq_now + fl - fhw, rec_freq_now + fh + fhw);
           ctx.fillStyle = '#444444';
@@ -1026,13 +1033,14 @@ define(['./basic', './dbui',
   // Waterfall overlay printing amplitude labels.
   // TODO this is currently not used because its axis scaling is not exactly right, because it is positioned outside the scrolling element and we haven't compensated for the height of the vertical scrollbar
   function VerticalScale(config) {
-    var splitCell = view.parameters.spectrum_split;
-    var minLevelCell = view.parameters.spectrum_level_min;
-    var maxLevelCell = view.parameters.spectrum_level_max;
+    const view = config.view;
+    const splitCell = view.parameters.spectrum_split;
+    const minLevelCell = view.parameters.spectrum_level_min;
+    const maxLevelCell = view.parameters.spectrum_level_max;
     
-    var minLevel = 0, maxLevel = 0;  // updated in draw()
+    let minLevel = 0, maxLevel = 0;  // updated in draw()
     
-    var outer = this.element = document.createElement("div");
+    const outer = this.element = document.createElement("div");
     
     function amplitudeToY(amplitude) {
       return ((amplitude - maxLevel) / (minLevel - maxLevel)
@@ -1041,20 +1049,20 @@ define(['./basic', './dbui',
     }
     
     var numberCache = new VisibleItemCache(outer, function (amplitude) {
-      var label = document.createElement('span');
+      const label = document.createElement('span');
       label.className = 'widget-VerticalScale-number';
       label.textContent = '' + amplitude;  // TODO formatting, state units
-      label.my_update = function() {
+      label.my_update = () => {
         label.style.top = amplitudeToY(amplitude);
-      }
+      };
       return label;
     });
     
     function draw() {
       minLevel = minLevelCell.depend(draw);
       maxLevel = maxLevelCell.depend(draw);
-      var count = 0;  // sanity check
-      for (var amplitude = Math.floor(maxLevel / 10) * 10;
+      let count = 0;  // sanity check
+      for (let amplitude = Math.floor(maxLevel / 10) * 10;
            amplitude >= minLevel && count < 50;
            amplitude -= 10, count++) {
         numberCache.add(amplitude).my_update();
@@ -1066,31 +1074,30 @@ define(['./basic', './dbui',
   }
   
   function FreqScale(config) {
-    var tunerSource = config.target;
-    var view = config.view;
-    var dataSource = config.view.isRFSpectrum() ? config.freqDB.groupSameFreq() : emptyDatabase;
-    var tune = config.actions.tune;
-    var menuContext = config.context;
+    const view = config.view;
+    const dataSource = config.view.isRFSpectrum() ? config.freqDB.groupSameFreq() : emptyDatabase;
+    const tune = config.actions.tune;
+    const menuContext = config.context;
 
     // cache query
-    var query, qLower = NaN, qUpper = NaN;
+    let query, qLower = NaN, qUpper = NaN;
 
-    var labelWidth = 60; // TODO actually measure styled text
+    const labelWidth = 60; // TODO actually measure styled text
     
     // view parameters closed over
-    var lower, upper;
+    let lower, upper;
     
     
-    var stacker = new IntervalStacker();
+    const stacker = new IntervalStacker();
     function pickY(lowerFreq, upperFreq) {
       return (stacker.claim(lowerFreq, upperFreq) + 1) * 1.15;
     }
 
-    var outer = this.element = document.createElement("div");
+    const outer = this.element = document.createElement("div");
     outer.className = "freqscale";
-    var numbers = outer.appendChild(document.createElement('div'));
+    const numbers = outer.appendChild(document.createElement('div'));
     numbers.className = 'freqscale-numbers';
-    var labels = outer.appendChild(document.createElement('div'));
+    const labels = outer.appendChild(document.createElement('div'));
     labels.className = 'freqscale-labels';
     
     outer.style.position = 'absolute';
@@ -1103,19 +1110,18 @@ define(['./basic', './dbui',
     
     // label maker fns
     function addChannel(record) {
-      var isGroup = record.type === 'group';
-      var channel = isGroup ? record.grouped[0] : record;
-      var freq = record.freq;
-      var el = document.createElement('button');
+      const isGroup = record.type === 'group';
+      const channel = isGroup ? record.grouped[0] : record;
+      const freq = record.freq;
+      const el = document.createElement('button');
       el.className = 'freqscale-channel';
       el.textContent =
         (isGroup ? '(' + record.grouped.length + ') ' : '')
         + (channel.label || channel.mode);
       el.addEventListener('click', function(event) {
         if (isGroup) {
-          var isAllSameMode = record.grouped.every(function (groupRecord) {
-            return groupRecord.mode == channel.mode;
-          });
+          const isAllSameMode = record.grouped.every(groupRecord =>
+            groupRecord.mode === channel.mode);
           if (isAllSameMode) {
             tune({
               record: channel,
@@ -1123,7 +1129,7 @@ define(['./basic', './dbui',
             });
           }
           // TODO: It would make sense to, once the user picks a record from the group, to show that record as the arbitrary-choice-of-label in this widget.
-          var menu = new Menu(menuContext, BareFreqList, record.grouped);
+          const menu = new Menu(menuContext, BareFreqList, record.grouped);
           menu.openAt(el);
         } else {
           tune({
@@ -1140,16 +1146,16 @@ define(['./basic', './dbui',
       return el;
     }
     function addBand(record) {
-      var el = document.createElement('span');
+      const el = document.createElement('span');
       el.className = 'freqscale-band';
       el.textContent = record.label || record.mode;
-      el.my_update = function() {
+      el.my_update = function () {
         var labelLower = Math.max(record.lowerFreq, lower);
         var labelUpper = Math.min(record.upperFreq, upper);
         el.style.left = view.freqToCSSLeft(labelLower);
         el.style.width = view.freqToCSSLength(labelUpper - labelLower);
         el.style.bottom = pickY(record.lowerFreq, record.upperFreq) + 'em';
-      }
+      };
       return el;
     }
 
@@ -1157,9 +1163,9 @@ define(['./basic', './dbui',
       var label = document.createElement('span');
       label.className = 'freqscale-number';
       label.textContent = formatFreqExact(freq);
-      label.my_update = function() {
+      label.my_update = function () {
         label.style.left = view.freqToCSSLeft(freq);
-      }
+      };
       return label;
     });
     var labelCache = new VisibleItemCache(labels, function makeLabel(record) {
@@ -1267,7 +1273,7 @@ define(['./basic', './dbui',
       this._elements.sort(function (a, b) { return a.key - b.key; });
       var index2 = this._search1(position);
       if (index2 !== index) throw new Error('assumption violated');
-      if (this._elements[index].key !== position) { debugger; throw new Error('assumption2 violated'); }
+      if (this._elements[index].key !== position) { throw new Error('assumption2 violated'); }
     }
     return index;
   };
@@ -1275,14 +1281,14 @@ define(['./basic', './dbui',
   IntervalStacker.prototype.claim = function (low, high) {
     // TODO: Optimize by not _storing_ zero-length intervals
     // note must be done in this order to not change the low index
-    var lowIndex = this._ensure1(low);
-    var highIndex = this._ensure1(high);
+    const lowIndex = this._ensure1(low);
+    const highIndex = this._ensure1(high);
     //console.log(this._elements.map(function(x){return x.key;}), lowIndex, highIndex);
     
-    for (var value = 0; value < 1000; value++) {
-      var free = true;
-      for (var i = lowIndex; i <= highIndex; i++) {
-        var element = this._elements[i];
+    for (let value = 0; value < 1000; value++) {
+      let free = true;
+      for (let i = lowIndex; i <= highIndex; i++) {
+        const element = this._elements[i];
         if (i > lowIndex || lowIndex === highIndex) {
           free = free && !element.below[value];
         }
@@ -1291,8 +1297,8 @@ define(['./basic', './dbui',
         }
       }
       if (!free) continue;
-      for (var i = lowIndex; i <= highIndex; i++) {
-        var element = this._elements[i];
+      for (let i = lowIndex; i <= highIndex; i++) {
+        const element = this._elements[i];
         if (i > lowIndex) {
           element.below[value] = true;
         }
@@ -1329,14 +1335,14 @@ define(['./basic', './dbui',
       return element;
     };
     this.flush = function() {
-      var active = parent.childNodes;
-      for (var i = active.length - 1; i >= 0; i--) {
-        var element = active[i];
+      const active = parent.childNodes;
+      for (let i = active.length - 1; i >= 0; i--) {
+        const element = active[i];
         if (element.my_inUse) {
           element.my_inUse = false;
         } else {
           parent.removeChild(element);
-          if (!'my_cacheKey' in element) throw new Error('oops2');
+          if (!('my_cacheKey' in element)) throw new Error('oops2');
           cache.delete(element.my_cacheKey);
         }
       }

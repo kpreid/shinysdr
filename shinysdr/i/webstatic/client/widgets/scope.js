@@ -90,7 +90,7 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
         && gl.getExtension('OES_texture_float_linear')
         && gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS) >= 1)) {
       // TODO: Add a way to provide a nicer-formatted error message.
-      throw Exception('Required WebGL feastures not available.');
+      throw new Error('Required WebGL feastures not available.');
     }
     
     gl.enable(gl.BLEND);
@@ -196,7 +196,7 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
         0, 0, 0, 0,
         0, 0, 0, 0,
         0, 0, 0, 1
-      ])
+      ]);
       let usesTrigger = false;
       String(parameters.axes.depend(dirty)).split(',').forEach((axisSpec, index) => {
         let v0 = 0, v1 = 0, v2 = 0, v3 = 0;
@@ -249,7 +249,7 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
         dynamicProjectionBuffer[2 * 4 + 3] += zOffset;
         
         gl.uniformMatrix4fv(gl.getUniformLocation(program, 'projection'), false, dynamicProjectionBuffer);
-      }
+      };
     })();
     
     const draw = config.boundedFn(function drawImpl() {

@@ -276,7 +276,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
             },
             decRefCount: function() {
               refCount--;
-              if (refCount == 0) {
+              if (refCount === 0) {
                 allocator._deallocate(stripeIndex, allocated, allocWidth);
                 onDestroy();
               } else if (refCount < 0) {
@@ -292,33 +292,33 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
   StripeAllocator.prototype._deallocate = function (stripeIndex, start, width) {
     // TODO coalesce
     this._stripes[stripeIndex].push({start: start, width: width});
-  }
+  };
   
   function FreeListAllocator(initialSize, grow) {
-    if (initialSize <= 0 || initialSize != (initialSize | 0)) {
+    if (initialSize <= 0 || initialSize !== (initialSize | 0)) {
       throw new Error('initialSize must be a positive integer');
     }
     this._size = initialSize;
-    var list = this._list = [];
+    const list = this._list = [];
     this._grow = grow;
-    for (var i = 0; i < initialSize; i++) {
+    for (let i = 0; i < initialSize; i++) {
       list.push(i);
     }
   }
-  FreeListAllocator.prototype.allocate = function() {
-    var list = this._list;
-    if (!(list.length > 0)) {
-      var oldSize = this._size;
-      var newSize = oldSize * 2;
+  FreeListAllocator.prototype.allocate = function () {
+    const list = this._list;
+    if (list.length === 0) {
+      const oldSize = this._size;
+      const newSize = oldSize * 2;
       this._size = newSize;
-      for (var i = oldSize; i < newSize; i++) {
+      for (let i = oldSize; i < newSize; i++) {
         list.push(i);
       }
       (0, this._grow)(newSize);
     }
     return list.pop();
   };
-  FreeListAllocator.prototype.deallocate = function(index) {
+  FreeListAllocator.prototype.deallocate = function (index) {
     if ((index | 0) !== index) {
       throw new Error('FreeListAllocator given not an integer: ' + index);
     }
@@ -398,15 +398,15 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
     });
     gl.bindTexture(gl.TEXTURE_2D, null);
     
-    var sphereVertBuffer = gl.createBuffer();
-    var sphereIndexBuffer = gl.createBuffer();
-    var sphereData, sphereIndices;
-    var sphereDataComponents = 5;
+    const sphereVertBuffer = gl.createBuffer();
+    const  sphereIndexBuffer = gl.createBuffer();
+    let sphereData, sphereIndices;
+    const sphereDataComponents = 5;
     (function () {
-      var latLines = 50;
-      var lonLines = 100;
-      var latTiles = latLines - 1;
-      var lonTiles = lonLines - 1;
+      const latLines = 50;
+      const lonLines = 100;
+      const latTiles = latLines - 1;
+      const lonTiles = lonLines - 1;
       sphereData = new Float32Array(latLines * lonLines * sphereDataComponents);
       sphereIndices = new Uint16Array(latTiles * lonTiles * 6);
       function latDeg(lat) { return (lat - latTiles / 2) * (180 / latTiles); }
@@ -415,15 +415,15 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
         if (lat < 0 || lon < 0 || lat >= latLines || lon >= lonLines) throw new Error('range');
         return lat * lonLines + lon;
       }
-      for (var lat = 0; lat < latLines; lat++) {
-        for (var lon = 0; lon < lonLines; lon++) {
-          var base = llindex(lat, lon) * sphereDataComponents;
+      for (let lat = 0; lat < latLines; lat++) {
+        for (let lon = 0; lon < lonLines; lon++) {
+          const base = llindex(lat, lon) * sphereDataComponents;
           writeCoords(sphereData, base, latDeg(lat), lonDeg(lon));
         }
       }
-      for (var lat = 0; lat < latTiles; lat++) {
-        for (var lon = 0; lon < lonTiles; lon++) {
-          var base = (lat * lonTiles + lon) * 6;
+      for (let lat = 0; lat < latTiles; lat++) {
+        for (let lon = 0; lon < lonTiles; lon++) {
+          const base = (lat * lonTiles + lon) * 6;
           sphereIndices[base + 0] = llindex(lat + 0, lon + 0);
           sphereIndices[base + 1] = llindex(lat + 0, lon + 1);
           sphereIndices[base + 2] = llindex(lat + 1, lon + 1);
@@ -434,8 +434,8 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
       }
     }());
     gl.bindBuffer(gl.ARRAY_BUFFER, sphereVertBuffer);
-    var BPE = Float32Array.BYTES_PER_ELEMENT;
-    var stride = sphereDataComponents * BPE;
+    const BPE = Float32Array.BYTES_PER_ELEMENT;
+    const stride = sphereDataComponents * BPE;
     gl.bufferData(gl.ARRAY_BUFFER, sphereData, gl.STATIC_DRAW);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIndexBuffer);
@@ -492,7 +492,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
 
     var labelCache = Object.create(null);
     function refLabel(width, xoff, yoff, name, paintFn) {
-      if (width == 0 && invisibleLabel) {
+      if (width === 0 && invisibleLabel) {
         return invisibleLabel.incRefCount();
       }
       var cacheKey = [xoff, yoff, name].toString();  // unambiguous because xoff and yoff are always numbers
@@ -520,7 +520,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
         labelRenderCtx.strokeRect(labelAlloc.x, labelAlloc.y, width, maxHeight);
       }
       textureDirty = true;
-      return labelCache[cacheKey] = {
+      return (labelCache[cacheKey] = {
         tnx: (labelAlloc.x) / labelRenderCanvas.width,
         tpx: (labelAlloc.x + width) / labelRenderCanvas.width,
         tny: (labelAlloc.y + maxHeight) / labelRenderCanvas.height,
@@ -539,7 +539,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
           labelAlloc.decRefCount();
           // TODO: make this object obviously unusable when dealloced
         }
-      };
+      });
     }
     this.refLabel = refLabel;
     
@@ -569,7 +569,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
         ctx.fillText(text, x, y + maxHeight * 0.8);
       }
       return refLabel(textWidth, xoff, yoff, JSON.stringify(text), paintTextLabel);
-    }
+    };
     
     this.refIconLabel = function refIconLabel(xoff, yoff, url) {
       return refLabel(maxHeight, xoff, yoff, url, function paintIconLabel(ctx, x, y) {
@@ -685,7 +685,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
         var sinlat = dsin(lat);
         var sinlon = dsin(lon);
         var instant = clock.convertFromTimestampSeconds(rendered.timestamp || 0);
-        var radiansPerSecondSpeed = (rendered.speed || 0) * ((Math.PI * 2) / 40075e3)
+        var radiansPerSecondSpeed = (rendered.speed || 0) * ((Math.PI * 2) / 40075e3);
         var opacity = isFinite(rendered.opacity) ? rendered.opacity : 1.0;
         var zFudge = -opacity;  // until we do proper depth sorting, this helps opaque things be in front of transparent things
         
@@ -947,7 +947,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
           bpy: 0,
           bnz: 0,
           bpz: 0
-        }
+        };
         
         // TODO do enough type checking to not throw on bad data
         
@@ -1141,7 +1141,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
           -y,
           x,
           y,
-          Math.exp(event.wheelDeltaY * 0.0001))
+          Math.exp(event.wheelDeltaY * 0.0001));
       
         event.preventDefault();  // no scrolling
         event.stopPropagation();
@@ -1192,7 +1192,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
     
     // tracking
     function updateFromCell() {
-      if (trackingCell == null) return;
+      if (trackingCell === null) return;
       var track = trackingCell.depend(updateFromCell);
       viewCenterLat = track.latitude.value;
       viewCenterLon = track.longitude.value;

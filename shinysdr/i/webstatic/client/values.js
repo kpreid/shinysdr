@@ -147,7 +147,7 @@ define(['./events', './types'], function (events, types) {
       this._needsCompute = false;
     }
     return this._value;
-  }
+  };
   exports.DerivedCell = DerivedCell;
   
   // Cell which does not really hold a value, but 

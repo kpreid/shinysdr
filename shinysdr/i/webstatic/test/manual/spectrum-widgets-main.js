@@ -16,7 +16,7 @@
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 // TODO: remove network module depenency
-require.config({
+requirejs.config({
   baseUrl: '/client/'
 });
 define(['types', 'values', 'events', 'widget', 'widgets', 'network', 'database', 'coordination'], function (types, values, events, widget, widgets, network, database, coordination) {

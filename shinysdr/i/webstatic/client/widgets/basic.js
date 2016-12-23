@@ -237,21 +237,21 @@ define(['../events', '../types', '../values', '../widget'],
   
   // TODO: lousy name
   // This abstract widget class is for widgets which use an INPUT or similar element and optionally wrap it in a panel.
-  function SimpleElementWidget(config, expectedNodeName, buildPanel, initDataEl, update) {
-    var target = config.target;
+  function SimpleElementWidget(config, expectedNodeName, buildPanel, initDataEl) {
+    const target = config.target;
     
-    var dataElement;
+    let dataElement;
     if (config.element.nodeName !== expectedNodeName) {
-      var container = this.element = config.element;
+      const container = this.element = config.element;
       if (config.shouldBePanel) container.classList.add('panel');
       dataElement = buildPanel(container);
     } else {
       this.element = dataElement = config.element;
     }
     
-    var update = initDataEl(dataElement, target);
+    const update = initDataEl(dataElement, target);
     
-    var draw = config.boundedFn(function drawImpl() {
+    const draw = config.boundedFn(function drawImpl() {
       var value = target.depend(draw);
       update(value, draw);
     });
@@ -383,10 +383,10 @@ define(['../events', '../types', '../values', '../widget'],
   exports.Number = NumberWidget;
   
   function Knob(config) {
-    var target = config.target;
-    var writable = 'set' in target; // TODO better type protocol
+    const target = config.target;
+    const writable = 'set' in target; // TODO better type protocol
 
-    var type = target.type;
+    const type = target.type;
     // TODO: use integer flag of Range, w decimal points?
     function clamp(value, direction) {
       if (type instanceof types.Range) {  // TODO: better type protocol
@@ -396,11 +396,11 @@ define(['../events', '../types', '../values', '../widget'],
       }
     }
     
-    var container = document.createElement('span');
+    const container = document.createElement('span');
     container.classList.add('widget-Knob-outer');
     
     if (config.shouldBePanel) {
-      var panel = document.createElement('div');
+      const panel = document.createElement('div');
       panel.classList.add('panel');
       if (config.element.hasAttribute('title')) {
         panel.appendChild(document.createTextNode(config.element.getAttribute('title')));
@@ -412,9 +412,9 @@ define(['../events', '../types', '../values', '../widget'],
       this.element = container;
     }
     
-    var places = [];
-    var marks = [];
-    for (var i = 9; i >= 0; i--) (function(i) {
+    const places = [];
+    const marks = [];
+    for (let i = 9; i >= 0; i--) (function(i) {
       if (i % 3 == 2) {
         var mark = container.appendChild(document.createElement("span"));
         mark.className = "knob-mark";
@@ -555,21 +555,21 @@ define(['../events', '../types', '../values', '../widget'],
     
     places[places.length - 1].element.tabIndex = 0; // initial tabbable digit
     
-    var draw = config.boundedFn(function drawImpl() {
-      var value = target.depend(draw);
-      var valueStr = String(Math.round(value));
+    const draw = config.boundedFn(function drawImpl() {
+      const value = target.depend(draw);
+      let valueStr = String(Math.round(value));
       if (valueStr === '0' && value === 0 && 1/value === -Infinity) {
         // allow user to see progress in entering negative values
         valueStr = '-0';
       }
-      var last = valueStr.length - 1;
-      for (var i = 0; i < places.length; i++) {
-        var digit = valueStr[last - i];
+      const last = valueStr.length - 1;
+      for (let i = 0; i < places.length; i++) {
+        const digit = valueStr[last - i];
         places[i].text.data = digit || '0';
         places[i].element.classList[digit ? 'remove' : 'add']('knob-dim');
       }
-      var numMarks = Math.floor((valueStr.replace("-", "").length - 1) / 3);
-      for (var i = 0; i < marks.length; i++) {
+      const numMarks = Math.floor((valueStr.replace("-", "").length - 1) / 3);
+      for (let i = 0; i < marks.length; i++) {
         marks[i].classList[i < numMarks ? 'remove' : 'add']('knob-dim');
       }
     });
@@ -621,7 +621,7 @@ define(['../events', '../types', '../values', '../widget'],
           }
           input.disabled = false;
           input.valueAsNumber = sValue;
-        }
+        };
       });
   }
   exports.SmallKnob = SmallKnob;
@@ -816,9 +816,9 @@ define(['../events', '../types', '../values', '../widget'],
             option.title = longDesc;  // TODO: This probably isn't visible.
           }
           return option;
-        })
+        });
 
-        select.addEventListener('change', function(event) {
+        select.addEventListener('change', event => {
           target.set(select.value);
         }, false);
         

@@ -150,23 +150,23 @@ define(['./coordination', './events', './math', './types', './values'], function
   
   // Replace the given template/input node with a widget node.
   function createWidget(targetCellCell, targetStr, context, node, widgetCtor) {
-    var scheduler = context.scheduler;
+    const scheduler = context.scheduler;
     
-    var originalStash = node;
+    const originalStash = node;
     
-    var container = node.parentNode;
+    const container = node.parentNode;
     if (!container) {
       throw new Error('createWidget: The supplied node ' + node.nodeName + ' did not have a parent node.');
     }
 
-    var currentWidgetEl = node;
-    var shouldBePanel = container.classList.contains('frame') || container.nodeName === 'DETAILS';  // TODO: less DWIM, more precise
+    let currentWidgetEl = node;
+    const shouldBePanel = container.classList.contains('frame') || container.nodeName === 'DETAILS';  // TODO: less DWIM, more precise
     
-    var id = node.id;
-    var idPrefix = id === '' ? null : node.id + '.';
+    const id = node.id;
+    const idPrefix = id === '' ? null : node.id + '.';
     
-    var go = function go() {
-      var targetCell = targetCellCell.depend(go);
+    function go() {
+      const targetCell = targetCellCell.depend(go);
       if (!targetCell) {
         if (node.parentNode) { // TODO: This condition shouldn't be necessary?
           node.parentNode.replaceChild(document.createTextNode('[Missing: ' + targetStr + ']'), node);
@@ -174,16 +174,16 @@ define(['./coordination', './events', './math', './types', './values'], function
         return;
       }
       
-      var boundedFnEnabled = true;
+      let boundedFnEnabled = true;
       function boundedFn(f) {
         return function boundedFnWrapper() {
           if (boundedFnEnabled) f.apply(undefined, arguments);
-        }
+        };
       }
 
       lifecycleDestroy(currentWidgetEl);
 
-      var newSourceEl = originalStash.cloneNode(true);
+      const newSourceEl = originalStash.cloneNode(true);
       container.replaceChild(newSourceEl, currentWidgetEl);
       
       // TODO: Better interface to the metadata
@@ -191,7 +191,7 @@ define(['./coordination', './events', './math', './types', './values'], function
         newSourceEl.setAttribute('title', targetCell.metadata.naming.label);
       }
       
-      var config = Object.freeze({
+      const config = Object.freeze({
         scheduler: scheduler,
         target: targetCell,
         element: newSourceEl,
@@ -209,7 +209,7 @@ define(['./coordination', './events', './math', './types', './values'], function
         boundedFn: boundedFn,
         idPrefix: idPrefix
       });
-      var widget = undefined;
+      let widget;
       try {
         widget = new widgetCtor(config);
       } catch (error) {
@@ -221,8 +221,8 @@ define(['./coordination', './events', './math', './types', './values'], function
       
       widget.element.classList.add('widget-' + widget.constructor.name);  // TODO use stronger namespacing
       
-      var newEl = widget.element;
-      var placeMark = newSourceEl.nextSibling;
+      const newEl = widget.element;
+      const placeMark = newSourceEl.nextSibling;
       if (newSourceEl.hasAttribute('title') && newSourceEl.getAttribute('title') === originalStash.getAttribute('title')) {
         console.warn('Widget ' + widget.constructor.name + ' did not handle title attribute');
       }
@@ -237,7 +237,7 @@ define(['./coordination', './events', './math', './types', './values'], function
       doPersistentDetails(currentWidgetEl);
       
       // allow widgets to embed widgets
-      createWidgetsInNode(targetCell || rootTargetCell, context, widget.element);
+      createWidgetsInNode(targetCell, context, widget.element);
       
       addLifecycleListener(newEl, 'destroy', function() {
         boundedFnEnabled = false;
@@ -320,7 +320,7 @@ define(['./coordination', './events', './math', './types', './values'], function
       
       var html = document.createDocumentFragment();
       while (node.firstChild) html.appendChild(node.firstChild);
-      var go = function go() {
+      function go() {
         // TODO defend against JS-significant keys
         var target = evalTargetStr(rootTargetCell, node.getAttribute('data-target'), scheduler).depend(go);
         if (!target) {
@@ -564,8 +564,8 @@ define(['./coordination', './events', './math', './types', './values'], function
         event.stopPropagation();
       } else {
         // Horizontal scrolling (or diagonal w/ useless vertical component): if hits edge, change frequency.
-        if (event.wheelDeltaX > 0 && cacheScrollLeft == 0
-            || event.wheelDeltaX < 0 && cacheScrollLeft == (container.scrollWidth - container.clientWidth)) {
+        if (event.wheelDeltaX > 0 && cacheScrollLeft === 0
+            || event.wheelDeltaX < 0 && cacheScrollLeft === (container.scrollWidth - container.clientWidth)) {
           if (isRFSpectrum) {
             var freqCell = radioCell.get().source.get().freq;
             freqCell.set(freqCell.get() + (event.wheelDeltaX * -0.12) / pixelsPerHertz);
@@ -641,7 +641,7 @@ define(['./coordination', './events', './math', './types', './values'], function
       // Frequency pan
       var clampedScroll = clampScroll(avgScroll);
       var overrun = avgScroll - clampedScroll;
-      if (overrun != 0 && isRFSpectrum) {
+      if (overrun !== 0 && isRFSpectrum) {
         // TODO repeated code -- abstract "cell to use to change freq"
         var freqCell = radioCell.get().source.get().freq;
         freqCell.set(freqCell.get() + overrun / pixelsPerHertz);
@@ -673,7 +673,7 @@ define(['./coordination', './events', './math', './types', './values'], function
           tune({
             freq: info.grabFreq,  // use initial touch pos, not final, because I expect it to be more precise
             alwaysCreate: alwaysCreateReceiverFromEvent(event)
-          })
+          });
         }
       }
       
@@ -681,15 +681,14 @@ define(['./coordination', './events', './math', './types', './values'], function
       touchcancel(event);
     }, true);
     
-    this.addClickToTune = function addClickToTune(element) {
+    this.addClickToTune = element => {
       if (!isRFSpectrum) return;
       
-      var dragReceiver = undefined;
+      let dragReceiver = null;
       
       function clickTune(event) {
-        var firstEvent = event.type === 'mousedown';
-        // compute frequency
-        var freq = clientXToFreq(event.clientX);
+        const firstEvent = event.type === 'mousedown';
+        const freq = clientXToFreq(event.clientX);
         
         if (!firstEvent && !dragReceiver) {
           // We sent the request to create a receiver, but it doesn't exist on the client yet. Do nothing.
@@ -711,12 +710,12 @@ define(['./coordination', './events', './math', './types', './values'], function
         event.preventDefault();
         document.addEventListener('mousemove', clickTune, true);
         document.addEventListener('mouseup', function(event) {
-          dragReceiver = undefined;
+          dragReceiver = null;
           document.removeEventListener('mousemove', clickTune, true);
         }, true);
         clickTune(event);
       }, false);
-    }.bind(this);
+    };
     
     function cc(key, type, value) {
       return new StorageCell(storage, type, value, key);

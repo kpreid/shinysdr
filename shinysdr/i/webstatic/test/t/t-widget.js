@@ -43,7 +43,7 @@ define(['events', 'types', 'values', 'widget', 'widgets/basic'],
         document.body.appendChild(container);
         const wEl = container.appendChild(document.createElement('div'));
         const cell = new values.LocalCell(Number, 0);
-        const widgetHandle = widget.createWidgetExt(context, TestWidget, wEl, cell);
+        /* const widgetHandle = */ widget.createWidgetExt(context, TestWidget, wEl, cell);
         // implicitly expect not to throw
         expect(container.firstChild.className).toBe('widget-ErrorWidget');
       });
@@ -55,7 +55,7 @@ define(['events', 'types', 'values', 'widget', 'widgets/basic'],
         let poke;
       
         function OuterWidget(config) {
-          widgets_basic.Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
+          Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
             addWidget('inner', TestWidget);
           });
         }

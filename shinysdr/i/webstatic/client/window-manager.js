@@ -31,10 +31,11 @@ define(['./values'], function (values) {
   var firstUpdateDone = false;
   
   function isWindowListSubwindow(subwindowElement) {
-    return subwindowElement.querySelector('#' + WINDOW_LIST_ID) != null;
+    return subwindowElement.querySelector('#' + WINDOW_LIST_ID) !== null;
   }
   
   function enroll(/* this = element */) {
+    // jshint validthis: true
     var header = this.querySelector('h2');
     if (!header) {
       console.warn(ELEMENT + ' inserted without h2');

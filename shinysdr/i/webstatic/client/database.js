@@ -152,13 +152,12 @@ define(['./events', './network', './types', './values'],
     this._listeners = [];
     this._chainedListening = false;
     
-    var notifier = new Notifier();
-    function forward() {
+    const notifier = new Notifier();
+    const forward = () => {
       //console.log(this + ' forwarding');
       this._chainedListening = false;
       notifier.notify();
-    }
-    forward = forward.bind(this);
+    };
     this.n = {
       notify: notifier.notify.bind(notifier),
       listen: function (l) {
@@ -290,7 +289,7 @@ define(['./events', './network', './types', './values'],
       });
       callback(out);
     });
-  };
+  }
   exports.arrayFromCatalog = arrayFromCatalog;
   
   function fromURL(url) {
@@ -319,6 +318,7 @@ define(['./events', './network', './types', './values'],
   }
   
   function finishModification() {
+    // jshint validthis: true
     this._needsSort = true;
     this._viewGeneration++;
     //console.log(this + ' firing notify for modification');
@@ -514,9 +514,9 @@ define(['./events', './network', './types', './values'],
   exports.fm = (function () {
     // Wikipedia currently says FM channels are numbered like so, but no one uses the numbers. Well, I'll use the numbers, just to start from integers. http://en.wikipedia.org/wiki/FM_broadcasting_in_the_USA
     return new Table('US FM broadcast', false, function (init) {
-      for (var channel = 200; channel <= 300; channel++) {
+      for (let channel = 200; channel <= 300; channel++) {
         // not computing in MHz because that leads to roundoff error
-        var freq = (channel - 200) * 2e5 + 879e5;
+        const freq = (channel - 200) * 2e5 + 879e5;
         init.add({
           type: 'channel',
           freq: freq,
@@ -531,7 +531,7 @@ define(['./events', './network', './types', './values'],
   exports.air = (function () {
     // http://en.wikipedia.org/wiki/Airband
     return new Table('US airband', false, function (init) {
-      for (var freq = 108e6; freq <= 117.96e6; freq += 50e3) {
+      for (let freq = 108e6; freq <= 117.96e6; freq += 50e3) {
         init.add({
           type: 'channel',
           freq: freq,
@@ -539,7 +539,7 @@ define(['./events', './network', './types', './values'],
           label: 'Air nav ' + (freq / 1e6).toFixed(2)
         });
       }
-      for (var freq = 118e6; freq < 137e6; freq += 25e3) {
+      for (let freq = 118e6; freq < 137e6; freq += 25e3) {
         init.add({
           type: 'channel',
           freq: freq,
@@ -554,7 +554,7 @@ define(['./events', './network', './types', './values'],
     exports.fm,
     // TODO: This is currently too much clutter. Re-add this sort of info once we have ways to deemphasize repetitive information.
     //exports.air
-  ])
+  ]);
   
   return Object.freeze(exports);
 });

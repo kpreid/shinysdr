@@ -82,7 +82,7 @@ define(function () {
     }, this);
     Object.freeze(this.offsets);
     Object.freeze(this);
-  };
+  }
   AttributeLayout.prototype.elementsPerVertex = function () {
     return this._elementsPerVertex;
   };

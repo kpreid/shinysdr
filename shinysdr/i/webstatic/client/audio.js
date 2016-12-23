@@ -215,17 +215,18 @@ define(['./events', './network', './types', './values'],
     
     var rxBufferSize = delayToBufferSize(nativeSampleRate, 0.15);
     
-    var ascr = audio.createScriptProcessor(rxBufferSize, 0, 2);
+    const ascr = audio.createScriptProcessor(rxBufferSize, 0, 2);
     ascr.onaudioprocess = function audioCallback(event) {
-      var abuf = event.outputBuffer;
-      var outputChunkSize = outputChunkSizeSample = abuf.length;
-      var l = abuf.getChannelData(0);
-      var r = abuf.getChannelData(1);
-      var rightChannelIndex = numAudioChannels - 1;
+      const abuf = event.outputBuffer;
+      const outputChunkSize = abuf.length;
+      outputChunkSizeSample = outputChunkSize;
+      const l = abuf.getChannelData(0);
+      const r = abuf.getChannelData(1);
+      const rightChannelIndex = numAudioChannels - 1;
       
-      var totalOverrun = 0;
+      let totalOverrun = 0;
       
-      var j;
+      let j;
       for (j = 0;
            chunkIndex < audioStreamChunk.length && j < outputChunkSize;
            chunkIndex += numAudioChannels, j++) {
@@ -238,7 +239,7 @@ define(['./events', './network', './types', './values'],
         audioStreamChunk = queue.shift() || EMPTY_CHUNK;
         queueSampleCount -= audioStreamChunk.length;
         chunkIndex = 0;
-        if (audioStreamChunk.length == 0) {
+        if (audioStreamChunk.length === 0) {
           break;
         }
         for (;
@@ -248,7 +249,7 @@ define(['./events', './network', './types', './values'],
           r[j] = audioStreamChunk[chunkIndex + rightChannelIndex];
         }
         if (queueSampleCount > targetQueueSize) {
-          var drop = Math.ceil((queueSampleCount - targetQueueSize) / 1024);
+          let drop = Math.ceil((queueSampleCount - targetQueueSize) / 1024);
           j = Math.max(0, j - drop);
           totalOverrun += drop;
         }
@@ -265,7 +266,7 @@ define(['./events', './network', './types', './values'],
           r[j] = fillR;
         }
       }
-      if (prevUnderrun != 0 && underrun != rxBufferSize) {
+      if (prevUnderrun !== 0 && underrun !== rxBufferSize) {
         // Report underrun, but only if it's not just due to the stream stopping
         error('Underrun by ' + prevUnderrun + ' samples.');
       }
@@ -318,36 +319,36 @@ define(['./events', './network', './types', './values'],
 
   // TODO adapter should have gui settable parameters and include these
   // These options create a less meaningful and more 'decorative' result.
-  var FREQ_ADJ = false;    // Compensate for typical frequency dependence in music so peaks are equal.
-  var TIME_ADJ = false;    // Subtract median amplitude; hides strong beats.
+  const FREQ_ADJ = false;    // Compensate for typical frequency dependence in music so peaks are equal.
+  const TIME_ADJ = false;    // Subtract median amplitude; hides strong beats.
   
   // Takes frequency data from an AnalyserNode and provides an interface like a MonitorSink
   function AudioAnalyserAdapter(scheduler, audioContext) {
     // Construct analyser.
-    var analyserNode = audioContext.createAnalyser();
+    const analyserNode = audioContext.createAnalyser();
     analyserNode.smoothingTimeConstant = 0;
     analyserNode.fftSize = 16384;
     
     // Used to have the option to reduce this to remove empty high-freq bins from the view. Leaving that out for now.
-    var length = analyserNode.frequencyBinCount;
+    const length = analyserNode.frequencyBinCount;
     
     // Constant parameters for MonitorSink interface
-    var effectiveSampleRate = analyserNode.context.sampleRate * (length / analyserNode.frequencyBinCount);
-    var info = Object.freeze({freq: 0, rate: effectiveSampleRate});
+    const effectiveSampleRate = analyserNode.context.sampleRate * (length / analyserNode.frequencyBinCount);
+    const info = Object.freeze({freq: 0, rate: effectiveSampleRate});
     
     // State
-    var fftBuffer = new Float32Array(length);
-    var lastValue = [info, fftBuffer];
-    var subscriptions = [];
-    var isScheduled = false;
-    var pausedCell = this.paused = new LocalCell(Boolean, true);
-    var lockout = false;
+    const fftBuffer = new Float32Array(length);
+    let lastValue = [info, fftBuffer];
+    const subscriptions = [];
+    let isScheduled = false;
+    const pausedCell = this.paused = new LocalCell(Boolean, true);
+    let lockout = false;
     
     function update() {
       isScheduled = false;
       analyserNode.getFloatFrequencyData(fftBuffer);
     
-      var absolute_adj;
+      let absolute_adj;
       if (TIME_ADJ) {
         var medianBuffer = Array.prototype.slice.call(fftBuffer);
         medianBuffer.sort(function(a, b) {return a - b; });
@@ -356,24 +357,24 @@ define(['./events', './network', './types', './values'],
         absolute_adj = 0;
       }
       
-      var freq_adj;
+      let freq_adj;
       if (FREQ_ADJ) {
         freq_adj = 1;
       } else {
         freq_adj = 0;
       }
       
-      for (var i = 0; i < length; i++) {
+      for (let i = 0; i < length; i++) {
         fftBuffer[i] = fftBuffer[i] + absolute_adj + freq_adj * Math.pow(i, 0.5);
       }
       
-      var newValue = [info, fftBuffer];  // fresh array, same contents, good enough.
+      const newValue = [info, fftBuffer];  // fresh array, same contents, good enough.
     
       // Deliver value
       lastValue = newValue;
       maybeScheduleUpdate();
       // TODO replace this with something async
-      for (var i = 0; i < subscriptions.length; i++) {
+      for (let i = 0; i < subscriptions.length; i++) {
         (0,subscriptions[i])(newValue);
       }
     }
@@ -565,7 +566,7 @@ define(['./events', './network', './types', './values'],
       }, e => {
         handleUserMediaError(e, errorCell._update.bind(errorCell), 'list audio devices');
       });
-    }
+    };
     // Note: Have not managed to see this event fired in practice (Chrome and Firefox on Mac).
     mediaDevices.addEventListener('devicechange', event => enumerate(), false);
     enumerate();
@@ -631,33 +632,6 @@ define(['./events', './network', './types', './values'],
     Object.defineProperty(this, 'source', {value: userMediaOpener.source});
   }
   exports.UserMediaSelector = UserMediaSelector;
-  
-  // Wrapper around getUserMedia which sets our desired parameters and displays an error message if it fails.
-  function getUserMediaForAudioTools(audioContext) {
-    return navigator.mediaDevices.getUserMedia({
-      audio: {
-        // See https://bugs.chromium.org/p/chromium/issues/detail?id=387737
-        // for why we are asking for no echoCancellation in particular; I'm not
-        // sure why it needs to be put inside 'mandatory' because having
-        // 'mandatory' as a key here isn't documented elsewhere than that suggestion.
-        // In any case, this doesn't seem to harm our success at getting stereo.
-        mandatory: { 
-          echoCancellation : false,
-        }
-      }
-    }).then((stream) => {
-      // TODO: There is supposedly a better version of this in the future (MediaStreamTrackSource)
-      return audioContext.createMediaStreamSource(stream);
-    }, (error) => {
-      const dialog = document.createElement('dialog');
-      // e is a DOMException
-      dialog.textContent = 'Could not access audio input: ' + e.name;
-      document.body.appendChild(dialog);
-      dialog.show();
-      return null;
-    });
-  }
-  exports.getUserMediaForAudioTools = getUserMediaForAudioTools;
   
   // Given a maximum acceptable delay, calculate the largest power-of-two buffer size for a ScriptProcessorNode which does not result in more than that delay.
   function delayToBufferSize(sampleRate, maxDelayInSeconds) {

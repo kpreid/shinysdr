@@ -75,19 +75,18 @@ define(['./map-core',
             case 'Feature':
               // don't yet care about feature structure, break down into geometry
               traverse(object.geometry);
-              break
+              break;
             case 'MultiPolygon':
               // don't yet care about structure, break down the multipolygon into rings
-              object.coordinates.forEach(function (polygonCoords) {
-                polygonCoords.forEach(function (linearRingCoords) {
-                  var convertedLinearRing = linearRingCoords.map(function (position) {
-                    return {position: [position[1], position[0]]};
-                  });
+              object.coordinates.forEach(polygonCoords => {
+                polygonCoords.forEach(linearRingCoords => {
+                  const convertedLinearRing = linearRingCoords.map(position =>
+                    ({position: [position[1], position[0]]}));
                   convertedFeatures.push({
                     lineWeight: 0.65,  // TODO shouldn't be hardcoded in makeStaticLayer
                     polylines: [convertedLinearRing]
-                  })
-                })
+                  });
+                });
               });
               break;
             default:
@@ -102,7 +101,7 @@ define(['./map-core',
         return feature;
       }
     };
-  };
+  }
   
   registerMapPlugin(function (mapPluginConfig) {
     var addLayer = mapPluginConfig.addLayer;
@@ -144,9 +143,10 @@ define(['./map-core',
       var receiving = new Map();
       var receivers = radio.receivers.depend(dirty);
       receivers._reshapeNotice.listen(dirty);
-      for (var key in receivers) (function(receiver) {
+      for (var key in receivers) {
+        const receiver = receivers[key].depend(dirty);
         receiving.set(receiver.rec_freq.depend(dirty), receiver);
-      }(receivers[key].depend(dirty)));
+      }
     
       return {
         lower: lower,
@@ -357,35 +357,37 @@ define(['./map-core',
         return features;
       }), 
       featureRenderer: function graticuleLineRenderer(spec, dirty) {
-        var parts = spec.split(',');
-        var type = parts[0];
+        const parts = spec.split(',');
+        const type = parts[0];
 
         switch (type) {
-          case 'lonLine':
-            var lon = parseFloat(parts[1]);
-            var line = [];
-            for (var lat = -90; lat < 90 + smoothStep/2; lat += smoothStep) {
+          case 'lonLine': {
+            const lon = parseFloat(parts[1]);
+            const line = [];
+            for (let lat = -90; lat < 90 + smoothStep/2; lat += smoothStep) {
               line.push(Object.freeze({position: Object.freeze([lat, lon])}));
             }
             return Object.freeze({
               lineWeight: 0.25,
               polylines: Object.freeze([Object.freeze(line)])
             });
-          case 'latLine':
-            var lat = parseFloat(parts[1]);
-            var line = [];
-            for (var lon = 0; lon < 360 + smoothStep/2; lon += smoothStep) {
+          }
+          case 'latLine': {
+            const lat = parseFloat(parts[1]);
+            const line = [];
+            for (let lon = 0; lon < 360 + smoothStep/2; lon += smoothStep) {
               line.push(Object.freeze({position: Object.freeze([lat, lon])}));
             }
             return Object.freeze({
               lineWeight: 0.25,
               polylines: Object.freeze([Object.freeze(line)])
             });
-          case 'lonLabel':
-            var lon = parseFloat(parts[1]);
-            var logStep = parseFloat(parts[2]);
-            var lat = parseFloat(parts[3]);
-            var epsilon = Math.pow(10, logStep) / 2;
+          }
+          case 'lonLabel': {
+            const lon = parseFloat(parts[1]);
+            const logStep = parseFloat(parts[2]);
+            const lat = parseFloat(parts[3]);
+            const epsilon = Math.pow(10, logStep) / 2;
             return Object.freeze({
               position: Object.freeze([lat, lon]),
               iconURL: blank,
@@ -394,11 +396,12 @@ define(['./map-core',
                      '0',
               labelSide: lat < 0 ? 'bottom' : lat > 0 ? 'top' : 'center'
             });
-          case 'latLabel':
-            var lat = parseFloat(parts[1]);
-            var logStep = parseFloat(parts[2]);
-            var lon = parseFloat(parts[3]);
-            var epsilon = Math.pow(10, logStep) / 2;
+          }
+          case 'latLabel': {
+            const lat = parseFloat(parts[1]);
+            const logStep = parseFloat(parts[2]);
+            const lon = parseFloat(parts[3]);
+            const epsilon = Math.pow(10, logStep) / 2;
             return Object.freeze({
               position: Object.freeze([lat, lon]),
               iconURL: blank,
@@ -407,16 +410,18 @@ define(['./map-core',
                      '0',
               labelSide: lon < 0 ? 'left' : lon < 0 ? 'right' : 'center'
             });
-          case 'maidenhead':
-            var lon = parseFloat(parts[1]);
-            var lat = parseFloat(parts[2]);
-            var lonDepth = parseInt(parts[3]);
-            var latDepth = parseInt(parts[4]);
+          }
+          case 'maidenhead': {
+            const lon = parseFloat(parts[1]);
+            const lat = parseFloat(parts[2]);
+            const lonDepth = parseInt(parts[3]);
+            const latDepth = parseInt(parts[4]);
             return Object.freeze({
               position: Object.freeze([lat, lon]),
               iconURL: blank,
               label: encodeMaidenhead(lon, lat, lonDepth, latDepth)
             });
+          }
           default:
             console.error('Unexpected type in graticule renderer: ' + type);
             return {};

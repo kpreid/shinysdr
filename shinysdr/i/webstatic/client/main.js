@@ -52,9 +52,9 @@ define(['types', 'values', 'events', 'coordination', 'database', 'network', 'map
   var databasesCell = new LocalCell(any, database.systematics.concat([
     writableDB,  // kludge till we have proper UI for selection of write targets
   ]));
-  database.arrayFromCatalog('dbs/', function (dbs) {   // TODO get url from server
+  database.arrayFromCatalog('dbs/', dbs => {   // TODO get url from server
     databasesCell.set(databasesCell.get().concat(dbs));
-  })
+  });
   var databasePicker = new DatabasePicker(
     scheduler,
     databasesCell,

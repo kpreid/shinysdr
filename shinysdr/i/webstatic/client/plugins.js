@@ -18,20 +18,22 @@
 // This module is basically a shim for the server's plugin-index resource to be loaded as a module (and parsed only once).
 
 define(['text!plugin-index.json'], function (text) {
-  var pluginIndex = JSON.parse(text);
-  var moduleIds = Object.freeze(Array.prototype.slice.call(pluginIndex.js));
+  'use strict';
   
-  var modeTable = Object.create(null);
+  const pluginIndex = JSON.parse(text);
+  const moduleIds = Object.freeze(Array.prototype.slice.call(pluginIndex.js));
+  
+  const modeTable = Object.create(null);
   for (var k in pluginIndex.modes) {
     modeTable[k] = Object.freeze(pluginIndex.modes[k]);
   }
   Object.freeze(modeTable);
   
-  var exports = {};
+  const exports = Object.create(null);
   
   exports.loadCSS = function () {
-    Array.prototype.forEach.call(pluginIndex.css, function (cssUrl) {
-      var link = document.createElement('link');
+    Array.prototype.forEach.call(pluginIndex.css, cssUrl => {
+      const link = document.createElement('link');
       link.rel = 'stylesheet';
       link.href = String(cssUrl);
       document.querySelector('head').appendChild(link);
