@@ -251,43 +251,50 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
   }
   StripeAllocator.prototype.allocate = function (allocWidth, allocName, onDestroy) {
     allocWidth = Math.min(Math.ceil(allocWidth), this._width);
-    var allocator = this;
-    var stripes = this._stripes;
-    var ns = stripes.length;
-    for (var stripeIndex = 0; stripeIndex < ns; stripeIndex++) {
-      var stripe = stripes[stripeIndex];
-      for (var j = 0; j < stripe.length; j++) {
-        var freeEntry = stripe[j];
-        if (freeEntry.width >= allocWidth) {
-          var allocated = freeEntry.start;
-          var remainder = freeEntry.width - allocWidth;
-          if (remainder > 0) {
-            freeEntry.start += allocWidth;
-            freeEntry.width = remainder;
-          } else {
-            stripe.splice(j, 1);
+    const allocator = this;
+    
+    const stripes = allocator._stripes;
+    const ns = stripes.length;
+    let stripeIndex, stripe, freeEntry, j;
+    search: {
+      for (stripeIndex = 0; stripeIndex < ns; stripeIndex++) {
+        stripe = stripes[stripeIndex];
+        for (j = 0; j < stripe.length; j++) {
+          freeEntry = stripe[j];
+          if (freeEntry.width >= allocWidth) {
+            break search;
           }
-          var refCount = 1;
-          return {
-            x: allocated,
-            y: stripeIndex * this._stripeHeight,
-            incRefCount: function() {
-              refCount++;
-            },
-            decRefCount: function() {
-              refCount--;
-              if (refCount === 0) {
-                allocator._deallocate(stripeIndex, allocated, allocWidth);
-                onDestroy();
-              } else if (refCount < 0) {
-                console.error('unbalanced refcount!', refCount, allocName);
-              }
-            }
-          };
         }
       }
+      return null;  // Search failed; no space available.
     }
-    return null;
+    
+    // Search succeeded, allocate.
+    const allocated = freeEntry.start;
+    const remainder = freeEntry.width - allocWidth;
+    if (remainder > 0) {
+      freeEntry.start += allocWidth;
+      freeEntry.width = remainder;
+    } else {
+      stripe.splice(j, 1);
+    }
+    let refCount = 1;
+    return {
+      x: allocated,
+      y: stripeIndex * allocator._stripeHeight,
+      incRefCount: function() {
+        refCount++;
+      },
+      decRefCount: function() {
+        refCount--;
+        if (refCount === 0) {
+          allocator._deallocate(stripeIndex, allocated, allocWidth);
+          onDestroy();
+        } else if (refCount < 0) {
+          console.error('unbalanced refcount!', refCount, allocName);
+        }
+      }
+    };
   };
   StripeAllocator.prototype._deallocate = function (stripeIndex, start, width) {
     // TODO coalesce
