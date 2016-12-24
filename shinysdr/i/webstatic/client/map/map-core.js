@@ -239,55 +239,125 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
     array[base + 4] = lat;
   }
   
+  // Helper for StripeAllocator for a single row.
+  class SpanAllocator {
+    constructor(size) {
+      if (size <= 0 || size !== (size | 0)) {
+        throw new Error('size must be a positive integer');
+      }
+      this._size = size;
+      this._spans = new Set();
+      this._starts = new Map();
+      this._ends = new Map();
+      this._allocated = new Map();
+      this._addFree(0, size);
+    }
+    
+    _addFree(start, end) {
+      // Coalesce with preceding and following empty spans.
+      const precedingSpan = this._ends.get(start);
+      const followingSpan = this._starts.get(end);
+      if (precedingSpan) {
+        this._removeFree(precedingSpan);
+        start = precedingSpan.start;
+      }
+      if (followingSpan) {
+        this._removeFree(followingSpan);
+        end = followingSpan.end;
+      }
+      
+      // Record new possibly-coalesced span.
+      const span = {start: start, end: end};
+      if (this._starts.has(start) || this._ends.has(end)) {
+        // sanity check we're not overwriting _starts/_ends entries
+        throw new Error('oops ' + start + ' ' + end + ' ' + JSON.stringify([span, this._starts.get(start), this._ends.get(end)]));
+      }
+      this._spans.add(span);
+      this._starts.set(start, span);
+      this._ends.set(end, span);
+    }
+    
+    _removeFree(span) {
+      if (this._starts.get(span.start) !== span || this._ends.get(span.end) !== span) {
+        throw new Error('oops');
+      }
+      this._spans.delete(span);
+      this._starts.delete(span.start);
+      this._ends.delete(span.end);
+    }
+    
+    allocate(size) {
+      if (size <= 0 || size !== (size | 0)) {
+        throw new Error('size must be a positive integer');
+      }
+      // Just find an arbitrary entry of adequate size.
+      for (var span of this._spans) {
+        if (span.end - span.start >= size) {
+          const remainderStart = span.start + size;
+          this._removeFree(span);
+          if (remainderStart < span.end) {
+            this._addFree(remainderStart, span.end);
+          }
+          this._allocated.set(span.start, remainderStart);
+          return span.start;
+        }
+      }
+      return null;
+    }
+    
+    deallocate(start) {
+      if (!this._allocated.has(start)) throw new Error('oops');
+      const end = this._allocated.get(start);
+      this._allocated.delete(start);
+      this._addFree(start, end);
+    }
+  }
+  
   function StripeAllocator(width, height, stripeHeight) {
+    if (width <= 0 || width !== (width | 0)) {
+      throw new Error('width must be a positive integer');
+    }
+    if (height <= 0 || height !== (height | 0)) {
+      throw new Error('height must be a positive integer');
+    }
     this._width = width;
     this._height = height;
     this._stripeHeight = stripeHeight;
     this._stripes = [];
-    for (var i = 0, y = 0; y + stripeHeight <= height; i++, y += stripeHeight) {
-      this._stripes[i] = [{start: 0, width: width}];
+    for (let y = 0; y + stripeHeight <= height; y += stripeHeight) {
+      this._stripes.push(new SpanAllocator(width));
     }
   }
   StripeAllocator.prototype.allocate = function (allocWidth, allocName, onDestroy) {
+    // allow over-utilization as long as it's taking the entire row and spilling over the right end.
     allocWidth = Math.min(Math.ceil(allocWidth), this._width);
-    const allocator = this;
     
-    const stripes = allocator._stripes;
-    const ns = stripes.length;
-    let stripeIndex, stripe, freeEntry, j;
-    search: {
-      for (stripeIndex = 0; stripeIndex < ns; stripeIndex++) {
-        stripe = stripes[stripeIndex];
-        for (j = 0; j < stripe.length; j++) {
-          freeEntry = stripe[j];
-          if (freeEntry.width >= allocWidth) {
-            break search;
-          }
-        }
+    let stripeIndex, spanAllocator, x;
+    for (stripeIndex = 0; stripeIndex < this._stripes.length; stripeIndex++) {
+      spanAllocator = this._stripes[stripeIndex];
+      x = spanAllocator.allocate(allocWidth);
+      if (x !== null) {
+        // Found a free space and allocated it.
+        break;
       }
-      return null;  // Search failed; no space available.
+    }
+    if (x === null) {
+      // All rows are too full.
+      return null;
     }
     
-    // Search succeeded, allocate.
-    const allocated = freeEntry.start;
-    const remainder = freeEntry.width - allocWidth;
-    if (remainder > 0) {
-      freeEntry.start += allocWidth;
-      freeEntry.width = remainder;
-    } else {
-      stripe.splice(j, 1);
-    }
+    // Construct handle to allocated space.
     let refCount = 1;
     return {
-      x: allocated,
-      y: stripeIndex * allocator._stripeHeight,
+      x: x,
+      y: stripeIndex * this._stripeHeight,
       incRefCount: function() {
         refCount++;
       },
       decRefCount: function() {
         refCount--;
         if (refCount === 0) {
-          allocator._deallocate(stripeIndex, allocated, allocWidth);
+          spanAllocator.deallocate(x);
           onDestroy();
         } else if (refCount < 0) {
           console.error('unbalanced refcount!', refCount, allocName);

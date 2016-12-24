@@ -68,6 +68,21 @@ define(['map/map-core'], (mapCore) => {
         // was freed
         expect(allocator.allocate(1, 'shouldwork', ()=>{})).toBeTruthy();
       });
+      
+      it('coalesces spans of free space', function () {
+        const allocator = new StripeAllocator(10, height, height);
+        
+        // allocate space in small chunks
+        const a1 = allocator.allocate(3, 'a1', ()=>{});
+        const a2 = allocator.allocate(3, 'a2', ()=>{});
+        const a3 = allocator.allocate(3, 'a3', ()=>{});
+        a1.decRefCount();
+        a3.decRefCount();
+        a2.decRefCount();
+        
+        // allocate a bigger thing
+        expect(allocator.allocate(9, 'a4', ()=>{})).toBeTruthy();
+      });
     });
   });
   
