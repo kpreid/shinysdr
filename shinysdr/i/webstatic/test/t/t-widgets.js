@@ -117,6 +117,27 @@ define(['coordination', 'database', 'events', 'map/map-core',
       //TODO it('should pick for Track', () => t(widgets.TrackWidget, types.Track, {}));
 
       it('should pick for unknown', () => t(widgets.Generic, function sometype() {}, 1));
+
+      // TODO: PickWidget used to be PickBlock. Add tests for its cell-type-based selection.
+      it('should default to Block', function () {
+        const cell = new LocalCell(types.block, makeBlock({}));
+        widget = new widgets.PickWidget(mockWidgetConfig(null, cell));
+        expect(Object.getPrototypeOf(widget)).toBe(widgets.Block.prototype);
+      });
+    
+      it('should match on object interfaces', function () {
+        function TestWidget(config) {
+          this.element = config.element;
+        }
+
+        const block = makeBlock({});
+        Object.defineProperty(block, '_implements_Foo', {value: true});  // non-enum
+        const cell = new LocalCell(types.block, block);
+        const config = mockWidgetConfig(null, cell);
+        config.context.widgets['interface:Foo'] = TestWidget;
+        widget = new widgets.PickWidget(config);
+        expect(Object.getPrototypeOf(widget)).toBe(TestWidget.prototype);
+      });
     });
   
     describe('Knob', function () {
@@ -157,26 +178,6 @@ define(['coordination', 'database', 'events', 'map/map-core',
     });
   
     describe('PickWidget', function () {
-      // TODO: PickWidget used to be PickBlock. Add tests for its cell-type-based selection.
-      it('should default to Block', function () {
-        const cell = new LocalCell(types.block, makeBlock({}));
-        widget = new widgets.PickWidget(mockWidgetConfig(null, cell));
-        expect(Object.getPrototypeOf(widget)).toBe(widgets.Block.prototype);
-      });
-    
-      it('should match on interfaces', function () {
-        function TestWidget(config) {
-          this.element = config.element;
-        }
-
-        const block = makeBlock({});
-        Object.defineProperty(block, '_implements_Foo', {value: true});  // non-enum
-        const cell = new LocalCell(types.block, block);
-        const config = mockWidgetConfig(null, cell);
-        config.context.widgets['interface:Foo'] = TestWidget;
-        widget = new widgets.PickWidget(config);
-        expect(Object.getPrototypeOf(widget)).toBe(TestWidget.prototype);
-      });
     });
   
     describe('Radio', function () {
