@@ -239,13 +239,12 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
     array[base + 4] = lat;
   }
   
-  // TODO: Tests. Like what happens if width is bigger than texture.
   function StripeAllocator(width, height, stripeHeight) {
     this._width = width;
     this._height = height;
     this._stripeHeight = stripeHeight;
     this._stripes = [];
-    for (var i = 0, y = 0; y < height; i++, y += stripeHeight) {
+    for (var i = 0, y = 0; y + stripeHeight <= height; i++, y += stripeHeight) {
       this._stripes[i] = [{start: 0, width: width}];
     }
   }
@@ -300,6 +299,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
     // TODO coalesce
     this._stripes[stripeIndex].push({start: start, width: width});
   };
+  exports._StripeAllocatorForTesting = StripeAllocator;
   
   function FreeListAllocator(initialSize, grow) {
     if (initialSize <= 0 || initialSize !== (initialSize | 0)) {
