@@ -161,6 +161,26 @@ define(['coordination', 'database', 'events', 'map/map-core',
       });
     });
   
+    describe('SmallKnob', function () {
+      it('should set limits from a continuous Range type', function () {
+        const cell = new LocalCell(new types.Range([[1, 2]], false, false), 0);
+        widget = new widgets.SmallKnob(mockWidgetConfig(null, cell));
+        const input = widget.element.querySelector('input');
+        expect(input.min).toBe('1');
+        expect(input.max).toBe('2');
+        expect(input.step).toBe('any');
+      });
+
+      it('should set limits from an integer Range type', function () {
+        const cell = new LocalCell(new types.Range([[1, 2]], false, true), 0);
+        widget = new widgets.SmallKnob(mockWidgetConfig(null, cell));
+        const input = widget.element.querySelector('input');
+        expect(input.min).toBe('1');
+        expect(input.max).toBe('2');
+        expect(input.step).toBe('1');
+      });
+    });
+  
     describe('ScopePlot', function () {
       it('should be successfully created', function () {
         // stub test to exercise the code because it's currently not in the default ui. Should have more tests.

@@ -599,8 +599,8 @@ define(['../events', '../types', '../values', '../widget'],
       function initSmallKnob(input, target) {
         var type = target.type;
         if (type instanceof types.Range) {
-          input.min = getT(type.getMin());
-          input.max = getT(type.getMax());
+          input.min = type.getMin();
+          input.max = type.getMax();
           input.step = (type.integer && !type.logarithmic) ? 1 : 'any';
         }
         
