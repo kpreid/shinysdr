@@ -15,60 +15,60 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['events'], (events) => {
+define(['/test/jasmine-glue.js', 'events'], (jasmineGlue, events) => {
   'use strict';
   
+  const {describe, expect, it, jasmine} = jasmineGlue.ji;
   const Scheduler = events.Scheduler;
   
-  describe('events', function () {
-    describe('Scheduler', function () {
-      it('should have callNow which cancels scheduling', function () {
+  describe('events', () => {
+    describe('Scheduler', () => {
+      describe('callNow', () => {
+        // TODO: figure out how to work with Jasmine async to be less awkward about use of it() here.
+        
         const scheduler = new Scheduler(window);
         const cb = jasmine.createSpy('cb');
         cb.scheduler = scheduler;
-        const waiter = jasmine.createSpy('waiter');
-        waiter.scheduler = scheduler;
       
-        scheduler.enqueue(cb);
-        scheduler.enqueue(waiter);
-        expect(cb.calls.length).toBe(0);
-        scheduler.callNow(cb);
-        expect(cb.calls.length).toBe(1);
-      
-        waitsFor(function() {
-          return waiter.calls.length;
-        }, 'did a schedule', 100);
-        runs(function() {
-          expect(cb.calls.length).toBe(1);
+        it('should call the function immediately', done => {
+          function waiter() { done(); }
+          waiter.scheduler = scheduler;
+          
+          scheduler.enqueue(cb);
+          scheduler.enqueue(waiter);
+          expect(cb.calls.count()).toBe(0);
+          scheduler.callNow(cb);
+          expect(cb.calls.count()).toBe(1);
+        });
+        
+        it('and should not call the function as previously scheduled', () => {
+          // Wasn't another call after the call done.
+          expect(cb.calls.count()).toBe(1);
         });
       });
     
-      it('should invoke callbacks after one which throws', function () {
+      it('should invoke callbacks after one which throws', done => {
         const scheduler = new Scheduler(window);
       
         const cb1 = jasmine.createSpy('cb1');
         cb1.scheduler = scheduler;
         const cb2base = jasmine.createSpy('cb2');
-        const cb2 = function () {
+        function cb2() {
           cb2base();
           throw new Error('Uncaught error for testing.');
-        };
+        }
         cb2.scheduler = scheduler;
-        const cb3 = jasmine.createSpy('cb3');
+        function cb3() {
+          expect(cb1).toHaveBeenCalled();
+          expect(cb2base).toHaveBeenCalled();
+          // we are cb3 and were therefore called.
+          done();
+        }
         cb3.scheduler = scheduler;
       
         scheduler.enqueue(cb1);
         scheduler.enqueue(cb2);
         scheduler.enqueue(cb3);
-      
-        waitsFor(function() {
-          return cb3.calls.length;
-        }, 'last callback called', 100);
-        runs(function() {
-          expect(cb1).toHaveBeenCalled();
-          expect(cb2base).toHaveBeenCalled();
-          expect(cb3).toHaveBeenCalled();
-        });
       });
     });
   });

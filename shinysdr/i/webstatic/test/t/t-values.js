@@ -15,70 +15,52 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['events', 'types', 'values'],
-       ( events,   types,   values) => {
+define(['/test/jasmine-glue.js', '/test/testutil.js',
+        'events', 'types', 'values'],
+       ( jasmineGlue, testutil,
+         events,   types,   values) => {
   'use strict';
-
+  
+  const {beforeEach, describe, expect, it} = jasmineGlue.ji;
+  const {newListener} = testutil;
   const Notifier = events.Notifier;
   const Scheduler = events.Scheduler;
-
+  
   describe('values', function () {
-    // TODO: duplicated code w/ other tests; move to a common library somewhere
     let s;
     beforeEach(function () {
       s = new Scheduler(window);
     });
-    function createListenerSpy() {
-      const l = jasmine.createSpy();
-      l.scheduler = s;
-      return l;
-    }
-    function expectNotification(l) {
-      // TODO: we could make a timeless test by mocking the scheduler
-      waitsFor(function() {
-        return l.calls.length;
-      }, 'notification received', 100);
-      runs(function() {
-        expect(l).toHaveBeenCalledWith();
-      });
-    }
-    function waitsForNotificationCycle() {
-      const dummyWait = createListenerSpy();
-      s.enqueue(dummyWait);
-      expectNotification(dummyWait);
-    }
   
     describe('LocalCell', function () {
-      it('should not notify immediately after its creation', function () {
+      it('should not notify immediately after its creation', done => {
         const cell = new values.LocalCell(types.any, 'foo');
-        const l = createListenerSpy();
+        const l = newListener(s);
         cell.n.listen(l);
-        waitsForNotificationCycle();
-        runs(function () {
-          expect(l).not.toHaveBeenCalled();
-        });
+        l.expectNotCalled(done);
       });
     });
   
-    describe('StorageCell', function () {
+    describe('StorageCell', () => {
       // TODO: break up this into individual tests
-      beforeEach(function () {
+      beforeEach(() => {
         // TODO: use a mock storage instead of abusing sessionStorage
         sessionStorage.clear();
       });
 
-      it('should function as a cell', function () {
+      it('should function as a cell', done => {
         const ns = new values.StorageNamespace(sessionStorage, 'foo.');
         const cell = new values.StorageCell(ns, String, 'default', 'bar');
         expect(cell.get()).toBe('default');
         cell.set('a');
         expect(cell.get()).toBe('a');
         expect(ns.getItem('bar')).toBe('"a"');
-        const l = createListenerSpy();
+        const l = newListener(s);
         cell.n.listen(l);
-        cell.set('b');
-        expect(cell.get()).toBe('b');
-        expectNotification(l);
+        l.expectCalled(() => {
+          cell.set('b');
+          expect(cell.get()).toBe('b');
+        }, done);
       });
     
       function fireStorageEvent() {
@@ -87,30 +69,32 @@ define(['events', 'types', 'values'],
         window.dispatchEvent(event);
       }
     
-      it('should notify if a storage event occurs', function () {
+      it('should notify if a storage event occurs', done => {
         const ns = new values.StorageNamespace(sessionStorage, 'foo.');
         const cell = new values.StorageCell(ns, String, 'default', 'bar');
-        const l = createListenerSpy();
+        const l = newListener(s);
         cell.n.listen(l);
       
         sessionStorage.setItem('foo.bar', '"sval"');
-        fireStorageEvent();
-        expectNotification(l);
-        expect(cell.get()).toBe('sval');
+        l.expectCalled(() => {
+          fireStorageEvent();
+        }, () => {
+          expect(cell.get()).toBe('sval');
+          done();
+        });
       });
     
-      it('should not notify if an unrelated storage event occurs', function () {
+      it('should not notify if an unrelated storage event occurs', done => {
         const ns = new values.StorageNamespace(sessionStorage, 'foo.');
         const cell = new values.StorageCell(ns, String, 'default', 'bar');
-        const l = createListenerSpy();
+        const l = newListener(s);
         cell.n.listen(l);
       
         sessionStorage.setItem('unrelated', '"sval"');
         fireStorageEvent();
-        waitsForNotificationCycle();
-        runs(function () {
-          expect(l).not.toHaveBeenCalled();
+        l.expectNotCalled(() => {
           expect(cell.get()).toBe('default');
+          done();
         });
       });
     
@@ -142,13 +126,14 @@ define(['events', 'types', 'values'],
         expect(f.get()).toEqual(11);
       });
     
-      it('should notify and update when the base value is updated', function () {
-        const l = createListenerSpy();
+      it('should notify and update when the base value is updated', done => {
+        const l = newListener(s);
         f.n.listen(l);
-        base.set(10);
-        expectNotification(l);
-        runs(function () {
+        l.expectCalled(() => {
+          base.set(10);
+        }, () => {
           expect(f.get()).toEqual(11);
+          done();
         });
       });
     
@@ -173,7 +158,7 @@ define(['events', 'types', 'values'],
         Object.defineProperty(structure.get().foo.get(), '_implements_Foo', {value:true});
       });
     
-      it('should index a block', function () {
+      it('should index a block', () => {
         const index = new values.Index(s, structure);
         const results = index.implementing('Foo').get();
         expect(results).toContain(structure.get().foo.get());
@@ -183,40 +168,41 @@ define(['events', 'types', 'values'],
         expect(noresults.length).toBe(0);
       });
     
-      it('should index a new block', function () {
+      it('should index a new block', done => {
         const index = new values.Index(s, structure);
         const resultsCell = index.implementing('Bar');
-        const l = createListenerSpy();
+        const l = newListener(s);
         resultsCell.n.listen(l);
-      
+        
         const newObj = values.makeBlock({});
         Object.defineProperty(newObj, '_implements_Bar', {value:true});
-        structure.get().bar.set(newObj);
-      
-        expectNotification(l);
-        runs(function () {
+        
+        l.expectCalled(() => {
+          structure.get().bar.set(newObj);
+        }, () => {
           expect(resultsCell.get().length).toBe(1);
           expect(resultsCell.get()).toContain(newObj);
-
+          
           expect(index.implementing('Foo').get().length).toBe(1);
+          
+          done();
         });
       });
     
-      it('should forget an old block', function () {
+      it('should forget an old block', done => {
         const index = new values.Index(s, structure);
         const resultsCell = index.implementing('Foo');
-        const l = createListenerSpy();
+        const l = newListener(s);
         resultsCell.n.listen(l);
-      
-        structure.get().foo.set(values.makeBlock({}));
-      
-        expectNotification(l);
-        runs(function () {
+        l.expectCalled(() => {
+          structure.get().foo.set(values.makeBlock({}));
+        }, () => {
           expect(resultsCell.get().length).toBe(0);
+          done();
         });
       });
     
-      it('should forget an old cell', function () {
+      it('should forget an old cell', done => {
         const dynamic = {
           foo: structure.get().foo
         };
@@ -224,15 +210,15 @@ define(['events', 'types', 'values'],
       
         const index = new values.Index(s, new values.LocalCell(types.block, dynamic));
         const resultsCell = index.implementing('Foo');
-        const l = createListenerSpy();
+        const l = newListener(s);
         resultsCell.n.listen(l);
       
-        delete dynamic['foo'];
-        dynamic._reshapeNotice.notify();
-      
-        expectNotification(l);
-        runs(function () {
+        l.expectCalled(() => {
+          delete dynamic['foo'];
+          dynamic._reshapeNotice.notify();
+        }, () => {
           expect(resultsCell.get().length).toBe(0);
+          done();
         });
       });
     });

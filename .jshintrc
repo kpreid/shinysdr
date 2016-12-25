@@ -17,14 +17,6 @@
     "define",
     "requirejs",
 
-    "jasmine",
-    "afterEach",
-    "beforeEach",
-    "describe",
-    "expect",
-    "it",
-    "runs",
-    "waits",
-    "waitsFor"
+    "jasmineRequire"
   ]
 }

@@ -15,35 +15,24 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['database', 'events'],
-       ( database,   events) => {
+define(['/test/jasmine-glue.js', '/test/testutil.js',
+        'database', 'events'],
+       ( jasmineGlue, testutil,
+         database,   events) => {
   'use strict';
   
+  const {beforeEach, describe, expect, it} = jasmineGlue.ji;
+  const {newListener} = testutil;
   const Scheduler = events.Scheduler;
   const Table = database.Table;
   const Union = database.Union;
 
   describe('database', function () {
-    // TODO: duplicated code w/ other tests; move to a common library somewhere
     let s;
     beforeEach(function () {
       s = new Scheduler(window);
     });
-    function createListenerSpy() {
-      const l = jasmine.createSpy();
-      l.scheduler = s;
-      return l;
-    }
-    function expectNotification(l) {
-      // TODO: we could make a timeless test by mocking the scheduler
-      waitsFor(function() {
-        return l.calls.length;
-      }, 'notification received', 100);
-      runs(function() {
-        expect(l).toHaveBeenCalledWith();
-      });
-    }
-
+    
     const dummyRecord = Object.freeze({
       type: 'channel',
       freq: 100e6
@@ -63,24 +52,26 @@ define(['database', 'events'],
     });
   
     describe('Table', function () {
-      it('should notify on record addition', function () {
+      it('should notify on record addition', done => {
         const t = new Table('foo', true);
-        const l = createListenerSpy();
+        const l = newListener(s);
         t.n.listen(l);
-        t.add(dummyRecord);
-        expectNotification(l);
+        l.expectCalled(() => {
+          t.add(dummyRecord);
+        }, done);
       });
     
-      it('should notify on record modification', function () {
+      it('should notify on record modification', done => {
         const t = new Table('foo', true);
-        const l = createListenerSpy();
+        const l = newListener(s);
         const r = t.add({
           type: 'channel',
           freq: 100e6
         });
         t.n.listen(l);
-        r.freq = 120e6;
-        expectNotification(l);
+        l.expectCalled(() => {
+          r.freq = 120e6;
+        }, done);
       });
 
       it('should report writability', function () {
@@ -91,7 +82,7 @@ define(['database', 'events'],
       it('should refuse to add records if not writable', function () {
         expect(function () {
           new Table('writable', false).add({});
-        }).toThrow('This table is read-only');
+        }).toThrowError('This table is read-only');
       });
 
       it('should refuse to modify records if not writable', function () {
@@ -101,7 +92,7 @@ define(['database', 'events'],
         expect(table.getAll()[0].writable).toBe(false);
         expect(function () {
           table.getAll()[0].label = 'bar';
-        }).toThrow('This record is read-only');
+        }).toThrowError('This record is read-only');
         expect(table.getAll()[0].label).toBe('foo');
       });
     });
@@ -139,16 +130,17 @@ define(['database', 'events'],
         expect(makeRecord(false).writable).toBe(false);
       });
 
-      it('should notify on record modification', function () {
+      it('should notify on record modification', done => {
         const t = new Table('foo', true);
-        const l = createListenerSpy();
+        const l = newListener(s);
         const r = t.add({
           type: 'channel',
           freq: 100e6
         });
         r.n.listen(l);
-        r.freq = 120e6;
-        expectNotification(l);
+        l.expectCalled(() => {
+          r.freq = 120e6;
+        }, done);
       });
     
       it('should have default values', function () {
@@ -208,31 +200,30 @@ define(['database', 'events'],
         expect(r.grouped).toContain(r2);
       });
     
-      it('record should not change and have an inert notifier', function () {
+      it('record should not change and have an inert notifier', done => {
         // We don't actually specifically _want_ to have an immutable group record, but we're testing the current implementation is consistent.
         const r = view.getAll()[0];
         expect(r.n).toBeTruthy();
-        const l = createListenerSpy();
+        const l = newListener(s);
         r.n.listen(l);
         r1.freq = 120e6;
-        waits(10);
-        waits(10);  // cycle event loop a bit
-        runs(function() {
-          expect(l).not.toHaveBeenCalled();
+        l.expectNotCalled(() => {
           expect(r.grouped).toContain(r1);
+          done();
         });
       });
     });
 
     describe('Union', function () {
-      it('should notify on member change', function () {
+      it('should notify on member change', done => {
         const t = new Table('foo', true);
         const u = new Union();
         u.add(t);
-        const l = createListenerSpy();
+        const l = newListener(s);
         u.n.listen(l);
-        t.add(dummyRecord);
-        expectNotification(l);
+        l.expectCalled(() => {
+          t.add(dummyRecord);
+        }, done);
       });
       // TODO test remove()
     });

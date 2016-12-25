@@ -15,12 +15,15 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['coordination', 'database', 'events', 'map/map-core',
+define(['/test/jasmine-glue.js',
+        'coordination', 'database', 'events', 'map/map-core',
         'types', 'values', 'widget', 'widgets', 'widgets/scope'],
-       ( coordination,   database,   events,   mapCore, 
+       ( jasmineGlue,
+         coordination,   database,   events,   mapCore, 
          types,   values,   widget,   widgets,   widgets_scope) => {
   'use strict';
 
+  const {afterEach, beforeEach, describe, expect, it} = jasmineGlue.ji;
   const ClientStateObject = coordination.ClientStateObject;
   const ConstantCell = values.ConstantCell;
   const LocalCell = values.LocalCell;

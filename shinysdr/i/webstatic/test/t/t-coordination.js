@@ -15,10 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['coordination', 'database', 'types', 'values'],
-       ( coordination,   database,   types,   values) => {
+define(['/test/jasmine-glue.js',
+        'coordination', 'database', 'types', 'values'],
+       ( jasmineGlue,
+         coordination,   database,   types,   values) => {
   'use strict';
   
+  const {describe, expect, it} = jasmineGlue.ji;
   const block = types.block;
   const makeBlock = values.makeBlock;
   const ConstantCell = values.ConstantCell;

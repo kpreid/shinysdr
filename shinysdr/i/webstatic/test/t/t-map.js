@@ -15,8 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['map/map-core'], (mapCore) => {
+define(['/test/jasmine-glue.js', 'map/map-core'], (jasmineGlue, mapCore) => {
   'use strict';
+  
+  const {describe, expect, it, jasmine} = jasmineGlue.ji;
   
   describe('map/map-core', function () {
     describe('StripeAllocator', function () {
@@ -56,14 +58,14 @@ define(['map/map-core'], (mapCore) => {
         // confirm cannot allocate more
         expect(allocator.allocate(1, 'nope', ()=>{})).toBe(null);
 
-        expect(spy.callCount).toBe(0);
+        expect(spy.calls.count()).toBe(0);
         a1.incRefCount();
         a1.incRefCount();
         a1.decRefCount();
         a1.decRefCount();
-        expect(spy.callCount).toBe(0);
+        expect(spy.calls.count()).toBe(0);
         a1.decRefCount();
-        expect(spy.callCount).toBe(1);
+        expect(spy.calls.count()).toBe(1);
 
         // was freed
         expect(allocator.allocate(1, 'shouldwork', ()=>{})).toBeTruthy();
