@@ -18,6 +18,8 @@
 # TODO explain better
 """
 Type definitions for ShinySDR value cells etc.
+
+See docs for ValueType in this module for more information.
 """
 
 from __future__ import absolute_import, division
@@ -52,8 +54,11 @@ def to_value_type(typeoid):
 
 
 class ValueType(object):
-    """
-    A type in the sense of "set of values", plus coercion and other hints.
+    """A type in the sense of "set of (permitted) values", plus coercion and hints about interpretation of the value.
+    
+    ValueTypes are used by shinysdr.values.BaseCell objects to define the kind of values the cell may take on.
+    
+    A type may be called with a value to coerce or reject the value.
     """
     implements(IJsonSerializable)
     def to_json(self):
