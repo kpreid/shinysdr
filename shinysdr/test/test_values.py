@@ -20,7 +20,7 @@ from __future__ import absolute_import, division
 import unittest
 
 from shinysdr.test.testutil import CellSubscriptionTester, SubscriptionTester
-from shinysdr.types import EnumRow, Range, Reference, to_value_type
+from shinysdr.types import EnumRow, RangeT, ReferenceT, to_value_type
 from shinysdr.values import Cell, CellDict, CollectionState, ExportedState, LooseCell, ViewCell, command, exported_value, nullExportedState, setter, unserialize_exported_state
 
 
@@ -83,7 +83,7 @@ class ValueAndBlockSpecimen(ExportedState):
         self.__value = value
         self.__block = block
     
-    @exported_value(type=Reference(), changes='never')
+    @exported_value(type=ReferenceT(), changes='never')
     def get_block(self):
         return self.__block
     
@@ -122,7 +122,7 @@ class DecoratorInheritanceSpecimen(DecoratorInheritanceSpecimenSuper):
     def __init__(self):
         self.rw = 0.0
     
-    @exported_value(type=Range([(0.0, 10.0)]), changes='this_setter')
+    @exported_value(type=RangeT([(0.0, 10.0)]), changes='this_setter')
     def get_rw(self):
         return self.rw
     
@@ -219,7 +219,7 @@ class BlockCellSpecimen(ExportedState):
     def __init__(self, block):
         self.__block = block
     
-    @exported_value(type=Reference(), changes='explicit')
+    @exported_value(type=ReferenceT(), changes='explicit')
     def get_block(self):
         return self.__block
     
@@ -250,7 +250,7 @@ class TestLooseCell(unittest.TestCase):
 
 class TestViewCell(unittest.TestCase):
     def setUp(self):
-        self.lc = LooseCell(value=0, key='a', type=Range([(-100, 100)]))
+        self.lc = LooseCell(value=0, key='a', type=RangeT([(-100, 100)]))
         self.delta = 1
         self.vc = ViewCell(
             base=self.lc,
@@ -386,6 +386,6 @@ class CellIdentitySpecimen(ExportedState):
     def get_value(self):
         return 9
 
-    @exported_value(type=Reference(), changes='never')
+    @exported_value(type=ReferenceT(), changes='never')
     def get_block(self):
         return self.__block

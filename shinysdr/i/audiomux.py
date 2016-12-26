@@ -28,7 +28,7 @@ from gnuradio import blocks
 from gnuradio import gr
 
 from shinysdr.filters import make_resampler
-from shinysdr.types import Enum
+from shinysdr.types import EnumT
 
 
 __all__ = []  # appended later
@@ -62,7 +62,7 @@ class AudioManager(object):
         self.__audio_devices = audio_devices
         audio_destination_dict = {key: 'Server' or key for key, device in audio_devices.iteritems()}  # temp name till we have proper device objects
         audio_destination_dict[CLIENT_AUDIO_DEVICE] = 'Client'  # TODO reconsider name
-        self.__audio_destination_type = Enum(audio_destination_dict)
+        self.__audio_destination_type = EnumT(audio_destination_dict)
         self.__audio_channels = 2 if stereo else 1
         self.__audio_queue_sinks = {}
         self.__audio_buses = {key: BusPlumber(graph, self.__audio_channels) for key in audio_destination_dict}

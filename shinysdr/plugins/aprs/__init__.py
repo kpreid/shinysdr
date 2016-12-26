@@ -46,7 +46,7 @@ from zope.interface import Interface, implements  # available via Twisted
 from shinysdr.devices import Device, IComponent
 from shinysdr.interfaces import ClientResourceDef
 from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, TelemetryStore, Track, empty_track
-from shinysdr.types import Notice, Timestamp
+from shinysdr.types import NoticeT, TimestampT
 from shinysdr.values import ExportedState, exported_value
 
 
@@ -141,7 +141,7 @@ class APRSStation(ExportedState):
         """implement ITelemetryObject"""
         return self.__last_heard_time + drop_unheard_timeout_seconds
     
-    @exported_value(type=Timestamp(), changes='explicit', sort_key='100', label='Last heard')
+    @exported_value(type=TimestampT(), changes='explicit', sort_key='100', label='Last heard')
     def get_last_heard_time(self):
         return self.__last_heard_time
     
@@ -167,7 +167,7 @@ class APRSStation(ExportedState):
     def get_last_comment(self):
         return self.__last_comment
 
-    @exported_value(type=Notice(always_visible=False), sort_key='000', changes='explicit')
+    @exported_value(type=NoticeT(always_visible=False), sort_key='000', changes='explicit')
     def get_last_parse_error(self):
         return self.__last_parse_error
 

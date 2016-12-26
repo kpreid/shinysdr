@@ -27,7 +27,7 @@ from zope.interface import implements
 
 from shinysdr.plugins.controller import Controller, Command, Selector
 from shinysdr.test.testutil import state_smoke_test
-from shinysdr.types import Enum
+from shinysdr.types import EnumT
 
 
 class TestController(unittest.TestCase):
@@ -44,7 +44,7 @@ class TestController(unittest.TestCase):
             elements=[
                 Command('cmd_name', 'cmd_text'),
                 Command('unicode_cmd', u'façade'),
-                Selector('enum_name', Enum({u'enum_text1': u'enum_label1', u'enum_text2': u'enum_label2'}, strict=False))
+                Selector('enum_name', EnumT({u'enum_text1': u'enum_label1', u'enum_text2': u'enum_label2'}, strict=False))
             ],
             encoding='UTF-8')
         self.proxy = self.device.get_components_dict()['controller']

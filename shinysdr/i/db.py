@@ -29,12 +29,12 @@ from twisted.python import log
 from twisted.web import http
 from twisted.web import resource
 
-from shinysdr.types import Enum, to_value_type
+from shinysdr.types import EnumT, to_value_type
 
 
 _NO_DEFAULT = object()
 _json_columns = {
-    u'type': (Enum({'channel': 'channel', 'band': 'band'}), 'channel'),
+    u'type': (EnumT({'channel': 'channel', 'band': 'band'}), 'channel'),
     u'lowerFreq': (to_value_type(float), _NO_DEFAULT),
     u'upperFreq': (to_value_type(float), _NO_DEFAULT),
     u'mode': (to_value_type(unicode), u''),

@@ -34,7 +34,7 @@ from shinysdr.i.receiver import Receiver
 from shinysdr.math import LazyRateCalculator
 from shinysdr.signals import SignalType
 from shinysdr.telemetry import TelemetryStore
-from shinysdr.types import Enum, Notice, Reference
+from shinysdr.types import EnumT, NoticeT, ReferenceT
 from shinysdr.values import CellDict, ExportedState, CollectionState, exported_value, setter, IWritableCollection, unserialize_exported_state
 
 
@@ -80,7 +80,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
             # arbitrary valid initial value
             self.source_name = key
             break
-        self.__rx_device_type = Enum({k: v.get_name() or k for (k, v) in self._sources.iteritems()})
+        self.__rx_device_type = EnumT({k: v.get_name() or k for (k, v) in self._sources.iteritems()})
         
         # Audio early setup
         self.__audio_manager = AudioManager(  # must be before contexts
@@ -305,28 +305,28 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
             self.__needs_reconnect.append(u'receiver %s validity changed' % (key,))
             self._do_connect()
     
-    @exported_value(type=Reference(), changes='never')
+    @exported_value(type=ReferenceT(), changes='never')
     def get_monitor(self):
         return self.monitor
     
-    @exported_value(type=Reference(), persists=False, changes='never')
+    @exported_value(type=ReferenceT(), persists=False, changes='never')
     def get_sources(self):
         return self.sources
     
-    @exported_value(type=Reference(), persists=False, changes='explicit')
+    @exported_value(type=ReferenceT(), persists=False, changes='explicit')
     def get_source(self):
         return self.source  # TODO no need for this now...?
     
-    @exported_value(type=Reference(), changes='never')
+    @exported_value(type=ReferenceT(), changes='never')
     def get_receivers(self):
         return self.receivers
     
     # TODO the concept of 'accessories' is old and needs to go away, but we don't have a flexible enough UI to replace it with just devices since only one device can be looked-at at a time so far.
-    @exported_value(type=Reference(), persists=False, changes='never')
+    @exported_value(type=ReferenceT(), persists=False, changes='never')
     def get_accessories(self):
         return self.accessories
     
-    @exported_value(type=Reference(), changes='never', label='Telemetry')
+    @exported_value(type=ReferenceT(), changes='never', label='Telemetry')
     def get_telemetry_store(self):
         return self.__telemetry_store
     
@@ -391,7 +391,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.source_name = value
         self._do_connect()
     
-    @exported_value(type=Notice(always_visible=False), changes='continuous')
+    @exported_value(type=NoticeT(always_visible=False), changes='continuous')
     def get_clip_warning(self):
         level = self.__clip_probe.level()
         # We assume that our sample source's absolute limits on I and Q values are the range -1.0 to 1.0. This is a square region; therefore the magnitude observed can be up to sqrt(2) = 1.414 above this, allowing us some opportunity to measure the amount of excess, and also to detect clipping even if the device doesn't produce exactly +-1.0 valus.

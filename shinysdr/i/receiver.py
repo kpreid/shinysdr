@@ -30,7 +30,7 @@ from shinysdr.i.modes import get_modes, lookup_mode
 from shinysdr.interfaces import ITunableDemodulator
 from shinysdr.math import dB, rotator_inc, to_dB
 from shinysdr.signals import SignalType
-from shinysdr.types import Enum, Range, Reference
+from shinysdr.types import EnumT, RangeT, ReferenceT
 from shinysdr.values import ExportedState, exported_value, setter, unserialize_exported_state
 
 
@@ -181,7 +181,7 @@ class Receiver(gr.hier_block2, ExportedState):
         self.state_changed('rec_freq')
         self.state_changed('is_valid')
 
-    @exported_value(type=Reference(), changes='explicit')
+    @exported_value(type=ReferenceT(), changes='explicit')
     def get_demodulator(self):
         return self.__demodulator
 
@@ -203,7 +203,7 @@ class Receiver(gr.hier_block2, ExportedState):
     
     # type construction is deferred because we don't want loading this file to trigger loading plugins
     @exported_value(
-        type_fn=lambda self: Enum({d.mode: d.info for d in get_modes()}),
+        type_fn=lambda self: EnumT({d.mode: d.info for d in get_modes()}),
         changes='this_setter',
         label='Mode')
     def get_mode(self):
@@ -264,7 +264,7 @@ class Receiver(gr.hier_block2, ExportedState):
     # TODO: support non-audio demodulators at which point these controls should be optional
     @exported_value(
         parameter='audio_gain',
-        type=Range([(-30, 20)], strict=False),
+        type=RangeT([(-30, 20)], strict=False),
         changes='this_setter',
         label='Volume')
     def get_audio_gain(self):
@@ -276,7 +276,7 @@ class Receiver(gr.hier_block2, ExportedState):
         self.__update_audio_gain()
     
     @exported_value(
-        type_fn=lambda self: Range([(-1, 1)] if self.__audio_channels > 1 else [(0, 0)], strict=True),
+        type_fn=lambda self: RangeT([(-1, 1)] if self.__audio_channels > 1 else [(0, 0)], strict=True),
         changes='this_setter',
         label='Pan')
     def get_audio_pan(self):
@@ -313,7 +313,7 @@ class Receiver(gr.hier_block2, ExportedState):
     
     # Note that the receiver cannot measure RF power because we don't know what the channel bandwidth is; we have to leave that to the demodulator.
     @exported_value(
-        type=Range([(_audio_power_minimum_dB, 0)], strict=False),
+        type=RangeT([(_audio_power_minimum_dB, 0)], strict=False),
         changes='continuous',
         label='Audio power')
     def get_audio_power(self):

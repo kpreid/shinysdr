@@ -40,7 +40,7 @@ from shinysdr.plugins.basic_demod import NFMDemodulator
 from shinysdr.plugins.aprs import parse_tnc2
 from shinysdr.signals import SignalType
 from shinysdr.twisted_ext import test_subprocess
-from shinysdr.types import Enum, Reference
+from shinysdr.types import EnumT, ReferenceT
 from shinysdr.values import ExportedState, exported_value, setter
 
 pipe_rate = 22050  # what multimon-ng expects
@@ -92,7 +92,7 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
         return SignalType(kind='MONO', sample_rate=pipe_rate)
 
 
-_aprs_squelch_type = Enum({
+_aprs_squelch_type = EnumT({
     u'mute': u'Muted',
     u'ctcss': 'Voice Alert',
     u'monitor': u'Monitor'}, strict=True)
@@ -217,7 +217,7 @@ class FMAPRSDemodulator(gr.hier_block2, ExportedState):
     def get_output_type(self):
         return self.mm_demod.get_output_type()
     
-    @exported_value(type=Reference(), changes='never')
+    @exported_value(type=ReferenceT(), changes='never')
     def get_mm_demod(self):
         return self.mm_demod
 

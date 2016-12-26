@@ -19,7 +19,7 @@ from __future__ import absolute_import, division
 
 from twisted.trial import unittest
 
-from shinysdr.types import Constant, Enum, EnumRow, Range
+from shinysdr.types import ConstantT, EnumT, EnumRow, RangeT
 
 
 def _testType(self, type_obj, good, bad):
@@ -35,41 +35,41 @@ def _testType(self, type_obj, good, bad):
         self.assertRaises(ValueError, lambda: type_obj(value))
 
 
-class TestConstant(unittest.TestCase):
+class TestConstantT(unittest.TestCase):
     longMessage = True
     
     def test_serial(self):
-        self.assertEqual({u'type': u'constant', u'value': 1}, Constant(1).to_json())
+        self.assertEqual({u'type': u'ConstantT', u'value': 1}, ConstantT(1).to_json())
     
     def test_run(self):
         _testType(self,
-            Constant(1),
+            ConstantT(1),
             [1, 1.0, (None, 1), ('foo', 1)],
             [])
 
-class TestEnum(unittest.TestCase):
+class TestEnumT(unittest.TestCase):
     longMessage = True
     
     def test_strict(self):
         _testType(self,
-            Enum({u'a': u'a', u'b': u'b'}, strict=True),
+            EnumT({u'a': u'a', u'b': u'b'}, strict=True),
             [(u'a', u'a'), ('a', u'a')],
             [u'c', 999])
 
     def test_strict_by_default(self):
         _testType(self,
-            Enum({u'a': u'a', u'b': u'b'}),
+            EnumT({u'a': u'a', u'b': u'b'}),
             [(u'a', u'a'), ('a', u'a')],
             [u'c', 999])
 
     def test_lenient(self):
         _testType(self,
-            Enum({u'a': u'a', u'b': u'b'}, strict=False),
+            EnumT({u'a': u'a', u'b': u'b'}, strict=False),
             [(u'a', u'a'), ('a', u'a'), u'c', (999, u'999')],
             [])
     
     def test_values(self):
-        enum = Enum({u'a': u'adesc'})
+        enum = EnumT({u'a': u'adesc'})
         self.assertEquals(enum.get_table(),
             {u'a': EnumRow(u'adesc', associated_key=u'a')})
     
@@ -111,57 +111,57 @@ class TestEnum(unittest.TestCase):
     
     
     def __row(self, row):
-        return Enum({u'key': row}).get_table()[u'key']
+        return EnumT({u'key': row}).get_table()[u'key']
 
 
-class TestRange(unittest.TestCase):
+class TestRangeT(unittest.TestCase):
     longMessage = True
     
     def test_discrete(self):
         _testType(self,
-            Range([(1, 1), (2, 3), (5, 5)], strict=True, integer=False),
+            RangeT([(1, 1), (2, 3), (5, 5)], strict=True, integer=False),
             [(0, 1), 1, (1.49, 1), (1.50, 1), (1.51, 2), 2, 2.5, 3, (4, 3), (4.1, 5), 5, (6, 5)],
             [])
 
     def test_log_integer(self):
         _testType(self,
-            Range([(1, 32)], strict=True, logarithmic=True, integer=True),
+            RangeT([(1, 32)], strict=True, logarithmic=True, integer=True),
             [(0, 1), 1, 2, 4, 32, (2.0, 2), (2.5, 2), (3.5, 4), (33, 32)],
             [])
 
     def test_shifted_float(self):
         _testType(self,
-            Range([(3, 4)], strict=True, logarithmic=False, integer=False).shifted_by(-3),
+            RangeT([(3, 4)], strict=True, logarithmic=False, integer=False).shifted_by(-3),
             [(-0.5, 0), 0, 0.25, 1, (1.5, 1)],
             [])
 
     def test_shifted_integer(self):
         _testType(self,
-            Range([(3, 4)], strict=True, logarithmic=False, integer=True).shifted_by(-3),
+            RangeT([(3, 4)], strict=True, logarithmic=False, integer=True).shifted_by(-3),
             [(-0.5, 0), 0, (0.25, 0), 1, (1.5, 1)],
             [])
 
     def test_repr(self):
-        self.assertEqual('Range([(1, 2), (3, 4)], strict=True, logarithmic=False, integer=False)',
-                         repr(Range([(1, 2), (3, 4)])))
-        self.assertEqual('Range([(1, 2), (3, 4)], strict=False, logarithmic=False, integer=False)',
-                         repr(Range([(1, 2), (3, 4)], strict=False)))
-        self.assertEqual('Range([(1, 2), (3, 4)], strict=True, logarithmic=True, integer=False)',
-                         repr(Range([(1, 2), (3, 4)], logarithmic=True)))
-        self.assertEqual('Range([(1, 2), (3, 4)], strict=True, logarithmic=False, integer=True)',
-                         repr(Range([(1, 2), (3, 4)], integer=True)))
+        self.assertEqual('RangeT([(1, 2), (3, 4)], strict=True, logarithmic=False, integer=False)',
+                         repr(RangeT([(1, 2), (3, 4)])))
+        self.assertEqual('RangeT([(1, 2), (3, 4)], strict=False, logarithmic=False, integer=False)',
+                         repr(RangeT([(1, 2), (3, 4)], strict=False)))
+        self.assertEqual('RangeT([(1, 2), (3, 4)], strict=True, logarithmic=True, integer=False)',
+                         repr(RangeT([(1, 2), (3, 4)], logarithmic=True)))
+        self.assertEqual('RangeT([(1, 2), (3, 4)], strict=True, logarithmic=False, integer=True)',
+                         repr(RangeT([(1, 2), (3, 4)], integer=True)))
 
     def test_equal(self):
-        self.assertEqual(Range([(1, 2), (3, 4)]),
-                         Range([(1, 2), (3, 4)]))
-        self.assertEqual(Range([(1, 2), (3, 4)], integer=True, logarithmic=True),
-                         Range([(1, 2), (3, 4)], integer=True, logarithmic=True))
-        self.assertNotEqual(Range([(1, 2), (3, 4)]),
-                            Range([(0, 2), (3, 4)]))
-        self.assertNotEqual(Range([(1, 2)]),
-                            Range([(1, 2)], integer=True))
-        self.assertNotEqual(Range([(1, 2)]),
-                            Range([(1, 2)], logarithmic=True))
-        self.assertNotEqual(Range([(1, 2)]),
-                            Range([(1, 2)], strict=False))
+        self.assertEqual(RangeT([(1, 2), (3, 4)]),
+                         RangeT([(1, 2), (3, 4)]))
+        self.assertEqual(RangeT([(1, 2), (3, 4)], integer=True, logarithmic=True),
+                         RangeT([(1, 2), (3, 4)], integer=True, logarithmic=True))
+        self.assertNotEqual(RangeT([(1, 2), (3, 4)]),
+                            RangeT([(0, 2), (3, 4)]))
+        self.assertNotEqual(RangeT([(1, 2)]),
+                            RangeT([(1, 2)], integer=True))
+        self.assertNotEqual(RangeT([(1, 2)]),
+                            RangeT([(1, 2)], logarithmic=True))
+        self.assertNotEqual(RangeT([(1, 2)]),
+                            RangeT([(1, 2)], strict=False))
         

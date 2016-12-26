@@ -48,7 +48,7 @@ def to_value_type(typeoid):
         return typeoid
     elif isinstance(typeoid, type):
         # TODO: Stricten this to only allow a specific set
-        return BareType(typeoid)
+        return PythonT(typeoid)
     else:
         raise TypeError('Don\'t know how to make a ValueType of %r' % (typeoid,))
 
@@ -59,6 +59,10 @@ class ValueType(object):
     ValueTypes are used by shinysdr.values.BaseCell objects to define the kind of values the cell may take on.
     
     A type may be called with a value to coerce or reject the value.
+    
+    A Python type object may be converted to a ValueType using the to_value_type function.
+    
+    Conventionally, concrete subclasses of ValueType should be referred to with names like "RangeT" and their instances (actual types) like "rangeT". This is in order to avoid ambiguity with naming a type versus a value of that type, given that there are also classes of types so that the normal capital/lowercase convention is not sufficient.
     """
     implements(IJsonSerializable)
     def to_json(self):
@@ -79,7 +83,7 @@ class ValueType(object):
         return False
 
 
-class BareType(ValueType):
+class PythonT(ValueType):
     """
     ValueType wrapper for Python types.
     """
@@ -87,7 +91,7 @@ class BareType(ValueType):
         self.__python_type = python_type
     
     def __cmp__(self, other):
-        if not isinstance(other, BareType):
+        if not isinstance(other, PythonT):
             return cmp(id(self), id(other))  # dummy
         else:
             return cmp(self.__python_type, other.__python_type)
@@ -96,14 +100,14 @@ class BareType(ValueType):
         return hash(self.__python_type) ^ hash(self.__python_type)
 
     def to_json(self):
-        return bare_type_registry.get(self.__python_type, None)
+        return python_type_registry.get(self.__python_type, None)
     
     def __call__(self, specimen):
         return self.__python_type(specimen)
 
 
 # TODO: Replace this raw object with a proper API
-bare_type_registry = {
+python_type_registry = {
     bool: u'boolean',
     float: u'float64',
     int: u'integer',
@@ -111,7 +115,7 @@ bare_type_registry = {
 }
 
 
-class Constant(ValueType):
+class ConstantT(ValueType):
     """
     A single-valued type.
     """
@@ -121,7 +125,7 @@ class Constant(ValueType):
     
     def to_json(self):
         return {
-            u'type': u'constant',
+            u'type': u'ConstantT',
             u'value': self.__value
         }
     
@@ -129,20 +133,20 @@ class Constant(ValueType):
         return self.__value
 
 
-class Reference(ValueType):
+class ReferenceT(ValueType):
     def to_json(self):
-        return u'block'
+        return u'reference'
     
     def __call__(self, specimen):
         # In the future there might be subtypes which have some criterion for accepting values
-        raise TypeError('generic Reference type does not coerce anything')
+        raise TypeError('generic ReferenceT type does not coerce anything')
     
     def is_reference(self):
         return True
 
 
-class Enum(ValueType):
-    """An Enum type accepts any of a fixed set of values.
+class EnumT(ValueType):
+    """An EnumT accepts any of a fixed set of values.
     
     The values are normally Unicode strings but may be another type.
     The values may have metadata such as description text different from the value itself.
@@ -165,7 +169,7 @@ class Enum(ValueType):
     
     def to_json(self):
         return {
-            'type': 'enum',
+            'type': 'EnumT',
             'table': self.__table,
         }
     
@@ -177,7 +181,7 @@ class Enum(ValueType):
 
 
 class EnumRow(object):
-    """An EnumRow object provides information about an element of an Enum type, and is also used for similar non-Enum-related purposes.
+    """An EnumRow object provides information about an element of an EnumT, and is also used for similar non-EnumT-related purposes.
     
     The label is a 'human-friendly' string to use in place of the enum value. If not specified it defaults to the enum value itself.
     
@@ -232,7 +236,7 @@ class EnumRow(object):
         }
 
 
-class Range(ValueType):
+class RangeT(ValueType):
     def __init__(self, subranges, strict=True, logarithmic=False, integer=False):
         # TODO validate subranges are sorted
         self.__mins = [min_value for (min_value, max_value) in subranges]
@@ -243,7 +247,7 @@ class Range(ValueType):
     
     def to_json(self):
         return {
-            'type': 'range',
+            'type': 'RangeT',
             'subranges': zip(self.__mins, self.__maxes),
             'logarithmic': self.__logarithmic,
             'integer': self.__integer
@@ -303,7 +307,7 @@ class Range(ValueType):
     def shifted_by(self, offset):
         mins = self.__mins
         maxes = self.__maxes
-        return Range(
+        return RangeT(
             [(mins[i] + offset, maxes[i] + offset) for i in xrange(len(mins))],
             strict=self.__strict,
             logarithmic=self.__logarithmic,
@@ -317,7 +321,7 @@ class Range(ValueType):
     
     def get_single_point(self):
         """
-        If this Range contains only a single value, return it, else None.
+        If this RangeT contains only a single value, return it, else None.
         """
         if len(self.__mins) != 1:
             return None
@@ -330,13 +334,13 @@ class Range(ValueType):
                 return None
 
 
-class Notice(ValueType):
+class NoticeT(ValueType):
     def __init__(self, always_visible=False):
         self.__always_visible = always_visible
     
     def to_json(self):
         return {
-            'type': 'notice',
+            'type': 'NoticeT',
             'always_visible': self.__always_visible
         }
     
@@ -344,27 +348,27 @@ class Notice(ValueType):
         return unicode(specimen)
 
 
-class Timestamp(ValueType):
+class TimestampT(ValueType):
     def __init__(self):
         pass
     
     def to_json(self):
         return {
-            'type': 'Timestamp'
+            'type': 'TimestampT'
         }
     
     def __call__(self, specimen):
         return float(specimen)
 
 
-class BulkDataType(ValueType):
+class BulkDataT(ValueType):
     def __init__(self, info_format, array_format):
         self.__info_format = info_format
         self.__array_format = array_format
     
     def to_json(self):
         return {
-            u'type': u'bulk_data',
+            u'type': u'BulkDataT',
             u'info_format': self.__info_format,
             u'array_format': self.__array_format,
         }
@@ -376,6 +380,6 @@ class BulkDataType(ValueType):
         return self.__array_format
     
     def __call__(self, specimen):
-        raise Exception('Coerce not implemented for BulkDataType')
+        raise Exception('Coerce not implemented for BulkDataT')
     
     # TODO implement coerce behavior, generally make this more well-defined

@@ -90,7 +90,7 @@ __all__.append('Command')
 class Selector(object):
     """Defines a cell whose value is the text to send.
     
-    Typically the cell's type would be an Enum.
+    Typically the cell's type would be an EnumT.
     """
     implements(IElement)
     

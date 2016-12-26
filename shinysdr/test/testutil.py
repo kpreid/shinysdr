@@ -34,7 +34,7 @@ from shinysdr.i.poller import Poller
 from shinysdr.i.top import Top
 from shinysdr.plugins.simulate import SimulatedDevice
 from shinysdr.signals import SignalType
-from shinysdr.types import Range
+from shinysdr.types import RangeT
 from shinysdr.values import ExportedState, SubscriptionContext, nullExportedState
 
 
@@ -146,7 +146,7 @@ class DeviceTestCase(unittest.TestCase):
         if self.__noop: return
         rx_driver = self.device.get_rx_driver()
         if rx_driver is nullExportedState: return
-        self.assertIsInstance(rx_driver.get_usable_bandwidth(), Range)
+        self.assertIsInstance(rx_driver.get_usable_bandwidth(), RangeT)
     
     def test_rx_notify(self):
         if self.__noop: return

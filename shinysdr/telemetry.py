@@ -28,7 +28,7 @@ from twisted.internet import reactor as the_reactor
 from twisted.internet.interfaces import IReactorTime
 from zope.interface import Interface, implements
 
-from shinysdr.types import bare_type_registry
+from shinysdr.types import python_type_registry
 from shinysdr.values import CellDict, CollectionState
 
 
@@ -70,7 +70,7 @@ class Track(_TrackNT):
             raise TypeError('Track constructor takes 1 dict or kwargs')
 
 
-bare_type_registry[Track] = 'shinysdr.telemetry.Track'
+python_type_registry[Track] = 'shinysdr.telemetry.Track'
 __all__.append('Track')
 
 

@@ -32,7 +32,7 @@ from shinysdr.interfaces import ModeDef, IDemodulator, IModulator, ITunableDemod
 from shinysdr.math import dB, to_dB
 from shinysdr.filters import MultistageChannelFilter, make_resampler, design_sawtooth_filter
 from shinysdr.signals import SignalType
-from shinysdr.types import Enum, EnumRow, Range
+from shinysdr.types import EnumT, EnumRow, RangeT
 from shinysdr.values import ExportedState, exported_value, setter
 
 
@@ -84,14 +84,14 @@ class SquelchMixin(ExportedState):
         self.rf_probe_block = analog.probe_avg_mag_sqrd_c(0, alpha=alpha)
 
     @exported_value(
-        type=Range([(-100, 0)], strict=False),
+        type=RangeT([(-100, 0)], strict=False),
         changes='continuous',
         label='Channel power')
     def get_rf_power(self):
         return to_dB(max(1e-10, self.rf_probe_block.level()))
 
     @exported_value(
-        type=Range([(-100, 0)], strict=False, logarithmic=False),
+        type=RangeT([(-100, 0)], strict=False, logarithmic=False),
         changes='this_setter',
         label='Squelch')
     def get_squelch_threshold(self):
@@ -195,7 +195,7 @@ pluginDef_iq = ModeDef(mode='IQ',
 
 _am_lower_cutoff_freq = 40
 _am_audio_bandwidth = 7500
-_am_demod_method_type = Enum({
+_am_demod_method_type = EnumT({
     u'async': u'Asynchronous',
     u'lsb': u'Lower sideband',
     u'usb': u'Upper sideband',
@@ -312,7 +312,7 @@ class AMDemodulator(SimpleAudioDemodulator):
     #        return 0
     
     # disabled because I haven't found any combination of parameters which makes the lock detector reliably useful
-    #@exported_value(type=Notice())
+    #@exported_value(type=NoticeT())
     #def get_pll_locked(self):
     #    if self.__pll and not self.__pll.lock_detector():
     #        return u'No carrier!'
@@ -732,7 +732,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
         super(SSBDemodulator, self).set_rec_freq(freq - self.__offset)
     
     @exported_value(
-        type=Range([(-20, _ssb_max_agc)]),
+        type=RangeT([(-20, _ssb_max_agc)]),
         changes='continuous',
         label='AGC')
     def get_agc_gain(self):

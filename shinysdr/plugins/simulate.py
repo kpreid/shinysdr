@@ -33,7 +33,7 @@ from shinysdr.math import dB, rotator_inc, to_dB
 from shinysdr.i.modes import lookup_mode
 from shinysdr.signals import SignalType, no_signal
 from shinysdr.devices import Device, IRXDriver
-from shinysdr.types import Range, Reference
+from shinysdr.types import RangeT, ReferenceT
 from shinysdr.values import CellDict, CollectionState, ExportedState, LooseCell, exported_value, setter
 
 
@@ -47,7 +47,7 @@ def SimulatedDevice(name='Simulated RF', freq=0.0, allow_tuning=False):
         vfo_cell=LooseCell(
             key='freq',
             value=freq,
-            type=Range([(-1e9, 1e9)]) if allow_tuning else Range([(freq, freq)]),  # TODO kludge magic numbers
+            type=RangeT([(-1e9, 1e9)]) if allow_tuning else RangeT([(freq, freq)]),  # TODO kludge magic numbers
             writable=True,
             persists=False,
             post_hook=rx_driver._set_sim_freq),
@@ -140,10 +140,10 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
         self.__signal_type = SignalType(
             kind='IQ',
             sample_rate=rf_rate)
-        self.__usable_bandwidth = Range([(-rf_rate / 2, rf_rate / 2)])
+        self.__usable_bandwidth = RangeT([(-rf_rate / 2, rf_rate / 2)])
         
     
-    @exported_value(type=Reference(), changes='never')
+    @exported_value(type=ReferenceT(), changes='never')
     def get_transmitters(self):
         return self.__transmitters_cs
 
@@ -167,7 +167,7 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
     def close(self):
         pass
     
-    @exported_value(type=Range([(-50, 0)]), changes='this_setter', label='White noise')
+    @exported_value(type=RangeT([(-50, 0)]), changes='this_setter', label='White noise')
     def get_noise_level(self):
         return self.__noise_level
     
@@ -213,12 +213,12 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
         self.__mult = blocks.multiply_const_cc(dB(-10))
         self.connect(modulator, rf_resampler, self.__rotator, self.__mult, self)
     
-    @exported_value(type=Reference(), changes='never')
+    @exported_value(type=ReferenceT(), changes='never')
     def get_modulator(self):
         return self.__modulator
 
     @exported_value(
-        type_fn=lambda self: Range([(-self.__rf_rate / 2, self.__rf_rate / 2)], strict=False),
+        type_fn=lambda self: RangeT([(-self.__rf_rate / 2, self.__rf_rate / 2)], strict=False),
         changes='this_setter',
         label='Frequency')
     def get_freq(self):
@@ -230,7 +230,7 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
         self.__rotator.set_phase_inc(rotator_inc(rate=self.__rf_rate, shift=self.__freq))
     
     @exported_value(
-        type=Range([(-50.0, 0.0)], strict=False),
+        type=RangeT([(-50.0, 0.0)], strict=False),
         changes='this_setter',
         label='Gain')
     def get_gain(self):
@@ -269,7 +269,7 @@ class ChirpModulator(gr.hier_block2, ExportedState):
     
     @exported_value(
         parameter='chirp_rate', 
-        type=Range([(-10.0, 10.0)], strict=False),
+        type=RangeT([(-10.0, 10.0)], strict=False),
         changes='this_setter',
         label='Chirp rate')
     def get_chirp_rate(self):

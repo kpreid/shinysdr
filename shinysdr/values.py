@@ -32,7 +32,7 @@ from zope.interface import Interface, implements  # available via Twisted
 
 from gnuradio import gr
 
-from shinysdr.types import BulkDataType, EnumRow, Reference, to_value_type
+from shinysdr.types import BulkDataT, EnumRow, ReferenceT, to_value_type
 
 
 class CellMetadata(namedtuple('CellMetadata', [
@@ -255,7 +255,7 @@ class Cell(ValueCell):
 class _MessageSplitter(object):
     def __init__(self, queue, info_getter, close, type):
         """
-        type: must be a BulkDataType
+        type: must be a BulkDataT
         """
         # config
         self.__queue = queue
@@ -307,7 +307,7 @@ class _MessageSplitter(object):
 
 class StreamCell(ValueCell):
     def __init__(self, target, key, type, **kwargs):
-        assert isinstance(type, BulkDataType)
+        assert isinstance(type, BulkDataT)
         ValueCell.__init__(self, target, key, type=type, writable=False, persists=False, **kwargs)
         self.__dgetter = getattr(self._target, 'get_' + key + '_distributor')
         self.__igetter = getattr(self._target, 'get_' + key + '_info')
@@ -678,7 +678,7 @@ nullExportedState = NullExportedState()
 class CellDict(object):
     """A dictionary-like object which holds its contents in cells."""
     
-    def __init__(self, initial_state={}, dynamic=False, member_type=Reference()):
+    def __init__(self, initial_state={}, dynamic=False, member_type=ReferenceT()):
         # pylint: disable=dangerous-default-value
         self.__member_type = member_type
         self.__cells = {}

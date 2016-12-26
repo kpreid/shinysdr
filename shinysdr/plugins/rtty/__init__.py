@@ -38,7 +38,7 @@ except ImportError:
 from shinysdr.filters import MultistageChannelFilter
 from shinysdr.interfaces import ModeDef, IDemodulator, IModulator
 from shinysdr.signals import SignalType, no_signal
-from shinysdr.types import Range, Reference
+from shinysdr.types import RangeT, ReferenceT
 from shinysdr.values import ExportedState, exported_value
 
 
@@ -125,7 +125,7 @@ class RTTYDemodulator(gr.hier_block2, ExportedState):
         """implement IDemodulator"""
         return SignalType(kind='MONO', sample_rate=self.samp_rate)
 
-    @exported_value(type=Reference(), changes='never')
+    @exported_value(type=ReferenceT(), changes='never')
     def get_fsk_demod(self):
         return self.fsk_demod
 
@@ -212,7 +212,7 @@ class RTTYFSKDemodulator(gr.hier_block2, ExportedState):
             self)
         self.connect(self.__dc_blocker, self.__freq_probe)
 
-    @exported_value(type=Range([(-2, 2)]), changes='continuous')
+    @exported_value(type=RangeT([(-2, 2)]), changes='continuous')
     def get_probe(self):
         return abs(self.__freq_probe.level())
 

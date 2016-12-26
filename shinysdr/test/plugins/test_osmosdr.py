@@ -23,7 +23,7 @@ from osmosdr import range_t, meta_range_t
 
 from shinysdr.plugins.osmosdr import OsmoSDRDevice, OsmoSDRProfile, convert_osmosdr_range, profile_from_device_string
 from shinysdr.test.testutil import DeviceTestCase
-from shinysdr.types import Range
+from shinysdr.types import RangeT
 
 
 class TestOsmoSDRDeviceCore(DeviceTestCase):
@@ -52,19 +52,19 @@ class TestOsmoSDRDeviceMisc(unittest.TestCase):
             .get_freq())
 
     def test_bandwidth_contiguous(self):
-        self.assertEqual(Range([(-30000.0, 30000.0)]),
+        self.assertEqual(RangeT([(-30000.0, 30000.0)]),
             OsmoSDRDevice('file=/dev/null,rate=80000', profile=OsmoSDRProfile(
                 dc_offset=False))
             .get_rx_driver().get_usable_bandwidth())
 
     def test_bandwidth_discontiguous(self):
-        self.assertEqual(Range([(-30000.0, -1.0), (1.0, 30000.0)]),
+        self.assertEqual(RangeT([(-30000.0, -1.0), (1.0, 30000.0)]),
             OsmoSDRDevice('file=/dev/null,rate=80000', profile=OsmoSDRProfile(
                 dc_offset=True))
             .get_rx_driver().get_usable_bandwidth())
 
     def test_bandwidth_default(self):
-        self.assertEqual(Range([(-30000.0, 30000.0)]),
+        self.assertEqual(RangeT([(-30000.0, 30000.0)]),
             OsmoSDRDevice('file=/dev/null,rate=80000')
             .get_rx_driver().get_usable_bandwidth())
 

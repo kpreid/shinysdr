@@ -27,7 +27,7 @@ from shinysdr.i.network.base import transform_for_json
 from shinysdr.i.network.export_ws import StateStreamInner
 from shinysdr.signals import SignalType
 from shinysdr.test.testutil import SubscriptionTester
-from shinysdr.types import Reference
+from shinysdr.types import ReferenceT
 from shinysdr.values import CellDict, CollectionState, ExportedState, NullExportedState, exported_value, nullExportedState, setter
 
 
@@ -189,11 +189,11 @@ class DuplicateReferenceSpecimen(ExportedState):
     def __init__(self):
         self.foo = self.bar = nullExportedState
     
-    @exported_value(type=Reference(), changes='explicit')
+    @exported_value(type=ReferenceT(), changes='explicit')
     def get_foo(self):
         return self.foo
     
-    @exported_value(type=Reference(), changes='explicit')
+    @exported_value(type=ReferenceT(), changes='explicit')
     def get_bar(self):
         return self.bar
 

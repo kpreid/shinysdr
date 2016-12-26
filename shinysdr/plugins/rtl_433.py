@@ -36,7 +36,7 @@ from shinysdr.interfaces import ModeDef, IDemodulator
 from shinysdr.signals import no_signal
 from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject
 from shinysdr.twisted_ext import test_subprocess
-from shinysdr.types import EnumRow, Timestamp
+from shinysdr.types import EnumRow, TimestampT
 from shinysdr.values import ExportedState, LooseCell, exported_value
 
 
@@ -321,7 +321,7 @@ class RTL433MsgGroup(ExportedState):
         """implement ITelemetryObject"""
         return self.__last_heard_time + drop_unheard_timeout_seconds
     
-    @exported_value(type=Timestamp(), changes='explicit', label='Last heard')
+    @exported_value(type=TimestampT(), changes='explicit', label='Last heard')
     def get_last_heard_time(self):
         return self.__last_heard_time
 

@@ -36,7 +36,7 @@ from shinysdr.filters import make_resampler
 from shinysdr.interfaces import ClientResourceDef, ModeDef, IDemodulator, IModulator
 from shinysdr.plugins.basic_demod import SimpleAudioDemodulator, design_lofi_audio_filter
 from shinysdr.signals import SignalType
-from shinysdr.types import Range
+from shinysdr.types import RangeT
 from shinysdr.values import ExportedState, exported_value, setter
 
 audio_modulation_index = 0.07
@@ -213,7 +213,7 @@ class VORModulator(gr.hier_block2, ExportedState):
         # calculate and initialize delay
         self.set_angle(angle)
     
-    @exported_value(type=Range([(0, 2 * math.pi)], strict=False), changes='this_setter', label='Bearing')
+    @exported_value(type=RangeT([(0, 2 * math.pi)], strict=False), changes='this_setter', label='Bearing')
     def get_angle(self):
         return self.__angle
     

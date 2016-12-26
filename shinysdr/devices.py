@@ -28,7 +28,7 @@ from gnuradio import gr
 
 from shinysdr.signals import SignalType
 from shinysdr.telemetry import TelemetryItem, Track, empty_track
-from shinysdr.types import Range, Reference
+from shinysdr.types import RangeT, ReferenceT
 from shinysdr.values import CellDict, CollectionState, ExportedState, LooseCell, ViewCell, exported_value, nullExportedState
 
 
@@ -63,7 +63,7 @@ class IRXDriver(Interface):
         """
     
     def get_usable_bandwidth():
-        """Return a Range object which specifies what portion of the bandwidth of the output signal should be conidered usable, in baseband Hz.
+        """Return a RangeT object which specifies what portion of the bandwidth of the output signal should be conidered usable, in baseband Hz.
         
         Usable here means that it is within the filter passband and does not contain spurs (in particular, a DC offset).
         """
@@ -157,7 +157,7 @@ class Device(ExportedState):
         if vfo_cell is None:
             vfo_cell = _stub_vfo
         assert vfo_cell.key() == 'freq'
-        assert isinstance(vfo_cell.type(), Range)
+        assert isinstance(vfo_cell.type(), RangeT)
         # TODO: Consider using an unconditional wrapper around the VFO cell which sets the cell metadata consistently.
         
         self.__name = name
@@ -188,15 +188,15 @@ class Device(ExportedState):
     def can_tune(self):
         return self.__vfo_cell is not _stub_vfo
     
-    @exported_value(type=Reference(), changes='never')
+    @exported_value(type=ReferenceT(), changes='never')
     def get_rx_driver(self):
         return self.rx_driver
     
-    @exported_value(type=Reference(), changes='never')
+    @exported_value(type=ReferenceT(), changes='never')
     def get_tx_driver(self):
         return self.tx_driver
     
-    @exported_value(type=Reference(), changes='never')
+    @exported_value(type=ReferenceT(), changes='never')
     def get_components(self):
         return self.__components_state
     
@@ -269,7 +269,7 @@ def _ConstantVFOCell(value):
     return LooseCell(
         key='freq',
         value=value,
-        type=Range([(value, value)]),
+        type=RangeT([(value, value)]),
         writable=False,
         persists=False)
 
@@ -398,7 +398,7 @@ def AudioDevice(
         vfo_cell=LooseCell(
             key='freq',
             value=0.0,
-            type=Range([(0.0, 0.0)]),
+            type=RangeT([(0.0, 0.0)]),
             writable=True,
             persists=False),
         rx_driver=rx_driver,
@@ -464,12 +464,12 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
                 kind='IQ',
                 sample_rate=self.__sample_rate)
             # TODO should be configurable
-            self.__usable_bandwidth = Range([(-self.__sample_rate / 2, self.__sample_rate / 2)])
+            self.__usable_bandwidth = RangeT([(-self.__sample_rate / 2, self.__sample_rate / 2)])
         else:
             self.__signal_type = SignalType(
                 kind='USB',  # TODO obtain correct type from config (or say hamlib)
                 sample_rate=self.__sample_rate)
-            self.__usable_bandwidth = Range([(500, 2500)])
+            self.__usable_bandwidth = RangeT([(500, 2500)])
         
         gr.hier_block2.__init__(
             self, type(self).__name__,

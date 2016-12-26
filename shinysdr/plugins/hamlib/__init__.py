@@ -48,7 +48,7 @@ from twisted.web import static
 from shinysdr.devices import Device, IComponent
 from shinysdr.interfaces import ClientResourceDef, IHasFrequency
 from shinysdr.twisted_ext import fork_deferred
-from shinysdr.types import Enum, Notice, Range
+from shinysdr.types import EnumT, NoticeT, RangeT
 from shinysdr.values import ExportedState, LooseCell, exported_value
 
 
@@ -103,13 +103,13 @@ RIG_EVFO = -15
 RIG_EDOM = -16
 
 
-_modes = Enum({x: x for x in ['USB', 'LSB', 'CW', 'CWR', 'RTTY', 'RTTYR', 'AM', 'FM', 'WFM', 'AMS', 'PKTLSB', 'PKTUSB', 'PKTFM', 'ECSSUSB', 'ECSSLSB', 'FAX', 'SAM', 'SAL', 'SAH', 'DSB']}, strict=False)
+_modes = EnumT({x: x for x in ['USB', 'LSB', 'CW', 'CWR', 'RTTY', 'RTTYR', 'AM', 'FM', 'WFM', 'AMS', 'PKTLSB', 'PKTUSB', 'PKTFM', 'ECSSUSB', 'ECSSLSB', 'FAX', 'SAM', 'SAL', 'SAH', 'DSB']}, strict=False)
 
 
-_vfos = Enum({'VFOA': 'VFO A', 'VFOB': 'VFO B', 'VFOC': 'VFO C', 'currVFO': 'currVFO', 'VFO': 'VFO', 'MEM': 'MEM', 'Main': 'Main', 'Sub': 'Sub', 'TX': 'TX', 'RX': 'RX'}, strict=False)
+_vfos = EnumT({'VFOA': 'VFO A', 'VFOB': 'VFO B', 'VFOC': 'VFO C', 'currVFO': 'currVFO', 'VFO': 'VFO', 'MEM': 'MEM', 'Main': 'Main', 'Sub': 'Sub', 'TX': 'TX', 'RX': 'RX'}, strict=False)
 
 
-_passbands = Range([(0, 0)])
+_passbands = RangeT([(0, 0)])
 
 
 _cap_remap = {
@@ -408,7 +408,7 @@ class _HamlibProxy(ExportedState):
         p = self.__protocol
         self.poll_slow(p.rc_send)
     
-    @exported_value(type=Notice(always_visible=False), changes='explicit')
+    @exported_value(type=NoticeT(always_visible=False), changes='explicit')
     def get_errors(self):
         if self.__communication_error:
             return 'Rig not responding.'
@@ -437,18 +437,18 @@ def _install_cell(self, name, is_level, writable, callback, caps):
     if is_level:
         # TODO: Use range info from hamlib if available
         if name == 'STRENGTH level':
-            vtype = Range([(-54, 50)], strict=False)
+            vtype = RangeT([(-54, 50)], strict=False)
         elif name == 'SWR level':
-            vtype = Range([(1, 30)], strict=False)
+            vtype = RangeT([(1, 30)], strict=False)
         elif name == 'RFPOWER level':
-            vtype = Range([(0, 100)], strict=False)
+            vtype = RangeT([(0, 100)], strict=False)
         else:
-            vtype = Range([(-10, 10)], strict=False)
+            vtype = RangeT([(-10, 10)], strict=False)
     elif name == 'Mode' or name == 'TX Mode':
         # kludge
-        vtype = Enum({x: x for x in caps['Mode list'].strip().split(' ')})
+        vtype = EnumT({x: x for x in caps['Mode list'].strip().split(' ')})
     elif name == 'VFO' or name == 'TX VFO':
-        vtype = Enum({x: x for x in caps['VFO list'].strip().split(' ')})
+        vtype = EnumT({x: x for x in caps['VFO list'].strip().split(' ')})
     else:
         vtype = self._info[name]
     
@@ -488,7 +488,7 @@ class _HamlibRig(_HamlibProxy):
     _dummy_command = 'get_freq'
     
     _info = {
-        'Frequency': (Range([(0, 9999999999)], integer=True)),
+        'Frequency': (RangeT([(0, 9999999999)], integer=True)),
         'Mode': (_modes),
         'Passband': (_passbands),
         'VFO': (_vfos),
@@ -496,7 +496,7 @@ class _HamlibRig(_HamlibProxy):
         'XIT': (int),
         'PTT': (bool),
         'DCD': (bool),
-        'Rptr Shift': (Enum({'+': '+', '-': '-', 'None': 'None'}, strict=False)),
+        'Rptr Shift': (EnumT({'+': '+', '-': '-', 'None': 'None'}, strict=False)),
         'Rptr Offset': (int),
         'CTCSS Tone': (int),
         'DCS Code': (str),
@@ -569,8 +569,8 @@ class _HamlibRotator(_HamlibProxy):
     
     _info = {
         # TODO: Get ranges from dump_caps
-        'Azimuth': (Range([(-180, 180)])),
-        'Elevation': (Range([(0, 90)])),
+        'Azimuth': (RangeT([(-180, 180)])),
+        'Elevation': (RangeT([(0, 90)])),
     }
     
     _commands = {

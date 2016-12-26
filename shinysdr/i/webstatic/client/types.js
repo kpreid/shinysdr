@@ -154,7 +154,7 @@ define([], () => {
     switch (typeof desc) {
       case 'string':
         switch (desc) {
-          case 'block':
+          case 'reference':
             return block;
           case 'boolean':
             return Boolean; // will do till we need something fancier
@@ -173,17 +173,17 @@ define([], () => {
           return any;
         }
         switch (desc.type) {
-          case 'constant':
+          case 'ConstantT':
             return new Constant(desc.value);
-          case 'enum':
+          case 'EnumT':
             return new Enum(desc.table);
-          case 'range':
+          case 'RangeT':
             return new Range(desc.subranges, desc.logarithmic, desc.integer);
-          case 'notice':
+          case 'NoticeT':
             return new Notice(desc.always_visible);
-          case 'Timestamp':
+          case 'TimestampT':
             return new Timestamp();
-          case 'bulk_data':
+          case 'BulkDataT':
             return new BulkDataType(desc.info_format, desc.array_format);
           default:
             throw new TypeError('unknown type desc tag: ' + desc.type);

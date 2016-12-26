@@ -43,7 +43,7 @@ from shinysdr.interfaces import ClientResourceDef, IDemodulator, ModeDef
 from shinysdr.math import LazyRateCalculator
 from shinysdr.signals import no_signal
 from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, TelemetryStore, Track, empty_track
-from shinysdr.types import EnumRow, Notice, Range, Timestamp
+from shinysdr.types import EnumRow, NoticeT, RangeT, TimestampT
 from shinysdr.values import ExportedState, exported_value, setter
 
 
@@ -121,7 +121,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
     def __del__(self):
         self.__msgq_runner.stop()
     
-    @exported_value(type=Range([(0, 30)]), changes='this_setter', label='Decode threshold')
+    @exported_value(type=RangeT([(0, 30)]), changes='this_setter', label='Decode threshold')
     def get_decode_threshold(self):
         return self.__demod.get_threshold()
     
@@ -268,7 +268,7 @@ class Aircraft(ExportedState):
         """implement ITelemetryObject"""
         return self.__last_heard_time + drop_unheard_timeout_seconds
     
-    @exported_value(type=Timestamp(), changes='explicit', sort_key='100', label='Last heard')
+    @exported_value(type=TimestampT(), changes='explicit', sort_key='100', label='Last heard')
     def get_last_heard_time(self):
         return self.__last_heard_time
     

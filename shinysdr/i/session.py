@@ -25,7 +25,7 @@ import sys
 from twisted.internet import reactor as the_reactor  # TODO fix
 
 from shinysdr.i.top import Top
-from shinysdr.types import Reference
+from shinysdr.types import ReferenceT
 from shinysdr.values import Command, ExportedState, exported_value
 
 
@@ -40,11 +40,11 @@ class AppRoot(ExportedState):
             receive_flowgraph=self.__receive_flowgraph,
             features=features)
     
-    @exported_value(type=Reference(), changes='never')
+    @exported_value(type=ReferenceT(), changes='never')
     def get_receive_flowgraph(self):  # TODO needs to go away
         return self.__receive_flowgraph
     
-    @exported_value(type=Reference(), persists=True, changes='never')
+    @exported_value(type=ReferenceT(), persists=True, changes='never')
     def get_devices(self):
         """Return all existant devices.
         

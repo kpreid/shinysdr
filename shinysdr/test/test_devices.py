@@ -28,7 +28,7 @@ from gnuradio import gr
 from shinysdr.devices import _ConstantVFOCell, AudioDevice, Device, FrequencyShift, IComponent, IDevice, IRXDriver, ITXDriver, PositionedDevice, _coerce_channel_mapping, merge_devices
 from shinysdr.signals import SignalType
 from shinysdr.test.testutil import DeviceTestCase
-from shinysdr.types import Range
+from shinysdr.types import RangeT
 from shinysdr.values import ExportedState, LooseCell, nullExportedState
 
 
@@ -123,7 +123,7 @@ class TestMergeDevices(unittest.TestCase):
     def test_vfos(self):
         d = merge_devices([
             Device(vfo_cell=_ConstantVFOCell(1)),
-            Device(vfo_cell=LooseCell(key='freq', value=0, type=Range([(10, 20)]), writable=True))
+            Device(vfo_cell=LooseCell(key='freq', value=0, type=RangeT([(10, 20)]), writable=True))
         ])
         self.assertTrue(d.get_vfo_cell().isWritable())
         # TODO more testing
@@ -208,7 +208,7 @@ class _TestRXDriver(ExportedState):
         return 0.0
 
     def get_usable_bandwidth(self):
-        return Range([(-1, 1)])
+        return RangeT([(-1, 1)])
     
     def close(self):
         pass
@@ -264,7 +264,7 @@ class _ShutdownDetector(gr.hier_block2, ExportedState):
         return 0.0
     
     def get_usable_bandwidth(self):
-        return Range([(-1, 1)])
+        return RangeT([(-1, 1)])
     
     def close(self):
         self.__dest.add(self.__key)

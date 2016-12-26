@@ -26,7 +26,7 @@ import osmosdr
 
 from shinysdr.devices import Device, IRXDriver, ITXDriver
 from shinysdr.signals import SignalType
-from shinysdr.types import Constant, Enum, Range, Reference
+from shinysdr.types import ConstantT, EnumT, RangeT, ReferenceT
 from shinysdr.values import Cell, ExportedState, LooseCell, exported_value, nullExportedState, setter
 
 
@@ -188,10 +188,10 @@ class _OsmoSDRTuning(object):
     def calc_usable_bandwidth(self, sample_rate):
         passband = sample_rate * (3/8)  # 3/4 of + and - halves
         if self.__profile.dc_offset:
-            epsilon = 1.0  # Range has only inclusive bounds, so we need a nonzero value.
-            return Range([(-passband, -epsilon), (epsilon, passband)])
+            epsilon = 1.0  # RangeT has only inclusive bounds, so we need a nonzero value.
+            return RangeT([(-passband, -epsilon), (epsilon, passband)])
         else:
-            return Range([(-passband, passband)])
+            return RangeT([(-passband, passband)])
     
     def set_block(self, value):
         self.__osmo_block = value
@@ -294,7 +294,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         self.__profile = profile
         self.__name = name
         self.__tuning = tuning
-        self.__antenna_type = Enum({unicode(name): unicode(name) for name in self.__source.get_antennas()}, strict=True)
+        self.__antenna_type = EnumT({unicode(name): unicode(name) for name in self.__source.get_antennas()}, strict=True)
         
         self.connect(self.__source, self)
         
@@ -344,7 +344,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     def set_correction_ppm(self, value):
         self.__tuning.set_correction_ppm(value)
     
-    @exported_value(type=Reference(), changes='never')
+    @exported_value(type=ReferenceT(), changes='never')
     def get_gains(self):
         return self.__gains
     
@@ -362,7 +362,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         self.__source.set_gain(float(value), ch)
     
     @exported_value(
-        type_fn=lambda self: bool if self.__profile.agc else Constant(False),
+        type_fn=lambda self: bool if self.__profile.agc else ConstantT(False),
         changes='this_setter',
         label='AGC on')
     def get_agc(self):
@@ -388,7 +388,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     
     # Note: dc_cancel has a 'manual' mode we are not yet exposing
     @exported_value(
-        type_fn=lambda self: bool if self.__profile.dc_cancel else Constant(False),
+        type_fn=lambda self: bool if self.__profile.dc_cancel else ConstantT(False),
         changes='this_setter',
         label='Use DC cancellation')
     def get_dc_cancel(self):
@@ -566,4 +566,4 @@ def convert_osmosdr_range(meta_range, add_zero=False, transform=lambda f: f, **k
         subranges.append((transform(single_range.start()), transform(single_range.stop())))
     if add_zero:
         subranges[0:0] = [(0, 0)]
-    return Range(subranges, **kwargs)
+    return RangeT(subranges, **kwargs)

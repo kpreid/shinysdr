@@ -35,7 +35,7 @@ from gnuradio.fft import logpwrfft
 
 from shinysdr.math import to_dB
 from shinysdr.signals import SignalType
-from shinysdr.types import BulkDataType, Range
+from shinysdr.types import BulkDataT, RangeT
 from shinysdr.values import ExportedState, LooseCell, StreamCell, exported_value, setter
 
 
@@ -263,10 +263,10 @@ class MonitorSink(gr.hier_block2, ExportedState):
         super(MonitorSink, self).state_def(callback)
         # TODO make this possible to be decorator style
         callback(StreamCell(self, 'fft',
-            type=BulkDataType(array_format='b', info_format='dff'),
+            type=BulkDataT(array_format='b', info_format='dff'),
             label='Spectrum'))
         callback(StreamCell(self, 'scope',
-            type=BulkDataType(array_format='f', info_format='d'),
+            type=BulkDataT(array_format='f', info_format='d'),
             label='Scope'))
 
     def __rebuild(self):
@@ -373,7 +373,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__input_center_freq = float(value) 
     
     @exported_value(
-        type=Range([(2, 4096)], logarithmic=True, integer=True),
+        type=RangeT([(2, 4096)], logarithmic=True, integer=True),
         changes='this_setter',
         label='Resolution',
         description='Frequency domain resolution; number of FFT bins.')
@@ -386,7 +386,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__rebuild()
         self.__connect()
 
-    @exported_value(type=Range([(1, 4096)], logarithmic=True, integer=True), changes='this_setter')
+    @exported_value(type=RangeT([(1, 4096)], logarithmic=True, integer=True), changes='this_setter')
     def get_time_length(self):
         return self.__time_length
 
@@ -397,7 +397,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__connect()
 
     @exported_value(
-        type=Range([(1, _maximum_fft_rate)],
+        type=RangeT([(1, _maximum_fft_rate)],
         logarithmic=True, integer=False),
         changes='this_setter',
         label='Rate',

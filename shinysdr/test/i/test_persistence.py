@@ -27,7 +27,7 @@ from twisted.trial import unittest
 
 from shinysdr.i.persistence import _PERSISTENCE_DELAY, PersistenceFileGlue, PersistenceChangeDetector
 from shinysdr.test.testutil import SubscriptionTester
-from shinysdr.values import ExportedState, Reference, exported_value, nullExportedState, setter
+from shinysdr.values import ExportedState, ReferenceT, exported_value, nullExportedState, setter
 
 
 class TestPersistenceFileGlue(unittest.TestCase):
@@ -126,7 +126,7 @@ class ValueAndBlockSpecimen(ExportedState):
         self.__value = value
         self.__block = block
     
-    @exported_value(type=Reference(), changes='never')
+    @exported_value(type=ReferenceT(), changes='never')
     def get_block(self):
         return self.__block
     
