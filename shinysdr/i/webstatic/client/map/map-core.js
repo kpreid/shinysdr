@@ -1477,13 +1477,13 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
     function addLayer(label, lconfig) {
       // TODO: type-check the contents
       label = String(label);
-      var featuresCell = lconfig.featuresCell;
-      var featureRenderer = lconfig.featureRenderer;
-      var clickHandler = lconfig.onclick || function noClick() {};
+      const featuresCell = lconfig.featuresCell;
+      const featureRenderer = lconfig.featureRenderer;
+      const clickHandler = lconfig.onclick || function noClick() {};
       // TODO: Instead of a "clickHandler" we should have a more general presentation-style system
-      var controlsCell = new ConstantCell(blockT, lconfig.controls || makeBlock({}));
+      const controlsCell = new ConstantCell(blockT, lconfig.controls || makeBlock({}));
       
-      var visibilityCell = new StorageCell(storage, Boolean, true, 'layer-visible.' + label);
+      const visibilityCell = new StorageCell(storage, Boolean, true, 'layer-visible.' + label);
       
       function redrawLayer() {
         if (visibilityCell.get()) {
@@ -1534,13 +1534,13 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
       if (arguments.length !== 2) {
         throw new Error('wrong call to addModeLayer');
       }
-      var receiversCell = new DerivedCell(anyT, scheduler, function (dirty) {
-        var radio = radioCell.depend(dirty);
-        var receivers = radio.receivers.depend(dirty);
+      const receiversCell = new DerivedCell(anyT, scheduler, function (dirty) {
+        const radio = radioCell.depend(dirty);
+        const receivers = radio.receivers.depend(dirty);
         receivers._reshapeNotice.listen(dirty);
-        var out = [];
+        const out = [];
         for (var key in receivers) {
-          var receiver = receivers[key].depend(dirty);
+          const receiver = receivers[key].depend(dirty);
           if (receiver.mode.depend(dirty) === filterMode) {
             out.push(receiver);
           }

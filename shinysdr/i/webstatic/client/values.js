@@ -269,7 +269,7 @@ define(['./events', './types'], function (events, types) {
   function cellPropOfBlockCell(scheduler, cell, prop, restrictToBlock) {
     // TODO: technically need a blockT-or-undefined type
     return new DerivedCell(restrictToBlock ? blockT : anyT, scheduler, function (dirty) {
-      var object = cell.depend(dirty);
+      const object = cell.depend(dirty);
       if (object === undefined) {
         return;
       }
@@ -277,7 +277,7 @@ define(['./events', './types'], function (events, types) {
         throw new Error('cellProp input neither an object nor undefined');
       }
       object._reshapeNotice.listen(dirty);
-      var propCell = object[prop];
+      const propCell = object[prop];
       if (!(propCell !== undefined && (!restrictToBlock || propCell.type === blockT))) {
         return undefined;
       }
@@ -379,7 +379,7 @@ define(['./events', './types'], function (events, types) {
     insert(rootCell);
     
     this.implementing = function (interfaceName) {
-      var cellsCell = gobi(interfaceName);
+      const cellsCell = gobi(interfaceName);
       return new DerivedCell(anyT, scheduler, function (dirty) {
         return cellsCell.depend(dirty).map(function (cell) {
           return cell.depend(dirty);

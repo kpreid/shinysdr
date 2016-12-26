@@ -21,27 +21,27 @@ define(['./map-core',
          events,   math,   network,   types,   values) => {
   'use strict';
   
-  var sin = Math.sin;
-  var cos = Math.cos;
+  const sin = Math.sin;
+  const cos = Math.cos;
   
-  var Clock = events.Clock;
-  var DerivedCell = values.DerivedCell;
-  var EnumT = types.EnumT;
-  var LocalReadCell = values.LocalReadCell;
-  var StorageCell = values.StorageCell;
-  var anyT = types.anyT;
-  var externalGet = network.externalGet;
-  var makeBlock = values.makeBlock;
-  var mod = math.mod;
-  var registerMapPlugin = mapCore.register;
-  var renderTrackFeature = mapCore.renderTrackFeature;
+  const Clock = events.Clock;
+  const DerivedCell = values.DerivedCell;
+  const EnumT = types.EnumT;
+  const LocalReadCell = values.LocalReadCell;
+  const StorageCell = values.StorageCell;
+  const anyT = types.anyT;
+  const externalGet = network.externalGet;
+  const makeBlock = values.makeBlock;
+  const mod = math.mod;
+  const registerMapPlugin = mapCore.register;
+  const renderTrackFeature = mapCore.renderTrackFeature;
   
-  var RADIANS_PER_DEGREE = Math.PI / 180;
+  const RADIANS_PER_DEGREE = Math.PI / 180;
   function dcos(x) { return cos(RADIANS_PER_DEGREE * x); }
   function dsin(x) { return sin(RADIANS_PER_DEGREE * x); }
   
   // TODO: Instead of using a blank icon, provide a way to skip the geometry entirely
-  var blank = 'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22/%3E';
+  const blank = 'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22/%3E';
   
   // TODO: only needs scheduler for DerivedCell. See if DerivedCell can be made to not need a scheduler.
   function makeStaticLayer(url, scheduler) {
@@ -121,24 +121,24 @@ define(['./map-core',
   }
   
   registerMapPlugin(function databaseLayerPlugin(mapPluginConfig) {
-    var addLayer = mapPluginConfig.addLayer;
-    var scheduler = mapPluginConfig.scheduler;
-    var db = mapPluginConfig.db;
-    var storage = mapPluginConfig.storage;
-    var radioCell = mapPluginConfig.radioCell;
-    var tune = mapPluginConfig.actions.tune;
+    const addLayer = mapPluginConfig.addLayer;
+    const scheduler = mapPluginConfig.scheduler;
+    const db = mapPluginConfig.db;
+    const storage = mapPluginConfig.storage;
+    const radioCell = mapPluginConfig.radioCell;
+    const tune = mapPluginConfig.actions.tune;
     
     // Condensed info about receivers to update DB layer.
     // TODO: Use info for more than the 'current' device.
-    var radioStateInfo = new DerivedCell(anyT, scheduler, function (dirty) {
-      var radio = radioCell.depend(dirty);
-      var device = radio.source.depend(dirty);
-      var center = device.freq.depend(dirty);
-      var track = deviceTrack(device, dirty);
+    const radioStateInfo = new DerivedCell(anyT, scheduler, function (dirty) {
+      const radio = radioCell.depend(dirty);
+      const device = radio.source.depend(dirty);
+      const center = device.freq.depend(dirty);
+      const track = deviceTrack(device, dirty);
       // TODO: Ask the "bandwidth" question directly rather than hardcoding logic here
-      var width = device.rx_driver.depend(dirty).output_type.depend(dirty).sample_rate;
-      var lower = center - width / 2;
-      var upper = center + width / 2;
+      const width = device.rx_driver.depend(dirty).output_type.depend(dirty).sample_rate;
+      const lower = center - width / 2;
+      const upper = center + width / 2;
     
       var receiving = new Map();
       var receivers = radio.receivers.depend(dirty);
@@ -215,17 +215,17 @@ define(['./map-core',
   });
   
   registerMapPlugin(function(mapPluginConfig) {
-    var addLayer = mapPluginConfig.addLayer;
-    var scheduler = mapPluginConfig.scheduler;
-    var storage = mapPluginConfig.storage;
-    var mapCamera = mapPluginConfig.mapCamera;
+    const addLayer = mapPluginConfig.addLayer;
+    const scheduler = mapPluginConfig.scheduler;
+    const storage = mapPluginConfig.storage;
+    const mapCamera = mapPluginConfig.mapCamera;
     
-    var graticuleTypeCell = new StorageCell(storage, new EnumT({
+    const graticuleTypeCell = new StorageCell(storage, new EnumT({
       'degrees': 'Degrees',
       'maidenhead': 'Maidenhead'
     }), 'degrees', 'graticuleType');
     
-    var smoothStep = 1;
+    const smoothStep = 1;
     
     function dasinClamp(x) {
       var deg = Math.asin(x) / RADIANS_PER_DEGREE;
@@ -438,11 +438,11 @@ define(['./map-core',
     
     // TODO make this test layer more cleaned up and enableable
     var emptyItem = {value: null, timestamp: null};
-    var motionTestTrackCell = new DerivedCell(anyT, scheduler, function(dirty) {
-      var t = slowClockForTests.convertToTimestampSeconds(slowClockForTests.depend(dirty));
-      var degreeSpeed = 10;
-      var angle = t * degreeSpeed;
-      var heading = angle + 90;
+    const motionTestTrackCell = new DerivedCell(anyT, scheduler, dirty => {
+      const t = slowClockForTests.convertToTimestampSeconds(slowClockForTests.depend(dirty));
+      const degreeSpeed = 10;
+      const angle = t * degreeSpeed;
+      const heading = angle + 90;
       //console.log('synthesizing track feature');
       return {
         latitude: {value: dcos(angle) * 10, timestamp: t},
@@ -498,9 +498,8 @@ define(['./map-core',
         ];
       }),
       featureRenderer: function testRenderer(feature, dirty) {
-        if (feature == 'TRACK') {
-          var f = renderTrackFeature(dirty, motionTestTrackCell, 'trackT feature');
-          return f;
+        if (feature === 'TRACK') {
+          return renderTrackFeature(dirty, motionTestTrackCell, 'trackT feature');
         } else {
           return feature;
         }
@@ -508,14 +507,14 @@ define(['./map-core',
     });
 
     // TODO make this test layer more cleaned up and enableable
-    var addDelFeature = {
+    const addDelFeature = {
       position: [10, 10],
       label: 'Blinker'
     };
     if (false) addLayer('Add/Delete Test', {
       featuresCell: new DerivedCell(anyT, scheduler, function(dirty) {
         // TODO: use explicitly slow clock for less redundant updates
-        var t = Math.floor(slowClockForTests.depend(dirty) / 1) * 1;
+        const t = Math.floor(slowClockForTests.depend(dirty) / 1) * 1;
         addDelFeature.label = 'Blinker ' + t;
         return t % 2 > 0 ? [addDelFeature] : [];
       }),

@@ -19,18 +19,18 @@ define(['../events', '../types', '../values', '../widget'],
        (    events,      types,      values,      widget) => {
   'use strict';
   
-  var Cell = values.Cell;
-  var Clock = events.Clock;
-  var CommandCell = values.CommandCell;
-  var ConstantCell = values.ConstantCell;
-  var DerivedCell = values.DerivedCell;
-  var EnumT = types.EnumT;
-  var NoticeT = types.NoticeT;
-  var RangeT = types.RangeT;
-  var TimestampT = types.TimestampT;
-  var trackT = types.trackT;
-  var createWidgetExt = widget.createWidgetExt;
-  var isSingleValued = types.isSingleValued;
+  const Cell = values.Cell;
+  const Clock = events.Clock;
+  const CommandCell = values.CommandCell;
+  const ConstantCell = values.ConstantCell;
+  const DerivedCell = values.DerivedCell;
+  const EnumT = types.EnumT;
+  const NoticeT = types.NoticeT;
+  const RangeT = types.RangeT;
+  const TimestampT = types.TimestampT;
+  const trackT = types.trackT;
+  const createWidgetExt = widget.createWidgetExt;
+  const isSingleValued = types.isSingleValued;
   
   var exports = Object.create(null);
 
@@ -180,16 +180,16 @@ define(['../events', '../types', '../values', '../widget'],
       throw new Error('cannot inherit from PickWidget');
     }
     
-    var targetCell = config.target;
-    var context = config.context;
-    var cellType = targetCell.type;
+    const targetCell = config.target;
+    const context = config.context;
+    const cellType = targetCell.type;
     
-    var ctorCell = new DerivedCell(types.anyT, config.scheduler, function (dirty) {
+    const ctorCell = new DerivedCell(types.anyT, config.scheduler, function (dirty) {
       if (cellType == types.blockT) {
-        var block = targetCell.depend(dirty);
+        const block = targetCell.depend(dirty);
       
         // TODO kludgy, need better representation of interfaces. At least pull this into a function itself.
-        var ctor;
+        let ctor;
         Object.getOwnPropertyNames(block).some(function (key) {
           var match = /^_implements_(.*)$/.exec(key);
           if (match) {
@@ -276,10 +276,10 @@ define(['../events', '../types', '../values', '../widget'],
   
   // widget for NoticeT type
   function Banner(config) {
-    var type = config.target.type;
-    var alwaysVisible = type instanceof NoticeT && type.alwaysVisible;  // TODO something better than instanceof...?
+    const type = config.target.type;
+    const alwaysVisible = type instanceof NoticeT && type.alwaysVisible;  // TODO something better than instanceof...?
     
-    var textNode = document.createTextNode('');
+    const textNode = document.createTextNode('');
     SimpleElementWidget.call(this, config, undefined,
       function buildPanel(container) {
         // TODO: use title in some way

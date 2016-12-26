@@ -15,13 +15,14 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./types', './values', './events'], function (types, values, events) {
+define(['./types', './values', './events'],
+       (   types,     values,     events) => {
   'use strict';
   
-  var BulkDataT = types.BulkDataT;
-  var Cell = values.Cell;
-  var CommandCell = values.CommandCell;
-  var typeFromDesc = types.typeFromDesc;
+  const BulkDataT = types.BulkDataT;
+  const Cell = values.Cell;
+  const CommandCell = values.CommandCell;
+  const typeFromDesc = types.typeFromDesc;
   
   var exports = {};
   

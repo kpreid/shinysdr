@@ -38,8 +38,8 @@ define(['types', 'values', 'events', 'widget', 'widgets', 'network', 'database',
   var clientStateStorage = new StorageNamespace(localStorage, 'shinysdr.client.');
   var clientState = new ClientStateObject(clientStateStorage, null);
   
-  var fftcell = new network.BulkDataCell('<dummy spectrum>', new types.BulkDataT('dff', 'b'));
-  var root = new ConstantCell(types.blockT, makeBlock({
+  const fftcell = new network.BulkDataCell('<dummy spectrum>', new types.BulkDataT('dff', 'b'));
+  const root = new ConstantCell(types.blockT, makeBlock({
     unpaused: new StorageCell(clientStateStorage, Boolean, true, '_test_unpaused'),
     source: new ConstantCell(types.blockT, makeBlock({
       freq: new ConstantCell(Number, 0),

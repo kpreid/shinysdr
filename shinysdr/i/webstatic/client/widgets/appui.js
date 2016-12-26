@@ -205,8 +205,8 @@ define(['./basic', './spectrum',
           gainModes['stages'] = 'Stages';
         }
         Object.freeze(gainModes);
-        var gainModeType = new EnumT(gainModes);
-        var gainModeCell = new LocalCell(gainModeType, block.agc.get() ? 'auto' : 'single');
+        const gainModeT = new EnumT(gainModes);
+        const gainModeCell = new LocalCell(gainModeT, block.agc.get() ? 'auto' : 'single');
 
         var gainPanel = getAppend().appendChild(document.createElement('div'));
         //gainPanel.appendChild(document.createTextNode('Gain '));
@@ -307,7 +307,7 @@ define(['./basic', './spectrum',
       createWidgetExt(config.context, Knob, knobContainer, block.rec_freq);
       ignore('rec_freq');
       
-      var outOfRangeNotice = new DerivedCell(NoticeT, config.scheduler, function(dirty) {
+      const outOfRangeNotice = new DerivedCell(NoticeT, config.scheduler, function(dirty) {
         return block.is_valid.depend(dirty)
           ? ''
           : 'Outside of device bandwidth; disabled.';
