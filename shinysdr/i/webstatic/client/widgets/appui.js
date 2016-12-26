@@ -24,12 +24,12 @@ define(['./basic', './spectrum',
   const Banner = widgets_basic.Banner;
   const Block = widgets_basic.Block;
   const DerivedCell = values.DerivedCell;
-  const Enum = types.Enum;
+  const EnumT = types.EnumT;
   const Knob = widgets_basic.Knob;
   const LinSlider = widgets_basic.LinSlider;
   const LocalCell = values.LocalCell;
   const Meter = widgets_basic.Meter;
-  const Notice = types.Notice;
+  const NoticeT = types.NoticeT;
   const NumberWidget = widgets_basic.Number;
   const PickWidget = widgets_basic.PickWidget;
   const Radio = widgets_basic.Radio;
@@ -205,7 +205,7 @@ define(['./basic', './spectrum',
           gainModes['stages'] = 'Stages';
         }
         Object.freeze(gainModes);
-        var gainModeType = new Enum(gainModes);
+        var gainModeType = new EnumT(gainModes);
         var gainModeCell = new LocalCell(gainModeType, block.agc.get() ? 'auto' : 'single');
 
         var gainPanel = getAppend().appendChild(document.createElement('div'));
@@ -307,7 +307,7 @@ define(['./basic', './spectrum',
       createWidgetExt(config.context, Knob, knobContainer, block.rec_freq);
       ignore('rec_freq');
       
-      var outOfRangeNotice = new DerivedCell(Notice, config.scheduler, function(dirty) {
+      var outOfRangeNotice = new DerivedCell(NoticeT, config.scheduler, function(dirty) {
         return block.is_valid.depend(dirty)
           ? ''
           : 'Outside of device bandwidth; disabled.';

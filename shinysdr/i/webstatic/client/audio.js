@@ -19,13 +19,13 @@ define(['./events', './network', './types', './values'],
        (   events,     network,     types,     values) => {
   'use strict';
   
-  const BulkDataType = types.BulkDataType;
+  const BulkDataT = types.BulkDataT;
   const Cell = values.Cell;
   const ConstantCell = values.ConstantCell;
-  const Enum = types.Enum;
+  const EnumT = types.EnumT;
   const LocalCell = values.LocalCell;
   const LocalReadCell = values.LocalReadCell;
-  const Notice = types.Notice;
+  const NoticeT = types.NoticeT;
   const Notifier = events.Notifier;
   const Neverfier = events.Neverfier;
   const StorageCell = values.StorageCell;
@@ -96,11 +96,11 @@ define(['./events', './network', './types', './values'],
       errorTime = Date.now() + 1000;
     }
     var info = makeBlock({
-      buffered: new LocalReadCell(new types.Range([[0, 2]], false, false), 0),
+      buffered: new LocalReadCell(new types.RangeT([[0, 2]], false, false), 0),
       target: new LocalReadCell(String, ''),  // TODO should be numeric w/ unit
-      error: new LocalReadCell(new Notice(true), ''),
+      error: new LocalReadCell(new NoticeT(true), ''),
       //averageSkew: new LocalReadCell(Number, 0),
-      monitor: new ConstantCell(types.block, analyserAdapter)
+      monitor: new ConstantCell(types.blockT, analyserAdapter)
     });
     function updateStatus() {
       // TODO: I think we are mixing up per-channel and total samples here  (queueSampleCount counts both channels individually)
@@ -407,7 +407,7 @@ define(['./events', './network', './types', './values'],
     }});
     
     // Output cell
-    this.fft = new Cell(new BulkDataType('dff', 'b'));  // TODO BulkDataType really isn't properly involved here
+    this.fft = new Cell(new BulkDataT('dff', 'b'));  // TODO BulkDataT really isn't properly involved here
     this.fft.get = function () {
       return lastValue;
     };
@@ -420,7 +420,7 @@ define(['./events', './network', './types', './values'],
     // Other elements expected by Monitor widget
     Object.defineProperty(this, '_implements_shinysdr.i.blocks.IMonitor', {enumerable: false});
     this.freq_resolution = new ConstantCell(Number, length);
-    this.signal_type = new ConstantCell(types.any, {kind: 'USB', sample_rate: effectiveSampleRate});
+    this.signal_type = new ConstantCell(types.anyT, {kind: 'USB', sample_rate: effectiveSampleRate});
   }
   Object.defineProperty(AudioAnalyserAdapter.prototype, '_reshapeNotice', {value: new Neverfier()});
   Object.freeze(AudioAnalyserAdapter.prototype);
@@ -505,7 +505,7 @@ define(['./events', './network', './types', './values'],
     }});
     
     // Output cell
-    this.scope = new Cell(new BulkDataType('d', 'f'));  // TODO BulkDataType really isn't properly involved here
+    this.scope = new Cell(new BulkDataT('d', 'f'));  // TODO BulkDataT really isn't properly involved here
     this.scope.get = function () {
       return lastValue;
     };
@@ -517,7 +517,7 @@ define(['./events', './network', './types', './values'],
     // Other elements expected by Monitor widget
     Object.defineProperty(this, '_implements_shinysdr.i.blocks.IMonitor', {enumerable: false});
     this.freq_resolution = new ConstantCell(Number, length);
-    this.signal_type = new ConstantCell(types.any, {kind: 'USB', sample_rate: audioContext.sampleRate});
+    this.signal_type = new ConstantCell(types.anyT, {kind: 'USB', sample_rate: audioContext.sampleRate});
   }
   Object.defineProperty(AudioScopeAdapter.prototype, '_reshapeNotice', {value: new Neverfier()});
   Object.freeze(AudioScopeAdapter.prototype);
@@ -543,7 +543,7 @@ define(['./events', './network', './types', './values'],
   function MediaDeviceSelector(mediaDevices, storage) {
     let shapeNotifier = new Notifier();
     let selectorCell = null;  // set by enumerate()
-    let errorCell = this.error = new LocalReadCell(new Notice(false), '');
+    let errorCell = this.error = new LocalReadCell(new NoticeT(false), '');
     
     Object.defineProperty(this, '_reshapeNotice', {value: shapeNotifier});
     
@@ -560,7 +560,7 @@ define(['./events', './network', './types', './values'],
           // TODO use deviceInfo.groupId as part of enum sort key
         });
         // TODO: StorageCell isn't actually meant to be re-created in this fashion and will leak stuff. Fix StorageCell.
-        this.device = selectorCell = new StorageCell(storage, new Enum(deviceEnumTable), defaultDeviceId, 'device');
+        this.device = selectorCell = new StorageCell(storage, new EnumT(deviceEnumTable), defaultDeviceId, 'device');
         shapeNotifier.notify();
         errorCell._update('');
       }, e => {
@@ -577,7 +577,7 @@ define(['./events', './network', './types', './values'],
     const output = audioContext.createGain();  // dummy node to be switchable
     
     makeBlock(this);
-    let errorCell = this.error = new LocalReadCell(new Notice(false), '');
+    let errorCell = this.error = new LocalReadCell(new NoticeT(false), '');
     Object.defineProperty(this, 'source', {value: output});
     
     let previousSource = null;
@@ -627,8 +627,8 @@ define(['./events', './network', './types', './values'],
     
     // TODO: this is not a good block/cell structure, we are exposing our implementation organization.
     makeBlock(this);
-    this.selector = new ConstantCell(types.block, mediaDeviceSelector);
-    this.opener = new ConstantCell(types.block, userMediaOpener);
+    this.selector = new ConstantCell(types.blockT, mediaDeviceSelector);
+    this.opener = new ConstantCell(types.blockT, userMediaOpener);
     Object.defineProperty(this, 'source', {value: userMediaOpener.source});
   }
   exports.UserMediaSelector = UserMediaSelector;

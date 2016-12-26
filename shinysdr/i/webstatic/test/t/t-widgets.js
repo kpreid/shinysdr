@@ -109,21 +109,21 @@ define(['/test/jasmine-glue.js',
       }
     
       // TODO add tests of the cell-is-read-only case.
-      it('should pick for Block', () => t(widgets.Block, types.block, makeBlock({})));
+      it('should pick for Block', () => t(widgets.Block, types.blockT, makeBlock({})));
       it('should pick for Boolean', () => t(widgets.Toggle, Boolean, false));
-      it('should pick for Enum', () => t(widgets.Select, new types.Enum({}), 0));
-      it('should pick for Notice', () => t(widgets.Banner, new types.Notice(), ''));
+      it('should pick for EnumT', () => t(widgets.Select, new types.EnumT({}), 0));
+      it('should pick for NoticeT', () => t(widgets.Banner, new types.NoticeT(), ''));
       it('should pick for Number', () => t(widgets.SmallKnob, Number, 0));
-      //TODO it('should pick for Range', () => t(widgets.LinSlider, new types.Range([(0, 0)]), 0));
+      //TODO it('should pick for RangeT', () => t(widgets.LinSlider, new types.RangeT([(0, 0)]), 0));
       it('should pick for String', () => t(widgets.TextBox, String, ''));
-      it('should pick for Timestamp', () => t(widgets.TimestampWidget, new types.Timestamp(), 0));
-      //TODO it('should pick for Track', () => t(widgets.TrackWidget, types.Track, {}));
+      it('should pick for TimestampT', () => t(widgets.TimestampWidget, new types.TimestampT(), 0));
+      //TODO it('should pick for trackT', () => t(widgets.TrackWidget, types.trackT, {}));
 
       it('should pick for unknown', () => t(widgets.Generic, function sometype() {}, 1));
 
       // TODO: PickWidget used to be PickBlock. Add tests for its cell-type-based selection.
       it('should default to Block', function () {
-        const cell = new LocalCell(types.block, makeBlock({}));
+        const cell = new LocalCell(types.blockT, makeBlock({}));
         widget = new widgets.PickWidget(mockWidgetConfig(null, cell));
         expect(Object.getPrototypeOf(widget)).toBe(widgets.Block.prototype);
       });
@@ -135,7 +135,7 @@ define(['/test/jasmine-glue.js',
 
         const block = makeBlock({});
         Object.defineProperty(block, '_implements_Foo', {value: true});  // non-enum
-        const cell = new LocalCell(types.block, block);
+        const cell = new LocalCell(types.blockT, block);
         const config = mockWidgetConfig(null, cell);
         config.context.widgets['interface:Foo'] = TestWidget;
         widget = new widgets.PickWidget(config);
@@ -145,7 +145,7 @@ define(['/test/jasmine-glue.js',
   
     describe('Knob', function () {
       it('should hold a negative zero', function () {
-        const cell = new LocalCell(types.any, 0);
+        const cell = new LocalCell(types.anyT, 0);
         widget = new widgets.Knob(mockWidgetConfig(null, cell));
       
         document.body.appendChild(widget.element);
@@ -165,8 +165,8 @@ define(['/test/jasmine-glue.js',
     });
   
     describe('SmallKnob', function () {
-      it('should set limits from a continuous Range type', function () {
-        const cell = new LocalCell(new types.Range([[1, 2]], false, false), 0);
+      it('should set limits from a continuous RangeT type', function () {
+        const cell = new LocalCell(new types.RangeT([[1, 2]], false, false), 0);
         widget = new widgets.SmallKnob(mockWidgetConfig(null, cell));
         const input = widget.element.querySelector('input');
         expect(input.min).toBe('1');
@@ -174,8 +174,8 @@ define(['/test/jasmine-glue.js',
         expect(input.step).toBe('any');
       });
 
-      it('should set limits from an integer Range type', function () {
-        const cell = new LocalCell(new types.Range([[1, 2]], false, true), 0);
+      it('should set limits from an integer RangeT type', function () {
+        const cell = new LocalCell(new types.RangeT([[1, 2]], false, true), 0);
         widget = new widgets.SmallKnob(mockWidgetConfig(null, cell));
         const input = widget.element.querySelector('input');
         expect(input.min).toBe('1');
@@ -188,11 +188,11 @@ define(['/test/jasmine-glue.js',
       it('should be successfully created', function () {
         // stub test to exercise the code because it's currently not in the default ui. Should have more tests.
       
-        const cell = new LocalCell(types.any, [{freq:0, rate:1}, []]);
+        const cell = new LocalCell(types.anyT, [{freq:0, rate:1}, []]);
         cell.subscribe = function() {}; // TODO implement
-        const root = new values.ConstantCell(types.block, values.makeBlock({
+        const root = new values.ConstantCell(types.blockT, values.makeBlock({
           scope: cell,
-          parameters: new values.ConstantCell(types.block,
+          parameters: new values.ConstantCell(types.blockT,
             new widgets_scope.ScopeParameters(sessionStorage)),
         }));
       
@@ -205,7 +205,7 @@ define(['/test/jasmine-glue.js',
   
     describe('Radio', function () {
       it('should use the metadata', function () {
-        const cell = new LocalCell(new types.Enum({
+        const cell = new LocalCell(new types.EnumT({
           'a': {'label': 'A', 'description': 'ALPHA', 'sort_key': '3'},
           'b': {'label': 'B', 'description': 'BETA', 'sort_key': '2'},
           'c': {'label': 'C', 'description': 'GAMMA', 'sort_key': '1'}
@@ -223,15 +223,15 @@ define(['/test/jasmine-glue.js',
       
       function makeStubTarget() {
         // TODO stop needing this boilerplate, somehow.
-        return new ConstantCell(types.block, makeBlock({
-          source: new ConstantCell(types.block, makeBlock({
+        return new ConstantCell(types.blockT, makeBlock({
+          source: new ConstantCell(types.blockT, makeBlock({
             freq: new ConstantCell(Number, 0),
-            rx_driver: new ConstantCell(types.block, makeBlock({
-              output_type: new ConstantCell(types.any, {sample_rate: 1})
+            rx_driver: new ConstantCell(types.blockT, makeBlock({
+              output_type: new ConstantCell(types.anyT, {sample_rate: 1})
             })),
-            components: new ConstantCell(types.block, makeBlock({}))
+            components: new ConstantCell(types.blockT, makeBlock({}))
           })),
-          receivers: new ConstantCell(types.block, makeBlock({
+          receivers: new ConstantCell(types.blockT, makeBlock({
           }))
         }));
       }

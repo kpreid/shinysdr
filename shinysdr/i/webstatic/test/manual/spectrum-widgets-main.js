@@ -38,19 +38,19 @@ define(['types', 'values', 'events', 'widget', 'widgets', 'network', 'database',
   var clientStateStorage = new StorageNamespace(localStorage, 'shinysdr.client.');
   var clientState = new ClientStateObject(clientStateStorage, null);
   
-  var fftcell = new network.BulkDataCell('<dummy spectrum>', new types.BulkDataType('dff', 'b'));
-  var root = new ConstantCell(types.block, makeBlock({
+  var fftcell = new network.BulkDataCell('<dummy spectrum>', new types.BulkDataT('dff', 'b'));
+  var root = new ConstantCell(types.blockT, makeBlock({
     unpaused: new StorageCell(clientStateStorage, Boolean, true, '_test_unpaused'),
-    source: new ConstantCell(types.block, makeBlock({
+    source: new ConstantCell(types.blockT, makeBlock({
       freq: new ConstantCell(Number, 0),
     })),
-    receivers: new ConstantCell(types.block, makeBlock({})),
-    client: new ConstantCell(types.block, clientState),
+    receivers: new ConstantCell(types.blockT, makeBlock({})),
+    client: new ConstantCell(types.blockT, clientState),
     //input_rate: new ConstantCell(Number, sampleRate),
-    monitor: new ConstantCell(types.block, makeBlock({
+    monitor: new ConstantCell(types.blockT, makeBlock({
       fft: fftcell,
       freq_resolution: new ConstantCell(Number, binCount),
-      signal_type: new ConstantCell(types.any, {kind: 'IQ', sample_rate: sampleRate})
+      signal_type: new ConstantCell(types.anyT, {kind: 'IQ', sample_rate: sampleRate})
     }))
   }));
   

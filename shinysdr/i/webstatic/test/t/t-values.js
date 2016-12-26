@@ -34,7 +34,7 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
   
     describe('LocalCell', function () {
       it('should not notify immediately after its creation', done => {
-        const cell = new values.LocalCell(types.any, 'foo');
+        const cell = new values.LocalCell(types.anyT, 'foo');
         const l = newListener(s);
         cell.n.listen(l);
         l.expectNotCalled(done);
@@ -109,9 +109,9 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
     describe('DerivedCell', function () {
       let base, f, calls;
       beforeEach(function () {
-        base = new values.LocalCell(types.any, 1);
+        base = new values.LocalCell(types.anyT, 1);
         calls = 0;
-        f = new values.DerivedCell(types.any, s, function (dirty) {
+        f = new values.DerivedCell(types.anyT, s, function (dirty) {
           calls++;
           return base.depend(dirty) + 1;
         });
@@ -151,9 +151,9 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
     describe('Index', function () {
       let structure;
       beforeEach(function () {
-        structure = new values.LocalCell(types.block, values.makeBlock({
-          foo: new values.LocalCell(types.block, values.makeBlock({})),
-          bar: new values.LocalCell(types.block, values.makeBlock({}))
+        structure = new values.LocalCell(types.blockT, values.makeBlock({
+          foo: new values.LocalCell(types.blockT, values.makeBlock({})),
+          bar: new values.LocalCell(types.blockT, values.makeBlock({}))
         }));
         Object.defineProperty(structure.get().foo.get(), '_implements_Foo', {value:true});
       });
@@ -208,7 +208,7 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
         };
         Object.defineProperty(dynamic, '_reshapeNotice', {value: new Notifier()});
       
-        const index = new values.Index(s, new values.LocalCell(types.block, dynamic));
+        const index = new values.Index(s, new values.LocalCell(types.blockT, dynamic));
         const resultsCell = index.implementing('Foo');
         const l = newListener(s);
         resultsCell.n.listen(l);

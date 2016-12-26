@@ -20,7 +20,7 @@
 define(['./types', './values', './widget'], function (types, values, widget) {
   'use strict';
 
-  var any = types.any;
+  var anyT = types.anyT;
   var ConstantCell = values.ConstantCell;
   var createWidgetExt = widget.createWidgetExt;
 

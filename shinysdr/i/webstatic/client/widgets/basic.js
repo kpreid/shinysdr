@@ -24,11 +24,11 @@ define(['../events', '../types', '../values', '../widget'],
   var CommandCell = values.CommandCell;
   var ConstantCell = values.ConstantCell;
   var DerivedCell = values.DerivedCell;
-  var Enum = types.Enum;
-  var Notice = types.Notice;
-  var Range = types.Range;
-  var Timestamp = types.Timestamp;
-  var Track = types.Track;
+  var EnumT = types.EnumT;
+  var NoticeT = types.NoticeT;
+  var RangeT = types.RangeT;
+  var TimestampT = types.TimestampT;
+  var trackT = types.trackT;
   var createWidgetExt = widget.createWidgetExt;
   var isSingleValued = types.isSingleValued;
   
@@ -80,7 +80,7 @@ define(['../events', '../types', '../values', '../widget'],
           wEl.id = config.idPrefix + name;
         }
       } else if (name === null) {
-        targetCell = new ConstantCell(types.block, block);
+        targetCell = new ConstantCell(types.blockT, block);
       } else if ('get' in name) {  // sanity check, not to be used as type discrimination
         targetCell = name;
       } else {
@@ -184,8 +184,8 @@ define(['../events', '../types', '../values', '../widget'],
     var context = config.context;
     var cellType = targetCell.type;
     
-    var ctorCell = new DerivedCell(types.any, config.scheduler, function (dirty) {
-      if (cellType == types.block) {
+    var ctorCell = new DerivedCell(types.anyT, config.scheduler, function (dirty) {
+      if (cellType == types.blockT) {
         var block = targetCell.depend(dirty);
       
         // TODO kludgy, need better representation of interfaces. At least pull this into a function itself.
@@ -203,7 +203,7 @@ define(['../events', '../types', '../values', '../widget'],
         return ctor || Block;
         
       // TODO: Figure out how to have a dispatch table for this.
-      } else if (cellType instanceof Range) {
+      } else if (cellType instanceof RangeT) {
         if (targetCell.set) {
           return cellType.logarithmic ? LogSlider : LinSlider;
         } else {
@@ -211,18 +211,18 @@ define(['../events', '../types', '../values', '../widget'],
         }
       } else if (cellType === Number) {
         return SmallKnob;
-      } else if (cellType instanceof Enum) {
-        // Our Enum-type widgets are Radio and Select; Select is a better default for arbitrarily-long lists.
+      } else if (cellType instanceof EnumT) {
+        // Our EnumT-type widgets are Radio and Select; Select is a better default for arbitrarily-long lists.
         return Select;
       } else if (cellType === Boolean) {
         return Toggle;
       } else if (cellType === String && targetCell.set) {
         return TextBox;
-      } else if (cellType === Track) {
+      } else if (cellType === trackT) {
         return TrackWidget;
-      } else if (cellType instanceof Notice) {
+      } else if (cellType instanceof NoticeT) {
         return Banner;
-      } else if (cellType instanceof Timestamp) {
+      } else if (cellType instanceof TimestampT) {
         return TimestampWidget;
       } else if (targetCell instanceof CommandCell) {
         return CommandButton;
@@ -274,10 +274,10 @@ define(['../events', '../types', '../values', '../widget'],
   }
   exports.Generic = Generic;
   
-  // widget for Notice type
+  // widget for NoticeT type
   function Banner(config) {
     var type = config.target.type;
-    var alwaysVisible = type instanceof Notice && type.alwaysVisible;  // TODO something better than instanceof...?
+    var alwaysVisible = type instanceof NoticeT && type.alwaysVisible;  // TODO something better than instanceof...?
     
     var textNode = document.createTextNode('');
     SimpleElementWidget.call(this, config, undefined,
@@ -306,7 +306,7 @@ define(['../events', '../types', '../values', '../widget'],
   }
   exports.Banner = Banner;
   
-  // widget for Timestamp type
+  // widget for TimestampT type
   var timestampUpdateClock = new Clock(1);
   function TimestampWidget(config) {
     SimpleElementWidget.call(this, config, undefined,
@@ -387,9 +387,9 @@ define(['../events', '../types', '../values', '../widget'],
     const writable = 'set' in target; // TODO better type protocol
 
     const type = target.type;
-    // TODO: use integer flag of Range, w decimal points?
+    // TODO: use integer flag of RangeT, w decimal points?
     function clamp(value, direction) {
-      if (type instanceof types.Range) {  // TODO: better type protocol
+      if (type instanceof types.RangeT) {  // TODO: better type protocol
         return type.round(value, direction);
       } else {
         return value;
@@ -507,7 +507,7 @@ define(['../events', '../types', '../values', '../widget'],
           if (negative) { value = -value; }
           var currentDigitValue;
           if (scale === 1) {
-            // When setting last digit, clear any hidden fractional digits as well
+            // When setting last digit, clear anyT hidden fractional digits as well
             currentDigitValue = (value / scale) % 10;
           } else {
             currentDigitValue = Math.floor(value / scale) % 10;
@@ -598,7 +598,7 @@ define(['../events', '../types', '../values', '../widget'],
       },
       function initSmallKnob(input, target) {
         var type = target.type;
-        if (type instanceof types.Range) {
+        if (type instanceof types.RangeT) {
           input.min = type.getMin();
           input.max = type.getMax();
           input.step = (type.integer && !type.logarithmic) ? 1 : 'any';
@@ -607,7 +607,7 @@ define(['../events', '../types', '../values', '../widget'],
         input.readOnly = !target.set;
         
         input.addEventListener('input', function(event) {
-          if (type instanceof types.Range) {
+          if (type instanceof types.RangeT) {
             target.set(type.round(input.valueAsNumber, 0));
           } else {
             target.set(input.valueAsNumber);
@@ -653,7 +653,7 @@ define(['../events', '../types', '../values', '../widget'],
         var format = function(n) { return n.toFixed(2); };
 
         var type = target.type;
-        if (type instanceof types.Range) {
+        if (type instanceof types.RangeT) {
           slider.min = getT(type.getMin());
           slider.max = getT(type.getMax());
           slider.step = (type.integer) ? 1 : 'any';
@@ -666,7 +666,7 @@ define(['../events', '../types', '../values', '../widget'],
         slider.disabled = !target.set;
         
         function listener(event) {
-          if (type instanceof types.Range) {
+          if (type instanceof types.RangeT) {
             target.set(type.round(setT(slider.valueAsNumber), 0));
           } else {
             target.set(setT(slider.valueAsNumber));
@@ -720,7 +720,7 @@ define(['../events', '../types', '../values', '../widget'],
         var format = function(n) { return n.toFixed(2); };
         
         var type = target.type;
-        if (type instanceof types.Range) {
+        if (type instanceof types.RangeT) {
           meter.min = type.getMin();
           meter.max = type.getMax();
           if (type.integer) {
@@ -764,7 +764,7 @@ define(['../events', '../types', '../values', '../widget'],
   // Create children of 'container' according to target's enum type, unless appropriate children already exist.
   function initEnumElements(container, selector, target, createElement) {
     var type = target.type;
-    if (!(type instanceof types.Enum)) type = null;
+    if (!(type instanceof types.EnumT)) type = null;
     
     var seen = Object.create(null);
     Array.prototype.forEach.call(container.querySelectorAll(selector), function (element) {

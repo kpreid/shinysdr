@@ -20,8 +20,8 @@ define(['./events', './types'], function (events, types) {
   
   const Neverfier = events.Neverfier;
   const Notifier = events.Notifier;
-  const any = types.any;
-  const block = types.block;
+  const anyT = types.anyT;
+  const blockT = types.blockT;
   
   const exports = Object.create(null);
 
@@ -267,8 +267,8 @@ define(['./events', './types'], function (events, types) {
   // Creates a cell whose value is cell.get()[prop].get() if that expression is valid and undefined otherwise.
   // TODO: Write tests of this because it is hairy.
   function cellPropOfBlockCell(scheduler, cell, prop, restrictToBlock) {
-    // TODO: technically need a block-or-undefined type
-    return new DerivedCell(restrictToBlock ? block : any, scheduler, function (dirty) {
+    // TODO: technically need a blockT-or-undefined type
+    return new DerivedCell(restrictToBlock ? blockT : anyT, scheduler, function (dirty) {
       var object = cell.depend(dirty);
       if (object === undefined) {
         return;
@@ -278,7 +278,7 @@ define(['./events', './types'], function (events, types) {
       }
       object._reshapeNotice.listen(dirty);
       var propCell = object[prop];
-      if (!(propCell !== undefined && (!restrictToBlock || propCell.type === block))) {
+      if (!(propCell !== undefined && (!restrictToBlock || propCell.type === blockT))) {
         return undefined;
       }
       return propCell.depend(dirty);
@@ -287,7 +287,7 @@ define(['./events', './types'], function (events, types) {
   exports.cellPropOfBlockCell = cellPropOfBlockCell;
   
   function cellPropOfBlock(scheduler, obj, prop, restrictToBlock) {
-    return cellPropOfBlockCell(scheduler, new ConstantCell(block, obj), prop, restrictToBlock);
+    return cellPropOfBlockCell(scheduler, new ConstantCell(blockT, obj), prop, restrictToBlock);
   }
   exports.cellPropOfBlock = cellPropOfBlock;
   
@@ -299,7 +299,7 @@ define(['./events', './types'], function (events, types) {
     function gobi(interfaceName) {
       return (objectsByInterface[interfaceName] ||
         (objectsByInterface[interfaceName] =
-          new LocalReadCell(any, Object.freeze([]))));
+          new LocalReadCell(anyT, Object.freeze([]))));
     }
     
     function flush(interfaceName) {
@@ -318,7 +318,7 @@ define(['./events', './types'], function (events, types) {
       if (cells.indexOf(cell) !== -1) {
         return;
       }
-      if (cell.type !== block) {
+      if (cell.type !== blockT) {
         return;
       }
       
@@ -355,7 +355,7 @@ define(['./events', './types'], function (events, types) {
           // TODO: centralize this is-a-cell test and any others like it
           if (!(childCell !== null && typeof childCell == 'object' && 'get' in childCell)) {
             if (typeof childCell === 'function') {
-              // allow methods. TODO revisit what the contract of a block is
+              // allow methods. TODO revisit what the contract of a blockT is
               continue;
             }
             console.error('Unexpected non-cell', childCell, 'in', object);
@@ -380,7 +380,7 @@ define(['./events', './types'], function (events, types) {
     
     this.implementing = function (interfaceName) {
       var cellsCell = gobi(interfaceName);
-      return new DerivedCell(any, scheduler, function (dirty) {
+      return new DerivedCell(anyT, scheduler, function (dirty) {
         return cellsCell.depend(dirty).map(function (cell) {
           return cell.depend(dirty);
         }).filter(function (block) {
@@ -392,7 +392,7 @@ define(['./events', './types'], function (events, types) {
   }
   exports.Index = Index;
   
-  // Turn the provided object into one which is like a remote object (called block for legacy reasons) and return it.
+  // Turn the provided object into one which is like a remote object (called blockT for legacy reasons) and return it.
   function makeBlock(obj) {
     Object.defineProperty(obj, '_reshapeNotice', {value: new Neverfier()});
     return obj;

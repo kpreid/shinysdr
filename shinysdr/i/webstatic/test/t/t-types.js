@@ -21,16 +21,16 @@ define(['/test/jasmine-glue.js', 'types'], (jasmineGlue, types) => {
   const {describe, expect, it} = jasmineGlue.ji;
   
   describe('types', function () {
-    describe('Enum', function () {
-      const Enum = types.Enum;
+    describe('EnumT', function () {
+      const EnumT = types.EnumT;
     
       it('reports isSingleValued correctly', function () {
-        expect(new Enum({'a': 'aa', 'b': 'bb'}).isSingleValued()).toBe(false);
-        expect(new Enum({'a': 'aa'}).isSingleValued()).toBe(true);
+        expect(new EnumT({'a': 'aa', 'b': 'bb'}).isSingleValued()).toBe(false);
+        expect(new EnumT({'a': 'aa'}).isSingleValued()).toBe(true);
       });
     
       it('preserves metadata', function () {
-        expect(new Enum({'a': {
+        expect(new EnumT({'a': {
           'label': 'b',
           'description': 'c',
           'sort_key': 'd'
@@ -42,7 +42,7 @@ define(['/test/jasmine-glue.js', 'types'], (jasmineGlue, types) => {
       });
     
       it('expands metadata', function () {
-        expect(new Enum({'a': 'b'}).getTable()['a']).toEqual({
+        expect(new EnumT({'a': 'b'}).getTable()['a']).toEqual({
           'label': 'b',
           'description': null,
           'sort_key': 'a'
@@ -50,11 +50,11 @@ define(['/test/jasmine-glue.js', 'types'], (jasmineGlue, types) => {
       });
     });
   
-    describe('Range', function () {
-      const Range = types.Range;
+    describe('RangeT', function () {
+      const RangeT = types.RangeT;
       
       function frange(subranges) {
-        return new Range(subranges, false, false);
+        return new RangeT(subranges, false, false);
       }
       it('should round at the ends of simple ranges', function () {
         expect(frange([[1, 3]]).round(0, -1)).toBe(1);

@@ -24,9 +24,9 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
   
   const Block = widgets_basic.Block;
   const DerivedCell = values.DerivedCell;
-  const Enum = types.Enum;
+  const EnumT = types.EnumT;
   const Radio = widgets_basic.Radio;
-  const Range = types.Range;
+  const RangeT = types.RangeT;
   const StorageCell = values.StorageCell;
   const dB = math.dB;
   const makeBlock = values.makeBlock;
@@ -40,7 +40,7 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
     }
     return makeBlock({
       paused: sc('paused', Boolean, false),
-      axes: sc('axes', new Enum({
+      axes: sc('axes', new EnumT({
         't,ch1,1': 'AT',
         't,ch2,1': 'BT',
         'ch1,ch2,t': 'XY',
@@ -48,13 +48,13 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
         '1-2,1+2,t': 'Stereo'
       }), 't,ch1,1'),
       draw_line: sc('draw_line', Boolean, false),  // TODO better name
-      history_samples: sc('history_samples', new Range([[256, 256], [512, 512], [1024, 1024], [2048, 2048], [4096, 4096], [8192, 8192], [16384, 16384]/*, [32768, 32768], [65536, 65536]*/], true, true), 8192),
-      time_scale: sc('time_scale', new Range([[128, 16384]], false, false), 1024),
-      gain: sc('gain', new Range([[-50, 50]], false, false), 0),
-      intensity: sc('intensity', new Range([[1.01/256, 10.0]], true, false), 1.0),
-      focus_falloff: sc('focus_falloff', new Range([[0.1, 3]], false, false), 0.8),
-      persistence_gamma: sc('persistence_gamma', new Range([[1, 100]], true, false), 10.0),
-      invgamma: sc('invgamma', new Range([[0.5, 2]], false, false), 1.0)
+      history_samples: sc('history_samples', new RangeT([[256, 256], [512, 512], [1024, 1024], [2048, 2048], [4096, 4096], [8192, 8192], [16384, 16384]/*, [32768, 32768], [65536, 65536]*/], true, true), 8192),
+      time_scale: sc('time_scale', new RangeT([[128, 16384]], false, false), 1024),
+      gain: sc('gain', new RangeT([[-50, 50]], false, false), 0),
+      intensity: sc('intensity', new RangeT([[1.01/256, 10.0]], true, false), 1.0),
+      focus_falloff: sc('focus_falloff', new RangeT([[0.1, 3]], false, false), 0.8),
+      persistence_gamma: sc('persistence_gamma', new RangeT([[1, 100]], true, false), 10.0),
+      invgamma: sc('invgamma', new RangeT([[0.5, 2]], false, false), 1.0)
     });
   }
   exports.ScopeParameters = ScopeParameters;

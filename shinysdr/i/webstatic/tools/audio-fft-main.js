@@ -34,9 +34,9 @@ define(['audio', 'coordination', 'events', 'types', 'values', 'widget', 'widgets
   
   // kludge: stick extra property on adapter so it gets in the options menu UI.
   // TODO: Replace this by adding flexibility to the UI system.
-  adapter.input = new values.ConstantCell(types.block, selector);
+  adapter.input = new values.ConstantCell(types.blockT, selector);
   
-  const root = new values.ConstantCell(types.block, adapter);
+  const root = new values.ConstantCell(types.blockT, adapter);
   
   const context = new widget.Context({
     widgets: widgets,

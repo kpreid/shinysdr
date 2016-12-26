@@ -36,8 +36,8 @@ define(['types', 'values', 'events', 'coordination', 'database', 'network', 'map
   const Scheduler = events.Scheduler;
   const StorageNamespace = values.StorageNamespace;
   const Index = values.Index;
-  const any = types.any;
-  const block = types.block;
+  const anyT = types.anyT;
+  const blockT = types.blockT;
   const connect = network.connect;
   const connectAudio = audio.connectAudio;
   const createWidgetExt = widget.createWidgetExt;
@@ -49,7 +49,7 @@ define(['types', 'values', 'events', 'coordination', 'database', 'network', 'map
   var clientStateStorage = new StorageNamespace(localStorage, 'shinysdr.client.');
   
   var writableDB = database.fromURL('wdb/');
-  var databasesCell = new LocalCell(any, database.systematics.concat([
+  var databasesCell = new LocalCell(anyT, database.systematics.concat([
     writableDB,  // kludge till we have proper UI for selection of write targets
   ]));
   database.arrayFromCatalog('dbs/', dbs => {   // TODO get url from server
@@ -63,7 +63,7 @@ define(['types', 'values', 'events', 'coordination', 'database', 'network', 'map
   
   // TODO(kpreid): Client state should be more closely associated with the components that use it.
   var clientState = new ClientStateObject(clientStateStorage, databasePicker);
-  var clientBlockCell = new ConstantCell(block, clientState);
+  var clientBlockCell = new ConstantCell(blockT, clientState);
   
   function main(stateUrl, audioUrl) {
     log(0.4, 'Loading plugins…');
@@ -113,11 +113,11 @@ define(['types', 'values', 'events', 'coordination', 'database', 'network', 'map
       if (firstConnection) {
         firstConnection = false;
         
-        var everything = new ConstantCell(block, makeBlock({
+        var everything = new ConstantCell(blockT, makeBlock({
           client: clientBlockCell,
           radio: remoteCell,
-          actions: new ConstantCell(block, coordinator.actions),
-          audio: new ConstantCell(block, audioState)
+          actions: new ConstantCell(blockT, coordinator.actions),
+          audio: new ConstantCell(blockT, audioState)
         }));
       
         var index = new Index(scheduler, everything);

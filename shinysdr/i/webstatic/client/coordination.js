@@ -18,12 +18,12 @@
 define(['./types', './values'], function (types, values) {
   'use strict';
 
-  var any = types.any;
-  var block = types.block;
-  var ConstantCell = values.ConstantCell;
-  var LocalCell = values.LocalCell;
-  var makeBlock = values.makeBlock;
-  var StorageCell = values.StorageCell;
+  const anyT = types.anyT;
+  const blockT = types.blockT;
+  const ConstantCell = values.ConstantCell;
+  const LocalCell = values.LocalCell;
+  const makeBlock = values.makeBlock;
+  const StorageCell = values.StorageCell;
 
   var exports = {};
   
@@ -120,7 +120,7 @@ define(['./types', './values'], function (types, values) {
       mapPanCallback = callback;
     }
     
-    var selectedRecord = new LocalCell(any, undefined);  // TODO should have a type
+    var selectedRecord = new LocalCell(anyT, undefined);  // TODO should have a type
     
     // TODO: Revisit whether this is a well-designed interface
     this.actions = Object.freeze(makeBlock({
@@ -144,7 +144,7 @@ define(['./types', './values'], function (types, values) {
     return makeBlock({
       opengl: cc('opengl', Boolean, true),
       opengl_float: cc('opengl_float', Boolean, true),
-      databases: new ConstantCell(block, databasePicker)
+      databases: new ConstantCell(blockT, databasePicker)
     });
   }
   exports.ClientStateObject = ClientStateObject;

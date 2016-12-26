@@ -38,8 +38,8 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
   const SmallKnob = widgets_basic.SmallKnob;
   const StorageCell = values.StorageCell;
   const Toggle = widgets_basic.Toggle;
-  const any = types.any;
-  const block = types.block;
+  const anyT = types.anyT;
+  const blockT = types.blockT;
   const createWidgetExt = widget.createWidgetExt;
   const externalGet = network.externalGet;
   const makeBlock = values.makeBlock;
@@ -1079,7 +1079,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
       }
     }
     
-    // If not null, a cell holding a Track object which we are locking the view to
+    // If not null, a cell holding a trackT object which we are locking the view to
     var trackingCell = null;
     
     // TODO: No standard cell class is suitable (write side effects, goes to storage, doesn't reparse on every read); fix.
@@ -1481,7 +1481,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
       var featureRenderer = lconfig.featureRenderer;
       var clickHandler = lconfig.onclick || function noClick() {};
       // TODO: Instead of a "clickHandler" we should have a more general presentation-style system
-      var controlsCell = new ConstantCell(block, lconfig.controls || makeBlock({}));
+      var controlsCell = new ConstantCell(blockT, lconfig.controls || makeBlock({}));
       
       var visibilityCell = new StorageCell(storage, Boolean, true, 'layer-visible.' + label);
       
@@ -1534,7 +1534,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
       if (arguments.length !== 2) {
         throw new Error('wrong call to addModeLayer');
       }
-      var receiversCell = new DerivedCell(any, scheduler, function (dirty) {
+      var receiversCell = new DerivedCell(anyT, scheduler, function (dirty) {
         var radio = radioCell.depend(dirty);
         var receivers = radio.receivers.depend(dirty);
         receivers._reshapeNotice.listen(dirty);

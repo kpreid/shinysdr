@@ -18,7 +18,7 @@
 define(['./types', './values', './events'], function (types, values, events) {
   'use strict';
   
-  var BulkDataType = types.BulkDataType;
+  var BulkDataT = types.BulkDataT;
   var Cell = values.Cell;
   var CommandCell = values.CommandCell;
   var typeFromDesc = types.typeFromDesc;
@@ -278,12 +278,12 @@ define(['./types', './values', './events'], function (types, values, events) {
       naming: desc.metadata.naming,
     };
     var cell;
-    if (type === types.block) {
+    if (type === types.blockT) {
       // TODO eliminate special case by making server block cells less special?
       // TODO blocks should not need urls (switch http op to websocket)
       cell = new ReadCell(setter, /* dummy */ makeBlock(url, []), metadata,
         function (id) { return idMap[id]; });
-    } else if (type instanceof BulkDataType) {
+    } else if (type instanceof BulkDataT) {
       // TODO can we eliminate this special case
       cell = new BulkDataCell(setter, metadata);
     } else if (desc.type === 'command_cell') {
@@ -300,7 +300,7 @@ define(['./types', './values', './events'], function (types, values, events) {
   function connect(rootURL, connectionStateCallback) {
     if (!connectionStateCallback) connectionStateCallback = function () {};
     
-    const rootCell = new ReadCell(null, null, types.block, identity);
+    const rootCell = new ReadCell(null, null, types.blockT, identity);
     
     retryingConnection(rootURL, connectionStateCallback, function (ws) {
       ws.binaryType = 'arraybuffer';

@@ -26,10 +26,10 @@ define(['./map-core',
   
   var Clock = events.Clock;
   var DerivedCell = values.DerivedCell;
-  var Enum = types.Enum;
+  var EnumT = types.EnumT;
   var LocalReadCell = values.LocalReadCell;
   var StorageCell = values.StorageCell;
-  var any = types.any;
+  var anyT = types.anyT;
   var externalGet = network.externalGet;
   var makeBlock = values.makeBlock;
   var mod = math.mod;
@@ -54,7 +54,7 @@ define(['./map-core',
       dataCell._update(geojson);
     });
     return {
-      featuresCell: new DerivedCell(any, scheduler, function(dirty) {
+      featuresCell: new DerivedCell(anyT, scheduler, function(dirty) {
         var geojson = dataCell.depend(dirty);
         if (!geojson) return [];
         
@@ -130,7 +130,7 @@ define(['./map-core',
     
     // Condensed info about receivers to update DB layer.
     // TODO: Use info for more than the 'current' device.
-    var radioStateInfo = new DerivedCell(any, scheduler, function (dirty) {
+    var radioStateInfo = new DerivedCell(anyT, scheduler, function (dirty) {
       var radio = radioCell.depend(dirty);
       var device = radio.source.depend(dirty);
       var center = device.freq.depend(dirty);
@@ -158,7 +158,7 @@ define(['./map-core',
   
     var searchCell = new StorageCell(storage, String, '', 'databaseFilterString');
     addLayer('Database', {
-      featuresCell: new DerivedCell(any, scheduler, function(dirty) {
+      featuresCell: new DerivedCell(anyT, scheduler, function(dirty) {
         db.n.listen(dirty);
         return db.string(searchCell.depend(dirty)).getAll();
       }), 
@@ -220,7 +220,7 @@ define(['./map-core',
     var storage = mapPluginConfig.storage;
     var mapCamera = mapPluginConfig.mapCamera;
     
-    var graticuleTypeCell = new StorageCell(storage, new Enum({
+    var graticuleTypeCell = new StorageCell(storage, new EnumT({
       'degrees': 'Degrees',
       'maidenhead': 'Maidenhead'
     }), 'degrees', 'graticuleType');
@@ -294,7 +294,7 @@ define(['./map-core',
       controls: makeBlock({
         type: graticuleTypeCell
       }),
-      featuresCell: new DerivedCell(any, scheduler, function(dirty) {
+      featuresCell: new DerivedCell(anyT, scheduler, function(dirty) {
         // TODO: Don't rerun this calc on every movement — have a thing which takes an 'error' window (eep computing that) and dirties if out of bounds
         var zoom = mapCamera.zoomCell.depend(dirty);
         var centerLat = mapCamera.latitudeCell.depend(dirty);
@@ -438,7 +438,7 @@ define(['./map-core',
     
     // TODO make this test layer more cleaned up and enableable
     var emptyItem = {value: null, timestamp: null};
-    var motionTestTrackCell = new DerivedCell(any, scheduler, function(dirty) {
+    var motionTestTrackCell = new DerivedCell(anyT, scheduler, function(dirty) {
       var t = slowClockForTests.convertToTimestampSeconds(slowClockForTests.depend(dirty));
       var degreeSpeed = 10;
       var angle = t * degreeSpeed;
@@ -456,7 +456,7 @@ define(['./map-core',
     });
     var mtNow = Date.now() / 1000;
     if (false) addLayer('Motion Test', {
-      featuresCell: new DerivedCell(any, scheduler, function(dirty) {
+      featuresCell: new DerivedCell(anyT, scheduler, function(dirty) {
         var speed = 40075e3/* 1 rev/second */ * 0.1;
         return [
           //{
@@ -499,7 +499,7 @@ define(['./map-core',
       }),
       featureRenderer: function testRenderer(feature, dirty) {
         if (feature == 'TRACK') {
-          var f = renderTrackFeature(dirty, motionTestTrackCell, 'Track feature');
+          var f = renderTrackFeature(dirty, motionTestTrackCell, 'trackT feature');
           return f;
         } else {
           return feature;
@@ -513,7 +513,7 @@ define(['./map-core',
       label: 'Blinker'
     };
     if (false) addLayer('Add/Delete Test', {
-      featuresCell: new DerivedCell(any, scheduler, function(dirty) {
+      featuresCell: new DerivedCell(anyT, scheduler, function(dirty) {
         // TODO: use explicitly slow clock for less redundant updates
         var t = Math.floor(slowClockForTests.depend(dirty) / 1) * 1;
         addDelFeature.label = 'Blinker ' + t;

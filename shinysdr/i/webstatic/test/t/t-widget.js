@@ -79,7 +79,7 @@ define(['/test/jasmine-glue.js',
         const container = document.createElement('div');
         document.body.appendChild(container);
         const wEl = container.appendChild(document.createElement('div'));
-        const cell = new values.LocalCell(types.block, values.makeBlock({
+        const cell = new values.LocalCell(types.blockT, values.makeBlock({
           inner: new values.LocalCell(Number, 0)
         }));
         const widgetHandle = widget.createWidgetExt(context, OuterWidget, wEl, cell);

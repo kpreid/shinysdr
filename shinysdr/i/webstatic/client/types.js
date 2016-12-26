@@ -26,15 +26,15 @@ define([], () => {
   }
   exports.isSingleValued = isSingleValued;
   
-  function Constant(value) {
+  function ConstantT(value) {
     this.value = value;
   }
-  Constant.prototype.isSingleValued = function () {
+  ConstantT.prototype.isSingleValued = function () {
     return true;
   };
-  exports.Constant = Constant;
+  exports.ConstantT = ConstantT;
   
-  function Enum(tableIn) {
+  function EnumT(tableIn) {
     var table = Object.create(null);
     for (var k in tableIn) {
       var row = tableIn[k];
@@ -56,30 +56,30 @@ define([], () => {
     this._table = Object.freeze(table);
     Object.freeze(this);
   }
-  Enum.prototype.getTable = function () {
+  EnumT.prototype.getTable = function () {
     return this._table;
   };
-  Enum.prototype.isSingleValued = function () {
+  EnumT.prototype.isSingleValued = function () {
     return Object.keys(this._table).length <= 1;
   };
-  exports.Enum = Enum;
+  exports.EnumT = EnumT;
 
-  function Range(subranges, logarithmic, integer) {
+  function RangeT(subranges, logarithmic, integer) {
     this.mins = Array.prototype.map.call(subranges, function (v) { return v[0]; });
     this.maxes = Array.prototype.map.call(subranges, function (v) { return v[1]; });
     this.logarithmic = logarithmic;
     this.integer = integer;
   }
-  Range.prototype.isSingleValued = function () {
+  RangeT.prototype.isSingleValued = function () {
     return this.mins.length <= 1 && this.maxes.length <= 1 && this.mins[0] === this.maxes[0];
   };
-  Range.prototype.getMin = function() {
+  RangeT.prototype.getMin = function() {
     return this.mins[0];
   };
-  Range.prototype.getMax = function() {
+  RangeT.prototype.getMax = function() {
     return this.maxes[this.maxes.length - 1];
   };
-  Range.prototype.round = function(value, direction) {
+  RangeT.prototype.round = function(value, direction) {
     // direction is -1, 0, or 1 indicating preferred rounding direction (0 round to nearest)
     value = +value;
     // algorithm is inefficient but adequate
@@ -112,20 +112,20 @@ define([], () => {
     if (value > max) value = max;
     return value;
   };
-  exports.Range = Range;
+  exports.RangeT = RangeT;
 
   // TODO: probably ought to have these type-_constructor_ names be named in some systematic way that distinguishes them from value-constructors.
 
-  function Notice(alwaysVisible) {
+  function NoticeT(alwaysVisible) {
     this.alwaysVisible = alwaysVisible;
   }
-  exports.Notice = Notice;
+  exports.NoticeT = NoticeT;
 
-  function Timestamp() {
+  function TimestampT() {
   }
-  exports.Timestamp = Timestamp;
+  exports.TimestampT = TimestampT;
 
-  function BulkDataType(info_format, array_format) {
+  function BulkDataT(info_format, array_format) {
     // TODO: redesign things so that we have the semantic info from the server
     if (info_format == 'dff' && array_format == 'b') {
       this.dataFormat = 'spectrum-byte';
@@ -135,19 +135,18 @@ define([], () => {
       throw new Error('Unexpected bulk data format: ' + info_format + ' ' + array_format);
     }
   }
-  exports.BulkDataType = BulkDataType;
+  exports.BulkDataT = BulkDataT;
 
   // type for any block
-  var block = Object.freeze({});
-  exports.block = block;
+  const blockT = Object.freeze({});
+  exports.blockT = blockT;
 
-  var any = Object.freeze({});
-  exports.any = any;
+  const anyT = Object.freeze({});
+  exports.anyT = anyT;
 
   // type for track objects
-  // TODO type name capitalization is getting inconsistent.
-  var Track = Object.freeze({});
-  exports.Track = Track;
+  const trackT = Object.freeze({});
+  exports.trackT = trackT;
 
   function typeFromDesc(desc) {
     // TODO if the type is unknown have a warning and fallback instead, or make network.js handle the failure more gracefully
@@ -155,7 +154,7 @@ define([], () => {
       case 'string':
         switch (desc) {
           case 'reference':
-            return block;
+            return blockT;
           case 'boolean':
             return Boolean; // will do till we need something fancier
           case 'float64':
@@ -163,28 +162,28 @@ define([], () => {
           case 'integer':
             return Number;
           case 'shinysdr.telemetry.Track':
-            return Track;
+            return trackT;
           default:
             throw new TypeError('unknown type desc value: ' + desc);
         }
         break;  // satisfy lint (actually unreachable)
       case 'object':
         if (desc === null) {
-          return any;
+          return anyT;
         }
         switch (desc.type) {
           case 'ConstantT':
-            return new Constant(desc.value);
+            return new ConstantT(desc.value);
           case 'EnumT':
-            return new Enum(desc.table);
+            return new EnumT(desc.table);
           case 'RangeT':
-            return new Range(desc.subranges, desc.logarithmic, desc.integer);
+            return new RangeT(desc.subranges, desc.logarithmic, desc.integer);
           case 'NoticeT':
-            return new Notice(desc.always_visible);
+            return new NoticeT(desc.always_visible);
           case 'TimestampT':
-            return new Timestamp();
+            return new TimestampT();
           case 'BulkDataT':
-            return new BulkDataType(desc.info_format, desc.array_format);
+            return new BulkDataT(desc.info_format, desc.array_format);
           default:
             throw new TypeError('unknown type desc tag: ' + desc.type);
         }

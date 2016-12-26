@@ -22,18 +22,18 @@ define(['/test/jasmine-glue.js',
   'use strict';
   
   const {describe, expect, it} = jasmineGlue.ji;
-  const block = types.block;
+  const blockT = types.blockT;
   const makeBlock = values.makeBlock;
   const ConstantCell = values.ConstantCell;
   const Table = database.Table;
   
   describe('Coordinator', function () {
     // TODO reduce the need for this stubbing
-    const stubRadioCell = new ConstantCell(block, makeBlock({
-      source: new ConstantCell(block, makeBlock({
+    const stubRadioCell = new ConstantCell(blockT, makeBlock({
+      source: new ConstantCell(blockT, makeBlock({
         freq: new ConstantCell(Number, 0),
       })),
-      receivers: new ConstantCell(block, makeBlock(Object.create(Object.prototype, {
+      receivers: new ConstantCell(blockT, makeBlock(Object.create(Object.prototype, {
         create: {value: function () {}}
       }))),
     }));

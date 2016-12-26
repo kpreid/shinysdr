@@ -267,7 +267,7 @@ define(['./coordination', './events', './math', './types', './values'], function
       throw new Error('createWidgetExt: missing targetCell');
     }
     return createWidget(
-      new ConstantCell(types.any, targetCell),
+      new ConstantCell(types.anyT, targetCell),
       String(targetCell),
       context,
       node,
@@ -280,7 +280,7 @@ define(['./coordination', './events', './math', './types', './values'], function
   //   rootCell.get().foo.get().bar
   function evalTargetStr(rootCell, str, scheduler) {
     var steps = str.split(/\./);
-    return new DerivedCell(types.any, scheduler, function (dirty) {
+    return new DerivedCell(types.anyT, scheduler, function (dirty) {
       var cell = rootCell;
       steps.forEach(function (name) {
         if (cell !== undefined) cell = cell.depend(dirty)[name];
@@ -298,7 +298,7 @@ define(['./coordination', './events', './math', './types', './values'], function
         targetCellCell = evalTargetStr(rootTargetCell, targetStr, scheduler);
       } else {
         targetStr = "<can't happen>";
-        targetCellCell = new ConstantCell(types.any, rootTargetCell);
+        targetCellCell = new ConstantCell(types.anyT, rootTargetCell);
       }
       
       var typename = node.getAttribute('data-widget');
@@ -721,10 +721,10 @@ define(['./coordination', './events', './math', './types', './values'], function
       return new StorageCell(storage, type, value, key);
     }
     this.parameters = makeBlock({
-      spectrum_split: cc('spectrum_split', new types.Range([[0, 1]], false, false), 0.6),
-      spectrum_average: cc('spectrum_average', new types.Range([[0.1, 1]], true, false), 0.15),
-      spectrum_level_min: cc('spectrum_level_min', new types.Range([[-200, -20]], false, false), -130),
-      spectrum_level_max: cc('spectrum_level_max', new types.Range([[-100, 0]], false, false), -20)
+      spectrum_split: cc('spectrum_split', new types.RangeT([[0, 1]], false, false), 0.6),
+      spectrum_average: cc('spectrum_average', new types.RangeT([[0.1, 1]], true, false), 0.15),
+      spectrum_level_min: cc('spectrum_level_min', new types.RangeT([[-200, -20]], false, false), -130),
+      spectrum_level_max: cc('spectrum_level_max', new types.RangeT([[-100, 0]], false, false), -20)
     });
     
     lifecycleInit(container);
