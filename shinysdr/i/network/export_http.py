@@ -29,7 +29,8 @@ from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 from twisted.web import template
 
-from shinysdr.i.network.base import prepath_escaped, renderElement, serialize, template_path
+from shinysdr.i.json import serialize
+from shinysdr.i.network.base import prepath_escaped, renderElement, template_path
 from shinysdr.values import IWritableCollection
 
 

@@ -22,7 +22,7 @@ import json
 from twisted.trial import unittest
 from zope.interface import Interface, implements  # available via Twisted
 
-from shinysdr.i.network.base import transform_for_json
+from shinysdr.i.json import transform_for_json
 # TODO: StateStreamInner is an implementation detail; arrange a better interface to test
 from shinysdr.i.network.export_ws import StateStreamInner
 from shinysdr.signals import SignalType

@@ -31,7 +31,8 @@ from zope.interface import providedBy
 
 from gnuradio import gr
 
-from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, serialize
+from shinysdr.i.json import serialize
+from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT
 from shinysdr.i.poller import the_subscription_context
 from shinysdr.signals import SignalType
 from shinysdr.types import ReferenceT

@@ -19,7 +19,6 @@
 
 from __future__ import absolute_import, division
 
-import json
 import os
 import urllib
 
@@ -29,8 +28,6 @@ from twisted.web import template
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
-from shinysdr.types import IJsonSerializable
-
 
 # TODO: Change this constant to something more generic, but save that for when we're changing the URL layout for other reasons anyway.
 CAP_OBJECT_PATH_ELEMENT = 'radio'
@@ -39,40 +36,6 @@ CAP_OBJECT_PATH_ELEMENT = 'radio'
 static_resource_path = os.path.join(os.path.dirname(__file__), '../webstatic')
 template_path = os.path.join(os.path.dirname(__file__), '../webparts')
 deps_path = os.path.join(os.path.dirname(__file__), '../../deps')
-
-
-def serialize(obj):
-    """JSON-encode values for clients, both HTTP and state stream WebSocket."""
-    structure = transform_for_json(obj)
-    return _json_encoder_for_serial.encode(structure)
-
-
-# JSONEncoder configured for ShinySDR API use.
-# Do not use this directly; use serialize() instead.
-_json_encoder_for_serial = json.JSONEncoder(
-    ensure_ascii=False,
-    check_circular=False,
-    allow_nan=True,
-    sort_keys=True,
-    separators=(',', ':'))
-
-
-def transform_for_json(obj):
-    """Replaces serializable objects in a data structure with JSON-compatible representations.
-
-    Use serialize() to produce a JSON string instead of this, unless this is what you need."""
-    # Cannot implement this using the default hook in JSONEncoder because we want to override the behavior for namedtuples (normally treated as tuples), which cannot be done otherwise.
-    if IJsonSerializable.providedBy(obj):
-        return transform_for_json(obj.to_json())
-    elif isinstance(obj, tuple) and hasattr(obj, '_asdict'):  # namedtuple
-        # TODO: Consider replreplacing all uses of this generic namedtuple handling with IJsonSerializable now that we have that.
-        return {k: transform_for_json(v) for k, v in obj._asdict().iteritems()}
-    elif isinstance(obj, dict):
-        return {k: transform_for_json(v) for k, v in obj.iteritems()}
-    elif isinstance(obj, (list, tuple)):
-        return map(transform_for_json, obj)
-    else:
-        return obj
 
 
 class SlashedResource(Resource):

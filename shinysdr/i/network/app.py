@@ -37,8 +37,9 @@ import txws
 
 import shinysdr.i.db
 from shinysdr.i.ephemeris import EphemerisResource
+from shinysdr.i.json import serialize
 from shinysdr.i.modes import get_modes
-from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, SlashedResource, deps_path, prepath_escaped, renderElement, serialize, static_resource_path, strport_to_url, template_path
+from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, SlashedResource, deps_path, prepath_escaped, renderElement, static_resource_path, strport_to_url, template_path
 from shinysdr.i.network.export_http import BlockResource, FlowgraphVizResource
 from shinysdr.i.network.export_ws import OurStreamProtocol
 from shinysdr.twisted_ext import FactoryWithArgs

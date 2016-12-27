@@ -26,26 +26,14 @@ from __future__ import absolute_import, division
 import bisect
 import math
 
-from zope.interface import Interface, implements
+from zope.interface import implements
+
+from shinysdr.i.json import IJsonSerializable  # reexport
 
 
-__all__ = []  # appended later
-
-
-# not itself a type in the sense meant here, but the least-wrong-so-far place to put this as it is used by types
-class IJsonSerializable(Interface):
-    """Value objects which can be serialized as JSON structures.
-    
-    Only value objects, not things like ExportedState, should implement this interface.
-    """
-    def to_json(self):
-        """Return a JSON representation of this object.
-        
-        The representation should be a JSON object (dict) which has a key u'type' whose value is a string uniquely identifying the class (loosely speaking) being represented. No well-defined namespace organization has yet been established for these type strings.
-        """
-
-
-__all__.append('IJsonSerializable')
+__all__ = [
+    'IJsonSerializable',  # reexport
+]  # also appended later
 
 
 def to_value_type(typeoid):
