@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-# TODO explain better
 """
 Type definitions for ShinySDR value cells etc.
 
@@ -96,9 +95,7 @@ __all__.append('ValueType')
 
 
 class PythonT(ValueType):
-    """
-    ValueType wrapper for Python types.
-    """
+    """ValueType wrapper for Python types."""
     def __init__(self, python_type):
         self.__python_type = python_type
     
@@ -152,6 +149,7 @@ __all__.append('ConstantT')
 
 
 class ReferenceT(ValueType):
+    # TODO document
     def to_json(self):
         return u'reference'
     
@@ -167,7 +165,7 @@ __all__.append('ReferenceT')
 
 
 class EnumT(ValueType):
-    """An EnumT accepts any of a fixed set of values.
+    """Type which accepts any of a fixed set of values.
     
     The values are normally Unicode strings but may be another type.
     The values may have metadata such as description text different from the value itself.
@@ -264,7 +262,17 @@ __all__.append('EnumRow')
 
 
 class RangeT(ValueType):
+    """Type for an integer or float value with a (possibly non-contiguous) range of permitted or recommended values.
+    
+    If a number outside of the range is provided and the type is strict, it is coerced to the nearest value which lies inside the range.
+    """
     def __init__(self, subranges, strict=True, logarithmic=False, integer=False):
+        """
+        subranges: Array of nonoverlapping (inclusive lower bound, inclusive upper bound) in increasing order.
+        strict: If false, numbers outside the subranges are permitted.
+        logarithmic: Whether UI for specifying the value should operate on a logarithmic scale.
+        integer: Whether the numbers should be of integer type after coercion.
+        """
         # TODO validate subranges are sorted
         self.__mins = [min_value for (min_value, max_value) in subranges]
         self.__maxes = [max_value for (min_value, max_value) in subranges]
@@ -365,6 +373,10 @@ __all__.append('RangeT')
 
 
 class NoticeT(ValueType):
+    """Type for strings which are warnings or errors.
+    
+    The empty string should be used for "no error at this time".
+    """
     def __init__(self, always_visible=False):
         self.__always_visible = always_visible
     
@@ -382,6 +394,7 @@ __all__.append('NoticeT')
 
 
 class TimestampT(ValueType):
+    """Type for seconds-since-epoch time values which are meaningfully displayed in relative-to-the-current-time form."""
     def __init__(self):
         pass
     
@@ -398,7 +411,9 @@ __all__.append('TimestampT')
 
 
 class BulkDataT(ValueType):
+    """Type for arrays of numbers which, particularly, are delivered to the client in efficient binary form rather than JSON."""
     def __init__(self, info_format, array_format):
+        # TODO: Document the format parameters
         self.__info_format = info_format
         self.__array_format = array_format
     
