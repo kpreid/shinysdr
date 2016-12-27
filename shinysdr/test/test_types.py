@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -20,6 +20,7 @@ from __future__ import absolute_import, division
 from twisted.trial import unittest
 
 from shinysdr.types import ConstantT, EnumT, EnumRow, RangeT
+from shinysdr import units
 
 
 def _testType(self, type_obj, good, bad):
@@ -147,13 +148,15 @@ class TestRangeT(unittest.TestCase):
             [])
 
     def test_repr(self):
-        self.assertEqual('RangeT([(1, 2), (3, 4)], strict=True, logarithmic=False, integer=False)',
+        self.assertEqual('RangeT([(1, 2), (3, 4)], unit=, strict=True, logarithmic=False, integer=False)',
                          repr(RangeT([(1, 2), (3, 4)])))
-        self.assertEqual('RangeT([(1, 2), (3, 4)], strict=False, logarithmic=False, integer=False)',
+        self.assertEqual('RangeT([(1, 2), (3, 4)], unit=dB, strict=True, logarithmic=False, integer=False)',
+                         repr(RangeT([(1, 2), (3, 4)], unit=units.dB)))
+        self.assertEqual('RangeT([(1, 2), (3, 4)], unit=, strict=False, logarithmic=False, integer=False)',
                          repr(RangeT([(1, 2), (3, 4)], strict=False)))
-        self.assertEqual('RangeT([(1, 2), (3, 4)], strict=True, logarithmic=True, integer=False)',
+        self.assertEqual('RangeT([(1, 2), (3, 4)], unit=, strict=True, logarithmic=True, integer=False)',
                          repr(RangeT([(1, 2), (3, 4)], logarithmic=True)))
-        self.assertEqual('RangeT([(1, 2), (3, 4)], strict=True, logarithmic=False, integer=True)',
+        self.assertEqual('RangeT([(1, 2), (3, 4)], unit=, strict=True, logarithmic=False, integer=True)',
                          repr(RangeT([(1, 2), (3, 4)], integer=True)))
 
     def test_equal(self):

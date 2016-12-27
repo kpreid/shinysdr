@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -29,6 +29,7 @@ import math
 from zope.interface import implements
 
 from shinysdr.i.json import IJsonSerializable  # reexport
+from shinysdr import units
 
 
 __all__ = [
@@ -250,12 +251,36 @@ class EnumRow(object):
 __all__.append('EnumRow')
 
 
+class QuantityT(ValueType):
+    """Type for a quantity, that is, a number with associated units.
+    
+    To express a quantity with a limited range, use RangeT instead.
+    """
+    def __init__(self, unit=units.none, base_type=float):
+        assert isinstance(unit, units.Unit)
+        self.__unit = unit
+        self.__base_type = to_value_type(base_type)
+    
+    def to_json(self):
+        return {
+            'type': 'QuantityT',
+            'unit': self.__unit,
+            'base_type': self.__base_type
+        }
+    
+    def __call__(self, specimen):
+        return self.__base_type(specimen)
+
+
+__all__.append(QuantityT)
+
+
 class RangeT(ValueType):
     """Type for an integer or float value with a (possibly non-contiguous) range of permitted or recommended values.
     
     If a number outside of the range is provided and the type is strict, it is coerced to the nearest value which lies inside the range.
     """
-    def __init__(self, subranges, strict=True, logarithmic=False, integer=False):
+    def __init__(self, subranges, unit=units.none, strict=True, logarithmic=False, integer=False):
         """
         subranges: Array of nonoverlapping (inclusive lower bound, inclusive upper bound) in increasing order.
         strict: If false, numbers outside the subranges are permitted.
@@ -263,6 +288,8 @@ class RangeT(ValueType):
         integer: Whether the numbers should be of integer type after coercion.
         """
         # TODO validate subranges are sorted
+        assert isinstance(unit, units.Unit)
+        self.__unit = unit
         self.__mins = [min_value for (min_value, max_value) in subranges]
         self.__maxes = [max_value for (min_value, max_value) in subranges]
         self.__strict = strict
@@ -273,6 +300,7 @@ class RangeT(ValueType):
         return {
             'type': 'RangeT',
             'subranges': zip(self.__mins, self.__maxes),
+            'unit': self.__unit,
             'logarithmic': self.__logarithmic,
             'integer': self.__integer
         }
@@ -310,7 +338,10 @@ class RangeT(ValueType):
         return specimen
     
     def __repr__(self):
-        return '%s(%r, strict=%r, logarithmic=%r, integer=%r)' % (type(self).__name__, zip(self.__mins, self.__maxes), self.__strict, self.__logarithmic, self.__integer)
+        return '{0}({1[subranges]!r}, unit={1[unit]}, strict={strict!r}, logarithmic={1[logarithmic]!r}, integer={1[integer]!r})'.format(
+            type(self).__name__,
+            self.to_json(),
+            strict=self.__strict)
     
     def __eq__(self, other):
         # pylint: disable=unidiomatic-typecheck
@@ -318,6 +349,7 @@ class RangeT(ValueType):
             type(self) == type(other) and
             self.__mins == other.__mins and
             self.__maxes == other.__maxes and
+            self.__unit == other.__unit and
             self.__strict == other.__strict and
             self.__logarithmic == other.__logarithmic and
             self.__integer == other.__integer
@@ -333,6 +365,7 @@ class RangeT(ValueType):
         maxes = self.__maxes
         return RangeT(
             [(mins[i] + offset, maxes[i] + offset) for i in xrange(len(mins))],
+            unit=self.__unit,
             strict=self.__strict,
             logarithmic=self.__logarithmic,
             integer=self.__integer and offset % 1 == 0)
