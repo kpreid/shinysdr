@@ -30,6 +30,9 @@ import math
 from zope.interface import Interface, implements
 
 
+__all__ = []  # appended later
+
+
 # not itself a type in the sense meant here, but the least-wrong-so-far place to put this as it is used by types
 class IJsonSerializable(Interface):
     """Value objects which can be serialized as JSON structures.
@@ -43,6 +46,9 @@ class IJsonSerializable(Interface):
         """
 
 
+__all__.append('IJsonSerializable')
+
+
 def to_value_type(typeoid):
     if isinstance(typeoid, ValueType):
         return typeoid
@@ -51,6 +57,9 @@ def to_value_type(typeoid):
         return PythonT(typeoid)
     else:
         raise TypeError('Don\'t know how to make a ValueType of %r' % (typeoid,))
+
+
+__all__.append('to_value_type')
 
 
 class ValueType(object):
@@ -81,6 +90,9 @@ class ValueType(object):
     
     def is_reference(self):
         return False
+
+
+__all__.append('ValueType')
 
 
 class PythonT(ValueType):
@@ -115,6 +127,9 @@ python_type_registry = {
 }
 
 
+__all__.append('python_type_registry')
+
+
 class ConstantT(ValueType):
     """
     A single-valued type.
@@ -133,6 +148,9 @@ class ConstantT(ValueType):
         return self.__value
 
 
+__all__.append('ConstantT')
+
+
 class ReferenceT(ValueType):
     def to_json(self):
         return u'reference'
@@ -143,6 +161,9 @@ class ReferenceT(ValueType):
     
     def is_reference(self):
         return True
+
+
+__all__.append('ReferenceT')
 
 
 class EnumT(ValueType):
@@ -178,6 +199,9 @@ class EnumT(ValueType):
         if self.__strict and specimen not in self.__table:
             raise ValueError('Not a permitted value: ' + repr(specimen))
         return specimen
+
+
+__all__.append('EnumT')
 
 
 class EnumRow(object):
@@ -234,6 +258,9 @@ class EnumRow(object):
             u'description': self.__description,
             u'sort_key': self.__sort_key
         }
+
+
+__all__.append('EnumRow')
 
 
 class RangeT(ValueType):
@@ -334,6 +361,9 @@ class RangeT(ValueType):
                 return None
 
 
+__all__.append('RangeT')
+
+
 class NoticeT(ValueType):
     def __init__(self, always_visible=False):
         self.__always_visible = always_visible
@@ -348,6 +378,9 @@ class NoticeT(ValueType):
         return unicode(specimen)
 
 
+__all__.append('NoticeT')
+
+
 class TimestampT(ValueType):
     def __init__(self):
         pass
@@ -359,6 +392,9 @@ class TimestampT(ValueType):
     
     def __call__(self, specimen):
         return float(specimen)
+
+
+__all__.append('TimestampT')
 
 
 class BulkDataT(ValueType):
@@ -383,3 +419,6 @@ class BulkDataT(ValueType):
         raise Exception('Coerce not implemented for BulkDataT')
     
     # TODO implement coerce behavior, generally make this more well-defined
+
+
+__all__.append('BulkDataT')
