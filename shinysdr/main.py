@@ -24,7 +24,6 @@ from __future__ import absolute_import, division
 
 import argparse
 import logging
-import os.path
 import sys
 
 from twisted.application.service import IService, MultiService

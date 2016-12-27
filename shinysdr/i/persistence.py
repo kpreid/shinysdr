@@ -120,5 +120,3 @@ class PersistenceChangeDetector(object):
         # ignore value because it is from an arbitrary element
         self.__clear_subscriptions()
         self.__callback()
-
-

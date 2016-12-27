@@ -19,7 +19,7 @@ from __future__ import absolute_import, division
 
 import unittest
 
-from shinysdr.test.testutil import CellSubscriptionTester, SubscriptionTester
+from shinysdr.test.testutil import CellSubscriptionTester
 from shinysdr.types import EnumRow, RangeT, ReferenceT, to_value_type
 from shinysdr.values import Cell, CellDict, CollectionState, ExportedState, LooseCell, ViewCell, command, exported_value, nullExportedState, setter, unserialize_exported_state
 
