@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -34,6 +34,7 @@ from shinysdr.i.modes import lookup_mode
 from shinysdr.signals import SignalType, no_signal
 from shinysdr.devices import Device, IRXDriver
 from shinysdr.types import RangeT, ReferenceT
+from shinysdr import units
 from shinysdr.values import CellDict, CollectionState, ExportedState, LooseCell, exported_value, setter
 
 
@@ -217,7 +218,7 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
         return self.__modulator
 
     @exported_value(
-        type_fn=lambda self: RangeT([(-self.__rf_rate / 2, self.__rf_rate / 2)], strict=False),
+        type_fn=lambda self: RangeT([(-self.__rf_rate / 2, self.__rf_rate / 2)], unit=units.Hz, strict=False),
         changes='this_setter',
         label='Frequency')
     def get_freq(self):
@@ -229,7 +230,7 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
         self.__rotator.set_phase_inc(rotator_inc(rate=self.__rf_rate, shift=self.__freq))
     
     @exported_value(
-        type=RangeT([(-50.0, 0.0)], strict=False),
+        type=RangeT([(-50.0, 0.0)], unit=units.dB, strict=False),
         changes='this_setter',
         label='Gain')
     def get_gain(self):
@@ -268,7 +269,7 @@ class ChirpModulator(gr.hier_block2, ExportedState):
     
     @exported_value(
         parameter='chirp_rate', 
-        type=RangeT([(-10.0, 10.0)], strict=False),
+        type=RangeT([(-10.0, 10.0)], unit=units.Hz, strict=False),
         changes='this_setter',
         label='Chirp rate')
     def get_chirp_rate(self):

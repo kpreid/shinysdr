@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -26,7 +26,8 @@ import osmosdr
 
 from shinysdr.devices import Device, IRXDriver, ITXDriver
 from shinysdr.signals import SignalType
-from shinysdr.types import ConstantT, EnumT, RangeT, ReferenceT
+from shinysdr.types import ConstantT, EnumT, QuantityT, RangeT, ReferenceT
+from shinysdr import units
 from shinysdr.values import Cell, ExportedState, LooseCell, exported_value, nullExportedState, setter
 
 
@@ -150,6 +151,7 @@ class _OsmoSDRTuning(object):
                 osmo_block.get_freq_range(ch),
                 strict=False,
                 transform=self.from_hardware_freq,
+                unit=units.Hz,
                 add_zero=profile.e4000),
             writable=True,
             persists=True,
@@ -333,9 +335,9 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         self.__tuning = None
     
     @exported_value(
-        type=float,
+        type=QuantityT(unit=units.ppm),
         changes='this_setter',
-        label='Freq.corr. (PPM)')  # TODO: Once we have formal units, remove them from the label
+        label='Freq.corr.')
     def get_correction_ppm(self):
         return self.__tuning.get_correction_ppm()
     
@@ -349,7 +351,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     
     @exported_value(
         type_fn=lambda self: convert_osmosdr_range(
-            self.__source.get_gain_range(ch), strict=False),
+            self.__source.get_gain_range(ch), unit=units.dB, strict=False),
         changes='this_setter',
         label='Gain')
     def get_gain(self):
@@ -420,7 +422,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     # TODO: Display automaticness in the UI rather than having a zero value.
     @exported_value(
         type_fn=lambda self: convert_osmosdr_range(
-            self.__source.get_bandwidth_range(ch), add_zero=True),
+            self.__source.get_bandwidth_range(ch), unit=units.Hz, add_zero=True),
         changes='this_setter',
         label='Analog bandwidth',
         description='Bandwidth of the analog antialiasing filter.')
@@ -543,7 +545,7 @@ def _install_gain_cell(self, sourceref, name, callback):
         if source is not None:
             source.set_gain(float(value), name, ch)
     
-    gain_range = convert_osmosdr_range(sourceref[0].get_gain_range(name, ch))
+    gain_range = convert_osmosdr_range(sourceref[0].get_gain_range(name, ch), unit=units.dB)
     
     # TODO: There should be a type of Cell such that we don't have to setattr but still implement the storage unlike LooseCell
     setattr(self, 'get_' + name, gain_getter)

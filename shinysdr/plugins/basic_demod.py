@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -33,6 +33,7 @@ from shinysdr.math import dB, to_dB
 from shinysdr.filters import MultistageChannelFilter, make_resampler, design_sawtooth_filter
 from shinysdr.signals import SignalType
 from shinysdr.types import EnumT, EnumRow, RangeT
+from shinysdr import units
 from shinysdr.values import ExportedState, exported_value, setter
 
 
@@ -87,14 +88,14 @@ class SquelchMixin(ExportedState):
         self.rf_probe_block = analog.probe_avg_mag_sqrd_c(0, alpha=alpha)
 
     @exported_value(
-        type=RangeT([(-100, 0)], strict=False),
+        type=RangeT([(-100, 0)], unit=units.dBFS, strict=False),
         changes='continuous',
         label='Channel power')
     def get_rf_power(self):
         return to_dB(max(1e-10, self.rf_probe_block.level()))
 
     @exported_value(
-        type=RangeT([(-100, 0)], strict=False, logarithmic=False),
+        type=RangeT([(-100, 0)], unit=units.dBFS, strict=False, logarithmic=False),
         changes='this_setter',
         label='Squelch')
     def get_squelch_threshold(self):
@@ -307,7 +308,7 @@ class AMDemodulator(SimpleAudioDemodulator):
         return grfilter.dc_blocker_ff(self.__demod_rate // _am_lower_cutoff_freq, False)
     
     # this needs UI cleanup before we want to expose it
-    # @exported_value(type=float)
+    # @exported_value(type=QuantityT(units.Hz))
     # def get_pll_frequency(self):
     #     if self.__pll:
     #         return self.__pll.get_frequency() * (self.input_rate / TWO_PI) + self.context.get_absolute_frequency()
@@ -737,7 +738,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
         super(SSBDemodulator, self).set_rec_freq(freq - self.__offset)
     
     @exported_value(
-        type=RangeT([(-20, _ssb_max_agc)]),
+        type=RangeT([(-20, _ssb_max_agc)], unit=units.dB),
         changes='continuous',
         label='AGC')
     def get_agc_gain(self):

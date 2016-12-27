@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -37,6 +37,7 @@ from shinysdr.filters import make_resampler
 from shinysdr.math import to_dB
 from shinysdr.signals import SignalType
 from shinysdr.types import BulkDataT, RangeT
+from shinysdr import units
 from shinysdr.values import ExportedState, LooseCell, StreamCell, exported_value, setter
 
 
@@ -400,7 +401,9 @@ class MonitorSink(gr.hier_block2, ExportedState):
 
     @exported_value(
         type=RangeT([(1, _maximum_fft_rate)],
-        logarithmic=True, integer=False),
+            unit=units.Hz,
+            logarithmic=True,
+            integer=False),
         changes='this_setter',
         label='Rate',
         description='Number of FFT frames per second.')

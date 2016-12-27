@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -36,7 +36,8 @@ from shinysdr.filters import make_resampler
 from shinysdr.interfaces import ClientResourceDef, ModeDef, IDemodulator, IModulator
 from shinysdr.plugins.basic_demod import SimpleAudioDemodulator, design_lofi_audio_filter
 from shinysdr.signals import SignalType
-from shinysdr.types import RangeT
+from shinysdr.types import QuantityT, RangeT
+from shinysdr import units
 from shinysdr.values import ExportedState, exported_value, setter
 
 audio_modulation_index = 0.07
@@ -137,7 +138,7 @@ class VOR(SimpleAudioDemodulator):
             self.zeroer,
             self.probe)
 
-    @exported_value(type=float, changes='this_setter', label='Zero')
+    @exported_value(type=QuantityT(units.degree), changes='this_setter', label='Zero')
     def get_zero_point(self):
         return self.zero_point
 
@@ -146,7 +147,8 @@ class VOR(SimpleAudioDemodulator):
         self.zero_point = zero_point
         self.zeroer.set_k((self.zero_point * (math.pi / 180), ))
 
-    @exported_value(type=float, changes='continuous', label='Bearing')
+    # TODO: Have a dedicated angle type which can be specified as referenced to true/magnetic north
+    @exported_value(type=QuantityT(units.degree), changes='continuous', label='Bearing')
     def get_angle(self):
         return self.probe.level()
 
@@ -213,7 +215,7 @@ class VORModulator(gr.hier_block2, ExportedState):
         # calculate and initialize delay
         self.set_angle(angle)
     
-    @exported_value(type=RangeT([(0, 2 * math.pi)], strict=False), changes='this_setter', label='Bearing')
+    @exported_value(type=RangeT([(0, 2 * math.pi)], unit=units.degree, strict=False), changes='this_setter', label='Bearing')
     def get_angle(self):
         return self.__angle
     

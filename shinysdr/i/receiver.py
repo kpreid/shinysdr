@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -30,7 +30,8 @@ from shinysdr.i.modes import get_modes, lookup_mode
 from shinysdr.interfaces import ITunableDemodulator
 from shinysdr.math import dB, rotator_inc, to_dB
 from shinysdr.signals import SignalType
-from shinysdr.types import EnumT, RangeT, ReferenceT
+from shinysdr.types import EnumT, QuantityT, RangeT, ReferenceT
+from shinysdr import units
 from shinysdr.values import ExportedState, exported_value, setter, unserialize_exported_state
 
 
@@ -234,7 +235,7 @@ class Receiver(gr.hier_block2, ExportedState):
 
     # TODO: rename rec_freq to just freq
     @exported_value(
-        type=float,
+        type=QuantityT(units.Hz),
         parameter='freq_absolute',
         changes='explicit',
         label='Frequency')
@@ -277,7 +278,7 @@ class Receiver(gr.hier_block2, ExportedState):
     # TODO: support non-audio demodulators at which point these controls should be optional
     @exported_value(
         parameter='audio_gain',
-        type=RangeT([(-30, 20)], strict=False),
+        type=RangeT([(-30, 20)], unit=units.dB, strict=False),
         changes='this_setter',
         label='Volume')
     def get_audio_gain(self):
@@ -325,8 +326,9 @@ class Receiver(gr.hier_block2, ExportedState):
                 valid_bandwidth_upper >= max(0, demod_shape['high']))
     
     # Note that the receiver cannot measure RF power because we don't know what the channel bandwidth is; we have to leave that to the demodulator.
+    # TODO: document what we are using as the reference level. It's not dBFS because we're floating-point and before the gain stage.
     @exported_value(
-        type=RangeT([(_audio_power_minimum_dB, 0)], strict=False),
+        type=RangeT([(_audio_power_minimum_dB, 0)], unit=units.dB, strict=False),
         changes='continuous',
         label='Audio power')
     def get_audio_power(self):

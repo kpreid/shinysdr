@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -44,6 +44,7 @@ from shinysdr.math import LazyRateCalculator
 from shinysdr.signals import no_signal
 from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, Track, empty_track
 from shinysdr.types import EnumRow, RangeT, TimestampT
+from shinysdr import units
 from shinysdr.values import ExportedState, exported_value, setter
 
 
@@ -120,7 +121,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
     def __del__(self):
         self.__msgq_runner.stop()
     
-    @exported_value(type=RangeT([(0, 30)]), changes='this_setter', label='Decode threshold')
+    @exported_value(type=RangeT([(0, 30)], unit=units.dB), changes='this_setter', label='Decode threshold')
     def get_decode_threshold(self):
         return self.__demod.get_threshold()
     

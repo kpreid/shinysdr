@@ -28,13 +28,13 @@ define(['./events', './network', './types', './values'],
   const NoticeT = types.NoticeT;
   const Notifier = events.Notifier;
   const Neverfier = events.Neverfier;
+  const QuantityT = types.QuantityT;
   const StorageCell = values.StorageCell;
   const booleanT = types.booleanT;
   const cellPropOfBlock = values.cellPropOfBlock;
   const makeBlock = values.makeBlock;
   const numberT = types.numberT;
   const retryingConnection = network.retryingConnection;
-  const stringT = types.stringT;
   
   const exports = {};
   
@@ -103,7 +103,9 @@ define(['./events', './network', './types', './values'],
     }
     var info = makeBlock({
       buffered: new LocalReadCell(new types.RangeT([[0, 2]], false, false), 0),
-      target: new LocalReadCell({value_type: stringT, naming: { label: 'Target latency' }}, ''),  // TODO should be numeric w/ unit
+      target: new LocalReadCell({
+        value_type: new QuantityT({symbol: 's', si_prefix_ok: false}),
+        naming: { label: 'Target latency' }}, ''),
       error: new LocalReadCell(new NoticeT(true), ''),
       //averageSkew: new LocalReadCell(Number, 0),
       monitor: new ConstantCell(types.blockT, analyserAdapter)
@@ -114,7 +116,7 @@ define(['./events', './network', './types', './values'],
       var buffered = (queueSampleCount + audioStreamChunk.length - chunkIndex) / nativeSampleRate;
       var target = targetQueueSize / nativeSampleRate;
       info.buffered._update(buffered / target);
-      info.target._update(target.toFixed(2) + ' s');
+      info.target._update(+target.toFixed(2));  // TODO formatting kludge, should be in type instead
       //info.averageSkew._update(averageSkew);
       if (errorTime < Date.now()) {
         info.error._update('');
