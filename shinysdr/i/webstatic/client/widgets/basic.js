@@ -26,6 +26,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
   const DerivedCell = values.DerivedCell;
   const EnumT = types.EnumT;
   const NoticeT = types.NoticeT;
+  const QuantityT = types.QuantityT;
   const RangeT = types.RangeT;
   const TimestampT = types.TimestampT;
   const booleanT = types.booleanT;
@@ -212,7 +213,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
         } else {
           return Meter;
         }
-      } else if (cellType === numberT) {
+      } else if (cellType === numberT || cellType instanceof QuantityT) {
         return SmallKnob;
       } else if (cellType instanceof EnumT) {
         // Our EnumT-type widgets are Radio and Select; Select is a better default for arbitrarily-long lists.

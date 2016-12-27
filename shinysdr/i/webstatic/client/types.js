@@ -22,10 +22,18 @@ define([], () => {
   
   const exports = Object.create(null);
   
+  const noUnit = Object.freeze({
+    symbol: '',
+    si_prefix_ok: false,
+  });
+  
   class ValueType {
     isSingleValued() {
-      // default implementation
       return false;
+    }
+    
+    getNumericUnit() {
+      return noUnit;
     }
   }
   exports.ValueType = ValueType;
@@ -91,14 +99,25 @@ define([], () => {
     }
   }
   exports.EnumT = EnumT;
-
+  
+  class QuantityT extends ValueType {
+    constructor(unit) {
+      super();
+      this._unit = unit || noUnit;
+    }
+    
+    getNumericUnit() { return this._unit; }
+  }
+  exports.QuantityT = QuantityT;
+  
   class RangeT extends ValueType {
-    constructor(subranges, logarithmic, integer) {
+    constructor(subranges, logarithmic, integer, unit) {
       super();
       this.mins = Array.prototype.map.call(subranges, function (v) { return v[0]; });
       this.maxes = Array.prototype.map.call(subranges, function (v) { return v[1]; });
       this.logarithmic = logarithmic;
       this.integer = integer;
+      this._unit = unit || noUnit;
     }
     
     isSingleValued() {
@@ -107,6 +126,8 @@ define([], () => {
     
     getMin() { return this.mins[0]; }
     getMax() { return this.maxes[this.maxes.length - 1]; }
+    
+    getNumericUnit() { return this._unit; }
     
     round(value, direction) {
       // direction is -1, 0, or 1 indicating preferred rounding direction (0 round to nearest)
@@ -229,8 +250,10 @@ define([], () => {
             return new ConstantT(desc.value);
           case 'EnumT':
             return new EnumT(desc.table);
+          case 'QuantityT':
+            return new QuantityT(desc.unit);
           case 'RangeT':
-            return new RangeT(desc.subranges, desc.logarithmic, desc.integer);
+            return new RangeT(desc.subranges, desc.logarithmic, desc.integer, desc.unit);
           case 'NoticeT':
             return new NoticeT(desc.always_visible);
           case 'TimestampT':
