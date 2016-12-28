@@ -150,5 +150,5 @@ along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 ### Additional information
 
-* The file `shinysdr/i/webstatic/client/basemap.geojson` was derived from [the Natural Earth data set `ne_50m_admin_0_countries`, version 2.0.0](http://www.naturalearthdata.com/downloads/50m-cultural-vectors/).
+* The file `shinysdr/i/webstatic/client/map/basemap.geojson.gz` was derived from [the Natural Earth data set `ne_50m_admin_0_countries`, version 2.0.0](http://www.naturalearthdata.com/downloads/50m-cultural-vectors/).
     This data set [is in the public domain](http://www.naturalearthdata.com/about/terms-of-use/).

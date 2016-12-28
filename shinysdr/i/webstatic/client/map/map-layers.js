@@ -108,7 +108,7 @@ define(['./map-core',
     var addLayer = mapPluginConfig.addLayer;
     var scheduler = mapPluginConfig.scheduler;
     // TODO: .gz suffix really shouldn't be there. Configure web server appropriately.
-    addLayer('Basemap', makeStaticLayer('/client/basemap.geojson.gz', scheduler));
+    addLayer('Basemap', makeStaticLayer('/client/map/basemap.geojson.gz', scheduler));
   });
   
   function deviceTrack(device, dirty) {
