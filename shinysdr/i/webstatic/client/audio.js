@@ -530,7 +530,7 @@ define(['./events', './network', './types', './values'],
       // Permission error.
       // Note: Empirically, e.message is empty but it exists, so let's mention it in case it helps.
       showMessage('Failed to ' + whatWeWereDoing + ' (permission denied). ' + e.message);
-    } else if (e.name) {
+    } else if (e && e.name) {
       showMessage(e.name);
     } else if (e) {
       showMessage(String(e));
@@ -539,6 +539,7 @@ define(['./events', './network', './types', './values'],
       throw e;
     }
   }
+  exports.handleUserMediaError_ForTesting = handleUserMediaError;
   
   function MediaDeviceSelector(mediaDevices, storage) {
     let shapeNotifier = new Notifier();
