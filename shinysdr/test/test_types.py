@@ -47,6 +47,7 @@ class TestConstantT(unittest.TestCase):
             [1, 1.0, (None, 1), ('foo', 1)],
             [])
 
+
 class TestEnumT(unittest.TestCase):
     longMessage = True
     
@@ -70,11 +71,13 @@ class TestEnumT(unittest.TestCase):
     
     def test_values(self):
         enum = EnumT({u'a': u'adesc'})
-        self.assertEquals(enum.get_table(),
+        self.assertEquals(
+            enum.get_table(),
             {u'a': EnumRow(u'adesc', associated_key=u'a')})
     
     def test_metadata_simple(self):
-        self.assertEquals(self.__row(u'desc').to_json(),
+        self.assertEquals(
+            self.__row(u'desc').to_json(),
             {
                 u'type': u'EnumRow',
                 u'label': u'desc',
@@ -83,7 +86,8 @@ class TestEnumT(unittest.TestCase):
             })
     
     def test_metadata_partial(self):
-        self.assertEquals(self.__row(EnumRow(label='a')).to_json(),
+        self.assertEquals(
+            self.__row(EnumRow(label='a')).to_json(),
             {
                 u'type': u'EnumRow',
                 u'label': u'a',
@@ -92,7 +96,8 @@ class TestEnumT(unittest.TestCase):
             })
     
     def test_metadata_explicit(self):
-        self.assertEquals(self.__row(EnumRow(label='a', description='b', sort_key='c')).to_json(),
+        self.assertEquals(
+            self.__row(EnumRow(label='a', description='b', sort_key='c')).to_json(),
             {
                 u'type': u'EnumRow',
                 u'label': u'a',
@@ -101,14 +106,14 @@ class TestEnumT(unittest.TestCase):
             })
     
     def test_metadata_empty_label(self):
-        self.assertEquals(self.__row(EnumRow(label='')).to_json(),
+        self.assertEquals(
+            self.__row(EnumRow(label='')).to_json(),
             {
                 u'type': u'EnumRow',
                 u'label': u'',
                 u'description': None,
                 u'sort_key': u'key',
             })
-    
     
     def __row(self, row):
         return EnumT({u'key': row}).get_table()[u'key']
@@ -164,4 +169,3 @@ class TestRangeT(unittest.TestCase):
                             RangeT([(1, 2)], logarithmic=True))
         self.assertNotEqual(RangeT([(1, 2)]),
                             RangeT([(1, 2)], strict=False))
-        

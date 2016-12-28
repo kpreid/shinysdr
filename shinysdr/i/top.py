@@ -352,8 +352,8 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         #
         # Both of these refinements require becoming aware of cell subscriptions.
         should_run = (
-            self.__has_a_useful_receiver
-            or self.monitor.get_interested_cell().get())
+            self.__has_a_useful_receiver or
+            self.monitor.get_interested_cell().get())
         if should_run != self.__running:
             if should_run:
                 self.start()
@@ -456,7 +456,7 @@ class ContextForReceiver(Context):
             return usable_bandwidth_range(rel_freq) == rel_freq
 
         # TODO: can't do this because it horribly breaks drag-tuning
-        #if tuning and not validate_by_range(needed_freq, current_device_freq):
+        #     if tuning and not validate_by_range(needed_freq, current_device_freq):
         # we need to check the range as well as receiver.get_is_valid because receiver.get_is_valid uses the tune_delay delayed frequency which may not be up to date
         if tuning and not receiver.get_is_valid() and not validate_by_range(needed_freq, current_device_freq):
             # TODO need 0Hz-gimmick logic
@@ -524,7 +524,6 @@ class MaxProbe(gr.hier_block2):
         
         # shortcut method implementation
         self.level = self.__sink.level
-        
 
 
 def base26(x):

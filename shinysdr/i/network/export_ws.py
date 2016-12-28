@@ -226,7 +226,6 @@ class StateStreamInner(object):
             log.msg('set %s to %r (%1.2fs)' % (registration, value, t1 - t0))
         else:
             log.msg('Unrecognized state stream op received: %r' % (command,))
-            
     
     def get__root_object(self):
         """Accessor for implementing self._cell."""

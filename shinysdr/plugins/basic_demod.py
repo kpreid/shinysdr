@@ -273,7 +273,7 @@ class AMDemodulator(SimpleAudioDemodulator):
             # TODO: refine PLL parameters further
             pll = self.__pll = analog.pll_carriertracking_cc(.01 * pi, .1 * pi, -.1 * pi)
             pll.set_lock_threshold(dB(-20))
-            #pll.squelch_enable(True)
+            # pll.squelch_enable(True)
             self.connect(before_demod, pll)
             
             if self.__demod_method == u'stereo':
@@ -304,20 +304,20 @@ class AMDemodulator(SimpleAudioDemodulator):
         return grfilter.dc_blocker_ff(self.__demod_rate // _am_lower_cutoff_freq, False)
     
     # this needs UI cleanup before we want to expose it
-    #@exported_value(type=float)
-    #def get_pll_frequency(self):
-    #    if self.__pll:
-    #        return self.__pll.get_frequency() * (self.input_rate / TWO_PI) + self.context.get_absolute_frequency()
-    #    else:
-    #        return 0
+    # @exported_value(type=float)
+    # def get_pll_frequency(self):
+    #     if self.__pll:
+    #         return self.__pll.get_frequency() * (self.input_rate / TWO_PI) + self.context.get_absolute_frequency()
+    #     else:
+    #         return 0
     
     # disabled because I haven't found any combination of parameters which makes the lock detector reliably useful
-    #@exported_value(type=NoticeT())
-    #def get_pll_locked(self):
-    #    if self.__pll and not self.__pll.lock_detector():
-    #        return u'No carrier!'
-    #    else:
-    #        return u''
+    # @exported_value(type=NoticeT())
+    # def get_pll_locked(self):
+    #     if self.__pll and not self.__pll.lock_detector():
+    #         return u'No carrier!'
+    #     else:
+    #         return u''
 
 
 class UnselectiveAMDemodulator(gr.hier_block2, ExportedState):
@@ -390,7 +390,6 @@ class UnselectiveAMDemodulator(gr.hier_block2, ExportedState):
         # By implementing ITunableDemodulator and doing nothing, we use the hardware frequency without changes.
         self.__rec_freq_input = freq
         self.state_changed('band_filter_shape')
-
 
 
 class AMModulator(gr.hier_block2, ExportedState):

@@ -24,7 +24,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='ShinySDR',
-    #version='...',  # No versioning is defined yet
+    # version='...',  # No versioning is defined yet
     description='Software-defined radio receiver application built on GNU Radio with a web-based UI and plugins.',
     url='https://github.com/kpreid/shinysdr/',
     author='Kevin Reid',
@@ -43,8 +43,8 @@ setup(
     packages=find_packages(exclude=['shinysdr.test']),
     include_package_data=True,
     install_requires=[
-        #'gnuradio',  # Not PyPI
-        #'osmosdr',  # Not PyPI
+        # 'gnuradio',  # Not PyPI
+        # 'osmosdr',  # Not PyPI
         'twisted',
         'txws',
         'ephem',

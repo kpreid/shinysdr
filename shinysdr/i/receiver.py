@@ -127,7 +127,7 @@ class Receiver(gr.hier_block2, ExportedState):
             sample_rate=output_type.get_sample_rate() if self.__demod_output else 0)
     
     def __do_connect(self, reason):
-        #log.msg(u'receiver do_connect: %s' % (reason,))
+        # log.msg(u'receiver do_connect: %s' % (reason,))
         self.context.lock()
         try:
             self.disconnect_all()
@@ -308,8 +308,8 @@ class Receiver(gr.hier_block2, ExportedState):
         demod_shape = self.__demodulator.get_band_filter_shape()
         valid_bandwidth_lower = -half_sample_rate - self.__freq_relative
         valid_bandwidth_upper = half_sample_rate - self.__freq_relative
-        return valid_bandwidth_lower <= min(0, demod_shape['low']) and \
-               valid_bandwidth_upper >= max(0, demod_shape['high'])
+        return (valid_bandwidth_lower <= min(0, demod_shape['low']) and
+                valid_bandwidth_upper >= max(0, demod_shape['high']))
     
     # Note that the receiver cannot measure RF power because we don't know what the channel bandwidth is; we have to leave that to the demodulator.
     @exported_value(

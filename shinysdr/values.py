@@ -36,10 +36,10 @@ from shinysdr.types import BulkDataT, EnumRow, ReferenceT, to_value_type
 
 
 class CellMetadata(namedtuple('CellMetadata', [
-        'value_type',  # ValueType
-        'persists',  # boolean
-        'naming',  # EnumRow  (TODO rename EnumRow given this is the third alternate use)
-    ])):
+    'value_type',  # ValueType
+    'persists',  # boolean
+    'naming',  # EnumRow  (TODO rename EnumRow given this is the third alternate use)
+])):
     """Information about a cell object.
     
     value_type: a ValueType object defining the possible values of the cell.
@@ -830,10 +830,12 @@ class ExportedSetter(object):
             return self
         else:
             bound_method = self.__function.__get__(obj, type)
+            
             def exported_setter_wrapper(value):
                 # TODO: Also coerce with value type? Requires tighter association with cell, may be overly restrictive in some cases.
                 bound_method(value)
                 obj.state__setter_called(self)
+            
             return exported_setter_wrapper
 
 

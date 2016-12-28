@@ -111,8 +111,9 @@ class TestTop(unittest.TestCase):
         top.remove_audio_queue(queue)
     
     def test_mono(self):
-        top = Top(devices={'s1': simulate.SimulatedDevice(freq=0)},
-            features={'stereo':False})
+        top = Top(
+            devices={'s1': simulate.SimulatedDevice(freq=0)},
+            features={'stereo': False})
         queue = gr.msg_queue()
         (_key, _receiver) = top.add_receiver('AM', key='a')
         top.add_audio_queue(queue, 48000)
@@ -142,7 +143,7 @@ class TestTop(unittest.TestCase):
         self.assertEqual(dev.get_freq(), f1)
         
         # one "page" up
-        f2 = f1 + bandwidth * 3/4
+        f2 = f1 + bandwidth * 3 / 4
         receiver.set_rec_freq(f2)
         self.assertEqual(dev.get_freq(), f1 + bandwidth)
         

@@ -84,8 +84,8 @@ def _Coordinate(text):
     if not match:
         raise ValueError('could not parse coordinate: %r' % (text,))
     return (
-        (-1 if match.group(2) in 'WS' else 1) 
-        * (float(match.group(1)) + float(match.group(3) + '.' + match.group(4)) / 60))
+        (-1 if match.group(2) in 'WS' else 1) *
+        (float(match.group(1)) + float(match.group(3) + '.' + match.group(4)) / 60))
 
 
 if 1 == 1:  # dummy block for pylint

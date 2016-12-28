@@ -21,7 +21,6 @@ import os.path
 import shutil
 import tempfile
 
-#from twisted.internet import defer
 from twisted.internet.task import Clock
 from twisted.trial import unittest
 
@@ -99,7 +98,7 @@ class TestPersistenceChangeDetector(unittest.TestCase):
         self.assertEqual(1, self.calls)
         self.o.set_value(2)
         self.st.advance()
-        self.assertEqual(1, self.calls) # only fires once
+        self.assertEqual(1, self.calls)  # only fires once
         self.assertEqual(self.d.get(), {
             u'value': 2,
             u'block': {

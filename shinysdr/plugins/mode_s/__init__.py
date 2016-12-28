@@ -42,11 +42,9 @@ from shinysdr.filters import MultistageChannelFilter
 from shinysdr.interfaces import ClientResourceDef, IDemodulator, ModeDef
 from shinysdr.math import LazyRateCalculator
 from shinysdr.signals import no_signal
-from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, TelemetryStore, Track, empty_track
-from shinysdr.types import EnumRow, NoticeT, RangeT, TimestampT
+from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, Track, empty_track
+from shinysdr.types import EnumRow, RangeT, TimestampT
 from shinysdr.values import ExportedState, exported_value, setter
-
-
 
 
 drop_unheard_timeout_seconds = 60
@@ -101,14 +99,15 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
         parser = air_modes.make_parser(parser_output)
         cpr_decoder = air_modes.cpr_decoder(my_location=None)  # TODO: get position info from device
         air_modes.output_print(cpr_decoder, parser_output)
-        def callback(msg):  # called on msgq_runner's thrad
+        
+        def msq_runner_callback(msg):  # called on msgq_runner's thread
             # pylint: disable=broad-except
             try:
                 reactor.callFromThread(parser, msg.to_string())
             except Exception:
                 print traceback.format_exc()
         
-        self.__msgq_runner = gru.msgq_runner(hex_msg_queue, callback)
+        self.__msgq_runner = gru.msgq_runner(hex_msg_queue, msq_runner_callback)
         
         def parsed_callback(msg):
             timestamp = time.time()

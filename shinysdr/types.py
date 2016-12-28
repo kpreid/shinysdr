@@ -61,6 +61,7 @@ class ValueType(object):
     Conventionally, concrete subclasses of ValueType should be referred to with names like "RangeT" and their instances (actual types) like "rangeT". This is in order to avoid ambiguity with naming a type versus a value of that type, given that there are also classes of types so that the normal capital/lowercase convention is not sufficient.
     """
     implements(IJsonSerializable)
+    
     def to_json(self):
         """See IJsonSerializable."""
         raise NotImplementedError()

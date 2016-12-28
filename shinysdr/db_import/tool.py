@@ -93,6 +93,7 @@ def import_main(argv=None, out=None):
         _add_file_wrapper(importer, "-", sys.stdin)
     
     records = []
+    
     def add_record(record):
         records.append(normalize_record(record))
     

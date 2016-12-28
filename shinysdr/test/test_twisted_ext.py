@@ -42,13 +42,14 @@ class TestForkDeferred(unittest.TestCase):
 class TestTestSubprocess(unittest.TestCase):
     def test_stdout_success(self):
         self.assertTrue(test_subprocess(['echo', 'x'], 'x', shell=False))
-
+    
     def test_stdout_failure(self):
         self.assertFalse(test_subprocess(['echo', 'y'], 'x', shell=False))
-
+    
     # TODO test command-not-found
     # TODO test stderr
     # TODO test shell mode
+
 
 class TestSerialPortEndpoint(unittest.TestCase):
     # We cannot rely on the existence of any serial ports or it being OK to try to open them, so this is just a smoke test: does creating the endpoint succeed?

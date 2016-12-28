@@ -23,7 +23,7 @@ import numpy
 import numpy.testing
 
 from shinysdr.plugins import rtty
-#from shinysdr.test.testutil import DemodulatorTester
+# from shinysdr.test.testutil import DemodulatorTester
 
 # disable: mode is disabled so we can't test it
 # class TestRTTY(unittest.TestCase):

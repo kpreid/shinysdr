@@ -555,6 +555,7 @@ class _HamlibRig(_HamlibProxy):
         send('get_split_vfo')
         send('get_ts')
 
+
 class _HamlibRotator(_HamlibProxy):
     implements(IRotator)
 
@@ -582,6 +583,7 @@ class _HamlibRotator(_HamlibProxy):
     
     def poll_slow(self, send):
         pass
+
 
 class _HamlibClientFactory(ClientFactory):
     def __init__(self, server_name, connected_deferred):

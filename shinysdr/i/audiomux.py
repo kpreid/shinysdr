@@ -46,11 +46,11 @@ class AudioManager(object):
     # TODO: This class needs a better name.
     
     def __init__(self, graph, audio_config, stereo=True):
-        #for key, audio_device in audio_devices.iteritems():
-        #    if key == CLIENT_AUDIO_DEVICE:
-        #        raise ValueError('The name %r for an audio device is reserved' % (key,))
-        #    if not audio_device.can_transmit():
-        #        raise ValueError('Audio device %r is not an output' % (key,))
+        # for key, audio_device in audio_devices.iteritems():
+        #     if key == CLIENT_AUDIO_DEVICE:
+        #         raise ValueError('The name %r for an audio device is reserved' % (key,))
+        #     if not audio_device.can_transmit():
+        #         raise ValueError('Audio device %r is not an output' % (key,))
         if audio_config is not None:
             # quick kludge placeholder -- currently a Device-device can't be stereo so we have a placeholder thing
             # pylint: disable=unpacking-non-sequence
@@ -97,7 +97,7 @@ class AudioManager(object):
     def reconnecting(self):
         return ReconnectSession(self.__audio_buses, self.__audio_devices, self.__audio_queue_sinks)
 
-    #@exported_value()
+    # @exported_value()
     def get_audio_bus_rate(self):
         # TODO: A debugging aid that used to be exported. Make this exported again (not necessarily from this object once we have a proper "system status" view
         return [b.get_current_rate() for b in self.__audio_buses.itervalues()]

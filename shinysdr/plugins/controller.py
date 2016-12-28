@@ -101,7 +101,7 @@ class Selector(object):
     
     def _install_cells(self, callback, send, encoding):
         callback(LooseCell(
-        # TODO: Autogenerate unique keys instead of requiring __name to be unique.
+            # TODO: Autogenerate unique keys instead of requiring __name to be unique.
             key=self.__name,
             type=self.__type,
             value=u'',

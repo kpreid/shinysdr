@@ -82,8 +82,10 @@ class TestDevice(unittest.TestCase):
         log = []
         txd = _TestTXDriver(log)
         d = Device(rx_driver=_TestRXDriver(), tx_driver=txd)
+        
         def midpoint_hook():
             log.append('H')
+        
         # Either TX driver receives the hook (!= case) or the hook is called directly (== case)
         d.set_transmitting(True, midpoint_hook)
         self.assertEqual(log, [(True, midpoint_hook)])

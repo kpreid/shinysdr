@@ -75,7 +75,7 @@ class ULSImporter(object):
             address_1 = ''
             address_full = ''
             for loc_record in rtypes['LO']:
-                if latitude != None:
+                if latitude is not None:
                     warning_callback('Duplicate location record! %s' % (system_id,))
                 latitude = parse_dms(*loc_record[19:23])
                 longitude = parse_dms(*loc_record[23:27])
@@ -85,7 +85,7 @@ class ULSImporter(object):
                 address_full = loc_record[11:15]
             
             for freq_record in rtypes['FR']:
-                #print >>sys.stderr, freq_record
+                # print >>sys.stderr, freq_record
                 call_sign, freq_action_performed, location_number, antenna_number, class_station_code, op_altitude_code, freq_assigned, freq_upper_band, freq_carrier = freq_record[4:13]
                 freq_assigned = float(freq_assigned)
                 callback({

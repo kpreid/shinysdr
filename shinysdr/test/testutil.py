@@ -175,9 +175,12 @@ class DeviceTestCase(unittest.TestCase):
         if self.__noop: return
         tx_driver = self.device.get_tx_driver()
         if tx_driver is nullExportedState: return
+        
         nhook = [0]
+        
         def midpoint_hook():
             nhook[0] += 1
+        
         # hook is always called exactly once
         tx_driver.set_transmitting(True, midpoint_hook)
         self.assertEqual(nhook, 1)

@@ -233,7 +233,8 @@ class Device(ExportedState):
         """
         value = bool(value)
         if midpoint_hook is None:
-            midpoint_hook = lambda: None
+            def midpoint_hook():
+                pass
         if not self.can_transmit() or value == self.__transmitting:
             midpoint_hook()
             return

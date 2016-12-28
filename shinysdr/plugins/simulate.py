@@ -141,7 +141,6 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
             kind='IQ',
             sample_rate=rf_rate)
         self.__usable_bandwidth = RangeT([(-rf_rate / 2, rf_rate / 2)])
-        
     
     @exported_value(type=ReferenceT(), changes='never')
     def get_transmitters(self):

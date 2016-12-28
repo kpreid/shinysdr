@@ -31,6 +31,7 @@ __all__ = []  # appended later
 _RADIANS_TO_DEGREES = 180 / math.pi
 t0 = time.time()
 
+
 class EphemerisResource(Resource):
     isLeaf = True
     

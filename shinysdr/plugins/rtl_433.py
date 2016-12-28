@@ -89,7 +89,8 @@ class RTL433Demodulator(gr.hier_block2, ExportedState):
             RTL433ProcessProtocol(context.output_message),
             '/usr/bin/env',
             env=None,  # inherit environment
-            args=['env', 'rtl_433',
+            args=[
+                'env', 'rtl_433',
                 '-F', 'json',
                 '-r', '-',  # read from stdin
                 '-m', '3',  # complex float input

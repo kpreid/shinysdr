@@ -75,6 +75,7 @@ class TestController(unittest.TestCase):
         self.proxy.state()['enum_name'].set(u'façade')
         self.assertEqual(u'façade'.encode('UTF-8'), self.endpoint.t.value())
 
+
 class _StringEndpoint(object):
     implements(IStreamClientEndpoint)
     

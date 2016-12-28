@@ -35,7 +35,7 @@ from shinysdr.values import CellDict, CollectionState
 __all__ = []  # appended later
 
 
-# Rpresentation of information about an object whose location is being tracked.
+# See Track below.
 _TrackNT = namedtuple('Track', [
     'latitude',  # TelemetryItem(latitude in degrees north)
     'longitude',  # TelemetryItem(latitude in degrees east)
@@ -47,6 +47,9 @@ _TrackNT = namedtuple('Track', [
     'altitude',  # TelemetryItem(altitude in meters above sea level)  TODO: Allow choice of reference? Barometric vs GPS vs other?
     'v_speed',  # TelemetryItem(vertical speed in m/s)
 ])
+
+
+# Representation of information about an object whose location is being tracked.
 class Track(_TrackNT):
     def __new__(cls, *args, **kwargs):
         if len(args) == 1 and len(kwargs) == 0:

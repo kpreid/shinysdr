@@ -212,6 +212,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
     The units of the FFT output are dB power/Hz (power spectral density) relative to unit amplitude (i.e. dBFS assuming the source clips at +/-1). Note this is different from the standard logpwrfft result of power _per bin_, which would be undesirably dependent on the sample rate and bin size.
     """
     implements(IMonitor)
+    
     def __init__(self,
             signal_type=None,
             enable_scope=False,

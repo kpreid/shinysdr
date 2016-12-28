@@ -24,9 +24,12 @@ from shinysdr.signals import SignalType
 
 class TestSignalType(unittest.TestCase):
     def test_compatibility(self):
-        self.assertTrue(
-            SignalType(kind='IQ', sample_rate=1).compatible_items(
+        def c(a, b):
+            return a.compatible_items(b)
+        
+        self.assertTrue(c(
+            SignalType(kind='IQ', sample_rate=1),
             SignalType(kind='IQ', sample_rate=2)))
-        self.assertFalse(
-            SignalType(kind='IQ', sample_rate=1).compatible_items(
+        self.assertFalse(c(
+            SignalType(kind='IQ', sample_rate=1),
             SignalType(kind='MONO', sample_rate=1)))

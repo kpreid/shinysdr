@@ -116,7 +116,6 @@ def profile_from_device_string(device_string):
     return OsmoSDRProfile()
 
 
-
 if 1 == 1:  # dummy block for pylint
     # pylint: disable=bad-whitespace
     _default_profiles = {
@@ -186,7 +185,7 @@ class _OsmoSDRTuning(object):
         self.__set_freq(self.__vfo_cell.get())
     
     def calc_usable_bandwidth(self, sample_rate):
-        passband = sample_rate * (3/8)  # 3/4 of + and - halves
+        passband = sample_rate * (3 / 8)  # 3/4 of + and - halves
         if self.__profile.dc_offset:
             epsilon = 1.0  # RangeT has only inclusive bounds, so we need a nonzero value.
             return RangeT([(-passband, -epsilon), (epsilon, passband)])
@@ -454,7 +453,6 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         self.__gains = Gains(self.__source)
         self.connect(self.__source, self)
         self.state_from_json(self.__state_while_inactive)
-    
 
 
 class _OsmoSDRTXDriver(ExportedState, gr.hier_block2):
