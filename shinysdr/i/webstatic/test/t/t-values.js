@@ -50,7 +50,7 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
 
       it('should function as a cell', done => {
         const ns = new values.StorageNamespace(sessionStorage, 'foo.');
-        const cell = new values.StorageCell(ns, String, 'default', 'bar');
+        const cell = new values.StorageCell(ns, types.stringT, 'default', 'bar');
         expect(cell.get()).toBe('default');
         cell.set('a');
         expect(cell.get()).toBe('a');
@@ -71,7 +71,7 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
     
       it('should notify if a storage event occurs', done => {
         const ns = new values.StorageNamespace(sessionStorage, 'foo.');
-        const cell = new values.StorageCell(ns, String, 'default', 'bar');
+        const cell = new values.StorageCell(ns, types.stringT, 'default', 'bar');
         const l = newListener(s);
         cell.n.listen(l);
       
@@ -86,7 +86,7 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
     
       it('should not notify if an unrelated storage event occurs', done => {
         const ns = new values.StorageNamespace(sessionStorage, 'foo.');
-        const cell = new values.StorageCell(ns, String, 'default', 'bar');
+        const cell = new values.StorageCell(ns, types.stringT, 'default', 'bar');
         const l = newListener(s);
         cell.n.listen(l);
       
@@ -101,7 +101,7 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
       it('should tolerate garbage found in storage', function () {
         sessionStorage.setItem('foo.bar', '}Non-JSON for testing');
         const ns = new values.StorageNamespace(sessionStorage, 'foo.');
-        const cell = new values.StorageCell(ns, String, 'default', 'bar');
+        const cell = new values.StorageCell(ns, types.stringT, 'default', 'bar');
         expect(cell.get()).toBe('default');
       });
     });

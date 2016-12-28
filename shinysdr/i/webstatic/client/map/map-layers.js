@@ -35,6 +35,7 @@ define(['./map-core',
   const mod = math.mod;
   const registerMapPlugin = mapCore.register;
   const renderTrackFeature = mapCore.renderTrackFeature;
+  const stringT = types.stringT;
   
   const RADIANS_PER_DEGREE = Math.PI / 180;
   function dcos(x) { return cos(RADIANS_PER_DEGREE * x); }
@@ -46,7 +47,7 @@ define(['./map-core',
   // TODO: only needs scheduler for DerivedCell. See if DerivedCell can be made to not need a scheduler.
   function makeStaticLayer(url, scheduler) {
     // TODO: Only fetch the URL when the user makes the map visible, to speed up page loading otherwise.
-    var dataCell = new LocalReadCell(Object, null);
+    var dataCell = new LocalReadCell(anyT, null);
     // TODO: externalGet into a cell ought to be factored out
     // TODO: UI-visible error report when there are parse errors at any level
     externalGet(url, 'text', function(jsonString) {
@@ -156,7 +157,7 @@ define(['./map-core',
       };
     });
   
-    var searchCell = new StorageCell(storage, String, '', 'databaseFilterString');
+    var searchCell = new StorageCell(storage, stringT, '', 'databaseFilterString');
     addLayer('Database', {
       featuresCell: new DerivedCell(anyT, scheduler, function(dirty) {
         db.n.listen(dirty);

@@ -22,6 +22,7 @@ define(['./events', './network', './types', './values'],
   const AddKeepDrop = events.AddKeepDrop;
   const Notifier = events.Notifier;
   const StorageCell = values.StorageCell;
+  const booleanT = types.booleanT;
   const externalGet = network.externalGet;
   const statusCategory = network.statusCategory;
   const xhrpost = network.xhrpost;
@@ -474,9 +475,9 @@ define(['./events', './network', './types', './values'],
     var i = 0;
     var sourceAKD = new AddKeepDrop(function addSource(source) {
       // TODO get clean stable unique names from the sources
-      var label = source.getTableLabel ? source.getTableLabel() : (i++);
-      var key = 'enabled_' + label; 
-      var cell = new StorageCell(storage, Boolean, true, key);
+      const label = source.getTableLabel ? source.getTableLabel() : (i++);
+      const key = 'enabled_' + label; 
+      const cell = new StorageCell(storage, booleanT, true, key);
       self[key] = cell;
       // TODO unbreakable notify loop. consider switching Union to work like, or to take a, DerivedCell.
       function updateUnionFromCell() {

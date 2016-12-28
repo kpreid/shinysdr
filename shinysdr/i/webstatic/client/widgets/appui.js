@@ -36,7 +36,6 @@ define(['./basic', './spectrum',
   const Select = widgets_basic.Select;
   const Toggle = widgets_basic.Toggle;
   const createWidgetExt = widget.createWidgetExt;
-  const isSingleValued = types.isSingleValued;
 
   const exports = Object.create(null);
 
@@ -177,7 +176,7 @@ define(['./basic', './spectrum',
   function Device(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       var freqCell = block.freq;
-      if (!isSingleValued(freqCell.type)) {
+      if (!freqCell.type.isSingleValued()) {
         addWidget('freq', Knob, 'Center frequency');
       }
       addWidget('rx_driver', PickWidget);
@@ -193,7 +192,7 @@ define(['./basic', './spectrum',
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       // If we have multiple gain-related controls, do a combined UI
       // TODO: Better feature-testing strategy
-      var hasAGC = 'agc' in block && !isSingleValued(block.agc.type);
+      var hasAGC = 'agc' in block && !block.agc.type.isSingleValued();
       var hasSingleGain = 'gain' in block;
       var hasMultipleGain = 'gains' in block;
       if (hasAGC + hasSingleGain + hasMultipleGain > 1) (function () {
@@ -307,7 +306,7 @@ define(['./basic', './spectrum',
       createWidgetExt(config.context, Knob, knobContainer, block.rec_freq);
       ignore('rec_freq');
       
-      const outOfRangeNotice = new DerivedCell(NoticeT, config.scheduler, function(dirty) {
+      const outOfRangeNotice = new DerivedCell(new NoticeT(false), config.scheduler, function(dirty) {
         return block.is_valid.depend(dirty)
           ? ''
           : 'Outside of device bandwidth; disabled.';

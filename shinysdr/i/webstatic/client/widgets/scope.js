@@ -28,6 +28,8 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
   const Radio = widgets_basic.Radio;
   const RangeT = types.RangeT;
   const StorageCell = values.StorageCell;
+  const anyT = types.anyT;
+  const booleanT = types.booleanT;
   const dB = math.dB;
   const makeBlock = values.makeBlock;
   const mod = math.mod;
@@ -39,7 +41,7 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
       return new StorageCell(sessionStorage, type, value, key);
     }
     return makeBlock({
-      paused: sc('paused', Boolean, false),
+      paused: sc('paused', booleanT, false),
       axes: sc('axes', new EnumT({
         't,ch1,1': 'AT',
         't,ch2,1': 'BT',
@@ -47,7 +49,7 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
         'ch2,ch1,t': 'XY Rev',
         '1-2,1+2,t': 'Stereo'
       }), 't,ch1,1'),
-      draw_line: sc('draw_line', Boolean, false),  // TODO better name
+      draw_line: sc('draw_line', booleanT, false),  // TODO better name
       history_samples: sc('history_samples', new RangeT([[256, 256], [512, 512], [1024, 1024], [2048, 2048], [4096, 4096], [8192, 8192], [16384, 16384]/*, [32768, 32768], [65536, 65536]*/], true, true), 8192),
       time_scale: sc('time_scale', new RangeT([[128, 16384]], false, false), 1024),
       gain: sc('gain', new RangeT([[-50, 50]], false, false), 0),
@@ -187,7 +189,7 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
       
     gltools.handleContextLoss(canvas, config.rebuildMe);
     
-    let projectionCell = new DerivedCell(Float32Array, scheduler, dirty => {
+    let projectionCell = new DerivedCell(/* Float32Array */ anyT, scheduler, dirty => {
       const gainLin = dB(parameters.gain.depend(dirty));
       const tAxisStretch = parameters.history_samples.depend(dirty) / parameters.time_scale.depend(dirty);
       

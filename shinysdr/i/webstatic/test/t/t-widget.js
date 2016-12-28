@@ -45,7 +45,7 @@ define(['/test/jasmine-glue.js',
         const container = document.createElement('div');
         document.body.appendChild(container);
         const wEl = container.appendChild(document.createElement('div'));
-        const cell = new values.LocalCell(Number, 0);
+        const cell = new values.LocalCell(types.numberT, 0);
         /* const widgetHandle = */ widget.createWidgetExt(context, TestWidget, wEl, cell);
         // implicitly expect not to throw
         expect(container.firstChild.className).toBe('widget-ErrorWidget');
@@ -80,7 +80,7 @@ define(['/test/jasmine-glue.js',
         document.body.appendChild(container);
         const wEl = container.appendChild(document.createElement('div'));
         const cell = new values.LocalCell(types.blockT, values.makeBlock({
-          inner: new values.LocalCell(Number, 0)
+          inner: new values.LocalCell(types.numberT, 0)
         }));
         const widgetHandle = widget.createWidgetExt(context, OuterWidget, wEl, cell);
         expect(calledInit).toBe(1);

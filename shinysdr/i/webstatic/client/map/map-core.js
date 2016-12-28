@@ -40,9 +40,12 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
   const Toggle = widgets_basic.Toggle;
   const anyT = types.anyT;
   const blockT = types.blockT;
+  const booleanT = types.booleanT;
   const createWidgetExt = widget.createWidgetExt;
   const externalGet = network.externalGet;
   const makeBlock = values.makeBlock;
+  const numberT = types.numberT;
+  const stringT = types.stringT;
   
   var exports = {};
   
@@ -1083,7 +1086,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
     var trackingCell = null;
     
     // TODO: No standard cell class is suitable (write side effects, goes to storage, doesn't reparse on every read); fix.
-    var latitudeCell = this.latitudeCell = new Cell(Number);
+    var latitudeCell = this.latitudeCell = new Cell(numberT);
     this.latitudeCell.get = function () { return viewCenterLat; };
     this.latitudeCell.set = function (v) {
       if (viewCenterLat !== v) {
@@ -1091,7 +1094,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
         changedView();
       }
     };
-    var longitudeCell = this.longitudeCell = new Cell(Number);
+    var longitudeCell = this.longitudeCell = new Cell(numberT);
     this.longitudeCell.get = function () { return viewCenterLon; };
     this.longitudeCell.set = function (v) {
       if (viewCenterLon !== v) {
@@ -1099,7 +1102,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
         changedView();
       }
     };
-    var zoomCell = this.zoomCell = new Cell(Number);
+    var zoomCell = this.zoomCell = new Cell(numberT);
     this.zoomCell.get = function () { return viewZoom; };
     this.zoomCell.set = function (v) {
       if (viewZoom !== v) {
@@ -1309,7 +1312,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
     });
     if (!gl) {
       var filler = containerElement.appendChild(document.createElement('div'));
-      createWidgetExt(config.context, Banner, filler, new ConstantCell(String, 'Sorry, the map requires WebGL to be supported and enabled.'));
+      createWidgetExt(config.context, Banner, filler, new ConstantCell(stringT, 'Sorry, the map requires WebGL to be supported and enabled.'));
       return;
     }
     containerElement.appendChild(canvas);
@@ -1483,7 +1486,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
       // TODO: Instead of a "clickHandler" we should have a more general presentation-style system
       const controlsCell = new ConstantCell(blockT, lconfig.controls || makeBlock({}));
       
-      const visibilityCell = new StorageCell(storage, Boolean, true, 'layer-visible.' + label);
+      const visibilityCell = new StorageCell(storage, booleanT, true, 'layer-visible.' + label);
       
       function redrawLayer() {
         if (visibilityCell.get()) {

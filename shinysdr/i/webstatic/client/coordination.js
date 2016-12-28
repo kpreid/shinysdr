@@ -18,12 +18,13 @@
 define(['./types', './values'], function (types, values) {
   'use strict';
 
-  const anyT = types.anyT;
-  const blockT = types.blockT;
   const ConstantCell = values.ConstantCell;
   const LocalCell = values.LocalCell;
-  const makeBlock = values.makeBlock;
   const StorageCell = values.StorageCell;
+  const anyT = types.anyT;
+  const blockT = types.blockT;
+  const booleanT = types.booleanT;
+  const makeBlock = values.makeBlock;
 
   var exports = {};
   
@@ -142,8 +143,8 @@ define(['./types', './values'], function (types, values) {
       return new StorageCell(clientStateStorage, type, value, key);
     }
     return makeBlock({
-      opengl: cc('opengl', Boolean, true),
-      opengl_float: cc('opengl_float', Boolean, true),
+      opengl: cc('opengl', booleanT, true),
+      opengl_float: cc('opengl_float', booleanT, true),
       databases: new ConstantCell(blockT, databasePicker)
     });
   }

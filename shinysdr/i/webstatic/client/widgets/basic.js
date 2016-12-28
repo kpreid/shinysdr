@@ -28,9 +28,11 @@ define(['../events', '../types', '../values', '../widget'],
   const NoticeT = types.NoticeT;
   const RangeT = types.RangeT;
   const TimestampT = types.TimestampT;
+  const booleanT = types.booleanT;
+  const numberT = types.numberT;
+  const stringT = types.stringT;
   const trackT = types.trackT;
   const createWidgetExt = widget.createWidgetExt;
-  const isSingleValued = types.isSingleValued;
   
   var exports = Object.create(null);
 
@@ -149,7 +151,7 @@ define(['../events', '../types', '../values', '../widget'],
       
       const member = block[key];
       if (member instanceof Cell) {
-        if (isSingleValued(member.type)) {
+        if (member.type.isSingleValued()) {
           continue;
         }
         sortTable.push({
@@ -185,7 +187,7 @@ define(['../events', '../types', '../values', '../widget'],
     const cellType = targetCell.type;
     
     const ctorCell = new DerivedCell(types.anyT, config.scheduler, function (dirty) {
-      if (cellType == types.blockT) {
+      if (cellType === types.blockT) {
         const block = targetCell.depend(dirty);
       
         // TODO kludgy, need better representation of interfaces. At least pull this into a function itself.
@@ -209,14 +211,14 @@ define(['../events', '../types', '../values', '../widget'],
         } else {
           return Meter;
         }
-      } else if (cellType === Number) {
+      } else if (cellType === numberT) {
         return SmallKnob;
       } else if (cellType instanceof EnumT) {
         // Our EnumT-type widgets are Radio and Select; Select is a better default for arbitrarily-long lists.
         return Select;
-      } else if (cellType === Boolean) {
+      } else if (cellType === booleanT) {
         return Toggle;
-      } else if (cellType === String && targetCell.set) {
+      } else if (cellType === stringT && targetCell.set) {
         return TextBox;
       } else if (cellType === trackT) {
         return TrackWidget;

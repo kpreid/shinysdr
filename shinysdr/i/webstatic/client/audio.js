@@ -29,9 +29,12 @@ define(['./events', './network', './types', './values'],
   const Notifier = events.Notifier;
   const Neverfier = events.Neverfier;
   const StorageCell = values.StorageCell;
+  const booleanT = types.booleanT;
   const cellPropOfBlock = values.cellPropOfBlock;
   const makeBlock = values.makeBlock;
+  const numberT = types.numberT;
   const retryingConnection = network.retryingConnection;
+  const stringT = types.stringT;
   
   const exports = {};
   
@@ -97,7 +100,7 @@ define(['./events', './network', './types', './values'],
     }
     var info = makeBlock({
       buffered: new LocalReadCell(new types.RangeT([[0, 2]], false, false), 0),
-      target: new LocalReadCell(String, ''),  // TODO should be numeric w/ unit
+      target: new LocalReadCell(stringT, ''),  // TODO should be numeric w/ unit
       error: new LocalReadCell(new NoticeT(true), ''),
       //averageSkew: new LocalReadCell(Number, 0),
       monitor: new ConstantCell(types.blockT, analyserAdapter)
@@ -341,7 +344,7 @@ define(['./events', './network', './types', './values'],
     let lastValue = [info, fftBuffer];
     const subscriptions = [];
     let isScheduled = false;
-    const pausedCell = this.paused = new LocalCell(Boolean, true);
+    const pausedCell = this.paused = new LocalCell(booleanT, true);
     let lockout = false;
     
     function update() {
@@ -419,7 +422,7 @@ define(['./events', './network', './types', './values'],
     
     // Other elements expected by Monitor widget
     Object.defineProperty(this, '_implements_shinysdr.i.blocks.IMonitor', {enumerable: false});
-    this.freq_resolution = new ConstantCell(Number, length);
+    this.freq_resolution = new ConstantCell(numberT, length);
     this.signal_type = new ConstantCell(types.anyT, {kind: 'USB', sample_rate: effectiveSampleRate});
   }
   Object.defineProperty(AudioAnalyserAdapter.prototype, '_reshapeNotice', {value: new Neverfier()});
@@ -516,7 +519,7 @@ define(['./events', './network', './types', './values'],
     
     // Other elements expected by Monitor widget
     Object.defineProperty(this, '_implements_shinysdr.i.blocks.IMonitor', {enumerable: false});
-    this.freq_resolution = new ConstantCell(Number, length);
+    this.freq_resolution = new ConstantCell(numberT, length);
     this.signal_type = new ConstantCell(types.anyT, {kind: 'USB', sample_rate: audioContext.sampleRate});
   }
   Object.defineProperty(AudioScopeAdapter.prototype, '_reshapeNotice', {value: new Neverfier()});

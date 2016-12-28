@@ -41,7 +41,7 @@ define(['./types', './values', './widget'], function (types, values, widget) {
       dialog.close();
     });
     
-    var widgetHandle = createWidgetExt(menuContext, widgetCtor, innerElement, new ConstantCell(any, target));
+    var widgetHandle = createWidgetExt(menuContext, widgetCtor, innerElement, new ConstantCell(anyT, target));
     
     dialog.addEventListener('mouseup', function (event) {
       if (event.target === dialog) {  // therefore not on content

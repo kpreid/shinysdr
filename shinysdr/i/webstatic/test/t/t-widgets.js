@@ -31,6 +31,7 @@ define(['/test/jasmine-glue.js',
   const Scheduler = events.Scheduler;
   const StorageNamespace = values.StorageNamespace;
   const Table = database.Table;
+  const ValueType = types.ValueType;
   const makeBlock = values.makeBlock;
 
   describe('widgets', function () {
@@ -109,17 +110,17 @@ define(['/test/jasmine-glue.js',
       }
     
       // TODO add tests of the cell-is-read-only case.
-      it('should pick for Block', () => t(widgets.Block, types.blockT, makeBlock({})));
-      it('should pick for Boolean', () => t(widgets.Toggle, Boolean, false));
+      it('should pick for blockT', () => t(widgets.Block, types.blockT, makeBlock({})));
+      it('should pick for booleanT', () => t(widgets.Toggle, types.booleanT, false));
       it('should pick for EnumT', () => t(widgets.Select, new types.EnumT({}), 0));
       it('should pick for NoticeT', () => t(widgets.Banner, new types.NoticeT(), ''));
-      it('should pick for Number', () => t(widgets.SmallKnob, Number, 0));
+      it('should pick for numberT', () => t(widgets.SmallKnob, types.numberT, 0));
       //TODO it('should pick for RangeT', () => t(widgets.LinSlider, new types.RangeT([(0, 0)]), 0));
-      it('should pick for String', () => t(widgets.TextBox, String, ''));
+      it('should pick for stringT', () => t(widgets.TextBox, types.stringT, ''));
       it('should pick for TimestampT', () => t(widgets.TimestampWidget, new types.TimestampT(), 0));
       //TODO it('should pick for trackT', () => t(widgets.TrackWidget, types.trackT, {}));
 
-      it('should pick for unknown', () => t(widgets.Generic, function sometype() {}, 1));
+      it('should pick for unknown', () => t(widgets.Generic, new (class FooT extends ValueType {})(), 1));
 
       // TODO: PickWidget used to be PickBlock. Add tests for its cell-type-based selection.
       it('should default to Block', function () {
@@ -225,7 +226,7 @@ define(['/test/jasmine-glue.js',
         // TODO stop needing this boilerplate, somehow.
         return new ConstantCell(types.blockT, makeBlock({
           source: new ConstantCell(types.blockT, makeBlock({
-            freq: new ConstantCell(Number, 0),
+            freq: new ConstantCell(types.numberT, 0),
             rx_driver: new ConstantCell(types.blockT, makeBlock({
               output_type: new ConstantCell(types.anyT, {sample_rate: 1})
             })),

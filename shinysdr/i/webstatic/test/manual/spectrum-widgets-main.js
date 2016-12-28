@@ -22,34 +22,35 @@ requirejs.config({
 define(['types', 'values', 'events', 'widget', 'widgets', 'network', 'database', 'coordination'], function (types, values, events, widget, widgets, network, database, coordination) {
   'use strict';
 
-  var ClientStateObject = coordination.ClientStateObject;
-  var ConstantCell = values.ConstantCell;
-  var StorageCell = values.StorageCell;
-  var StorageNamespace = values.StorageNamespace;
-  var makeBlock = values.makeBlock;
+  const ClientStateObject = coordination.ClientStateObject;
+  const ConstantCell = values.ConstantCell;
+  const StorageCell = values.StorageCell;
+  const StorageNamespace = values.StorageNamespace;
+  const makeBlock = values.makeBlock;
+  const numberT = types.numberT;
   
-  var binCount = 4096;
-  var sampleRate = 1e6;
-  var minLevel = -130;
-  var maxLevel = -20;
+  const binCount = 4096;
+  const sampleRate = 1e6;
+  const minLevel = -130;
+  const maxLevel = -20;
   
-  var scheduler = new events.Scheduler();
+  const scheduler = new events.Scheduler();
 
-  var clientStateStorage = new StorageNamespace(localStorage, 'shinysdr.client.');
-  var clientState = new ClientStateObject(clientStateStorage, null);
+  const clientStateStorage = new StorageNamespace(localStorage, 'shinysdr.client.');
+  const clientState = new ClientStateObject(clientStateStorage, null);
   
   const fftcell = new network.BulkDataCell('<dummy spectrum>', new types.BulkDataT('dff', 'b'));
   const root = new ConstantCell(types.blockT, makeBlock({
     unpaused: new StorageCell(clientStateStorage, Boolean, true, '_test_unpaused'),
     source: new ConstantCell(types.blockT, makeBlock({
-      freq: new ConstantCell(Number, 0),
+      freq: new ConstantCell(numberT, 0),
     })),
     receivers: new ConstantCell(types.blockT, makeBlock({})),
     client: new ConstantCell(types.blockT, clientState),
-    //input_rate: new ConstantCell(Number, sampleRate),
+    //input_rate: new ConstantCell(numberT, sampleRate),
     monitor: new ConstantCell(types.blockT, makeBlock({
       fft: fftcell,
-      freq_resolution: new ConstantCell(Number, binCount),
+      freq_resolution: new ConstantCell(numberT, binCount),
       signal_type: new ConstantCell(types.anyT, {kind: 'IQ', sample_rate: sampleRate})
     }))
   }));

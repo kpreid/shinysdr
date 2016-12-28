@@ -20,6 +20,7 @@ define(['./events', './types'], function (events, types) {
   
   const Neverfier = events.Neverfier;
   const Notifier = events.Notifier;
+  const ValueType = types.ValueType;
   const anyT = types.anyT;
   const blockT = types.blockT;
   
@@ -34,12 +35,14 @@ define(['./events', './types'], function (events, types) {
       type = type_or_metadata.value_type;
       metadata = type_or_metadata;
     } else {
-      // TODO: Once we have an actual superclass for client-side ValueTypes, check for it here.
       type = type_or_metadata;
       metadata = {
         value_type: type_or_metadata,
         naming: {}
       };
+    }
+    if (!(type instanceof ValueType)) {
+      throw new TypeError('cell type not a ValueType: ' + type);
     }
     // TODO: .metadata was added after .type, and .type is now redundant. Look at whether we want to remove it -- probably not.
     this.type = type;

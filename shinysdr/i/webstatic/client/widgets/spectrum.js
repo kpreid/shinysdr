@@ -16,12 +16,12 @@
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 define(['./basic', './dbui',
-        '../database', '../gltools', '../math', '../menus', '../values', '../widget',
+        '../database', '../gltools', '../math', '../menus', '../types', '../values', '../widget',
         'text!./spectrum-common.glsl',
         'text!./spectrum-graph-f.glsl', 'text!./spectrum-graph-v.glsl',
         'text!./spectrum-waterfall-f.glsl', 'text!./spectrum-waterfall-v.glsl'], 
        (widgets_basic, widgets_dbui,
-        database, gltools, math, menus, values, widget,
+        database, gltools, math, menus, types, values, widget,
         shader_common,
         shader_graph_f, shader_graph_v,
         shader_waterfall_f, shader_waterfall_v) => {
@@ -43,6 +43,7 @@ define(['./basic', './dbui',
   const formatFreqExact = math.formatFreqExact;
   const formatFreqInexactVerbose = math.formatFreqInexactVerbose;
   const mod = math.mod;
+  const numberT = types.numberT;
   
   const exports = Object.create(null);
   
@@ -75,10 +76,10 @@ define(['./basic', './dbui',
       // TODO this is clunky. (Note we're not just using rebuildMe because we don't want to lose waterfall history and reinit GL and and and...)
       var freqCell = isRFSpectrum ? (function() {
         var radioCell = config.radioCell;
-        return new DerivedCell(Number, config.scheduler, function (dirty) {
+        return new DerivedCell(numberT, config.scheduler, function (dirty) {
           return radioCell.depend(dirty).source.depend(dirty).freq.depend(dirty);
         });
-      }()) : new ConstantCell(Number, 0);
+      }()) : new ConstantCell(numberT, 0);
       var freqScaleEl = overlayContainer.appendChild(document.createElement('div'));
       createWidgetExt(context, FreqScale, freqScaleEl, freqCell);
       

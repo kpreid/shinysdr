@@ -15,137 +15,190 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+// Client-side mirror of shinysdr/types.py
+
 define([], () => {
   'use strict';
   
-  var exports = Object.create(null);
+  const exports = Object.create(null);
   
-  function isSingleValued(type) {
-    // TODO: Stop using Boolean etc. as type objects and remove the need for this feature test
-    return type.isSingleValued && type.isSingleValued();
+  class ValueType {
+    isSingleValued() {
+      // default implementation
+      return false;
+    }
   }
-  exports.isSingleValued = isSingleValued;
+  exports.ValueType = ValueType;
   
-  function ConstantT(value) {
-    this.value = value;
+  // Do not instantiate arbitrarily; identity is used.
+  class _JSType extends ValueType {
+    constructor(jsCoerceFn) {
+      super();
+      this._jsCoerceFn = jsCoerceFn;
+      Object.freeze(this);
+    }
   }
-  ConstantT.prototype.isSingleValued = function () {
-    return true;
-  };
+  const booleanT = new _JSType(Boolean);
+  exports.booleanT = booleanT;
+  const numberT = new _JSType(Number);  // TODO: Preserve integer distinction? Not currently useful anywhere.
+  exports.numberT = numberT;
+  const stringT = new _JSType(String);
+  exports.stringT = stringT;
+  
+  class ConstantT extends ValueType {
+    constructor(value) {
+      super();
+      this.value = value;
+      Object.freeze(this);
+    }
+    
+    isSingleValued() { return true; }
+  }
   exports.ConstantT = ConstantT;
   
-  function EnumT(tableIn) {
-    var table = Object.create(null);
-    for (var k in tableIn) {
-      var row = tableIn[k];
-      switch (typeof row) {
-        case 'string':
-          table[k] = {
-            label: row,
-            description: null,
-            sort_key: k
-          };
-          break;
-        case 'object':
-          table[k] = row;
-          break;
-        default:
-          throw new TypeError('enum row not string or EnumRow: ' + row);
+  class EnumT extends ValueType {
+    constructor(tableIn) {
+      const table = Object.create(null);
+      for (var k in tableIn) {
+        const row = tableIn[k];
+        switch (typeof row) {
+          case 'string':
+            table[k] = {
+              label: row,
+              description: null,
+              sort_key: k
+            };
+            break;
+          case 'object':
+            table[k] = row;
+            break;
+          default:
+            throw new TypeError('enum row not string or EnumRow: ' + row);
+        }
       }
+      
+      super();
+      this._table = Object.freeze(table);
+      Object.freeze(this);
     }
-    this._table = Object.freeze(table);
-    Object.freeze(this);
+    
+    getTable() {
+      return this._table;
+    }
+    
+    isSingleValued() {
+      return Object.keys(this._table).length <= 1;
+    }
   }
-  EnumT.prototype.getTable = function () {
-    return this._table;
-  };
-  EnumT.prototype.isSingleValued = function () {
-    return Object.keys(this._table).length <= 1;
-  };
   exports.EnumT = EnumT;
 
-  function RangeT(subranges, logarithmic, integer) {
-    this.mins = Array.prototype.map.call(subranges, function (v) { return v[0]; });
-    this.maxes = Array.prototype.map.call(subranges, function (v) { return v[1]; });
-    this.logarithmic = logarithmic;
-    this.integer = integer;
-  }
-  RangeT.prototype.isSingleValued = function () {
-    return this.mins.length <= 1 && this.maxes.length <= 1 && this.mins[0] === this.maxes[0];
-  };
-  RangeT.prototype.getMin = function() {
-    return this.mins[0];
-  };
-  RangeT.prototype.getMax = function() {
-    return this.maxes[this.maxes.length - 1];
-  };
-  RangeT.prototype.round = function(value, direction) {
-    // direction is -1, 0, or 1 indicating preferred rounding direction (0 round to nearest)
-    value = +value;
-    // algorithm is inefficient but adequate
-    const length = this.mins.length;
-    let bestFit = Infinity;
-    let bestIndex = direction == -1 ? 0 : direction == 1 ? length - 1 : undefined;
-    for (let i = 0; i < length; i++) {
-      const min = this.mins[i];
-      const max = this.maxes[i];
-      const upwardFit = value > max ? Infinity : min - value;
-      const downwardFit = value < min ? Infinity : value - max;
-      let fit;
-      switch (direction) {
-        case 0: fit = Math.min(upwardFit, downwardFit); break;
-        case 1: fit = upwardFit; break;
-        case -1: fit = downwardFit; break;
-        default: throw new Error('bad rounding direction');
-      }
-      //console.log('fit for ', min, max, ' is ', fit);
-      if (fit < bestFit) {
-        bestFit = fit;
-        bestIndex = i;
-      }
+  class RangeT extends ValueType {
+    constructor(subranges, logarithmic, integer) {
+      super();
+      this.mins = Array.prototype.map.call(subranges, function (v) { return v[0]; });
+      this.maxes = Array.prototype.map.call(subranges, function (v) { return v[1]; });
+      this.logarithmic = logarithmic;
+      this.integer = integer;
     }
-    if (bestIndex === undefined) throw new Error("can't happen");
-    const min = this.mins[bestIndex];
-    const max = this.maxes[bestIndex];
-    //console.log(value, direction, min, max);
-    if (value < min) value = min;
-    if (value > max) value = max;
-    return value;
-  };
+    
+    isSingleValued() {
+      return this.mins.length <= 1 && this.maxes.length <= 1 && this.mins[0] === this.maxes[0];
+    }
+    
+    getMin() { return this.mins[0]; }
+    getMax() { return this.maxes[this.maxes.length - 1]; }
+    
+    round(value, direction) {
+      // direction is -1, 0, or 1 indicating preferred rounding direction (0 round to nearest)
+      value = +value;
+      // algorithm is inefficient but adequate
+      const length = this.mins.length;
+      let bestFit = Infinity;
+      let bestIndex = direction == -1 ? 0 : direction == 1 ? length - 1 : undefined;
+      for (let i = 0; i < length; i++) {
+        const min = this.mins[i];
+        const max = this.maxes[i];
+        const upwardFit = value > max ? Infinity : min - value;
+        const downwardFit = value < min ? Infinity : value - max;
+        let fit;
+        switch (direction) {
+          case 0: fit = Math.min(upwardFit, downwardFit); break;
+          case 1: fit = upwardFit; break;
+          case -1: fit = downwardFit; break;
+          default: throw new Error('bad rounding direction');
+        }
+        //console.log('fit for ', min, max, ' is ', fit);
+        if (fit < bestFit) {
+          bestFit = fit;
+          bestIndex = i;
+        }
+      }
+      if (bestIndex === undefined) throw new Error("can't happen");
+      const min = this.mins[bestIndex];
+      const max = this.maxes[bestIndex];
+      //console.log(value, direction, min, max);
+      if (value < min) value = min;
+      if (value > max) value = max;
+      return value;
+    }
+  }
   exports.RangeT = RangeT;
 
-  // TODO: probably ought to have these type-_constructor_ names be named in some systematic way that distinguishes them from value-constructors.
-
-  function NoticeT(alwaysVisible) {
-    this.alwaysVisible = alwaysVisible;
+  class NoticeT extends ValueType {
+    constructor(alwaysVisible) {
+      super();
+      this.alwaysVisible = Boolean(alwaysVisible);
+      Object.freeze(this);
+    }
   }
   exports.NoticeT = NoticeT;
 
-  function TimestampT() {
+  class TimestampT extends ValueType {
   }
   exports.TimestampT = TimestampT;
 
-  function BulkDataT(info_format, array_format) {
-    // TODO: redesign things so that we have the semantic info from the server
-    if (info_format == 'dff' && array_format == 'b') {
-      this.dataFormat = 'spectrum-byte';
-    } else if (info_format == 'd' && array_format == 'f') {
-      this.dataFormat = 'scope-float';
-    } else {
-      throw new Error('Unexpected bulk data format: ' + info_format + ' ' + array_format);
+  class BulkDataT extends ValueType {
+    constructor(info_format, array_format) {
+      super();
+      // TODO: redesign things so that we have the semantic info from the server
+      if (info_format == 'dff' && array_format == 'b') {
+        this.dataFormat = 'spectrum-byte';
+      } else if (info_format == 'd' && array_format == 'f') {
+        this.dataFormat = 'scope-float';
+      } else {
+        throw new Error('Unexpected bulk data format: ' + info_format + ' ' + array_format);
+      }
+      Object.freeze(this);
     }
   }
   exports.BulkDataT = BulkDataT;
 
-  // type for any block
-  const blockT = Object.freeze({});
-  exports.blockT = blockT;
+  const singletonDone = new WeakMap();
+  class SingletonValueType extends ValueType {
+    constructor() {
+      super();
+      const c = this.constructor;  // TODO: More ES6ish thing to check?
+      if (singletonDone.get(c)) {
+        throw new Error('singleton error for ' + c);
+      }
+      singletonDone.set(c, true);
+      Object.freeze(this);
+    }
+  }
 
-  const anyT = Object.freeze({});
+  // type for any value at all
+  class AnyT extends SingletonValueType {}
+  const anyT = new AnyT();
   exports.anyT = anyT;
 
+  // type for any block
+  class BlockT extends SingletonValueType {}
+  const blockT = new BlockT();
+  exports.blockT = blockT;
+
   // type for track objects
-  const trackT = Object.freeze({});
+  class TrackT extends SingletonValueType {}
+  const trackT = new TrackT();
   exports.trackT = trackT;
 
   function typeFromDesc(desc) {
@@ -156,11 +209,11 @@ define([], () => {
           case 'reference':
             return blockT;
           case 'boolean':
-            return Boolean; // will do till we need something fancier
+            return booleanT;
           case 'float64':
-            return Number;
+            return numberT;
           case 'integer':
-            return Number;
+            return numberT;
           case 'shinysdr.telemetry.Track':
             return trackT;
           default:
