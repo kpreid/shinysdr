@@ -52,8 +52,9 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
       draw_line: sc('draw_line', booleanT, false),  // TODO better name
       history_samples: sc('history_samples', new RangeT([[256, 256], [512, 512], [1024, 1024], [2048, 2048], [4096, 4096], [8192, 8192], [16384, 16384]/*, [32768, 32768], [65536, 65536]*/], true, true), 8192),
       time_scale: sc('time_scale', new RangeT([[128, 16384]], false, false), 1024),
+      dot_interpolation: sc('dot_interpolation', new RangeT([[1, 40]], false, true), 10),
       gain: sc('gain', new RangeT([[-50, 50]], false, false), 0),
-      intensity: sc('intensity', new RangeT([[1.01/256, 10.0]], true, false), 1.0),
+      intensity: sc('intensity', new RangeT([[0.01, 100.0]], true, false), 1.0),
       focus_falloff: sc('focus_falloff', new RangeT([[0.1, 3]], false, false), 0.8),
       persistence_gamma: sc('persistence_gamma', new RangeT([[1, 100]], true, false), 10.0),
       invgamma: sc('invgamma', new RangeT([[0.5, 2]], false, false), 1.0)
@@ -76,7 +77,6 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
     const fakeDataMode = false;
     
     const numberOfChannels = 2;  // not directly changeable; this is for documentation
-    const interpScale = 10;
     
     const kernelRadius = 10;
 
@@ -112,6 +112,7 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
     // These are initialized by configureDataBuffer.
     let numberOfSamples;
     let numberOfDots;
+    let interpScale;
     const timeBuffer = gl.createBuffer();
     // scopeDataArray is a copy of the texture contents, not used for drawing but is used to calculate the trigger position.
     let scopeDataArray = new Float32Array(0);
@@ -142,6 +143,10 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
     gl.uniform1i(gl.getUniformLocation(program, 'scopeData'), 0);  // texture
     
     const configureDataBuffer = config.boundedFn(function configureDataBufferImpl() {
+      // TODO: Once we have proper non-linear interpolation, we will want to interpolate even if drawing lines.
+      interpScale =
+          parameters.draw_line.depend(configureDataBuffer) ? 1 :
+          parameters.dot_interpolation.depend(configureDataBuffer);
       numberOfSamples = parameters.history_samples.depend(configureDataBuffer);
       numberOfDots = (numberOfSamples - 1) * interpScale + 1;  // avoids having any end-to-beginning wraparound points
       
@@ -287,12 +292,17 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
         }
       }
       
+      const drawLine = parameters.draw_line.depend(draw);
+      const compensatedIntensity = drawLine
+          ? parameters.intensity.depend(draw) / 10  // fudge factor, not applicable to all cases
+          : parameters.intensity.depend(draw) / interpScale;
+      
       gl.useProgram(postProcessor1.getProgram());
       gl.uniform1fv(gl.getUniformLocation(postProcessor1.getProgram(), 'kernel'), ppKernel);
       
       gl.useProgram(postProcessor2.getProgram());
       gl.uniform1fv(gl.getUniformLocation(postProcessor2.getProgram(), 'kernel'), ppKernel);
-      gl.uniform1f(gl.getUniformLocation(postProcessor2.getProgram(), 'intensity'), parameters.intensity.depend(draw));
+      gl.uniform1f(gl.getUniformLocation(postProcessor2.getProgram(), 'intensity'), compensatedIntensity);
       gl.uniform1f(gl.getUniformLocation(postProcessor2.getProgram(), 'invgamma'), parameters.invgamma.depend(draw));
       
       gl.useProgram(program);
@@ -314,7 +324,7 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
       gl.bindTexture(gl.TEXTURE_2D, scopeDataTexture);
       
       const staticProjectionInfo = projectionCell.depend(draw);
-      const primitive = parameters.draw_line.depend(draw) ? gl.LINE_STRIP : gl.POINTS;
+      const primitive = drawLine ? gl.LINE_STRIP : gl.POINTS;
       let hadAnyTrigger = false;
       if (staticProjectionInfo.usesTrigger) {
         for (let i = triggerSampleIndexes.length - 1; i >= 0; i--) {
@@ -458,6 +468,7 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
       makeContainer('Time');
       addWidget('history_samples');
       addWidget('time_scale');
+      addWidget('dot_interpolation');
 
       makeContainer('Rendering');
       addWidget('intensity');
