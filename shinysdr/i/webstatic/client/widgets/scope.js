@@ -49,6 +49,12 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
         'ch2,ch1,t': 'XY Rev',
         '1-2,1+2,t': 'Stereo'
       }), 't,ch1,1'),
+      trigger_channel: sc('trigger_channel',  new EnumT({
+        'ch1': 'A',
+        'ch2': 'B'
+      }), 'ch1'),
+      trigger_level: sc('trigger_level', new RangeT([[-1, 1]], false, false), 0),
+      trigger_hysteresis: sc('trigger_hysteresis', new RangeT([[0.001, 0.5]], true, false), 0.01),
       draw_line: sc('draw_line', booleanT, false),  // TODO better name
       history_samples: sc('history_samples', new RangeT([[256, 256], [512, 512], [1024, 1024], [2048, 2048], [4096, 4096], [8192, 8192], [16384, 16384]/*, [32768, 32768], [65536, 65536]*/], true, true), 8192),
       time_scale: sc('time_scale', new RangeT([[128, 16384]], false, false), 1024),
@@ -419,14 +425,28 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
       }
       
       // calculate new trigger points
-      const triggerLevel = 0;  // TODO parameter
+      let triggerChannel;
+      switch (parameters.trigger_channel.get()) {
+        case 'ch1':
+          triggerChannel = 0;
+          break;
+        case 'ch2':
+        default:
+          triggerChannel = 1;
+          break;
+      }
+      const triggerLevel = parameters.trigger_level.get();
+      const triggerHysteresis = parameters.trigger_hysteresis.get();
       for (let i = newDataStart; i < newDataEnd; i++) {  // note: i may > numberOfSamples
         if (triggerInhibition > 0) {
           triggerInhibition--;
         } else {
           triggerInhibition = 0;
-          if (scopeDataArray[mod(i - 1, numberOfSamples) * numberOfChannels] <= triggerLevel
-              && scopeDataArray[mod(i, numberOfSamples) * numberOfChannels] > triggerLevel) {
+          const previousSampleCh1 = scopeDataArray[mod(i - 1, numberOfSamples) * numberOfChannels + triggerChannel];
+          const thisSampleCh1 = scopeDataArray[mod(i, numberOfSamples) * numberOfChannels + triggerChannel];
+          if (previousSampleCh1 <= triggerLevel
+              && thisSampleCh1 > triggerLevel
+              && (thisSampleCh1 - previousSampleCh1) > triggerHysteresis) {
             triggerSampleIndexes[triggerAddPtr] = mod(i, numberOfSamples);
             triggerAddPtr = mod(triggerAddPtr + 1, triggerSampleIndexes.length);
             triggerInhibition += Math.min(numberOfSamples, parameters.time_scale.get());
@@ -469,6 +489,11 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
       addWidget('history_samples');
       addWidget('time_scale');
       addWidget('dot_interpolation');
+
+      makeContainer('Trigger');
+      addWidget('trigger_channel');
+      addWidget('trigger_level');
+      addWidget('trigger_hysteresis');
 
       makeContainer('Rendering');
       addWidget('intensity');
