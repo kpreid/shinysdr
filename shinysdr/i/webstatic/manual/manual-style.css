@@ -17,7 +17,7 @@
  */
 
 @import url(/client/ui.css);
-@import url(/client/theme.css);
+@import url(/client/themes/gray.css);
 
 html {
   margin: 0;

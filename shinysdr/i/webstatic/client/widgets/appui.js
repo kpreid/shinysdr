@@ -433,5 +433,29 @@ define(['./basic', './spectrum',
   var TelemetryStoreWidget = BlockSet(PickWidget, BlockSetInFrameEntryBuilder(''));
   exports['interface:shinysdr.telemetry.ITelemetryStore'] = TelemetryStoreWidget;
   
+  class ThemeApplier {
+    constructor(config) {
+      const element = this.element = config.element;
+      const target = config.target;
+      
+      if (element.tagName !== 'LINK') {
+        throw new Error('wrong element ' + element.nodeName);
+      }
+      
+      const update = config.boundedFn(function updateImpl() {
+        let themeUrl = target.depend(update);
+        // If value is not valid take a valid one
+        // TODO: implement client side coercion and remove this instanceof
+        if (target.type instanceof EnumT && !(themeUrl in target.type.getTable())) {
+          themeUrl = Object.keys(target.type.getTable())[0];
+        }
+        element.href = themeUrl;
+      });
+      update.scheduler = config.scheduler;
+      update();
+    }
+  }
+  exports.ThemeApplier = ThemeApplier;
+  
   return Object.freeze(exports);
 });

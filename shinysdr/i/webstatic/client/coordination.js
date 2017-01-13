@@ -138,11 +138,20 @@ define(['./types', './values'], function (types, values) {
   // Client state: perhaps a better word would be 'preferences'.
   // (This is not really associated with the Coordinator but it has a similar relation to the rest of the system so it's in this file for now.)
   function ClientStateObject(clientStateStorage, databasePicker) {
-    // TODO(kpreid): Client state should be more closely associated with the components that use it, rather than centrally defined.
+    // TODO: Client state should be more closely associated with the components that use it, rather than centrally defined.
+    
+    const themeType = new types.EnumT({
+      // TODO get list of themes
+      '/client/themes/black.css': 'Dark',
+      '/client/themes/gray.css': 'Gray',
+    });
+    const defaultTheme = '/client/themes/gray.css'
+    
     function cc(key, type, value) {
       return new StorageCell(clientStateStorage, type, value, key);
     }
     return makeBlock({
+      theme: cc('theme', themeType, defaultTheme),
       opengl: cc('opengl', booleanT, true),
       opengl_float: cc('opengl_float', booleanT, true),
       databases: new ConstantCell(blockT, databasePicker)

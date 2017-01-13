@@ -1,4 +1,4 @@
-/* Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+/* Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
  * 
  * This file is part of ShinySDR.
  * 
@@ -56,6 +56,16 @@ html.subwindowed-page, .subwindowed-page body {
   display: flex;
   flex-direction: row;
   justify-content: center;
+  
+  /* This background color shows up only where there is no subwindow to fill the space. */
+  background: #333;
+  background-image: linear-gradient(45deg, #2F2F2F 26%, #333 26%, #333 51%, #2F2F2F 51%, #2F2F2F 76%, #333 76%);
+  background-size: 1em 1em;
+  color: white;
+}
+shinysdr-subwindow {
+  background: var(--shinysdr-theme-column-bgfill);
+  color: var(--shinysdr-theme-foreground);
 }
 .subwindowed > shinysdr-subwindow {
   display: flex;
@@ -72,6 +82,12 @@ shinysdr-subwindow > h2 {
   margin: 0;
   padding: .2em;
   flex: 0 0 auto;
+  
+  border: var(--shinysdr-theme-window-title-bgcolor) outset;
+  border-width: 0 1px;
+  background: var(--shinysdr-theme-window-title-bgcolor);
+  background: var(--shinysdr-theme-window-title-bgfill);
+  color: var(--shinysdr-theme-window-title-foreground);
 }
 .subwindow-menu-button {
   /* reset */
@@ -92,6 +108,9 @@ shinysdr-subwindow > h2 {
   
   /* spacing vs. other header content -- probably should be moved */
   margin-right: 0.2em;
+  
+  border: 0 var(--shinysdr-theme-window-title-bgcolor) groove;
+  border-width: 0 2px 0 0;
   
   cursor: pointer;
 }
@@ -138,6 +157,14 @@ ul.system-menu-list, .system-menu-list ul { /* TODO doesn't fit here, is styling
 
   cursor: pointer;
 }
+.system-menu-list .subwindow-show-button-shown {
+  /* TODO: theme might want this to be darkening */
+  background: rgba(255, 255, 255, 0.2);
+}
+.system-menu-list .subwindow-show-button:hover {
+  /* TODO: theme might want this to be darkening */
+  background: rgba(255, 255, 255, 0.4);
+}
 
 /* pop-up menus (which are <dialog> elements) */
 .menu-dialog {
@@ -146,6 +173,8 @@ ul.system-menu-list, .system-menu-list ul { /* TODO doesn't fit here, is styling
   padding: 0.25em;
   
   left: 0; right: 0;
+  
+  box-shadow: 0 0.1em 1em 0.1em rgba(0, 0, 0, 0.25);
 }
 
 /* widgets */
@@ -165,9 +194,13 @@ ul.system-menu-list, .system-menu-list ul { /* TODO doesn't fit here, is styling
 .panel, details.frame summary {
   padding: .2em;
 }
+.panel {
+  border-bottom: 0.1em solid var(--shinysdr-theme-header-bgcolor);
+}
 
 .frame-controls, .panel.frame, details.frame summary {
   margin-top: 0.2em;
+  border-color: var(--shinysdr-theme-header-bgcolor);
 }
 .frame-controls {
   margin-bottom: -0.2em; /* collapse margin with following frame */
@@ -184,6 +217,17 @@ ul.system-menu-list, .system-menu-list ul { /* TODO doesn't fit here, is styling
 
   font-style: italic;
   text-transform: lowercase;
+}
+.frame > details > summary:hover {
+  background-color: var(--shinysdr-theme-header-bgcolor);
+  color: var(--shinysdr-theme-foreground);
+  cursor: pointer;
+}
+.frame-controls, details.frame summary {
+  padding-left: 0.2em;
+  background: var(--shinysdr-theme-header-bgcolor);
+  background: var(--shinysdr-theme-header-bgfill);
+  color: var(--shinysdr-theme-foreground);
 }
 
 details.frame summary {
@@ -207,6 +251,9 @@ details[open].frame summary {
   padding: 0.2em;
   
   border-radius: 99em;
+  
+  background: black;
+  color: white;
 }
 
 /* widget-in-inline-context gimmicks */
@@ -235,6 +282,10 @@ h2 input {
   display: flex;
   flex: 1;
   position: relative;  /* allow contents to absolute position relative to this */
+
+  /* TODO: We actually want this to be the WaterfallPlot's graph background color, but no good way to express that currently (so the widget is transparent) */
+  background: var(--shinysdr-theme-spectrum-bgcolor);
+  color: var(--shinysdr-theme-spectrum-label-foreground); /* consistency */
 }
 .widget-Monitor-scrollable {
   flex: 1 1;
@@ -273,11 +324,17 @@ h2 input {
   padding: .2em;
 }
 .widget-MonitorDetailedOptions > details[open] {
-  /* TODO should in principle be in theme.css but we need a reset here */
-  background: white;
-  color: black;
+  background: var(--shinysdr-theme-column-bgfill);
+  color: var(--shinysdr-theme-foreground);
   
   width: 16em;
+}
+
+.widget-WaterfallPlot {
+  /* these properties (normally SVG-only) are read by the widget's code */
+  /* TODO: but actually only the 2dcanvas version, so making this themeable doesn't help... */
+  fill: rgba(64, 100, 100, 0.75);
+  stroke: #00FFAA;
 }
 
 /* map */
@@ -302,7 +359,11 @@ h2 input {
 .map-coordinate-control input:not(:focus):not(:hover) {
   border-color: transparent;
   background: none;
-  text-shadow: 1px 1px 0px white, -1px 1px 0px white, 1px -1px 0px white, -1px -1px 0px white;
+  text-shadow:
+     1px  1px 0px var(--shinysdr-theme-halo-bgcolor),
+    -1px  1px 0px var(--shinysdr-theme-halo-bgcolor),
+     1px -1px 0px var(--shinysdr-theme-halo-bgcolor),
+    -1px -1px 0px var(--shinysdr-theme-halo-bgcolor);
 }
 .map-layer-switcher {
   position: absolute;
@@ -310,10 +371,16 @@ h2 input {
   top: 1em;
   display: table;
   padding: .2em;
-  text-shadow: 1px 1px 0px white, -1px 1px 0px white, 1px -1px 0px white, -1px -1px 0px white;
+  text-shadow:
+     1px  1px 0px var(--shinysdr-theme-halo-bgcolor),
+    -1px  1px 0px var(--shinysdr-theme-halo-bgcolor),
+     1px -1px 0px var(--shinysdr-theme-halo-bgcolor),
+    -1px -1px 0px var(--shinysdr-theme-halo-bgcolor);
 }
 .map-layer-switcher[open], .map-layer-switcher summary:hover, .map-layer-switcher summary:focus {
-  background: white;
+  background: var(--shinysdr-theme-column-bgcolor);
+  color: var(--shinysdr-theme-foreground);
+  text-shadow: none;
 }
 .map-layer-switcher label {
   display: block;
@@ -346,6 +413,38 @@ h2 input {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* individual button total-reskin styling */
+.widget-Radio input {
+  opacity: 0;  /* hide without disabling focusability */
+  width: 0.0em;
+  margin: 0;
+  border: none;
+  padding: 0;
+}
+.widget-Radio input + * {
+  border-radius: 0.38em;
+  box-shadow: 0 0.1em 0.1em 0.0em #666,
+      inset 0 0.1em 0.1em 0.0em #FFF;
+  margin: 0.05em 0.05em 0.1em;
+  background: #E4E4E4;
+  color: black;
+  
+  text-align: center;
+  
+  /*font-stretch: condensed;*/  /* Not currently supported by Chrome, so do the following instead */
+  font-size: 0.85em;
+  letter-spacing: -0.04em;
+}
+.widget-Radio input:checked + * {
+  background: black;
+  color: white;
+  box-shadow: 0 0.1em 0.1em 0.0em #EEE,
+      inset 0 0.08em 0.1em 0.0em #666;
+}
+.widget-Radio input:focus + * {
+  /* this is a Windows-style focus ring, but there doesn't seem to be a standard way to ask for a native one */
+  outline: 0.1em dotted black;
+}
 
 /* widgets: knob */
 .panel > .widget-Knob-outer {
@@ -356,6 +455,10 @@ h2 input {
   white-space: nowrap;
   font-family: monospace;
   font-size: 2.8em;
+  
+  background: var(--shinysdr-theme-knob-bgcolor);
+  color: var(--shinysdr-theme-knob-foreground);
+  border: .03em inset var(--shinysdr-theme-column-bgcolor);
 }
 .knob-digit {
   display: inline-block;
@@ -375,8 +478,8 @@ h2 input {
   /* hide normal focus ring */
   outline: none;
   /* and replace with a different more text-selectiony cue */
-  background: #555;
-  color: white;
+  background: rgba(127, 127, 127, 0.6);
+  color: inherit;  
 }
 .knob-spin-button-shim {
   position: absolute;
@@ -408,6 +511,10 @@ h2 input {
 }
 
 /* widgets: frequency scale */
+.widget-FreqScale {
+  background: none;
+  color: var(--shinysdr-theme-spectrum-label-foreground);
+}
 .freqscale {
   flex-shrink: 0;
   height: 1em;
@@ -435,6 +542,9 @@ h2 input {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  
+  opacity: 0.7;
+  color: var(--shinysdr-theme-spectrum-label-foreground);
 }
 .freqscale-channel {
   position: absolute;
@@ -453,6 +563,9 @@ h2 input {
   bottom: 1.15em;
   
   text-align: center;
+  
+  background: var(--shinysdr-theme-spectrum-label-bgcolor);
+  background: var(--shinysdr-theme-spectrum-label-bgfill);
 }
 
 .widget-Receiver-device-controls {
@@ -518,7 +631,10 @@ h2 input {
   
   font: .7em sans-serif;
   
-  border: .1em inset;
+  border: .1em inset var(--shinysdr-theme-column-bgcolor);
+  
+  background: var(--shinysdr-theme-databox-bgcolor);
+  color: var(--shinysdr-theme-databox-foreground);
 }
 .widget-FreqList table {
   border-collapse: collapse;
@@ -532,6 +648,22 @@ h2 input {
 .widget-FreqList .freqlist-cell-freq { text-align: right; }
 .widget-FreqList .freqlist-cell-mode { }
 .widget-FreqList .freqlist-cell-label { }
+.widget-FreqList .freqlist-item-unsupported {
+  color: var(--shinysdr-theme-databox-disabled-foreground);
+}
+.freqlist-item-band-start {
+  background: var(--shinysdr-theme-databox-band-start-bgfill);
+}
+.freqlist-item-band-end {
+  background: var(--shinysdr-theme-databox-band-end-bgfill);
+}
+.freqlist-item-band-start .freqlist-cell-label,
+.freqlist-item-band-end .freqlist-cell-label {
+  font-style: italic;
+}
+.widget-FreqList tr:hover {
+  background: var(--shinysdr-theme-databox-hover-bgcolor);
+}
 
 /* widgets: RecordDetails */
 .widget-RecordDetails .RecordDetails-fields {
