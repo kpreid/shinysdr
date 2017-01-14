@@ -134,6 +134,7 @@ ul.system-menu-list, .system-menu-list ul { /* TODO doesn't fit here, is styling
   border: none;
   background: none;
   text-align: left;
+  color: inherit;
 
   cursor: pointer;
 }
