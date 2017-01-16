@@ -546,6 +546,8 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
     };
   }
 
+  const TEXTURE_BLEED_GUARD_INSET = 2;
+
   function LabelTextureManager(gl, scheduler, maxHeight, redrawCallback) {
     var labelsTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, labelsTexture);
@@ -566,7 +568,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
     // Whether the canvas has been drawn on but not copied to the texture.
     var textureDirty = false;
 
-    var textureAllocator = new StripeAllocator(labelRenderCanvas.width, labelRenderCanvas.height, maxHeight + 2); // 2px bleed guard
+    var textureAllocator = new StripeAllocator(labelRenderCanvas.width, labelRenderCanvas.height, maxHeight + TEXTURE_BLEED_GUARD_INSET * 2);
 
     this.texture = function () { return labelsTexture; };
 
@@ -582,7 +584,9 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
       function destroyLabel() {
         delete labelCache[cacheKey];
       }
-      var labelAlloc = textureAllocator.allocate(width + 2, name, destroyLabel);  // 2px bleed guard
+      const allocWidth = width + TEXTURE_BLEED_GUARD_INSET * 2;
+      const allocHeight = maxHeight + TEXTURE_BLEED_GUARD_INSET * 2;
+      const labelAlloc = textureAllocator.allocate(allocWidth, name, destroyLabel);
       if (!labelAlloc) {
         // allocation failure
         if (!errorMarkerLabel) {
@@ -591,20 +595,22 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
         console.error('Failed to allocate label texture space for:', name);
         return errorMarkerLabel.incRefCount();
       }
-      labelRenderCtx.clearRect(labelAlloc.x, labelAlloc.y, width, maxHeight);
+      const paintX = labelAlloc.x + TEXTURE_BLEED_GUARD_INSET;
+      const paintY = labelAlloc.y + TEXTURE_BLEED_GUARD_INSET;
+      labelRenderCtx.clearRect(labelAlloc.x, labelAlloc.y, allocWidth, allocHeight);
       if (true) {
-        paintFn(labelRenderCtx, labelAlloc.x, labelAlloc.y);
+        paintFn(labelRenderCtx, paintX, paintY);
       } else {
         // debug allocation regions
         //labelRenderCtx.fillStyle = 'rgba(255, 0, 0, 0.5)';
-        labelRenderCtx.strokeRect(labelAlloc.x, labelAlloc.y, width, maxHeight);
+        labelRenderCtx.strokeRect(paintX, paintY, width, maxHeight);
       }
       textureDirty = true;
       return (labelCache[cacheKey] = {
-        tnx: (labelAlloc.x) / labelRenderCanvas.width,
-        tpx: (labelAlloc.x + width) / labelRenderCanvas.width,
-        tny: (labelAlloc.y + maxHeight) / labelRenderCanvas.height,
-        tpy: (labelAlloc.y) / labelRenderCanvas.height,
+        tnx: (paintX) / labelRenderCanvas.width,
+        tpx: (paintX + width) / labelRenderCanvas.width,
+        tny: (paintY + maxHeight) / labelRenderCanvas.height,
+        tpy: (paintY) / labelRenderCanvas.height,
         bnx: xoff - width / 2,
         bpx: xoff + width / 2,
         bny: yoff - maxHeight / 2,
