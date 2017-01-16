@@ -667,6 +667,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
         return;
       }
       textureDirty = false;
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
       // TODO: stop using a texture-sized canvas and use texSubImage2D instead, to avoid using more memory and copying more than we need. Not doing that yet because being able to look at the canvas is useful for debugging.
       gl.texImage2D(
         gl.TEXTURE_2D,
@@ -864,7 +865,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
           } else {
             gl.enable(gl.BLEND);
           }
-          gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+          gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);  // premultiplied-alpha blend function
 
 
           gl.uniform1i(gl.getUniformLocation(program, 'picking'), picking);
