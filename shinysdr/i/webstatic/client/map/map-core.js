@@ -1305,10 +1305,10 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
     
     // Abort if we can't do GL.
     var gl = gltools.getGL(config, canvas, {
-      alpha: true,
-      depth: true,  // TODO revisit if we end up using it
+      alpha: false,  // not currently used
+      depth: true,
       stencil: false,
-      antialias: false,  // TODO revisit
+      antialias: true,
       preserveDrawingBuffer: false
     });
     if (!gl) {
