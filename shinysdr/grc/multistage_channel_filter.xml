@@ -2,7 +2,7 @@
 <block>
     <name>Multistage Channel Filter</name>
     <key>shinysdr_MultistageChannelFilter</key>
-    <category>Filters</category>
+    <category>[ShinySDR]</category>
     <import>import shinysdr.filters</import>
     <make>shinysdr.filters.MultistageChannelFilter(input_rate=$input_rate, output_rate=$output_rate, cutoff_freq=$cutoff_freq, transition_width=$transition_width, center_freq=$center_freq)</make>
     <callback>set_cutoff_freq($cutoff_freq)</callback>
