@@ -443,7 +443,8 @@ __all__.append('MultistageChannelFilter')
 
 
 # TODO: Rename for consistency. Document.
-def make_resampler(in_rate, out_rate):
+# TODO: I think there are places where we are _not_ using make_resampler because it didn't have a complex mode before.
+def make_resampler(in_rate, out_rate, complex=False):
     fractional_cutoff = 0.4
     fractional_transition_width = 0.2
     
@@ -460,7 +461,7 @@ def make_resampler(in_rate, out_rate):
         common = gcd(in_rate, out_rate)
         interpolation = out_rate // common
         decimation = in_rate // common
-        return rational_resampler.rational_resampler_fff(
+        return (rational_resampler.rational_resampler_ccf if complex else rational_resampler.rational_resampler_fff)(
             interpolation=interpolation,
             decimation=decimation,
             taps=firdes.low_pass(
@@ -471,7 +472,7 @@ def make_resampler(in_rate, out_rate):
     else:
         resample_ratio = out_rate / in_rate
         pfbsize = 32  # TODO: justify magic number (taken from gqrx)
-        return pfb.arb_resampler_fff(
+        return (pfb.arb_resampler_ccf if complex else pfb.arb_resampler_fff)(
             resample_ratio,
             firdes.low_pass(
                 pfbsize,

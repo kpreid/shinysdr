@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<block>
+    <name>ShinySDR Modulator</name>
+    <key>shinysdr_modulator</key>
+    <category>[ShinySDR]</category>
+    <import>import shinysdr.grc</import>
+    <make>shinysdr.grc.ModulatorAdapter(mode=$mode, input_rate=$input_rate, output_rate=$output_rate)</make>
+    <param>
+        <name>Mode</name>
+        <key>mode</key>
+        <value>'AM'</value>
+        <type>string</type>
+    </param>
+    <param>
+        <name>Input Sample Rate</name>
+        <key>input_rate</key>
+        <value>samp_rate</value>
+        <type>real</type>
+    </param>
+    <param>
+        <name>Output Sample Rate</name>
+        <key>output_rate</key>
+        <value>samp_rate</value>
+        <type>real</type>
+    </param>
+    <sink>
+        <name>in</name>
+        <type>float</type>
+    </sink>
+    <source>
+        <name>out</name>
+        <type>complex</type>
+    </source>
+</block>
