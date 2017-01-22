@@ -104,7 +104,7 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
     reactor.addSystemEventTrigger('during', 'shutdown', app.close_all_devices)
     
     log.msg('Restoring state...')
-    PersistenceFileGlue(
+    pfg = PersistenceFileGlue(
         reactor=reactor,
         root_object=app,
         filename=config_obj._state_filename,
@@ -130,6 +130,7 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
     
     if _abort_for_test:
         services.stopService()
+        yield pfg.sync()
         defer.returnValue(app)
     else:
         yield defer.Deferred()  # never fires
