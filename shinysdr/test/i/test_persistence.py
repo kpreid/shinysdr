@@ -37,6 +37,7 @@ class TestPersistenceFileGlue(unittest.TestCase):
         self.__reset()
     
     def tearDown(self):
+        self.assertFalse(self.__clock.getDelayedCalls())
         shutil.rmtree(self.__temp_dir)
     
     def __reset(self):
@@ -61,14 +62,23 @@ class TestPersistenceFileGlue(unittest.TestCase):
 
     def test_persistence(self):
         """Test that state persists."""
-        self.__start()
+        pfg = self.__start()
         self.assertEqual(self.__root.get_value(), 0)  # check initial assumption
         self.__root.set_value(1)
-        self.__clock.advance(0.01)  # let change detector detect change
-        self.__clock.advance(_PERSISTENCE_DELAY + 0.01)
+        advance_until(self.__clock, pfg.sync(), limit=2)
         self.__reset()
         self.__start()
         self.assertEqual(self.__root.get_value(), 1)  # check persistence
+    
+    def test_delay_is_present(self):
+        """Test that persistence isn't immediate."""
+        pfg = self.__start()
+        self.assertEqual(self.__root.get_value(), 0)  # check initial assumption
+        self.__root.set_value(1)
+        self.__reset()
+        self.__start()
+        self.assertEqual(self.__root.get_value(), 0)  # change not persisted
+        advance_until(self.__clock, pfg.sync(), limit=2)  # clean up clock for tearDown check
     
     # TODO: Add a test that multiple changes don't trigger multiple writes -- needs a reasonable design for a hook to observe the write.
 
@@ -136,3 +146,17 @@ class ValueAndBlockSpecimen(ExportedState):
     @setter
     def set_value(self, value):
         self.__value = value
+
+
+def advance_until(clock, d, limit=10, timestep=0.001):
+    ret = []
+    err = []
+    d.addCallbacks(ret.append, err.append)
+    for _ in xrange(limit):
+        if ret:
+            return ret[0]
+        elif err:
+            raise err[0]
+        else:
+            clock.advance(timestep)
+        

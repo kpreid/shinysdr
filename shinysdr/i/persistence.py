@@ -23,6 +23,7 @@ import json
 import os.path
 import shutil
 
+from twisted.internet import defer
 from twisted.python import log
 
 from shinysdr.values import ExportedState, SubscriptionContext
@@ -69,9 +70,24 @@ class PersistenceFileGlue(object):
         # This is because it is useful in some failure modes to not immediately overwrite a good state file with a bad one on startup.
         self.__pcd.get()
     
+    def sync(self):
+        """Ensure that all pending changes have been written before the returned Deferred fires."""
+        d = defer.Deferred()
+        # We have to wait for cell subscription notifications to fire, but we have no idea if there are any. TODO: Add tests that ensures this matches.
+        self.__reactor.callLater(0, self.__sync_actual, d)
+        return d
+    
+    def __sync_actual(self, d):
+        if self.__active():
+            self.__write_immediately()
+        d.callback(None)
+    
+    def __active(self):
+        return self.__delayed_write_call and self.__delayed_write_call.active()
+    
     def __write_later(self):
         # TODO: Surely there is some utility in Twisted to do this better.
-        if not (self.__delayed_write_call and self.__delayed_write_call.active()):
+        if not self.__active():
             # TODO: factor out the logging?
             log.msg('Scheduling state write.')
             self.__delayed_write_call = self.__reactor.callLater(_PERSISTENCE_DELAY, self.__write_immediately)
