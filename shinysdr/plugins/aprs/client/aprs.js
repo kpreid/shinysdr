@@ -15,20 +15,43 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['widgets', 'map/map-core', 'events'], function (widgets, mapCore, events) {
+define(['events',  'map/map-core', 'types', 'values', 'widgets',
+        'text!plugins/shinysdr.plugins.aprs/symbol-index'],
+       (events, mapCore, types, values, widgets,
+        symbolIndexJsonText) => {
   'use strict';
   
-  var Block = widgets.Block;
-  var BlockSet = widgets.BlockSet;
-  var Clock = events.Clock;
-  var renderTrackFeature = mapCore.renderTrackFeature;
+  const Block = widgets.Block;
+  const BlockSet = widgets.BlockSet;
+  const Clock = events.Clock;
+  const DerivedCell = values.DerivedCell;
+  const anyT = types.anyT;
+  const dependOnPromise = values.dependOnPromise;
+  const renderTrackFeature = mapCore.renderTrackFeature;
+  const symbolIndex = JSON.parse(symbolIndexJsonText);
   
-  var exports = {};
+  const exports = {};
+
+  const UNKNOWN_SYMBOL = {description: ''};
   
   function APRSStationWidget(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       ignore('address'); // in header
       addWidget('track', widgets.TrackWidget);
+      
+      ignore('symbol');
+      const symbolCell = block.symbol;
+      addWidget(new DerivedCell({
+        value_type: anyT,
+        naming: {
+          label: 'Symbol',
+          description: '',
+          sort_key: 'symbol'
+        }
+      }, config.scheduler, dirty => {
+        const symbol = symbolCell.depend(dirty);
+        return symbol + ' ' + (symbolIndex.symbols[symbol] || UNKNOWN_SYMBOL).description;
+      }));
     }, false);
   }
   
@@ -48,12 +71,22 @@ define(['widgets', 'map/map-core', 'events'], function (widgets, mapCore, events
     mapPluginConfig.addLayer('APRS', {
       featuresCell: mapPluginConfig.index.implementing('shinysdr.plugins.aprs.IAPRSStation'),
       featureRenderer: function renderStation(station, dirty) {
-        var text = station.address.depend(dirty) + ' • ' + station.symbol.depend(dirty) +
-        ' • ' + (station.status.depend(dirty) || station.last_comment.depend(dirty));
         // TODO: Add multiline text rendering and use it
-        var f = renderTrackFeature(dirty, station.track, text);
+        const text = [
+          station.address.depend(dirty),
+          (station.status.depend(dirty) || station.last_comment.depend(dirty))
+        ].filter(t => t.trim() !== '').join(' • ');
         
-        // TODO: Get an APRS icon set and use it.
+        const f = renderTrackFeature(dirty, station.track, text);
+        
+        const symbol = station.symbol.depend(dirty);
+        if (symbol) {
+          // TODO: implement overlay symbols
+          const tables = dependOnPromise(dirty, null, aprsSymbolTablesPromise);
+          if (tables !== null) {
+            f.iconURL = tables[symbol[0] == '\\' ? 1 : 0][symbol.charCodeAt(1) - 33];
+          }
+        }
         
         var now = opacityClock.convertToTimestampSeconds(opacityClock.depend(dirty));
         var age = now - station.last_heard_time.depend(dirty);
@@ -70,6 +103,60 @@ define(['widgets', 'map/map-core', 'events'], function (widgets, mapCore, events
   }
   
   mapCore.register(addAPRSMapLayer);
+  
+  // Given an image element containing an APRS symbol spritesheet, slice it into an array of URLs for individual images.
+  function sliceSpritesheetImage(imageEl) {
+    const rows = 6;
+    const columns = 16;
+    const cellWidth = imageEl.width / columns;
+    const cellHeight = imageEl.height / rows;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = cellWidth;
+    canvas.height = cellHeight;
+    const ctx = canvas.getContext('2d');
+    const sprites = [];
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < columns; x++) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(imageEl, -x * cellWidth, -y * cellHeight);
+        sprites.push(new Promise(resolve => {
+          canvas.toBlob(blob => {
+            resolve(URL.createObjectURL(blob));
+          });
+        }));
+      }
+    }
+    return Promise.all(sprites);
+  }
+  
+  function sliceSpritesheetUrl(imageURL) {
+    return new Promise((resolve, reject) => {
+      const imageEl = document.createElement('img');
+      imageEl.onload = () => {
+        resolve(sliceSpritesheetImage(imageEl));
+      };
+      imageEl.onerror = reject;
+      imageEl.src = imageURL;
+    });
+  }
+  const aprsSymbolTablesPromise = Promise.all([0, 1, 2].map(index => 
+    sliceSpritesheetUrl(
+      '/client/plugins/shinysdr.plugins.aprs/symbols/aprs-symbols-24-' + index + '%402x.png')));
+  
+  //function sliceAPRSSpritesheet(symbol) {
+  //  const xIndex = 1;
+  //  const yIndex = 1;
+  //  const svgDoc = sliceSvgText.replace(/\$([XY])/g, match => {
+  //    switch (match[1]) {
+  //      case 'X': return -24 * xIndex;
+  //      case 'Y': return -24 * yIndex;
+  //      default: 
+  //        return 0;
+  //    }
+  //  });
+  //  return 'data:image/svg,' + encodeURIComponent(symbol);
+  //}
   
   return Object.freeze(exports);
 });

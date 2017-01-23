@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -96,7 +96,7 @@ define(['../events', '../types', '../values', '../widget'],
         widgetCtor = widgetType;
       } else if (widgetType === undefined || widgetType === null) {
         widgetCtor = PickWidget;
-        optBoxLabel = name;  // TODO kludge; this is not the right thing
+        if (typeof name === 'string') optBoxLabel = name;  // TODO kludge; this is not the right thing
       } else {
         throw new Error('bad widgetType: ' + widgetType);
       }

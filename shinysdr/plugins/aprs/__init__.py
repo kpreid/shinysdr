@@ -1,4 +1,4 @@
-# Copyright 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -43,6 +43,7 @@ from twisted.python import log
 from twisted.web import static
 from zope.interface import Interface, implements  # available via Twisted
 
+import shinysdr
 from shinysdr.devices import Device, IComponent
 from shinysdr.interfaces import ClientResourceDef
 from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, TelemetryStore, Track, empty_track
@@ -94,7 +95,7 @@ class APRSStation(ExportedState):
         self.__address = object_id
         self.__track = empty_track
         self.__status = u''
-        self.__symbol = None
+        self.__symbol = u''
         self.__last_comment = u''
         self.__last_parse_error = u''
 
@@ -701,7 +702,11 @@ def _parse_telemetry_value(facts, errors, value_str, channel):
     facts.append(Telemetry(channel=channel, value=value))
 
 
-plugin_client = ClientResourceDef(
+_plugin_resource = static.File(os.path.join(os.path.split(__file__)[0], 'client'))
+_plugin_resource.putChild('symbols', static.File(os.path.join(os.path.split(shinysdr.__file__)[0], 'deps/aprs-symbols/png')))
+_plugin_resource.putChild('symbol-index', static.File(os.path.join(os.path.split(shinysdr.__file__)[0], 'deps/aprs-symbol-index/generated/symbols.dense.json')))
+
+plugin_client_js = ClientResourceDef(
     key=__name__,
-    resource=static.File(os.path.join(os.path.split(__file__)[0], 'client')),
+    resource=_plugin_resource,
     load_js_path='aprs.js')

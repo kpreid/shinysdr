@@ -152,3 +152,5 @@ along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 * The file `shinysdr/i/webstatic/client/map/basemap.geojson.gz` was derived from [the Natural Earth data set `ne_50m_admin_0_countries`, version 2.0.0](http://www.naturalearthdata.com/downloads/50m-cultural-vectors/).
     This data set [is in the public domain](http://www.naturalearthdata.com/about/terms-of-use/).
+* The APRS symbol graphics and descriptions used are from various sources and [collected by Heikki Hannikainen](https://github.com/hessu/aprs-symbols).
+    See [author credits and licensing information](https://github.com/hessu/aprs-symbols/blob/master/COPYRIGHT.md).

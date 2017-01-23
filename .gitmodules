@@ -1,3 +1,9 @@
+[submodule "shinysdr/deps/aprs-symbol-index"]
+	path = shinysdr/deps/aprs-symbol-index
+	url = https://github.com/hessu/aprs-symbol-index
+[submodule "shinysdr/deps/aprs-symbols"]
+	path = shinysdr/deps/aprs-symbols
+	url = https://github.com/hessu/aprs-symbols
 [submodule "shinysdr/deps/jasmine"]
 	path = shinysdr/deps/jasmine
 	url = https://github.com/pivotal/jasmine

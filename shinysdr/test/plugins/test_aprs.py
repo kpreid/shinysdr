@@ -385,7 +385,7 @@ class TestAPRSStation(unittest.TestCase):
         ), self.s.get_track())
         
     def test_symbol(self):
-        self.assertEqual(None, self.s.get_symbol())
+        self.assertEqual('', self.s.get_symbol())
         self.s.receive(self.__message([
             Symbol('/=')
         ]))
