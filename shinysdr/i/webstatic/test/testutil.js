@@ -61,9 +61,21 @@ define(['/test/jasmine-glue.js'], (jasmineGlue) => {
         calledPromise.then(() => {
           if (calls !== 1) {
             fail('Expected listener to be called once but was called ' + calls + ' times.');
+          } else {
+            afterCallback();
           }
-          afterCallback();
         });
+      });
+    };
+    
+    listener.expectCalledWhenever = function (afterCallback) {
+      expect(1).toBe(1);  // dummy to suppress "SPEC HAS NO EXPECTATIONS". TODO: better way?
+      calledPromise.then(() => {
+        if (calls !== 1) {
+          fail('Expected listener to be called once but was called ' + calls + ' times.');
+        } else {
+          afterCallback();
+        }
       });
     };
     

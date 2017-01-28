@@ -148,6 +148,26 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
       });
     });
   
+    describe('dependOnPromise', () => {
+      it('eventually returns the value of a resolved promise', done => {
+        const l = newListener(s);
+        const promise = Promise.resolve('b');
+        const call = () => values.dependOnPromise(l, 'a', promise);
+        expect(call()).toBe('a');
+        l.expectCalledWhenever(() => {
+          expect(call()).toBe('b');
+          done();
+        });
+      });
+      it('ignores a rejected promise', done => {
+        const l = newListener(s);
+        const promise = Promise.reject(new Error('Uncaught for testing dependOnPromise'));
+        const call = () => values.dependOnPromise(l, 'a', promise);
+        expect(call()).toBe('a');
+        l.expectNotCalled(done);
+      });
+    });
+  
     describe('Index', function () {
       let structure;
       beforeEach(function () {

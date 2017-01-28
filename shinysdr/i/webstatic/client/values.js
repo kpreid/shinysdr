@@ -249,6 +249,28 @@ define(['./events', './types'], function (events, types) {
   };
   exports.StorageCell = StorageCell;
   
+  // Adapt Promises to the cell.depend() style protocol.
+  const dependOnPromiseTable = new WeakMap();
+  function dependOnPromise(callback, placeholderValue, promise) {
+    // Promise value lookup is also keyed on the scheduler to minimize the degree to which we're adding global state to the system; this is analogous to how whether a given callback is scheduled is also per-scheduler.
+    const scheduler = callback.scheduler;
+    if (!dependOnPromiseTable.has(scheduler)) {
+      dependOnPromiseTable.set(scheduler, new WeakMap());
+    }
+    const syncPromiseValues = dependOnPromiseTable.get(scheduler);
+    
+    if (syncPromiseValues.has(promise)) {
+      return syncPromiseValues.get(promise);
+    } else {
+      promise.then(value => {
+        syncPromiseValues.set(promise, value);
+        scheduler.enqueue(callback);
+      });
+      return placeholderValue;
+    }
+  }
+  exports.dependOnPromise = dependOnPromise;
+  
   function getInterfaces(object) {
     var result = [];
     // TODO kludgy, need better representation of interfaces
