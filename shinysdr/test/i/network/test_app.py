@@ -20,7 +20,6 @@ from __future__ import absolute_import, division
 import json
 import urlparse
 
-
 from twisted.trial import unittest
 from twisted.internet import reactor
 from twisted.web import http
@@ -57,6 +56,18 @@ class TestWebSite(unittest.TestCase):
     
     def test_expected_url(self):
         self.assertEqual('/ROOT/', self._service.get_host_relative_url())
+    
+    def test_common_root(self):
+        return assert_common(self, self.url)
+    
+    def test_common_client_example(self):
+        return assert_common(self, urlparse.urljoin(self.url, '/client/main.js'))
+    
+    def test_common_object(self):
+        return assert_common(self, urlparse.urljoin(self.url, CAP_OBJECT_PATH_ELEMENT))
+    
+    def test_common_ephemeris(self):
+        return assert_common(self, urlparse.urljoin(self.url, 'ephemeris'))
     
     def test_app_redirect(self):
         if 'ROOT' not in self.url:
@@ -129,6 +140,23 @@ class TestSiteWithoutRootCap(TestWebSite):
     
     def test_expected_url(self):
         self.assertEqual('/', self._service.get_host_relative_url())
+
+
+def assert_common(self, url):
+    """Common properties all HTTP resources should have."""
+    def callback((response, data)):
+        # If this fails, we probably made a mistake
+        self.assertNotEqual(response.code, http.NOT_FOUND)
+        
+        content_type = response.headers.getRawHeaders('Content-Type')
+        if data.startswith('{'):
+            self.assertEqual(['application/json'], content_type)
+        elif data.startswith('<'):
+            self.assertEqual(['text/html'], content_type)
+        else:
+            raise Exception('Don\'t know what content type to expect', data[0], content_type)
+    
+    return testutil.http_get(reactor, self.url).addCallback(callback)
 
 
 class SiteStateStub(ExportedState):
