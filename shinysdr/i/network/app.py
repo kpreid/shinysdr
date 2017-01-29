@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -128,7 +128,7 @@ class WebService(Service):
         
         self.__ws_protocol = txws.WebSocketFactory(
             FactoryWithArgs.forProtocol(OurStreamProtocol, ws_caps))
-        self.__site = server.Site(server_root)
+        self.__site = _SiteWithHeaders(server_root)
         
         self.__ws_port_obj = None
         self.__http_port_obj = None
@@ -244,6 +244,27 @@ def _put_session(container_resource, session, wcommon, reactor, title, read_only
     
     # Ephemeris
     container_resource.putChild('ephemeris', EphemerisResource())
+
+
+class _SiteWithHeaders(server.Site):
+    """Subclass of Site which provides some default headers for all resources."""
+    
+    def getResourceFor(self, request):
+        """overrides Site"""
+        # TODO remove unsafe-inline (not that it really matters as we are not doing sloppy templating)
+        # TODO: Once we know our own hostname(s), or if we start using the same port for WebSockets, tighten the connect-src policy
+        request.setHeader('Content-Security-Policy', ';'.join([
+            "default-src 'self' 'unsafe-inline'",
+            "connect-src 'self' ws://*:* wss://*:*",
+            "img-src 'self' data: blob:",
+            "object-src 'none'",
+            "base-uri 'self'",
+            "plugin-types 'none'",
+            "block-all-mixed-content",
+        ]))
+        request.setHeader('Referrer-Policy', 'no-referrer')
+        request.setHeader('X-Content-Type-Options', 'nosniff')
+        return server.Site.getResourceFor(self, request)
 
 
 class WebServiceCommon(object):

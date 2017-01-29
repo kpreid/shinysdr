@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -147,6 +147,20 @@ def assert_common(self, url):
     def callback((response, data)):
         # If this fails, we probably made a mistake
         self.assertNotEqual(response.code, http.NOT_FOUND)
+        
+        self.assertEqual(
+            [';'.join([
+                "default-src 'self' 'unsafe-inline'",
+                "connect-src 'self' ws://*:* wss://*:*",
+                "img-src 'self' data: blob:",
+                "object-src 'none'",
+                "base-uri 'self'",
+                "plugin-types 'none'",
+                "block-all-mixed-content",
+            ])],
+            response.headers.getRawHeaders('Content-Security-Policy'))
+        self.assertEqual(['no-referrer'], response.headers.getRawHeaders('Referrer-Policy'))
+        self.assertEqual(['nosniff'], response.headers.getRawHeaders('X-Content-Type-Options'))
         
         content_type = response.headers.getRawHeaders('Content-Type')
         if data.startswith('{'):
