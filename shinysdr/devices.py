@@ -223,7 +223,7 @@ class Device(ExportedState):
         """
         return self.__vfo_cell.set(value)
     
-    def set_transmitting(self, value, midpoint_hook=None):
+    def set_transmitting(self, value, midpoint_hook=lambda: None):
         """
         Start or stop transmitting. This may involve flowgraph reconfiguration, and as such the caller is responsible for locking or stopping the flowgraph(s) around this call.
         
@@ -232,9 +232,6 @@ class Device(ExportedState):
         The output of the RX driver while transmitting is undefined; it may produce no samples, produce meaningless samples at the normal rate, or be unaffected (full duplex).
         """
         value = bool(value)
-        if midpoint_hook is None:
-            def midpoint_hook():
-                pass
         if not self.can_transmit() or value == self.__transmitting:
             midpoint_hook()
             return

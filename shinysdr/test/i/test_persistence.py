@@ -24,7 +24,7 @@ import tempfile
 from twisted.internet.task import Clock
 from twisted.trial import unittest
 
-from shinysdr.i.persistence import _PERSISTENCE_DELAY, PersistenceFileGlue, PersistenceChangeDetector
+from shinysdr.i.persistence import PersistenceFileGlue, PersistenceChangeDetector
 from shinysdr.test.testutil import SubscriptionTester
 from shinysdr.values import ExportedState, ReferenceT, exported_value, nullExportedState, setter
 
