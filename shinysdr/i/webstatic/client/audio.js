@@ -38,7 +38,10 @@ define(['./events', './network', './types', './values'],
   
   const exports = {};
   
-  var EMPTY_CHUNK = [];
+  // In connectAudio, we assume that the maximum audio bandwidth is lower than that suiting this sample rate, so that if the native sample rate is much higher than this we can send a lower one over the network without losing anything of interest.
+  const ASSUMED_USEFUL_SAMPLE_RATE = 40000;
+  
+  const EMPTY_CHUNK = Object.freeze([]);
   
   function connectAudio(scheduler, url) {
     var audio = new AudioContext();
@@ -135,7 +138,10 @@ define(['./events', './network', './types', './values'],
     antialiasFilter.type = 'lowpass';
     const interpolationGainNode = audio.createGain();
     
-    retryingConnection(url + '?rate=' + encodeURIComponent(JSON.stringify(nativeSampleRate)), null, function (ws) {
+    // don't use too much bandwidth
+    const requestedSampleRate = minimizeSampleRate(nativeSampleRate, ASSUMED_USEFUL_SAMPLE_RATE);
+    
+    retryingConnection(url + '?rate=' + encodeURIComponent(JSON.stringify(requestedSampleRate)), null, ws => {
       ws.binaryType = 'arraybuffer';
       function lose(reason) {
         // TODO: Arrange to trigger exponential backoff if we get this kind of error promptly (maybe retryingConnection should just have a time threshold)
@@ -652,6 +658,24 @@ define(['./events', './network', './types', './values'],
     return powerOfTwoBufferSize;
   }
   
+  // Find the smallest (sample rate) number which divides highRate (so can be upsampled by the resampling implemented here) while being larger than lowerLimitRate (so as to avoid obligating the source to discard wanted frequency content) unless highRate is already lower.
+  function minimizeSampleRate(highRate, lowerLimitRate) {
+    const divisor = Math.floor(highRate / lowerLimitRate);
+    if (highRate / divisor < lowerLimitRate) {
+      // Fix up bad rounding (TODO: haven't proven this to be necessary)
+      divisor--;
+    }
+    if (divisor === 0) {
+      // highRate is already less than lowerLimitRate.
+      return highRate;
+    }
+    const minimizedRate = highRate / divisor;
+    if (minimizedRate < lowerLimitRate || !isFinite(minimizedRate)) {
+      throw new Error('oops');
+    }
+    return minimizedRate;
+  }
+  exports.minimizeSampleRate_ForTesting = minimizeSampleRate;
     
   return Object.freeze(exports);
 });

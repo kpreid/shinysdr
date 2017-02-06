@@ -24,6 +24,7 @@ define(['/test/jasmine-glue.js', 'audio', 'events'], (jasmineGlue, audio, events
     AudioScopeAdapter, 
     UserMediaSelector,
     handleUserMediaError_ForTesting: handleUserMediaError,
+    minimizeSampleRate_ForTesting: minimizeSampleRate
   } = audio;
   const {
     Scheduler,
@@ -175,6 +176,18 @@ define(['/test/jasmine-glue.js', 'audio', 'events'], (jasmineGlue, audio, events
       
       // TODO: tests of functionality
     });
+    
+    describe('minimizeSampleRate', () => {
+      it('should return a reduced rate when possible', () => {
+        expect(minimizeSampleRate(192000, 40000)).toBe(48000);
+      });
+      it('should preserve an exact match', () => {
+        expect(minimizeSampleRate(44100, 44100)).toBe(44100);
+      });
+      it('should return the input rate if it is smaller than the limit', () => {
+        expect(minimizeSampleRate(22050, 40000)).toBe(22050);
+      });
+    })
   });
   
   return 'ok';
