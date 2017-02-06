@@ -133,6 +133,7 @@ define(['./events', './network', './types', './values'],
     // Note that this filter's frequency is updated from the network
     var antialiasFilter = audio.createBiquadFilter();
     antialiasFilter.type = 'lowpass';
+    const interpolationGainNode = audio.createGain();
     
     retryingConnection(url + '?rate=' + encodeURIComponent(JSON.stringify(nativeSampleRate)), null, function (ws) {
       ws.binaryType = 'arraybuffer';
@@ -159,9 +160,9 @@ define(['./events', './network', './types', './values'],
           }
           
           // Read in floats and zero-stuff.
-          var interpolation = nativeSampleRate / streamSampleRate;  // TODO fail if not integer
-          var streamRateChunk = new Float32Array(event.data);
-          var nSamples = streamRateChunk.length / numAudioChannels;
+          const interpolation = nativeSampleRate / streamSampleRate;  // TODO fail if not integer
+          const streamRateChunk = new Float32Array(event.data);
+          const nSamples = streamRateChunk.length / numAudioChannels;
           
           // Insert zeros to change sample rate, e.g. with interpolation = 3,
           //     [l r l r l r] becomes [l r 0 0 0 0 l r 0 0 0 0 l r 0 0 0 0]
@@ -202,6 +203,9 @@ define(['./events', './network', './types', './values'],
           
           // TODO: We should not update this now, but when the audio callback starts reading the new-rate samples. (This could be done by stuffing the message into the queue.) But unless it's a serious problem, let's not bother until Audio Workers are available at which time we'll need to rewrite much of this anyway.
           antialiasFilter.frequency.value = streamSampleRate * 0.45;  // TODO justify choice of 0.45
+          const interpolation = nativeSampleRate / streamSampleRate;
+          interpolationGainNode.gain.value = interpolation;
+          
           console.log('Streaming', streamSampleRate, numAudioChannels + 'ch', 'audio and converting to', nativeSampleRate);
           
         } else {
@@ -291,8 +295,9 @@ define(['./events', './network', './types', './values'],
       updateParameters();
     };
     
-    ascr.connect(antialiasFilter);    
-    var nodeBeforeDestination = antialiasFilter;
+    ascr.connect(antialiasFilter);
+    antialiasFilter.connect(interpolationGainNode);
+    const nodeBeforeDestination = interpolationGainNode;
     
     function startStop() {
       startStopTickle = false;
