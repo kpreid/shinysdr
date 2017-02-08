@@ -22,12 +22,11 @@ from __future__ import absolute_import, division
 import os
 import urllib
 
-from twisted.application import strports
 from twisted.web import http
 from twisted.web import template
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
-
+from twisted.internet import endpoints
 
 # TODO: Change this constant to something more generic, but save that for when we're changing the URL layout for other reasons anyway.
 CAP_OBJECT_PATH_ELEMENT = 'radio'
@@ -49,8 +48,7 @@ class SlashedResource(Resource):
 
 def strport_to_url(desc, scheme='http', hostname='localhost', path='/', socket_port=0):
     """Construct a URL from a twisted.application.strports string."""
-    # TODO: strports.parse is deprecated but nothing seems to replace it for this purpose
-    (method, args, _) = strports.parse(desc, None)
+    (method, args, _) = endpoints._parseServer(desc, None)
     if socket_port == 0:
         socket_port = args[0]
     if method == 'TCP':
