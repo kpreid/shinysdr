@@ -103,10 +103,11 @@ class WebService(Service):
     # TODO: Too many parameters
     def __init__(self, reactor, root_object, read_only_dbs, writable_db, http_endpoint, ws_endpoint, root_cap, title, flowgraph_for_debug):
         # Constants
-        self.__http_port = http_endpoint
-        self.__ws_port = ws_endpoint
+        self.__http_endpoint_string = http_endpoint
+        self.__http_endpoint = endpoints.serverFromString(reactor, http_endpoint)
+        self.__ws_endpoint = endpoints.serverFromString(reactor, ws_endpoint)
         
-        wcommon = WebServiceCommon(ws_endpoint=ws_endpoint)
+        wcommon = WebServiceCommon(ws_endpoint_string=ws_endpoint)
         
         # Roots of resource trees
         # - app_root is everything stateful/authority-bearing
@@ -133,14 +134,13 @@ class WebService(Service):
         self.__ws_port_obj = None
         self.__http_port_obj = None
     
+    @defer.inlineCallbacks
     def startService(self):
         Service.startService(self)
         if self.__ws_port_obj is not None:
             raise Exception('Already started')
-        self.__ws_port_obj = (endpoints.serverFromString(self.__ws_port)
-            .listen(self.__ws_protocol))
-        self.__http_port_obj = (endpoints.serverFromString(self.__http_port)
-            .listen(self.__site))
+        self.__http_port_obj = yield self.__http_endpoint.listen(self.__site)
+        self.__ws_port_obj = yield self.__ws_endpoint.listen(self.__ws_protocol)
     
     def stopService(self):
         Service.stopService(self)
@@ -161,10 +161,8 @@ class WebService(Service):
         """Get the absolute URL of the service. Cannot be used before startService is called.
         
         This method exists primarily for testing purposes."""
-        port_num = self.__http_port_obj.socket.getsockname()[1]  # TODO touching implementation, report need for a better way (web_port_obj.port is 0 if specified port is 0, not actual port)
-    
         # TODO: need to know canonical domain name (endpoint_string_to_url defaults to localhost); can we extract the information from the certificate when applicable?
-        return endpoint_string_to_url(self.__http_port, socket_port=port_num, path=self.get_host_relative_url())
+        return endpoint_string_to_url(self.__http_endpoint_string, listening_port=self.__http_port_obj, path=self.get_host_relative_url())
 
     def announce(self, open_client):
         """interface used by shinysdr.main"""
@@ -273,11 +271,11 @@ class _SiteWithHeaders(server.Site):
 
 class WebServiceCommon(object):
     """Ugly collection of stuff web resources need which is not noteworthy authority."""
-    def __init__(self, ws_endpoint):
-        self.__ws_endpoint = ws_endpoint
+    def __init__(self, ws_endpoint_string):
+        self.__ws_endpoint_string = ws_endpoint_string
 
     def make_websocket_url(self, request, path):
-        return endpoint_string_to_url(self.__ws_endpoint,
+        return endpoint_string_to_url(self.__ws_endpoint_string,
             hostname=request.getRequestHostname(),
             scheme='ws',
             path=path)

@@ -46,15 +46,20 @@ class SlashedResource(Resource):
         return ''
 
 
-def endpoint_string_to_url(desc, scheme='http', hostname='localhost', path='/', socket_port=0):
-    """Construct a URL from a twisted.internet.endpoints string."""
+def endpoint_string_to_url(desc, scheme='http', hostname='localhost', path='/', listening_port=None):
+    """Construct a URL from a twisted.internet.endpoints string.
+    
+    If listening_port is supplied then it is used to obtain the actual port number."""
     (method, args, _) = endpoints._parseServer(desc, None)
-    if socket_port == 0:
-        socket_port = args[0]
+    if listening_port:
+        # assuming that this is a TCP port object
+        port_number = listening_port.getHost().port
+    else:
+        port_number = args[0]
     if method == 'TCP':
-        return scheme + '://' + hostname + ':' + str(socket_port) + path
+        return scheme + '://' + hostname + ':' + str(port_number) + path
     elif method == 'SSL':
-        return scheme + 's://' + hostname + ':' + str(socket_port) + path
+        return scheme + 's://' + hostname + ':' + str(port_number) + path
     else:
         # TODO better error return
         return '???'

@@ -34,6 +34,7 @@ import array
 import struct
 
 from twisted.application.service import Service
+from twisted.internet import defer
 from twisted.internet import endpoints
 from twisted.internet import protocol
 from twisted.internet import task
@@ -178,18 +179,19 @@ class _DspserverProtocol(protocol.Protocol):
 
 
 class DspserverService(Service):
-    def __init__(self, top, endpoint_string):
+    def __init__(self, reactor, top, endpoint_string):
         self.__top = top
-        self.__endpoint_string = endpoint_string
+        self.__endpoint = endpoints.serverFromString(reactor, endpoint_string)
         self.__port_obj = None
     
+    @defer.inlineCallbacks
     def startService(self):
-        self.__port_obj = (endpoints.serverFromString(self.__endpoint_string)
-            .listen(FactoryWithArgs.forProtocol(_DspserverProtocol, self.__top)))
+        self.__port_obj = yield self.__endpoint.listen(
+            FactoryWithArgs.forProtocol(_DspserverProtocol, self.__top))
     
     def stopService(self):
         return self.__port_obj.stopListening()
 
     def announce(self, open_client):
         """interface used by shinysdr.main"""
-        log.msg('GHPSDR-compatible server at port %s' % self.__endpoint)
+        log.msg('GHPSDR-compatible server at port %s' % self.__port_obj.getHost().port)

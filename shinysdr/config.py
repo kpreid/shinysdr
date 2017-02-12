@@ -125,7 +125,7 @@ class Config(object):
         
         def make_service(app):
             import shinysdr.plugins.ghpsdr as lazy_ghpsdr
-            return lazy_ghpsdr.DspserverService(app.get_receive_flowgraph(), 'tcp:8000')
+            return lazy_ghpsdr.DspserverService(self.reactor, app.get_receive_flowgraph(), 'tcp:8000')
         
         self._service_makers.append(make_service)
     
