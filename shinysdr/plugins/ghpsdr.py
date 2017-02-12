@@ -33,8 +33,8 @@ from __future__ import absolute_import, division
 import array
 import struct
 
-from twisted.application import strports
 from twisted.application.service import Service
+from twisted.internet import endpoints
 from twisted.internet import protocol
 from twisted.internet import task
 from twisted.python import log
@@ -178,13 +178,14 @@ class _DspserverProtocol(protocol.Protocol):
 
 
 class DspserverService(Service):
-    def __init__(self, top, endpoint):
+    def __init__(self, top, endpoint_string):
         self.__top = top
-        self.__endpoint = endpoint
+        self.__endpoint_string = endpoint_string
         self.__port_obj = None
     
     def startService(self):
-        self.__port_obj = strports.listen(self.__endpoint, FactoryWithArgs.forProtocol(_DspserverProtocol, self.__top))
+        self.__port_obj = (endpoints.serverFromString(self.__endpoint_string)
+            .listen(FactoryWithArgs.forProtocol(_DspserverProtocol, self.__top)))
     
     def stopService(self):
         return self.__port_obj.stopListening()

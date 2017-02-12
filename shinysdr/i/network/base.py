@@ -46,8 +46,8 @@ class SlashedResource(Resource):
         return ''
 
 
-def strport_to_url(desc, scheme='http', hostname='localhost', path='/', socket_port=0):
-    """Construct a URL from a twisted.application.strports string."""
+def endpoint_string_to_url(desc, scheme='http', hostname='localhost', path='/', socket_port=0):
+    """Construct a URL from a twisted.internet.endpoints string."""
     (method, args, _) = endpoints._parseServer(desc, None)
     if socket_port == 0:
         socket_port = args[0]

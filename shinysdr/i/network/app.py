@@ -22,9 +22,9 @@ from __future__ import absolute_import, division
 import os
 import urllib
 
-from twisted.application import strports
 from twisted.application.service import Service
 from twisted.internet import defer
+from twisted.internet import endpoints
 from twisted.plugin import getPlugins
 from twisted.python import log
 from twisted.web import static
@@ -39,7 +39,7 @@ import shinysdr.i.db
 from shinysdr.i.ephemeris import EphemerisResource
 from shinysdr.i.json import serialize
 from shinysdr.i.modes import get_modes
-from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, SlashedResource, deps_path, prepath_escaped, renderElement, static_resource_path, strport_to_url, template_path
+from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, SlashedResource, deps_path, prepath_escaped, renderElement, static_resource_path, endpoint_string_to_url, template_path
 from shinysdr.i.network.export_http import BlockResource, FlowgraphVizResource
 from shinysdr.i.network.export_ws import OurStreamProtocol
 from shinysdr.twisted_ext import FactoryWithArgs
@@ -137,8 +137,10 @@ class WebService(Service):
         Service.startService(self)
         if self.__ws_port_obj is not None:
             raise Exception('Already started')
-        self.__ws_port_obj = strports.listen(self.__ws_port, self.__ws_protocol)
-        self.__http_port_obj = strports.listen(self.__http_port, self.__site)
+        self.__ws_port_obj = (endpoints.serverFromString(self.__ws_port)
+            .listen(self.__ws_protocol))
+        self.__http_port_obj = (endpoints.serverFromString(self.__http_port)
+            .listen(self.__site))
     
     def stopService(self):
         Service.stopService(self)
@@ -161,8 +163,8 @@ class WebService(Service):
         This method exists primarily for testing purposes."""
         port_num = self.__http_port_obj.socket.getsockname()[1]  # TODO touching implementation, report need for a better way (web_port_obj.port is 0 if specified port is 0, not actual port)
     
-        # TODO: need to know canonical domain name (strport_to_url defaults to localhost); can we extract the information from the certificate when applicable?
-        return strport_to_url(self.__http_port, socket_port=port_num, path=self.get_host_relative_url())
+        # TODO: need to know canonical domain name (endpoint_string_to_url defaults to localhost); can we extract the information from the certificate when applicable?
+        return endpoint_string_to_url(self.__http_port, socket_port=port_num, path=self.get_host_relative_url())
 
     def announce(self, open_client):
         """interface used by shinysdr.main"""
@@ -275,7 +277,7 @@ class WebServiceCommon(object):
         self.__ws_endpoint = ws_endpoint
 
     def make_websocket_url(self, request, path):
-        return strport_to_url(self.__ws_endpoint,
+        return endpoint_string_to_url(self.__ws_endpoint,
             hostname=request.getRequestHostname(),
             scheme='ws',
             path=path)
