@@ -58,10 +58,6 @@ def SimulatedDevice(name='Simulated RF', freq=0.0, allow_tuning=False):
 __all__.append('SimulatedDevice')
 
 
-# deprecated alias
-SimulatedSource = SimulatedDevice
-
-
 class _SimulatedRXDriver(ExportedState, gr.hier_block2):
     implements(IRXDriver)
     

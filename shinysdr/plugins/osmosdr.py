@@ -271,9 +271,6 @@ def OsmoSDRDevice(
 __all__.append('OsmoSDRDevice')
 
 
-OsmoSDRSource = OsmoSDRDevice  # legacy alias
-
-
 class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     implements(IRXDriver)
     
