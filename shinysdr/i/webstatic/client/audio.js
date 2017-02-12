@@ -177,7 +177,7 @@ define(['./events', './network', './types', './values'],
           var step = interpolation * numAudioChannels;
           for (var i = 0; i < nSamples; i++) {
             nativeRateChunk[i * step] = streamRateChunk[i * numAudioChannels];
-            nativeRateChunk[i * step + rightChannelIndex] = streamRateChunk[i * numAudioChannels + 1];
+            nativeRateChunk[i * step + rightChannelIndex] = streamRateChunk[i * numAudioChannels + rightChannelIndex];
           }
           
           queue.push(nativeRateChunk);
