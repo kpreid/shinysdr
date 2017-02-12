@@ -62,7 +62,7 @@ class IDemodulator(Interface):
         """
         Return the SignalType of the demodulator's output.
         
-        The output must be stereo audio, mono audio, or nothing.
+        The output must be stereo audio, mono audio, or nothing. Note that stereo audio is represented as a vector of two floats, not as two output ports.
         """
 
 

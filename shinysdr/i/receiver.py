@@ -69,9 +69,8 @@ class Receiver(gr.hier_block2, ExportedState):
         gr.hier_block2.__init__(
             # str() because insists on non-unicode
             self, str('%s receiver' % (mode,)),
-            gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
-            gr.io_signature(audio_channels, audio_channels, gr.sizeof_float * 1),
-        )
+            gr.io_signature(1, 1, gr.sizeof_gr_complex),
+            gr.io_signature(1, 1, gr.sizeof_float * audio_channels))
         
         if lookup_mode(mode) is None:
             # TODO: communicate back to client if applicable
@@ -104,7 +103,7 @@ class Receiver(gr.hier_block2, ExportedState):
         self.__rotator = blocks.rotator_cc()
         self.__demodulator = self.__make_demodulator(mode, {})
         self.__update_demodulator_info()
-        self.__audio_gain_blocks = [blocks.multiply_const_ff(0.0) for _ in xrange(self.__audio_channels)]
+        self.__audio_gain_block = blocks.multiply_const_vff([0.0] * audio_channels)
         self.probe_audio = analog.probe_avg_mag_sqrd_f(0, alpha=10.0 / 44100)  # TODO adapt to output audio rate
         
         # Other internals
@@ -139,28 +138,42 @@ class Receiver(gr.hier_block2, ExportedState):
                 self.connect(self, self.__rotator, self.__demodulator)
             
             if self.__demod_output:
-                # Connect output of demodulator
-                self.connect((self.__demodulator, 0), self.__audio_gain_blocks[0])  # left or mono
-                if self.__audio_channels == 2:
-                    self.connect(
-                        (self.__demodulator, 1 if self.__demod_stereo else 0),
-                        self.__audio_gain_blocks[1])
+                # Construct stereo-to-mono conversion (used at least for level probe)
+                if self.__demod_stereo:
+                    splitter = blocks.vector_to_streams(gr.sizeof_float, 2)
+                    mono_audio = blocks.multiply_matrix_ff(((0.5, 0.5),))
+                    self.connect(self.__demodulator, splitter)
+                    self.connect((splitter, 0), (mono_audio, 0))
+                    self.connect((splitter, 1), (mono_audio, 1))
                 else:
-                    if self.__demod_stereo:
-                        self.connect((self.__demodulator, 1), blocks.null_sink(gr.sizeof_float))
+                    mono_audio = self.__demodulator
                 
-                # Connect output of receiver
-                for ch in xrange(self.__audio_channels):
-                    self.connect(self.__audio_gain_blocks[ch], (self, ch))
+                # Connect mono audio to level probe
+                self.connect(mono_audio, self.probe_audio)
                 
-                # Level meter
-                # TODO: should mix left and right or something
-                self.connect((self.__demodulator, 0), self.probe_audio)
+                # Connect demodulator to output gain control, converting as needed
+                if (self.__audio_channels == 2) == self.__demod_stereo:
+                    # stereo to stereo or mono to mono
+                    self.connect(self.__demodulator, self.__audio_gain_block)
+                elif self.__audio_channels == 2 and not self.__demod_stereo:
+                    # mono to stereo
+                    duplicator = blocks.streams_to_vector(gr.sizeof_float, 2)
+                    self.connect(self.__demodulator, (duplicator, 0))
+                    self.connect(self.__demodulator, (duplicator, 1))
+                    self.connect(duplicator, self.__audio_gain_block)
+                elif self.__audio_channels == 1 and self.__demod_stereo:
+                    # stereo to mono
+                    self.connect(mono_audio, self.__audio_gain_block)
+                else:
+                    raise Exception('shouldn\'t happen')
+                    
+                # Connect gain control to output of receiver
+                self.connect(self.__audio_gain_block, self)
             else:
                 # Dummy output, ignored by containing block
-                source_of_nothing = blocks.vector_source_f([])
-                for ch in xrange(0, self.__audio_channels):
-                    self.connect(source_of_nothing, (self, ch))
+                self.connect(
+                    blocks.vector_source_f([], vlen=self.__audio_channels),
+                    self)
             
             if self.__output_type != self.__last_output_type:
                 self.__last_output_type = self.__output_type
@@ -357,7 +370,7 @@ class Receiver(gr.hier_block2, ExportedState):
         self.state_changed('demodulator')
         
         # Replace blocks downstream of the demodulator so as to flush samples that are potentially at a different sample rate and would therefore be audibly wrong. Caller will handle reconnection.
-        self.__audio_gain_blocks = [blocks.multiply_const_ff(0.0) for _ in xrange(self.__audio_channels)]
+        self.__audio_gain_block = blocks.multiply_const_vff([0.0] * self.__audio_channels)
         self.__update_audio_gain()
 
     def __make_demodulator(self, mode, state):
@@ -394,11 +407,13 @@ class Receiver(gr.hier_block2, ExportedState):
         gain_lin = dB(self.audio_gain)
         if self.__audio_channels == 2:
             pan = self.audio_pan
-            # TODO: Determine correct computation for panning. http://en.wikipedia.org/wiki/Pan_law seems relevant but was short on actual formulas. May depend on headphones vs speakers? This may be correct already for headphones -- it sounds nearly-flat to me.
-            self.__audio_gain_blocks[0].set_k(gain_lin * (1 - pan))
-            self.__audio_gain_blocks[1].set_k(gain_lin * (1 + pan))
+            # TODO: Instead of left-to-left and right-to-right, panning other than center should mix left and right content. (A "pan law" defines the proper mix.) This implies a matrix multiplication type operation.
+            self.__audio_gain_block.set_k([
+                gain_lin * (1 - pan),
+                gain_lin * (1 + pan),
+            ])
         else:
-            self.__audio_gain_blocks[0].set_k(gain_lin)
+            self.__audio_gain_block.set_k([gain_lin])
 
 
 class ContextForDemodulator(object):

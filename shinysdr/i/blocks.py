@@ -33,6 +33,7 @@ from gnuradio import gr
 from gnuradio import blocks
 from gnuradio.fft import logpwrfft
 
+from shinysdr.filters import make_resampler
 from shinysdr.math import to_dB
 from shinysdr.signals import SignalType
 from shinysdr.types import BulkDataT, RangeT
@@ -434,3 +435,28 @@ class MonitorSink(gr.hier_block2, ExportedState):
     
     def get_scope_distributor(self):
         return self.__scope_sink
+
+
+# this is in shinysdr.i.blocks rather than shinysdr.filters because I don't consider it public (yet?)
+class VectorResampler(gr.hier_block2):
+    def __init__(self, in_rate, out_rate, vlen, complex=False):
+        # pylint: disable=redefined-builtin
+        vitemsize = gr.sizeof_gr_complex if complex else gr.sizeof_float
+        itemsize = vitemsize * vlen
+        gr.hier_block2.__init__(
+            self, type(self).__name__,
+            gr.io_signature(1, 1, itemsize),
+            gr.io_signature(1, 1, itemsize))
+
+        if vlen == 1:
+            self.connect(self, make_resampler(in_rate, out_rate, complex=complex), self)
+        else:
+            splitter = blocks.vector_to_streams(vitemsize, vlen)
+            joiner = blocks.streams_to_vector(vitemsize, vlen)
+            self.connect(self, splitter)
+            for ch in xrange(vlen):
+                self.connect(
+                    (splitter, ch),
+                    make_resampler(in_rate, out_rate, complex=complex),
+                    (joiner, ch))
+            self.connect(joiner, self)

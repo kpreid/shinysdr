@@ -263,8 +263,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
                 receiver_output_type = receiver.get_output_type()
                 if receiver_output_type.get_sample_rate() <= 0:
                     # Demodulator has no output, but receiver has a dummy output, so connect it to something to satisfy flow graph structure.
-                    for ch in xrange(0, self.__audio_manager.get_channels()):
-                        self.connect((receiver, ch), blocks.null_sink(gr.sizeof_float))
+                    self.connect(receiver, blocks.null_sink(gr.sizeof_float * self.__audio_manager.get_channels()))
                     # Note that we have a non-audio receiver which may be useful even if there is no audio output
                     has_non_audio_receiver = True
                 else:

@@ -56,8 +56,10 @@ class SignalType(object):
     def get_itemsize(self):
         if self.__kind == 'NONE':
             return 0
-        elif self.__kind == 'MONO' or self.__kind == 'STEREO':
+        elif self.__kind == 'MONO':
             return gr.sizeof_float
+        elif self.__kind == 'STEREO':
+            return gr.sizeof_float * 2
         else:
             return gr.sizeof_gr_complex
     
@@ -67,6 +69,8 @@ class SignalType(object):
     
     def compatible_items(self, other):
         assert isinstance(other, SignalType)
+        # there could be same-size incompatible items but there aren't yet
+        # whether IQ and STEREO are incompatible is arguable
         return self.get_itemsize() == other.get_itemsize()
     
     def to_json(self):

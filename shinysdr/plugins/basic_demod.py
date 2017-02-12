@@ -57,8 +57,8 @@ class Demodulator(gr.hier_block2, ExportedState):
         self.__channels = channels = 2 if self.get_output_type().get_kind() == 'STEREO' else 1
         gr.hier_block2.__init__(
             self, (u'%s(mode=%r)' % (type(self).__name__, mode)).encode('utf-8'),
-            gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
-            gr.io_signature(channels, channels, gr.sizeof_float * 1))
+            gr.io_signature(1, 1, gr.sizeof_gr_complex),
+            gr.io_signature(1, 1, gr.sizeof_float * channels))
 
     def can_set_mode(self, mode):
         return False
@@ -69,12 +69,15 @@ class Demodulator(gr.hier_block2, ExportedState):
     def get_output_type(self):
         raise NotImplementedError('Demodulator.get_output_type')
 
-    # TODO: remove this indirection
-    def connect_audio_output(self, l_port, r_port=None):
-        assert (r_port is not None) == (self.__channels == 2)
-        self.connect(l_port, (self, 0))
-        if r_port is not None:
-            self.connect(r_port, (self, 1))
+    def connect_audio_output(self, l_endpoint, r_endpoint=None):
+        stereo = r_endpoint is not None
+        assert stereo == (self.__channels == 2)
+        if stereo:
+            joiner = blocks.streams_to_vector(gr.sizeof_float, 2)
+            self.connect(l_endpoint, (joiner, 0), self)
+            self.connect(r_endpoint, (joiner, 1))
+        else:
+            self.connect(l_endpoint, self)
 
 
 class SquelchMixin(ExportedState):
@@ -166,8 +169,9 @@ def design_lofi_audio_filter(rate, lowpass):
 
 
 class IQDemodulator(SimpleAudioDemodulator):
+    # TODO: Allow a choice of bandwidth/sample rate
     def __init__(self, mode='IQ', **kwargs):
-        audio_rate = 96000  # TODO parameter / justify this
+        audio_rate = 96000
         SimpleAudioDemodulator.__init__(self,
             mode=mode,
             stereo=True,
@@ -183,9 +187,8 @@ class IQDemodulator(SimpleAudioDemodulator):
             self,
             self.band_filter_block,
             self.rf_squelch_block,
-            self.split_block)
+            self)
         self.connect(self.band_filter_block, self.rf_probe_block)
-        self.connect_audio_output((self.split_block, 0), (self.split_block, 1))
 
 
 pluginDef_iq = ModeDef(mode='IQ',
@@ -333,7 +336,7 @@ class UnselectiveAMDemodulator(gr.hier_block2, ExportedState):
         gr.hier_block2.__init__(
             self, str('%s demodulator' % (mode,)),
             gr.io_signature(1, 1, gr.sizeof_gr_complex),
-            gr.io_signature(channels, channels, gr.sizeof_float))
+            gr.io_signature(1, 1, gr.sizeof_float * channels))
 
         self.__input_rate = input_rate
         self.__rec_freq_input = 0.0
@@ -349,6 +352,9 @@ class UnselectiveAMDemodulator(gr.hier_block2, ExportedState):
             self,
             agc_block)
         
+        channel_joiner = blocks.streams_to_vector(gr.sizeof_float, channels)
+        self.connect(channel_joiner, self)
+        
         for channel in xrange(0, channels):
             self.connect(
                 agc_block,
@@ -363,7 +369,7 @@ class UnselectiveAMDemodulator(gr.hier_block2, ExportedState):
                 blocks.complex_to_real(),
                 # assuming below 40Hz is not of interest
                 grfilter.dc_blocker_ff(audio_rate // 40, False),
-                (self, channel))
+                (channel_joiner, channel))
     
     def can_set_mode(self, mode):
         """implement IDemodulator"""

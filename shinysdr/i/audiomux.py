@@ -27,7 +27,7 @@ from gnuradio import audio
 from gnuradio import blocks
 from gnuradio import gr
 
-from shinysdr.filters import make_resampler
+from shinysdr.i.blocks import VectorResampler
 from shinysdr.types import EnumT
 
 
@@ -55,7 +55,9 @@ class AudioManager(object):
             # quick kludge placeholder -- currently a Device-device can't be stereo so we have a placeholder thing
             # pylint: disable=unpacking-non-sequence
             audio_device_name, audio_sample_rate = audio_config
-            audio_devices = {'server': (audio_sample_rate, audio.sink(audio_sample_rate, audio_device_name, False))}
+            audio_devices = {
+                'server': (audio_sample_rate, VectorAudioSink(
+                    audio_sample_rate, audio_device_name, channels=(2 if stereo else 1), ok_to_block=False))}
         else:
             audio_devices = {}
         
@@ -140,7 +142,7 @@ class ReconnectSession(object):
 
 class BusPlumber(object):
     """
-    Takes an arbitrary number of blocks' float outputs (bus inputs), sums and resamples them, and connects them to an arbitrary number of blocks' inputs (bus outputs).
+    Takes an arbitrary number of blocks' float or pair-of-float (stereo) outputs (bus inputs), sums and resamples them, and connects them to an arbitrary number of blocks' inputs (bus outputs).
     
     If there are no outputs, the inputs will go to a null sink. If there are no inputs, the outputs will remain unconnected.
     
@@ -148,10 +150,9 @@ class BusPlumber(object):
     """
     def __init__(self, graph, nchannels):
         self.__graph = graph
+        self.__nchannels = nchannels
         self.__channels = xrange(nchannels)
         self.__bus_rate = 0.0
-        # TODO: Stop using a cache of resamplers unless we use them in exactly-corresponding fashion; instead use a cache of resampling _filter taps_.
-        self.__resampler_cache = {}
     
     def get_current_rate(self):
         return self.__bus_rate
@@ -178,71 +179,68 @@ class BusPlumber(object):
             new_bus_rate = self.__bus_rate
         elif new_bus_rate != self.__bus_rate:
             self.__bus_rate = new_bus_rate
-            self.__resampler_cache.clear()
         
         # recreated each time because reusing an add_ff w/ different
         # input counts fails; TODO: report/fix bug
-        bus_sums = [blocks.add_ff() for _ in self.__channels]
+        bus_sum = blocks.add_ff(vlen=self.__nchannels)
         
         in_index = 0
         for in_rate, in_block in inputs:
-            if in_rate == self.__bus_rate:
-                for ch in self.__channels:
-                    self.__graph.connect(
-                        (in_block, ch),
-                        (bus_sums[ch], in_index))
-            else:
-                for ch in self.__channels:
-                    self.__graph.connect(
-                        (in_block, ch),
-                        # TODO pool these resamplers
-                        make_resampler(in_rate, self.__bus_rate),
-                        (bus_sums[ch], in_index))
+            self.__connect_maybe_with_resampler(in_block, in_rate, self.__bus_rate, (bus_sum, in_index))
             in_index += 1
         
         if in_index > 0:
             # connect output only if there is at least one input
             if len(outputs) > 0:
-                used_resamplers = set()
+                resampler_table = {}
                 for out_rate, out_block in outputs:
-                    if out_rate == self.__bus_rate:
-                        for ch in self.__channels:
-                            self.__graph.connect(bus_sums[ch], (out_block, ch))
-                    else:
-                        if out_rate not in self.__resampler_cache:
-                            # Moderately expensive due to the internals using optfir
-                            log.msg('Constructing resampler for audio rate %i' % out_rate)
-                            self.__resampler_cache[out_rate] = tuple(
-                                make_resampler(self.__bus_rate, out_rate)
-                                for _ in self.__channels)
-                        resamplers = self.__resampler_cache[out_rate]
-                        used_resamplers.add(resamplers)
-                        for ch in self.__channels:
-                            self.__graph.connect(resamplers[ch], (out_block, ch))
-                for resamplers in used_resamplers:
-                    for ch in self.__channels:
-                        self.__graph.connect(bus_sums[ch], resamplers[ch])
+                    self.__connect_maybe_with_resampler(bus_sum, self.__bus_rate, out_rate, out_block, resampler_table=resampler_table)
             else:
                 # gnuradio requires at least one connected output
-                for ch in self.__channels:
-                    self.__graph.connect(bus_sums[ch], blocks.null_sink(gr.sizeof_float))
+                self.__graph.connect(bus_sum, blocks.null_sink(gr.sizeof_float * self.__nchannels))
+    
+    def __connect_maybe_with_resampler(self, in_endpoint, in_rate, out_rate, out_endpoint, resampler_table=None):
+        """Connect in_endpoint, a source of vectors of size self.__nchannels, to out_endpoint, inserting per-channel resamplers if needed.
+        
+        If resampler_table (a dict) is provided then it is used to record resamplers already created that can be shared. in_endpoint and in_rate are assumed to be the same."""
+        if in_rate == out_rate:
+            self.__graph.connect(in_endpoint, out_endpoint)
+        else:
+            if resampler_table is not None and out_rate in resampler_table:
+                self.__graph.connect(resampler_table[out_rate], out_endpoint)
+            else:
+                resampler = VectorResampler(in_rate, out_rate, vlen=self.__nchannels)
+                self.__graph.connect(in_endpoint, resampler, out_endpoint)
+                if resampler_table is not None:
+                    resampler_table[out_rate] = resampler
 
 
 class AudioQueueSink(gr.hier_block2):
     def __init__(self, channels, queue):
         gr.hier_block2.__init__(
-            self, 'ShinySDR AudioQueueSink',
-            gr.io_signature(channels, channels, gr.sizeof_float),
-            gr.io_signature(0, 0, 0),
-        )
+            self, type(self).__name__,
+            gr.io_signature(1, 1, gr.sizeof_float * channels),
+            gr.io_signature(0, 0, 0))
         sink = blocks.message_sink(
             gr.sizeof_float * channels,
             queue,
             True)
-        if channels == 1:
-            self.connect((self, 0), sink)
-        else:
-            interleaver = blocks.streams_to_vector(gr.sizeof_float, channels)
+        self.connect(self, sink)
+
+
+class VectorAudioSink(gr.hier_block2):
+    """Like gnuradio.audio.sink, but takes vectors instead of multiple input ports."""
+    def __init__(self, sample_rate, device_name, channels, ok_to_block=False):
+        assert channels > 0
+        gr.hier_block2.__init__(
+            self, type(self).__name__,
+            gr.io_signature(1, 1, gr.sizeof_float * channels),
+            gr.io_signature(0, 0, 0))
+        sink = audio.sink(sample_rate, device_name, ok_to_block=ok_to_block)
+        if channels > 1:
+            splitter = blocks.vector_to_streams(gr.sizeof_float, channels)
+            self.connect(self, splitter)
             for ch in xrange(channels):
-                self.connect((self, ch), (interleaver, ch))
-            self.connect(interleaver, sink)
+                self.connect((splitter, ch), (sink, ch))
+        else:
+            self.connect(self, sink)

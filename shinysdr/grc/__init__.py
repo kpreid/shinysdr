@@ -19,6 +19,7 @@
 
 from __future__ import absolute_import, division
 
+from gnuradio import blocks
 from gnuradio import gr
 
 from shinysdr.filters import MultistageChannelFilter, make_resampler
@@ -56,18 +57,26 @@ class DemodulatorAdapter(gr.hier_block2):
         stereo = output_type.get_kind() == 'STEREO'
         
         # connect outputs, resampling and adapting mono/stereo as needed
+        # TODO: Make the logic for this in receiver.py reusable?
+        if stereo:
+            splitter = blocks.vector_to_streams(gr.sizeof_float, 2)
+            self.connect(demod, splitter)
         if same_rate:
-            self.connect((demod, 0), (self, 0))
-            self.connect((demod, 1 if stereo else 0), (self, 1))
+            if stereo:
+                self.connect((splitter, 0), (self, 0))
+                self.connect((splitter, 1), (self, 1))
+            else:
+                self.connect(demod, (self, 0))
+                self.connect(demod, (self, 1))
         else:
             gr.log.info('{}: Native {} demodulated rate is {}; resampling to {}'.format(
                 type(self).__name__, mode, demod_output_rate, output_rate))
             if stereo:
-                self.connect((demod, 0), make_resampler(demod_output_rate, output_rate), (self, 0))
-                self.connect((demod, 1), make_resampler(demod_output_rate, output_rate), (self, 1))
+                self.connect((splitter, 0), make_resampler(demod_output_rate, output_rate), (self, 0))
+                self.connect((splitter, 1), make_resampler(demod_output_rate, output_rate), (self, 1))
             else:
                 resampler = make_resampler(demod_output_rate, output_rate)
-                self.connect((demod, 0), resampler, (self, 0))
+                self.connect(demod, resampler, (self, 0))
                 self.connect(resampler, (self, 1))
     
     def get_demodulator(self):
