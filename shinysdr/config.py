@@ -35,7 +35,6 @@ from twisted.internet import defer
 from twisted.python import log
 
 # Note that gnuradio-dependent modules are loaded lazily, to avoid the startup time if all we're going to do is give a usage message
-import shinysdr  # put into config namespace
 from shinysdr.i.db import DatabaseModel, database_from_csv, databases_from_directory
 
 
@@ -258,7 +257,7 @@ def execute_config(config_obj, config_file_or_directory):
     Note: does not _wait_and_validate()
     """
     env = dict(__builtin__.__dict__)
-    env.update({'shinysdr': shinysdr, 'config': config_obj})
+    env.update({'config': config_obj})
     if os.path.isdir(config_file_or_directory):
         execfile(os.path.join(config_file_or_directory, 'config.py'), env)
         

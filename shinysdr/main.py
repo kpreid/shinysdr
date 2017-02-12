@@ -82,11 +82,6 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
         print >>sys.stderr, version_report
         sys.exit(1)
 
-    # We don't actually use shinysdr.devices directly, but we want it to be guaranteed available in the context of the config file.
-    # pylint: disable=unused-variable
-    import shinysdr.devices as lazy_devices
-    import shinysdr.source as lazy_source  # legacy shim
-
     # Write config file and exit if asked ...
     if args.createConfig:
         write_default_config(args.config_path)
