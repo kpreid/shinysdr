@@ -355,8 +355,8 @@ config.devices.add(u'sim', SimulatedDevice())</pre>
   <p><code>correction_ppm</code> is optional, and specifies a correction for the hardware oscillator frequency in parts-per-million. (This value can be changed at runtime via the UI, which is useful for calibrating against a known-frequency signal. After the first run, the value set in this configuration is ignored.)</p>
   
   <p>Example:</p>
-  <pre>from shinysdr.plugins.osmosdr import OsmoSDRSource
-config.devices.add(u'rtl', OsmoSDRSource('rtl=0', correction_ppm=-52))</pre>
+  <pre>from shinysdr.plugins.osmosdr import OsmoSDRDevice
+config.devices.add(u'rtl', OsmoSDRDevice('rtl=0', correction_ppm=-52))</pre>
 </dd>
 
 </dl>
@@ -371,10 +371,10 @@ config.devices.add(u'rtl', OsmoSDRSource('rtl=0', correction_ppm=-52))</pre>
   
   <p><code>shift</code> should be set to the needed change in the <em>displayed</em> frequency. For example, if using a 125 MHz upconverter for receiving HF using an RTL-SDR device, one should specify a shift of -125e6:</p>
   
-  <pre>from shinysdr.plugins.osmosdr import OsmoSDRSource
+  <pre>from shinysdr.plugins.osmosdr import OsmoSDRDevice
 from shinysdr.devices import FrequencyShift
 config.devices.add(u'rtl',
-    OsmoSDRSource('rtl=0'),
+    OsmoSDRDevice('rtl=0'),
     FrequencyShift(-125e6))</pre>
 </dd>
 
@@ -388,10 +388,10 @@ config.devices.add(u'rtl',
   
   <p>Example:</p>
   
-  <pre>from shinysdr.plugins.osmosdr import OsmoSDRSource
+  <pre>from shinysdr.plugins.osmosdr import OsmoSDRDevice
 from shinysdr.devices import PositionedDevice
 config.devices.add(u'rtl',
-    OsmoSDRSource('rtl=0'),
+    OsmoSDRDevice('rtl=0'),
     PositionedDevice(27.988056, 86.925278))</pre>
 </dd>
 
