@@ -430,8 +430,7 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
         case 'ch1':
           triggerChannel = 0;
           break;
-        case 'ch2':
-        default:
+        /* case 'ch2': */ default:
           triggerChannel = 1;
           break;
       }

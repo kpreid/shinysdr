@@ -660,7 +660,7 @@ define(['./events', './network', './types', './values'],
   
   // Find the smallest (sample rate) number which divides highRate (so can be upsampled by the resampling implemented here) while being larger than lowerLimitRate (so as to avoid obligating the source to discard wanted frequency content) unless highRate is already lower.
   function minimizeSampleRate(highRate, lowerLimitRate) {
-    const divisor = Math.floor(highRate / lowerLimitRate);
+    let divisor = Math.floor(highRate / lowerLimitRate);
     if (highRate / divisor < lowerLimitRate) {
       // Fix up bad rounding (TODO: haven't proven this to be necessary)
       divisor--;

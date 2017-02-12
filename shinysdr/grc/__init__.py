@@ -22,7 +22,7 @@ from __future__ import absolute_import, division
 from gnuradio import blocks
 from gnuradio import gr
 
-from shinysdr.filters import MultistageChannelFilter, make_resampler
+from shinysdr.filters import make_resampler
 from shinysdr.interfaces import IDemodulator, IModulator
 from shinysdr.i.modes import lookup_mode, get_modes
 
@@ -141,6 +141,8 @@ class ModulatorAdapter(gr.hier_block2):
         return self.__modulator
     
     def __connect_with_resampling(self, from_endpoint, from_rate, to_endpoint, to_rate, complex):
+        # pylint: disable=redefined-builtin
+        
         if from_rate == to_rate:
             self.connect(from_endpoint, to_endpoint)
         else:

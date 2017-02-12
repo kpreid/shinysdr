@@ -1,7 +1,10 @@
-# This is a truncated and customized version of the default pylint configuration. The sections pertaining to reporting and other execution behavior have been removed entirely, leaving only the configuration of code style.
+[REPORTS]
+
+reports=no
 
 [MESSAGES CONTROL]
-disable=locally-disabled,trailing-whitespace,fixme,missing-docstring,protected-access,invalid-name,super-init-not-called,star-args,no-self-argument,inherit-non-class,no-method-argument,no-self-use,unused-argument,too-many-return-statements,too-many-branches,too-many-function-args,too-many-instance-attributes,too-many-locals,bad-continuation,unnecessary-lambda,redefined-variable-type,global-statement
+
+disable=locally-disabled,trailing-whitespace,fixme,missing-docstring,protected-access,invalid-name,super-init-not-called,star-args,no-self-argument,inherit-non-class,no-method-argument,no-self-use,unused-argument,too-many-return-statements,too-many-branches,too-many-function-args,too-many-instance-attributes,too-many-locals,bad-continuation,unnecessary-lambda,redefined-variable-type,global-statement,duplicate-code
 # why super-init-not-called: false positives
 # why star-args: I reject the premise
 # why protected-access: because I am using it for 'friend' access, maybe fix that
@@ -16,6 +19,7 @@ disable=locally-disabled,trailing-whitespace,fixme,missing-docstring,protected-a
 # why unnecessary-lambda: false positives, I don't make this mistake
 # why redefined-variable-type: interferes with polymorphism. https://github.com/PyCQA/pylint/issues/710
 # why global-statement: when I use global variables, I use them thoughtfully
+# why duplicate-code: too many false positives
 # TODO: turn on missing-docstring, invalid-name
 
 [BASIC]

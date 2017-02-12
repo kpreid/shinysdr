@@ -159,4 +159,3 @@ def advance_until(clock, d, limit=10, timestep=0.001):
             raise err[0]
         else:
             clock.advance(timestep)
-        

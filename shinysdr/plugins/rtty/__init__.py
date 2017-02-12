@@ -43,8 +43,8 @@ from shinysdr.values import ExportedState, exported_value
 
 
 # note: this string is ordered so that the first bit (on the air) is the least significant bit of the index in the string
-ITA2_LETTERS = u"nTrO HNM\nLRGIPCVEZ"  + "DBSYFXAWJfUQKl"
-ITA2_FIGURES = u"n5r9 #,.\n)4&80:;3\"" + "e?b6!/-2'f71(l"
+ITA2_LETTERS = u'''nTrO HNM\nLRGIPCVEZDBSYFXAWJfUQKl'''
+ITA2_FIGURES = u'''n5r9 #,.\n)4&80:;3"e?b6!/-2'f71(l'''
 _ITA2_LETTERS_SHIFT = ITA2_LETTERS.index("l")
 _ITA2_FIGURES_SHIFT = ITA2_LETTERS.index("f")
 

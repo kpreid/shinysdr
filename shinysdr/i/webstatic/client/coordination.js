@@ -145,7 +145,7 @@ define(['./types', './values'], function (types, values) {
       '/client/themes/black.css': 'Dark',
       '/client/themes/gray.css': 'Gray',
     });
-    const defaultTheme = '/client/themes/gray.css'
+    const defaultTheme = '/client/themes/gray.css';
     
     function cc(key, type, value) {
       return new StorageCell(clientStateStorage, type, value, key);

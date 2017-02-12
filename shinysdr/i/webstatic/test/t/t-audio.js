@@ -187,7 +187,7 @@ define(['/test/jasmine-glue.js', 'audio', 'events'], (jasmineGlue, audio, events
       it('should return the input rate if it is smaller than the limit', () => {
         expect(minimizeSampleRate(22050, 40000)).toBe(22050);
       });
-    })
+    });
   });
   
   return 'ok';

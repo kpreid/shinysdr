@@ -17,6 +17,8 @@
     "define",
     "requirejs",
 
-    "jasmineRequire"
+    "jasmineRequire",
+    
+    "measviz"
   ]
 }

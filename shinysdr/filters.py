@@ -446,6 +446,8 @@ __all__.append('MultistageChannelFilter')
 # TODO: Add the ability to memoize/precompute filter taps, particularly because pfb uses optfir internally which is slow. Maybe we can express this using the same 'plan' type as MultistageChannelFilter.
 # TODO: I think there are places where we are _not_ using make_resampler because it didn't have a complex mode before.
 def make_resampler(in_rate, out_rate, complex=False):
+    # pylint: disable=redefined-builtin
+    
     fractional_cutoff = 0.4
     fractional_transition_width = 0.2
     
