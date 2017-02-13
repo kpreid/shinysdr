@@ -37,6 +37,14 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
   const createWidgetExt = widget.createWidgetExt;
   
   var exports = Object.create(null);
+  
+  function insertUnitIfPresent(type, container) {
+    const unitSymbol = type.getNumericUnit().symbol;
+    if (unitSymbol !== '') {
+      // TODO: use SI prefixes for large/small values when OK
+      container.appendChild(document.createTextNode('\u00A0' + unitSymbol));
+    }
+  }
 
   // Superclass for a sub-block widget
   function Block(config, optSpecial, optEmbed) {
@@ -268,7 +276,9 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
       function buildPanel(container) {
         container.appendChild(document.createTextNode(container.getAttribute('title') + ': '));
         container.removeAttribute('title');
-        return container.appendChild(document.createTextNode(''));
+        const node = container.appendChild(document.createTextNode(''));
+        insertUnitIfPresent(config.target.type, container);
+        return node;
       },
       function init(node, target) {
         return function updateGeneric(value, draw) {
@@ -597,6 +607,8 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
         var input = container.appendChild(document.createElement('input'));
         input.type = 'number';
         input.step = 'any';
+        
+        insertUnitIfPresent(config.target.type, container);
         
         return input;
       },

@@ -705,6 +705,7 @@ h2 input {
   max-width: 8em;
 }
 .widget-SmallKnob-panel input {
+  width: 0; /* override default form field sizing, let flex set size larger or smaller */
   flex: 1 1 auto;
 
   vertical-align: middle;
