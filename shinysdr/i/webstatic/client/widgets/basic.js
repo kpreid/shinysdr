@@ -42,7 +42,9 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
     const unitSymbol = type.getNumericUnit().symbol;
     if (unitSymbol !== '') {
       // TODO: use SI prefixes for large/small values when OK
-      container.appendChild(document.createTextNode('\u00A0' + unitSymbol));
+      const el = container.appendChild(document.createElement('span'));
+      el.classList.add('unit-symbol');
+      el.appendChild(document.createTextNode('\u00A0' + unitSymbol));
     }
   }
 
@@ -663,6 +665,8 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
         textEl.classList.add('widget-Slider-text');
         text = textEl.appendChild(document.createTextNode(''));
         
+        insertUnitIfPresent(config.target.type, container);
+        
         return slider;
       },
       function initSlider(slider, target) {
@@ -720,7 +724,8 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
         if (container.hasAttribute('title')) {
           var labelEl = container.appendChild(document.createElement('span'));
           labelEl.classList.add('widget-Slider-label');
-          labelEl.appendChild(document.createTextNode(container.getAttribute('title')));
+          labelEl.appendChild(document.createTextNode(
+              container.getAttribute('title') + '\u00A0'));
           container.removeAttribute('title');
         }
         
@@ -729,6 +734,8 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
         var textEl = container.appendChild(document.createElement('span'));
         textEl.classList.add('widget-Slider-text');
         text = textEl.appendChild(document.createTextNode(''));
+        
+        insertUnitIfPresent(config.target.type, container);
         
         return meter;
       },

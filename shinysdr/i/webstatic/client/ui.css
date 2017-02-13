@@ -715,7 +715,7 @@ h2 input {
   display: flex;
   flex-direction: row;
 }
-.widget-Slider-label, .widget-Slider-text {
+.widget-Slider-panel > * {
   display: inline-block;
   align-self: center;
   overflow: hidden;
@@ -731,10 +731,15 @@ h2 input {
 
   vertical-align: middle;
 }
+.widget-Slider-text, .widget-Slider-panel .unit-symbol {
+  font-family: monospace;
+}
 .widget-Slider-text {
   flex: 0 0 8ex;
   text-align: right;
-  font-family: monospace;
+}
+.widget-Slider-panel .unit-symbol {
+  flex: 0 0 auto;
 }
 
 .widget-ReceiverMarks {
