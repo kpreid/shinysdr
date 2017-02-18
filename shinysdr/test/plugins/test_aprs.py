@@ -19,7 +19,6 @@ from __future__ import absolute_import, division
 
 from datetime import datetime
 
-from twisted.internet import reactor as the_reactor
 from twisted.internet.task import Clock
 from twisted.trial import unittest
 
@@ -341,6 +340,7 @@ class TestAPRSTelemetryStore(unittest.TestCase):
         self.__receive(parse_tnc2(
             'FOO>BAR:;TFCSCRUZ _160323z3655.94N\12200.92W?',
             _dummy_receive_time))
+        self.clock.advance(0)
         self.assertEqual({'FOO', 'KE6AFE-2'}, set(self.store.state().keys()))
 
     def test_drop_old(self):
@@ -400,9 +400,12 @@ class TestAPRSStation(unittest.TestCase):
 
 
 class TestAPRSISRXDevice(unittest.TestCase):
+    def setUp(self):
+        self.clock = _ClockWithFakeThread()
+    
     def test_smoke(self):
         device = APRSISRXDevice(
-            reactor=the_reactor,
+            reactor=self.clock,
             aprs_filter='r/0/0/100',
             client=_StubAPRSClient())
         state_smoke_test(device)
@@ -411,9 +414,15 @@ class TestAPRSISRXDevice(unittest.TestCase):
     
     def test_smoke_nofilter(self):
         device = APRSISRXDevice(
-            reactor=the_reactor,
+            reactor=self.clock,
             client=_StubAPRSClient())
         state_smoke_test(device)
+
+
+class _ClockWithFakeThread(Clock):
+    def callFromThread(self, func, *args, **kwargs):
+        # adequate for this test
+        func(*args, **kwargs)
 
 
 class _StubAPRSClient(object):

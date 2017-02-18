@@ -311,7 +311,7 @@ class _APRSISComponent(TelemetryStore):
     __alive = True
     
     def __init__(self, reactor, client, name, aprs_filter):
-        super(_APRSISComponent, self).__init__()
+        super(_APRSISComponent, self).__init__(time_source=reactor)
         
         client.connect(aprs_filter=aprs_filter)  # TODO either expect the user to do this or forward args
         
