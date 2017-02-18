@@ -170,6 +170,7 @@ class TelemetryStore(CollectionState):
         self.__objects = {}
         self.__expiry_times = {}
         self.__time_source = IReactorTime(time_source)
+        self.__flush_call = None
     
     # not exported
     def receive(self, message):
@@ -185,13 +186,12 @@ class TelemetryStore(CollectionState):
                 message.get_object_constructor()(object_id=object_id))
 
         obj.receive(message)
-        self.__expiry_times[object_id] = obj.get_object_expiry()
+        expiry = obj.get_object_expiry()
+        self.__expiry_times[object_id] = expiry
         if obj.is_interesting():
             self.__interesting_objects[object_id] = obj
         
-        # logically independent but this is a convenient time, and this approach allows us to borrow the receive time rather than reading the system clock ourselves.
-        # TODO: But it doesn't deal with timing out when we aren't receiving messages
-        self.__flush_expired()
+        self.__maybe_schedule_flush()
     
     def __flush_expired(self):
         current_time = self.__time_source.seconds()
@@ -204,6 +204,20 @@ class TelemetryStore(CollectionState):
             del self.__expiry_times[object_id]
             if object_id in self.__interesting_objects:
                 del self.__interesting_objects[object_id]
+        
+        self.__maybe_schedule_flush()
+    
+    def __maybe_schedule_flush(self):
+        """Schedule a call to __flush_expired if there is not one already."""
+        if self.__flush_call and self.__flush_call.active():
+            # Could need to schedule one earlier than already scheduled.
+            self.__flush_call.cancel()
+        
+        if self.__expiry_times:
+            next_expiry = min(self.__expiry_times.itervalues())
+            self.__flush_call = self.__time_source.callLater(
+                next_expiry - self.__time_source.seconds(),
+                self.__flush_expired)
 
 
 __all__.append('TelemetryStore')

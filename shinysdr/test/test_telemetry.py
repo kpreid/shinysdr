@@ -59,12 +59,19 @@ class TestTelemetryStore(unittest.TestCase):
     def test_drop_old(self):
         self.store.receive(Msg('foo', 1000))
         self.assertEqual(['foo'], self.store.state().keys())
+
         self.clock.advance(1799.5)
         self.store.receive(Msg('bar', 2799.5))
         self.assertEqual({'bar', 'foo'}, set(self.store.state().keys()))
+
         self.clock.advance(0.5)
-        self.store.receive(Msg('bar', 2800))
-        self.assertEqual(['bar'], self.store.state().keys())
+        self.assertEqual({'bar'}, set(self.store.state().keys()))
+
+        self.clock.advance(10000)
+        self.assertEqual([], self.store.state().keys())
+
+        # Expect complete cleanup -- that is, even if a TelemetryStore is created, filled, and thrown away, it will eventually be garbage collected when the objects expire.
+        self.assertEqual([], self.clock.getDelayedCalls())
     
     def test_become_interesting(self):
         self.store.receive(Msg('foo', 1000, 'boring'))
