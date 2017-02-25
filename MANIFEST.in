@@ -8,4 +8,7 @@ graft shinysdr/i/webstatic
 
 # Tight includes to avoid packaging cruft. Don't forget to update!
 include shinysdr/deps/*.js
+include shinysdr/deps/aprs-symbol-index/generated/symbols.dense.json
+include shinysdr/deps/aprs-symbols/png/aprs-symbols-24-*.png
 include shinysdr/deps/jasmine/lib/jasmine-core/jasmine*
+graft shinysdr/deps/measviz/src
