@@ -482,7 +482,9 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
         
         channel_matrix = blocks.multiply_matrix_ff(channel_mapping)
         combine = blocks.float_to_complex(1)
-        for i in xrange(0, len(channel_mapping[0])):
+        # TODO: min() is to support mono sources with default channel mapping. Handle this better, and give a warning if an explicit mapping is too big.
+        for i in xrange(0, min(len(channel_mapping[0]),
+                               self.__source.output_signature().max_streams())):
             self.connect((self.__source, i), (channel_matrix, i))
         for i in xrange(0, len(channel_mapping)):
             self.connect((channel_matrix, i), (combine, i))
