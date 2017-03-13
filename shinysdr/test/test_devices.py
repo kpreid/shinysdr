@@ -22,10 +22,11 @@ from __future__ import absolute_import, division
 from twisted.trial import unittest
 from zope.interface import implements  # available via Twisted
 
+from gnuradio import blocks
 from gnuradio import gr
 
 # Note: not testing _ConstantVFOCell, it's just a useful utility
-from shinysdr.devices import _ConstantVFOCell, AudioDevice, Device, FrequencyShift, IComponent, IDevice, IRXDriver, ITXDriver, PositionedDevice, _coerce_channel_mapping, merge_devices
+from shinysdr.devices import _ConstantVFOCell, AudioDevice, Device, FrequencyShift, IComponent, IDevice, IRXDriver, ITXDriver, PositionedDevice, _coerce_channel_mapping, find_audio_rx_names, merge_devices
 from shinysdr.signals import SignalType
 from shinysdr.test.testutil import DeviceTestCase
 from shinysdr.types import RangeT
@@ -131,20 +132,42 @@ class TestMergeDevices(unittest.TestCase):
         # TODO more testing
 
 
-class TestAudioDevice1Ch(DeviceTestCase):
+class TestAudioDevice2ChTo1(DeviceTestCase):
     def setUp(self):
-        super(TestAudioDevice1Ch, self).setUpFor(
-            device=AudioDevice('', channel_mapping=1))
+        super(TestAudioDevice2ChTo1, self).setUpFor(
+            device=AudioDevice('', channel_mapping=1,
+                _module=_AudioModuleStub({'': 2})))
 
     # Test methods provided by DeviceTestCase
 
 
-class TestAudioDevice2Ch(DeviceTestCase):
+class TestAudioDevice2ChTo2(DeviceTestCase):
     def setUp(self):
-        super(TestAudioDevice2Ch, self).setUpFor(
-            device=AudioDevice('', channel_mapping='IQ'))
+        super(TestAudioDevice2ChTo2, self).setUpFor(
+            device=AudioDevice('', channel_mapping='IQ',
+                _module=_AudioModuleStub({'': 2})))
 
     # Test methods provided by DeviceTestCase
+
+
+class TestAudioDevice1ChTo2(DeviceTestCase):
+    def setUp(self):
+        super(TestAudioDevice1ChTo2, self).setUpFor(
+            device=AudioDevice('', channel_mapping='IQ',
+                _module=_AudioModuleStub({'': 1})))
+
+    # Test methods provided by DeviceTestCase
+
+
+class TestFindAudioRxNames(unittest.TestCase):
+    def test_normal(self):
+        # TODO: This test will have to change once we actually support enumerating audio devices
+        self.assertEqual([''],
+            find_audio_rx_names(_module=_AudioModuleStub({'': 2})))
+    
+    def test_none(self):
+        self.assertEqual([],
+            find_audio_rx_names(_module=_AudioModuleStub({})))
 
 
 class TestAudioDeviceChannels(unittest.TestCase):
@@ -276,3 +299,30 @@ class _ShutdownDetector(gr.hier_block2, ExportedState):
     
     def set_transmitting(self, value, midpoint_hook):
         pass
+
+
+class _AudioModuleStub(object):
+    """Stub to substitute for the gnuradio.audio module which does not talk to actual hardware.
+    """
+    
+    def __init__(self, names):
+        """
+        names: dict mapping from device name to number of channels in source block
+        """
+        self.__names = names
+    
+    def source(self, sampling_rate, device_name, ok_to_block=True):
+        if device_name not in self.__names:
+            # unfortunately RuntimeError is the error gnuradio raises
+            raise RuntimeError('_AudioModuleStub has no audio device {!r}'.format(device_name))
+        noutputs = self.__names[device_name]
+        # An arbitrary block that has the same output signature as the intended audio source. The tests we are doing do not ever run the flow graph, so the blocks do not need to have their inputs satisfied. We cannot use a custom hier block because hier blocks do not support variable numbers of outputs.
+        if noutputs == 1:
+            return blocks.vector_source_f([1])
+        elif noutputs == 2:
+            return blocks.complex_to_float()
+        else:
+            raise NotImplementedError('noutputs={!r}'.format(noutputs))
+    
+    def sink(self, sampling_rate, device_name, ok_to_block=True):
+        raise NotImplementedError()

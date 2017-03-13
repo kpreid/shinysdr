@@ -22,7 +22,7 @@ from collections import Counter
 
 from zope.interface import Interface, implements  # available via Twisted
 
-from gnuradio import audio
+from gnuradio import audio as gr_audio
 from gnuradio import blocks
 from gnuradio import gr
 
@@ -366,7 +366,8 @@ def AudioDevice(
         tx_device=None,
         name=None,
         sample_rate=44100,
-        channel_mapping=None):
+        channel_mapping=None,
+        _module=gr_audio):  # parameter for testing only
     rx_device = str(rx_device)
     if tx_device is not None:
         tx_device = str(tx_device)
@@ -382,12 +383,14 @@ def AudioDevice(
     rx_driver = _AudioRXDriver(
         device_name=rx_device,
         sample_rate=sample_rate,
-        channel_mapping=channel_mapping)
+        channel_mapping=channel_mapping,
+        audio_module=_module)
     if tx_device is not None:
         tx_driver = _AudioTXDriver(
             device_name=tx_device,
             sample_rate=sample_rate,
-            channel_mapping=channel_mapping)
+            channel_mapping=channel_mapping,
+            audio_module=_module)
     else:
         tx_driver = nullExportedState
     
@@ -435,10 +438,10 @@ def _coerce_channel_mapping(channel_mapping):
         raise TypeError('AudioDevice: channel_mapping parameter must be a channel number, "IQ", "QI", or a 2×N list-of-lists matrix, but was %r' % (channel_mapping,))
 
 
-def find_audio_rx_names():
+def find_audio_rx_names(_module=gr_audio):
     # TODO: request that gnuradio support device enumeration
     try:
-        AudioDevice(rx_device='')
+        AudioDevice(rx_device='', _module=_module)
         return ['']
     except RuntimeError:  # thrown by gnuradio
         return []
@@ -453,7 +456,8 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
     def __init__(self,
             device_name,
             sample_rate,
-            channel_mapping):
+            channel_mapping,
+            audio_module):
         self.__device_name = device_name
         self.__sample_rate = sample_rate
         
@@ -475,7 +479,7 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
         )
         
-        self.__source = audio.source(
+        self.__source = audio_module.source(
             self.__sample_rate,
             device_name=self.__device_name,
             ok_to_block=True)
@@ -520,7 +524,8 @@ class _AudioTXDriver(ExportedState, gr.hier_block2):
     def __init__(self,
             device_name,
             sample_rate,
-            channel_mapping):
+            channel_mapping,
+            audio_module):
         self.__device_name = device_name
         self.__sample_rate = sample_rate
         
@@ -535,7 +540,7 @@ class _AudioTXDriver(ExportedState, gr.hier_block2):
             gr.io_signature(0, 0, 0),
         )
         
-        sink = audio.sink(
+        sink = audio_module.sink(
             self.__sample_rate,
             device_name=self.__device_name,
             ok_to_block=True)
