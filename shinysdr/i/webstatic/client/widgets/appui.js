@@ -457,8 +457,8 @@ define(['./basic', './spectrum',
         let themeUrl = target.depend(update);
         // If value is not valid take a valid one
         // TODO: implement client side coercion and remove this instanceof
-        if (target.type instanceof EnumT && !(themeUrl in target.type.getTable())) {
-          themeUrl = Object.keys(target.type.getTable())[0];
+        if (target.type instanceof EnumT && !target.type.getEnumTable().has(themeUrl)) {
+          themeUrl = Object.keys(target.type.getEnumTable())[0];
         }
         element.href = themeUrl;
       });

@@ -34,7 +34,7 @@ define(['/test/jasmine-glue.js', 'types'], (jasmineGlue, types) => {
           'label': 'b',
           'description': 'c',
           'sort_key': 'd'
-        }}).getTable()['a']).toEqual({
+        }}).getEnumTable().get('a')).toEqual({
           'label': 'b',
           'description': 'c',
           'sort_key': 'd'
@@ -42,7 +42,7 @@ define(['/test/jasmine-glue.js', 'types'], (jasmineGlue, types) => {
       });
     
       it('expands metadata', function () {
-        expect(new EnumT({'a': 'b'}).getTable()['a']).toEqual({
+        expect(new EnumT({'a': 'b'}).getEnumTable().get('a')).toEqual({
           'label': 'b',
           'description': null,
           'sort_key': 'a'
@@ -79,6 +79,9 @@ define(['/test/jasmine-glue.js', 'types'], (jasmineGlue, types) => {
         expect(frange([[1, 2], [3, 4]]).round(5,  0)).toBe(4);
         expect(frange([[1, 2], [3, 4]]).round(5, -1)).toBe(4);
         expect(frange([[1, 2], [3, 4]]).round(5, +1)).toBe(4);
+      });
+      it('should produce an enumTable', () => {
+        expect(Array.from(frange([[1, 2], [3, 4]]).getEnumTable().keys())).toEqual([1, 2, 3, 4]);
       });
     });
   });

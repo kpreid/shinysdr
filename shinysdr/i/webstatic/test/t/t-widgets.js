@@ -218,6 +218,20 @@ define(['/test/jasmine-glue.js',
       });
     });
   
+    describe('Select', function () {
+      it('should use a Range type', function () {
+        const cell = new LocalCell(
+          new types.RangeT(
+            [[1, 1], [20, 20], [300, 300]],
+            false, true, {symbol: 'Hz', si_prefix_ok: true}),
+          20);
+        widget = new widgets.Select(mockWidgetConfig(null, cell));
+        //document.body.appendChild(widget.element);
+        expect(widget.element.textContent).toBe('1 Hz20 Hz300 Hz');
+        expect(widget.element.querySelector('option').value).toBe('1');
+      });
+    });
+  
     // TODO: This is in a different module and arguably ought to be in a separate test file. It's here because it's a widget and has use for the widget test glue.
     describe('GeoMap', function () {
       const GeoMap = mapCore.GeoMap;

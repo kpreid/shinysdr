@@ -784,32 +784,30 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
   }
   exports.Toggle = Toggle;
   
-  // Create children of 'container' according to target's enum type, unless appropriate children already exist.
+  // Create children of 'container' according to target's EnumT (or RangeT) type, unless appropriate children already exist.
   function initEnumElements(container, selector, target, createElement) {
-    var type = target.type;
-    if (!(type instanceof types.EnumT)) type = null;
+    const enumTable = target.type.getEnumTable();
     
-    var seen = Object.create(null);
+    const seen = new Set();
     Array.prototype.forEach.call(container.querySelectorAll(selector), function (element) {
       var value = element.value;
-      seen[value] = true;
-      if (type) {
-        element.disabled = !(element.value in type.values);
+      seen.add(value);
+      if (enumTable) {
+        element.disabled = !enumTable.has(element.value);  // TODO: handle non-string values
       }
     });
 
-    if (type) {
-      var table = type.getTable();
-      var array = Object.keys(table);
-      array.sort(function (a, b) {
-        var aKey = table[a].sort_key;
-        var bKey = table[b].sort_key;
+    if (enumTable) {
+      const array = Array.from(enumTable.keys());
+      array.sort((a, b) => {
+        const aKey = enumTable.get(a).sort_key;
+        const bKey = enumTable.get(b).sort_key;
         return aKey < bKey ? -1 : aKey > bKey ? 1 : 0;
       });
-      array.forEach(function (value) {
-        var metadataRow = table[value];
-        if (seen[value]) return;
-        var element = createElement(metadataRow.label, metadataRow.description);
+      array.forEach(value => {
+        const metadataRow = enumTable.get(value);
+        if (seen.has(value)) return;
+        const element = createElement(metadataRow.label, metadataRow.description);
         element.value = value;
       });
     }
@@ -831,6 +829,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
         return container.appendChild(document.createElement('select'));
       },
       function initSelect(select, target) {
+        const numeric = target.type instanceof RangeT;  // TODO better test, provide coercion in the types
         select.disabled = !target.set;
         initEnumElements(select, 'option', target, function createOption(name, longDesc) {
           var option = select.appendChild(document.createElement('option'));
@@ -842,11 +841,11 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
         });
 
         select.addEventListener('change', event => {
-          target.set(select.value);
+          target.set(numeric ? +select.value : select.value);
         }, false);
         
         return function updateSelect(value) {
-          select.value = value;
+          select.value = '' + value;
         };
       });
   }
@@ -854,6 +853,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
   
   function Radio(config) {
     var target = config.target;
+    const numeric = target.type instanceof RangeT;  // TODO better test, provide coercion in the types
     var container = this.element = config.element;
     container.classList.add('panel');
 
@@ -872,13 +872,13 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
 
     Array.prototype.forEach.call(container.querySelectorAll('input[type=radio]'), function (rb) {
       rb.addEventListener('change', function(event) {
-        target.set(rb.value);
+        target.set(numeric ? +rb.value : rb.value);
       }, false);
     });
     var draw = config.boundedFn(function drawImpl() {
       var value = config.target.depend(draw);
       Array.prototype.forEach.call(container.querySelectorAll('input[type=radio]'), function (rb) {
-        rb.checked = rb.value === value;
+        rb.checked = rb.value === '' + value;
       });
     });
     draw.scheduler = config.scheduler;

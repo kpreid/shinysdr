@@ -32,6 +32,11 @@ define([], () => {
       return false;
     }
     
+    // If this type can be described as a small set of values, return a Map from each possible value to an EnumRow.
+    getEnumTable() {
+      return null;
+    }
+    
     getNumericUnit() {
       return noUnit;
     }
@@ -60,25 +65,27 @@ define([], () => {
       Object.freeze(this);
     }
     
+    // TODO: Implement getEnumTable once we have a use for it
+    
     isSingleValued() { return true; }
   }
   exports.ConstantT = ConstantT;
   
   class EnumT extends ValueType {
     constructor(tableIn) {
-      const table = Object.create(null);
+      const table = new Map();
       for (var k in tableIn) {
         const row = tableIn[k];
         switch (typeof row) {
           case 'string':
-            table[k] = {
+            table.set(k, {
               label: row,
               description: null,
               sort_key: k
-            };
+            });
             break;
           case 'object':
-            table[k] = row;
+            table.set(k, row);
             break;
           default:
             throw new TypeError('enum row not string or EnumRow: ' + row);
@@ -86,16 +93,16 @@ define([], () => {
       }
       
       super();
-      this._table = Object.freeze(table);
+      this._enumTable = table;   // TODO: Look into making an immutable map
       Object.freeze(this);
     }
     
-    getTable() {
-      return this._table;
+    getEnumTable() {
+      return this._enumTable;
     }
     
     isSingleValued() {
-      return Object.keys(this._table).length <= 1;
+      return this._enumTable.size <= 1;
     }
   }
   exports.EnumT = EnumT;
@@ -122,6 +129,36 @@ define([], () => {
     
     isSingleValued() {
       return this.mins.length <= 1 && this.maxes.length <= 1 && this.mins[0] === this.maxes[0];
+    }
+    
+    getEnumTable() {
+      if (this._enumTable) {
+        return this._enumTable;
+      }
+      
+      const table = new Map();
+      const suffix = this._unit.symbol ? ' ' + this._unit.symbol : '';
+      function put(value) {
+        table.set(value, {
+          label: value + suffix,
+          description: null,
+          sort_key: value,  // TODO: using a non-string here is not 100% legit
+        });
+      }
+      
+      const length = this.mins.length;
+      for (let i = 0; i < length; i++) {
+        const min = this.mins[i];
+        const max = this.maxes[i];
+        put(min);
+        if (max !== min) {
+          // Skipping the intermediate range, which is the best we can do.
+          put(max);
+        }
+      }
+      
+      this._enumTable = table;
+      return table;
     }
     
     getMin() { return this.mins[0]; }
