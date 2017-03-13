@@ -436,6 +436,7 @@ define(['./basic', './spectrum',
   
   function AudioStreamStatusWidget(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
+      addWidget('requested_sample_rate', Select);
       addWidget('buffered', MeasvizWidget);
       addWidget('target', PickWidget, 'Target latency');  // TODO: label should not need to be repeated here
       addWidget('error');

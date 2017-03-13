@@ -43,7 +43,7 @@ define(['./events', './network', './types', './values'],
   
   const EMPTY_CHUNK = Object.freeze([]);
   
-  function connectAudio(scheduler, url) {
+  function connectAudio(scheduler, url, storage) {
     var audio = new AudioContext();
     var nativeSampleRate = audio.sampleRate;
     
@@ -102,6 +102,7 @@ define(['./events', './network', './types', './values'],
       errorTime = Date.now() + 1000;
     }
     var info = makeBlock({
+      requested_sample_rate: makeRequestedSampleRateCell(nativeSampleRate, storage),
       buffered: new LocalReadCell(new types.RangeT([[0, 2]], false, false), 0),
       target: new LocalReadCell({
         value_type: new QuantityT({symbol: 's', si_prefix_ok: false}),
@@ -122,6 +123,11 @@ define(['./events', './network', './types', './values'],
         info.error._update('');
       }
     }
+    
+     // Force sample rate to be a value valid for the current nativeSampleRate, which may not be the same as when the value was written to localStorage.
+     info.requested_sample_rate.set(
+         info.requested_sample_rate.type.round(
+           info.requested_sample_rate.get(), 0));
     
     function updateParameters() {
       // Update queue size management
@@ -152,16 +158,15 @@ define(['./events', './network', './types', './values'],
     
     const interpolationGainNode = audio.createGain();
     
-    // don't use too much bandwidth
-    const requestedSampleRate = minimizeSampleRate(nativeSampleRate, ASSUMED_USEFUL_SAMPLE_RATE);
-    
-    retryingConnection(() => url + '?rate=' + encodeURIComponent(JSON.stringify(requestedSampleRate)), null, ws => {
+    retryingConnection(() => url + '?rate=' + encodeURIComponent(JSON.stringify(info.requested_sample_rate.get())), null, ws => {
       ws.binaryType = 'arraybuffer';
       function lose(reason) {
         // TODO: Arrange to trigger exponential backoff if we get this kind of error promptly (maybe retryingConnection should just have a time threshold)
         console.error('audio:', reason);
         ws.close(4000);  // first "application-specific" error code
       }
+      lose.scheduler = scheduler;
+      info.requested_sample_rate.n.listen(lose);
       ws.onmessage = function(event) {
         var wsDataValue = event.data;
         if (wsDataValue instanceof ArrayBuffer) {
@@ -674,6 +679,22 @@ define(['./events', './network', './types', './values'],
     // Size limits defined by the Web Audio API specification.
     powerOfTwoBufferSize = Math.max(256, Math.min(16384, powerOfTwoBufferSize));
     return powerOfTwoBufferSize;
+  }
+  
+  function makeRequestedSampleRateCell(nativeSampleRate, storage) {
+    const defaultRate = minimizeSampleRate(nativeSampleRate, ASSUMED_USEFUL_SAMPLE_RATE);
+    const ranges = [];
+    for (let rate = nativeSampleRate; rate >= 6000 && rate == rate | 0; rate /= 2) {
+      ranges.push([rate, rate]);
+    }
+    if (ranges.length === 0) {
+      ranges.push([defaultRate, defaultRate]);
+    }
+    return new StorageCell(
+      storage,
+      new types.RangeT(ranges, false, true, {symbol: 'Hz', si_prefix_ok: true}),
+      defaultRate,
+      'requested_sample_rate');
   }
   
   // Find the smallest (sample rate) number which divides highRate (so can be upsampled by the resampling implemented here) while being larger than lowerLimitRate (so as to avoid obligating the source to discard wanted frequency content) unless highRate is already lower.

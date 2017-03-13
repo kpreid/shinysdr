@@ -86,7 +86,7 @@ define(['types', 'values', 'events', 'coordination', 'database', 'network', 'map
     
     var coordinator = new Coordinator(scheduler, freqDB, remoteCell);
     
-    var audioState = connectAudio(scheduler, audioUrl);
+    var audioState = connectAudio(scheduler, audioUrl, new StorageNamespace(localStorage, 'shinysdr.audio.'));
 
     function connectionCallback(state) {
       switch (state) {
