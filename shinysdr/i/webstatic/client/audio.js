@@ -165,6 +165,7 @@ define(['./events', './network', './types', './values'],
           
           if (numAudioChannels === null) {
             lose('Did not receive number-of-channels message before first chunk');
+            return;
           }
           
           // Read in floats and zero-stuff.
