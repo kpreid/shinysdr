@@ -219,13 +219,14 @@ define(['./types', './values', './events'],
   const minRetryTime = 1000;
   const maxRetryTime = 20000;
   const backoff = 1.05;
-  function retryingConnection(wsURL, connectionStateCallback, callback) {
+  function retryingConnection(wsURLFunc, connectionStateCallback, callback) {
     if (!connectionStateCallback) connectionStateCallback = function () {};
 
     var timeout = minRetryTime;
     var succeeded = false;
     function go() {
-      var ws = openWebSocket(wsURL);
+      const wsURL = wsURLFunc();
+      const ws = openWebSocket(wsURL);
       ws.addEventListener('open', function (event) {
         succeeded = true;
         timeout = minRetryTime;
@@ -303,7 +304,7 @@ define(['./types', './values', './events'],
     
     const rootCell = new ReadCell(null, null, types.blockT, identity);
     
-    retryingConnection(rootURL, connectionStateCallback, function (ws) {
+    retryingConnection(() => rootURL, connectionStateCallback, ws => {
       ws.binaryType = 'arraybuffer';
 
       // indexed by object ids chosen by server

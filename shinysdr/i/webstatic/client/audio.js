@@ -143,7 +143,7 @@ define(['./events', './network', './types', './values'],
     // don't use too much bandwidth
     const requestedSampleRate = minimizeSampleRate(nativeSampleRate, ASSUMED_USEFUL_SAMPLE_RATE);
     
-    retryingConnection(url + '?rate=' + encodeURIComponent(JSON.stringify(requestedSampleRate)), null, ws => {
+    retryingConnection(() => url + '?rate=' + encodeURIComponent(JSON.stringify(requestedSampleRate)), null, ws => {
       ws.binaryType = 'arraybuffer';
       function lose(reason) {
         // TODO: Arrange to trigger exponential backoff if we get this kind of error promptly (maybe retryingConnection should just have a time threshold)
