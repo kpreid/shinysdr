@@ -135,9 +135,21 @@ define(['./events', './network', './types', './values'],
       updateStatus();
     }
     
-    // Note that this filter's frequency is updated from the network
-    var antialiasFilter = audio.createBiquadFilter();
-    antialiasFilter.type = 'lowpass';
+    // Antialiasing filters for interpolated signal, cascaded for more attenuation.
+    // Note that the cutoff frequency is set from the network callback, not here.
+    const antialiasFilters = [];
+    for (let i = 0; i < 6; i++) {
+      const filter = audio.createBiquadFilter();
+      // highshelf type, empirically, has a sharper cutoff than lowpass.
+      // TODO: Learn enough about IIR filtering and what the Web Audio filter facilities are actually doing to get this to be actually optimal.
+      filter.type = 'highshelf';
+      filter.gain.value = -40;
+      if (antialiasFilters.length) {
+        antialiasFilters[antialiasFilters.length - 1].connect(filter);
+      }
+      antialiasFilters.push(filter);
+    }
+    
     const interpolationGainNode = audio.createGain();
     
     // don't use too much bandwidth
@@ -210,8 +222,10 @@ define(['./events', './network', './types', './values'],
           numAudioChannels = message.signal_type.kind === 'STEREO' ? 2 : 1;
           streamSampleRate = message.signal_type.sample_rate;
           
-          // TODO: We should not update this now, but when the audio callback starts reading the new-rate samples. (This could be done by stuffing the message into the queue.) But unless it's a serious problem, let's not bother until Audio Workers are available at which time we'll need to rewrite much of this anyway.
-          antialiasFilter.frequency.value = streamSampleRate * 0.45;  // TODO justify choice of 0.45
+          // TODO: We should not update the filter frequency now, but when the audio callback starts reading the new-rate samples. (This could be done by stuffing the message into the queue.) But unless it's a serious problem, let's not bother until Audio Workers are available at which time we'll need to rewrite much of this anyway.
+          antialiasFilters.forEach(filter => {
+            filter.frequency.value = streamSampleRate * 0.50;
+          });
           const interpolation = nativeSampleRate / streamSampleRate;
           interpolationGainNode.gain.value = interpolation;
           
@@ -304,8 +318,9 @@ define(['./events', './network', './types', './values'],
       updateParameters();
     };
     
-    ascr.connect(antialiasFilter);
-    antialiasFilter.connect(interpolationGainNode);
+    // TODO: If interpolation is 1, omit the filter from the chain. (This requires reconnecting dynamically.)
+    ascr.connect(antialiasFilters[0]);
+    antialiasFilters[antialiasFilters.length - 1].connect(interpolationGainNode);
     const nodeBeforeDestination = interpolationGainNode;
     
     function startStop() {
