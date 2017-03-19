@@ -123,11 +123,11 @@ define(['./basic', './spectrum',
   }
   exports.BlockSet = BlockSet;
   
-  function BlockSetInFrameEntryBuilder(userTypeName) {
+  function BlockSetInFrameEntryBuilder(userTypeName, collapsible) {
     return function blockSetInFrameEntryBuilder(setElement, block, name) {
-      var container = setElement.appendChild(document.createElement('div'));
+      var container = setElement.appendChild(document.createElement(collapsible ? 'details' : 'div'));
       container.className = 'frame';
-      var toolbar = container.appendChild(document.createElement('div'));
+      var toolbar = container.appendChild(document.createElement(collapsible ? 'summary' : 'div'));
       toolbar.className = 'panel frame-controls';
       
       if (block['_implements_shinysdr.values.IWritableCollection']) {
@@ -169,8 +169,8 @@ define(['./basic', './spectrum',
   
   // TODO: This is unused but won't be once 'Accessory' is dead
   //exports.DeviceSet = BlockSet(Device, BlockSetInFrameEntryBuilder('Device'));
-  var ReceiverSet = exports.ReceiverSet = BlockSet(Receiver, BlockSetInFrameEntryBuilder('Receiver'));
-  var AccessorySet = exports.AccessorySet = BlockSet(PickWidget, BlockSetInFrameEntryBuilder('Accessory'));
+  var ReceiverSet = exports.ReceiverSet = BlockSet(Receiver, BlockSetInFrameEntryBuilder('Receiver'), false);
+  var AccessorySet = exports.AccessorySet = BlockSet(PickWidget, BlockSetInFrameEntryBuilder('Accessory', true));
   exports.WindowBlocks = BlockSet(PickWidget, windowEntryBuilder);
   
   // Widget for a device
@@ -431,7 +431,7 @@ define(['./basic', './spectrum',
   exports.SaveButton = SaveButton;
   
   // TODO: Needs to be more than just a BlockSet: eventually a table with grouped headings and sorting, maybe
-  var TelemetryStoreWidget = BlockSet(PickWidget, BlockSetInFrameEntryBuilder(''));
+  var TelemetryStoreWidget = BlockSet(PickWidget, BlockSetInFrameEntryBuilder('', false));
   exports['interface:shinysdr.telemetry.ITelemetryStore'] = TelemetryStoreWidget;
   
   function AudioStreamStatusWidget(config) {

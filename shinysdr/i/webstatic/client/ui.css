@@ -232,10 +232,10 @@ ul.system-menu-list, .system-menu-list ul { /* TODO doesn't fit here, is styling
   color: var(--shinysdr-theme-foreground);
 }
 
-details.frame summary {
+.panel details.frame summary {
   margin: -.2em 0 -.2em -.3em; /* cancel panel padding and close up body */
 }
-details[open].frame summary {
+.panel details[open].frame summary {
   margin: -.2em 0 0 -.3em; /* cancel panel padding */
 }
 
