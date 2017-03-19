@@ -170,7 +170,7 @@ define(['./basic', './spectrum',
   // TODO: This is unused but won't be once 'Accessory' is dead
   //exports.DeviceSet = BlockSet(Device, BlockSetInFrameEntryBuilder('Device'));
   var ReceiverSet = exports.ReceiverSet = BlockSet(Receiver, BlockSetInFrameEntryBuilder('Receiver'), false);
-  var AccessorySet = exports.AccessorySet = BlockSet(PickWidget, BlockSetInFrameEntryBuilder('Accessory', true));
+  var AccessorySet = exports.AccessorySet = BlockSet(PickWidget, BlockSetInFrameEntryBuilder('', true));
   exports.WindowBlocks = BlockSet(PickWidget, windowEntryBuilder);
   
   // Widget for a device
