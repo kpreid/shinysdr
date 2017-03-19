@@ -25,7 +25,6 @@ The "public" operations on these objects are used by configuration files to spec
 
 from __future__ import absolute_import, division
 
-import base64
 import os
 import os.path
 import warnings
@@ -36,6 +35,7 @@ from twisted.python import log
 
 # Note that gnuradio-dependent modules are loaded lazily, to avoid the startup time if all we're going to do is give a usage message
 from shinysdr.i.db import DatabaseModel, database_from_csv, databases_from_directory
+from shinysdr.i.roots import generate_cap
 
 
 __all__ = []  # appended later
@@ -327,7 +327,7 @@ config.serve_web(
     # Page title / station name
     title='ShinySDR')
 ''' % {
-        'root_cap': base64.urlsafe_b64encode(os.urandom(128 // 8)).replace('=', ''),
+        'root_cap': generate_cap(),
         'audio_comment': '' if has_audio else '# ',
         'audio_rx_name': audio_rx_name,
     }
