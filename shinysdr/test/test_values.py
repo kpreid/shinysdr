@@ -309,13 +309,19 @@ class TestCommandCell(unittest.TestCase):
         self.assertEqual(0, self.specimen.count)
         self.specimen.state()['cmd'].set(None)  # TODO: Stop overloading 'set' to mean 'invoke'
         self.assertEqual(1, self.specimen.count)
+    
+    def test_metadata(self):
+        cell = self.specimen.state()['cmd']
+        self.assertEqual(cell.metadata().naming, EnumRow(
+            label='Do the thing',
+            sort_key='cmd'))
 
 
 class DecoratorCommandSpecimen(ExportedState):
     def __init__(self):
         self.count = 0
     
-    @command()
+    @command(label='Do the thing')
     def cmd(self):
         self.count += 1
 

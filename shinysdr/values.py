@@ -773,9 +773,11 @@ def setter(f):
     return ExportedSetter(f)
 
 
-def command():
+def command(**cell_kwargs):
     """Returns a decorator for command methods."""
-    return ExportedCommand
+    def decorator(f):
+        return ExportedCommand(f, cell_kwargs)
+    return decorator
 
 
 class ExportedGetter(object):
@@ -841,8 +843,9 @@ class ExportedSetter(object):
 
 class ExportedCommand(object):
     """Descriptor for a command method exported using @command."""
-    def __init__(self, f):
+    def __init__(self, f, cell_kwargs):
         self.__function = f
+        self.__cell_kwargs = cell_kwargs
     
     def __get__(self, obj, type=None):
         """implements method binding"""
@@ -852,4 +855,4 @@ class ExportedCommand(object):
             return self.__function.__get__(obj, type)
     
     def make_cell(self, obj, attr):
-        return Command(obj, attr, self.__get__(obj))
+        return Command(obj, attr, self.__get__(obj), **self.__cell_kwargs)
