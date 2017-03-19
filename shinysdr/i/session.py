@@ -1,4 +1,4 @@
-# Copyright 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -17,16 +17,11 @@
 
 # TODO: Now that this module has AppRoot in it, it is misnamed.
 
-from __future__ import absolute_import, division
-
-import os
-import sys
-
-from twisted.internet import reactor as the_reactor  # TODO fix
+from __future__ import absolute_import, division, unicode_literals
 
 from shinysdr.i.top import Top
 from shinysdr.types import ReferenceT
-from shinysdr.values import Command, ExportedState, exported_value
+from shinysdr.values import ExportedState, exported_value
 
 
 class AppRoot(ExportedState):
@@ -63,7 +58,6 @@ class AppRoot(ExportedState):
 class Session(ExportedState):
     def __init__(self, receive_flowgraph, features):
         self.__receive_flowgraph = receive_flowgraph
-        self.__enable_reboot = features['reboot']
     
     def state_def(self, callback):
         super(Session, self).state_def(callback)
@@ -76,10 +70,6 @@ class Session(ExportedState):
         callback(rxfs['telemetry_store'])
         callback(rxfs['source_name'])
         callback(rxfs['clip_warning'])
-        if self.__enable_reboot:
-            # TODO kludge
-            callback(Command(self, 'reboot', self.reboot, label='Restart server'))
-            callback(Command(self, 'kill', self.kill, label='Kill server'))
     
     def add_audio_queue(self, queue, queue_rate):
         return self.__receive_flowgraph.add_audio_queue(queue, queue_rate)
@@ -89,14 +79,3 @@ class Session(ExportedState):
     
     def get_audio_queue_channels(self):
         return self.__receive_flowgraph.get_audio_queue_channels()
-        
-    # TODO: reboot and kill don't belong here, neither the interface nor the implementation.
-    def reboot(self):
-        # Note that this will immediately kill us and so we will never ack the client invocation -- which we're doing as a deliberate indication of our temporary death.
-        # TODO: Do better preservation of interpreter options, etc.
-        os.execlp(sys.executable or 'python', 'python',
-            '-m', 'shinysdr.main', *sys.argv[1:])
-    
-    def kill(self):
-        # pylint: disable=no-member
-        the_reactor.stop()

@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -66,6 +66,11 @@ class Config(object):
     @defer.inlineCallbacks
     def _wait_and_validate(self):
         yield defer.gatherResults(self.__waiting)
+        
+        # reboot used to be not-a-plugin so we have this hardcoded definition -- but exposing the plugin isn't necessarily a good replacement anyway
+        if self.features._get('reboot'):
+            from shinysdr.plugins.rebooter import Rebooter
+            self.devices.add('rebooter', Rebooter(self.reactor))
         
         self.__finished = True
         if len(self._service_makers) == 0:
