@@ -144,7 +144,7 @@ define(['./events', './network', './types', './values'],
     // Antialiasing filters for interpolated signal, cascaded for more attenuation.
     // Note that the cutoff frequency is set from the network callback, not here.
     const antialiasFilters = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 12; i++) {
       const filter = audio.createBiquadFilter();
       // highshelf type, empirically, has a sharper cutoff than lowpass.
       // TODO: Learn enough about IIR filtering and what the Web Audio filter facilities are actually doing to get this to be actually optimal.
@@ -166,7 +166,11 @@ define(['./events', './network', './types', './values'],
         ws.close(4000);  // first "application-specific" error code
       }
       lose.scheduler = scheduler;
-      info.requested_sample_rate.n.listen(lose);
+      function changeSampleRate() {
+        lose('changing sample rate');
+      }
+      changeSampleRate.scheduler = scheduler;
+      info.requested_sample_rate.n.listen(changeSampleRate);
       ws.onmessage = function(event) {
         var wsDataValue = event.data;
         if (wsDataValue instanceof ArrayBuffer) {
@@ -229,7 +233,8 @@ define(['./events', './network', './types', './values'],
           
           // TODO: We should not update the filter frequency now, but when the audio callback starts reading the new-rate samples. (This could be done by stuffing the message into the queue.) But unless it's a serious problem, let's not bother until Audio Workers are available at which time we'll need to rewrite much of this anyway.
           antialiasFilters.forEach(filter => {
-            filter.frequency.value = streamSampleRate * 0.50;
+            // Yes, this cutoff value is above the Nyquist limit, but the actual cascaded filter works out to be about what we want.
+            filter.frequency.value = Math.min(streamSampleRate * 0.8, nativeSampleRate * 0.5);
           });
           const interpolation = nativeSampleRate / streamSampleRate;
           interpolationGainNode.gain.value = interpolation;
