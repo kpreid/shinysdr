@@ -179,6 +179,7 @@ define(['./basic', './dbui',
     }
     this.element = canvas;
     view.addClickToTune(canvas);
+    canvas.setAttribute('title', '');  // prohibit auto-set title -- TODO: Stop having auto-set titles in the first place
     
     var glOptions = {
       alpha: true,
