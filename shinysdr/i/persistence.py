@@ -59,6 +59,7 @@ class PersistenceFileGlue(object):
         if os.path.isfile(filename):
             root_object.state_from_json(json.load(open(filename, 'r')))
             # make a backup in case this code version misreads the state and loses things on save (but only if the load succeeded, in case the file but not its backup is bad)
+            # TODO: should automatically use backup if main file is missing or broken
             shutil.copyfile(filename, filename + '~')
         else:
             root_object.state_from_json(get_defaults(root_object))
@@ -94,12 +95,18 @@ class PersistenceFileGlue(object):
     
     def __write_immediately(self):
         log.msg('Performing state write...')
-        current_state = self.__pcd.get()
-        with open(self.__filename, 'w') as f:
-            json.dump(current_state, f)
-        log.msg('...done')
-        if self.__delayed_write_call and self.__delayed_write_call.active():
-            self.__delayed_write_call.cancel()
+        try:
+            current_state = self.__pcd.get()  # note: may raise if getters are broken
+            temp_filename = self.__filename + '.new'
+            with open(temp_filename, 'w') as f:
+                json.dump(current_state, f)  # note: may raise if objects return non-serializable values
+                f.flush()
+                os.fsync(f.fileno())
+            os.rename(temp_filename, self.__filename)  # TODO: use os.replace() if we ever get to Python 3
+            log.msg('...done')
+        finally:
+            if self.__delayed_write_call and self.__delayed_write_call.active():
+                self.__delayed_write_call.cancel()
 
 
 class PersistenceChangeDetector(object):

@@ -80,6 +80,19 @@ class TestPersistenceFileGlue(unittest.TestCase):
         self.assertEqual(self.__root.get_value(), 0)  # change not persisted
         advance_until(self.__clock, pfg.sync(), limit=2)  # clean up clock for tearDown check
     
+    def test_broken_state_recovery(self):
+        pfg = self.__start()
+        self.assertEqual(self.__root.get_value(), 0)  # check initial assumption
+        self.__root.set_value(ObjectWhichCannotBePersisted())
+        try:
+            advance_until(self.__clock, pfg.sync(), limit=2)
+        except TypeError:  # expected error
+            pass
+        self.__reset()
+        self.__start()
+        # now we should be back to the default value
+        self.assertEqual(self.__root.get_value(), 0)
+    
     # TODO: Add a test that multiple changes don't trigger multiple writes -- needs a reasonable design for a hook to observe the write.
 
 
@@ -146,6 +159,10 @@ class ValueAndBlockSpecimen(ExportedState):
     @setter
     def set_value(self, value):
         self.__value = value
+
+
+class ObjectWhichCannotBePersisted(object):
+    pass
 
 
 def advance_until(clock, d, limit=10, timestep=0.001):
