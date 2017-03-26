@@ -228,21 +228,25 @@ define(['./basic', './spectrum',
           ignore('gains');
         }
         
+        function setIfDifferent(cell, value) {
+          // TODO this function should be a more widely available utility
+          if (cell.get() !== value) {
+            cell.set(value);
+          }
+        }
         function bindGainModeSet() {
-          var mode = gainModeCell.depend(bindGainModeSet);
-          if (mode === 'auto' && !block.agc.get()) {
-            block.agc.set(true);
-          } else if (hasAGC) {
-            block.agc.set(false);
+          const mode = gainModeCell.depend(bindGainModeSet);
+          if (hasAGC) {
+            setIfDifferent(block.agc, mode === 'auto');
           }
         }
         bindGainModeSet.scheduler = config.scheduler;
         bindGainModeSet();
         function bindGainModeGet() {
           if (hasAGC && block.agc.depend(bindGainModeGet)) {
-            gainModeCell.set('auto');
+            setIfDifferent(gainModeCell, 'auto');
           } else if (gainModeCell.get() === 'auto') {
-            gainModeCell.set('single');
+            setIfDifferent(gainModeCell, 'single');
           }
         }
         bindGainModeGet.scheduler = config.scheduler;
