@@ -28,9 +28,11 @@ import tempfile
 from twisted.internet import reactor as the_reactor
 from twisted.internet import defer
 from twisted.trial import unittest
+from zope.interface import implements
 
 from shinysdr import devices
 from shinysdr.config import Config, ConfigException, ConfigTooLateException, execute_config, write_default_config
+from shinysdr.i.roots import IEntryPoint
 from shinysdr.values import ExportedState
 
 
@@ -143,7 +145,7 @@ class TestConfigObject(unittest.TestCase):
         self.assertEqual(1, len(self.config._service_makers))
         # Actually instantiating the service. We need to do this to check if the root_cap value was processed correctly.
         service = self.config._service_makers[0](DummyAppRoot())
-        self.assertEqual('/', service.get_host_relative_url())
+        self.assertEqual('/public/', service.get_host_relative_url())
     
     # --- serve_ghpsdr ---
     
@@ -276,7 +278,14 @@ def get_default_dbs():
 
 class DummyAppRoot(ExportedState):
     def get_session(self):
-        return self
+        return StubEntryPoint()
     
     def get_receive_flowgraph(self):
         return None
+
+
+class StubEntryPoint(object):
+    implements(IEntryPoint)
+    
+    def entry_point_is_deleted(self):
+        return False
