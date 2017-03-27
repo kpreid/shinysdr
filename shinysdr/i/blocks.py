@@ -254,13 +254,9 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__gate = None
         self.__fft_sink = None
         self.__scope_sink = None
-        self.__scope_chunker = None
-        self.__before_fft = None
         self.__logpwrfft = None
-        self.__overlapper = None
         
-        self.__rebuild()
-        self.__connect()
+        self.__do_connect()
     
     def state_def(self, callback):
         super(MonitorSink, self).state_def(callback)
@@ -272,7 +268,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
             type=BulkDataT(array_format='f', info_format='d'),
             label='Scope'))
 
-    def __rebuild(self):
+    def __do_connect(self):
         if self.__signal_type.is_analytic():
             input_length = self.__freq_resolution
             output_length = self.__freq_resolution
@@ -296,7 +292,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
             context=self.__context,
             migrate=self.__fft_sink,
             notify=self.__update_interested)
-        self.__overlapper = _OverlapGimmick(
+        overlapper = _OverlapGimmick(
             size=input_length,
             factor=overlap_factor,
             itemsize=self.__itemsize)
@@ -320,20 +316,20 @@ class MonitorSink(gr.hier_block2, ExportedState):
             context=self.__context,
             migrate=self.__scope_sink,
             notify=self.__update_interested)
-        self.__scope_chunker = blocks.stream_to_vector_decimator(
+        scope_chunker = blocks.stream_to_vector_decimator(
             item_size=gr.sizeof_gr_complex,
             sample_rate=sample_rate,
             vec_rate=self.__frame_rate,  # TODO doesn't need to be coupled
             vec_len=self.__time_length)
 
-    def __connect(self):
+        # connect everything
         self.__context.lock()
         try:
             self.disconnect_all()
             self.connect(
                 self,
                 self.__gate,
-                self.__overlapper,
+                overlapper,
                 self.__logpwrfft)
             if self.__after_fft is not None:
                 self.connect(self.__logpwrfft, self.__after_fft)
@@ -344,7 +340,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
             if self.__enable_scope:
                 self.connect(
                     self.__gate,
-                    self.__scope_chunker,
+                    scope_chunker,
                     self.__scope_sink)
         finally:
             self.__context.unlock()
@@ -367,8 +363,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
         # TODO: don't rebuild if the rate did not change and the spectrum-sidedness of the type did not change
         assert self.__signal_type.compatible_items(value)
         self.__signal_type = value
-        self.__rebuild()
-        self.__connect()
+        self.__do_connect()
         self.state_changed('signal_type')
     
     # non-exported
@@ -386,8 +381,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
     @setter
     def set_freq_resolution(self, freq_resolution):
         self.__freq_resolution = freq_resolution
-        self.__rebuild()
-        self.__connect()
+        self.__do_connect()
 
     @exported_value(type=RangeT([(1, 4096)], logarithmic=True, integer=True), changes='this_setter')
     def get_time_length(self):
@@ -396,8 +390,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
     @setter
     def set_time_length(self, value):
         self.__time_length = value
-        self.__rebuild()
-        self.__connect()
+        self.__do_connect()
 
     @exported_value(
         type=RangeT([(1, _maximum_fft_rate)],
