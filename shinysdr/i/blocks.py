@@ -31,7 +31,7 @@ from zope.interface import Interface, implements
 
 from gnuradio import gr
 from gnuradio import blocks
-from gnuradio.fft import logpwrfft
+from gnuradio.fft import fft_vcc, window as windows
 
 from shinysdr.filters import make_resampler
 from shinysdr.math import to_dB
@@ -155,14 +155,12 @@ class MessageDistributorSink(gr.hier_block2):
 _maximum_fft_rate = 500
 
 
-class _OverlapGimmick(gr.hier_block2):
+class _OverlappedStreamToVector(gr.hier_block2):
     """
-    Pure flowgraph kludge to cause a logpwrfft block to perform overlapped FFTs.
-    
-    The more correct solution would be to replace stream_to_vector_decimator (used inside of logpwrfft) with a block which takes arbitrarily-spaced vector chunks of the input rather than chunking and then decimating in terms of whole chunks. The cost of doing this instead is more scheduling steps and more data copies.
-    
-    To adjust for the data rate, the logpwrfft block's sample rate parameter must be multiplied by the factor parameter of this block; or equivalently, the frame rate must be divided by it.
+    Block which is like gnuradio.blocks.stream_to_vector, but generates vectors which are overlapping segments of the input, multiplying the overall number of samples by a specified factor.
     """
+    
+    # A disadvantage of our implementation strategy is that, because blocks.interleave does, we will always generate output vectors in bursts (of size = factor) rather than smoothly.
     
     def __init__(self, size, factor, itemsize=gr.sizeof_gr_complex):
         """
@@ -179,19 +177,15 @@ class _OverlapGimmick(gr.hier_block2):
         gr.hier_block2.__init__(
             self, type(self).__name__,
             gr.io_signature(1, 1, itemsize),
-            gr.io_signature(1, 1, itemsize),
+            gr.io_signature(1, 1, itemsize * size),
         )
         
         if factor == 1:
             # No duplication needed; simplify flowgraph
-            # GR refused to connect self to self, so insert a dummy block
-            self.connect(self, blocks.copy(itemsize), self)
+            self.connect(self, blocks.stream_to_vector(itemsize, size), self)
         else:
             interleave = blocks.interleave(itemsize * size)
-            self.connect(
-                interleave,
-                blocks.vector_to_stream(itemsize, size),
-                self)
+            self.connect(interleave, self)
         
             for i in xrange(0, factor):
                 self.connect(
@@ -250,11 +244,12 @@ class MonitorSink(gr.hier_block2, ExportedState):
         
         self.__interested_cell = LooseCell(key='interested', type=bool, value=False, writable=False, persists=False)
         
-        # blocks
+        # stuff created by __do_connect
         self.__gate = None
         self.__fft_sink = None
         self.__scope_sink = None
-        self.__logpwrfft = None
+        self.__frame_dec = None
+        self.__frame_rate_to_decimation_conversion = 0.0
         
         self.__do_connect()
     
@@ -284,32 +279,46 @@ class MonitorSink(gr.hier_block2, ExportedState):
         # sanity limit -- OverlapGimmick is not free
         overlap_factor = min(16, overlap_factor)
         
+        self.__frame_rate_to_decimation_conversion = sample_rate * overlap_factor / input_length
+        
         self.__gate = blocks.copy(gr.sizeof_gr_complex)
         self.__gate.set_enabled(not self.__paused)
+        
+        overlapper = _OverlappedStreamToVector(
+            size=input_length,
+            factor=overlap_factor,
+            itemsize=self.__itemsize)
+        
+        self.__frame_dec = blocks.keep_one_in_n(
+            itemsize=gr.sizeof_gr_complex * input_length,
+            n=int(round(self.__frame_rate_to_decimation_conversion / self.__frame_rate)))
+        
+        # the actual FFT logic, which is similar to GR's logpwrfft_c
+        window = windows.blackmanharris(input_length)
+        window_power = sum(x * x for x in window)
+        # TODO: use fft_vfc when applicable
+        fft_block = fft_vcc(
+            fft_size=input_length,
+            forward=True,
+            window=window)
+        mag_squared = blocks.complex_to_mag_squared(input_length)
+        logarithmizer = blocks.nlog10_ff(
+            n=10,  # the "deci" in "decibel"
+            vlen=input_length,
+            k=(
+                -to_dB(window_power) +  # compensate for window
+                -to_dB(sample_rate) +  # convert from power-per-sample to power-per-Hz
+                self.__power_offset  # offset for packing into bytes
+            ))
+        
+        # It would make slightly more sense to use unsigned chars, but blocks.float_to_uchar does not support vlen.
+        self.__fft_converter = blocks.float_to_char(vlen=self.__freq_resolution, scale=1.0)
         
         self.__fft_sink = MessageDistributorSink(
             itemsize=output_length * gr.sizeof_char,
             context=self.__context,
             migrate=self.__fft_sink,
             notify=self.__update_interested)
-        overlapper = _OverlapGimmick(
-            size=input_length,
-            factor=overlap_factor,
-            itemsize=self.__itemsize)
-        
-        # Adjusts units so displayed level is independent of resolution and sample rate. Also throw in the packing offset
-        compensation = to_dB(input_length / sample_rate) + self.__power_offset
-        # TODO: Consider not using the logpwrfft block
-        
-        self.__logpwrfft = logpwrfft.logpwrfft_c(
-            sample_rate=sample_rate * overlap_factor,
-            fft_size=input_length,
-            ref_scale=10.0 ** (-compensation / 20.0) * 2,  # not actually using this as a reference scale value but avoiding needing to use a separate add operation to apply the unit change -- this expression is the inverse of what logpwrfft does internally
-            frame_rate=self.__frame_rate,
-            avg_alpha=1.0,
-            average=False)
-        # It would make slightly more sense to use unsigned chars, but blocks.float_to_uchar does not support vlen.
-        self.__fft_converter = blocks.float_to_char(vlen=self.__freq_resolution, scale=1.0)
     
         self.__scope_sink = MessageDistributorSink(
             itemsize=self.__time_length * gr.sizeof_gr_complex,
@@ -330,13 +339,16 @@ class MonitorSink(gr.hier_block2, ExportedState):
                 self,
                 self.__gate,
                 overlapper,
-                self.__logpwrfft)
+                self.__frame_dec,
+                fft_block,
+                mag_squared,
+                logarithmizer)
             if self.__after_fft is not None:
-                self.connect(self.__logpwrfft, self.__after_fft)
+                self.connect(logarithmizer, self.__after_fft)
                 self.connect(self.__after_fft, self.__fft_converter, self.__fft_sink)
                 self.connect((self.__after_fft, 1), blocks.null_sink(gr.sizeof_float * self.__freq_resolution))
             else:
-                self.connect(self.__logpwrfft, self.__fft_converter, self.__fft_sink)
+                self.connect(logarithmizer, self.__fft_converter, self.__fft_sink)
             if self.__enable_scope:
                 self.connect(
                     self.__gate,
@@ -405,8 +417,10 @@ class MonitorSink(gr.hier_block2, ExportedState):
 
     @setter
     def set_frame_rate(self, value):
-        self.__logpwrfft.set_vec_rate(float(value))
-        self.__frame_rate = self.__logpwrfft.frame_rate()
+        n = int(round(self.__frame_rate_to_decimation_conversion / value))
+        self.__frame_dec.set_n(n)
+        # derive effective value by calculating inverse
+        self.__frame_rate = self.__frame_rate_to_decimation_conversion / n
     
     @exported_value(type=bool, changes='this_setter', label='Pause')
     def get_paused(self):
