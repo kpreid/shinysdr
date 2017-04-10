@@ -63,6 +63,11 @@ class TestPersistenceFileGlue(unittest.TestCase):
         self.__start()
         self.assertEqual(self.__root.get_value(), 'default')
 
+    def test_no_persistence(self):
+        self.__state_name = None
+        self.__start()
+        self.assertEqual(self.__root.get_value(), 'default')
+
     def test_persistence(self):
         """Test that state persists."""
         pfg = self.__start()

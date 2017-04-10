@@ -47,14 +47,16 @@ class PersistenceFileGlue(object):
         """
         assert isinstance(root_object, ExportedState)
         
+        def apply_defaults():
+            root_object.state_from_json(get_defaults(root_object))
+        
         self.__reactor = reactor
         self.__filename = filename
         self.__delayed_write_call = None
         
         if filename is None:
-            # TODO: Should probably be calling get_defaults in this case.
+            apply_defaults()
             self.__pcd = None
-            self.__scheduled = False
             return
         
         state_json = self.__attempt_to_read_file(filename, _suppress_error_for_test=_suppress_error_for_test)
@@ -64,7 +66,7 @@ class PersistenceFileGlue(object):
             # TODO: should automatically use backup if main file is missing or broken
             shutil.copyfile(filename, filename + '~')
         else:
-            root_object.state_from_json(get_defaults(root_object))
+            apply_defaults()
         
         self.__pcd = PersistenceChangeDetector(root_object, self.__write_later,
             SubscriptionContext(reactor=reactor, poller=None))
