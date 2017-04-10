@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import os.path
 import shutil
@@ -42,47 +42,47 @@ class TestPersistenceFileGlue(unittest.TestCase):
     
     def __reset(self):
         """Recreate the object for write-then-read tests."""
-        self.__root = ValueAndBlockSpecimen()
+        self.__root = ValueAndBlockSpecimen(value='initial')
     
-    def __start(self, **kwargs):
+    def __start(self,
+            get_defaults=lambda _: {'value': 'default'},
+            **kwargs):
         return PersistenceFileGlue(
             reactor=self.__clock,
             root_object=self.__root,
             filename=self.__state_name,
+            get_defaults=get_defaults,
             **kwargs)
     
     def test_no_defaults(self):
-        self.__start()
+        self.__start(get_defaults=lambda _: {})
         # It would be surprising if this assertion failed; this test is mainly just to test the initialization succeeds
-        self.assertEqual(self.__root.get_value(), 0)
+        self.assertEqual(self.__root.get_value(), 'initial')
     
     def test_defaults(self):
-        self.__start(get_defaults=lambda _: {u'value': 1})
-        self.assertEqual(self.__root.get_value(), 1)
+        self.__start()
+        self.assertEqual(self.__root.get_value(), 'default')
 
     def test_persistence(self):
         """Test that state persists."""
         pfg = self.__start()
-        self.assertEqual(self.__root.get_value(), 0)  # check initial assumption
-        self.__root.set_value(1)
+        self.__root.set_value('set')
         advance_until(self.__clock, pfg.sync(), limit=2)
         self.__reset()
         self.__start()
-        self.assertEqual(self.__root.get_value(), 1)  # check persistence
+        self.assertEqual(self.__root.get_value(), 'set')  # check persistence
     
     def test_delay_is_present(self):
         """Test that persistence isn't immediate."""
         pfg = self.__start()
-        self.assertEqual(self.__root.get_value(), 0)  # check initial assumption
-        self.__root.set_value(1)
+        self.__root.set_value('set')
         self.__reset()
         self.__start()
-        self.assertEqual(self.__root.get_value(), 0)  # change not persisted
+        self.assertEqual(self.__root.get_value(), 'default')  # change not persisted
         advance_until(self.__clock, pfg.sync(), limit=2)  # clean up clock for tearDown check
     
     def test_broken_state_recovery(self):
         pfg = self.__start()
-        self.assertEqual(self.__root.get_value(), 0)  # check initial assumption
         self.__root.set_value(ObjectWhichCannotBePersisted())
         try:
             advance_until(self.__clock, pfg.sync(), limit=2)
@@ -91,13 +91,13 @@ class TestPersistenceFileGlue(unittest.TestCase):
         self.__reset()
         self.__start()
         # now we should be back to the default value
-        self.assertEqual(self.__root.get_value(), 0)
+        self.assertEqual(self.__root.get_value(), 'default')
     
     def test_unparseable_file_recovery(self):
         with open(self.__state_name, 'w'):
             pass  # write empty file
         self.__start(_suppress_error_for_test=True)
-        self.assertEqual(self.__root.get_value(), 0)
+        self.assertEqual(self.__root.get_value(), 'default')
     
     # TODO: Add a test that multiple changes don't trigger multiple writes -- needs a reasonable design for a hook to observe the write.
 
@@ -114,43 +114,43 @@ class TestPersistenceChangeDetector(unittest.TestCase):
     
     def test_1(self):
         self.assertEqual(self.d.get(), {
-            u'value': 0,
-            u'block': {
-                u'value': 0,
-                u'block': {},
+            'value': 'initial',
+            'block': {
+                'value': 'initial',
+                'block': {},
             },
         })
         self.assertEqual(0, self.calls)
-        self.o.set_value(1)
+        self.o.set_value('one')
         self.assertEqual(0, self.calls)
         self.st.advance()
         self.assertEqual(1, self.calls)
-        self.o.set_value(2)
+        self.o.set_value('two')
         self.st.advance()
         self.assertEqual(1, self.calls)  # only fires once
         self.assertEqual(self.d.get(), {
-            u'value': 2,
+            u'value': 'two',
             u'block': {
-                u'value': 0,
+                u'value': 'initial',
                 u'block': {},
             },
         })
         self.st.advance()
         self.assertEqual(1, self.calls)
-        self.o.get_block().set_value(3)  # pylint: disable=no-member
+        self.o.get_block().set_value('three')  # pylint: disable=no-member
         self.st.advance()
         self.assertEqual(2, self.calls)
         self.assertEqual(self.d.get(), {
-            u'value': 2,
+            u'value': 'two',
             u'block': {
-                u'value': 3,
+                u'value': 'three',
                 u'block': {},
             },
         })
 
 
 class ValueAndBlockSpecimen(ExportedState):
-    def __init__(self, block=nullExportedState, value=0):
+    def __init__(self, block=nullExportedState, value='initial'):
         self.__value = value
         self.__block = block
     
@@ -158,7 +158,7 @@ class ValueAndBlockSpecimen(ExportedState):
     def get_block(self):
         return self.__block
     
-    @exported_value(type=float, parameter='value', changes='this_setter')
+    @exported_value(type=unicode, parameter='value', changes='this_setter')
     def get_value(self):
         return self.__value
     
