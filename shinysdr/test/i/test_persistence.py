@@ -93,6 +93,12 @@ class TestPersistenceFileGlue(unittest.TestCase):
         # now we should be back to the default value
         self.assertEqual(self.__root.get_value(), 0)
     
+    def test_unparseable_file_recovery(self):
+        with open(self.__state_name, 'w'):
+            pass  # write empty file
+        self.__start(_suppress_error_for_test=True)
+        self.assertEqual(self.__root.get_value(), 0)
+    
     # TODO: Add a test that multiple changes don't trigger multiple writes -- needs a reasonable design for a hook to observe the write.
 
 

@@ -39,7 +39,7 @@ def _no_defaults(_root):
 # TODO: Think about a better name. The better name must not include "Manager".
 # This is a class because I expect that it will have methods to control it in more detail in the future.
 class PersistenceFileGlue(object):
-    def __init__(self, reactor, root_object, filename, get_defaults=_no_defaults):
+    def __init__(self, reactor, root_object, filename, get_defaults=_no_defaults, _suppress_error_for_test=False):
         """
         root_object: Object to persist.
         filename: path to state file to read/write, or None to not actually do persistence.
@@ -52,12 +52,14 @@ class PersistenceFileGlue(object):
         self.__delayed_write_call = None
         
         if filename is None:
+            # TODO: Should probably be calling get_defaults in this case.
             self.__pcd = None
             self.__scheduled = False
             return
         
-        if os.path.isfile(filename):
-            root_object.state_from_json(json.load(open(filename, 'r')))
+        state_json = self.__attempt_to_read_file(filename, _suppress_error_for_test=_suppress_error_for_test)
+        if state_json is not None:
+            root_object.state_from_json(state_json)
             # make a backup in case this code version misreads the state and loses things on save (but only if the load succeeded, in case the file but not its backup is bad)
             # TODO: should automatically use backup if main file is missing or broken
             shutil.copyfile(filename, filename + '~')
@@ -85,6 +87,16 @@ class PersistenceFileGlue(object):
     
     def __active(self):
         return self.__delayed_write_call and self.__delayed_write_call.active()
+    
+    def __attempt_to_read_file(self, filename, _suppress_error_for_test):
+        try:
+            if os.path.isfile(filename):
+                with open(filename, 'r') as f:
+                    return json.load(f)
+        except (OSError, ValueError) as e:
+            if not _suppress_error_for_test:  # Twisted considers this fatal in a test
+                log.err(e, 'Loading state file {!r}'.format(filename))
+        return None
     
     def __write_later(self):
         # TODO: Surely there is some utility in Twisted to do this better.
