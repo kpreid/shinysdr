@@ -27,6 +27,7 @@ from gnuradio import gr
 
 from shinysdr.devices import Device, IComponent, merge_devices
 from shinysdr.i.top import Top
+from shinysdr.i.poller import the_subscription_context
 from shinysdr.plugins import simulate
 from shinysdr.test.testutil import state_smoke_test
 from shinysdr.values import ExportedState
@@ -162,6 +163,19 @@ class TestTop(unittest.TestCase):
         
         # TODO test DC offset gap handling
         # TODO test "set to value it already has" behavior
+    
+    @defer.inlineCallbacks
+    def test_monitor_interest(self):
+        queue = gr.msg_queue()
+        top = Top(devices={'s1': simulate.SimulatedDevice()})
+        self.assertFalse(top._Top__running)
+        top.get_monitor().get_fft_distributor().subscribe(queue)
+        yield deferLater(the_reactor, 0.1, lambda: None)
+        self.assertTrue(top._Top__running)
+        top.get_monitor().get_fft_distributor().unsubscribe(queue)
+        yield deferLater(the_reactor, 0.1, lambda: None)
+        self.assertFalse(top._Top__running)
+        
 
 
 class _DeviceShutdownDetector(ExportedState):

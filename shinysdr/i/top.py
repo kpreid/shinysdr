@@ -96,7 +96,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.monitor = MonitorSink(
             signal_type=SignalType(sample_rate=10000, kind='IQ'),  # dummy value will be updated in _do_connect
             context=Context(self))
-        self.monitor.get_interested_cell().subscribe2(lambda value: self.__start_or_stop_later, the_subscription_context)
+        self.monitor.get_interested_cell().subscribe2(self.__start_or_stop_later, the_subscription_context)
         self.__clip_probe = MaxProbe()
         
         # Receiver blocks (multiple, eventually)
@@ -360,7 +360,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
                 self.stop()
                 self.wait()
 
-    def __start_or_stop_later(self):
+    def __start_or_stop_later(self, unused_subscription_value=None):
         reactor.callLater(0, self.__start_or_stop)
 
     def close_all_devices(self):
