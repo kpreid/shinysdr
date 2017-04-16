@@ -259,7 +259,6 @@ class _SiteWithHeaders(server.Site):
             "img-src 'self' data: blob:",
             "object-src 'none'",
             "base-uri 'self'",
-            "plugin-types 'none'",
             "block-all-mixed-content",
         ]))
         request.setHeader('Referrer-Policy', 'no-referrer')

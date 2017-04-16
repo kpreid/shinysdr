@@ -157,7 +157,6 @@ def assert_common(self, url):
                 "img-src 'self' data: blob:",
                 "object-src 'none'",
                 "base-uri 'self'",
-                "plugin-types 'none'",
                 "block-all-mixed-content",
             ])],
             response.headers.getRawHeaders('Content-Security-Policy'))
