@@ -403,6 +403,9 @@ class _SimpleSubscription(object):
     
     def unsubscribe(self):
         self.__subscription_set.remove(self)
+    
+    def __repr__(self):
+        return u'<{} calling {}>'.format(type(self).__name__, self.__callback)
 
 
 class _LooseCellImmediateSubscription(object):
