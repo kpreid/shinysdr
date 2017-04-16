@@ -394,7 +394,8 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
       for (let i = oldSize; i < newSize; i++) {
         list.push(i);
       }
-      (0, this._grow)(newSize);
+      const callbackWithoutThis = this._grow;
+      callbackWithoutThis(newSize);
     }
     return list.pop();
   };

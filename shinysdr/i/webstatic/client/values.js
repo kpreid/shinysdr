@@ -121,14 +121,11 @@ define(['./events', './types'], function (events, types) {
   function DerivedCell(type_or_metadata, scheduler, compute) {
     Cell.call(this, type_or_metadata);
     
-    this._compute = compute;
-    this._needsCompute = false;
-    
-    var dirtyCallback = this._dirty = function derivedCellDirtyCallback() {
+    const dirtyCallback = function derivedCellDirtyCallback() {
       this.n.notify();
     }.bind(this);
     var cell = this;
-    this._dirty.scheduler = {
+    dirtyCallback.scheduler = {
       // This scheduler-like object is a kludge so that we can get a prompt dirty flag.
       // I suspect that there are other use cases for this, in which case it should be extracted into a full scheduler implementation (or a part of the base Scheduler) but I'm waiting to see what the other cases look like first.
       toString: function () { return '[DerivedCell gimmick scheduler]'; },
@@ -143,15 +140,18 @@ define(['./events', './types'], function (events, types) {
       }
     };
     
+    this._compute = Function.prototype.bind.call(compute, undefined, dirtyCallback);
+    this._needsCompute = true;
+    
     // Register initial notifications by computing once.
     // Note: this would not be necessary if .depend() were the only interface instead of .n.listen(), so it is perhaps worth considering that.
-    this._value = (1,this._compute)(this._dirty);
+    this.get();
   }
   DerivedCell.prototype = Object.create(Cell.prototype, {constructor: {value: DerivedCell}});
   DerivedCell.prototype.get = function () {
     if (this._needsCompute) {
       // Note that this._compute could throw. The behavior we have chosen here is to throw on every get call. Other possible behaviors would be to catch and log (or throw-async) the exception and return either a stale value or a pumpkin value.
-      this._value = (1,this._compute)(this._dirty);
+      this._value = this._compute();
       this._needsCompute = false;
     }
     return this._value;

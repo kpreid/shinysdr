@@ -352,7 +352,8 @@ define(['./events', './network', './types', './values'],
             this[internalName] = coerce(value);
           }
           if (this._hook && !this._initializing) {
-            (0, this._hook)();
+            const callbackWithoutThis = this._hook;
+            callbackWithoutThis();
           }
           this.n.notify();
         } else {

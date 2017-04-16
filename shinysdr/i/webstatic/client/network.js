@@ -183,7 +183,8 @@ define(['./types', './values', './events'],
       lastValue = newValue;
       // TODO replace this with something async
       for (let i = 0; i < subscriptions.length; i++) {
-        (0,subscriptions[i])(newValue);
+        const callbackWithoutThis = subscriptions[i];
+        callbackWithoutThis(newValue);
       }
       
       return newValue;
@@ -353,7 +354,8 @@ define(['./types', './values', './events'],
               return;
             }
             if (isCellMap[id]) {
-              (0, updaterMap[id])(value);
+              const callbackWithoutThis = updaterMap[id];
+              callbackWithoutThis(value);
             } else {
               // is block
               const block = idMap[id];

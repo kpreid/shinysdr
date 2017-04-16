@@ -418,7 +418,8 @@ define(['./events', './network', './types', './values'],
       maybeScheduleUpdate();
       // TODO replace this with something async
       for (let i = 0; i < subscriptions.length; i++) {
-        (0,subscriptions[i])(newValue);
+        const callbackWithoutThis = subscriptions[i];
+        callbackWithoutThis(newValue);
       }
     }
     
@@ -534,7 +535,8 @@ define(['./events', './network', './types', './values'],
       lastValue = newValue;
       // TODO replace this with something async
       for (let i = 0; i < subscriptions.length; i++) {
-        (0,subscriptions[i])(newValue);
+        const callbackWithoutThis = subscriptions[i];
+        callbackWithoutThis(newValue);
       }
     }
     
