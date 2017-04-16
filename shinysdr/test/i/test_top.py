@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -27,7 +27,6 @@ from gnuradio import gr
 
 from shinysdr.devices import Device, IComponent, merge_devices
 from shinysdr.i.top import Top
-from shinysdr.i.poller import the_subscription_context
 from shinysdr.plugins import simulate
 from shinysdr.test.testutil import state_smoke_test
 from shinysdr.values import ExportedState
@@ -175,7 +174,6 @@ class TestTop(unittest.TestCase):
         top.get_monitor().get_fft_distributor().unsubscribe(queue)
         yield deferLater(the_reactor, 0.1, lambda: None)
         self.assertFalse(top._Top__running)
-        
 
 
 class _DeviceShutdownDetector(ExportedState):
