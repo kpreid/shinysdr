@@ -1,0 +1,438 @@
+<!doctype html>
+<!--
+  Copyright 2015, 2016 Kevin Reid <kpreid@switchb.org>
+  
+  This file is part of ShinySDR.
+  
+  ShinySDR is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+  
+  ShinySDR is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public License
+  along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<html lang="en"><head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>ShinySDR Manual: Configuration and devices</title>
+  <meta name="viewport" content="width=device-width">
+  <link rel="stylesheet" href="/manual/manual-style.css">
+</head><body>
+
+<h1><a href="./">ShinySDR Manual</a>: Configuration and devices</h1>
+
+<ol>
+  <li><a href="#introduction">Configuration directories</a></li>
+  <li><a href="#config"><code>config.py</code> and the <code>config</code> object</a></li>
+  <li><a href="#rx">Available receiving devices</a></li>
+  <li><a href="#special">Available special-purpose devices</a></li>
+</ol>
+
+<h2 id="introduction">Configuration directories</h2>
+
+<p>Starting the ShinySDR server requires specifying on the command line a directory containing configuration information. Such a directory can be created with example contents using the command <code>shinysdr --create <var>config-dir-name</var></code>. The contents of a configuration directory look like this:</p>
+  
+<ul class="directory-listing">
+  <li><code><var>config-dir-name</var>/</code><ul class="directory-listing">
+    <li><code>config.py</code></li>
+    <li><code>dbs-read-only/</code></li>
+    <li><code>state.json</code></li>
+  </ul></li>
+</ul>
+  
+<p><code>config.py</code> specifies the radio hardware to use and the address of the server, among other things. It is written in Python so that unusual configurations can be accommodated, including definitions of custom drivers for special hardware.</p>
+
+<p><code>dbs-read-only/</code> may contain frequency database <code>.csv</code> files; for information on the format of these files, see the page <a href="dbs">Frequency Databases</a>.
+
+<h2 id="config"><code>config.py</code> and the <code>config</code> object</h2>
+
+<p>As an example, here is the default <code>config.py</code>, without the comments:</p>
+
+<blockquote><pre>from shinysdr.devices import AudioDevice
+from shinysdr.plugins.osmosdr import OsmoSDRDevice
+from shinysdr.plugins.simulate import SimulatedDevice
+
+config.devices.add(u'osmo', OsmoSDRDevice(''))
+config.devices.add(u'audio', AudioDevice(rx_device=''))
+config.devices.add(u'sim', SimulatedDevice())
+
+config.serve_web(
+    http_endpoint='tcp:8100',
+    ws_endpoint='tcp:8101',
+    root_cap='3QLxPaLD22xaAzykSVH2eg',
+    title='ShinySDR')</pre></blockquote>
+
+<p>The only required parts are at least one device and <code>config.serve_web(...)</code>. In addition to the usual Python builtins, there is one additional global, <dfn><code>config</code></dfn>, which contains all of the ShinySDR configuration methods.</p>
+
+<p>Note: The config object cannot be used to modify the configuration after startup has finished.</p>
+
+<p>The remainder of this section describes the methods of the <code>config</code> object.</p>
+
+<h3>Devices; <code>config.devices</code></h3>
+
+<p>A <dfn>device</dfn> object corresponds to a hardware device (or multiple devices working together) providing antenna, tuner (VFO/LO), ADC, antenna rotator, etc.</p>
+
+<p>Device objects are created via various plugins which implement drivers for the particular hardware;
+in the above example, <code>shinysdr.plugins.osmosdr</code> provides ShinySDR devices for <a href="http://sdr.osmocom.org/trac/wiki/GrOsmoSDR">gr-osmosdr</a>.
+See the section <a href="#rx">Available receiving devices</a> below for information on those drivers which are bundled with ShinySDR.</p>
+
+<p>Several device objects can be <em>merged</em>, creating a single device object containing all of the functionality of both.
+This is appropriate when the corresponding hardware is in fact interconnected, but has independent interfaces;
+for example, a receiver with an external downconverter or upconverter, or a device which uses a separate sound card for ADC.</p>
+
+<dl class="major-dl">
+  
+  <dt><code>config.devices.add(<var>key</var>, <var>device</var>, ...)</code></dt>
+  <dd>
+    <p>Add a device object, making it available for use from the UI.</p>
+    
+    <p><code><var>key</var></code> is a (Unicode) string used to identify the particular device (for example, in order to save its state when the server is restarted). It can be anything.</p>
+    
+    <p>You can specify more than one device, in which case they will be merged, as described above.</p>
+  </dd>
+  
+  <!-- not sure if this is worth mentioning
+  <dt><code>shinysdr.devices.merge_devices([<var>device</var>, ...])</code></dt>
+  <dd><p>Merge devices and return the merged device. This does explicitly what <code>config.devices.add</code> does implicitly.</p></dd>
+  -->
+
+</dl>
+
+<h3>Web server and other network interfaces</h3>
+
+<dl class="major-dl">
+  
+  <dt><code>config.serve_web(http_endpoint='...', ws_endpoint='...', root_cap=u'...', title=u'...')</code></dt>
+  <dd>
+    <p>Enable and configure the web server.</p>
+    
+    <p><code>http_endpoint</code> specifies the port (and address) to use for HTTP access.
+    It should be a string in <a href="http://twistedmatrix.com/documents/current/api/twisted.internet.endpoints.html#serverFromString">Twisted endpoint syntax</a>;
+    for a quick example, <code>"tcp:8000"</code> specifies port 8000, and <code>"tcp:8000:interface=127.0.0.1"</code> does the same while also prohibiting access from other machines.</p>
+    
+    <p><code>ws_endpoint</code> specifies the port to use for the WebSocket service used to stream data to the client.
+    It should be identical to the <code>http_endpoint</code> except for using a port number exactly one greater (this restriction will be removed in the future).</p>
+    
+    <p><code>root_cap</code> is a secret string value used for restricting access to the server, or <code>None</code> to disable it.
+    If set, the URL of the web interface will include this secret, so that no one can use this ShinySDR instance without having been given that particular URL.</p>
+    
+    <p><code>title</code> is a name for identifying this particular ShinySDR instance &mdash; it will be used in the titles of web pages.
+    If not specified, the default is &ldquo;ShinySDR&rdquo;.</p>
+  </dd>
+
+  <!-- TODO enable this once it actually works
+  <dt><code>config.serve_ghpsdr()</code></dt>
+  <dd>
+    <p>TODO</p>
+  </dd>
+  -->
+
+</dl>
+
+<h4>SSL configuration</h4>
+
+<p>If you're using ShinySDR over the Internet, I highly recommend that you use HTTPS to prevent snooping on your connection and hence unauthorized access to your ShinySDR instance.</p>
+
+<p>If you already have a certificate for your domain name (lucky you!), the configuration looks like this:</p>
+<pre>config.serve_web(
+    http_endpoint='ssl:8100:privateKey=key.pem:certKey=cert.pem',
+    ws_endpoint='ssl:8101:privateKey=key.pem:certKey=cert.pem',
+    ...)</pre>
+
+<p>If you don't have a certificate, you can generate a &ldquo;self-signed&rdquo; certificate using OpenSSL.
+This will not be accepted as legitimate by web browsers unless you install it on your client machine (the details of this process vary widely, and may not be possible at all),
+but even without that you gain protections against <em>some</em> attacks that plain HTTP does not have.</p>
+
+<p><strong>This advice has not been reviewed by crypto experts! It is being provided only because it is slightly better than nothing! Make your own evaluation of the risks and get a second opinion!</strong></p>
+
+<ol>
+  
+  <li><p>Install the <code>openssl</code> command-line tool.</p></li>
+  
+  <li>
+  <p>Create a file with the following contents, and call it, say, <code>req.conf</code>.</p>
+  <blockquote><pre>[ req ]
+default_bits = 2048
+distinguished_name = req_distinguished_name
+x509_extensions = x509_extensions
+prompt = no
+[ req_distinguished_name ]
+CN=<var><strong>your domain name goes here</strong></var>
+[ x509_extensions ]
+basicConstraints=critical,CA:FALSE
+extendedKeyUsage=critical,serverAuth</pre></blockquote>
+  <p>(Note: The lines in the <code>x509_extensions</code> section restrict the generated certificate so that a client which has it installed does not trust it for any other purposes than authenticating the server; this limits the harm if your private key is stolen.)</p>
+  </li>
+  
+  <li>
+  <p>Run the command: <code>openssl req -new -x509 -days 365 -nodes -out cert.pem -keyout key.pem -config req.conf</code></p>
+  
+  <p>This will generate two new files, <code>cert.pem</code> and <code>key.pem</code>, which should be named in the endpoint specification of the ShinySDR config as described earlier. <code>key.pem</code> contains your server private key &mdash; keep it private! <code>cert.pem</code> contains the certificate; this is the file you install on the client to make it accepted as valid.</p>
+  
+  <p>The number after <code>-days</code> specifies the length of time (in days) for which the certificate is valid. When it expires, if you wish to generate a new certificate using the same key, replace the <code>-keyout</code> option with <code>-key</code> to read the key file instead of writing a new one.</p>
+  </li>
+
+</ol>
+
+<h3>Frequency databases; <code>config.databases</code></h3>
+
+<p>A frequency database is a file containing listings of frequencies and bands of interest. For information on the file format, and using them within ShinySDR, see the page <a href="dbs">Frequency Databases</a>.</p>
+
+<p>Some frequency databases are included with ShinySDR. Your own databases may be placed in <code><var>config-dir-name</var>/dbs-read-only/</code>, or the methods below may be used to specify additional locations.</p>
+
+<dl class="major-dl">
+
+  <dt><code>config.databases.add_directory(<var>pathname</var>)</code></dt>
+  <dd>
+    <p>Given the pathname of a directory, add all files located in that directory with names ending in &ldquo;<code>.csv</code>&rdquo; as <a href="dbs">frequency databases</a>.</p>
+    
+    <p><strong>Warning:</strong> The provided pathname, if relative, is currently relative to the working directory of the server. It is planned that this will be changed to be relative to the location of the config file. If this makes a difference, use an absolute path for now.</p>
+  </dd>
+  
+  <dt><code>config.databases.add_writable_database(<var>pathname</var>)</code></dt>
+  <dd>
+    <p>Use the given pathname for a single frequency database file whose contents may be edited from the UI.</p>
+    
+    <p><strong>Warning:</strong> The provided pathname, if relative, is currently relative to the working directory of the server. It is planned that this will be changed to be relative to the location of the config file. If this makes a difference, use an absolute path for now.</p>
+  </dd>
+
+</dl>
+
+<h3>Other features of the <code>config</code> object</h3>
+
+<dl class="major-dl">
+
+  <dt><code>config.persist_to_file(<var>pathname</var>)</code></dt>
+  <dd>
+    <p><strong>Deprecated:</strong> In the future, server state will not be stored in a single file and this method will not be available. A replacement will specify a directory instead.
+    
+    <p>Use the specified pathname as the name of a file storing the state of the server (current tuning, receivers, gain, etc.) to preserve it across restarts. If <code>config.persist_to_file</code> is not called, the state will be saved in <code><var>config-dir-name</var>/state.json</code>.</p>
+    
+    <p>Additional names made by appending suffixes to <var>pathname</var> will be used for temporary copies and backups.</p>
+    
+    <p><strong>Warning:</strong> The provided pathname, if relative, is currently relative to the working directory of the server. It is planned that this will be changed to be relative to the location of the config file. If this makes a difference, use an absolute path for now.</p>
+  </dd>
+
+  <dt><code>config.set_server_audio_allowed(True<var>[</var>, device_name=..., sample_rate=...<var>]</var>)</code></dt>
+  <dd>
+    <p>Enable sending the demodulated audio output from to an audio device on the server, rather than the client.</p>
+    
+    <p>This is disabled by default since it may be undesirable for remote or multiuser operation.</p>
+    
+    <p><code>device_name</code> is optional, and may be used to specify the audio device to use instead of the default.
+    It takes the same names as the GNU Radio audio sink block.
+    [TODO: Explain or link to explanation of where to find device names.]
+    <code>sample_rate</code> is optional, defaults to 44100, must be an integer, and specifies the sample rate to request.</p>
+  </dd>
+
+  <dt>
+    <!-- TODO bad markup, should be just two <dt>s -->
+    <div><code>config.features.enable('<var>...</var>')</code></div>
+    <div><code>config.features.disable('<var>...</var>')</code></div>
+  </dt>
+  <dd>
+    <p>Enable or disable the optional feature with the specified name.</p>
+    
+    <p>Certain features of ShinySDR are notably incomplete, in which case they are disabled by default but can be enabled, or costly, in which case they are enabled by default but one might wish to disable them.</p>
+    
+    <p>Attempting to enable or disable an unrecognized feature name is an error. Attempting to disable a feature which in a previous version of ShinySDR was disabled-by-default but is now always enabled will have no effect.</p>
+    
+    <p>The currently defined optional features' names are:</p>
+    
+    <dl>
+      <dt><code>'stereo'</code>
+      <dd><p>Stereo audio output. Enabled by default and may be disabled (producing mono audio instead) to reduce CPU usage and network data rate.</p></dd>
+
+      <dt><code>'reboot'</code>
+      <dd>
+        <p>Allows restarting or stopping the server by request from the client. Disabled by default.
+        <p>This feature is useful if you have flaky or sometimes-unplugged RF devices. It is incomplete in that the commands do not yet live in a sensible location in the user interface, and they may not work if you have an unusual configuration (it is implemented as essentially <code>exec&nbsp;python -m&nbsp;shinysdr.main&nbsp;...</code>).</p>
+      </p></dd>
+    </dl>
+  </dd>
+
+  <dt><code>config.reactor</code></dt>
+  <dd>
+    <p>ShinySDR uses the <a href="https://twistedmatrix.com/">Twisted</a> framework. <code>config.reactor</code> is a convenient alias for the <i>reactor</i> object from Twisted, which may be useful in some advanced configuration scenarios or when a plugin requires it.</p>
+  </dd>
+
+  <dt><code>config.wait_for(<var>deferred</var>)</code></dt>
+  <dd>
+    <p>Used to delay startup until some asynchronous operation has completed. <code><var>deferred</var></code> should be a <a href="http://twistedmatrix.com/documents/current/core/howto/defer-intro.html">Twisted <code>Deferred</code></a> object.</p>
+  </dd>
+
+</dl>
+
+<h2 id="rx">Available receiving devices</h2>
+
+<p>These are the device types which are available in ShinySDR or the bundled plugins.</p>
+
+<dl class="major-dl">
+
+<dt><code>shinysdr.devices.AudioDevice(rx_device='...', tx_device='...', name='...', sample_rate=44100, channel_mapping='IQ')</code></dt>
+<dd>
+  <p>An system audio input (&ldquo;sound card&rdquo;) device.</p>
+  
+  <p>There are two basic use cases for this device, depending on what the sound card is connected to:</p>
+  <ul>
+    <li>
+      <p>A SDR receiver device which uses a standard sound card (possibly built into the SDR unit) for the analog-to-digital conversion of a baseband I/Q signal.
+      The <code>channel_mapping</code> option should be set to <code>'IQ'</code> (or <code>'QI'</code> to swap the channels if needed; see below for details). Example:</p>
+      <pre>from shinysdr.devices import AudioDevice
+config.devices.add(u'fcd', AudioDevice(
+  rx_device='Built-in Input',
+  sample_rate=192000,
+  channel_mapping='IQ'))</pre>
+      </li>
+    <li>
+      <p>A single-sideband receiver.
+      The <code>channel_mapping</code> option should be set to <code>1</code>, and the receiver should be in upper sideband (USB) mode, not lower sideband. Example:</p>
+      <pre>from shinysdr.devices import AudioDevice
+config.devices.add(u'rig', AudioDevice(
+  rx_device='USB Audio CODEC ',  # this is how the Yaesu SCU-17 shows up on a Mac, for example
+  sample_rate=8000,
+  channel_mapping=1))</pre>
+    </li>
+    <li>If you wish to use a microphone as an input, any settings will work and I encourage you to play with them. But in this case, you might also be interested in the <a href="/tools/audio-fft">standalone audio FFT</a>, which uses audio input directly in the browser and therefore has lower latency.</li>
+  </ul>
+  
+  <p><code>rx_device</code> is optional, and may be used to specify the audio input device to use instead of the default.
+  (Specifying the device name is recommended, so that you can change the OS input settings without affecting ShinySDR.)
+  It takes the same names as the GNU Radio audio sink block.
+  [TODO: Explain or link to explanation of where to find device names.]</p>
+
+  <p><code>tx_device</code> will be used to specify the output device when ShinySDR finally gets transmit support. Right now, it's useless.</p>
+
+  <p><code>name</code> is optional, setting a name for the device which will be shown in the UI.
+  It defaults to being named after <code>rx_device</code>.</p>
+
+  <p><code>sample_rate</code> is optional, defaults to 44100, must be an integer, and specifies the sample rate to request.</p>
+
+  <p><code>channel_mapping</code> is optional and defaults to <code>'IQ'</code>. It specifies how the audio input device's channels should be interpreted. The value may be:</p>
+  
+  <ul>
+    <li>An integer, to use a single input channel (1 = left, 2 = right).
+    <li>'IQ', for quadrature using the first channel as real and the second channel as imaginary.
+    <li>'QI', for quadrature using the second channel as real and the first channel as imaginary.
+    <li>A list of lists specifying a 2 × <var>N</var> matrix where the two rows correspond <var>I</var> and <var>Q</var> and the columns correspond to the audio device's input channels. For example, <code>[[1, 0.1], [0, 0.9]]</code> leaks some of the second channel into <var>I</var> and scales <var>Q</var> down slightly. This can be used to set an arbitrary channel mapping or to compensate for magnitude and phase errors in the analog input.
+  </ul>
+</dd>
+
+<dt><code>shinysdr.plugins.simulate.SimulatedDevice(name='Simulated RF')</code></dt>
+<dd>
+  <p>A simulated RF spectrum, useful for testing demodulators.</p>
+  
+  <p>Currently all of its configuration for the signals and noise level is only through the UI, not in this configuration. That may change.</p>
+  
+  <p><code>name</code> is optional, setting a name for the device which will be shown in the UI.</p>
+  
+  <p>Example:</p>
+  <pre>from shinysdr.plugins.simulate import SimulatedDevice
+config.devices.add(u'sim', SimulatedDevice())</pre>
+</dd>
+
+<dt><code>shinysdr.plugins.osmosdr.OsmoSDRDevice('...', name=u'...', profile=..., sample_rate=..., correction_ppm=0.0)</code></dt>
+<dd>
+  <p>Any device supported by the <a href="http://sdr.osmocom.org/trac/wiki/GrOsmoSDR">gr-osmosdr</a> library (includes RTL-SDR, HackRF, bladeRF, UHD (USRP), and files of recorded data).</p>
+  
+  <p>The first parameter is a <a href="http://sdr.osmocom.org/trac/wiki/GrOsmoSDR#Devicespecification">gr-osmosdr device string</a>; see that page for complete information. Common uses:</p>
+  <ul>
+    <li><p>The empty string picks the first available device.</p></li>
+    <li><p>RTL-SDR devices are <code>'rtl=x'</code> where x is either an index (0, 1, 2...) or the &ldquo;serial number&ldquo; of the device (which can be read and modified by the <code>rtl_eeprom</code> tool).</p></li>
+  </ul>
+  
+  <p><code>name</code> is optional, setting a name for the device which will be shown in the UI.</p>
+  
+  <p><code>profile</code> is optional, and can be used to provide more information about the characteristics of the hardware. [TODO: Values not yet documented; see <code>shinysdr.plugins.osmosdr.OsmoSDRProfile</code> in the ShinySDR source code for now.]</p>
+  
+  <p><code>sample_rate</code> is optional, and defaults to the nearest value to 2.4 MHz that is supported by the particular hardware.</p>
+  
+  <p><code>correction_ppm</code> is optional, and specifies a correction for the hardware oscillator frequency in parts-per-million. (This value can be changed at runtime via the UI, which is useful for calibrating against a known-frequency signal. After the first run, the value set in this configuration is ignored.)</p>
+  
+  <p>Example:</p>
+  <pre>from shinysdr.plugins.osmosdr import OsmoSDRDevice
+config.devices.add(u'rtl', OsmoSDRDevice('rtl=0', correction_ppm=-52))</pre>
+</dd>
+
+</dl>
+
+<h2 id="special">Available special-purpose devices</h2>
+
+<dl class="major-dl">
+
+<dt><code>shinysdr.devices.FrequencyShift(<var>shift</var>)</code></dt>
+<dd>
+  <p>This device is useless by itself. When merged with another device, it represents an external device performing frequency shifting (upconversion, downconversion) in the antenna line.</p>
+  
+  <p><code>shift</code> should be set to the needed change in the <em>displayed</em> frequency. For example, if using a 125 MHz upconverter for receiving HF using an RTL-SDR device, one should specify a shift of -125e6:</p>
+  
+  <pre>from shinysdr.plugins.osmosdr import OsmoSDRDevice
+from shinysdr.devices import FrequencyShift
+config.devices.add(u'rtl',
+    OsmoSDRDevice('rtl=0'),
+    FrequencyShift(-125e6))</pre>
+</dd>
+
+<dt><code>shinysdr.devices.PositionedDevice(<var>latitude</var>, <var>longitude</var>)</code></dt>
+<dd>
+  <p>This device is useless by itself. When merged with another device, it stores the physical location of the receiving antenna, allowing it to be displayed on the map view.</p>
+  
+  <p>In future versions, this information may be used for such purposes as calculating antenna rotation for satellite communications.</p>
+  
+  <p><code>latitude</code> and <code>longitude</code> are in degrees North and East, in the <a href="http://en.wikipedia.org/wiki/World_Geodetic_System">WGS 84 coordinate system</a>.</p>
+  
+  <p>Example:</p>
+  
+  <pre>from shinysdr.plugins.osmosdr import OsmoSDRDevice
+from shinysdr.devices import PositionedDevice
+config.devices.add(u'rtl',
+    OsmoSDRDevice('rtl=0'),
+    PositionedDevice(27.988056, 86.925278))</pre>
+</dd>
+
+<dt><code>shinysdr.plugins.hamlib.connect_to_rig(config.reactor, options=[<var>...</var>], port=4532)</code></dt>
+<dd>
+  <p>Hamlib is a library for controlling amateur radio transceivers and antenna rotators. When Hamlib is installed, <code>connect_to_rig</code> from the Hamlib plugin for ShinySDR can be used to control the VFO frequency of a transceiver which is also sending upper-sideband audio to an audio device.</p>
+  
+  <p><code>options</code> should be an array of strings which are command-line options to Hamlib's <code>rigctld</code> (usually to specify the transceiver model and serial port to communicate on) such as <code>['-m', '123', '-r', '/dev/ttyUSB0']</code>. <strong>Do not specify host or port in these options.</strong></p>
+  
+  <p><code>port</code> is an unused TCP port number which <code>rigctld</code> will use. (Unfortunately, <code>rigctld</code> does not support automatically choosing a free port number.)</p>
+  
+  <p>Because this involves an external process and a TCP connection, <code>connect_to_rig</code> completes <em>asynchronously</em>, returning a <a href="http://twistedmatrix.com/documents/current/core/howto/defer-intro.html">Twisted <code>Deferred</code></a> value instead of a Device object. Therefore, configs using <code>connect_to_rig</code> must delay startup and retrieve the Device from the Deferred, as shown in this example:
+  
+  <pre>import shinysdr.plugins.hamlib as hamlib
+d = hamlib.connect_to_rig(config.reactor,
+    options=['-m', '123', '-r', '/dev/cu.SLAB_USBtoUART', '-p', '/dev/cu.SLAB_USBtoUART1', '-P', 'RTS'])
+d.addCallback(lambda rig: config.devices.add('rig',
+    rig,
+    shinysdr.devices.AudioDevice(
+        'USB Audio CODEC ', sample_rate=8000, channel_mapping=1)))
+config.wait_for(d)</pre>
+
+  <p>This configuration example also demonstrates merging in an audio device, so that ShinySDR can match the input audio signal with the the VFO frequency, allowing display of an appropriate frequency scale and use of the frequency database.</p>
+
+  <p>[TODO: Make this nicer by adding Deferred support to config.devices.add, perhaps.]</p>
+</dd>
+
+<dt><code>shinysdr.plugins.hamlib.connect_to_rigctld(config.reactor, host='localhost', port=4532)</code></dt>
+<dd>
+  <p>Identical to <code>connect_to_rig</code> except that it connects to an existing <code>rigctld</code> server rather than starting one of its own.</p>
+</dd>
+
+<!-- TODO: use two <dt>s instead and fix stylesheet -->
+<dt><code>shinysdr.plugins.hamlib.connect_to_rotator(config.reactor, options=[...], port=4533)</code><br>
+<code>shinysdr.plugins.hamlib.connect_to_rotctld(config.reactor, host='localhost', port=4533)</code></dt>
+<dd>
+  <p>For controlling an antenna rotator. Usage is identical to <code>connect_to_rig</code> and <code>connect_to_rigctld</code>, but uses Hamlib <code>rotctld</code> instead of <code>rigctld</code>.</p>
+  
+  <p>This device can be used either merged with another device (to bundle the rotator controls with it) or as a separate non-receiving device; it works the same either way.</p>
+</dd>
+
+</dl>
+
+</body></html>

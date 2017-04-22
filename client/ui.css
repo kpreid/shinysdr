@@ -1,0 +1,805 @@
+/* Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
+ * 
+ * This file is part of ShinySDR.
+ * 
+ * ShinySDR is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * ShinySDR is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+@import "measviz.css";
+
+/* global structure */
+html.subwindowed-page, .subwindowed-page body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* loading screen */
+#loading-information-dialog {
+  display: none;
+}
+.main-not-yet-run #loading-information-dialog {
+  display: block; /* cancel out previous display: none */
+  
+  top: 0; right: 0; bottom: 0; left: 0;
+  
+  width: 30em;
+  height: 10em;
+  box-sizing: border-box;
+  max-width: 100%;
+  max-height: 100%;
+  
+  overflow: auto;
+}
+#loading-information-dialog progress {
+  margin: 0;
+  box-sizing: border-box;
+  width: 100%;
+}
+.main-not-yet-run.subwindowed > shinysdr-subwindow {
+  /* hide unfinished UI (but still allow it to layout, i.e. avoid display: none) */
+  visibility: hidden;
+}
+
+/* container for subwindows */
+.subwindowed {
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  
+  /* This background color shows up only where there is no subwindow to fill the space. */
+  background: #333;
+  background-image: linear-gradient(45deg, #2F2F2F 26%, #333 26%, #333 51%, #2F2F2F 51%, #2F2F2F 76%, #333 76%);
+  background-size: 1em 1em;
+  color: white;
+}
+shinysdr-subwindow {
+  background: var(--shinysdr-theme-column-bgfill);
+  color: var(--shinysdr-theme-foreground);
+}
+.subwindowed > shinysdr-subwindow {
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
+  height: 100%; /* doesn't change layout height, but enables percentage height to work inside */
+}
+.subwindowed > shinysdr-subwindow.stretchy {
+  flex: 1 2;
+  width: 1px;  /* This width is not actually wanted, but leaving it unset or auto causes sized content such as in the spectrum subwindow to overrun the intended flexible width. It is 1px because it will act as a minimum width. */
+}
+shinysdr-subwindow > h2 {
+  font-size: 100%;
+  margin: 0;
+  padding: .2em;
+  flex: 0 0 auto;
+  
+  border: var(--shinysdr-theme-window-title-bgcolor) outset;
+  border-width: 0 1px;
+  background: var(--shinysdr-theme-window-title-bgcolor);
+  background: var(--shinysdr-theme-window-title-bgfill);
+  color: var(--shinysdr-theme-window-title-foreground);
+}
+.subwindow-menu-button {
+  /* reset */
+  border: none;
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: 100%;
+  
+  display: block;
+  float: left;
+  margin: -.18em 0 -.2em -.2em; /* cancel padding */ /* TODO: .18em is a mysterious fudge factor which ought to be .2em. */
+  width: 1.4em;
+  height: 1.4em;
+  text-align: center;
+  vertical-align: middle;
+  overflow: hidden;
+  
+  /* spacing vs. other header content -- probably should be moved */
+  margin-right: 0.2em;
+  
+  border: 0 var(--shinysdr-theme-window-title-bgcolor) groove;
+  border-width: 0 2px 0 0;
+  
+  cursor: pointer;
+}
+.subwindow-menu-button img {
+  display: inline-block;
+  width: 80%;
+  height: 80%;
+}
+.subwindow-menu-button:disabled img {
+  opacity: 0.4;
+}
+
+/* left sidebar menu which contains window show-buttons and links */
+#section-system-menu .sidebar {
+  width: 10em;  /* override default sidebar width */
+}
+ul.system-menu-list, .system-menu-list ul { /* TODO doesn't fit here, is styling for side menu */
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.system-menu-list li {
+  display: block;
+  margin: 0;
+  padding: 0;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.system-menu-list li > a:first-child:last-child,
+.system-menu-list li > button:first-child:last-child {
+  display: block;
+  margin: 0;
+  padding: .4em;
+
+  /* button reset */
+  box-sizing: border-box;
+  width: 100%;
+  font: inherit;
+  border: none;
+  background: none;
+  text-align: left;
+  color: inherit;
+
+  cursor: pointer;
+}
+.system-menu-list .subwindow-show-button-shown {
+  /* TODO: theme might want this to be darkening */
+  background: rgba(255, 255, 255, 0.2);
+}
+.system-menu-list .subwindow-show-button:hover {
+  /* TODO: theme might want this to be darkening */
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* pop-up menus (which are <dialog> elements) */
+.menu-dialog {
+  margin: 0;
+  border: none;
+  padding: 0.25em;
+  
+  left: 0; right: 0;
+  
+  box-shadow: 0 0.1em 1em 0.1em rgba(0, 0, 0, 0.25);
+}
+
+/* widgets */
+.sidebar {
+  flex: 1 1 auto;
+  height: auto;
+  width: 18em;
+  overflow-y: auto;
+}
+.frame {
+  display: flex;
+  flex-direction: column;
+}
+.frame > * {
+  flex-shrink: 0;  /* sometimes overridden, but in general we want scrolling rather than scrunching */
+}
+.panel, details.frame summary {
+  padding: .2em;
+}
+.panel {
+  border-bottom: 0.1em solid var(--shinysdr-theme-header-bgcolor);
+}
+
+.frame-controls, .panel.frame, details.frame summary {
+  margin-top: 0.2em;
+  border-color: var(--shinysdr-theme-header-bgcolor);
+}
+.frame-controls {
+  margin-bottom: -0.2em; /* collapse margin with following frame */
+}
+.panel.frame {
+  margin-top: 0.2em;
+  margin-bottom: 0.2em;
+  border-style: solid;
+  border-width: 0 0 .3em .3em;
+  padding: 0;  /* override .panel padding */
+}
+.frame > details > summary { /* a frame's "more" section */
+  padding-left: .2em;
+
+  font-style: italic;
+  text-transform: lowercase;
+}
+.frame > details > summary:hover {
+  background-color: var(--shinysdr-theme-header-bgcolor);
+  color: var(--shinysdr-theme-foreground);
+  cursor: pointer;
+}
+.frame-controls, details.frame summary {
+  padding-left: 0.2em;
+  background: var(--shinysdr-theme-header-bgcolor);
+  background: var(--shinysdr-theme-header-bgfill);
+  color: var(--shinysdr-theme-foreground);
+}
+
+.panel details.frame summary {
+  margin: -.2em 0 -.2em -.3em; /* cancel panel padding and close up body */
+}
+.panel details[open].frame summary {
+  margin: -.2em 0 0 -.3em; /* cancel panel padding */
+}
+
+.frame-delete-button {
+  /* TODO: better styling; look up good ways to make "X" buttons */
+  vertical-align: middle;
+  display: inline-block;
+  text-align: center;
+
+  width: 1.8em;
+  height: 1.8em;
+
+  margin: 0;
+  border: none;
+  padding: 0.2em;
+  
+  border-radius: 99em;
+  
+  background: black;
+  color: white;
+}
+
+/* widget-in-inline-context gimmicks */
+/* TODO need to make this more generally applicable */
+h2 .frame {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  margin: 0 .5em;
+  
+  /* override heading styling */
+  font-weight: normal;
+}
+h2 .panel {
+  padding: 0 .2em;
+  border: none;
+  width: 12em;
+}
+h2 input {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* monitor widget */
+.widget-Monitor-outer {
+  display: flex;
+  flex: 1;
+  position: relative;  /* allow contents to absolute position relative to this */
+
+  /* TODO: We actually want this to be the WaterfallPlot's graph background color, but no good way to express that currently (so the widget is transparent) */
+  background: var(--shinysdr-theme-spectrum-bgcolor);
+  color: var(--shinysdr-theme-spectrum-label-foreground); /* consistency */
+}
+.widget-Monitor-scrollable {
+  flex: 1 1;
+  display: flex;
+  flex-direction: column;
+  overflow-x: scroll;
+  overflow-y: hidden;
+  min-width: 0px; /* cause Chrome 27.0.1453.116 to be willing to scroll the flex element rather than stretch; don't know whether this is a bug or what */
+}
+.widget-Monitor-scrolled {
+  display: flex; /* don't expect this to be _used_ but causes "height 100%" of its contents to use the computed shrunk size rather than the written one */
+  flex-direction: column;
+  position: relative; /* allow contents to absolute position relative to this */
+  overflow: hidden;
+  width: 100%;
+  flex: 100 100;
+  height: 50%;
+}
+.widget-Monitor-overlay {
+  display: block;
+  position: absolute;
+  left: 0;
+  top: 0;
+  /* width must be set considering zoom */
+  height: 100%;
+}
+
+.widget-MonitorDetailedOptions {
+  display: block;
+  position: absolute;
+  box-sizing: border-box;
+  
+  /* TODO: This is similar to .map-layer-switcher, refactor so they can share */
+  right: 1em;
+  top: 1em;
+  padding: .2em;
+}
+.widget-MonitorDetailedOptions > details[open] {
+  background: var(--shinysdr-theme-column-bgfill);
+  color: var(--shinysdr-theme-foreground);
+  
+  width: 16em;
+}
+
+.widget-WaterfallPlot {
+  /* these properties (normally SVG-only) are read by the widget's code */
+  /* TODO: but actually only the 2dcanvas version, so making this themeable doesn't help... */
+  fill: rgba(64, 100, 100, 0.75);
+  stroke: #00FFAA;
+}
+
+.widget-ScopePlot {
+  position: relative;    /* abs position root */
+}
+.widget-ScopePlot-data, .widget-ScopePlot-graticule {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 100%;
+}
+
+/* map */
+.map-container {
+  display: flex;
+  flex-direction: column;
+
+  flex: 1 1;
+
+  position: relative;  /* abs position root */
+}
+.map-canvas {
+  flex: 1 1 0;
+  height: 1px; /* TODO: voodoo */
+}
+.map-coordinate-control {
+  position: absolute;
+  left: 1em;
+  top: 1em;
+  display: table;
+}
+.map-coordinate-control input:not(:focus):not(:hover) {
+  border-color: transparent;
+  background: none;
+  text-shadow:
+     1px  1px 0px var(--shinysdr-theme-halo-bgcolor),
+    -1px  1px 0px var(--shinysdr-theme-halo-bgcolor),
+     1px -1px 0px var(--shinysdr-theme-halo-bgcolor),
+    -1px -1px 0px var(--shinysdr-theme-halo-bgcolor);
+}
+.map-layer-switcher {
+  position: absolute;
+  right: 1em;
+  top: 1em;
+  display: table;
+  padding: .2em;
+  text-shadow:
+     1px  1px 0px var(--shinysdr-theme-halo-bgcolor),
+    -1px  1px 0px var(--shinysdr-theme-halo-bgcolor),
+     1px -1px 0px var(--shinysdr-theme-halo-bgcolor),
+    -1px -1px 0px var(--shinysdr-theme-halo-bgcolor);
+}
+.map-layer-switcher[open], .map-layer-switcher summary:hover, .map-layer-switcher summary:focus {
+  background: var(--shinysdr-theme-column-bgcolor);
+  color: var(--shinysdr-theme-foreground);
+  text-shadow: none;
+}
+.map-layer-switcher label {
+  display: block;
+}
+
+.widget-ErrorWidget {
+  margin: 0;
+  border: .3em solid red;
+  padding: 0.2em;
+  background: white;
+  color: black;
+}
+
+/* widgets: radio button group */
+.widget-Radio label {
+  display: inline-flex;
+  box-sizing: border-box;
+  margin: 0.08em 0;
+  width: 32.5%;
+  padding: 0 0.1em;
+  
+  text-align: left;
+  white-space: nowrap;
+}
+.widget-Radio label span {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0 0.1em;
+  
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* individual button total-reskin styling */
+.widget-Radio input {
+  opacity: 0;  /* hide without disabling focusability */
+  width: 0.0em;
+  margin: 0;
+  border: none;
+  padding: 0;
+}
+.widget-Radio input + * {
+  border-radius: 0.38em;
+  box-shadow: 0 0.1em 0.1em 0.0em #666,
+      inset 0 0.1em 0.1em 0.0em #FFF;
+  margin: 0.05em 0.05em 0.1em;
+  background: #E4E4E4;
+  color: black;
+  
+  text-align: center;
+  
+  /*font-stretch: condensed;*/  /* Not currently supported by Chrome, so do the following instead */
+  font-size: 0.85em;
+  letter-spacing: -0.04em;
+}
+.widget-Radio input:checked + * {
+  background: black;
+  color: white;
+  box-shadow: 0 0.1em 0.1em 0.0em #EEE,
+      inset 0 0.08em 0.1em 0.0em #666;
+}
+.widget-Radio input:focus + * {
+  /* this is a Windows-style focus ring, but there doesn't seem to be a standard way to ask for a native one */
+  outline: 0.1em dotted black;
+}
+
+/* widgets: knob */
+.panel > .widget-Knob-outer {
+  display: block;
+  text-align: center;
+}
+.widget-Knob-outer {
+  white-space: nowrap;
+  font-family: monospace;
+  font-size: 2.8em;
+  
+  background: var(--shinysdr-theme-knob-bgcolor);
+  color: var(--shinysdr-theme-knob-foreground);
+  border: .03em inset var(--shinysdr-theme-column-bgcolor);
+}
+.knob-digit {
+  display: inline-block;
+  position: relative; /* for buttons */
+}
+.knob-mark {
+  font-family: 'Arial', sans-serif;
+  font-size: 0.8em;
+}
+.knob-dim {
+  opacity: 0.18;
+}
+.knob-dim:focus {
+  opacity: 1.0;
+}
+.knob-digit:focus {
+  /* hide normal focus ring */
+  outline: none;
+  /* and replace with a different more text-selectiony cue */
+  background: rgba(127, 127, 127, 0.6);
+  color: inherit;  
+}
+.knob-spin-button-shim {
+  position: absolute;
+  right: 50%;
+  display: none;
+}
+.knob-digit:focus .knob-spin-button-shim {
+  outline: none;
+  display: inline-block;
+}
+.knob-spin-button-shim.knob-spin-up { bottom: 100%; }
+.knob-spin-button-shim.knob-spin-down { top: 100%; }
+.knob-spin-button {
+  position: relative;
+  right: -50%;
+  font-size: .5em;
+  box-sizing: border-box;
+  width: 1.5em;
+  height: 1.5em;
+  padding: 0;
+  margin: 0;
+  display: block;
+}
+
+/* frequency scale and power scale */
+.freqscale, .widget-VerticalScale {
+  font-family: 'Arial', sans-serif;
+  font-size: .75em;
+}
+
+/* widgets: frequency scale */
+.widget-FreqScale {
+  background: none;
+  color: var(--shinysdr-theme-spectrum-label-foreground);
+}
+.freqscale {
+  flex-shrink: 0;
+  height: 1em;
+  position: relative;
+}
+.freqscale-numbers, .freqscale-stations {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+.freqscale-numbers {
+  overflow: hidden;
+}
+.freqscale-labels {
+  left: 0;
+  top: 0;
+}
+.freqscale-number {
+  border-left: 1px solid; /* hairline marking actual freq */
+  position: absolute;
+}
+.freqscale-channel, .freqscale-band {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  
+  opacity: 0.7;
+  color: var(--shinysdr-theme-spectrum-label-foreground);
+}
+.freqscale-channel {
+  position: absolute;
+  -webkit-transform-origin: center left;
+  -webkit-transform: rotate(-90deg) translate(1.9em, 0);
+  
+  /* override <button> styles */
+  color: inherit;
+  background: inherit;
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+.freqscale-band {
+  position: absolute;
+  bottom: 1.15em;
+  
+  text-align: center;
+  
+  background: var(--shinysdr-theme-spectrum-label-bgcolor);
+  background: var(--shinysdr-theme-spectrum-label-bgfill);
+}
+
+.widget-Receiver-device-controls {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+/* Vertical scales on spectrum. See also combined styles with FreqScale. */
+.widget-VerticalScale {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+}
+.widget-VerticalScale-number {
+  position: absolute;
+  border-top: 1px solid;
+}
+
+.widget-VerticalSplitHandle-positioner {
+  position: absolute;
+  height: 0;  
+  width: 100%;
+}
+.widget-VerticalSplitHandle-handle {
+  margin: -0.3em 0 0 0;
+  border: 0.3em dotted rgba(255, 255, 255, 0.5);
+  height: 0;
+  width: 100%;
+
+  cursor: ns-resize;
+  
+  opacity: 0;
+}
+.widget-VerticalSplitHandle-handle:hover {
+  opacity: 1;
+}
+
+/* widgets: frequency database list */
+.widget-FreqList {
+  min-height: 10em;
+  flex: 2 2;
+  
+  display: flex;
+  flex-direction: column;
+}
+.widget-FreqList .freqlist-box, .widget-FreqList input {
+  width: 100%;
+  margin: .1em 0;
+  box-sizing: border-box;
+}
+.widget-FreqList > * {
+  flex: 0 0;
+}
+.widget-FreqList .freqlist-box {
+  flex: 1 1;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  min-height: 0px; /* cause Chrome 27.0.1453.116 to be willing to scroll the flex element rather than stretch; don't know whether this is a bug or what */
+  
+  font: .7em sans-serif;
+  
+  border: .1em inset var(--shinysdr-theme-column-bgcolor);
+  
+  background: var(--shinysdr-theme-databox-bgcolor);
+  color: var(--shinysdr-theme-databox-foreground);
+}
+.widget-FreqList table {
+  border-collapse: collapse;
+  margin: 0;
+  border: none;
+  padding: 0;
+}
+.widget-FreqList .freqlist-box td {
+  vertical-align: baseline;
+}
+.widget-FreqList .freqlist-cell-freq { text-align: right; }
+.widget-FreqList .freqlist-cell-mode { }
+.widget-FreqList .freqlist-cell-label { }
+.widget-FreqList .freqlist-item-unsupported {
+  color: var(--shinysdr-theme-databox-disabled-foreground);
+}
+.freqlist-item-band-start {
+  background: var(--shinysdr-theme-databox-band-start-bgfill);
+}
+.freqlist-item-band-end {
+  background: var(--shinysdr-theme-databox-band-end-bgfill);
+}
+.freqlist-item-band-start .freqlist-cell-label,
+.freqlist-item-band-end .freqlist-cell-label {
+  font-style: italic;
+}
+.widget-FreqList tr:hover {
+  background: var(--shinysdr-theme-databox-hover-bgcolor);
+}
+
+/* widgets: RecordDetails */
+.widget-RecordDetails .RecordDetails-fields {
+  display: table;
+  border-collapse: collapse;
+  width: 100%;
+}
+.widget-RecordDetails label {
+  display: table-row;
+}
+.widget-RecordDetails .RecordDetails-labeltext, .widget-RecordDetails input {
+  display: table-cell;
+}
+.widget-RecordDetails input {
+  box-sizing: border-box;
+  width: 100%;
+}
+.widget-RecordDetails textarea {
+  box-sizing: border-box;
+  margin: 0;
+  width: 100%;
+  height: 6em;
+}
+
+/* TODO(kpreid): SmallKnob/Slider duplication */
+.widget-SmallKnob-panel {
+  display: flex;
+  flex-direction: row;
+}
+.widget-SmallKnob-label {
+  display: inline-block;
+  align-self: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  flex: 0 0 auto;
+  max-width: 8em;
+}
+.widget-SmallKnob-panel input {
+  width: 0; /* override default form field sizing, let flex set size larger or smaller */
+  flex: 1 1 auto;
+
+  vertical-align: middle;
+}
+
+.widget-Slider-panel {
+  display: flex;
+  flex-direction: row;
+}
+.widget-Slider-panel > * {
+  display: inline-block;
+  align-self: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.widget-Slider-label {
+  flex: 0 0 auto;
+  max-width: 8em;
+}
+.widget-Slider-panel input, .widget-Slider-panel meter {
+  flex: 1 1 0;  /* TODO: 'auto' basis used to work, sometimes doesn't now. Figure out how to not be plugging in a nonsense length here. */
+  width: 3em;  /* This width is not actually wanted and only acts as a minimum width, but leaving it unset or auto causes bad layout in the spectrum rate/resolution controls. */
+
+  vertical-align: middle;
+}
+.widget-Slider-text, .widget-Slider-panel .unit-symbol {
+  font-family: monospace;
+}
+.widget-Slider-text {
+  flex: 0 0 8ex;
+  text-align: right;
+}
+.widget-Slider-panel .unit-symbol {
+  flex: 0 0 auto;
+}
+
+.widget-ReceiverMarks {
+  pointer-events: none;
+}
+
+/* for Toggle widget, but is a generally applicable principle */
+label.panel {
+  display: block;
+}
+
+table.aligned-controls-table {
+  margin: 0;
+  box-sizing: border-box;
+  width: 100%;
+
+  border-spacing: 0;
+}
+.aligned-controls-table th {
+  width: 10%;
+  text-align: right;
+  font: inherit;
+  padding: 0 .2em 0 0;
+  vertical-align: baseline;
+}
+.aligned-controls-table :first-child > th {
+  font-weight: bold;
+}
+.aligned-controls-table td {
+  padding: 0;
+  vertical-align: baseline;
+}
+.aligned-controls-table td:nth-child(2) > * {
+  width: 100%;
+}
+.aligned-controls-table td:nth-child(3) {
+  width: 8ex;
+  text-align: right;
+}
+
+.widget-Banner {
+  min-height: 1.1em;
+  
+  text-align: center;
+}
+.widget-Banner-active {
+  background: #FFD;
+  color: black;
+}
+.widget-Banner-hidden {
+  display: none;
+}

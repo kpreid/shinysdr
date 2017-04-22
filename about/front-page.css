@@ -1,0 +1,60 @@
+@import url(/manual/manual-style.css);
+
+html {
+  color: white;
+  background: black;
+}
+
+body {
+  /* ensure our background is flush with ends, not moved down by inner margin */
+  padding-top: 1px;
+  padding-bottom: 1px;
+  
+  color: black;
+  background: white;
+}
+
+#waterfall-bg {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+
+  margin: 0;
+  border: none;
+  padding: 0;
+
+  z-index: -1;
+  
+  /* Disable interactivity. */
+  pointer-events: none;
+  overflow-x: hidden;  /* no permanent scroll bar */
+}
+
+.site-sections-list {
+  display: flex;
+  justify-content: space-around;
+  flex-flow: row wrap;
+  
+  margin: 0;
+  border: none;
+  padding: 0;
+}
+
+.site-sections-list li {
+  display: block;  /* not list-item */
+}
+
+.site-sections-list a {
+  display: block;
+  flex: 0;
+  
+  margin: 0.5em;
+  min-width: 10em;
+  padding: 1em;
+  text-align: center;
+  
+  background: #EEE;
+  font-weight: bold;
+}

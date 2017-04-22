@@ -1,0 +1,17 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20010904//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    xmlns:xlink="http://www.w3.org/1999/xlink"
+    width="13"
+    height="13"
+    preserveAspectRatio="xMidYMid"
+    viewBox="-100 -100 200 200">
+  <polygon style="fill:black;" points="
+    -80,0
+    0,-100
+    80,0
+    80,100
+    -80,100
+  "/>
+</svg>

@@ -1,0 +1,112 @@
+<!doctype html>
+<!--
+  Copyright 2016 Kevin Reid <kpreid@switchb.org>
+  
+  This file is part of ShinySDR.
+  
+  ShinySDR is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+  
+  ShinySDR is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public License
+  along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<html lang="en"><head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>About ShinySDR</title>
+  <meta name="viewport" content="width=device-width">
+  <link rel="stylesheet" href="/about/front-page.css">
+</head><body>
+
+<div id="waterfall-bg" data-widget="Monitor" data-target="monitor"></div>
+
+<h1>ShinySDR: a software-defined radio receiver</h1>
+
+<ul class="site-sections-list">
+  <!--<li><a href="#features">Features</a>-->
+  <li><a href="https://github.com/kpreid/shinysdr/">Source &amp; Download</a>
+  <li><a href="/manual/">Manual</a>
+</ul>
+
+<p>ShinySDR is the software component of a software-defined radio receiver. When combined with suitable hardware devices such as the RTL-SDR, HackRF, or USRP, it can be used to listen to or display data from a variety of radio transmissions.</p>
+
+<h2>Features and applications</h2>
+
+<ul>
+<li><p><strong>Remote operation:</strong>
+  The receiver can be listened to and remotely controlled over a LAN or the Internet;
+  the user interface works the same everywhere.</p>
+
+  <p>Requires network capacity of 3 Mb/s or greater, depending on settings.
+  Requires Google Chrome.
+  Phone/tablet compatible (excluding iOS).</p>
+
+  <p>Internet access is not required for local or LAN operation.</p>
+</li>
+<li><p><strong>Receive audio transmissions and broadcasts:</strong>
+  ShinySDR supports all standard analog modes — AM, FM (narrowband and broadcast), SSB, CW.
+  You can monitor multiple frequencies at once, limited only by hardware bandwidth, and use stereo panning for easier listening.</p>
+</li>
+<li><p><strong>Receive and decode telemetry data:</strong>
+  ShinySDR can decode and display ADS-B, APRS and the telemetry formats supported by <em><a href="https://github.com/merbanan/rtl_433">rtl_433</a></em>. When position information is available, it is displayed on a map with animated extrapolated positions.
+  
+  <p>Telemetry support requires installation of additional (open source) software as described in the installation instructions.
+
+<li><p><strong>Frequency database</strong>:
+  Jump to favorite stations; catalog signals you hear; import published tables of band, channel, and station info. Stations with known coordinates can be displayed on the map.</p></li>
+
+<li><p><strong>Persistent waterfall display</strong>: You can zoom, pan, and retune without losing any of the displayed history, whereas many other programs will discard anything which is temporarily offscreen, or the whole thing if the window is resized. If you zoom in to get a look at one signal, you can zoom out again.</p></li>
+</ul>
+
+<h3>Supported modes</h3>
+
+<ul>
+<li>Analog audio: AM, FM narrowband, FM broadcast, SSB, CW.</li>
+<li>Digital audio: All those supported by gr-dsd.</li>
+<li>Telemetry: APRS, Mode S/ADS-B, all those supported by <a href="https://github.com/merbanan/rtl_433">rtl_433</a>.</li>
+</ul>
+
+<h3>For developers</h3>
+
+<p>ShinySDR is designed for ease of modification and extension.</p>
+
+<ul>
+<li><p><strong>All server code is Python</strong>, and has <strong>no mandatory build or install step</strong>; simply restart the server to apply a change.</p></li>
+<li><p><strong>Plugin system</strong> allows adding support for new modes (types of modulation) and hardware devices.</p>
+
+  <p>Demodulators prototyped in GNU Radio Companion can be turned into plugins with very little additional code. Control UI can be automatically generated or customized and is based on a generic networking layer.</p></li>
+</ul>
+
+<h3>Missing features</h3>
+
+<ul>
+  <li>ShinySDR is not particularly CPU-efficient or otherwise optimized.</li>
+  <li>Remote operation is not suitable for multiple users; there are no independent sessions. Yet.</li>
+  <li>Installation is not very friendly if you're not already familiar with building C and Python software.</li>
+  <li>Many features are incomplete and backward compatibility of new versions is not guaranteed.</li>
+</ul>
+
+<h2>Requirements</h2>
+
+<p>ShinySDR operates as a specialized web server, running on the machine which has your SDR hardware attached. ShinySDR is known to be compatible with Mac OS X and Linux; in principle, you can use anything which can also run GNU Radio and Python and has enough CPU power (a Raspberry Pi will not do).</p>
+
+<p>The only web browser currently supported as a ShinySDR client is <a href="https://www.google.com/chrome/">Google Chrome</a> (excluding Chrome for iPhone or iPad).
+While it is not <em>intended</em> to be Chrome-only, no attempt has been made to avoid using facilities which are <em>not yet</em> implemented in other browsers.
+Safari (Mac, 9.1.1) and Firefox (47.0) both succeed in connecting but important elements of the UI will not work.</p>
+
+<p>Currently, the client must have the same endianness and floating-point format as the server.
+This may be fixed in the future (if I ever hear of this actually being a problem, or if the data in question is switched to fixed-point to reduce data rate).</p>
+
+<h2>Copyright and License</h2>
+
+<p>ShinySDR (and this web site) &copy; 2013, 2014, 2015, 2016 <a href="http://switchb.org/kpreid/">Kevin Reid</a> &lt;<a href="mailto:kpreid@switchb.org">kpreid@switchb.org</a>&gt; and distributed under the GNU General Public License. For more information, see the relevant source code repositories.</p>
+
+<script src="/client/require.js" data-main="about/waterfall-bg.js"></script>
+
+</body></html>
