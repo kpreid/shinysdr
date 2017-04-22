@@ -61,7 +61,8 @@ class IClientResourceDef(Interface):
 
 
 def _make_static_resource(pathname):
-    r = static.File(pathname,
+    # str() because if we happen to pass unicode as the pathname then directory listings break (discovered with Twisted 16.4.1).
+    r = static.File(str(pathname),
         defaultType='text/plain',
         ignoredExts=['.html'])
     r.contentTypes['.csv'] = 'text/csv'
