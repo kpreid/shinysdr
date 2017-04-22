@@ -59,6 +59,7 @@ Installation procedure:
 
     * [`gr-air-modes`](https://github.com/bistromath/gr-air-modes) (for receiving ADS-B, aircraft transponders).
     * [`multimon-ng`](https://github.com/EliasOenal/multimon-ng) (for receiving APRS).
+    * [`rtl_433`](https://github.com/merbanan/rtl_433) (for receiving miscellaneous telemetry).
     * `gr-dsd` (for receiving digital voice modes supported by DSD).
     
     (If any of these are not installed, ShinySDR will simply hide the corresponding mode options.)
