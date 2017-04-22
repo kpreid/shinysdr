@@ -43,6 +43,9 @@ define(['./events', './network', './types', './values'],
   
   const EMPTY_CHUNK = Object.freeze([]);
   
+  // webkitAudioContext required for Safari as of version 10.1
+  const AudioContext = (window.AudioContext || window.webkitAudioContext);
+  
   function connectAudio(scheduler, url, storage) {
     var audio = new AudioContext();
     var nativeSampleRate = audio.sampleRate;
@@ -370,7 +373,12 @@ define(['./events', './network', './types', './values'],
     // Construct analyser.
     const analyserNode = audioContext.createAnalyser();
     analyserNode.smoothingTimeConstant = 0;
-    analyserNode.fftSize = 16384;
+    try {
+      analyserNode.fftSize = 16384;
+    } catch (e) {
+      // Safari as of version 10.1 does not support larger sizest than this, despite the specification limit being 32768.
+      analyserNode.fftSize = 2048;
+    }
     
     // Used to have the option to reduce this to remove empty high-freq bins from the view. Leaving that out for now.
     const length = analyserNode.frequencyBinCount;
