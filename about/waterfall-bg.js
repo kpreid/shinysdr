@@ -17,7 +17,7 @@
 
 // TODO: remove network module depenency
 require.config({
-  baseUrl: '/client/'
+  baseUrl: 'client/'
 });
 define(['types', 'values', 'events', 'widget', 'widgets', 'network', 'database', 'coordination'],
        (types, values, events, widget, widgets, network, database, coordination) => {

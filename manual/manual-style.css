@@ -16,8 +16,8 @@
  * along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-@import url(/client/ui.css);
-@import url(/client/themes/gray.css);
+@import url(../client/ui.css);
+@import url(../client/themes/gray.css);
 
 html {
   margin: 0;

@@ -21,7 +21,7 @@
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <title>About ShinySDR</title>
   <meta name="viewport" content="width=device-width">
-  <link rel="stylesheet" href="/about/front-page.css">
+  <link rel="stylesheet" href="about/front-page.css">
 </head><body>
 
 <div id="waterfall-bg" data-widget="Monitor" data-target="monitor"></div>
@@ -31,7 +31,7 @@
 <ul class="site-sections-list">
   <!--<li><a href="#features">Features</a>-->
   <li><a href="https://github.com/kpreid/shinysdr/">Source &amp; Download</a>
-  <li><a href="/manual/">Manual</a>
+  <li><a href="manual/">Manual</a>
 </ul>
 
 <p>ShinySDR is the software component of a software-defined radio receiver. When combined with suitable hardware devices such as the RTL-SDR, HackRF, or USRP, it can be used to listen to or display data from a variety of radio transmissions.</p>
@@ -98,7 +98,7 @@
 
 <p>The only web browser currently supported as a ShinySDR client is <a href="https://www.google.com/chrome/">Google Chrome</a> (excluding Chrome for iPhone or iPad).
 While it is not <em>intended</em> to be Chrome-only, no attempt has been made to avoid using facilities which are <em>not yet</em> implemented in other browsers.
-Safari (Mac, 9.1.1) and Firefox (47.0) both succeed in connecting but important elements of the UI will not work.</p>
+Safari (as of version 10.1) will succeed in connecting but important elements of the UI will not work; Firefox (as of version 53.0) has WebSocket compatibility issues.</p>
 
 <p>Currently, the client must have the same endianness and floating-point format as the server.
 This may be fixed in the future (if I ever hear of this actually being a problem, or if the data in question is switched to fixed-point to reduce data rate).</p>
@@ -107,6 +107,6 @@ This may be fixed in the future (if I ever hear of this actually being a problem
 
 <p>ShinySDR (and this web site) &copy; 2013, 2014, 2015, 2016 <a href="http://switchb.org/kpreid/">Kevin Reid</a> &lt;<a href="mailto:kpreid@switchb.org">kpreid@switchb.org</a>&gt; and distributed under the GNU General Public License. For more information, see the relevant source code repositories.</p>
 
-<script src="/client/require.js" data-main="about/waterfall-bg.js"></script>
+<script async src="client/require.js" data-main="about/waterfall-bg.js"></script>
 
 </body></html>
