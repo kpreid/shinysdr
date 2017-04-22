@@ -16,7 +16,7 @@
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 requirejs.config({
-  baseUrl: '/client/'
+  baseUrl: '../client/'
 });
 define(['audio', 'coordination', 'events', 'types', 'values', 'widget', 'widgets'],
        ( audio,   coordination,   events,   types,   values,   widget,   widgets ) => {
