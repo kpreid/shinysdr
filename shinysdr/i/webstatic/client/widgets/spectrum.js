@@ -36,7 +36,6 @@ define(['./basic', './dbui',
   const Menu = menus.Menu;
   const SingleQuad = gltools.SingleQuad;
   const Toggle = widgets_basic.Toggle;
-  const addLifecycleListener = domtools.addLifecycleListener;
   const alwaysCreateReceiverFromEvent = widget.alwaysCreateReceiverFromEvent;
   const createWidgetExt = widget.createWidgetExt;
   const emptyDatabase = database.empty;
@@ -698,10 +697,10 @@ define(['./basic', './dbui',
       
       var fillStyle = 'white';
       var strokeStyle = 'white';
-      addLifecycleListener(canvas, 'init', function() {
+      canvas.addEventListener('shinysdr:lifecycleinit', event => {
         fillStyle = getComputedStyle(canvas).fill;
         strokeStyle = getComputedStyle(canvas).stroke;
-      });
+      }, true);
       
       function changedSplit() {
         cleared = true;

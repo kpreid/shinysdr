@@ -21,7 +21,6 @@ define(['./coordination', './domtools', './events', './math', './types', './valu
   
   const {Coordinator} = coordination;
   const {
-    addLifecycleListener,
     lifecycleDestroy,
     lifecycleInit,
   } = domtools;
@@ -203,9 +202,9 @@ define(['./coordination', './domtools', './events', './math', './types', './valu
       // allow widgets to embed widgets
       createWidgetsInNode(targetCell, context, widget.element);
       
-      addLifecycleListener(newEl, 'destroy', function() {
+      newEl.addEventListener('shinysdr:lifecycledestroy', event => {
         boundedFnEnabled = false;
-      });
+      }, true);
       
       // signal now that we've inserted
       // TODO: Make this less DWIM
@@ -344,7 +343,7 @@ define(['./coordination', './domtools', './events', './math', './types', './valu
     var cacheScrollLeft = 0;
     
     // Restore persistent zoom state
-    addLifecycleListener(container, 'init', function() {
+    container.addEventListener('shinysdr:lifecycleinit', event => {
       // TODO: clamp zoom here in the same way changeZoom does
       zoom = parseFloat(storage.getItem('zoom')) || 1;
       var initScroll = parseFloat(storage.getItem('scroll')) || 0;

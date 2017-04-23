@@ -20,46 +20,37 @@ define([], () => {
   
   const exports = {};
   
-  // HTML element life cycle facility. It is expected that:
+  // DOM element life cycle facility. It is expected that:
   // "init" is fired when the element has been inserted in the document (and has approximately correct layout)
   // "destroy" is fired when the element and its children are going to be discarded (not reused)
   
-  function fireLifecycleEvent(element, condition) {
-    const key = '__shinysdr_lifecycle_' + condition + '__';
-    if (key in element) {
-      element[key].forEach(function(callback) {
-        // TODO: error handling and think about scheduling
-        callback();
-      });
-    }
-  }
-  
-  function addLifecycleListener(element, condition, callback) {
-    const key = '__shinysdr_lifecycle_' + condition + '__';
-    if (!(key in element)) {
-      element[key] = [];
-    }
-    element[key].push(callback);
-  }
-  exports.addLifecycleListener = addLifecycleListener;
-  
+  const lifecycleState = new WeakMap();
   function lifecycleInit(element) {
-    if (element.__shinysdr_lifecycle__ !== undefined) return;
+    if (lifecycleState.has(element)) {
+      // Already inited.
+      return;
+    }
     
     let root = element;
     while (root.parentNode) root = root.parentNode;
-    if (root.nodeType !== Node.DOCUMENT_NODE) return;
+    if (root.nodeType !== Node.DOCUMENT_NODE) {
+      // Too early; node not in document.
+      return;
+    }
     
-    element.__shinysdr_lifecycle__ = 'live';
-    fireLifecycleEvent(element, 'init');
+    lifecycleState.set(element, 'live');
+    element.dispatchEvent(new CustomEvent('shinysdr:lifecycleinit', {bubbles: false}));
   }
   exports.lifecycleInit = lifecycleInit;
   
   function lifecycleDestroy(element) {
-    if (element.__shinysdr_lifecycle__ !== 'live') return;
+    if (lifecycleState.get(element) !== 'live') {
+      // Already dead or never live.
+      return;
+    }
     
-    element.__shinysdr_lifecycle__ = 'dead';
-    fireLifecycleEvent(element, 'destroy');
+    lifecycleState.set(element, 'dead');
+    element.dispatchEvent(new CustomEvent('shinysdr:lifecycledestroy', {bubbles: false}));
     
     Array.prototype.forEach.call(element.children, function (childEl) {
       lifecycleDestroy(childEl);

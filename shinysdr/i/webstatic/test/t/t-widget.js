@@ -65,10 +65,10 @@ define(['/test/jasmine-glue.js',
         function TestWidget(config) {
           console.log('TestWidget instantiated');
           this.element = config.element;
-          domtools.addLifecycleListener(this.element, 'init', function() {
+          this.element.addEventListener('shinysdr:lifecycleinit', event => {
             calledInit++;
           });
-          domtools.addLifecycleListener(this.element, 'destroy', function() {
+          this.element.addEventListener('shinysdr:lifecycledestroy', event => {
             calledDestroy++;
           });
           poke = config.boundedFn(function() {
