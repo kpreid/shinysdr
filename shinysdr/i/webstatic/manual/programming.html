@@ -79,7 +79,7 @@
 
 <h2>Testing</h2>
 
-<p>Automated testing and linting that should be done regularly (TODO Put this in some scripts):</p>
+<p>Automated testing and linting that should be done regularly:</p>
 
 <ol>
   <li><p>Run automated tests of Python code by running <kbd>trial shinysdr</kbd>. The <code>trial</code> utility is part of Twisted.
@@ -87,7 +87,7 @@
     <p>(If you are using a MacPorts-packaged version of Twisted, note that it will have a Python-version suffix such as <code>trial-2.7</code>. I don't know whether any other package systems have a similar issue.)</p>
   </li>
   
-  <li><p>Lint Python code by running <kbd>pylint --rcfile pylintrc shinysdr</kbd> and <kbd>flake8 .</kbd></p>
+  <li><p>Lint code by running <kbd>./lint.sh</kbd></p>
 
   <li><p>Run automated tests of JavaScript code by visiting <code><a href="/test/">/test/</a></code>.</li>
 </ol>
@@ -102,7 +102,7 @@
       <li><p>For the telemetry modes (APRS, Mode S), tune appropriately and receive at least one message. (TODO: Add sample messages to the <code>SimulatedDevice</code> so real-world signals are unnecessary.)
     </ul>
     
-  <li><p>Visit the <a href="/tools/audio-fft">audio FFT</a>.
+  <li><p>Visit the <a href="/tools/">tools</a> to make sure they work.
 
   <li><p>Visit a block page (e.g. append <kbd>/radio/monitor</kbd> to the main page URL).
     
