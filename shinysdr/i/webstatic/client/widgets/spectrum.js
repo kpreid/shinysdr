@@ -16,12 +16,12 @@
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 define(['./basic', './dbui',
-        '../database', '../gltools', '../math', '../menus', '../types', '../values', '../widget',
+        '../database', '../domtools', '../gltools', '../math', '../menus', '../types', '../values', '../widget',
         'text!./spectrum-common.glsl',
         'text!./spectrum-graph-f.glsl', 'text!./spectrum-graph-v.glsl',
         'text!./spectrum-waterfall-f.glsl', 'text!./spectrum-waterfall-v.glsl'], 
        (widgets_basic, widgets_dbui,
-        database, gltools, math, menus, types, values, widget,
+        database, domtools, gltools, math, menus, types, values, widget,
         shader_common,
         shader_graph_f, shader_graph_v,
         shader_waterfall_f, shader_waterfall_v) => {
@@ -36,7 +36,7 @@ define(['./basic', './dbui',
   const Menu = menus.Menu;
   const SingleQuad = gltools.SingleQuad;
   const Toggle = widgets_basic.Toggle;
-  const addLifecycleListener = widget.addLifecycleListener;
+  const addLifecycleListener = domtools.addLifecycleListener;
   const alwaysCreateReceiverFromEvent = widget.alwaysCreateReceiverFromEvent;
   const createWidgetExt = widget.createWidgetExt;
   const emptyDatabase = database.empty;

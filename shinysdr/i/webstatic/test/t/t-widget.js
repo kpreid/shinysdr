@@ -1,4 +1,4 @@
-// Copyright 2014, 2016 Kevin Reid <kpreid@switchb.org>
+// Copyright 2014, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -16,9 +16,9 @@
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 define(['/test/jasmine-glue.js',
-        'events', 'types', 'values', 'widget', 'widgets/basic'],
+        'domtools', 'events', 'types', 'values', 'widget', 'widgets/basic'],
        ( jasmineGlue,
-         events,   types,   values,   widget,   widgets_basic) => {
+         domtools,   events,   types,   values,   widget,   widgets_basic) => {
   'use strict';
   
   const {beforeEach, describe, expect, it} = jasmineGlue.ji;
@@ -65,10 +65,10 @@ define(['/test/jasmine-glue.js',
         function TestWidget(config) {
           console.log('TestWidget instantiated');
           this.element = config.element;
-          widget.addLifecycleListener(this.element, 'init', function() {
+          domtools.addLifecycleListener(this.element, 'init', function() {
             calledInit++;
           });
-          widget.addLifecycleListener(this.element, 'destroy', function() {
+          domtools.addLifecycleListener(this.element, 'destroy', function() {
             calledDestroy++;
           });
           poke = config.boundedFn(function() {
