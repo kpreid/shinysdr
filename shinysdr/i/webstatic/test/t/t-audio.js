@@ -90,23 +90,22 @@ define(['/test/jasmine-glue.js', 'audio', 'events'], (jasmineGlue, audio, events
         expect(1).toBe(1);  // dummy expect for "this does not throw" test
       });
 
-      // TODO: Implement unsubscription, otherwise this test burns CPU forever after.
-      it('should have a subscribable output cell', done => {
-        const adapter = new AudioScopeAdapter(scheduler, audioContext);
-        /* const cell = */ adapter.scope;
-        // let finished = false;
-        
-        // const subscription = cell.subscribe(value => {
-        //   if (finished) return;
-        //   finished = true;
-        //   expect(value.length).toEqual(2);
-        //   expect(value[0]).toEqual({});
-        //   expect(value[1].constructor).toEqual(Float32Array);
-        //   // subscription.unsubscribe();  // TODO implement unsubscription.
-        //   done();
-        // });
-        done();
-      });
+      // TODO: Implement unsubscription so that we can enable this test without burning CPU forever after.
+      // it('should have a subscribable output cell', done => {
+      //   const adapter = new AudioScopeAdapter(scheduler, audioContext);
+      //   const cell = adapter.scope;
+      //   let finished = false;
+      //   
+      //   const subscription = cell.subscribe(value => {
+      //     if (finished) return;
+      //     finished = true;
+      //     expect(value.length).toEqual(2);
+      //     expect(value[0]).toEqual({});
+      //     expect(value[1].constructor).toEqual(Float32Array);
+      //     // subscription.unsubscribe();  // TODO implement unsubscription.
+      //     done();
+      //   });
+      // });
       
       // TODO: test gathering actual plausible data
     });

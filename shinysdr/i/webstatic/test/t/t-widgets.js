@@ -198,6 +198,8 @@ define(['/test/jasmine-glue.js',
         }));
       
         widget = new widgets.ScopePlot(mockWidgetConfig(null, root));
+        
+        expect(1).toBe(1);  // dummy expect for "this does not throw" test
       });
     });
   
