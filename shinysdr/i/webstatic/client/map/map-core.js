@@ -15,12 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
-        'widgets/basic',
+define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
+        'widget', 'widgets/basic',
         'text!./sphere-v.glsl', 'text!./sphere-f.glsl', 'text!./features-v.glsl',
         'text!./points-f.glsl', 'text!./curves-f.glsl'],
-       ( events,   gltools,   math,   network,   types,   values,   widget,
-        widgets_basic,
+       (domtools, events, gltools, math, network, types, values,
+        widget, widgets_basic,
         shader_sphere_v, shader_sphere_f, shader_features_v,
         shader_points_f, shader_curves_f) => {
   'use strict';
@@ -45,6 +45,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
   const externalGet = network.externalGet;
   const makeBlock = values.makeBlock;
   const numberT = types.numberT;
+  const reveal = domtools.reveal;
   const stringT = types.stringT;
   
   var exports = {};
@@ -1072,7 +1073,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
   }
 
   // Not reusable, just a subdivision for sanity
-  function MapCamera(scheduler, storage, redrawCallback, pickFromMouseEvent, positionedDevices, coordActions) {
+  function MapCamera(scheduler, storage, redrawCallback, pickFromMouseEvent, positionedDevices, coordActions, elementForReveal) {
     var w = 1;
     var h = 1;
     
@@ -1290,6 +1291,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
     updateFromCell.scheduler = scheduler;
     
     coordActions._registerMap(function navigateMapCallback(trackCell) {
+      reveal(elementForReveal);
       trackingCell = trackCell;
       updateFromCell();
     });
@@ -1436,7 +1438,7 @@ define(['events', 'gltools', 'math', 'network', 'types', 'values', 'widget',
       scheduler.callNow(draw);
     });
     
-    var mapCamera = new MapCamera(scheduler, storage, draw, pickFromMouseEvent, config.index.implementing('shinysdr.devices.IPositionedDevice'), config.actions);
+    var mapCamera = new MapCamera(scheduler, storage, draw, pickFromMouseEvent, config.index.implementing('shinysdr.devices.IPositionedDevice'), config.actions, canvas);
     // TODO: Once we have overlays, put the listeners on the overlay container...?
     mapCamera.addDragListeners(canvas);
     
