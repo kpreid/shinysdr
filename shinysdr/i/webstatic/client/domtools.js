@@ -67,5 +67,39 @@ define([], () => {
   }
   exports.lifecycleDestroy = lifecycleDestroy;
   
+  // "Reveal" facility.
+  // To reveal a node is to make it visible on-screen (as opposed to hidden by some hidden/collapsed container).
+  // Custom collapsible-things may add event listeners to handle revealing.
+  function reveal(node) {
+    node.dispatchEvent(new CustomEvent('shinysdr:reveal', {
+      bubbles: true
+    }));
+    
+    // Handle built-in elements
+    for (let parent = node; parent; parent = parent.parentNode) {
+      switch (parent.nodeName.toLowerCase()) {
+        case 'details':
+          parent.open = true;
+          break;
+        case 'dialog':
+          parent.open();
+          break;
+      }
+      
+      if (!parent.parentNode && parent !== node.ownerDocument) {
+        console.warn('domtools.reveal: tried to reveal an un-rooted node', node);
+        return false;
+      }
+    }
+
+    if (node.offsetWidth === 0) {
+      // TODO: Find a better test that can't false-positive if the node is currently empty
+      console.warn('domtools.reveal: apparently failed to reveal', node);
+      return false;
+    }
+    return true;
+  }
+  exports.reveal = reveal;
+  
   return Object.freeze(exports);
 });
