@@ -795,6 +795,8 @@ table.aligned-controls-table {
   min-height: 1.1em;
   
   text-align: center;
+  
+  white-space: pre-wrap;  /* message source is stuck with plain text, so give it maximum opportunity to format */
 }
 .widget-Banner-active {
   background: #FFD;

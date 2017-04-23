@@ -133,7 +133,7 @@ define(['/test/jasmine-glue.js', 'audio', 'events'], (jasmineGlue, audio, events
             stubMediaError('NotReadableError'),  // an example we have seen from Firefox
             m => { message = m; },
             'testing1');
-        expect(message).toBe('NotReadableError');
+        expect(message).toBe('Failed to testing1 (could not open device). blah');
       });
       it('should resort to throwing on an arbitrary object', () => {
         let message;
