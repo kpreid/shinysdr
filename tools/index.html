@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  Copyright 2014 Kevin Reid <kpreid@switchb.org>
+  Copyright 2017 Kevin Reid <kpreid@switchb.org>
   
   This file is part of ShinySDR.
   
@@ -17,16 +17,22 @@
   You should have received a copy of the GNU General Public License
   along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 -->
-
-<html lang="en" class="subwindowed-page"><head>
+<html lang="en"><head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <title>Audio FFT — ShinySDR</title>
-  <link rel="stylesheet" href="../client/ui.css">
-  <link rel="stylesheet" href="../client/themes/gray.css" />
+  <title>ShinySDR Toolbox</title>
   <meta name="viewport" content="width=device-width">
+  <link rel="stylesheet" href="../manual/manual-style.css">
 </head><body>
 
-<div id="monitor" data-widget="Monitor" style="height: 100%;"></div>
+<h1>ShinySDR Toolbox</h1>
 
-<script src="../client/require.js" data-main="audio-fft-main.js"></script>
+<p>This is a collection of tools built on ShinySDR’s components while not being ShinySDR per se. They are usable without a ShinySDR server.</p>
+
+<p>All of the current tools visualize audio from any of the audio input devices available to your web browser. (They do not transmit the audio to the server — or so this text claims.)</p>
+
+<ul>
+  <li><a href="audio-spectrum">Audio spectrum display</a></li>
+  <li><a href="audio-scope">Audio oscilloscope</a></li>
+</ul>
+
 </body></html>

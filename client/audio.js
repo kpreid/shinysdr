@@ -581,8 +581,15 @@ define(['./events', './network', './types', './values'],
     // Note: Empirically, e is a NavigatorUserMediaError but that ctor is not exposed so we can't say instanceof.
     if (e && e.name === 'PermissionDeniedError') {
       // Permission error.
-      // Note: Empirically, e.message is empty but it exists, so let's mention it in case it helps.
+      // Note: Empirically, e.message is empty on Chrome.
       showMessage('Failed to ' + whatWeWereDoing + ' (permission denied). ' + e.message);
+    } else if (e && e.name === 'NotReadableError') {
+      let message = 'Failed to ' + whatWeWereDoing + ' (could not open device). ' + e.message;
+      if (navigator.userAgent.match('Firefox')) {
+        // Known issue; give advice rather than just being broken.
+        message += '\nPlease try reloading or reopening the tab.';
+      }
+      showMessage(message);
     } else if (e && e.name) {
       showMessage(e.name);
     } else if (e) {
@@ -665,6 +672,7 @@ define(['./events', './network', './types', './values'],
           errorCell._update('');
         }, (e) => {
           setOutput(null);
+          // TODO: Get device's friendly name for error message
           handleUserMediaError(e, errorCell._update.bind(errorCell),
               'open audio device ' + JSON.stringify(deviceId));
         });
