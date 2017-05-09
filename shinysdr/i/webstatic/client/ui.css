@@ -367,7 +367,7 @@ h2 input {
   position: absolute;
   left: 1em;
   top: 1em;
-  display: table;
+  width: 12ex;
 }
 .map-coordinate-control input:not(:focus):not(:hover) {
   border-color: transparent;
