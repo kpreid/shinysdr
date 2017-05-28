@@ -23,22 +23,23 @@ from zope.interface import implements
 
 from gnuradio import analog
 from gnuradio import blocks
-from gnuradio import digital
 from gnuradio import filter as grfilter
 from gnuradio.filter import firdes
 from gnuradio import gr
 import numpy
 
 try:
-    import rtty  # gr-rtty
+    # gr-radioteletype
+    # https://github.com/bitglue/gr-radioteletype
+    from radioteletype.demodulators import rtty_demod_cb
     _available = True
 except ImportError:
     _available = False
 
+from shinysdr.math import dB, rotator_inc
 from shinysdr.filters import MultistageChannelFilter
 from shinysdr.interfaces import ModeDef, IDemodulator, IModulator
 from shinysdr.signals import SignalType, no_signal
-from shinysdr.types import RangeT, ReferenceT
 from shinysdr.values import ExportedState, exported_value
 
 
@@ -55,59 +56,101 @@ _HALF_BITS_PER_CODE = (1 + _DATA_BITS) * 2 + 3
 
 
 class RTTYDemodulator(gr.hier_block2, ExportedState):
+    '''Demodulate typical amateur RTTY.
+
+    Input should be centered on the mark frequency. (By convention, RTTY
+    contacts are logged at the mark frequency.)
+
+    Assumptions:
+
+        - 45.45 baud
+        - 170 Hz spacing
+        - Mark tone high
+
+    TODO: make these assumptions parameters.
+    '''
+
     implements(IDemodulator)
     
-    __filter_low = 1500
-    __filter_high = 2500
-    __transition = 100
+    __spacing = 170
+    __demod_rate = 6000
 
-    def __init__(self, mode,
-            input_rate=0,
-            context=None):
+    __low_cutoff = __spacing * -2
+    __high_cutoff = __spacing
+    __transition_width = __spacing
+
+    def __init__(self, mode, input_rate=0, context=None):
         assert input_rate > 0
+        self.__input_rate = input_rate
         gr.hier_block2.__init__(
             self, 'RTTY demodulator',
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
-            gr.io_signature(1, 1, gr.sizeof_float * 1),
-        )
-        self.__text = u''
+            gr.io_signature(1, 1, gr.sizeof_float * 1))
         
-        baud = _DEFAULT_BAUD  # TODO param
-        self.baud = baud
+        channel_filter = self.__make_channel_filter()
 
-        demod_rate = 6000  # TODO optimize this value
-        self.samp_rate = demod_rate  # TODO rename
-        
-        self.__channel_filter = MultistageChannelFilter(
-            input_rate=input_rate,
-            output_rate=demod_rate,
-            cutoff_freq=self.__filter_high,
-            transition_width=self.__transition)  # TODO optimize filter band
-        self.__sharp_filter = grfilter.fir_filter_ccc(
-            1,
-            firdes.complex_band_pass(1.0, demod_rate,
-                self.__filter_low,
-                self.__filter_high,
-                self.__transition,
-                firdes.WIN_HAMMING))
-        self.fsk_demod = RTTYFSKDemodulator(input_rate=demod_rate, baud=baud)
-        self.__real = blocks.complex_to_real(vlen=1)
+        self.__text = u''
         self.__char_queue = gr.msg_queue(limit=100)
-        self.char_sink = blocks.message_sink(gr.sizeof_char, self.__char_queue, True)
+        self.__char_sink = blocks.message_sink(gr.sizeof_char, self.__char_queue, True)
 
         self.connect(
             self,
-            self.__channel_filter,
-            self.__sharp_filter,
-            self.fsk_demod,
-            rtty.rtty_decode_ff(rate=demod_rate, baud=baud, polarity=False),
-            self.char_sink)
+            channel_filter,
+            self.__make_demodulator(),
+            self.__char_sink)
         
         self.connect(
-            self.__sharp_filter,
-            self.__real,
+            channel_filter,
+            self.__make_audio_filter(),
+            blocks.rotator_cc(rotator_inc(self.__demod_rate, 2000 + self.__spacing / 2)),
+            blocks.complex_to_real(vlen=1),
+            analog.agc2_ff(
+                reference=dB(-10),
+                attack_rate=8e-1,
+                decay_rate=8e-1),
             self)
-    
+
+    def __make_demodulator(self):
+        return rtty_demod_cb(
+            samp_rate=self.__demod_rate,
+            # 6000 / 45.45 / 11 = 12.0012 samples per bit. We want a number
+            # that's not too small to avoid quantization errors in the
+            # timing.
+            decimation=11,
+            mark_freq=0,
+            space_freq=-self.__spacing)
+
+    def __make_channel_filter(self):
+        '''Return the channel filter.
+
+        rtty_demod_cb includes filters, so here we just need a broad, cheap filter to
+        decimate.
+        '''
+        return MultistageChannelFilter(
+            input_rate=self.__input_rate,
+            output_rate=self.__demod_rate,
+            cutoff_freq=self.__spacing * 5,
+            transition_width=self.__spacing * 5)
+
+    def __make_audio_filter(self):
+        '''Return a filter which selects just the RTTY signal and shifts to AF.
+
+        This isn't anywhere in the digital processing chain, so doesn't need to
+        be concerned with signal fidelity as long as it sounds good.
+        '''
+        taps = firdes.complex_band_pass(
+            gain=1.0,
+            sampling_freq=self.__demod_rate,
+            low_cutoff_freq=self.__low_cutoff,
+            high_cutoff_freq=self.__high_cutoff,
+            transition_width=self.__transition_width)
+
+        af_filter = grfilter.fir_filter_ccc(
+            decimation=1,
+            taps=taps)
+
+        return af_filter
+
     def can_set_mode(self, mode):
         """implement IDemodulator"""
         return False
@@ -116,18 +159,14 @@ class RTTYDemodulator(gr.hier_block2, ExportedState):
     def get_band_filter_shape(self):
         """implement IDemodulator"""
         return {
-            'low': self.__filter_low,
-            'high': self.__filter_high,
-            'width': self.__transition
+            'low': self.__low_cutoff,
+            'high': self.__high_cutoff,
+            'width': self.__transition_width,
         }
     
     def get_output_type(self):
         """implement IDemodulator"""
-        return SignalType(kind='MONO', sample_rate=self.samp_rate)
-
-    @exported_value(type=ReferenceT(), changes='never')
-    def get_fsk_demod(self):
-        return self.fsk_demod
+        return SignalType(kind='MONO', sample_rate=self.__demod_rate)
 
     @exported_value(type=unicode, changes='continuous')
     def get_text(self):
@@ -179,42 +218,6 @@ class RTTYModulator(gr.hier_block2, ExportedState):
     
     def get_output_type(self):
         return SignalType(kind='IQ', sample_rate=self.__sample_rate_out)
-
-
-class RTTYFSKDemodulator(gr.hier_block2, ExportedState):
-    """
-    Demodulate FSK with parameters suitable for gr-rtty.
-    
-    TODO: Make this into something more reusable once we have other examples of FSK.
-    Note this differs from the GFSK demod in gnuradio.digital by having a DC blocker.
-    """
-    def __init__(self, input_rate, baud):
-        gr.hier_block2.__init__(
-            self, 'RTTY FSK demodulator',
-            gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
-            gr.io_signature(1, 1, gr.sizeof_float * 1),
-        )
-        
-        self.bit_time = bit_time = input_rate / baud
-        
-        fsk_deviation_hz = 85  # TODO param or just don't care
-        
-        self.__dc_blocker = grfilter.dc_blocker_ff(int(bit_time * _HALF_BITS_PER_CODE * 10), False)
-        self.__quadrature_demod = analog.quadrature_demod_cf(-input_rate / (2 * math.pi * fsk_deviation_hz))
-        self.__freq_probe = blocks.probe_signal_f()
-        
-        self.connect(
-            self,
-            self.__quadrature_demod,
-            self.__dc_blocker,
-            digital.binary_slicer_fb(),
-            blocks.char_to_float(scale=1),
-            self)
-        self.connect(self.__dc_blocker, self.__freq_probe)
-
-    @exported_value(type=RangeT([(-2, 2)]), changes='continuous')
-    def get_probe(self):
-        return abs(self.__freq_probe.level())
 
 
 def _to_bits(code):
@@ -295,4 +298,4 @@ pluginMode = ModeDef(mode='RTTY',
     info='RTTY',
     demod_class=RTTYDemodulator,
     mod_class=RTTYModulator,
-    available=_available and False)  # disabled until it works better
+    available=_available)
