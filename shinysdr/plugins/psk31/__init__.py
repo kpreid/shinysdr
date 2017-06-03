@@ -1,0 +1,148 @@
+# Copyright 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
+#
+# This file is part of ShinySDR.
+# 
+# ShinySDR is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# ShinySDR is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
+
+from __future__ import absolute_import, division, unicode_literals
+
+from zope.interface import implementer
+
+from gnuradio import analog
+from gnuradio import blocks
+from gnuradio import gr
+
+try:
+    # gr-radioteletype
+    # https://github.com/bitglue/gr-radioteletype
+    from radioteletype.demodulators import psk31_demodulator_cbc, varicode_decode_bb
+    _available = True
+except ImportError:
+    _available = False
+
+from shinysdr.math import dB, rotator_inc
+from shinysdr.filters import MultistageChannelFilter
+from shinysdr.interfaces import ModeDef, IDemodulator, BandShape
+from shinysdr.signals import SignalType
+from shinysdr.values import ExportedState, exported_value
+
+
+@implementer(IDemodulator)
+class PSK31Demodulator(gr.hier_block2, ExportedState):
+    '''Demodulate PSK31.'''
+    
+    __symbol_rate = 31.25
+    __demod_rate = 4000
+
+    __cutoff = __symbol_rate
+    __transition_width = __symbol_rate
+
+    __audio_frequency = 1500
+
+    def __init__(self, mode, input_rate=0, context=None):
+        assert input_rate > 0
+        self.__input_rate = input_rate
+        gr.hier_block2.__init__(
+            self, type(self).__name__,
+            gr.io_signature(1, 1, gr.sizeof_gr_complex),
+            gr.io_signature(1, 1, gr.sizeof_float))
+        
+        channel_filter = self.__make_channel_filter()
+
+        self.__text = u''
+        self.__char_queue = gr.msg_queue(limit=100)
+        self.__char_sink = blocks.message_sink(gr.sizeof_char, self.__char_queue, True)
+
+        # The output of the channel filter is oversampled so we don't need to
+        # interpolate for the audio monitor. So we'll downsample before going into
+        # the demodulator.
+        samples_per_symbol = 8
+        downsample = self.__demod_rate / samples_per_symbol / self.__symbol_rate
+        assert downsample % 1 == 0
+        downsample = int(downsample)
+
+        self.connect(
+            self,
+            channel_filter,
+            blocks.keep_one_in_n(gr.sizeof_gr_complex, downsample),
+            psk31_demodulator_cbc(samples_per_symbol),
+            varicode_decode_bb(),
+            self.__char_sink)
+        
+        self.connect(
+            channel_filter,
+            blocks.rotator_cc(rotator_inc(self.__demod_rate, self.__audio_frequency)),
+            blocks.complex_to_real(vlen=1),
+            analog.agc2_ff(
+                reference=dB(-10),
+                attack_rate=8e-1,
+                decay_rate=8e-1),
+            self)
+
+    def __make_channel_filter(self):
+        '''Return the channel filter.
+
+        psk31_demodulator_cbc includes filters, so this filter will be wide to
+        assure the passband has no group delay and make it easier to listen to.
+
+        Output has frequencies from -250 to +250.
+        '''
+        return MultistageChannelFilter(
+            input_rate=self.__input_rate,
+            output_rate=self.__demod_rate,
+            cutoff_freq=250 - 25,
+            transition_width=25)
+
+    def can_set_mode(self, mode):
+        """implement IDemodulator"""
+        return False
+
+    def set_mode(self, mode):
+        raise NotImplementedError
+    
+    @exported_value(type=BandShape, changes='never')
+    def get_band_shape(self):
+        """implement IDemodulator"""
+        return BandShape.bandpass_transition(
+            low=-self.__cutoff,
+            high=self.__cutoff,
+            transition=self.__transition_width,
+        )
+    
+    def get_output_type(self):
+        """implement IDemodulator"""
+        return SignalType(kind='MONO', sample_rate=self.__demod_rate)
+
+    @exported_value(type=unicode, changes='continuous')
+    def get_text(self):
+        # pylint: disable=no-member
+        queue = self.__char_queue
+        # we would use .delete_head_nowait() but it returns a crashy wrapper
+        # instead of a sensible value like None. So implement a test (which is
+        # safe as long as we're the only reader)
+        if not queue.empty_p():
+            message = queue.delete_head()
+            if message.length() > 0:
+                bitstring = message.to_string()
+            else:
+                bitstring = ''  # avoid crash bug
+            textstring = self.__text
+            textstring += bitstring
+            self.__text = textstring[-20:]
+        return self.__text
+
+pluginMode = ModeDef(mode='PSK31',
+    info='PSK31',
+    demod_class=PSK31Demodulator,
+    available=_available)
