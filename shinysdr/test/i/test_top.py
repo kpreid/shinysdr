@@ -28,8 +28,10 @@ from gnuradio import gr
 from shinysdr.devices import Device, IComponent, merge_devices
 from shinysdr.i.top import Top
 from shinysdr.plugins import simulate
-from shinysdr.test.testutil import state_smoke_test
-from shinysdr.values import ExportedState
+from shinysdr.signals import SignalType
+from shinysdr.test.testutil import StubRXDriver, state_smoke_test
+from shinysdr.types import RangeT
+from shinysdr.values import ExportedState, LooseCell
 
 
 class TestTop(unittest.TestCase):
@@ -145,13 +147,14 @@ class TestRetuning(unittest.TestCase):
     """Tests of automatic device tuning behavior."""
     def setUp(self):
         f1 = self.f1 = 50e6  # avoid 100e6 because that's a default a couple of places
-        self.dev = simulate.SimulatedDevice(freq=f1, allow_tuning=True)
+        self.dev = _RetuningTestDevice(f1, False)
         self.bandwidth = self.dev.get_rx_driver().get_output_type().get_sample_rate()
         top = Top(devices={'s1': self.dev})
         (_key, self.receiver) = top.add_receiver('AM', key='a')
         
-        # initial state init & check
         self.receiver.set_rec_freq(f1)
+
+        # sanity check
         self.assertEqual(self.dev.get_freq(), f1)
     
     @defer.inlineCallbacks
@@ -181,6 +184,35 @@ class TestRetuning(unittest.TestCase):
     
     # TODO test DC offset gap handling
     # TODO test "set to value it already has" behavior
+
+
+def _RetuningTestDevice(freq, has_dc_offset):
+    return Device(
+        rx_driver=_RetuningTestRXDriver(has_dc_offset),
+        vfo_cell=LooseCell(
+            key='freq',
+            value=freq,
+            type=RangeT([(-1e9, 1e9)]),  # TODO kludge magic numbers
+            writable=True,
+            persists=False))
+
+
+class _RetuningTestRXDriver(StubRXDriver):
+    def __init__(self, has_dc_offset):
+        super(_RetuningTestRXDriver, self).__init__()
+        rate = 200e3
+        self.__signal_type = SignalType(kind='IQ', sample_rate=rate)
+        halfrate = rate / 2
+        if has_dc_offset:
+            self.__usable_bandwidth = RangeT([(-halfrate, 1), (1, halfrate)])
+        else:
+            self.__usable_bandwidth = RangeT([(-halfrate, halfrate)])
+    
+    def get_output_type(self):
+        return self.__signal_type
+    
+    def get_usable_bandwidth(self):
+        return self.__usable_bandwidth
 
 
 class _DeviceShutdownDetector(ExportedState):
