@@ -17,7 +17,7 @@
 
 from __future__ import absolute_import, division
 
-from shinysdr.plugins.simulate import SimulatedDevice
+from shinysdr.plugins.simulate import SimulatedDevice, SimulatedDeviceForTest
 from shinysdr.test.testutil import DeviceTestCase
 
 
@@ -25,5 +25,13 @@ class TestSimulatedDevice(DeviceTestCase):
     def setUp(self):
         super(TestSimulatedDevice, self).setUpFor(
             device=SimulatedDevice())
+
+    # Test methods provided by DeviceTestCase
+
+
+class TestSimulatedDeviceForTest(DeviceTestCase):
+    def setUp(self):
+        super(TestSimulatedDeviceForTest, self).setUpFor(
+            device=SimulatedDeviceForTest())
 
     # Test methods provided by DeviceTestCase

@@ -41,11 +41,30 @@ from shinysdr.values import CellDict, CollectionState, ExportedState, LooseCell,
 __all__ = []  # appended later
 
 
-def SimulatedDevice(name='Simulated RF', freq=0.0, allow_tuning=False):
+def SimulatedDevice(
+        name='Simulated RF',
+        freq=0.0,
+        allow_tuning=False):
     """
     See documentation in shinysdr/i/webstatic/manual/configuration.html.
     """
-    rx_driver = _SimulatedRXDriver(name)
+    return SimulatedDeviceForTest(
+        name=name,
+        freq=freq,
+        allow_tuning=allow_tuning,
+        add_transmitters=True)
+
+
+__all__.append('SimulatedDevice')
+
+
+def SimulatedDeviceForTest(
+        name='Simulated RF',
+        freq=0.0,
+        allow_tuning=False,
+        add_transmitters=False):
+    """Identical to SimulatedDevice except that the defaults are arranged to be minimal for fast testing rather than to provide a rich simulation."""
+    rx_driver = _SimulatedRXDriver(name, add_transmitters=add_transmitters)
     return Device(
         name=name,
         vfo_cell=LooseCell(
@@ -57,7 +76,7 @@ def SimulatedDevice(name='Simulated RF', freq=0.0, allow_tuning=False):
         rx_driver=rx_driver)
 
 
-__all__.append('SimulatedDevice')
+__all__.append('SimulatedDeviceForTest')
 
 
 @implementer(IRXDriver)
@@ -66,7 +85,7 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
     audio_rate = 1e4
     rf_rate = 200e3
 
-    def __init__(self, name):
+    def __init__(self, name, add_transmitters):
         gr.hier_block2.__init__(
             self, name,
             gr.io_signature(0, 0, 0),
@@ -122,18 +141,26 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
         self.connect(pitch, vco)
         
         # Channels
-        add_modulator(0.0, 'usb', 'USB')
-        add_modulator(10e3, 'am', 'AM')
-        add_modulator(30e3, 'fm', 'NFM')
-        add_modulator(-30e3, 'vor1', 'VOR', angle=0)
-        add_modulator(-60e3, 'vor2', 'VOR', angle=math.pi / 2)
-        add_modulator(50e3, 'rtty', 'RTTY', message='The quick brown fox jumped over the lazy dog.\n')
-        add_modulator(80e3, 'chirp', ChirpModulator)
+        if add_transmitters:
+            add_modulator(0.0, 'usb', 'USB')
+            add_modulator(10e3, 'am', 'AM')
+            add_modulator(30e3, 'fm', 'NFM')
+            add_modulator(-30e3, 'vor1', 'VOR', angle=0)
+            add_modulator(-60e3, 'vor2', 'VOR', angle=math.pi / 2)
+            add_modulator(50e3, 'rtty', 'RTTY', message='The quick brown fox jumped over the lazy dog.\n')
+            add_modulator(80e3, 'chirp', ChirpModulator)
         
-        bus_input = 0
-        for signal in signals:
-            self.connect(signal, (self.__bus, bus_input))
-            bus_input = bus_input + 1
+        if signals:
+            for bus_input, signal in enumerate(signals):
+                self.connect(signal, (self.__bus, bus_input))
+        else:
+            # kludge up a correct-sample-rate no-op
+            self.connect(
+                audio_signal,
+                blocks.multiply_const_ff(0),
+                make_resampler(audio_rate, rf_rate),
+                blocks.float_to_complex(),
+                self.__bus)
         
         self.__signal_type = SignalType(
             kind='IQ',

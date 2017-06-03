@@ -45,8 +45,8 @@ class TestMain(unittest.TestCase):
         with open(self.__config_name, 'w') as config:
             config.write(textwrap.dedent('''\
                 import shinysdr.plugins.simulate
-                config.devices.add('sim_foo', shinysdr.plugins.simulate.SimulatedDevice())
-                config.devices.add('sim_bar', shinysdr.plugins.simulate.SimulatedDevice())
+                config.devices.add('sim_foo', shinysdr.plugins.simulate.SimulatedDeviceForTest())
+                config.devices.add('sim_bar', shinysdr.plugins.simulate.SimulatedDeviceForTest())
                 config.persist_to_file(%r)
                 config.serve_web(
                     http_endpoint='tcp:0',
@@ -88,8 +88,8 @@ class TestMain(unittest.TestCase):
         with open(self.__config_name, 'w') as config:
             config.write(textwrap.dedent('''\
                 import shinysdr.plugins.simulate
-                config.devices.add('sim_foo', shinysdr.plugins.simulate.SimulatedDevice())
-                config.devices.add('sim_bar', shinysdr.plugins.simulate.SimulatedDevice())
+                config.devices.add('sim_foo', shinysdr.plugins.simulate.SimulatedDeviceForTest())
+                config.devices.add('sim_bar', shinysdr.plugins.simulate.SimulatedDeviceForTest())
             '''))
         
         app = yield self.__run_main()
@@ -109,7 +109,7 @@ class TestMain(unittest.TestCase):
                 import shinysdr.plugins.simulate
                 from twisted.internet import reactor
                 from twisted.internet.task import deferLater
-                d = deferLater(reactor, 0.001, lambda: config.devices.add('a_source', shinysdr.plugins.simulate.SimulatedDevice()))
+                d = deferLater(reactor, 0.001, lambda: config.devices.add('a_source', shinysdr.plugins.simulate.SimulatedDeviceForTest()))
                 config.wait_for(d)
             '''))
         

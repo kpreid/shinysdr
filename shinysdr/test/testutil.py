@@ -38,6 +38,7 @@ from shinysdr.grc import DemodulatorAdapter
 from shinysdr.i.modes import lookup_mode
 from shinysdr.i.poller import Poller
 from shinysdr.interfaces import IDemodulator
+from shinysdr.i.top import Top
 from shinysdr.signals import SignalType
 from shinysdr.types import RangeT
 from shinysdr.values import ExportedState, ISubscription, SubscriptionContext, nullExportedState
