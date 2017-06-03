@@ -129,41 +129,6 @@ class TestTop(unittest.TestCase):
         self.assertEqual(l, ['close'])
     
     @defer.inlineCallbacks
-    def test_auto_retune(self):
-        # pylint: disable=no-member
-        
-        f1 = 50e6  # avoid 100e6 because that's a default a couple of places
-        dev = simulate.SimulatedDevice(freq=f1, allow_tuning=True)
-        bandwidth = dev.get_rx_driver().get_output_type().get_sample_rate()
-        top = Top(devices={'s1': dev})
-        (_key, receiver) = top.add_receiver('AM', key='a')
-        
-        # initial state check
-        receiver.set_rec_freq(f1)
-        self.assertEqual(dev.get_freq(), f1)
-        
-        # one "page" up
-        f2 = f1 + bandwidth * 3 / 4
-        receiver.set_rec_freq(f2)
-        self.assertEqual(dev.get_freq(), f1 + bandwidth)
-        
-        # must wait for tune_delay, which is 0 for simulated source, or it will look still-valid
-        yield deferLater(the_reactor, 0.1, lambda: None)
-        
-        # one "page" down
-        receiver.set_rec_freq(f1)
-        self.assertEqual(dev.get_freq(), f1)
-        
-        yield deferLater(the_reactor, 0.1, lambda: None)
-        
-        # long hop
-        receiver.set_rec_freq(200e6)
-        self.assertEqual(dev.get_freq(), 200e6)
-        
-        # TODO test DC offset gap handling
-        # TODO test "set to value it already has" behavior
-    
-    @defer.inlineCallbacks
     def test_monitor_interest(self):
         queue = gr.msg_queue()
         top = Top(devices={'s1': simulate.SimulatedDevice()})
@@ -174,6 +139,48 @@ class TestTop(unittest.TestCase):
         top.get_monitor().get_fft_distributor().unsubscribe(queue)
         yield deferLater(the_reactor, 0.1, lambda: None)
         self.assertFalse(top._Top__running)
+
+
+class TestRetuning(unittest.TestCase):
+    """Tests of automatic device tuning behavior."""
+    def setUp(self):
+        f1 = self.f1 = 50e6  # avoid 100e6 because that's a default a couple of places
+        self.dev = simulate.SimulatedDevice(freq=f1, allow_tuning=True)
+        self.bandwidth = self.dev.get_rx_driver().get_output_type().get_sample_rate()
+        top = Top(devices={'s1': self.dev})
+        (_key, self.receiver) = top.add_receiver('AM', key='a')
+        
+        # initial state init & check
+        self.receiver.set_rec_freq(f1)
+        self.assertEqual(self.dev.get_freq(), f1)
+    
+    @defer.inlineCallbacks
+    def __do_test(self, rec_freq, expected_dev_freq):
+        self.receiver.set_rec_freq(rec_freq)
+        self.assertEqual(self.dev.get_freq(), expected_dev_freq)
+        
+        # allow for tune_delay (which is 0 for SimulatedDevice) so receiver validity is updated
+        yield deferLater(the_reactor, 0.1, lambda: None)
+        
+        self.assertTrue(self.receiver.get_is_valid())
+    
+    def test_one_page_up(self):
+        return self.__do_test(
+            self.f1 + self.bandwidth * 3 / 4,
+            self.f1 + self.bandwidth)
+    
+    def test_one_page_down(self):
+        return self.__do_test(
+            self.f1 - self.bandwidth * 3 / 4,
+            self.f1 - self.bandwidth)
+    
+    def test_long_jump(self):
+        return self.__do_test(
+            200e6,
+            200e6)
+    
+    # TODO test DC offset gap handling
+    # TODO test "set to value it already has" behavior
 
 
 class _DeviceShutdownDetector(ExportedState):
