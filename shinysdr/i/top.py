@@ -330,6 +330,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         return self.__telemetry_store
     
     def start(self, **kwargs):
+        # pylint: disable=arguments-differ
         # trigger reconnect/restart notification
         self._recursive_lock()
         self._recursive_unlock()

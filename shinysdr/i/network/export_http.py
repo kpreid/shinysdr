@@ -88,18 +88,18 @@ class BlockResource(Resource):
                     self.putChild(key, ValueCellResource(cell, self.__wcommon))
         self.__element = _BlockHtmlElement(wcommon)
     
-    def getChild(self, name, request):
+    def getChild(self, path, request):
         if self._dynamic:
             curstate = self._block.state()
-            if name in curstate:
-                cell = curstate[name]
+            if path in curstate:
+                cell = curstate[path]
                 if cell.type().is_reference():
-                    return self.__getBlockChild(name, cell.get())
+                    return self.__getBlockChild(path, cell.get())
         else:
-            if name in self._blockCells:
-                return self.__getBlockChild(name, self._blockCells[name].get())
+            if path in self._blockCells:
+                return self.__getBlockChild(path, self._blockCells[path].get())
         # old-style-class super call
-        return Resource.getChild(self, name, request)
+        return Resource.getChild(self, path, request)
     
     def __getBlockChild(self, name, block):
         r = self._blockResourceCache.get(block)
@@ -185,15 +185,15 @@ class CapAccessResource(Resource):
         self.__cap_table = cap_table
         self.__resource_ctor = resource_ctor
     
-    def getChild(self, name, request):
+    def getChild(self, path, request):
         """override Resource"""
         # TODO: Either add a cache here or throw out the cache in BlockResource which this is defeating, depending on a performance comparison
-        name = name.decode('utf-8')  # TODO centralize this 'urls are utf-8'
-        if name in self.__cap_table:
-            return self.__resource_ctor(self.__cap_table[name])
+        path = path.decode('utf-8')  # TODO centralize this 'urls are utf-8'
+        if path in self.__cap_table:
+            return self.__resource_ctor(self.__cap_table[path])
         else:
             # old-style-class super call
-            return Resource.getChild(self, name, request)
+            return Resource.getChild(self, path, request)
 
 
 class FlowgraphVizResource(Resource):

@@ -596,7 +596,7 @@ def _parse_data_extension(facts, errors, data, symbol):
         return data
     
     match = re.match(r'^(\d\d\d)/(\d\d\d)(.*)$', data)
-    if match and symbol is not '\\l':  # not an area object, which is ambiguous
+    if match and symbol != '\\l':  # not an area object, which is ambiguous
         # TODO: Deal with wind direction case
         course, speed, comment = match.groups()
         facts.append(Velocity(speed_knots=int(speed), course_degrees=int(course)))

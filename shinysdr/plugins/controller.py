@@ -69,7 +69,7 @@ class Command(object):
         """label: Name the user sees.
         text: What is sent when the command is triggered.
         """
-        if not (isinstance(text, str) or isinstance(text, unicode)):
+        if not isinstance(text, basestring):
             raise TypeError('Command text must be string, not %s: %r' % (type(text), text))
         self.__label = label
         self.__text = text

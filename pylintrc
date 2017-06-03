@@ -4,7 +4,7 @@ reports=no
 
 [MESSAGES CONTROL]
 
-disable=locally-disabled,trailing-whitespace,fixme,missing-docstring,protected-access,invalid-name,super-init-not-called,star-args,no-self-argument,inherit-non-class,no-method-argument,no-self-use,unused-argument,too-many-return-statements,too-many-branches,too-many-function-args,too-many-instance-attributes,too-many-locals,bad-continuation,unnecessary-lambda,redefined-variable-type,global-statement,duplicate-code
+disable=locally-disabled,trailing-whitespace,fixme,missing-docstring,protected-access,invalid-name,super-init-not-called,star-args,no-self-argument,inherit-non-class,no-method-argument,no-self-use,unused-argument,too-many-return-statements,too-many-branches,too-many-function-args,too-many-instance-attributes,too-many-locals,bad-continuation,unnecessary-lambda,redefined-variable-type,global-statement,duplicate-code,no-else-return,len-as-condition
 # why super-init-not-called: false positives
 # why star-args: I reject the premise
 # why protected-access: because I am using it for 'friend' access, maybe fix that
@@ -20,6 +20,8 @@ disable=locally-disabled,trailing-whitespace,fixme,missing-docstring,protected-a
 # why redefined-variable-type: interferes with polymorphism. https://github.com/PyCQA/pylint/issues/710
 # why global-statement: when I use global variables, I use them thoughtfully
 # why duplicate-code: too many false positives
+# why no-else-return: it rejects "if x return y else return z" which is silly
+# why len-as-condition: I prefer the extra type-checking and documentation resulting from using len
 # TODO: turn on missing-docstring, invalid-name
 
 [BASIC]

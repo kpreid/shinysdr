@@ -420,14 +420,14 @@ def _coerce_channel_mapping(channel_mapping):
         return [[1, 0], [0, 1]]
     elif channel_mapping == 'QI':
         return [[0, 1], [1, 0]]
-    elif isinstance(channel_mapping, tuple) or isinstance(channel_mapping, list):
+    elif isinstance(channel_mapping, (tuple, list)):
         if not 1 <= len(channel_mapping) <= 2:
             raise TypeError('AudioDevice: len(channel_mapping) must be 1 or 2 but was %r' % (len(channel_mapping),))
         for i, row in enumerate(channel_mapping):
-            if not (isinstance(row, tuple) or isinstance(row, list)):
+            if not isinstance(row, (tuple, list)):
                 raise TypeError('AudioDevice: channel_mapping[%r] must be a list of input channel gains' % (i,))
             for j, elem in enumerate(row):
-                if not (isinstance(elem, float) or isinstance(elem, int)):
+                if not isinstance(elem, (float, int)):
                     raise TypeError('AudioDevice: channel_mapping[%r][%r] must be a numeric gain value' % (i, j))
         if len(channel_mapping) == 2 and len(channel_mapping[0]) != len(channel_mapping[1]):
             raise TypeError('AudioDevice: channel_mapping must have the same number of input channels in each row but had %d and %d' % (len(channel_mapping[0]), len(channel_mapping[1])))

@@ -265,8 +265,8 @@ class _Accumulator(Protocol):
         self.finished = finished
         self.data = ''
 
-    def dataReceived(self, chunk):
-        self.data += chunk
+    def dataReceived(self, data):
+        self.data += data
     
     def connectionLost(self, reason):
         # pylint: disable=signature-differs

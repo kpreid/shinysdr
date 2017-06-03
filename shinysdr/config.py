@@ -174,7 +174,7 @@ class _ConfigDict(object):
 
     def add(self, key, value):
         self._config._not_finished()
-        if not (isinstance(key, unicode) or isinstance(key, str)):
+        if not isinstance(key, basestring):
             # Used to just coerce, but I saw a user error where they did "config.devices.add(device)", so I figured an error is better
             raise ConfigException('Key must be a string, not a %s: %r' % (type(key), key))
         key = unicode(key)
@@ -185,6 +185,7 @@ class _ConfigDict(object):
 
 class _ConfigDevices(_ConfigDict):
     def add(self, key, *devices):
+        # pylint: disable=arguments-differ
         if len(devices) <= 0:
             raise ConfigException('config.devices: no device(s) specified')
         from shinysdr.devices import merge_devices
