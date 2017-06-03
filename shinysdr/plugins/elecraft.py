@@ -94,6 +94,7 @@ class _ElecraftRadio(ExportedState):
         base_freq_cell = self.__rx_main.state()[_FREQ_CELL_KEY]
         mode_cell = self.__rx_main.state()['MD']
         sidetone_cell = self.state()['CW']
+        submode_cell = self.state()['DT']
         iq_offset_cell = LooseCell(key='iq_offset', value=0.0, type=float)
         
         self.__iq_center_cell = ViewCell(
@@ -114,6 +115,20 @@ class _ElecraftRadio(ExportedState):
                 iq_offset = -sidetone_cell.get()
             elif mode == 'AM' or mode == 'FM':
                 iq_offset = 11000.0
+            elif mode == 'DATA' or mode == 'DATA-REV':
+                submode = submode_cell.get()
+                if submode == 0:  # "DATA A", SSB with less processing
+                    iq_offset = 0.0  # ???
+                elif submode == 1:  # "AFSK A", SSB with RTTY style filter
+                    iq_offset = 0.0  # ???
+                elif submode == 2:  # "FSK D", RTTY
+                    iq_offset = 900.0
+                elif submode == 3:  # "PSK D", PSK31
+                    iq_offset = 1000.0  # I think so...
+                else:
+                    iq_offset = 0  # fallback
+                if mode == 'DATA-REV':
+                    iq_offset = -iq_offset
             else:  # USB, LSB, other
                 iq_offset = 0.0
             iq_offset_cell.set(iq_offset)
@@ -122,6 +137,7 @@ class _ElecraftRadio(ExportedState):
         # TODO bad practice
         mode_cell._subscribe_immediate(changed_iq)
         sidetone_cell._subscribe_immediate(changed_iq)
+        submode_cell._subscribe_immediate(changed_iq)
         changed_iq()
     
     def state_def(self, callback):
