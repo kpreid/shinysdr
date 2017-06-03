@@ -147,6 +147,30 @@ class TestRangeT(unittest.TestCase):
             [(-0.5, 0), 0, (0.25, 0), 1, (1.5, 1)],
             [])
 
+    def test_rounding_at_ends_single(self):
+        self.assertEqual(RangeT([[1, 3]])(0, range_round_direction=-1), 1)
+        self.assertEqual(RangeT([[1, 3]])(2, range_round_direction=-1), 2)
+        self.assertEqual(RangeT([[1, 3]])(4, range_round_direction=-1), 3)
+        self.assertEqual(RangeT([[1, 3]])(0, range_round_direction=+1), 1)
+        self.assertEqual(RangeT([[1, 3]])(2, range_round_direction=+1), 2)
+        self.assertEqual(RangeT([[1, 3]])(4, range_round_direction=+1), 3)
+    
+    def test_rounding_in_gap(self):
+        self.assertEqual(RangeT([[1, 2], [3, 4]])(2.4, range_round_direction=0), 2)
+        self.assertEqual(RangeT([[1, 2], [3, 4]])(2.4, range_round_direction=-1), 2)
+        self.assertEqual(RangeT([[1, 2], [3, 4]])(2.4, range_round_direction=+1), 3)
+        self.assertEqual(RangeT([[1, 2], [3, 4]])(2.6, range_round_direction=-1), 2)
+        self.assertEqual(RangeT([[1, 2], [3, 4]])(2.6, range_round_direction=+1), 3)
+        self.assertEqual(RangeT([[1, 2], [3, 4]])(2.6, range_round_direction=0), 3)
+    
+    def test_rounding_at_ends_split(self):
+        self.assertEqual(RangeT([[1, 2], [3, 4]])(0, range_round_direction=0), 1)
+        self.assertEqual(RangeT([[1, 2], [3, 4]])(0, range_round_direction=-1), 1)
+        self.assertEqual(RangeT([[1, 2], [3, 4]])(0, range_round_direction=+1), 1)
+        self.assertEqual(RangeT([[1, 2], [3, 4]])(5, range_round_direction=0), 4)
+        self.assertEqual(RangeT([[1, 2], [3, 4]])(5, range_round_direction=-1), 4)
+        self.assertEqual(RangeT([[1, 2], [3, 4]])(5, range_round_direction=+1), 4)
+    
     def test_repr(self):
         self.assertEqual('RangeT([(1, 2), (3, 4)], unit=, strict=True, logarithmic=False, integer=False)',
                          repr(RangeT([(1, 2), (3, 4)])))

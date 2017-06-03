@@ -305,7 +305,7 @@ class RangeT(ValueType):
             'integer': self.__integer
         }
     
-    def __call__(self, specimen):
+    def __call__(self, specimen, range_round_direction=0):
         specimen = float(specimen)
         
         if self.__integer:
@@ -323,11 +323,18 @@ class RangeT(ValueType):
             
             i = bisect.bisect_right(mins, specimen) - 1
             if i < 0: i = 0
-            # i is now the index of the subrange whose lower endpoint is closest to the specimen.
+            # i is now the index of the subrange whose lower endpoint is closest to but not exceeding the specimen.
             
-            # Round to nearest range instead of lower one.
-            if i < len(mins) - 1 and mins[i + 1] - specimen < specimen - maxes[i]:
-                i = i + 1
+            if range_round_direction < 0:
+                pass
+            elif range_round_direction > 0:
+                # Round to upper range rather than lower one, if we're not already in range.
+                if i < len(mins) - 1 and specimen > maxes[i]:
+                    i = i + 1
+            else:
+                # Round to nearest range instead of lower one.
+                if i < len(mins) - 1 and mins[i + 1] - specimen < specimen - maxes[i]:
+                    i = i + 1
             
             # Clamp to chosen range.
             if specimen < mins[i]:
