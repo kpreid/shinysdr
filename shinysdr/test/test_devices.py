@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -20,17 +20,14 @@
 from __future__ import absolute_import, division
 
 from twisted.trial import unittest
-from zope.interface import implements  # available via Twisted
 
 from gnuradio import blocks
-from gnuradio import gr
 
 # Note: not testing _ConstantVFOCell, it's just a useful utility
-from shinysdr.devices import _ConstantVFOCell, AudioDevice, Device, FrequencyShift, IComponent, IDevice, IRXDriver, ITXDriver, PositionedDevice, _coerce_channel_mapping, find_audio_rx_names, merge_devices
-from shinysdr.signals import SignalType
-from shinysdr.test.testutil import DeviceTestCase
+from shinysdr.devices import _ConstantVFOCell, AudioDevice, Device, FrequencyShift, IDevice, PositionedDevice, _coerce_channel_mapping, find_audio_rx_names, merge_devices
+from shinysdr.test.testutil import DeviceTestCase, StubComponent, StubRXDriver, StubTXDriver
 from shinysdr.types import RangeT
-from shinysdr.values import ExportedState, LooseCell, nullExportedState
+from shinysdr.values import LooseCell, nullExportedState
 
 
 class TestDevice(unittest.TestCase):
@@ -41,8 +38,8 @@ class TestDevice(unittest.TestCase):
     def test_close(self):
         l = set()
         Device(
-            rx_driver=_ShutdownDetector(l, 'rx'),
-            tx_driver=_ShutdownDetector(l, 'tx'),
+            rx_driver=_ShutdownDetectorRX(l, 'rx'),
+            tx_driver=_ShutdownDetectorTX(l, 'tx'),
             components={'c': _ShutdownDetector(l, 'c')}
         ).close()
         self.assertEqual(l, set(['rx', 'tx', 'c']))
@@ -53,7 +50,7 @@ class TestDevice(unittest.TestCase):
         self.assertEqual(nullExportedState, d.get_rx_driver())
     
     def test_rx_present(self):
-        rxd = _TestRXDriver()
+        rxd = StubRXDriver()
         d = Device(rx_driver=rxd)
         self.assertEqual(True, d.can_receive())
         self.assertEqual(rxd, d.get_rx_driver())
@@ -75,14 +72,14 @@ class TestDevice(unittest.TestCase):
         
         This was chosen as the most robust handling of the erroneous operation.
         """
-        d = Device(rx_driver=_TestRXDriver())
+        d = Device(rx_driver=StubRXDriver())
         d.set_transmitting(True)
         d.set_transmitting(False)
     
     def test_tx_mode_actual(self):
         log = []
         txd = _TestTXDriver(log)
-        d = Device(rx_driver=_TestRXDriver(), tx_driver=txd)
+        d = Device(rx_driver=StubRXDriver(), tx_driver=txd)
         
         def midpoint_hook():
             log.append('H')
@@ -109,16 +106,16 @@ class TestMergeDevices(unittest.TestCase):
 
     def test_components_disjoint(self):
         d = merge_devices([
-            Device(components={'a': _StubComponent()}),
-            Device(components={'b': _StubComponent()})
+            Device(components={'a': StubComponent()}),
+            Device(components={'b': StubComponent()})
         ])
         self.assertEqual(d, IDevice(d))
         self.assertEqual(sorted(d.get_components_dict().iterkeys()), ['a', 'b'])
 
     def test_components_conflict(self):
         d = merge_devices([
-            Device(components={'a': _StubComponent()}),
-            Device(components={'a': _StubComponent()})
+            Device(components={'a': StubComponent()}),
+            Device(components={'a': StubComponent()})
         ])
         self.assertEqual(d, IDevice(d))
         self.assertEqual(sorted(d.get_components_dict().iterkeys()), ['0-a', '1-a'])
@@ -223,82 +220,30 @@ class TestPositionedDevice(DeviceTestCase):
     # Test methods provided by DeviceTestCase
 
 
-class _TestRXDriver(ExportedState):
-    implements(IRXDriver)
-    
-    def get_output_type(self):
-        return SignalType('IQ', 1)
-
-    def get_tune_delay(self):
-        return 0.0
-
-    def get_usable_bandwidth(self):
-        return RangeT([(-1, 1)])
-    
-    def close(self):
-        pass
-    
-    def notify_reconnecting_or_restarting(self):
-        pass
-
-
-class _TestTXDriver(ExportedState):
-    implements(ITXDriver)
-    
+class _TestTXDriver(StubTXDriver):
     def __init__(self, log):
         self.log = log
-    
-    def get_input_type(self):
-        return SignalType('IQ', 1)
-    
-    def close(self):
-        pass
-    
-    def notify_reconnecting_or_restarting(self):
-        pass
     
     def set_transmitting(self, value, midpoint_hook):
         self.log.append((value, midpoint_hook))
 
 
-class _StubComponent(ExportedState):
-    implements(IComponent)
-    
-    def close(self):
-        pass
-
-
-class _ShutdownDetector(gr.hier_block2, ExportedState):
-    implements(IComponent, IRXDriver, ITXDriver)
-
+class _ShutdownDetector(StubComponent):
     def __init__(self, dest, key):
-        gr.hier_block2.__init__(
-            self, type(self).__name__,
-            gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
-            gr.io_signature(1, 1, gr.sizeof_gr_complex * 1))
+        super(_ShutdownDetector, self).__init__()
         self.__dest = dest
         self.__key = key
     
-    def get_output_type(self):
-        return SignalType(kind='IQ', sample_rate=10000)
-    
-    def get_input_type(self):
-        return SignalType(kind='IQ', sample_rate=10000)
-    
-    def get_tune_delay(self):
-        return 0.0
-    
-    def get_usable_bandwidth(self):
-        return RangeT([(-1, 1)])
-    
     def close(self):
         self.__dest.add(self.__key)
-    
-    def notify_reconnecting_or_restarting(self):
-        pass
-    
-    def set_transmitting(self, value, midpoint_hook):
-        pass
+
+
+class _ShutdownDetectorRX(_ShutdownDetector, StubRXDriver):
+    pass
+
+
+class _ShutdownDetectorTX(_ShutdownDetector, StubTXDriver):
+    pass
 
 
 class _AudioModuleStub(object):

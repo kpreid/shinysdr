@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -15,9 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import, division
+
 import json
 import StringIO
 
+from gnuradio import blocks
 from gnuradio import gr
 
 from twisted.internet.defer import Deferred
@@ -27,8 +30,9 @@ from twisted.trial import unittest
 from twisted.web import client
 from twisted.web import http
 from twisted.web.http_headers import Headers
+from zope.interface import implements
 
-from shinysdr.devices import Device
+from shinysdr.devices import Device, IComponent, IRXDriver, ITXDriver
 from shinysdr.i.modes import lookup_mode
 from shinysdr.i.poller import Poller
 from shinysdr.i.top import Top
@@ -221,6 +225,73 @@ class DemodulatorTester(object):
     
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
+
+
+class StubComponent(ExportedState):
+    """Minimal implementation of IComponent."""
+    implements(IComponent)
+    
+    def close():
+        pass
+
+
+class StubRXDriver(gr.hier_block2, ExportedState):
+    """Minimal implementation of IRXDriver."""
+    implements(IRXDriver)
+    
+    __signal_type = SignalType(kind='IQ', sample_rate=10000)
+    __usable_bandwidth = RangeT([(-1e9, 1e9)])  # TODO magic numbers
+
+    def __init__(self):
+        gr.hier_block2.__init__(
+            self, type(self).__name__,
+            gr.io_signature(0, 0, 0),
+            gr.io_signature(1, 1, gr.sizeof_gr_complex))
+        self.connect(blocks.vector_source_c([]), self)
+    
+    def get_output_type(self):
+        return self.__signal_type
+
+    def get_tune_delay(self):
+        return 0.0
+    
+    def get_usable_bandwidth(self):
+        return self.__usable_bandwidth
+    
+    def close(self):
+        pass
+    
+    def notify_reconnecting_or_restarting(self):
+        pass
+
+
+class StubTXDriver(gr.hier_block2, ExportedState):
+    """Minimal implementation of ITXDriver."""
+    implements(ITXDriver)
+    
+    __signal_type = SignalType(kind='IQ', sample_rate=10000)
+    
+    def __init__(self):
+        gr.hier_block2.__init__(
+            self, type(self).__name__,
+            gr.io_signature(1, 1, gr.sizeof_gr_complex),
+            gr.io_signature(0, 0, 0))
+        self.connect(self, blocks.null_sink(gr.sizeof_gr_complex))
+    
+    def get_input_type(self):
+        return self.__signal_type
+
+    def get_tune_delay(self):
+        return 0.0
+    
+    def close(self):
+        pass
+    
+    def notify_reconnecting_or_restarting(self):
+        pass
+    
+    def set_transmitting(self, value, midpoint_hook):
+        pass
 
 
 # --- HTTP test utilities ---
