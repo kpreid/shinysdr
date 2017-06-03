@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 from twisted.internet import defer
 from twisted.internet import reactor as the_reactor
@@ -143,24 +143,31 @@ class TestTop(unittest.TestCase):
         self.assertFalse(top._Top__running)
 
 
+_DC_OFFSET_RADIUS = 1.0
+
+
 class TestRetuning(unittest.TestCase):
     """Tests of automatic device tuning behavior."""
     def setUp(self):
         f1 = self.f1 = 50e6  # avoid 100e6 because that's a default a couple of places
-        self.dev = _RetuningTestDevice(f1, False)
-        self.bandwidth = self.dev.get_rx_driver().get_output_type().get_sample_rate()
-        top = Top(devices={'s1': self.dev})
+        self.devs = {
+            'clean': _RetuningTestDevice(f1, False),
+            'offset': _RetuningTestDevice(f1, True),
+        }
+        self.bandwidth = self.devs['clean'].get_rx_driver().get_output_type().get_sample_rate()
+        top = Top(devices=self.devs)
         (_key, self.receiver) = top.add_receiver('AM', key='a')
-        
-        self.receiver.set_rec_freq(f1)
 
-        # sanity check
-        self.assertEqual(self.dev.get_freq(), f1)
+        # initial state sanity check
+        for d in self.devs.itervalues():
+            self.assertEqual(d.get_freq(), f1)
     
     @defer.inlineCallbacks
-    def __do_test(self, rec_freq, expected_dev_freq):
+    def __do_test(self, offset, rec_freq, expected_dev_freq):
+        device_name = 'offset' if offset else 'clean'
+        self.receiver.set_device_name(device_name)
         self.receiver.set_rec_freq(rec_freq)
-        self.assertEqual(self.dev.get_freq(), expected_dev_freq)
+        self.assertEqual(self.devs[device_name].get_freq(), expected_dev_freq)
         
         # allow for tune_delay (which is 0 for SimulatedDevice) so receiver validity is updated
         yield deferLater(the_reactor, 0.1, lambda: None)
@@ -168,21 +175,40 @@ class TestRetuning(unittest.TestCase):
         self.assertTrue(self.receiver.get_is_valid())
     
     def test_one_page_up(self):
-        return self.__do_test(
+        return self.__do_test(False,
             self.f1 + self.bandwidth * 3 / 4,
             self.f1 + self.bandwidth)
     
     def test_one_page_down(self):
-        return self.__do_test(
+        return self.__do_test(False,
             self.f1 - self.bandwidth * 3 / 4,
             self.f1 - self.bandwidth)
     
-    def test_long_jump(self):
-        return self.__do_test(
+    def test_jump(self):
+        return self.__do_test(False,
             200e6,
             200e6)
     
-    # TODO test DC offset gap handling
+    def test_jump_dc_avoidance_am(self):
+        shape = self.receiver.get_demodulator().get_band_filter_shape()
+        return self.__do_test(True,
+            200e6,
+            200e6 - _DC_OFFSET_RADIUS + shape['low'] - shape['width'] / 2)
+    
+    def test_jump_dc_offset_usb(self):
+        # Expect no offset because USB's filter lies above the exclusion
+        self.receiver.set_mode('USB')
+        return self.__do_test(True,
+            200e6,
+            200e6)
+    
+    def test_jump_dc_offset_lsb(self):
+        # Expect no offset because LSB's filter lies below the exclusion
+        self.receiver.set_mode('LSB')
+        return self.__do_test(True,
+            200e6,
+            200e6)
+    
     # TODO test "set to value it already has" behavior
 
 
@@ -204,7 +230,7 @@ class _RetuningTestRXDriver(StubRXDriver):
         self.__signal_type = SignalType(kind='IQ', sample_rate=rate)
         halfrate = rate / 2
         if has_dc_offset:
-            self.__usable_bandwidth = RangeT([(-halfrate, 1), (1, halfrate)])
+            self.__usable_bandwidth = RangeT([(-halfrate, -_DC_OFFSET_RADIUS), (_DC_OFFSET_RADIUS, halfrate)])
         else:
             self.__usable_bandwidth = RangeT([(-halfrate, halfrate)])
     

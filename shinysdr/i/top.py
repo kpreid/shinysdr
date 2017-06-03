@@ -38,6 +38,9 @@ from shinysdr.types import EnumT, NoticeT, ReferenceT
 from shinysdr.values import CellDict, ExportedState, CollectionState, exported_value, setter, IWritableCollection, unserialize_exported_state
 
 
+_DEBUG_RETUNE = False
+
+
 class ReceiverCollection(CollectionState):
     implements(IWritableCollection)
     
@@ -467,12 +470,14 @@ class ContextForReceiver(Context):
             paged_freq = device.get_freq() + direction * page_size
             if validate_by_range(needed_freq, paged_freq):
                 freq = paged_freq
-                print '--- page', device.get_freq(), direction * page_size, freq
+                if _DEBUG_RETUNE:
+                    print '--- page', device.get_freq(), direction * page_size, freq
             else:
                 # need a long step
-                # TODO need avoid-DC-offset logic
-                freq = needed_freq
-                print '--- jump', device.get_freq(), freq
+                freq = needed_freq + _find_in_usable_bandwidth(
+                    usable_bandwidth_range, receiver)
+                if _DEBUG_RETUNE:
+                    print '--- jump', device.get_freq(), freq
 
             # TODO write justification here that this won't be dangerously reentrant
             device.set_freq(freq)
@@ -488,6 +493,34 @@ class ContextForReceiver(Context):
     
     def output_message(self, message):
         self.__top.get_telemetry_store().receive(message)
+
+
+def _find_in_usable_bandwidth(usable_bandwidth_range, receiver):
+    """Given the usable_bandwidth_range of a device and a receiver, find where we can place the receiver in the range (all relative frequencies)."""
+    shape = receiver.get_demodulator().get_band_filter_shape()
+    shape_lowest = shape['low'] - shape['width'] / 2
+    shape_highest = shape['high'] + shape['width'] / 2
+    
+    # We assume that the bandwidth range is generally wide-open with a possible gap in the middle.
+    # TODO: It would make more sense to directly ask RangeT to tell us where an interval will fit, rather than making that assumption.
+    least_positive = usable_bandwidth_range(0, range_round_direction=+1)
+    greatest_negative = usable_bandwidth_range(0, range_round_direction=-1)
+    if least_positive == greatest_negative == 0:
+        # No DC avoidance. We can just pick the center.
+        if _DEBUG_RETUNE:
+            print '--- no offset'
+        return 0.0
+    offset_positive = least_positive - shape_lowest
+    offset_negative = greatest_negative - shape_highest
+    if _DEBUG_RETUNE:
+        print '--- offsets', offset_negative, greatest_negative, least_positive, offset_positive
+    if offset_positive < 0 or offset_negative > 0:
+        # Receiver has a larger filter than the DC offset, so line up neatly.
+        return 0.0
+    if offset_positive < -offset_negative:
+        return offset_positive
+    else:
+        return offset_negative
 
 
 class MaxProbe(gr.hier_block2):
