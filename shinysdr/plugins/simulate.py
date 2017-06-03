@@ -42,6 +42,9 @@ __all__ = []  # appended later
 
 
 def SimulatedDevice(name='Simulated RF', freq=0.0, allow_tuning=False):
+    """
+    See documentation in shinysdr/i/webstatic/manual/configuration.html.
+    """
     rx_driver = _SimulatedRXDriver(name)
     return Device(
         name=name,

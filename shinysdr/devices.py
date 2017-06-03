@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -353,6 +353,8 @@ def FrequencyShift(shift, name=None):
     Define a fixed VFO frequency shift, such as if a upconverter/downconverter/transverter is in use.
     
     The shift value should be set to the needed change in the _displayed_ frequency. For example, if using a 125 MHz upconverter for receiving HF (such as the popular Ham-It-Up), one should specify a shift of -125e6.
+    
+    See also documentation in shinysdr/i/webstatic/manual/configuration.html.
     """
     shift = float(shift)
     return Device(name=name, vfo_cell=_ConstantVFOCell(shift))
@@ -367,7 +369,12 @@ def AudioDevice(
         name=None,
         sample_rate=44100,
         channel_mapping=None,
+        usable_bandwidth=None,
         _module=gr_audio):  # parameter for testing only
+    """System audio ("sound card") device.
+    
+    See documentation in shinysdr/i/webstatic/manual/configuration.html.
+    """
     rx_device = str(rx_device)
     if tx_device is not None:
         tx_device = str(tx_device)
@@ -384,6 +391,7 @@ def AudioDevice(
         device_name=rx_device,
         sample_rate=sample_rate,
         channel_mapping=channel_mapping,
+        usable_bandwidth=usable_bandwidth,
         audio_module=_module)
     if tx_device is not None:
         tx_driver = _AudioTXDriver(
@@ -457,6 +465,7 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
             device_name,
             sample_rate,
             channel_mapping,
+            usable_bandwidth,
             audio_module):
         self.__device_name = device_name
         self.__sample_rate = sample_rate
@@ -465,8 +474,15 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
             self.__signal_type = SignalType(
                 kind='IQ',
                 sample_rate=self.__sample_rate)
-            # TODO should be configurable
-            self.__usable_bandwidth = RangeT([(-self.__sample_rate / 2, self.__sample_rate / 2)])
+            if usable_bandwidth is not None:
+                ub_low, ub_high = usable_bandwidth
+                assert ub_high > 0
+                if ub_low <= 0:
+                    self.__usable_bandwidth = RangeT([(-ub_high, ub_high)])
+                else:
+                    self.__usable_bandwidth = RangeT([(-ub_high, -ub_low), (ub_low, ub_high)])
+            else:
+                self.__usable_bandwidth = RangeT([(-self.__sample_rate / 2, self.__sample_rate / 2)])
         else:
             self.__signal_type = SignalType(
                 kind='USB',  # TODO obtain correct type from config (or say hamlib)
@@ -571,8 +587,9 @@ class _AudioTXDriver(ExportedState, gr.hier_block2):
 
 
 def PositionedDevice(latitude, longitude):
-    """
-    Combine with other devices to specify a device's location on the Earth.
+    """Combine with other devices to specify a device's location on the Earth.
+    
+    See documentation in shinysdr/i/webstatic/manual/configuration.html.
     """
     return Device(components={'position': _PositionedDeviceComponent(latitude, longitude)})
 

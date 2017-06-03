@@ -212,6 +212,8 @@ def OsmoSDRDevice(
     profile: an OsmoSDRProfile (see docs)
     sample_rate: desired sample rate, or None == guess a good rate
     correction_ppm: oscillator frequency calibration (parts-per-million)
+    
+    See documentation in shinysdr/i/webstatic/manual/configuration.html.
     """
     # The existence of the correction_ppm parameter is a workaround for the current inability to dynamically change an exported field's type (the frequency range), allowing them to be initialized early enough, in the configuration, to take effect. (Well, it's also nice to hardcode them in the config if you want to.)
     if name is None:
