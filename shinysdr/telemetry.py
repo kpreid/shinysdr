@@ -1,17 +1,17 @@
 # Copyright 2015, 2016 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
-# 
+#
 # ShinySDR is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # ShinySDR is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -109,21 +109,26 @@ __all__.append('empty_track')
 class ITelemetryObject(Interface):
     """
     An object that can be in an TelemetryStore.
+
+    Examples: an APRS station, aircraft, etc. The state of an ITelemetryObject
+    is updated through receiving ITelemetryMessage.
     """
-    
+
     def receive(message):
         """
-        TODO document
+        Update state according to the received ITelemetryMessage.
         """
-    
+
     def is_interesting():
         """
-        Return whether this object should be shown to the client. The value should change only when a message is receive()d.
+        Return whether this object should be shown to the client. The value
+        should change only when a message is receive()d.
         """
-    
+
     def get_object_expiry():
         """
-        Return the absolute time after which this object should be deleted from the store.
+        Return the absolute time (seconds since epoch) after which this object
+        should be deleted from the store.
         """
 
 
@@ -134,12 +139,12 @@ class ITelemetryMessage(Interface):
     """
     A message that can be delivered to an ITelemetryObject or TelemetryStore.
     """
-    
+
     def get_object_id():
         """
         Return a string identifying the object this message is about. It must be unique among all objects, not just within a particular telemetry mode.
         """
-    
+
     def get_object_constructor():
         """
         Return a constructor function for this type of telemetry object.
@@ -163,6 +168,7 @@ class TelemetryStore(CollectionState):
     """
     Accepts telemetry messages and exports the accumulated information obtained from them.
     """
+
     def __init__(self, time_source=the_reactor):
         self.__interesting_objects = CellDict(dynamic=True)
         CollectionState.__init__(self, self.__interesting_objects)
@@ -170,13 +176,13 @@ class TelemetryStore(CollectionState):
         self.__expiry_times = {}
         self.__time_source = IReactorTime(time_source)
         self.__flush_call = None
-    
+
     # not exported
     def receive(self, message):
         """Store the supplied telemetry message object."""
         message = ITelemetryMessage(message)
         object_id = unicode(message.get_object_id())
-        
+
         if object_id in self.__objects:
             obj = self.__objects[object_id]
         else:
@@ -189,9 +195,9 @@ class TelemetryStore(CollectionState):
         self.__expiry_times[object_id] = expiry
         if obj.is_interesting():
             self.__interesting_objects[object_id] = obj
-        
+
         self.__maybe_schedule_flush()
-    
+
     def __flush_expired(self):
         current_time = self.__time_source.seconds()
         deletes = []
@@ -203,15 +209,15 @@ class TelemetryStore(CollectionState):
             del self.__expiry_times[object_id]
             if object_id in self.__interesting_objects:
                 del self.__interesting_objects[object_id]
-        
+
         self.__maybe_schedule_flush()
-    
+
     def __maybe_schedule_flush(self):
         """Schedule a call to __flush_expired if there is not one already."""
         if self.__flush_call and self.__flush_call.active():
             # Could need to schedule one earlier than already scheduled.
             self.__flush_call.cancel()
-        
+
         if self.__expiry_times:
             now = self.__time_source.seconds()
             next_expiry = min(self.__expiry_times.itervalues())
