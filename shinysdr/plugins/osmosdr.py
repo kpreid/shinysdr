@@ -189,7 +189,7 @@ class _OsmoSDRTuning(object):
     def calc_usable_bandwidth(self, sample_rate):
         passband = sample_rate * (3 / 8)  # 3/4 of + and - halves
         if self.__profile.dc_offset:
-            epsilon = 1.0  # RangeT has only inclusive bounds, so we need a nonzero value.
+            epsilon = 1.0  # TODO: Put width in the profile.
             return RangeT([(-passband, -epsilon), (epsilon, passband)])
         else:
             return RangeT([(-passband, passband)])

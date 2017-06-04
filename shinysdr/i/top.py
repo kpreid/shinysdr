@@ -473,11 +473,11 @@ class ContextForReceiver(Context):
                 if _DEBUG_RETUNE:
                     print '--- page', device.get_freq(), direction * page_size, freq
             else:
-                # need a long step
-                freq = needed_freq + _find_in_usable_bandwidth(
+                # One page will not do; jump exactly to center frequency, or as close as avoids DC if needed.
+                freq = needed_freq - _find_in_usable_bandwidth(
                     usable_bandwidth_range, receiver)
                 if _DEBUG_RETUNE:
-                    print '--- jump', device.get_freq(), freq
+                    print '--- jump', receiver.get_mode(), device.get_freq(), 'to', freq, 'for', needed_freq
 
             # TODO write justification here that this won't be dangerously reentrant
             device.set_freq(freq)
@@ -512,12 +512,12 @@ def _find_in_usable_bandwidth(usable_bandwidth_range, receiver):
     offset_positive = least_positive - shape.stop_low
     offset_negative = greatest_negative - shape.stop_high
     if _DEBUG_RETUNE:
-        print '--- offsets', offset_negative, greatest_negative, least_positive, offset_positive
+        print '--- offsets', receiver.get_mode(), offset_negative, greatest_negative, least_positive, offset_positive
 
     if offset_positive < 0 or offset_negative > 0:
         # Receiver has a larger filter than the DC offset, so line up neatly.
         return 0.0
-    if offset_positive < -offset_negative:
+    if offset_positive <= -offset_negative:
         return offset_positive
     else:
         return offset_negative

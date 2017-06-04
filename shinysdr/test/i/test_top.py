@@ -143,16 +143,17 @@ class TestTop(unittest.TestCase):
         self.assertFalse(top._Top__running)
 
 
-_DC_OFFSET_RADIUS = 1.0
-
-
 class TestRetuning(unittest.TestCase):
+    __OFFSET_SMALL = 1.0
+    __OFFSET_LARGE = 1000.0
+    
     """Tests of automatic device tuning behavior."""
     def setUp(self):
         f1 = self.f1 = 50e6  # avoid 100e6 because that's a default a couple of places
         self.devs = {
-            'clean': _RetuningTestDevice(f1, False),
-            'offset': _RetuningTestDevice(f1, True),
+            'clean': _RetuningTestDevice(f1, -1.0),
+            'offset_small': _RetuningTestDevice(f1, self.__OFFSET_SMALL),
+            'offset_large': _RetuningTestDevice(f1, self.__OFFSET_LARGE),
         }
         self.bandwidth = self.devs['clean'].get_rx_driver().get_output_type().get_sample_rate()
         top = Top(devices=self.devs)
@@ -163,8 +164,7 @@ class TestRetuning(unittest.TestCase):
             self.assertEqual(d.get_freq(), f1)
     
     @defer.inlineCallbacks
-    def __do_test(self, offset, rec_freq, expected_dev_freq):
-        device_name = 'offset' if offset else 'clean'
+    def __do_test(self, device_name, rec_freq, expected_dev_freq):
         self.receiver.set_device_name(device_name)
         self.receiver.set_rec_freq(rec_freq)
         self.assertEqual(self.devs[device_name].get_freq(), expected_dev_freq)
@@ -175,39 +175,54 @@ class TestRetuning(unittest.TestCase):
         self.assertTrue(self.receiver.get_is_valid())
     
     def test_one_page_up(self):
-        return self.__do_test(False,
+        return self.__do_test('clean',
             self.f1 + self.bandwidth * 3 / 4,
             self.f1 + self.bandwidth)
     
     def test_one_page_down(self):
-        return self.__do_test(False,
+        return self.__do_test('clean',
             self.f1 - self.bandwidth * 3 / 4,
             self.f1 - self.bandwidth)
     
     def test_jump(self):
-        return self.__do_test(False,
+        return self.__do_test('clean',
             200e6,
             200e6)
     
     def test_jump_dc_avoidance_am(self):
         shape = self.receiver.get_demodulator().get_band_shape()
-        return self.__do_test(True,
+        # Note: sign of offset doesn't matter, but the implementation prefers this one.
+        return self.__do_test('offset_small',
             200e6,
-            200e6 - _DC_OFFSET_RADIUS + shape.stop_low)
+            200e6 - self.__OFFSET_SMALL + shape.stop_low)
     
-    def test_jump_dc_offset_usb(self):
+    def test_jump_dc_offset_small_usb(self):
         # Expect no offset because USB's filter lies above the exclusion
         self.receiver.set_mode('USB')
-        return self.__do_test(True,
+        return self.__do_test('offset_small',
             200e6,
             200e6)
     
-    def test_jump_dc_offset_lsb(self):
+    def test_jump_dc_offset_small_lsb(self):
         # Expect no offset because LSB's filter lies below the exclusion
         self.receiver.set_mode('LSB')
-        return self.__do_test(True,
+        return self.__do_test('offset_small',
             200e6,
             200e6)
+    
+    def test_jump_dc_offset_large_usb(self):
+        self.receiver.set_mode('USB')
+        shape = self.receiver.get_demodulator().get_band_shape()
+        return self.__do_test('offset_large',
+            200e6,
+            200e6 - self.__OFFSET_LARGE - shape.stop_low)
+    
+    def test_jump_dc_offset_large_lsb(self):
+        self.receiver.set_mode('LSB')
+        shape = self.receiver.get_demodulator().get_band_shape()
+        return self.__do_test('offset_large',
+            200e6,
+            200e6 + self.__OFFSET_LARGE - shape.stop_high)
     
     # TODO test "set to value it already has" behavior
 
@@ -224,13 +239,13 @@ def _RetuningTestDevice(freq, has_dc_offset):
 
 
 class _RetuningTestRXDriver(StubRXDriver):
-    def __init__(self, has_dc_offset):
+    def __init__(self, offset_radius):
         super(_RetuningTestRXDriver, self).__init__()
         rate = 200e3
         self.__signal_type = SignalType(kind='IQ', sample_rate=rate)
         halfrate = rate / 2
-        if has_dc_offset:
-            self.__usable_bandwidth = RangeT([(-halfrate, -_DC_OFFSET_RADIUS), (_DC_OFFSET_RADIUS, halfrate)])
+        if offset_radius > 0:
+            self.__usable_bandwidth = RangeT([(-halfrate, -offset_radius), (offset_radius, halfrate)])
         else:
             self.__usable_bandwidth = RangeT([(-halfrate, halfrate)])
     
