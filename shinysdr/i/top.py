@@ -61,12 +61,12 @@ class ReceiverCollection(CollectionState):
 
 
 # TODO: Figure out how to stop having to 'declare' this here and in config.py
-_stub_features = {'stereo': True}
+_STUB_FEATURES = {'stereo': True}
 
 
 class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 
-    def __init__(self, devices={}, audio_config=None, features=_stub_features):
+    def __init__(self, devices={}, audio_config=None, features=_STUB_FEATURES):
         # pylint: disable=dangerous-default-value
         if len(devices) <= 0:
             raise ValueError('Must have at least one RF device')
@@ -536,7 +536,7 @@ class MaxProbe(gr.hier_block2):
         self.set_window_and_reconnect(window)
     
     def level(self):
-        # pylint: disable=method-hidden
+        # pylint: disable=method-hidden, no-self-use
         # overridden in instances
         raise Exception('This placeholder should never get called')
     

@@ -50,6 +50,8 @@ class _ModeTable(object):
         return self.__modes.get(mode)
 
 
+# pylint: disable=global-statement
+# This is memoizing what is global anyway and mostly-immutable. namely getPlugins() results (which ultimately depend on module imports).
 _mode_table = None
 
 

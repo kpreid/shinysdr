@@ -2,32 +2,32 @@
 
 reports=no
 
+
 [MESSAGES CONTROL]
 
-disable=locally-disabled,trailing-whitespace,fixme,missing-docstring,protected-access,invalid-name,super-init-not-called,star-args,no-self-argument,inherit-non-class,no-method-argument,no-self-use,unused-argument,too-many-return-statements,too-many-branches,too-many-function-args,too-many-instance-attributes,too-many-locals,bad-continuation,unnecessary-lambda,redefined-variable-type,global-statement,duplicate-code,no-else-return,len-as-condition
-# why super-init-not-called: false positives
-# why star-args: I reject the premise
-# why protected-access: because I am using it for 'friend' access, maybe fix that
-# why no-self-argument: false positives on interface declarations
-# why inherit-non-class: false positives on interface declarations
-# why no-method-argument: false positives on interface declarations
-# why no-self-use: false positives on exported state
-# why unused-argument: apparently cannot be prevented when an implementation legitimately does not use an arg
-# why too-many-return-statements and too-many-branches: useful for parsers
-# why too-many-function-args, too-many-instance-attributes, too-many-locals: we're doing things that just have lots of knobs
-# why bad-continuation: I don't want to do aligned indentation
-# why unnecessary-lambda: false positives, I don't make this mistake
-# why redefined-variable-type: interferes with polymorphism. https://github.com/PyCQA/pylint/issues/710
-# why global-statement: when I use global variables, I use them thoughtfully
-# why duplicate-code: too many false positives
-# why no-else-return: it rejects "if x return y else return z" which is silly
-# why len-as-condition: I prefer the extra type-checking and documentation resulting from using len
-# TODO: turn on missing-docstring, invalid-name
+disable=bad-continuation, fixme, len-as-condition, inherit-non-class, invalid-name, missing-docstring, no-else-return, no-method-argument, no-self-argument, no-self-use, protected-access, too-many-function-args, trailing-whitespace, unnecessary-lambda, unused-argument
+# Rationales:
+#   bad-continuation: Aligned indentation is bad for maintenance and version control
+#   fixme: "Yes, yes, I know! That's why I put it there!"
+#   inherit-non-class: false positives on interface declarations
+#   invalid-name: TODO turn this one back on
+#   len-as-condition: I prefer the extra type-checking and documentation resulting from using len
+#   missing-docstring: not everything needs documentation. TODO try setting the limit high
+#   no-else-return: it rejects "if x return y else return z" which is silly
+#   no-method-argument: false positives on interface declarations
+#   no-self-argument: false positives on interface declarations
+#   no-self-use: Doesn't understand that polymorphism means methods
+#   protected-access: because I am using it for 'friend' access, maybe fix that
+#   too-many-function-args: false positives on interface usage (note that this is not "more args than style limit" this is "more args at call than parameters at declaration")
+#   trailing-whitespace: indenting blank lines is more sensible than the opposite, and trailing whitespace is mostly not worth the trouble to keep neat anyway
+#   unnecessary-lambda: false positives (complains about passing functions that happens to be constant)
+#   unused-argument: apparently cannot be prevented when an implementation legitimately does not use an arg
+
 
 [BASIC]
 
 # List of builtins function names that should not be used, separated by a comma
-bad-functions=apply,input
+bad-functions=apply,chr,globals,help,input,locals,ord,range,raw_input,__import__
 
 # Regular expression which should only match correct module names
 module-rgx=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
@@ -48,10 +48,10 @@ method-rgx=[a-z_][a-z0-9_]{2,30}$
 attr-rgx=[a-z_][a-z0-9_]{2,30}$
 
 # Regular expression which should only match correct argument names
-argument-rgx=[a-z_][a-z0-9_]{2,30}$
+argument-rgx=[a-z_][a-z0-9_]{0,30}$
 
 # Regular expression which should only match correct variable names
-variable-rgx=[a-z_][a-z0-9_]{2,30}$
+variable-rgx=[a-z_][a-z0-9_]{0,30}$
 
 # Regular expression which should only match correct attribute names in class
 # bodies
@@ -74,6 +74,7 @@ no-docstring-rgx=__.*__
 # Minimum line length for functions/classes that require docstrings, shorter
 # ones are exempt.
 docstring-min-length=-1
+# TODO: consider turning this on
 
 
 [FORMAT]
@@ -128,7 +129,7 @@ ignore-mixin-members=yes
 
 # List of classes names for which member attributes should not be checked
 # (useful for classes with attributes dynamically set).
-ignored-classes=SQLObject
+ignored-classes=
 
 # List of members which are set dynamically and missed by pylint inference
 # system, and so shouldn't trigger E0201 when accessed. Python regular
@@ -140,7 +141,7 @@ generated-members=providedBy,run,callLater
 [VARIABLES]
 
 # Tells whether we should check for unused import in __init__ files.
-init-import=no
+init-import=yes
 
 # A regular expression matching the beginning of the name of dummy variables
 # (i.e. not used).
@@ -173,13 +174,17 @@ max-args=20
 ignored-argument-names=_.*
 
 # Maximum number of locals for function / method body
-max-locals=20
+max-locals=100
+# increased due to use in parsers
+# TODO think about reducing this
 
 # Maximum number of return / yield for function / method body
-max-returns=6
+max-returns=50
+# increased due to use in parsers
 
 # Maximum number of branch for function / method body
-max-branches=12
+max-branches=50
+# increased due to use in parsers
 
 # Maximum number of statements in function / method body
 max-statements=100
@@ -189,7 +194,7 @@ max-parents=10
 # increased due to gnuradio having a deep ancestry we inherit in hier blocks
 
 # Maximum number of attributes for a class (see R0902).
-max-attributes=20
+max-attributes=40
 # increased because we do complex things with many knobs in single hier blocks
 
 # Minimum number of public methods for a class (see R0903).

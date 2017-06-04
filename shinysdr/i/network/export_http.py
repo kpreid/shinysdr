@@ -167,6 +167,7 @@ class _BlockHtmlElement(template.Element):
     loader = template.XMLFile(os.path.join(template_path, 'block.template.xhtml'))
     
     def __init__(self, wcommon):
+        super(_BlockHtmlElement, self).__init__()
         self.__wcommon = wcommon
     
     @template.renderer

@@ -74,6 +74,7 @@ class _RadioIndexHtmlElement(template.Element):
     loader = template.XMLFile(os.path.join(template_path, 'index.template.xhtml'))
     
     def __init__(self, wcommon, title):
+        super(_RadioIndexHtmlElement, self).__init__()
         self.__wcommon = wcommon
         self.__title = unicode(title)
     

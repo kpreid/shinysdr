@@ -222,6 +222,7 @@ class TestPositionedDevice(DeviceTestCase):
 
 class _TestTXDriver(StubTXDriver):
     def __init__(self, log):
+        super(_TestTXDriver, self).__init__()
         self.log = log
     
     def set_transmitting(self, value, midpoint_hook):

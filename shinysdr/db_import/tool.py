@@ -38,12 +38,12 @@ def _add_file_wrapper(importer, filename, open_file):
     importer.add_file(filename, open_file, warning_callback)
 
 
-_importer_defs = {p.name: p for p in getPlugins(_IImporterDef, plugins) if p.available}
+_IMPORTER_DEFS = {p.name: p for p in getPlugins(_IImporterDef, plugins) if p.available}
 
 
 def _importer_list_msg():
     out = 'Known importers:\n'
-    for name, idef in _importer_defs.iteritems():
+    for name, idef in _IMPORTER_DEFS.iteritems():
         out += '  %s: %s\n' % (name, idef.description)
     return out
 
@@ -72,10 +72,10 @@ def import_main(argv=None, out=None):
     importer_name = options.importer_name
     filenames = options.filenames
     
-    if importer_name not in _importer_defs:
+    if importer_name not in _IMPORTER_DEFS:
         print >>sys.stderr, 'Unknown importer: %r.\n%s' % (importer_name, _importer_list_msg())
         sys.exit(1)
-    importer = IImporter(_importer_defs[importer_name].importer_class())
+    importer = IImporter(_IMPORTER_DEFS[importer_name].importer_class())
     
     if options.near:
         geo_filter_parts = [int(s.strip()) for s in options.near.split(',')]

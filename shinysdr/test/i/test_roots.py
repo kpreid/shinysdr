@@ -64,6 +64,8 @@ class TestCapTable(unittest.TestCase):
         self.assertFalse(cap in self.t.as_unenumerable_collection())
 
 
+# pylint: disable=global-statement
+# We need unique identifiers that are persistable, otherwise just fresh objects would do.
 _counter = 0
 
 

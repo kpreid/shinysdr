@@ -36,7 +36,7 @@ class EphemerisResource(Resource):
     isLeaf = True
     
     def __init__(self):
-        pass
+        Resource.__init__(self)
     
     def render_GET(self, request):
         # pylint: disable=no-member
