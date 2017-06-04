@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -21,7 +21,9 @@ This module contains objects and interfaces used by plugins to declare
 the functionality they provide.
 """
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
+
+from collections import namedtuple
 
 from twisted.plugin import IPlugin
 from zope.interface import Interface, implements
@@ -46,16 +48,13 @@ class IDemodulator(Interface):
         Per can_set_mode.
         """
     
-    def get_band_filter_shape():
+    def get_band_shape():
         """
-        Returns a dict describing the shape of the demodulator's input filter.
+        Returns a BandShape object describing the portion of its input signal which the demodulator uses (typically, the shape of its filter).
         
-        This is used to display the filter on-screen and to determine when to disable a receiver because the demodulator's passband is outside the device's bandwidth.
+        Should be exported.
         
-        The dict must have the following elements:
-            'low': lower edge (Hz relative to nominal carrier frequency, usually negative)
-            'high': upper edge (Hz relative to nominal carrier frequency, usually positive)
-            'width': transition band width
+        This is used to display the filter on-screen and to determine when the demodulator's input requirements are satisfied by the device's tuning.
         """
     
     def get_output_type():
@@ -67,6 +66,42 @@ class IDemodulator(Interface):
 
 
 __all__.append('IDemodulator')
+
+
+# TODO: BandShape doesn't really belong here but it is related to IDemodulator. Find better location.
+
+# All frequencies are relative to the demodulator's input signal (i.e. baseband)
+_BandShape = namedtuple('BandShape', [
+    'stop_low',  # float; lower edge of stopband
+    'pass_low',  # float; lower edge of passband
+    'pass_high',  # float; upper edge of passband
+    'stop_high',  # float; upper edge of stopband
+    'markers',  # dict of float to string; labels of significant frequencies (e.g. FSK mark and space)
+])
+
+class BandShape(_BandShape):
+    @classmethod
+    def lowpass_transition(cls, cutoff, transition, markers={}):
+        h = transition / 2.0
+        return cls(
+            stop_low=-cutoff - h,
+            pass_low=-cutoff + h,
+            pass_high=cutoff - h,
+            stop_high=cutoff + h,
+            markers=markers)
+
+    @classmethod
+    def bandpass_transition(cls, transition, low, high, markers={}):
+        h = transition / 2.0
+        return cls(
+            stop_low=low - h,
+            pass_low=low + h,
+            pass_high=high - h,
+            stop_high=high + h,
+            markers=markers)
+
+
+__all__.append('BandShape')
 
 
 class IModulator(Interface):

@@ -1,4 +1,4 @@
-# Copyright 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2016, 2017 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -32,7 +32,7 @@ from gnuradio import gr
 from shinysdr.i.blocks import make_sink_to_process_stdin
 from shinysdr.filters import MultistageChannelFilter
 from shinysdr.math import dB
-from shinysdr.interfaces import ModeDef, IDemodulator
+from shinysdr.interfaces import BandShape, ModeDef, IDemodulator
 from shinysdr.signals import no_signal
 from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject
 from shinysdr.twisted_ext import test_subprocess
@@ -122,18 +122,14 @@ class RTL433Demodulator(gr.hier_block2, ExportedState):
         """implements IDemodulator"""
         return False
     
-    @exported_value(changes='never')
-    def get_band_filter_shape(self):
+    @exported_value(type=BandShape, changes='never')
+    def get_band_shape(self):
         """implements IDemodulator"""
         if self.__band_filter:
             return self.__band_filter.get_shape()
         else:
-            # TODO stub
-            return {
-                'low': 0,
-                'high': 0,
-                'width': 0
-            }
+            # TODO Reuse UnselectiveAMDemodulator's approach to this
+            return BandShape(stop_low=0, pass_low=0, pass_high=0, stop_high=0, markers={})
     
     def get_output_type(self):
         """implements IDemodulator"""

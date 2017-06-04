@@ -319,11 +319,11 @@ class Receiver(gr.hier_block2, ExportedState):
         if self.__demodulator is None:
             return False
         half_sample_rate = self.__get_device().get_rx_driver().get_output_type().get_sample_rate() / 2
-        demod_shape = self.__demodulator.get_band_filter_shape()
+        demod_shape = self.__demodulator.get_band_shape()
         valid_bandwidth_lower = -half_sample_rate - self.__freq_relative
         valid_bandwidth_upper = half_sample_rate - self.__freq_relative
-        return (valid_bandwidth_lower <= min(0, demod_shape['low']) and
-                valid_bandwidth_upper >= max(0, demod_shape['high']))
+        return (valid_bandwidth_lower <= min(0, demod_shape.pass_low) and
+                valid_bandwidth_upper >= max(0, demod_shape.pass_high))
     
     # Note that the receiver cannot measure RF power because we don't know what the channel bandwidth is; we have to leave that to the demodulator.
     # TODO: document what we are using as the reference level. It's not dBFS because we're floating-point and before the gain stage.

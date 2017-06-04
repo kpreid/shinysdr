@@ -375,7 +375,7 @@ define(['./basic', './spectrum',
   // Widget for a demodulator block
   function Demodulator(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
-      ignore('band_filter_shape');
+      ignore('band_shape');
       if ('rf_power' in block && 'squelch_threshold' in block) (function() {
         var squelchAndPowerPanel = this.element.appendChild(document.createElement('table'));
         squelchAndPowerPanel.classList.add('panel');

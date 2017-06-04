@@ -1,4 +1,4 @@
-# Copyright 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -31,6 +31,7 @@ from gnuradio.filter import pfb
 from gnuradio.filter import firdes
 from gnuradio.filter import rational_resampler
 
+from shinysdr.interfaces import BandShape
 from shinysdr.i.math import factorize, small_factor_at_least
 
 
@@ -52,11 +53,9 @@ class _MultistageChannelFilterPlan(object):
         self.__freq_xlate_stage = freq_xlate_stage
         self.__cutoff_freq = float(cutoff_freq)
         self.__transition_width = float(transition_width)
-        self.__shape_json = {
-            'low': -self.__cutoff_freq,
-            'high': self.__cutoff_freq,
-            'width': self.__transition_width
-        }
+        self.__band_shape = BandShape.lowpass_transition(
+            cutoff=self.__cutoff_freq,
+            transition=self.__transition_width)
     
     def get_stage_designs(self):
         return self.__stage_designs
@@ -74,7 +73,7 @@ class _MultistageChannelFilterPlan(object):
         return self.__transition_width
     
     def get_shape(self):
-        return self.__shape_json
+        return self.__band_shape
     
     def replace(self, cutoff_freq=None, transition_width=None):
         if cutoff_freq is None:
@@ -432,7 +431,7 @@ class MultistageChannelFilter(gr.hier_block2):
         self.freq_filter_block.set_center_freq(freq)
     
     def get_shape(self):
-        """Describe the filter shape in the format used by ShinySDR demodulators.
+        """Describe the filter shape as a shinysdr.interfaces.BandShape value.
         
         This is primarily a helper for simplifying the code implementing demodulator objects.
         """

@@ -39,7 +39,7 @@ except ImportError:
     _available = False
 
 from shinysdr.filters import MultistageChannelFilter
-from shinysdr.interfaces import ClientResourceDef, IDemodulator, ModeDef
+from shinysdr.interfaces import BandShape, ClientResourceDef, IDemodulator, ModeDef
 from shinysdr.math import LazyRateCalculator
 from shinysdr.signals import no_signal
 from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, Track, empty_track
@@ -139,8 +139,8 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
     def get_output_type(self):
         return no_signal
     
-    @exported_value(changes='never')
-    def get_band_filter_shape(self):
+    @exported_value(type=BandShape, changes='never')
+    def get_band_shape(self):
         return self.__band_filter.get_shape()
 
 

@@ -38,7 +38,7 @@ except ImportError:
 
 from shinysdr.math import dB, rotator_inc
 from shinysdr.filters import MultistageChannelFilter
-from shinysdr.interfaces import ModeDef, IDemodulator, IModulator
+from shinysdr.interfaces import BandShape, ModeDef, IDemodulator, IModulator
 from shinysdr.signals import SignalType, no_signal
 from shinysdr.values import ExportedState, exported_value
 
@@ -155,14 +155,17 @@ class RTTYDemodulator(gr.hier_block2, ExportedState):
         """implement IDemodulator"""
         return False
     
-    @exported_value(changes='never')
-    def get_band_filter_shape(self):
+    @exported_value(type=BandShape, changes='never')
+    def get_band_shape(self):
         """implement IDemodulator"""
-        return {
-            'low': self.__low_cutoff,
-            'high': self.__high_cutoff,
-            'width': self.__transition_width,
-        }
+        return BandShape.bandpass_transition(
+            low=self.__low_cutoff,
+            high=self.__high_cutoff,
+            transition=self.__transition_width,
+            markers={
+                -self.__spacing: u'S',
+                0: u'M',
+            })
     
     def get_output_type(self):
         """implement IDemodulator"""

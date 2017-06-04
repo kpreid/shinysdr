@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -35,7 +35,7 @@ from gnuradio import blocks
 
 from shinysdr.filters import make_resampler
 from shinysdr.i.blocks import make_sink_to_process_stdin
-from shinysdr.interfaces import ModeDef, IDemodulator
+from shinysdr.interfaces import BandShape, ModeDef, IDemodulator
 from shinysdr.plugins.basic_demod import NFMDemodulator
 from shinysdr.plugins.aprs import parse_tnc2
 from shinysdr.signals import SignalType
@@ -210,9 +210,9 @@ class FMAPRSDemodulator(gr.hier_block2, ExportedState):
     def can_set_mode(self, mode):
         return False
     
-    @exported_value(changes='never')
-    def get_band_filter_shape(self):
-        return self.fm_demod.get_band_filter_shape()
+    @exported_value(type=BandShape, changes='never')
+    def get_band_shape(self):
+        return self.fm_demod.get_band_shape()
     
     def get_output_type(self):
         return self.mm_demod.get_output_type()

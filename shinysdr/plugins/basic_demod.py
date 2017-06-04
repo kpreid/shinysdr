@@ -28,7 +28,7 @@ from gnuradio import filter as grfilter  # don't shadow builtin
 from gnuradio.analog import fm_emph
 from gnuradio.filter import firdes
 
-from shinysdr.interfaces import ModeDef, IDemodulator, IModulator, ITunableDemodulator
+from shinysdr.interfaces import BandShape, ModeDef, IDemodulator, IModulator, ITunableDemodulator
 from shinysdr.math import dB, to_dB
 from shinysdr.filters import MultistageChannelFilter, make_resampler, design_sawtooth_filter
 from shinysdr.signals import SignalType
@@ -64,8 +64,8 @@ class Demodulator(gr.hier_block2, ExportedState):
     def can_set_mode(self, mode):
         return False
 
-    def get_band_filter_shape(self):
-        raise NotImplementedError('Demodulator.get_band_filter_shape')
+    def get_band_shape(self):
+        raise NotImplementedError('Demodulator.get_band_shape')
 
     def get_output_type(self):
         raise NotImplementedError('Demodulator.get_output_type')
@@ -130,8 +130,8 @@ class SimpleAudioDemodulator(Demodulator, SquelchMixin):
             cutoff_freq=band_filter,
             transition_width=band_filter_transition)
     
-    @exported_value(changes='never')  # TODO not sure if this is the right change policy
-    def get_band_filter_shape(self):
+    @exported_value(type=BandShape, changes='never')  # TODO not sure if this is the right change policy
+    def get_band_shape(self):
         """Implements IDemodulator."""
         return self.band_filter_block.get_shape()
     
@@ -376,17 +376,18 @@ class UnselectiveAMDemodulator(gr.hier_block2, ExportedState):
         """implement IDemodulator"""
         return False
     
-    @exported_value(changes='explicit')
-    def get_band_filter_shape(self):
+    @exported_value(type=BandShape, changes='explicit')
+    def get_band_shape(self):
         """implement IDemodulator"""
         halfbw = self.__input_rate * 0.5
         offset = self.__rec_freq_input
         epsilon = 1  # don't be invalid in case of floating-point error
-        return {
-            'low': -halfbw - offset + epsilon,
-            'high': halfbw - offset - epsilon,
-            'width': epsilon * 2
-        }
+        return BandShape(
+            stop_low=-halfbw - offset,
+            stop_high=halfbw - offset,
+            pass_low=-halfbw - offset + epsilon,
+            pass_high=-halfbw - offset + epsilon,
+            markers={})
     
     def get_output_type(self):
         """implement IDemodulator"""
@@ -396,7 +397,7 @@ class UnselectiveAMDemodulator(gr.hier_block2, ExportedState):
         """implement ITunableDemodulator"""
         # By implementing ITunableDemodulator and doing nothing, we use the hardware frequency without changes.
         self.__rec_freq_input = freq
-        self.state_changed('band_filter_shape')
+        self.state_changed('band_shape')
 
 
 class AMModulator(gr.hier_block2, ExportedState):
@@ -704,11 +705,11 @@ class SSBDemodulator(SimpleAudioDemodulator):
                 band_filter_high + self.__offset,
                 band_filter_width,
                 firdes.WIN_HAMMING))
-        self.__filter_shape = {
-            u'low': band_filter_low,
-            u'high': band_filter_high,
-            u'width': band_filter_width
-        }
+        self.__filter_shape = BandShape.bandpass_transition(
+            low=band_filter_low,
+            high=band_filter_high,
+            transition=band_filter_width,
+            markers={})
         
         self.agc_block = analog.agc2_cc(reference=agc_reference)
         self.agc_block.set_attack_rate(agc_rate)
@@ -721,7 +722,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
             self,
             self.band_filter_block,
             sharp_filter_block,
-            # TODO: We would like to have an in
+            # TODO: We would like to have a squelch which does not interfere with the AGC, but this is impossible without combining the squelch and AGC
             self.rf_squelch_block,
             self.agc_block,
             ssb_demod_block)
@@ -729,8 +730,8 @@ class SSBDemodulator(SimpleAudioDemodulator):
         self.connect_audio_output(ssb_demod_block)
     
     # override
-    @exported_value(changes='never')
-    def get_band_filter_shape(self):
+    @exported_value(type=BandShape, changes='never')
+    def get_band_shape(self):
         return self.__filter_shape
     
     # override

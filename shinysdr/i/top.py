@@ -497,9 +497,7 @@ class ContextForReceiver(Context):
 
 def _find_in_usable_bandwidth(usable_bandwidth_range, receiver):
     """Given the usable_bandwidth_range of a device and a receiver, find where we can place the receiver in the range (all relative frequencies)."""
-    shape = receiver.get_demodulator().get_band_filter_shape()
-    shape_lowest = shape['low'] - shape['width'] / 2
-    shape_highest = shape['high'] + shape['width'] / 2
+    shape = receiver.get_demodulator().get_band_shape()
     
     # We assume that the bandwidth range is generally wide-open with a possible gap in the middle.
     # TODO: It would make more sense to directly ask RangeT to tell us where an interval will fit, rather than making that assumption.
@@ -510,10 +508,12 @@ def _find_in_usable_bandwidth(usable_bandwidth_range, receiver):
         if _DEBUG_RETUNE:
             print '--- no offset'
         return 0.0
-    offset_positive = least_positive - shape_lowest
-    offset_negative = greatest_negative - shape_highest
+    
+    offset_positive = least_positive - shape.stop_low
+    offset_negative = greatest_negative - shape.stop_high
     if _DEBUG_RETUNE:
         print '--- offsets', offset_negative, greatest_negative, least_positive, offset_positive
+
     if offset_positive < 0 or offset_negative > 0:
         # Receiver has a larger filter than the DC offset, so line up neatly.
         return 0.0

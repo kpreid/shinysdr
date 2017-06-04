@@ -190,10 +190,10 @@ class TestRetuning(unittest.TestCase):
             200e6)
     
     def test_jump_dc_avoidance_am(self):
-        shape = self.receiver.get_demodulator().get_band_filter_shape()
+        shape = self.receiver.get_demodulator().get_band_shape()
         return self.__do_test(True,
             200e6,
-            200e6 - _DC_OFFSET_RADIUS + shape['low'] - shape['width'] / 2)
+            200e6 - _DC_OFFSET_RADIUS + shape.stop_low)
     
     def test_jump_dc_offset_usb(self):
         # Expect no offset because USB's filter lies above the exclusion

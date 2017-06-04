@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -32,7 +32,7 @@ except ImportError:
     _available = False
 
 from shinysdr.filters import make_resampler
-from shinysdr.interfaces import ModeDef, IDemodulator
+from shinysdr.interfaces import BandShape, ModeDef, IDemodulator
 from shinysdr.plugins.basic_demod import NFMDemodulator
 from shinysdr.signals import SignalType
 from shinysdr.types import EnumRow, ReferenceT
@@ -80,9 +80,9 @@ class DSDDemodulator(gr.hier_block2, ExportedState):
     def get_output_type(self):
         return self.__output_type
     
-    @exported_value(changes='never')
-    def get_band_filter_shape(self):
-        return self.__fm_demod.get_band_filter_shape()
+    @exported_value(type=BandShape, changes='never')
+    def get_band_shape(self):
+        return self.__fm_demod.get_band_shape()
 
 
 _modeDef = ModeDef(mode=u'DSD',  # TODO: Ought to declare all the individual modes that DSD can decode -- once we have a way to not spam the mode selector with that.
