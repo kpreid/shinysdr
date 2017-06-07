@@ -1244,7 +1244,7 @@ define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
             -y,
             x,
             y,
-            Math.exp(event.wheelDeltaY * 0.0001));
+            Math.exp(event.wheelDeltaY * 0.001));
       
           event.preventDefault();  // no scrolling
           event.stopPropagation();
