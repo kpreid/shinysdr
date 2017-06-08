@@ -214,9 +214,11 @@ class TelemetryStore(CollectionState):
             self.__flush_call.cancel()
         
         if self.__expiry_times:
+            now = self.__time_source.seconds()
             next_expiry = min(self.__expiry_times.itervalues())
+            sec_until_expiry = max(0, next_expiry - now)
             self.__flush_call = self.__time_source.callLater(
-                next_expiry - self.__time_source.seconds(),
+                sec_until_expiry,
                 self.__flush_expired)
 
 

@@ -38,7 +38,7 @@ class TestTrack(unittest.TestCase):
 
 class TestTelemetryStore(unittest.TestCase):
     def setUp(self):
-        self.clock = Clock()
+        self.clock = SlightlyBetterClock()
         self.clock.advance(1000)
         self.store = TelemetryStore(time_source=self.clock)
     
@@ -89,6 +89,30 @@ class TestTelemetryStore(unittest.TestCase):
         self.clock.advance(1800)
         self.store.receive(Msg('bar', 2800, 'boring'))
         self.assertEqual([], self.store.state().keys())
+
+    def test_expire_in_the_past(self):
+        """
+        An ITelemetryObject expiring in the past is not an error.
+        """
+        self.clock.advance(10000)
+        self.store.receive(Msg('foo', 0, 'long ago'))
+        self.clock.advance(2000)
+
+
+class SlightlyBetterClock(Clock):
+    def callLater(self, when, *a, **kw):
+        """
+        Unlike the real reactor, Clock.callLater doesn't raise an exception
+        when the time is negative.
+
+        https://twistedmatrix.com/trac/ticket/9166#comment
+
+        Until that's fixed upstream, emulate the behavior here.
+        """
+
+        assert when >= 0, \
+            "%s is not greater than or equal to 0 seconds" % (when,)
+        return Clock.callLater(self, when, *a, **kw)
     
 
 class Msg(object):
