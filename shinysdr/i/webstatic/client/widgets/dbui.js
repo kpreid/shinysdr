@@ -174,7 +174,10 @@ define(['./basic', '../types', '../values', '../events', '../widget', '../databa
       if (record.lowerFreq !== freq) {
         row.classList.add('freqlist-item-band-end');
       }
-      row.addEventListener('click', function(event) {
+      row.addEventListener('mousedown', event => {
+        event.preventDefault();  // prevent shift-click-select (shift is used by alwaysCreateReceiverFromEvent)
+      }, false);
+      row.addEventListener('click', event => {
         tune({
           record: record,
           alwaysCreate: alwaysCreateReceiverFromEvent(event)
