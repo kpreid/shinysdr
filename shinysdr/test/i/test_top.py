@@ -215,14 +215,14 @@ class TestRetuning(unittest.TestCase):
         shape = self.receiver.get_demodulator().get_band_shape()
         return self.__do_test('offset_large',
             200e6,
-            200e6 - self.__OFFSET_LARGE - shape.stop_low)
+            200e6 - self.__OFFSET_LARGE + shape.stop_low)
     
     def test_jump_dc_offset_large_lsb(self):
         self.receiver.set_mode('LSB')
         shape = self.receiver.get_demodulator().get_band_shape()
         return self.__do_test('offset_large',
             200e6,
-            200e6 + self.__OFFSET_LARGE - shape.stop_high)
+            200e6 + self.__OFFSET_LARGE + shape.stop_high)
     
     # TODO test "set to value it already has" behavior
 
