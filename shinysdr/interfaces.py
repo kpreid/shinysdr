@@ -79,9 +79,12 @@ _BandShape = namedtuple('BandShape', [
     'markers',  # dict of float to string; labels of significant frequencies (e.g. FSK mark and space)
 ])
 
+
 class BandShape(_BandShape):
     @classmethod
-    def lowpass_transition(cls, cutoff, transition, markers={}):
+    def lowpass_transition(cls, cutoff, transition, markers=None):
+        if markers is None:
+            markers = {}
         h = transition / 2.0
         return cls(
             stop_low=-cutoff - h,
@@ -91,7 +94,9 @@ class BandShape(_BandShape):
             markers=markers)
 
     @classmethod
-    def bandpass_transition(cls, transition, low, high, markers={}):
+    def bandpass_transition(cls, transition, low, high, markers=None):
+        if markers is None:
+            markers = {}
         h = transition / 2.0
         return cls(
             stop_low=low - h,

@@ -100,7 +100,7 @@ class TestTelemetryStore(unittest.TestCase):
 
 
 class SlightlyBetterClock(Clock):
-    def callLater(self, when, *a, **kw):
+    def callLater(self, when, what, *a, **kw):
         """
         Unlike the real reactor, Clock.callLater doesn't raise an exception
         when the time is negative.
@@ -112,7 +112,7 @@ class SlightlyBetterClock(Clock):
 
         assert when >= 0, \
             "%s is not greater than or equal to 0 seconds" % (when,)
-        return Clock.callLater(self, when, *a, **kw)
+        return Clock.callLater(self, when, what, *a, **kw)
     
 
 class Msg(object):
