@@ -17,12 +17,9 @@
 
 from __future__ import absolute_import, division
 
-from twisted.trial import unittest
-
-from shinysdr.test.testutil import DemodulatorTester
+from shinysdr.test.testutil import DemodulatorTestCase
 
 
-class DemodulatorSmokeTest(unittest.TestCase):
-    def test_1(self):
-        with DemodulatorTester('DSD'):
-            pass
+class TestDSD(DemodulatorTestCase):
+    def setUp(self):
+        self.setUpFor(mode='DSD')

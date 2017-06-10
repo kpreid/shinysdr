@@ -34,11 +34,10 @@ from zope.interface import implements
 from zope.interface.verify import verifyObject
 
 from shinysdr.devices import Device, IComponent, IRXDriver, ITXDriver
+from shinysdr.grc import DemodulatorAdapter
 from shinysdr.i.modes import lookup_mode
 from shinysdr.i.poller import Poller
-from shinysdr.i.top import Top
 from shinysdr.interfaces import IDemodulator
-from shinysdr.plugins.simulate import SimulatedDevice
 from shinysdr.signals import SignalType
 from shinysdr.types import RangeT
 from shinysdr.values import ExportedState, SubscriptionContext, nullExportedState
@@ -210,36 +209,58 @@ class DeviceTestCase(unittest.TestCase):
         self.assertEqual(nhook, 4)
 
 
-class DemodulatorTester(object):
+class DemodulatorTestCase(unittest.TestCase):
     """
     Set up an environment for testing a demodulator and do some fundamental tests.
     """
-    def __init__(self, mode, state=None):
-        # TODO: Refactor things so that we can take the demod ctor rather than a mode string
+
+    def setUp(self):
+        # pylint: disable=unidiomatic-typecheck
+        self.__noop = type(self) is DemodulatorTestCase
+        if not hasattr(self, 'demodulator') and not self.__noop:
+            raise Exception('No demodulator specified for DemodulatorTestCase')
+        
+    def setUpFor(self, mode, demod_class=None, state=None):
+        # pylint: disable=attribute-defined-outside-init
         if state is None:
             state = {}
         mode_def = lookup_mode(mode)
-        if mode_def is None:
-            raise Exception('No such mode is registered: ' + repr(mode))
-        # TODO: Tell the simulated device to have no modulators, or have a simpler dummy source for testing, so we don't waste time on setup
-        self.__top = Top(devices={'s1': SimulatedDevice()})
-        (_, receiver) = self.__top.add_receiver(mode, key='a', state=state)
-        self.__demodulator = receiver.get_demodulator()
-        if not isinstance(self.__demodulator, mode_def.demod_class):
-            raise Exception('Demodulator not of expected class: ' + repr(self.__demodulator))
-        self.__top.start()  # TODO overriding internals
+        if mode_def is not None and demod_class is None:
+            demod_class = mode_def.demod_class
+        if demod_class is None:
+            raise Exception('Demodulator not registered for mode {!r}'.format(mode))
+        
+        # Wire up top block. We don't actually want to inspect the signal processing; we just want to see if GR has a complaint about the flow graph connectivity.
+        self.__top = gr.top_block()
+        self.__adapter = DemodulatorAdapter(
+            mode=mode,
+            demod_class=demod_class,
+            input_rate=100000,
+            output_rate=22050,
+            quiet=True)
+        self.demodulator = self.__adapter.get_demodulator()
+        self.__top.connect(
+            blocks.vector_source_c([]),
+            (self.__adapter, 0),
+            blocks.null_sink(gr.sizeof_float))
+        self.__top.connect(
+            (self.__adapter, 1),
+            blocks.null_sink(gr.sizeof_float))
+        
+        DemodulatorTestCase.setUp(self)  # neither super nor self call
     
-    def close(self):
-        if self.__top is not None:
-            self.__top.stop()
-            self.__top = None
+    def tearDown(self):
+        if self.__noop: return
+        self.__top.stop()
+        self.__top.wait()
     
-    def __enter__(self):
-        verifyObject(IDemodulator, self.__demodulator)
-        state_smoke_test(self.__demodulator)
+    def test_implements(self):
+        if self.__noop: return
+        verifyObject(IDemodulator, self.demodulator)
     
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.close()
+    def test_state(self):
+        if self.__noop: return
+        state_smoke_test(self.demodulator)
 
 
 class StubComponent(ExportedState):

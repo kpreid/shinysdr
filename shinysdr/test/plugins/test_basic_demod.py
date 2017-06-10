@@ -17,36 +17,44 @@
 
 from __future__ import absolute_import, division
 
-from twisted.trial import unittest
-
-from shinysdr.test.testutil import DemodulatorTester
+from shinysdr.test.testutil import DemodulatorTestCase
 
 
-class DemodulatorSmokeTest(unittest.TestCase):
-    def __test(self, mode, **kwargs):
-        with DemodulatorTester(mode, **kwargs):
-            pass
-    
-    def test_iq(self):
-        self.__test('IQ')
-    
-    def test_am(self):
-        self.__test('AM')
-    
-    def test_am_entire(self):
-        self.__test('AM-unsel')
-    
-    def test_nfm(self):
-        self.__test('NFM')
-    
-    def test_wfm(self):
-        self.__test('WFM')
-    
-    def test_lsb(self):
-        self.__test('LSB')
-    
-    def test_usb(self):
-        self.__test('USB')
-    
-    def test_cw(self):
-        self.__test('CW')
+class TestIQ(DemodulatorTestCase):
+    def setUp(self):
+        self.setUpFor(mode='IQ')
+
+
+class TestAM(DemodulatorTestCase):
+    def setUp(self):
+        self.setUpFor(mode='AM')
+
+
+class TestUnselectiveAM(DemodulatorTestCase):
+    def setUp(self):
+        self.setUpFor(mode='AM-unsel')
+
+
+class TestNFM(DemodulatorTestCase):
+    def setUp(self):
+        self.setUpFor(mode='NFM')
+
+
+class TestWFM(DemodulatorTestCase):
+    def setUp(self):
+        self.setUpFor(mode='WFM')
+
+
+class TestLSB(DemodulatorTestCase):
+    def setUp(self):
+        self.setUpFor(mode='LSB')
+
+
+class TestUSB(DemodulatorTestCase):
+    def setUp(self):
+        self.setUpFor(mode='USB')
+
+
+class TestCW(DemodulatorTestCase):
+    def setUp(self):
+        self.setUpFor(mode='CW')

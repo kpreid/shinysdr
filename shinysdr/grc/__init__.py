@@ -32,20 +32,22 @@ __all__ = []  # appended later
 
 class DemodulatorAdapter(gr.hier_block2):
     """Adapts IDemodulator to be a GRC block."""
-    def __init__(self, mode, input_rate, output_rate, freq=0.0):
+    def __init__(self, mode, input_rate, output_rate, demod_class=None, freq=0.0, quiet=False):
         gr.hier_block2.__init__(
             self, type(self).__name__,
             gr.io_signature(1, 1, gr.sizeof_gr_complex),
             gr.io_signature(2, 2, gr.sizeof_float))
         
-        mode_def = lookup_mode(mode)
-        if mode_def is None:
-            raise Exception('{}: No demodulator registered for mode {!r}, only {!r}'.format(
-                type(self).__name__, mode, [md.mode for md in get_modes()]))
+        if demod_class is None:
+            mode_def = lookup_mode(mode)
+            if mode_def is None:
+                raise Exception('{}: No demodulator registered for mode {!r}, only {!r}'.format(
+                    type(self).__name__, mode, [md.mode for md in get_modes()]))
+            demod_class = mode_def.demod_class
         
         context = _DemodulatorAdapterContext(adapter=self, freq=freq)
         
-        demod = self.__demodulator = IDemodulator(mode_def.demod_class(
+        demod = self.__demodulator = IDemodulator(demod_class(
             mode=mode,
             input_rate=input_rate,
             context=context))
@@ -58,26 +60,33 @@ class DemodulatorAdapter(gr.hier_block2):
         
         # connect outputs, resampling and adapting mono/stereo as needed
         # TODO: Make the logic for this in receiver.py reusable?
-        if stereo:
-            splitter = blocks.vector_to_streams(gr.sizeof_float, 2)
-            self.connect(demod, splitter)
-        if same_rate:
-            if stereo:
-                self.connect((splitter, 0), (self, 0))
-                self.connect((splitter, 1), (self, 1))
-            else:
-                self.connect(demod, (self, 0))
-                self.connect(demod, (self, 1))
+        if output_type.get_kind() == 'NONE':
+            # TODO: produce correct sample rate of zeroes and maybe a warning
+            dummy = blocks.vector_source_f([])
+            self.connect(dummy, (self, 0))
+            self.connect(dummy, (self, 1))
         else:
-            gr.log.info('{}: Native {} demodulated rate is {}; resampling to {}'.format(
-                type(self).__name__, mode, demod_output_rate, output_rate))
             if stereo:
-                self.connect((splitter, 0), make_resampler(demod_output_rate, output_rate), (self, 0))
-                self.connect((splitter, 1), make_resampler(demod_output_rate, output_rate), (self, 1))
+                splitter = blocks.vector_to_streams(gr.sizeof_float, 2)
+                self.connect(demod, splitter)
+            if same_rate:
+                if stereo:
+                    self.connect((splitter, 0), (self, 0))
+                    self.connect((splitter, 1), (self, 1))
+                else:
+                    self.connect(demod, (self, 0))
+                    self.connect(demod, (self, 1))
             else:
-                resampler = make_resampler(demod_output_rate, output_rate)
-                self.connect(demod, resampler, (self, 0))
-                self.connect(resampler, (self, 1))
+                if not quiet:
+                    gr.log.info('{}: Native {} demodulated rate is {}; resampling to {}'.format(
+                        type(self).__name__, mode, demod_output_rate, output_rate))
+                if stereo:
+                    self.connect((splitter, 0), make_resampler(demod_output_rate, output_rate), (self, 0))
+                    self.connect((splitter, 1), make_resampler(demod_output_rate, output_rate), (self, 1))
+                else:
+                    resampler = make_resampler(demod_output_rate, output_rate)
+                    self.connect(demod, resampler, (self, 0))
+                    self.connect(resampler, (self, 1))
     
     def get_demodulator(self):
         """Return the actual plugin-provided demodulator block."""
@@ -110,20 +119,22 @@ class _DemodulatorAdapterContext(object):
 
 class ModulatorAdapter(gr.hier_block2):
     """Adapts IModulator to be a GRC block."""
-    def __init__(self, mode, input_rate, output_rate):
+    def __init__(self, mode, input_rate, output_rate, mod_class=None):
         gr.hier_block2.__init__(
             self, type(self).__name__,
             gr.io_signature(1, 1, gr.sizeof_float),
             gr.io_signature(1, 1, gr.sizeof_gr_complex))
         
-        mode_def = lookup_mode(mode)
-        if mode_def is None:
-            raise Exception('{}: No modulator registered for mode {!r}, only {!r}'.format(
-                type(self).__name__, mode, [md.mode for md in get_modes() if md.mod_class]))
+        if mod_class is None:
+            mode_def = lookup_mode(mode)
+            if mode_def is None:
+                raise Exception('{}: No modulator registered for mode {!r}, only {!r}'.format(
+                    type(self).__name__, mode, [md.mode for md in get_modes() if md.mod_class]))
+            mod_class = mode_def.mod_class
         
         context = _ModulatorAdapterContext(adapter=self)
         
-        modulator = self.__modulator = IModulator(mode_def.mod_class(
+        modulator = self.__modulator = IModulator(mod_class(
             mode=mode,
             context=context))
 
