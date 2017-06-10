@@ -21,10 +21,8 @@ define(['./map-core',
          events,   math,   network,   types,   values) => {
   'use strict';
   
-  const sin = Math.sin;
   const cos = Math.cos;
   
-  const Clock = events.Clock;
   const DerivedCell = values.DerivedCell;
   const EnumT = types.EnumT;
   const LocalReadCell = values.LocalReadCell;
@@ -39,7 +37,6 @@ define(['./map-core',
   
   const RADIANS_PER_DEGREE = Math.PI / 180;
   function dcos(x) { return cos(RADIANS_PER_DEGREE * x); }
-  function dsin(x) { return sin(RADIANS_PER_DEGREE * x); }
   
   // TODO: Instead of using a blank icon, provide a way to skip the geometry entirely
   const blank = 'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22/%3E';
@@ -427,100 +424,6 @@ define(['./map-core',
             console.error('Unexpected type in graticule renderer: ' + type);
             return {};
         }
-      }
-    });
-  });
-  
-  var slowClockForTests = new Clock(1);
-  
-  registerMapPlugin(function (mapPluginConfig) {
-    var addLayer = mapPluginConfig.addLayer;
-    var scheduler = mapPluginConfig.scheduler;
-    
-    // TODO make this test layer more cleaned up and enableable
-    var emptyItem = {value: null, timestamp: null};
-    const motionTestTrackCell = new DerivedCell(anyT, scheduler, dirty => {
-      const t = slowClockForTests.convertToTimestampSeconds(slowClockForTests.depend(dirty));
-      const degreeSpeed = 10;
-      const angle = t * degreeSpeed;
-      const heading = angle + 90;
-      //console.log('synthesizing track feature');
-      return {
-        latitude: {value: dcos(angle) * 10, timestamp: t},
-        longitude: {value: dsin(angle) * 10, timestamp: t},
-        altitude: emptyItem,
-        track_angle: {value: heading, timestamp: t},
-        h_speed: {value: 40075e3 / 360 * degreeSpeed / (Math.PI * 2), timestamp: t},  // TODO value
-        v_speed: emptyItem,
-        heading: {value: heading, timestamp: t}
-      };
-    });
-    var mtNow = Date.now() / 1000;
-    if (false) addLayer('Motion Test', {
-      featuresCell: new DerivedCell(anyT, scheduler, function(dirty) {
-        var speed = 40075e3/* 1 rev/second */ * 0.1;
-        return [
-          //{
-          //  timestamp: mtNow,
-          //  position: [45, 0],
-          //  label: '45N 0E 0°',
-          //  vangle: 0,
-          //  speed: speed,
-          //},
-          //{
-          //  timestamp: mtNow,
-          //  position: [0, 0],
-          //  label: '0N 0E 90°',
-          //  vangle: 90,
-          //  speed: speed,
-          //},
-          //{
-          //  timestamp: mtNow,
-          //  position: [0, 45],
-          //  label: '0N 45E 90°',
-          //  vangle: 90,
-          //  speed: speed
-          //},
-          //{
-          //  timestamp: mtNow,
-          //  position: [0, 0],
-          //  label: '0N 0E 0°',
-          //  vangle: 0,
-          //  speed: speed
-          //},
-          //{
-          //  timestamp: mtNow,
-          //  position: [0, 0],
-          //  label: '0N 0E 45°',
-          //  vangle: 45,
-          //  speed: speed
-          //},
-          'TRACK',
-        ];
-      }),
-      featureRenderer: function testRenderer(feature, dirty) {
-        if (feature === 'TRACK') {
-          return renderTrackFeature(dirty, motionTestTrackCell, 'trackT feature');
-        } else {
-          return feature;
-        }
-      }
-    });
-
-    // TODO make this test layer more cleaned up and enableable
-    const addDelFeature = {
-      position: [10, 10],
-      label: 'Blinker'
-    };
-    if (false) addLayer('Add/Delete Test', {
-      featuresCell: new DerivedCell(anyT, scheduler, function(dirty) {
-        // TODO: use explicitly slow clock for less redundant updates
-        const t = Math.floor(slowClockForTests.depend(dirty) / 1) * 1;
-        addDelFeature.label = 'Blinker ' + t;
-        return t % 2 > 0 ? [addDelFeature] : [];
-      }),
-      featureRenderer: function stubRenderer(feature, dirty) {
-        return feature;
       }
     });
   });
