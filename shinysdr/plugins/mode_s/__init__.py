@@ -135,7 +135,10 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
     
     def can_set_mode(self, mode):
         return False
-
+    
+    def set_mode(self, mode):
+        raise Exception('set_mode should not have been called')
+    
     def get_output_type(self):
         return no_signal
     

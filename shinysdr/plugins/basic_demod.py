@@ -63,7 +63,10 @@ class Demodulator(gr.hier_block2, ExportedState):
 
     def can_set_mode(self, mode):
         return False
-
+    
+    def set_mode(self, mode):
+        raise Exception('set_mode should not have been called')
+    
     def get_band_shape(self):
         raise NotImplementedError('Demodulator.get_band_shape')
 
@@ -375,6 +378,9 @@ class UnselectiveAMDemodulator(gr.hier_block2, ExportedState):
     def can_set_mode(self, mode):
         """implement IDemodulator"""
         return False
+    
+    def set_mode(self, mode):
+        raise Exception('set_mode should not have been called')
     
     @exported_value(type=BandShape, changes='explicit')
     def get_band_shape(self):

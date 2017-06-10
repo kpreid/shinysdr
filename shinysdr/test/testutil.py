@@ -31,11 +31,13 @@ from twisted.web import client
 from twisted.web import http
 from twisted.web.http_headers import Headers
 from zope.interface import implements
+from zope.interface.verify import verifyObject
 
 from shinysdr.devices import Device, IComponent, IRXDriver, ITXDriver
 from shinysdr.i.modes import lookup_mode
 from shinysdr.i.poller import Poller
 from shinysdr.i.top import Top
+from shinysdr.interfaces import IDemodulator
 from shinysdr.plugins.simulate import SimulatedDevice
 from shinysdr.signals import SignalType
 from shinysdr.types import RangeT
@@ -131,6 +133,12 @@ class DeviceTestCase(unittest.TestCase):
         self.assertIsInstance(self.device, Device)
         # also tests close() by way of tearDown
     
+    def test_rx_implements(self):
+        if self.__noop: return
+        rx_driver = self.device.get_rx_driver()
+        if rx_driver is nullExportedState: return
+        verifyObject(IRXDriver, rx_driver)
+    
     def test_rx_output_type(self):
         if self.__noop: return
         rx_driver = self.device.get_rx_driver()
@@ -158,6 +166,12 @@ class DeviceTestCase(unittest.TestCase):
         if rx_driver is nullExportedState: return
         # No specific expectations, but it shouldn't throw.
         rx_driver.notify_reconnecting_or_restarting()
+    
+    def test_tx_implements(self):
+        if self.__noop: return
+        tx_driver = self.device.get_tx_driver()
+        if tx_driver is nullExportedState: return
+        verifyObject(ITXDriver, tx_driver)
     
     def test_tx_input_type(self):
         if self.__noop: return
@@ -221,6 +235,7 @@ class DemodulatorTester(object):
             self.__top = None
     
     def __enter__(self):
+        verifyObject(IDemodulator, self.__demodulator)
         state_smoke_test(self.__demodulator)
     
     def __exit__(self, exc_type, exc_value, traceback):
