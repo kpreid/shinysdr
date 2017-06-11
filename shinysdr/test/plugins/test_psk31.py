@@ -17,15 +17,10 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from twisted.trial import unittest
-
-from zope.interface.verify import verifyObject
-
 from shinysdr.plugins.psk31 import PSK31Demodulator
-from shinysdr.interfaces import IDemodulator
 from shinysdr.test.testutil import DemodulatorTestCase
 
 
 class TestPSK31Demodulator(DemodulatorTestCase):
     def setUp(self):
-        self.setUpFor(mode='PSK31')
+        self.setUpFor(mode='PSK31', demod_class=PSK31Demodulator)
