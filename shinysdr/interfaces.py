@@ -36,18 +36,6 @@ __all__ = []  # appended later
 
 
 class IDemodulator(Interface):
-    def can_set_mode(mode):
-        """
-        Return whether this demodulator can reconfigure itself to demodulate the specified mode.
-        
-        If it returns False, it will typically be replaced with a newly created demodulator.
-        """
-    
-    def set_mode(mode):
-        """
-        Per can_set_mode.
-        """
-    
     def get_band_shape():
         """
         Returns a BandShape object describing the portion of its input signal which the demodulator uses (typically, the shape of its filter).
@@ -66,6 +54,37 @@ class IDemodulator(Interface):
 
 
 __all__.append('IDemodulator')
+
+
+class ITunableDemodulator(IDemodulator):
+    """If a demodulator implements this interface, then there may be a arbitrary frequency offset in its input signal, which it will be informed of via the set_rec_freq method."""
+    
+    def set_rec_freq(freq):
+        """
+        Set the nominal (carrier) frequency offset of the signal to be demodulated within the input signal.
+        """
+
+
+__all__.append('ITunableDemodulator')
+
+
+class IDemodulatorModeChange(IDemodulator):
+    """If a demodulator implements this interface, then it may be asked to reconfigure itself to demodulate a different mode."""
+    
+    def can_set_mode(mode):
+        """
+        Return whether this demodulator can reconfigure itself to demodulate the specified mode.
+        
+        If it returns False, it will typically be replaced with a newly created demodulator.
+        """
+    
+    def set_mode(mode):
+        """
+        Per can_set_mode.
+        """
+
+
+__all__.append('IDemodulatorModeChange')
 
 
 # TODO: BandShape doesn't really belong here but it is related to IDemodulator. Find better location.
@@ -134,16 +153,6 @@ class IModulator(Interface):
 
 
 __all__.append('IModulator')
-
-
-class ITunableDemodulator(IDemodulator):
-    def set_rec_freq(freq):
-        """
-        Set the nominal (carrier) frequency offset of the signal to be demodulated within the input signal.
-        """
-
-
-__all__.append('ITunableDemodulator')
 
 
 class IHasFrequency(Interface):

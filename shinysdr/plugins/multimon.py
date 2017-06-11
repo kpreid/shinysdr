@@ -206,9 +206,6 @@ class FMAPRSDemodulator(gr.hier_block2, ExportedState):
             self.mm_demod,
             self)
     
-    def can_set_mode(self, mode):
-        return False
-    
     @exported_value(type=BandShape, changes='never')
     def get_band_shape(self):
         return self.fm_demod.get_band_shape()

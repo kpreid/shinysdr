@@ -104,13 +104,6 @@ class PSK31Demodulator(gr.hier_block2, ExportedState):
             cutoff_freq=250 - 25,
             transition_width=25)
 
-    def can_set_mode(self, mode):
-        """implement IDemodulator"""
-        return False
-
-    def set_mode(self, mode):
-        raise NotImplementedError
-    
     @exported_value(type=BandShape, changes='never')
     def get_band_shape(self):
         """implement IDemodulator"""

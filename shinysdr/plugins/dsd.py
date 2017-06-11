@@ -73,12 +73,6 @@ class DSDDemodulator(gr.hier_block2, ExportedState):
     def get_fm_demod(self):
         return self.__fm_demod
     
-    def can_set_mode(self, mode):
-        return False
-    
-    def set_mode(self, mode):
-        raise Exception('set_mode should not have been called')
-    
     def get_output_type(self):
         return self.__output_type
     

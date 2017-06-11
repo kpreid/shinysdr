@@ -150,14 +150,6 @@ class RTTYDemodulator(gr.hier_block2, ExportedState):
 
         return af_filter
 
-    def can_set_mode(self, mode):
-        """implement IDemodulator"""
-        return False
-    
-    def set_mode(self, mode):
-        """implement IDemodulator"""
-        raise Exception('set_mode should not have been called')
-    
     @exported_value(type=BandShape, changes='never')
     def get_band_shape(self):
         """implement IDemodulator"""

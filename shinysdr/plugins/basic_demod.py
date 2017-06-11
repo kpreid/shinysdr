@@ -60,12 +60,6 @@ class Demodulator(gr.hier_block2, ExportedState):
             gr.io_signature(1, 1, gr.sizeof_gr_complex),
             gr.io_signature(1, 1, gr.sizeof_float * channels))
 
-    def can_set_mode(self, mode):
-        return False
-    
-    def set_mode(self, mode):
-        raise Exception('set_mode should not have been called')
-    
     def get_band_shape(self):
         raise NotImplementedError('Demodulator.get_band_shape')
 
@@ -373,13 +367,6 @@ class UnselectiveAMDemodulator(gr.hier_block2, ExportedState):
                 grfilter.dc_blocker_ff(audio_rate // 40, False),
                 (channel_joiner, channel))
     
-    def can_set_mode(self, mode):
-        """implement IDemodulator"""
-        return False
-    
-    def set_mode(self, mode):
-        raise Exception('set_mode should not have been called')
-    
     @exported_value(type=BandShape, changes='explicit')
     def get_band_shape(self):
         """implement IDemodulator"""
@@ -657,6 +644,8 @@ _ssb_max_agc = 40
 
 
 class SSBDemodulator(SimpleAudioDemodulator):
+    # TODO: implement IDemodulatorModeChange
+    
     def __init__(self, mode, **kwargs):
         if mode == 'LSB':
             lsb = True

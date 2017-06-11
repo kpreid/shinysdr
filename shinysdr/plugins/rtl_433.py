@@ -117,10 +117,6 @@ class RTL433Demodulator(gr.hier_block2, ExportedState):
                 agc)
         self.connect(agc, sink)
     
-    def can_set_mode(self, mode):
-        """implements IDemodulator"""
-        return False
-    
     @exported_value(type=BandShape, changes='never')
     def get_band_shape(self):
         """implements IDemodulator"""

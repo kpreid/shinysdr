@@ -28,7 +28,7 @@ from gnuradio import gr
 from gnuradio import blocks
 
 from shinysdr.i.modes import get_modes, lookup_mode
-from shinysdr.interfaces import ITunableDemodulator
+from shinysdr.interfaces import IDemodulator, IDemodulatorModeChange, ITunableDemodulator
 from shinysdr.math import dB, rotator_inc, to_dB
 from shinysdr.signals import SignalType
 from shinysdr.types import EnumT, QuantityT, RangeT, ReferenceT
@@ -227,7 +227,9 @@ class Receiver(gr.hier_block2, ExportedState):
     def set_mode(self, mode):
         mode = unicode(mode)
         if mode == self.mode: return
-        if self.__demodulator and self.__demodulator.can_set_mode(mode):
+        if self.__demodulator and \
+                IDemodulatorModeChange.providedBy(self.__demodulator) and \
+                self.__demodulator.can_set_mode(mode):
             self.__demodulator.set_mode(mode)
             self.mode = mode
         else:
@@ -395,10 +397,10 @@ class Receiver(gr.hier_block2, ExportedState):
             mode=mode,
             input_rate=self.__get_device().get_rx_driver().get_output_type().get_sample_rate(),
             context=facet)
-        demodulator = unserialize_exported_state(
+        demodulator = IDemodulator(unserialize_exported_state(
             ctor=clas,
             state=state,
-            kwargs=init_kwargs)
+            kwargs=init_kwargs))
         
         # until _enabled, ignore any callbacks resulting from unserialization calling setters
         facet._enabled = True
