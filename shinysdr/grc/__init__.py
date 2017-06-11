@@ -19,11 +19,13 @@
 
 from __future__ import absolute_import, division
 
+from zope.interface import implementer
+
 from gnuradio import blocks
 from gnuradio import gr
 
 from shinysdr.filters import make_resampler
-from shinysdr.interfaces import IDemodulator, IModulator
+from shinysdr.interfaces import IDemodulator, IDemodulatorContext, IModulator
 from shinysdr.i.modes import lookup_mode, get_modes
 from shinysdr.values import LooseCell
 
@@ -97,6 +99,7 @@ class DemodulatorAdapter(gr.hier_block2):
 __all__.append('DemodulatorAdapter')
 
 
+@implementer(IDemodulatorContext)
 class _DemodulatorAdapterContext(object):
     def __init__(self, adapter, freq):
         self.__adapter = adapter

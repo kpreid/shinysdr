@@ -28,7 +28,7 @@ from gnuradio import gr
 from gnuradio import blocks
 
 from shinysdr.i.modes import get_modes, lookup_mode
-from shinysdr.interfaces import IDemodulator, IDemodulatorModeChange, ITunableDemodulator
+from shinysdr.interfaces import IDemodulator, IDemodulatorContext, IDemodulatorModeChange, ITunableDemodulator
 from shinysdr.math import dB, rotator_inc, to_dB
 from shinysdr.signals import SignalType
 from shinysdr.types import EnumT, QuantityT, RangeT, ReferenceT
@@ -420,6 +420,7 @@ class Receiver(gr.hier_block2, ExportedState):
             self.__audio_gain_block.set_k([gain_lin])
 
 
+@implementer(IDemodulatorContext)
 class ContextForDemodulator(object):
     def __init__(self, receiver):
         self._receiver = receiver
@@ -439,6 +440,5 @@ class ContextForDemodulator(object):
         self._receiver.context.output_message(message)
     
     def get_absolute_frequency_cell(self):
-        """Returns a cell containing the original RF carrier frequency of the signal to be demodulated — the frequency the signal entering the demodulator has been shifted down from."""
         # TODO: This should return a read-only cell (until we have a use case demonstrating otherwise) (but we don't have read-only wrapper cells yet)
         return self._receiver.state()['rec_freq']

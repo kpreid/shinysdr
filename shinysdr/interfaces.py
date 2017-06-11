@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
@@ -21,6 +22,9 @@ This module contains objects and interfaces used by plugins to declare
 the functionality they provide.
 """
 
+# pylint: disable=signature-differs
+# (pylint is confused by interfaces)
+
 from __future__ import absolute_import, division, unicode_literals
 
 from collections import namedtuple
@@ -35,12 +39,39 @@ from shinysdr.types import EnumRow
 __all__ = []  # appended later
 
 
+class IDemodulatorFactory(Interface):
+    def __call__(mode, input_rate, context):
+        """
+        Returns a new IDemodulator.
+        
+        mode: unicode, the mode to be demodulated (should be one the factory/class was declared to support)
+        input_rate: float, sample rate the demodulator must accept
+        context: an IDemodulatorContext
+        
+        May support additional keyword arguments as supplied by unserialize_exported_state.
+        """
+
+
+__all__.append('IDemodulatorFactory')
+
+
 class IDemodulator(Interface):
+    """
+    Demodulators may also wish to implement:
+    IDemodulatorModeChange
+    ITunableDemodulator
+    
+    Additional constraints:
+    
+    The object must also be GNU Radio block with one gr_complex input, and output as described by get_output_type().
+    """
+    
     def get_band_shape():
         """
         Returns a BandShape object describing the portion of its input signal which the demodulator uses (typically, the shape of its filter).
         
-        Should be exported.
+        Should be exported, typically like:
+            @exported_value(type=BandShape, changes='never')
         
         This is used to display the filter on-screen and to determine when the demodulator's input requirements are satisfied by the device's tuning.
         """
@@ -54,6 +85,33 @@ class IDemodulator(Interface):
 
 
 __all__.append('IDemodulator')
+
+
+class IDemodulatorContext(Interface):
+    def rebuild_me(self):
+        """Request that this demodulator be discarded and an identically configured copy be created.
+        
+        This is needed when something such as the output type of the demodulator changes; it may also be used any time constructing a new demodulator is more convenient than changing the internal structure of an existing one.
+        """
+
+    def lock(self):
+        """
+        Use this method instead of gr.hier_block2.lock().
+        
+        This differs in that it will avoid acquiring the lock if it is already held (implementing a "recursive lock"). It is therefore suitable for use when the demodulator is being invoked in a situation where the lock may already be held.
+        """
+
+    def unlock(self):
+        """Use in pairs with IDemodulatorContext.lock()."""
+    
+    def output_message(self, message):
+        """Report a message output from the demodulator, such as in demodulators which handle packets rather than audio.
+        
+        The message object should provide shinysdr.telemetry.ITelemetryMessage.
+        """
+    
+    def get_absolute_frequency_cell(self):
+        """Returns a cell containing the original RF carrier frequency of the signal to be demodulated — the frequency the signal entering the demodulator has been shifted down from."""
 
 
 class ITunableDemodulator(IDemodulator):
@@ -128,7 +186,25 @@ class BandShape(_BandShape):
 __all__.append('BandShape')
 
 
+class IModulatorFactory(Interface):
+    def __call__(mode, context):
+        """
+        Returns a new IModulator.
+        
+        mode: unicode, the mode to be modulated (should be one the factory/class was declared to support)
+        context: always None, will later become IModulatorContext when that exists.
+        
+        May support additional keyword arguments as supplied by unserialize_exported_state.
+        """
+
+
 class IModulator(Interface):
+    """
+    Additional constraints:
+    
+    The object must also be a GNU Radio block with one gr_complex output, and input as described by get_input_type().
+    """
+    
     def can_set_mode(mode):
         """
         Return whether this modulator can reconfigure itself to modulate the specified mode.
@@ -177,9 +253,8 @@ class ModeDef(object):
         mode: String uniquely identifying this mode, typically a standard abbreviation written in uppercase letters (e.g. "USB", "WFM").
         info: An EnumRow object with a label for the mode, or a string.
             The EnumRow sort key should be like the mode value but organized for sorting with space as a separator of qualifiers (e.g. "SSB U", "FM W").
-        demod_class: Class to instantiate to create a demodulator for this mode.
-        mod_class: Class to instantiate to create a modulator for this mode.
-        (TODO: cite demodulator and modulator interface docs)
+        demod_class: Class (or factory function) to instantiate to create a demodulator for this mode. Should provide IDemodulatorFactory but need not declare it.
+        mod_class: Class (or factory function) to instantiate to create a modulator for this mode. Should provide IModulatorFactory but need not declare it.
         available: If false, this mode definition will be ignored.
         """
         self.mode = unicode(mode)
