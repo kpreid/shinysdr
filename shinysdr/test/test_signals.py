@@ -15,14 +15,49 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 from twisted.trial import unittest
 
-from shinysdr.signals import SignalType
+from shinysdr.signals import no_signal, SignalType
 
 
 class TestSignalType(unittest.TestCase):
+    def test_validation(self):
+        self.assertRaises(TypeError, lambda: SignalType(kind='NONE', sample_rate=None))
+        self.assertRaises(ValueError, lambda: SignalType(kind='NONE', sample_rate=0.1))
+        self.assertRaises(ValueError, lambda: SignalType(kind='FOO', sample_rate=1.0))
+        self.assertRaises(ValueError, lambda: SignalType(kind='IQ', sample_rate=-1.0))
+        self.assertRaises(ValueError, lambda: SignalType(kind='IQ', sample_rate=0.0))
+    
+    def test_constants(self):
+        self.assertEquals(
+            no_signal,
+            SignalType(kind='NONE', sample_rate=0))
+    
+    def test_eq(self):
+        self.assertEquals(
+            no_signal,
+            no_signal)
+        self.assertEquals(
+            SignalType(kind='IQ', sample_rate=1),
+            SignalType(kind='IQ', sample_rate=1))
+        self.assertNotEquals(
+            no_signal,
+            SignalType(kind='IQ', sample_rate=1))
+        self.assertNotEquals(
+            SignalType(kind='IQ', sample_rate=1),
+            SignalType(kind='IQ', sample_rate=2))
+        self.assertNotEquals(
+            SignalType(kind='USB', sample_rate=1),
+            SignalType(kind='LSB', sample_rate=1))
+    
+    def test_sample_rate(self):
+        self.assertIsInstance(SignalType(kind='IQ', sample_rate=1).get_sample_rate(), float)
+        self.assertIsInstance(no_signal.get_sample_rate(), float)
+        self.assertEquals(123, SignalType(kind='IQ', sample_rate=123).get_sample_rate())
+        self.assertEquals(0, no_signal.get_sample_rate())
+    
     def test_compatibility(self):
         def c(a, b):
             return a.compatible_items(b)
