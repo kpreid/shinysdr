@@ -19,7 +19,7 @@ from __future__ import absolute_import, division
 
 from twisted.internet.task import Clock
 from twisted.trial import unittest
-from zope.interface import implements
+from zope.interface import implementer
 
 from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, TelemetryStore, Track, empty_track
 
@@ -115,9 +115,8 @@ class SlightlyBetterClock(Clock):
         return Clock.callLater(self, when, what, *a, **kw)
     
 
+@implementer(ITelemetryMessage)
 class Msg(object):
-    implements(ITelemetryMessage)
-    
     def __init__(self, object_id, timestamp, value='no value'):
         self.__id = object_id
         self.timestamp = timestamp
@@ -130,9 +129,8 @@ class Msg(object):
         return Obj
     
 
+@implementer(ITelemetryObject)
 class Obj(object):
-    implements(ITelemetryObject)
-    
     def __init__(self, object_id):
         self.__id = object_id
         self.last_msg = 'no message'

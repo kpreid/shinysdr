@@ -20,7 +20,7 @@ from __future__ import absolute_import, division
 import json
 
 from twisted.trial import unittest
-from zope.interface import Interface, implements  # available via Twisted
+from zope.interface import Interface, implementer  # available via Twisted
 
 from shinysdr.i.json import transform_for_json
 # TODO: StateStreamInner is an implementation detail; arrange a better interface to test
@@ -167,9 +167,9 @@ class IFoo(Interface):
     pass
 
 
+@implementer(IFoo)
 class StateSpecimen(ExportedState):
     """Helper for TestStateStream"""
-    implements(IFoo)
 
     def __init__(self):
         self.rw = 1.0
@@ -214,9 +214,9 @@ class TestSerialization(StateStreamTestCase):
         ])
 
 
+@implementer(IFoo)
 class SerializationSpecimen(ExportedState):
     """Helper for TestStateStream"""
-    implements(IFoo)
 
     def __init__(self):
         self.st = None

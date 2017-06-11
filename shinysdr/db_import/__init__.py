@@ -20,7 +20,7 @@
 from __future__ import absolute_import, division
 
 from twisted.plugin import IPlugin
-from zope.interface import Interface, implements  # available via Twisted
+from zope.interface import Interface, implementer  # available via Twisted
 
 from shinysdr.i.math import geodesic_distance
 
@@ -60,9 +60,8 @@ class _IImporterDef(Interface):
     # Only needed to make the plugin system work
 
 
+@implementer(IPlugin, _IImporterDef)
 class ImporterDef(object):
-    implements(IPlugin, _IImporterDef)
-    
     def __init__(self,
             name,
             description,
@@ -83,9 +82,8 @@ class ImporterDef(object):
 __all__.append('ImporterDef')
 
 
+@implementer(IImporter)
 class ImporterFilter(object):
-    implements(IImporter)
-    
     def __init__(self, importer):
         self._importer = importer
     

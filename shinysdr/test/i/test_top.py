@@ -21,7 +21,7 @@ from twisted.internet import defer
 from twisted.internet import reactor as the_reactor
 from twisted.internet.task import deferLater
 from twisted.trial import unittest
-from zope.interface import implements  # available via Twisted
+from zope.interface import implementer  # available via Twisted
 
 from gnuradio import gr
 
@@ -256,9 +256,8 @@ class _RetuningTestRXDriver(StubRXDriver):
         return self.__usable_bandwidth
 
 
+@implementer(IComponent)
 class _DeviceShutdownDetector(ExportedState):
-    implements(IComponent)
-
     def __init__(self, dest):
         super(_DeviceShutdownDetector, self).__init__()
         self.__dest = dest

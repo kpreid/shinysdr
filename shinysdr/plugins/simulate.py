@@ -19,7 +19,7 @@ from __future__ import absolute_import, division
 
 import math
 
-from zope.interface import implements  # available via Twisted
+from zope.interface import implementer  # available via Twisted
 
 from gnuradio import analog
 from gnuradio import blocks
@@ -61,9 +61,8 @@ def SimulatedDevice(name='Simulated RF', freq=0.0, allow_tuning=False):
 __all__.append('SimulatedDevice')
 
 
+@implementer(IRXDriver)
 class _SimulatedRXDriver(ExportedState, gr.hier_block2):
-    implements(IRXDriver)
-    
     # TODO: be not hardcoded; for now this is convenient
     audio_rate = 1e4
     rf_rate = 200e3
@@ -240,9 +239,8 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
         self.__mult.set_k(dB(value))
 
 
+@implementer(IModulator)
 class ChirpModulator(gr.hier_block2, ExportedState):
-    implements(IModulator)
-    
     def __init__(self, context, mode, chirp_rate=0.1, output_rate=10000):
         gr.hier_block2.__init__(
             self, type(self).__name__,

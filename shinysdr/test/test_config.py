@@ -28,7 +28,7 @@ import tempfile
 from twisted.internet import reactor as the_reactor
 from twisted.internet import defer
 from twisted.trial import unittest
-from zope.interface import implements
+from zope.interface import implementer
 
 from shinysdr import devices
 from shinysdr.config import Config, ConfigException, ConfigTooLateException, execute_config, write_default_config
@@ -284,8 +284,7 @@ class DummyAppRoot(ExportedState):
         return None
 
 
+@implementer(IEntryPoint)
 class StubEntryPoint(object):
-    implements(IEntryPoint)
-    
     def entry_point_is_deleted(self):
         return False

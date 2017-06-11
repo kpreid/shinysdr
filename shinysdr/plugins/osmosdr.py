@@ -17,7 +17,7 @@
 
 from __future__ import absolute_import, division
 
-from zope.interface import implements  # available via Twisted
+from zope.interface import implementer  # available via Twisted
 
 from gnuradio import gr
 from gnuradio import blocks
@@ -273,8 +273,8 @@ def OsmoSDRDevice(
 __all__.append('OsmoSDRDevice')
 
 
+@implementer(IRXDriver)
 class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
-    implements(IRXDriver)
     
     # Note: Docs for gr-osmosdr are in comments at gr-osmosdr/lib/source_iface.h
     def __init__(self,
@@ -456,9 +456,8 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         self.state_from_json(self.__state_while_inactive)
 
 
+@implementer(ITXDriver)
 class _OsmoSDRTXDriver(ExportedState, gr.hier_block2):
-    implements(ITXDriver)
-    
     def __init__(self,
             osmo_device,
             rx,

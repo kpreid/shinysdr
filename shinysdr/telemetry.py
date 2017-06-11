@@ -26,7 +26,7 @@ from collections import namedtuple
 
 from twisted.internet import reactor as the_reactor
 from twisted.internet.interfaces import IReactorTime
-from zope.interface import Interface, implements
+from zope.interface import Interface, implementer
 
 from shinysdr.types import python_type_registry
 from shinysdr.values import CellDict, CollectionState
@@ -158,12 +158,11 @@ class ITelemetryStore(Interface):
 __all__.append('ITelemetryStore')
 
 
+@implementer(ITelemetryStore)
 class TelemetryStore(CollectionState):
     """
     Accepts telemetry messages and exports the accumulated information obtained from them.
     """
-    implements(ITelemetryStore)
-        
     def __init__(self, time_source=the_reactor):
         self.__interesting_objects = CellDict(dynamic=True)
         CollectionState.__init__(self, self.__interesting_objects)

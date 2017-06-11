@@ -28,7 +28,7 @@ import struct
 import weakref
 
 from twisted.python import log
-from zope.interface import Interface, implements  # available via Twisted
+from zope.interface import Interface, implementer  # available via Twisted
 
 from gnuradio import gr
 
@@ -670,9 +670,9 @@ class INull(Interface):
     """Marker for nullExportedState."""
 
 
+@implementer(INull)
 class NullExportedState(ExportedState):
     """An ExportedState object containing no cells, for use analogously to None."""
-    implements(INull)
 
 
 nullExportedState = NullExportedState()

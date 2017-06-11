@@ -25,7 +25,7 @@ import shutil
 import tempfile
 
 from twisted.trial import unittest
-from zope.interface import implements  # available via Twisted
+from zope.interface import implementer  # available via Twisted
 
 from shinysdr.db_import import GeoFilter, IImporter, ImporterFilter
 from shinysdr.db_import.tool import import_main
@@ -105,9 +105,8 @@ def run_importer(importer, input_text):
     return records
 
 
+@implementer(IImporter)
 class StubImporter(object):
-    implements(IImporter)
-    
     def __init__(self, records):
         self.__records = records
     

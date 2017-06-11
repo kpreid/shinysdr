@@ -26,7 +26,7 @@ from __future__ import absolute_import, division, unicode_literals
 from collections import namedtuple
 
 from twisted.plugin import IPlugin
-from zope.interface import Interface, implements
+from zope.interface import Interface, implementer
 
 from shinysdr.i.modes import IModeDef
 from shinysdr.i.network.app import IClientResourceDef
@@ -155,9 +155,8 @@ class IHasFrequency(Interface):
 __all__.append('IHasFrequency')
 
 
+@implementer(IPlugin, IModeDef)
 class ModeDef(object):
-    implements(IPlugin, IModeDef)
-    
     # Twisted plugin system caches whether-a-plugin-class-was-found permanently, so we need to avoid _not_ having a ModeDef if the plugin has some sort of dependency it checks -- thus the 'available' flag can be used to hide a mode while still having an _IModeDef
     def __init__(self,
             mode,
@@ -184,9 +183,8 @@ class ModeDef(object):
 __all__.append('ModeDef')
 
 
+@implementer(IPlugin, IClientResourceDef)
 class ClientResourceDef(object):
-    implements(IPlugin, IClientResourceDef)
-    
     def __init__(self, key, resource, load_css_path=None, load_js_path=None):
         self.key = key
         self.resource = resource

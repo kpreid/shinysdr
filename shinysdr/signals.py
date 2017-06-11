@@ -17,7 +17,7 @@
 
 from __future__ import absolute_import, division
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from gnuradio import gr
 
@@ -30,9 +30,8 @@ from shinysdr.types import IJsonSerializable
 __all__ = []  # appended later
 
 
+@implementer(IJsonSerializable)
 class SignalType(object):
-    implements(IJsonSerializable)
-    
     def __init__(self, sample_rate, kind):
         self.__sample_rate = float(sample_rate)
         self.__kind = unicode(kind)

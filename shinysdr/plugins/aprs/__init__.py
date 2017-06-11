@@ -41,7 +41,7 @@ import time
 
 from twisted.python import log
 from twisted.web import static
-from zope.interface import Interface, implements  # available via Twisted
+from zope.interface import Interface, implementer  # available via Twisted
 
 import shinysdr
 from shinysdr.devices import Device, IComponent
@@ -87,9 +87,8 @@ class IAPRSStation(Interface):
     pass
 
 
+@implementer(IAPRSStation, ITelemetryObject)
 class APRSStation(ExportedState):
-    implements(IAPRSStation, ITelemetryObject)
-    
     def __init__(self, object_id):
         self.__last_heard_time = None
         self.__address = object_id
@@ -173,6 +172,7 @@ class APRSStation(ExportedState):
         return self.__last_parse_error
 
 
+@implementer(ITelemetryMessage)
 class APRSMessage(namedtuple('APRSMessage', [
     'receive_time',  # unix time: when the message was received
     'source',  # string: AX.25 address
@@ -183,8 +183,6 @@ class APRSMessage(namedtuple('APRSMessage', [
     'errors',  # list: of strings describing parse failures
     'comment',  # APRS comment text
 ])):
-    implements(ITelemetryMessage)
-    
     def get_object_id(self):
         # TODO: Fail on object/item facts which should never be seen here
         return self.source
@@ -305,9 +303,8 @@ def APRSISRXDevice(reactor, client, name=None, aprs_filter=None):
 
 
 # TODO being a TelemetryStore is a temporary kludge. We should instead be sending messages to the main telemetry store.
+@implementer(IComponent)
 class _APRSISComponent(TelemetryStore):
-    implements(IComponent)
-    
     __alive = True
     
     def __init__(self, reactor, client, name, aprs_filter):

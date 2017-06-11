@@ -23,7 +23,7 @@ import urlparse
 from twisted.trial import unittest
 from twisted.internet import reactor
 from twisted.web import http
-from zope.interface import implements
+from zope.interface import implementer
 
 from gnuradio import gr
 
@@ -174,5 +174,6 @@ def assert_common(self, url):
     return testutil.http_get(reactor, self.url).addCallback(callback)
 
 
+@implementer(IEntryPoint)
 class SiteStateStub(ExportedState):
-    implements(IEntryPoint)
+    pass

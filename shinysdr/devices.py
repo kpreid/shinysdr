@@ -20,7 +20,7 @@ from __future__ import absolute_import, division
 
 from collections import Counter
 
-from zope.interface import Interface, implements  # available via Twisted
+from zope.interface import Interface, implementer  # available via Twisted
 
 from gnuradio import audio as gr_audio
 from gnuradio import blocks
@@ -128,6 +128,7 @@ class IComponent(Interface):
 __all__.append('IComponent')
 
 
+@implementer(IDevice)
 class Device(ExportedState):
     """
     A Device aggregates the functions of one or more pieces of radio hardware or drivers for same; particularly:
@@ -138,7 +139,6 @@ class Device(ExportedState):
     
     For example, if one is using a sound card-based transceiver, then there would be an audio-source, an audio-sink, and a separate interface to the VFO and other hardware controls. These are completely unrelated as far as the operating system and GNU Radio are concerned, but the Device object aggregates all of those so that the user interface can display them as properly related and control them in sync.
     """
-    implements(IDevice)
     # pylint: disable=no-member
     # (confused by nullExportedState)
 
@@ -458,9 +458,8 @@ def find_audio_rx_names(_module=gr_audio):
 __all__.append('find_audio_rx_names')
 
 
+@implementer(IRXDriver)
 class _AudioRXDriver(ExportedState, gr.hier_block2):
-    implements(IRXDriver)
-    
     def __init__(self,
             device_name,
             sample_rate,
@@ -534,9 +533,8 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
         pass
 
 
+@implementer(ITXDriver)
 class _AudioTXDriver(ExportedState, gr.hier_block2):
-    implements(ITXDriver)
-    
     def __init__(self,
             device_name,
             sample_rate,
@@ -600,9 +598,8 @@ class IPositionedDevice(Interface):
     """
 
 
+@implementer(IComponent, IPositionedDevice)
 class _PositionedDeviceComponent(ExportedState):
-    implements(IComponent, IPositionedDevice)
-    
     def __init__(self, latitude, longitude):
         self.__track = empty_track._replace(
             latitude=TelemetryItem(float(latitude), None),

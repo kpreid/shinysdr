@@ -27,7 +27,7 @@ import traceback
 
 from twisted.internet import reactor  # TODO eliminate
 from twisted.web import static
-from zope.interface import Interface, implements
+from zope.interface import Interface, implementer
 
 from gnuradio import gr
 from gnuradio import gru
@@ -59,9 +59,8 @@ _INCH_PER_FOOT = 12
 _METERS_PER_FEET = (_CM_PER_INCH * _INCH_PER_FOOT) / 100
 
 
+@implementer(IDemodulator)
 class ModeSDemodulator(gr.hier_block2, ExportedState):
-    implements(IDemodulator)
-    
     def __init__(self, mode='MODE-S', input_rate=0, context=None):
         assert input_rate > 0
         gr.hier_block2.__init__(
@@ -147,9 +146,8 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
         return self.__band_filter.get_shape()
 
 
+@implementer(ITelemetryMessage)
 class ModeSMessageWrapper(object):
-    implements(ITelemetryMessage)
-    
     def __init__(self, message, cpr_decoder, receive_time):
         self.message = message  # a gr-air-modes message
         self.cpr_decoder = cpr_decoder
@@ -174,9 +172,8 @@ class IAircraft(Interface):
     pass
 
 
+@implementer(IAircraft, ITelemetryObject)
 class Aircraft(ExportedState):
-    implements(IAircraft, ITelemetryObject)
-    
     def __init__(self, object_id):
         """Implements ITelemetryObject. object_id is the hex formatted address."""
         self.__last_heard_time = None

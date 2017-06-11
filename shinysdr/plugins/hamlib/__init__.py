@@ -35,7 +35,7 @@ import re
 import subprocess
 import time
 
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 from twisted.internet import defer
 from twisted.internet.error import ConnectionRefusedError
@@ -264,12 +264,12 @@ def _connect_to_device(reactor, options, port, daemon, connect_func):
     defer.returnValue(proxy_device)
 
 
+@implementer(IComponent, IProxy)
 class _HamlibProxy(ExportedState):
     # pylint: disable=no-member
     """
     Abstract class for objects which export state proxied to a hamlib daemon.
     """
-    implements(IComponent, IProxy)
     
     def __init__(self, protocol):
         # info from hamlib
@@ -481,9 +481,8 @@ def _install_cell(self, name, is_level, writable, callback, caps):
     callback(cell)
 
 
+@implementer(IRig, IHasFrequency)
 class _HamlibRig(_HamlibProxy):
-    implements(IRig, IHasFrequency)
-    
     _server_name = 'rigctld'
     _dummy_command = 'get_freq'
     
@@ -556,9 +555,8 @@ class _HamlibRig(_HamlibProxy):
         send('get_ts')
 
 
+@implementer(IRotator)
 class _HamlibRotator(_HamlibProxy):
-    implements(IRotator)
-
     _server_name = 'rotctld'
     _dummy_command = 'get_pos'
     

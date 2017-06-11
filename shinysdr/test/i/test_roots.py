@@ -18,7 +18,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from twisted.trial import unittest
-from zope.interface import implements
+from zope.interface import implementer
 
 from shinysdr.i.roots import CapTable, IEntryPoint
 from shinysdr.values import ExportedState, exported_value, unserialize_exported_state
@@ -69,9 +69,8 @@ class TestCapTable(unittest.TestCase):
 _counter = 0
 
 
+@implementer(IEntryPoint)
 class BaseEntryPointStub(ExportedState):
-    implements(IEntryPoint)
-    
     def __init__(self, serial_number=None):
         global _counter
         if serial_number is None:

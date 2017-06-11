@@ -28,14 +28,13 @@ from __future__ import absolute_import, division
 
 from collections import defaultdict
 
-from zope.interface import implements  # available via Twisted
+from zope.interface import implementer  # available via Twisted
 
 from shinysdr.db_import import IImporter, ImporterDef
 
 
+@implementer(IImporter)
 class ULSImporter(object):
-    implements(IImporter)
-    
     def __init__(self):
         # keys are Unique System Identifiers, values are ...?
         self.__records = defaultdict(lambda: defaultdict(list))

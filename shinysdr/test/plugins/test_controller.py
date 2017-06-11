@@ -23,7 +23,7 @@ from twisted.trial import unittest
 from twisted.internet import defer
 from twisted.internet.interfaces import IStreamClientEndpoint
 from twisted.internet import reactor as the_reactor
-from zope.interface import implements
+from zope.interface import implementer
 
 from shinysdr.plugins.controller import Controller, Command, Selector
 from shinysdr.test.testutil import state_smoke_test
@@ -76,9 +76,8 @@ class TestController(unittest.TestCase):
         self.assertEqual(u'façade'.encode('UTF-8'), self.endpoint.t.value())
 
 
+@implementer(IStreamClientEndpoint)
 class _StringEndpoint(object):
-    implements(IStreamClientEndpoint)
-    
     def __init__(self):
         self.t = StringTransport()
     

@@ -23,7 +23,7 @@ import math
 import os.path
 
 from twisted.web import static
-from zope.interface import implements
+from zope.interface import implementer
 
 from gnuradio import analog
 from gnuradio import blocks
@@ -45,9 +45,8 @@ fm_subcarrier = 9960
 fm_deviation = 480
 
 
+@implementer(IDemodulator)
 class VOR(SimpleAudioDemodulator):
-    implements(IDemodulator)
-    
     def __init__(self, mode='VOR', zero_point=59, **kwargs):
         self.channel_rate = channel_rate = 40000
         internal_audio_rate = 20000  # TODO over spec'd
@@ -153,9 +152,8 @@ class VOR(SimpleAudioDemodulator):
         return self.probe.level()
 
 
+@implementer(IModulator)
 class VORModulator(gr.hier_block2, ExportedState):
-    implements(IModulator)
-    
     __vor_sig_freq = 30
     __audio_rate = 10000
     __rf_rate = 30000  # needs to be above fm_subcarrier * 2

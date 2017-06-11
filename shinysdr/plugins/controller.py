@@ -28,7 +28,7 @@ import functools
 
 from twisted.internet.protocol import Factory, Protocol
 from twisted.protocols.basic import LineReceiver
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 from shinysdr.devices import Device, IComponent
 from shinysdr.types import to_value_type
@@ -61,10 +61,9 @@ class IElement(Interface):
         pass
 
 
+@implementer(IElement)
 class Command(object):
     """Defines a command to send a single string."""
-    implements(IElement)
-    
     def __init__(self, label, text):
         """label: Name the user sees.
         text: What is sent when the command is triggered.
@@ -87,12 +86,12 @@ class Command(object):
 __all__.append('Command')
 
 
+@implementer(IElement)
 class Selector(object):
     """Defines a cell whose value is the text to send.
     
     Typically the cell's type would be an EnumT.
     """
-    implements(IElement)
     
     def __init__(self, name, type):
         # pylint: disable=redefined-builtin
@@ -114,9 +113,8 @@ class Selector(object):
 __all__.append('Selector')
 
 
+@implementer(IComponent)
 class _ControllerProxy(ExportedState):
-    implements(IComponent)
-    
     def __init__(self, reactor, endpoint, elements, encoding):
         self.__reactor = reactor
         self.__elements = elements

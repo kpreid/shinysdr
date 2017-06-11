@@ -19,7 +19,7 @@ from __future__ import absolute_import, division
 
 from math import pi
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from gnuradio import gr
 from gnuradio import blocks
@@ -42,9 +42,8 @@ TWO_PI = pi * 2
 BASIC_MODE_SORT_PREFIX = ' '
 
 
+@implementer(IDemodulator)
 class Demodulator(gr.hier_block2, ExportedState):
-    implements(IDemodulator)
-    
     def __init__(self, mode,
             input_rate=0,
             context=None):
@@ -109,9 +108,8 @@ class SquelchMixin(ExportedState):
         self.rf_squelch_block.set_threshold(level)
 
 
+@implementer(ITunableDemodulator)
 class SimpleAudioDemodulator(Demodulator, SquelchMixin):
-    implements(ITunableDemodulator)
-    
     def __init__(self, demod_rate=0, audio_rate=0, band_filter=None, band_filter_transition=None, stereo=False, **kwargs):
         assert audio_rate > 0
         
@@ -327,11 +325,11 @@ class AMDemodulator(SimpleAudioDemodulator):
     #         return u''
 
 
+@implementer(IDemodulator, ITunableDemodulator)
 class UnselectiveAMDemodulator(gr.hier_block2, ExportedState):
     """
     Wideband AM demodulator. Ignores the receive frequency and demodulates the entire RF signal.
     """
-    implements(IDemodulator, ITunableDemodulator)
     
     def __init__(self, mode, input_rate, context):
         channels = 2
@@ -406,9 +404,8 @@ class UnselectiveAMDemodulator(gr.hier_block2, ExportedState):
         self.state_changed('band_shape')
 
 
+@implementer(IModulator)
 class AMModulator(gr.hier_block2, ExportedState):
-    implements(IModulator)
-    
     def __init__(self, context, mode, rate=10000):
         gr.hier_block2.__init__(
             self, type(self).__name__,
@@ -520,9 +517,8 @@ class NFMDemodulator(FMDemodulator):
             **kwargs)
 
 
+@implementer(IModulator)
 class NFMModulator(gr.hier_block2, ExportedState):
-    implements(IModulator)
-    
     def __init__(self, context, mode, audio_rate=10000, rf_rate=20000):
         gr.hier_block2.__init__(
             self, type(self).__name__,
@@ -752,9 +748,8 @@ class SSBDemodulator(SimpleAudioDemodulator):
         return to_dB(self.agc_block.gain())
 
 
+@implementer(IModulator)
 class DSBModulator(gr.hier_block2, ExportedState):
-    implements(IModulator)
-    
     def __init__(self, context, mode, rate=8000):
         gr.hier_block2.__init__(
             self, type(self).__name__,

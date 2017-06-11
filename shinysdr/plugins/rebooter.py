@@ -20,7 +20,7 @@ from __future__ import absolute_import, division, unicode_literals
 import os
 import sys
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from shinysdr.devices import Device, IComponent
 from shinysdr.values import ExportedState, command
@@ -33,9 +33,8 @@ def Rebooter(reactor):
     return Device(components={'rebooter': _RebooterComponent(reactor)})
 
 
+@implementer(IComponent)
 class _RebooterComponent(ExportedState):
-    implements(IComponent)
-    
     def __init__(self, reactor):
         self.__reactor = reactor
     

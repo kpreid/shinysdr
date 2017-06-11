@@ -28,7 +28,7 @@ from collections import namedtuple
 import os.path
 import re
 
-from zope.interface import implements  # available via Twisted
+from zope.interface import implementer  # available via Twisted
 
 from shinysdr.db_import import IImporter, ImporterDef
 
@@ -171,9 +171,8 @@ def parse_columnar(line, line_number, column_defs, warning_callback):
     return out
 
 
+@implementer(IImporter)
 class HFCCImporter(object):
-    implements(IImporter)
-    
     def __init__(self):
         self.__records = []
         self.__tables = {}

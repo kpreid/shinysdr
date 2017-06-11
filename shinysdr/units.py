@@ -26,7 +26,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from collections import namedtuple as _namedtuple
 
-from zope.interface import implements as _implements
+from zope.interface import implementer as _implements
 
 from shinysdr.i.json import IJsonSerializable as _IJsonSerializable
 

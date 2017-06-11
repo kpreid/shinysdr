@@ -24,7 +24,7 @@ from twisted.internet import reactor as the_reactor  # TODO eliminate
 from twisted.internet.protocol import ProcessProtocol
 from twisted.protocols.basic import LineReceiver
 from twisted.python import log
-from zope.interface import implements
+from zope.interface import implementer
 
 from gnuradio import analog
 from gnuradio import gr
@@ -44,9 +44,8 @@ drop_unheard_timeout_seconds = 120
 upper_preferred_demod_rate = 400000
 
 
+@implementer(IDemodulator)
 class RTL433Demodulator(gr.hier_block2, ExportedState):
-    implements(IDemodulator)
-    
     def __init__(self, mode='433', input_rate=0, context=None):
         assert input_rate > 0
         assert context is not None
@@ -251,9 +250,8 @@ _message_field_is_id = {
 }
 
 
+@implementer(ITelemetryMessage)
 class RTL433MessageWrapper(object):
-    implements(ITelemetryMessage)
-    
     def __init__(self, message, receive_time):
         self.message = message  # a parsed rtl_433 JSON-format message
         self.receive_time = float(receive_time)
@@ -270,9 +268,8 @@ class RTL433MessageWrapper(object):
 
 
 # TODO: It would make sense to make this a CollectionState object to have simple dynamic fields.
+@implementer(ITelemetryObject)
 class RTL433MsgGroup(ExportedState):
-    implements(ITelemetryObject)
-    
     def __init__(self, object_id):
         """Implements ITelemetryObject."""
         self.__cells = {}

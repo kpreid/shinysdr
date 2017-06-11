@@ -19,7 +19,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from shinysdr.i.roots import IEntryPoint
 from shinysdr.i.top import Top
@@ -58,9 +58,8 @@ class AppRoot(ExportedState):
         self.__receive_flowgraph.close_all_devices()
 
 
+@implementer(IEntryPoint)
 class Session(ExportedState):
-    implements(IEntryPoint)
-    
     def __init__(self, receive_flowgraph, features):
         self.__receive_flowgraph = receive_flowgraph
     

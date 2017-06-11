@@ -20,7 +20,7 @@ from __future__ import absolute_import, division
 import time
 
 from twisted.python import log
-from zope.interface import Interface, implements  # available via Twisted
+from zope.interface import Interface, implementer  # available via Twisted
 
 from gnuradio import analog
 from gnuradio import gr
@@ -51,9 +51,8 @@ class IReceiver(Interface):
     """
 
 
+@implementer(IReceiver)
 class Receiver(gr.hier_block2, ExportedState):
-    implements(IReceiver)
-    
     def __init__(self, mode,
             freq_absolute=100.0,
             freq_relative=None,

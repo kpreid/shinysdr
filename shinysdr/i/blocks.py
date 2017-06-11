@@ -27,7 +27,7 @@ from __future__ import absolute_import, division
 import math
 import os
 
-from zope.interface import Interface, implements
+from zope.interface import Interface, implementer
 
 from gnuradio import gr
 from gnuradio import blocks
@@ -202,13 +202,12 @@ class IMonitor(Interface):
     """
 
 
+@implementer(IMonitor)
 class MonitorSink(gr.hier_block2, ExportedState):
     """Convenience wrapper around all the bits and pieces to display the signal spectrum to the client.
     
     The units of the FFT output are dB power/Hz (power spectral density) relative to unit amplitude (i.e. dBFS assuming the source clips at +/-1). Note this is different from the standard logpwrfft result of power _per bin_, which would be undesirably dependent on the sample rate and bin size.
     """
-    implements(IMonitor)
-    
     def __init__(self,
             signal_type=None,
             enable_scope=False,

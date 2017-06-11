@@ -26,7 +26,7 @@ from __future__ import absolute_import, division
 import bisect
 import math
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from shinysdr.i.json import IJsonSerializable  # reexport
 from shinysdr import units
@@ -50,6 +50,7 @@ def to_value_type(typeoid):
 __all__.append('to_value_type')
 
 
+@implementer(IJsonSerializable)
 class ValueType(object):
     """A type in the sense of "set of (permitted) values", plus coercion and hints about interpretation of the value.
     
@@ -61,8 +62,6 @@ class ValueType(object):
     
     Conventionally, concrete subclasses of ValueType should be referred to with names like "RangeT" and their instances (actual types) like "rangeT". This is in order to avoid ambiguity with naming a type versus a value of that type, given that there are also classes of types so that the normal capital/lowercase convention is not sufficient.
     """
-    implements(IJsonSerializable)
-    
     def to_json(self):
         """See IJsonSerializable."""
         raise NotImplementedError()
@@ -192,6 +191,7 @@ class EnumT(ValueType):
 __all__.append('EnumT')
 
 
+@implementer(IJsonSerializable)
 class EnumRow(object):
     """An EnumRow object provides information about an element of an EnumT, and is also used for similar non-EnumT-related purposes.
     
@@ -204,8 +204,6 @@ class EnumRow(object):
     The label and sort_key default to the enum value itself, and otherwise must be unicode strings.
     The description may be None instead.
     """
-    implements(IJsonSerializable)
-    
     # TODO this complicated init needs more tests
     def __init__(self, enum_row_or_string=None, label=None, description=None, sort_key=None, associated_key=None):
         if isinstance(enum_row_or_string, EnumRow):

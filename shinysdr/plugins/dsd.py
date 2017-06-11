@@ -21,7 +21,7 @@
 
 from __future__ import absolute_import, division
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from gnuradio import gr
 
@@ -42,9 +42,8 @@ from shinysdr.values import ExportedState, exported_value
 _demod_rate = 48000  # hardcoded in gr-dsd
 
 
+@implementer(IDemodulator)
 class DSDDemodulator(gr.hier_block2, ExportedState):
-    implements(IDemodulator)
-    
     def __init__(self, mode, input_rate=0, context=None):
         assert input_rate > 0
         gr.hier_block2.__init__(

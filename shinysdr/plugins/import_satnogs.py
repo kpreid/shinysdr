@@ -30,14 +30,13 @@ import json
 import os.path
 import textwrap
 
-from zope.interface import implements  # available via Twisted
+from zope.interface import implementer  # available via Twisted
 
 from shinysdr.db_import import IImporter, ImporterDef
 
 
+@implementer(IImporter)
 class SatNOGSImporter(object):
-    implements(IImporter)
-    
     def __init__(self):
         self.__transmitters = []
         self.__satellites = {}

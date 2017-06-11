@@ -19,7 +19,7 @@ from __future__ import absolute_import, division
 
 import math
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from gnuradio import analog
 from gnuradio import blocks
@@ -55,6 +55,7 @@ _DATA_BITS = 5
 _HALF_BITS_PER_CODE = (1 + _DATA_BITS) * 2 + 3
 
 
+@implementer(IDemodulator)
 class RTTYDemodulator(gr.hier_block2, ExportedState):
     '''Demodulate typical amateur RTTY.
 
@@ -69,8 +70,6 @@ class RTTYDemodulator(gr.hier_block2, ExportedState):
 
     TODO: make these assumptions parameters.
     '''
-
-    implements(IDemodulator)
     
     __spacing = 170
     __demod_rate = 6000
@@ -193,9 +192,8 @@ class RTTYDemodulator(gr.hier_block2, ExportedState):
 
 
 # Because we don't currently have an encoder which can operate as a block, the rtty modulator is limited to looping a fixed message. This is good enough for simulation testing.
+@implementer(IModulator)
 class RTTYModulator(gr.hier_block2, ExportedState):
-    implements(IModulator)
-    
     def __init__(self, context, mode, rtty_baud=_DEFAULT_BAUD, rtty_shift=170.0, message='\0'):
         gr.hier_block2.__init__(
             self, type(self).__name__,

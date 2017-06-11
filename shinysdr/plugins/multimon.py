@@ -27,7 +27,7 @@ from twisted.internet import reactor
 from twisted.internet.protocol import ProcessProtocol
 from twisted.protocols.basic import LineReceiver
 from twisted.python import log
-from zope.interface import implements
+from zope.interface import implementer
 
 from gnuradio import analog
 from gnuradio import gr
@@ -171,9 +171,8 @@ class APRSDemodulator(gr.hier_block2, ExportedState):
 
 
 # TODO: Eliminate this class and replace it with adapters available to any demodulator
+@implementer(IDemodulator)
 class FMAPRSDemodulator(gr.hier_block2, ExportedState):
-    implements(IDemodulator)
-    
     def __init__(self, mode, input_rate=0, context=None):
         assert input_rate > 0
         assert context is not None

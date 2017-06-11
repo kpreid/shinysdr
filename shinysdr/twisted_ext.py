@@ -29,7 +29,7 @@ from twisted.internet import defer
 from twisted.internet.interfaces import ILoggingContext, IStreamClientEndpoint
 from twisted.internet.protocol import Factory
 from twisted.internet.serialport import SerialPort
-from zope.interface import implements
+from zope.interface import implementer
 
 __all__ = []  # appended later
 
@@ -78,13 +78,12 @@ def test_subprocess(args, substring, shell=False):
 __all__.append('test_subprocess')
 
 
+@implementer(ILoggingContext)
 class FactoryWithArgs(Factory):
     """A Factory which passes constant arguments to construct a Protocol.
     
     Use as FactoryWithArgs.forProtocol(protocol_class, *args, **kwargs).
     """
-    implements(ILoggingContext)
-    
     def __init__(self, *args, **kwargs):
         self.__args = args
         self.__kwargs = kwargs
@@ -104,10 +103,9 @@ class FactoryWithArgs(Factory):
 __all__.append('FactoryWithArgs')
 
 
+@implementer(IStreamClientEndpoint)
 class SerialPortEndpoint(object):
     """Endpoint for connecting to a serial port."""
-    implements(IStreamClientEndpoint)
-    
     def __init__(self, port, reactor, **serial_kwargs):
         self.__port = port
         self.__reactor = reactor

@@ -22,7 +22,7 @@ import time
 
 from twisted.internet import reactor
 from twisted.python import log
-from zope.interface import implements  # available via Twisted
+from zope.interface import implementer  # available via Twisted
 
 from gnuradio import blocks
 from gnuradio import gr
@@ -41,9 +41,8 @@ from shinysdr.values import CellDict, ExportedState, CollectionState, exported_v
 _DEBUG_RETUNE = False
 
 
+@implementer(IWritableCollection)
 class ReceiverCollection(CollectionState):
-    implements(IWritableCollection)
-    
     def __init__(self, table, top):
         CollectionState.__init__(self, table)
         self.__top = top

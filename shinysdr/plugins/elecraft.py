@@ -33,7 +33,7 @@ from twisted.internet import defer
 from twisted.internet.protocol import Protocol
 from twisted.protocols.basic import LineReceiver
 from twisted.python import log
-from zope.interface import implements
+from zope.interface import implementer
 
 from shinysdr.devices import Device, IComponent
 from shinysdr.interfaces import IHasFrequency
@@ -67,9 +67,8 @@ def connect_to_rig(reactor, port, baudrate=38400):
         components={'rig': proxy}))
 
 
+@implementer(IHasFrequency)
 class _ElecraftReceiver(ExportedState):
-    implements(IHasFrequency)
-    
     def __init__(self, protocol, is_sub):
         self.__protocol = protocol
         self.__is_sub = is_sub
@@ -80,9 +79,9 @@ class _ElecraftReceiver(ExportedState):
         _st.install_cells(self, self.__protocol, callback, is_sub=self.__is_sub)
 
 
+@implementer(IComponent)
 class _ElecraftRadio(ExportedState):
     # TODO: Tell protocol to do no/less polling when nobody is looking.
-    implements(IComponent)
     
     def __init__(self, protocol):
         self.__protocol = protocol

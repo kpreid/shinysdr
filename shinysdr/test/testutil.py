@@ -30,7 +30,7 @@ from twisted.trial import unittest
 from twisted.web import client
 from twisted.web import http
 from twisted.web.http_headers import Headers
-from zope.interface import implements
+from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
 from shinysdr.devices import Device, IComponent, IRXDriver, ITXDriver
@@ -263,18 +263,16 @@ class DemodulatorTestCase(unittest.TestCase):
         state_smoke_test(self.demodulator)
 
 
+@implementer(IComponent)
 class StubComponent(ExportedState):
     """Minimal implementation of IComponent."""
-    implements(IComponent)
-    
     def close():
         pass
 
 
+@implementer(IRXDriver)
 class StubRXDriver(gr.hier_block2, ExportedState):
     """Minimal implementation of IRXDriver."""
-    implements(IRXDriver)
-    
     __signal_type = SignalType(kind='IQ', sample_rate=10000)
     __usable_bandwidth = RangeT([(-1e9, 1e9)])  # TODO magic numbers
 
@@ -301,10 +299,9 @@ class StubRXDriver(gr.hier_block2, ExportedState):
         pass
 
 
+@implementer(ITXDriver)
 class StubTXDriver(gr.hier_block2, ExportedState):
     """Minimal implementation of ITXDriver."""
-    implements(ITXDriver)
-    
     __signal_type = SignalType(kind='IQ', sample_rate=10000)
     
     def __init__(self):
