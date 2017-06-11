@@ -312,7 +312,7 @@ class AMDemodulator(SimpleAudioDemodulator):
     # @exported_value(type=QuantityT(units.Hz))
     # def get_pll_frequency(self):
     #     if self.__pll:
-    #         return self.__pll.get_frequency() * (self.input_rate / TWO_PI) + self.context.get_absolute_frequency()
+    #         return self.__pll.get_frequency() * (self.input_rate / TWO_PI) + self.context.get_absolute_frequency_cell().get()
     #     else:
     #         return 0
     

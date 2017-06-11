@@ -25,6 +25,7 @@ from gnuradio import gr
 from shinysdr.filters import make_resampler
 from shinysdr.interfaces import IDemodulator, IModulator
 from shinysdr.i.modes import lookup_mode, get_modes
+from shinysdr.values import LooseCell
 
 
 __all__ = []  # appended later
@@ -99,7 +100,12 @@ __all__.append('DemodulatorAdapter')
 class _DemodulatorAdapterContext(object):
     def __init__(self, adapter, freq):
         self.__adapter = adapter
-        self.__freq = freq
+        self.__freq_cell = LooseCell(
+            key='rec_freq',
+            value=freq,
+            type=float,
+            persists=False,
+            writable=False)
         
     def rebuild_me(self):
         raise Exception('TODO: DemodulatorAdapter does not yet support rebuild_me')
@@ -113,8 +119,8 @@ class _DemodulatorAdapterContext(object):
     def output_message(self, message):
         print message
     
-    def get_absolute_frequency(self):
-        return self.__freq
+    def get_absolute_frequency_cell(self):
+        return self.__freq_cell
 
 
 class ModulatorAdapter(gr.hier_block2):

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
@@ -435,8 +436,7 @@ class ContextForDemodulator(object):
     def output_message(self, message):
         self._receiver.context.output_message(message)
     
-    def get_absolute_frequency(self):
-        """Return the original RF carrier frequency of the signal to be demodulated.
-        
-        This method is for information display or data interpretation purposes and does not relate to the spectrum of the signal entering the demodulator."""
-        return self._receiver.get_rec_freq()
+    def get_absolute_frequency_cell(self):
+        """Returns a cell containing the original RF carrier frequency of the signal to be demodulated — the frequency the signal entering the demodulator has been shifted down from."""
+        # TODO: This should return a read-only cell (until we have a use case demonstrating otherwise) (but we don't have read-only wrapper cells yet)
+        return self._receiver.state()['rec_freq']
