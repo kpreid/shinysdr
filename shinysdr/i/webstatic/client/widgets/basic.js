@@ -322,6 +322,25 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
   }
   exports.Banner = Banner;
   
+  class TextTerminal {
+    constructor(config) {
+      const target = config.target;
+      this.element = config.element;
+      
+      const textarea = config.element.appendChild(document.createElement('textarea'));
+      textarea.readOnly = true;
+      textarea.rows = 3;
+      textarea.cols = 40;
+      
+      const draw = config.boundedFn(function drawImpl() {
+        textarea.textContent = String(target.depend(draw));
+        textarea.scrollTop = textarea.scrollHeight;  // TODO better sticky behavior
+      });
+      draw.scheduler = config.scheduler;
+      draw();
+    }
+  }
+  
   // widget for TimestampT type
   var timestampUpdateClock = new Clock(1);
   function TimestampWidget(config) {

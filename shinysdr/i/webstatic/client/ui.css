@@ -805,3 +805,10 @@ table.aligned-controls-table {
 .widget-Banner-hidden {
   display: none;
 }
+
+.widget-TextTerminal textarea, textarea.widget-TextTerminal {
+  width: 100%;
+  box-sizing: border-box;
+  
+  font-family: monospace;
+}
