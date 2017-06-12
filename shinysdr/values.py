@@ -254,9 +254,13 @@ class Cell(ValueCell):
 
 
 class _MessageSplitter(object):
+    """Wraps a gr.msg_queue, whose arg1 and arg2 are as in blocks.message_sink, to allow extracting one data item at a time by polling."""
     def __init__(self, queue, info_getter, close, type):
         """
-        type: must be a BulkDataT
+        queue: a gr.msg_queue
+        info_getter: function () -> anything; returned with data
+        close: function () -> None; provided as a method
+        type: a BulkDataT
         """
         # config
         self.__queue = queue
