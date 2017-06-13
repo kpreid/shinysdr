@@ -562,6 +562,6 @@ def convert_osmosdr_range(meta_range, add_zero=False, transform=lambda f: f, **k
     for i in xrange(0, meta_range.size()):
         single_range = meta_range[i]
         subranges.append((transform(single_range.start()), transform(single_range.stop())))
-    if add_zero:
+    if add_zero or not subranges:  # don't generate an invalid empty RangeT
         subranges[0:0] = [(0, 0)]
     return RangeT(subranges, **kwargs)

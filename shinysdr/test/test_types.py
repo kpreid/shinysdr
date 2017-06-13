@@ -123,6 +123,11 @@ class TestEnumT(unittest.TestCase):
 class TestRangeT(unittest.TestCase):
     longMessage = True
     
+    def test_construction(self):
+        self.assertRaises(ValueError, lambda: RangeT([]))
+        self.assertRaises(ValueError, lambda: RangeT([(2, 1)]))
+        self.assertRaises(ValueError, lambda: RangeT([(1, 2), (2, 3)]))
+    
     def test_discrete(self):
         _testType(self,
             RangeT([(1, 1), (2, 3), (5, 5)], strict=True, integer=False),

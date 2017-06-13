@@ -60,7 +60,7 @@ class ValueType(object):
     
     A Python type object may be converted to a ValueType using the to_value_type function.
     
-    Conventionally, concrete subclasses of ValueType should be referred to with names like "RangeT" and their instances (actual types) like "rangeT". This is in order to avoid ambiguity with naming a type versus a value of that type, given that there are also classes of types so that the normal capital/lowercase convention is not sufficient.
+    Conventionally, concrete subclasses of ValueType should be referred to with names like "RangeT" and their instances (actual types) like "range_t". This is in order to avoid ambiguity with naming a type versus a value of that type, given that there are also classes of types so that the normal capital/lowercase convention is not sufficient.
     """
     def to_json(self):
         """See IJsonSerializable."""
@@ -285,11 +285,24 @@ class RangeT(ValueType):
         logarithmic: Whether UI for specifying the value should operate on a logarithmic scale.
         integer: Whether the numbers should be of integer type after coercion.
         """
-        # TODO validate subranges are sorted
         assert isinstance(unit, units.Unit)
+
+        # check that subranges are sorted and nonoverlapping
+        mins = []
+        maxes = []
+        for i, (min_value, max_value) in enumerate(subranges):
+            if not (min_value <= max_value):
+                raise ValueError('Invalid RangeT: subranges[{}] has min {} < max {}'.format(i, min_value, max_value))
+            if maxes and not (maxes[-1] < min_value):
+                raise ValueError('Invalid RangeT: subranges[{}] has min {} below previous max {}'.format(i, min_value, maxes[-1]))
+            mins.append(min_value)
+            maxes.append(max_value)
+        if not mins:
+            raise ValueError('Invalid RangeT: no subranges given')
+        
         self.__unit = unit
-        self.__mins = [min_value for (min_value, max_value) in subranges]
-        self.__maxes = [max_value for (min_value, max_value) in subranges]
+        self.__mins = mins
+        self.__maxes = maxes
         self.__strict = strict
         self.__logarithmic = logarithmic
         self.__integer = integer
