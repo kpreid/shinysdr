@@ -41,6 +41,16 @@ from .interfaces import IWAVIntervalListener
 from .telemetry import WSPRSpot
 
 
+def find_wsprd():
+    path = os.environ.get('PATH', os.pathsep.join(['/usr/local/bin', '/usr/bin', '/bin']))
+    for directory in path.split(':'):
+        maybe_wsprd = os.path.join(directory, 'wsprd')
+        if os.path.isfile(maybe_wsprd) and os.access(maybe_wsprd, os.X_OK):
+            return maybe_wsprd
+
+    return None
+
+
 @implementer(IDemodulator)
 class WSPRDemodulator(gr.hier_block2, ExportedState):
     """Decode WSPR (Weak Signal Propagation Reporter).
@@ -73,13 +83,15 @@ class WSPRDemodulator(gr.hier_block2, ExportedState):
             context=None,
 
             _mkdtemp=tempfile.mkdtemp,
-            _WAVIntervalSink=WAVIntervalSink):
+            _WAVIntervalSink=WAVIntervalSink,
+            _find_wsprd=find_wsprd):
         assert input_rate > 0
         gr.hier_block2.__init__(
             self, type(self).__name__,
             gr.io_signature(1, 1, gr.sizeof_gr_complex),
             gr.io_signature(1, 1, gr.sizeof_float))
         self.__context = context
+        self.__find_wsprd = _find_wsprd
 
         # it's not great doing this in the reactor since it could block.
         # However, so can creating GNU Radio blocks.
@@ -100,7 +112,8 @@ class WSPRDemodulator(gr.hier_block2, ExportedState):
         listener = WAVIntervalListener(
             self.__recording_dir,
             context,
-            self.__audio_frequency)
+            self.__audio_frequency,
+            _find_wsprd=self.__find_wsprd)
 
         wav_sink = _WAVIntervalSink(
             interval=self.__interval,
@@ -149,16 +162,6 @@ class WSPRDemodulator(gr.hier_block2, ExportedState):
         self.close()
 
 
-def _find_wsprd():
-    path = os.environ.get('PATH', os.pathsep.join(['/usr/local/bin', '/usr/bin', '/bin']))
-    for directory in path.split(':'):
-        maybe_wsprd = os.path.join(directory, 'wsprd')
-        if os.path.isfile(maybe_wsprd) and os.access(maybe_wsprd, os.X_OK):
-            return maybe_wsprd
-
-    return None
-
-
 @implementer(IWAVIntervalListener)
 class WAVIntervalListener(object):
     # pylint: disable=no-member
@@ -172,7 +175,7 @@ class WAVIntervalListener(object):
             audio_frequency,
 
             _reactor=reactor,
-            _find_wsprd=_find_wsprd,
+            _find_wsprd=find_wsprd,
             _time=time.time):
         self.directory = directory
         self.context = context

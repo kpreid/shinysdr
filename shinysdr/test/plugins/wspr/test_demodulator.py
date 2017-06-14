@@ -188,7 +188,8 @@ class TestDemodulator(unittest.TestCase):
             48000,
             None,
             _WAVIntervalSink=FakeWAVIntervalSink,
-            _mkdtemp=self._mkdtemp)
+            _mkdtemp=self._mkdtemp,
+            _find_wsprd=lambda: '/here/is/wsprd')
 
     def _mkdtemp(self):
         self.tempdir = self.mktemp()
@@ -196,7 +197,12 @@ class TestDemodulator(unittest.TestCase):
         return self.tempdir
 
     def test_interface(self):
-        demodulator = WSPRDemodulator('WSPR', 48000, None, _WAVIntervalSink=FakeWAVIntervalSink)
+        demodulator = WSPRDemodulator(
+            'WSPR',
+            48000,
+            None,
+            _WAVIntervalSink=FakeWAVIntervalSink,
+            _find_wsprd=lambda: '/here/is/wsprd')
         verifyObject(IDemodulator, demodulator)
 
     def test_temporary_directory(self):

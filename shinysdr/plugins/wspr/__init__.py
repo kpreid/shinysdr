@@ -22,12 +22,12 @@ from twisted.web import static
 
 from shinysdr.interfaces import ModeDef, ClientResourceDef
 
-from .demodulator import WSPRDemodulator, _find_wsprd
+from .demodulator import WSPRDemodulator, find_wsprd
 
 plugin_mode = ModeDef(mode='WSPR',
     info='WSPR',
     demod_class=WSPRDemodulator,
-    available=_find_wsprd() is not None)
+    available=find_wsprd() is not None)
 
 plugin_client = ClientResourceDef(
     key=__name__,
