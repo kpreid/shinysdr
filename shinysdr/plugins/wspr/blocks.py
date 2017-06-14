@@ -41,8 +41,6 @@ class WAVIntervalSink(gr.hier_block2):
     Whenever the current time is a round multiple of `interval`, a new file is
     opened and samples are written there. `duration` seconds later, it's
     closed, until the next round multiple of `interval`.
-
-    Behavior if the duration and interval are equal is undefined.
     """
 
     _next_delayed_call = None
@@ -57,6 +55,8 @@ class WAVIntervalSink(gr.hier_block2):
         _time=time.time,
         _deferToThread=threads.deferToThread,
     ):
+        assert interval > duration
+
         gr.hier_block2.__init__(
             self, type(self).__name__,
             gr.io_signature(1, 1, gr.sizeof_float),
