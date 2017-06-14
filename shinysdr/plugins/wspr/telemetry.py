@@ -24,8 +24,7 @@ from collections import namedtuple
 
 from zope.interface import implementer, Interface
 
-from shinysdr.telemetry import (
-    ITelemetryMessage, ITelemetryObject, Track, TelemetryItem)
+from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, Track
 from shinysdr.types import TimestampT
 from shinysdr.values import ExportedState, exported_value
 
@@ -64,7 +63,7 @@ class WSPRStation(ExportedState):
     __txpower = None
 
     def __init__(self, object_id):
-        self.__object_id = object_id
+        pass
 
     def receive(self, message):
         self.__last_heard = message.time

@@ -40,7 +40,7 @@ class WAVIntervalSink(gr.hier_block2):
 
     Whenever the current time is a round multiple of `interval`, a new file is
     opened and samples are written there. `duration` seconds later, it's
-    closed, until the next round multiple of `interval'.
+    closed, until the next round multiple of `interval`.
 
     Behavior if the duration and interval are equal is undefined.
     """
@@ -122,6 +122,7 @@ class WAVIntervalSink(gr.hier_block2):
         return filename
 
     def _close_wav(self, filename):
+        # called in thread.
         self._sink.close()
         return filename
 

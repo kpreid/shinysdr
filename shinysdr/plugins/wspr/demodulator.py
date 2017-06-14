@@ -122,7 +122,7 @@ class WSPRDemodulator(gr.hier_block2, ExportedState):
         """Implement IDemodulator."""
         raise NotImplementedError
 
-    @exported_value(changes='never')
+    @exported_value(type=BandShape, changes='never')
     def get_band_shape(self):
         """Implement IDemodulator."""
         return BandShape(
