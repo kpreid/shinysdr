@@ -22,4 +22,4 @@ from shinysdr.test.testutil import DemodulatorTestCase
 
 class TestModeS(DemodulatorTestCase):
     def setUp(self):
-        self.setUpFor(mode='MODE-S')
+        self.setUpFor(mode='MODE-S', skip_if_unavailable=True)

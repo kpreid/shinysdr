@@ -22,4 +22,4 @@ from shinysdr.test.testutil import DemodulatorTestCase
 
 class TestDSD(DemodulatorTestCase):
     def setUp(self):
-        self.setUpFor(mode='DSD')
+        self.setUpFor(mode='DSD', skip_if_unavailable=True)

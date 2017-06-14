@@ -28,7 +28,7 @@ from shinysdr.test.testutil import DemodulatorTestCase
 
 class TestRTTY(DemodulatorTestCase):
     def setUp(self):
-        self.setUpFor(mode='RTTY')
+        self.setUpFor(mode='RTTY', skip_if_unavailable=True)
 
 
 class TestRTTYEncoder(unittest.TestCase):

@@ -23,4 +23,4 @@ from shinysdr.test.testutil import DemodulatorTestCase
 
 class TestPSK31Demodulator(DemodulatorTestCase):
     def setUp(self):
-        self.setUpFor(mode='PSK31', demod_class=PSK31Demodulator)
+        self.setUpFor(mode='PSK31', skip_if_unavailable=True, demod_class=PSK31Demodulator)

@@ -41,13 +41,20 @@ class IModeDef(Interface):
 # Object for memoizing results of getPlugins(IModeDef)
 class _ModeTable(object):
     def __init__(self):
-        self.__modes = {p.mode: p for p in getPlugins(IModeDef, plugins) if p.available}
+        self.__all_modes = {d.mode: d
+            for d in getPlugins(IModeDef, plugins)}
+        self.__available_modes = {d.mode: d
+             for d in self.__all_modes.itervalues()
+             if d.available}
     
     def get_modes(self):
-        return self.__modes.values()
+        return self.__available_modes.values()
     
-    def lookup_mode(self, mode):
-        return self.__modes.get(mode)
+    def lookup_mode(self, mode, include_unavailable=False):
+        if include_unavailable:
+            return self.__all_modes.get(mode)
+        else:
+            return self.__available_modes.get(mode)
 
 
 # pylint: disable=global-statement
@@ -69,8 +76,8 @@ def get_modes():
 __all__.append('get_modes')
 
 
-def lookup_mode(mode):
-    return _get_mode_table().lookup_mode(mode)
+def lookup_mode(mode, include_unavailable=False):
+    return _get_mode_table().lookup_mode(mode, include_unavailable=include_unavailable)
 
 
 __all__.append('lookup_mode')

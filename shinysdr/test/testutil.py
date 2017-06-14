@@ -220,15 +220,20 @@ class DemodulatorTestCase(unittest.TestCase):
         if not hasattr(self, 'demodulator') and not self.__noop:
             raise Exception('No demodulator specified for DemodulatorTestCase')
         
-    def setUpFor(self, mode, demod_class=None, state=None):
+    def setUpFor(self, mode, demod_class=None, state=None, skip_if_unavailable=False):
         # pylint: disable=attribute-defined-outside-init
         if state is None:
             state = {}
-        mode_def = lookup_mode(mode)
+        mode_def = lookup_mode(mode, include_unavailable=True)
+        if mode_def and not mode_def.available and skip_if_unavailable:
+            raise unittest.SkipTest('mode {!r} marked unavailable'.format(mode))
         if mode_def is not None and demod_class is None:
             demod_class = mode_def.demod_class
         if demod_class is None:
-            raise Exception('Demodulator not registered for mode {!r}'.format(mode))
+            if mode_def is None:
+                raise Exception('Mode {!r} not registered'.format(mode))
+            else:
+                raise Exception('Demodulator not registered for mode {!r}'.format(mode))
         
         # Wire up top block. We don't actually want to inspect the signal processing; we just want to see if GR has a complaint about the flow graph connectivity.
         self.__top = gr.top_block()
