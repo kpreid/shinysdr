@@ -88,23 +88,23 @@ class WSPRStation(ExportedState):
 
     @exported_value(type=QuantityT(units.dB), changes='explicit', label='SNR')
     def get_snr(self):
-        return self.__snr
+        return self.__snr or -999
 
     @exported_value(type=QuantityT(units.MHz), changes='explicit', label='Frequency')
     def get_frequency(self):
-        return (self.__frequency or 0) * 1e6
+        return self.__frequency or 0
 
     @exported_value(type=unicode, changes='explicit', label='Call')
     def get_call(self):
-        return self.__call
+        return self.__call or ''
 
     @exported_value(type=unicode, changes='explicit', label='Grid')
     def get_grid(self):
-        return self.__grid
+        return self.__grid or ''
 
     @exported_value(type=QuantityT(units.dBm), changes='explicit', label='Tx Power')
     def get_txpower(self):
-        return self.__txpower
+        return self.__txpower or 0
 
     @exported_value(type=Track, changes='explicit', label='Track')
     def get_track(self):
