@@ -32,6 +32,7 @@ import __builtin__
 
 from twisted.internet import defer
 from twisted.python import log
+from twisted.python.util import sibpath
 
 # Note that gnuradio-dependent modules are loaded lazily, to avoid the startup time if all we're going to do is give a usage message
 from shinysdr.i.db import DatabaseModel, database_from_csv, databases_from_directory
@@ -200,8 +201,9 @@ class _ConfigDbs(object):
         self._config = config
         self.__reactor = reactor
         
-        self.__read_only_databases, diagnostics = databases_from_directory(self.__reactor,
-            os.path.join(os.path.dirname(__file__), 'data/dbs/'))
+        self.__read_only_databases, diagnostics = databases_from_directory(
+            self.__reactor,
+            sibpath(__file__, 'data/dbs/'))
         if len(diagnostics) > 0:
             raise ConfigException(diagnostics)
     

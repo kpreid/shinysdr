@@ -19,7 +19,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import os
 import urllib
 
 from twisted.web import http
@@ -27,15 +26,16 @@ from twisted.web import template
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 from twisted.internet import endpoints
+from twisted.python.util import sibpath
 
 # TODO: Change this constant to something more generic, but save that for when we're changing the URL layout for other reasons anyway.
 CAP_OBJECT_PATH_ELEMENT = b'radio'
 UNIQUE_PUBLIC_CAP = 'public'
 
 
-static_resource_path = os.path.join(os.path.dirname(__file__), '../webstatic')
-template_path = os.path.join(os.path.dirname(__file__), '../webparts')
-deps_path = os.path.join(os.path.dirname(__file__), '../../deps')
+static_resource_path = sibpath(__file__, '../webstatic')
+template_path = sibpath(__file__, '../webparts')
+deps_path = sibpath(__file__, '../../deps')
 
 
 class SlashedResource(Resource):

@@ -22,6 +22,8 @@ from __future__ import absolute_import, division
 from importlib import import_module
 import os.path
 
+from twisted.python.util import sibpath
+
 
 class DependencyTester(object):
     """
@@ -72,7 +74,7 @@ class DependencyTester(object):
     
     # This method has an overly-specific name because it has an overly-specific report message.
     def check_jsdep_file(self, relative_to_pathname, expected_pathname, dep_name):
-        absolute_path = os.path.join(os.path.dirname(relative_to_pathname), expected_pathname)
+        absolute_path = sibpath(relative_to_pathname, expected_pathname)
         if not os.path.exists(absolute_path):
             self.__missing_files.add((dep_name, '%s does not exist.' % absolute_path))
     
