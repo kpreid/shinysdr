@@ -1,6 +1,6 @@
 """ShinySDR telemetry for WSPR"""
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division, unicode_literals
 
 import time
 from collections import namedtuple

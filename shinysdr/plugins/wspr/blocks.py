@@ -1,6 +1,6 @@
 """GNU Radio blocks for WSPR"""
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division, unicode_literals
 
 import time
 from math import pi
@@ -42,7 +42,7 @@ class WAVIntervalSink(gr.hier_block2):
         _deferToThread=threads.deferToThread,
     ):
         gr.hier_block2.__init__(
-            self, 'WAV Interval Sink',
+            self, type(self).__name__,
             gr.io_signature(1, 1, gr.sizeof_float),
             gr.io_signature(0, 0, 0))
 
@@ -57,7 +57,7 @@ class WAVIntervalSink(gr.hier_block2):
         self._sink = wavfile_sink(
             # There doesn't seem to be a way to create a sink without
             # immediately opening a file :(
-            filename='/dev/null',
+            filename=b'/dev/null',
             n_channels=1,
             sample_rate=sample_rate,
             bits_per_sample=16)
@@ -150,7 +150,7 @@ class WSPRFilter(gr.hier_block2):
         """
 
         gr.hier_block2.__init__(
-            self, 'WSPR Filter',
+            self, type(self).__name__,
             gr.io_signature(1, 1, gr.sizeof_gr_complex),
             gr.io_signature(1, 1, gr.sizeof_float))
 

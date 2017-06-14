@@ -1,4 +1,4 @@
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division, unicode_literals
 
 import os
 from textwrap import dedent
@@ -134,7 +134,7 @@ class TestIntervalListener(unittest.TestCase):
 class FakeWAVIntervalSink(gr.hier_block2):
     def __init__(self, interval, duration, listener, sample_rate):
         gr.hier_block2.__init__(
-            self, 'Fake WAV Interval Sink',
+            self, type(self).__name__,
             gr.io_signature(1, 1, gr.sizeof_float),
             gr.io_signature(0, 0, 0))
 

@@ -1,6 +1,6 @@
 """WSPR demodulator; glue between GNU Radio and ShinySDR."""
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division, unicode_literals
 
 import os.path
 import time
@@ -61,7 +61,7 @@ class WSPRDemodulator(gr.hier_block2, ExportedState):
     ):
         assert input_rate > 0
         gr.hier_block2.__init__(
-            self, 'WSPR Demodulator',
+            self, type(self).__name__,
             gr.io_signature(1, 1, gr.sizeof_gr_complex),
             gr.io_signature(1, 1, gr.sizeof_float))
         self.__context = context
@@ -210,8 +210,8 @@ class WAVIntervalListener(object):
         )
 
     def filename(self, start_time):
-        time_str = time.strftime('%y%m%d_%H%M.wav', time.gmtime(start_time))
-        filename = '%s_%s' % (self.context.get_absolute_frequency(), time_str)
+        time_str = time.strftime(b'%y%m%d_%H%M.wav', time.gmtime(start_time))
+        filename = b'%s_%s' % (self.context.get_absolute_frequency(), time_str)
         return os.path.join(self.directory, filename)
 
 
