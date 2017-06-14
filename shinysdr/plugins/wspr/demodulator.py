@@ -114,14 +114,6 @@ class WSPRDemodulator(gr.hier_block2, ExportedState):
         wav_sink.start_running()
         return wav_sink
 
-    def can_set_mode(self, mode):
-        """Implement IDemodulator."""
-        return False
-
-    def set_mode(self, mode):
-        """Implement IDemodulator."""
-        raise NotImplementedError
-
     @exported_value(type=BandShape, changes='never')
     def get_band_shape(self):
         """Implement IDemodulator."""
