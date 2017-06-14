@@ -46,15 +46,14 @@ class WAVIntervalSink(gr.hier_block2):
     _next_delayed_call = None
 
     def __init__(self,
-        interval,
-        duration,
-        listener,
-        sample_rate,
+            interval,
+            duration,
+            listener,
+            sample_rate,
 
-        _callLater=reactor.callLater,
-        _time=time.time,
-        _deferToThread=threads.deferToThread,
-    ):
+            _callLater=reactor.callLater,
+            _time=time.time,
+            _deferToThread=threads.deferToThread):
         assert interval > duration
 
         gr.hier_block2.__init__(
@@ -146,12 +145,11 @@ class WSPRFilter(gr.hier_block2):
     # beacons that might be just outside the band.
 
     def __init__(self,
-        input_rate,
-        output_rate=12000,
-        output_frequency=1500,
-        transition_width=100,
-        width=800
-    ):
+            input_rate,
+            output_rate=12000,
+            output_frequency=1500,
+            transition_width=100,
+            width=800):
         """Make a new WSPRFilter.
 
         input_rate: the incomming sample rate
