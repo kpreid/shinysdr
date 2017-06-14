@@ -24,8 +24,8 @@ from collections import namedtuple
 
 from zope.interface import implementer, Interface
 
-from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, Track
-from shinysdr.types import TimestampT
+from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, Track, empty_track
+from shinysdr.types import QuantityT, TimestampT
 from shinysdr import units
 from shinysdr.values import ExportedState, exported_value
 
@@ -73,6 +73,7 @@ class WSPRStation(ExportedState):
         self.__call = message.call
         self.__grid = message.grid
         self.__txpower = message.txpower
+        self.state_changed()
 
     def is_interesting(self):
         """Every WSPR message is about as interesting as another, I suppose."""
@@ -91,7 +92,7 @@ class WSPRStation(ExportedState):
 
     @exported_value(type=QuantityT(units.Hz), changes='explicit', label='Frequency')
     def get_frequency(self):
-        return self.__frequency * 1e6
+        return (self.__frequency or 0) * 1e6
 
     @exported_value(type=unicode, changes='explicit', label='Call')
     def get_call(self):
@@ -107,11 +108,14 @@ class WSPRStation(ExportedState):
 
     @exported_value(type=Track, changes='explicit', label='Track')
     def get_track(self):
-        latitude, longitude = grid_to_lat_long(self.__grid)
-        track = Track(
-            latitude=TelemetryItem(latitude, time.time()),
-            longitude=TelemetryItem(longitude, time.time()))
-        return track
+        if self.__grid:
+            latitude, longitude = grid_to_lat_long(self.__grid)
+            track = Track(
+                latitude=TelemetryItem(latitude, self.__last_heard),
+                longitude=TelemetryItem(longitude, self.__last_heard))
+            return track
+        else:
+            return empty_track
 
 
 def grid_to_lat_long(grid):
