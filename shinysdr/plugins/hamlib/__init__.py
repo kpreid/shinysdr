@@ -688,6 +688,7 @@ class _HamlibClientProtocol(Protocol):
         self.__waiting_for_responses.append((cmd, d))
         return d
 
+
 _plugin_client = ClientResourceDef(
     key=__name__,
     resource=static.File(os.path.join(os.path.split(__file__)[0], 'client')),

@@ -135,6 +135,7 @@ class PSK31Demodulator(gr.hier_block2, ExportedState):
             self.__text = textstring[-20:]
         return self.__text
 
+
 pluginMode = ModeDef(mode='PSK31',
     info='PSK31',
     demod_class=PSK31Demodulator,

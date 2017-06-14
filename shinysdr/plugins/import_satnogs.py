@@ -135,6 +135,7 @@ class SatNOGSImporter(object):
                 Inverting: {t[invert]}'''))
         return result
 
+
 _plugin = ImporterDef(
     name='satnogs',
     description='SatNOGS DB JSON.',

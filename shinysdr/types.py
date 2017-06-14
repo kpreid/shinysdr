@@ -291,9 +291,9 @@ class RangeT(ValueType):
         mins = []
         maxes = []
         for i, (min_value, max_value) in enumerate(subranges):
-            if not (min_value <= max_value):
+            if not min_value <= max_value:
                 raise ValueError('Invalid RangeT: subranges[{}] has min {} < max {}'.format(i, min_value, max_value))
-            if maxes and not (maxes[-1] < min_value):
+            if maxes and not maxes[-1] < min_value:
                 raise ValueError('Invalid RangeT: subranges[{}] has min {} below previous max {}'.format(i, min_value, maxes[-1]))
             mins.append(min_value)
             maxes.append(max_value)
