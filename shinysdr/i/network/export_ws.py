@@ -325,13 +325,11 @@ def _AudioStream_read_loop(reactor, queue, deliver, running):
     while running[0]:
         buf = ''
         message = queue.delete_head()  # blocking call
-        if message.length() > 0:  # avoid crash bug
-            buf += message.to_string()
+        buf += message.to_string()
         # Collect more queue contents to batch data
         while not queue.empty_p():
             message = queue.delete_head()
-            if message.length() > 0:  # avoid crash bug
-                buf += message.to_string()
+            buf += message.to_string()
         reactor.callFromThread(deliver, buf)
 
 

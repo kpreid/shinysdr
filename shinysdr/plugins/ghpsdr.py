@@ -157,8 +157,7 @@ class _DspserverProtocol(protocol.Protocol):
         while not aqueue.empty_p():
             # pylint: disable=no-member
             grmessage = aqueue.delete_head()
-            if grmessage.length() > 0:  # avoid crash bug
-                self.__audio_buffer += grmessage.to_string()
+            self.__audio_buffer += grmessage.to_string()
         size_in_bytes = 2000 * 4
         if len(self.__audio_buffer) > size_in_bytes:
             abuf = self.__audio_buffer[:size_in_bytes]

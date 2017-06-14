@@ -32,6 +32,7 @@ from zope.interface import Interface, implementer  # available via Twisted
 
 from gnuradio import gr
 
+from shinysdr.gr_ext import safe_delete_head_nowait
 from shinysdr.types import BulkDataT, EnumRow, ReferenceT, to_value_type
 
 
@@ -272,14 +273,10 @@ class _MessageSplitter(object):
         else:
             queue = self.__queue
             # we would use .delete_head_nowait() but it returns a crashy wrapper instead of a sensible value like None. So implement a test (which is safe as long as we're the only reader)
-            if queue.empty_p():
+            message = safe_delete_head_nowait(queue)
+            if not message:
                 return None
-            else:
-                message = queue.delete_head()
-            if message.length() > 0:
-                string = message.to_string()  # only interface available
-            else:
-                string = ''  # avoid crash bug
+            string = message.to_string()
             itemsize = int(message.arg1())
             count = int(message.arg2())
             index = 0

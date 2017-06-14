@@ -33,6 +33,7 @@ except ImportError:
 
 from shinysdr.math import dB, rotator_inc
 from shinysdr.filters import MultistageChannelFilter
+from shinysdr.gr_ext import safe_delete_head_nowait
 from shinysdr.interfaces import ModeDef, IDemodulator, BandShape
 from shinysdr.signals import SignalType
 from shinysdr.values import ExportedState, exported_value
@@ -119,19 +120,10 @@ class PSK31Demodulator(gr.hier_block2, ExportedState):
 
     @exported_value(type=unicode, changes='continuous')
     def get_text(self):
-        # pylint: disable=no-member
-        queue = self.__char_queue
-        # we would use .delete_head_nowait() but it returns a crashy wrapper
-        # instead of a sensible value like None. So implement a test (which is
-        # safe as long as we're the only reader)
-        if not queue.empty_p():
-            message = queue.delete_head()
-            if message.length() > 0:
-                bitstring = message.to_string()
-            else:
-                bitstring = ''  # avoid crash bug
+        message = safe_delete_head_nowait(self.__char_queue)
+        if message:
             textstring = self.__text
-            textstring += bitstring
+            textstring += message.to_string().decode('us-ascii')
             self.__text = textstring[-20:]
         return self.__text
 
