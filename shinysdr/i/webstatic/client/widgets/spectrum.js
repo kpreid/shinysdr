@@ -88,8 +88,10 @@ define(['./basic', './dbui',
       // Not in overlayContainer because it does not scroll.
       // Works with zero height as the top-of-scale reference.
       // TODO this is currently disabled because its axis scaling is not exactly right, because it is outside the scrolling element and we haven't compensated for the height of the vertical scrollbar
-      // var verticalScaleEl = outerElement.appendChild(document.createElement('div'));
-      // createWidgetExt(context, VerticalScale, verticalScaleEl, {});
+      if (false) {
+        var verticalScaleEl = outerElement.appendChild(document.createElement('div'));
+        createWidgetExt(context, VerticalScale, verticalScaleEl, {});
+      }
 
       var parametersEl = outerElement.appendChild(document.createElement('div'));
       createWidgetExt(context, MonitorDetailedOptions, parametersEl, config.target);
