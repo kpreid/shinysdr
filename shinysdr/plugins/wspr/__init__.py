@@ -34,4 +34,4 @@ plugin_client = ClientResourceDef(
     resource=static.File(sibpath(__file__, 'client')),
     load_js_path='wspr.js')
 
-__all__ = ['plugin_mode', 'plugin_client']
+__all__ = []
