@@ -64,4 +64,5 @@ dB = Unit('dB', False)
 dBm = Unit('dBm', False)
 dBFS = Unit('dBFS', False)
 Hz = Unit('Hz', True)
+MHz = Unit('MHz', False)  # TODO: Remove or refine this when si_prefix_ok is actually used
 ppm = Unit('ppm', False)

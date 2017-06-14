@@ -90,7 +90,7 @@ class WSPRStation(ExportedState):
     def get_snr(self):
         return self.__snr
 
-    @exported_value(type=QuantityT(units.Hz), changes='explicit', label='Frequency')
+    @exported_value(type=QuantityT(units.MHz), changes='explicit', label='Frequency')
     def get_frequency(self):
         return (self.__frequency or 0) * 1e6
 
