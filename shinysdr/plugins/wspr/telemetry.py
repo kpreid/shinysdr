@@ -56,6 +56,7 @@ class IWSPRStation(Interface):
 
 @implementer(ITelemetryObject, IWSPRStation)
 class WSPRStation(ExportedState):
+    __last_heard = 0
     __snr = None
     __frequency = None
     __call = None
