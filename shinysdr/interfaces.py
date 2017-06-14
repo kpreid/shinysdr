@@ -88,29 +88,29 @@ __all__.append('IDemodulator')
 
 
 class IDemodulatorContext(Interface):
-    def rebuild_me(self):
+    def rebuild_me():
         """Request that this demodulator be discarded and an identically configured copy be created.
         
         This is needed when something such as the output type of the demodulator changes; it may also be used any time constructing a new demodulator is more convenient than changing the internal structure of an existing one.
         """
 
-    def lock(self):
+    def lock():
         """
         Use this method instead of gr.hier_block2.lock().
         
         This differs in that it will avoid acquiring the lock if it is already held (implementing a "recursive lock"). It is therefore suitable for use when the demodulator is being invoked in a situation where the lock may already be held.
         """
 
-    def unlock(self):
+    def unlock():
         """Use in pairs with IDemodulatorContext.lock()."""
     
-    def output_message(self, message):
+    def output_message(message):
         """Report a message output from the demodulator, such as in demodulators which handle packets rather than audio.
         
         The message object should provide shinysdr.telemetry.ITelemetryMessage.
         """
     
-    def get_absolute_frequency_cell(self):
+    def get_absolute_frequency_cell():
         """Returns a cell containing the original RF carrier frequency of the signal to be demodulated — the frequency the signal entering the demodulator has been shifted down from."""
 
 

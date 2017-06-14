@@ -26,10 +26,12 @@ from zope.interface.verify import verifyObject
 from twisted.trial import unittest
 from twisted.internet.interfaces import IProcessProtocol
 from twisted.internet import defer
+from twisted.internet.task import Clock
 
 from gnuradio import gr
 
 from shinysdr.interfaces import IDemodulator, IDemodulatorContext
+from shinysdr.values import LooseCell
 
 from shinysdr.plugins.wspr.demodulator import (
     WAVIntervalListener, WSPRDemodulator, WsprdProtocol)
@@ -58,11 +60,27 @@ class FakeWavfileSink(object):
 class FakeContext(object):
     def __init__(self):
         self.messages = []
-
-    @staticmethod
-    def get_absolute_frequency():
         # 12,345,678 Hz, all the time, every day.
-        return 12345678
+        self.__absolute_frequency_cell = LooseCell(
+            key='rec_freq',
+            value=12345678,
+            type=float,
+            writable=False,
+            persists=False)
+        
+        verifyObject(IDemodulatorContext, self)  # Ensure we are a good fake.
+
+    def rebuild_me(self):
+        raise Exception('not implemented')
+
+    def lock(self):
+        raise Exception('not implemented')
+
+    def unlock(self):
+        raise Exception('not implemented')
+
+    def get_absolute_frequency_cell(self):
+        return self.__absolute_frequency_cell
 
     def output_message(self, message):
         self.messages.append(message)
@@ -76,15 +94,18 @@ class TestIntervalListener(unittest.TestCase):
         self.directory = self.mktemp()
         os.mkdir(self.directory)
         self.context = FakeContext()
+        self.clockAndSpawn = Clock()
+        self.clockAndSpawn.spawnProcess = self.spawnProcess
+        self.spawned = []
+
         self.listener = WAVIntervalListener(
             self.directory,
             self.context,
             self.audio_frequency,
 
             _find_wsprd=self.find_wsprd,
-            _time=self.time)
-        self.listener._spawnProcess = self.spawnProcess
-        self.spawned = []
+            _time=self.time,
+            _reactor=self.clockAndSpawn)
 
     def time(self):
         """Return some unix timestamp."""
@@ -128,7 +149,7 @@ class TestIntervalListener(unittest.TestCase):
 
         self.assertEqual(executable, self.wsprd_path)
 
-        rx_frequency = FakeContext.get_absolute_frequency()
+        rx_frequency = self.context.get_absolute_frequency_cell().get()
         dial_frequency = (rx_frequency - self.audio_frequency) / 1e6
         self.assertIn(str(dial_frequency), args)
 
@@ -141,7 +162,8 @@ class TestIntervalListener(unittest.TestCase):
         happened on another.
         """
         self.listener.fileOpened('some file')
-        self.context.get_absolute_frequency = lambda: 654321
+        self.context.get_absolute_frequency_cell().set(654321)
+        self.clockAndSpawn.advance(1)  # Allow cell subscription to fire.
         self.listener.fileClosed('some file')
         self.assertFalse(self.spawned)
 

@@ -32,7 +32,7 @@ from twisted.internet.protocol import ProcessProtocol
 from twisted.python import log
 from zope.interface import implementer
 
-from shinysdr.values import ExportedState, exported_value
+from shinysdr.values import ExportedState, SubscriptionContext, exported_value
 from shinysdr.interfaces import IDemodulator, BandShape
 from shinysdr.signals import SignalType
 
@@ -162,14 +162,16 @@ def _find_wsprd():
 @implementer(IWAVIntervalListener)
 class WAVIntervalListener(object):
     # pylint: disable=no-member
-    _spawnProcess = reactor.spawnProcess
     __start_frequency = 0
+    __frequency_subscription = None
+    __invalidated_by_frequency_change = False
 
     def __init__(self,
             directory,
             context,
             audio_frequency,
 
+            _reactor=reactor,
             _find_wsprd=_find_wsprd,
             _time=time.time):
         self.directory = directory
@@ -179,38 +181,46 @@ class WAVIntervalListener(object):
         if self.__wsprd is None:
             raise Exception('Could not find wsprd. Is WSJT-X installed and wsprd in $PATH?')
         self._time = _time
+        self._reactor = _reactor
 
     def fileOpened(self, filename):
-        self.__start_frequency = self.context.get_absolute_frequency()
+        rf_frequency_cell = self.context.get_absolute_frequency_cell()
+        self.__start_frequency = rf_frequency_cell.get()
+        self.__frequency_subscription = rf_frequency_cell.subscribe2(
+            self.__check_modified_frequency,
+            SubscriptionContext(reactor=self._reactor, poller=None))
+        self.__invalidated_by_frequency_change = False
 
     def fileClosed(self, filename):
-        freq = self.context.get_absolute_frequency()
-        if freq != self.__start_frequency:
+        self.__frequency_subscription.unsubscribe()
+        if self.__invalidated_by_frequency_change:
             # If the recording started on one frequency, but finished on
             # another, don't decode the file. We especially wouldn't want to
             # upload spots that were recorded on one band as if they happened
             # on another because the user tuned the radio just before the
             # interval completed.
-            #
-            # Of course equal start and end frequencies don't guarantee there
-            # were no frequency changes during the recording, but ShinySDR
-            # doesn't provide a way for demodulators to be notified of a
-            # frequency change.
             return
 
         # wsprd expects its -f argument to be as if the recording was made with
         # a USB receiver
-        dial_freq = (freq - self.audio_frequency) / 1e6
-        self._spawnProcess(
+        dial_freq = (self.__start_frequency - self.audio_frequency) / 1e6
+        self._reactor.spawnProcess(
             WsprdProtocol(self.context, filename, self._time()),
             self.__wsprd,
             args=['wsprd', '-d', '-f', str(dial_freq), filename],
             env={},
             path=self.directory)
 
+    def __check_modified_frequency(self, value):
+        if value != self.__start_frequency:
+            self.__invalidated_by_frequency_change = True
+
     def filename(self, start_time):
+        # TODO: We should be using the same frequency as __start_frequency but
+        # there is no guarantee in the interface about the timing of calls to
+        # this method vs. fileOpened.
         time_str = time.strftime(b'%y%m%d_%H%M.wav', time.gmtime(start_time))
-        filename = b'%s_%s' % (self.context.get_absolute_frequency(), time_str)
+        filename = b'%s_%s' % (self.context.get_absolute_frequency_cell().get(), time_str)
         return os.path.join(self.directory, filename)
 
 
