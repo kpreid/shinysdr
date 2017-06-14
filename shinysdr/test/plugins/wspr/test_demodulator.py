@@ -20,6 +20,7 @@ from __future__ import absolute_import, division, unicode_literals
 import os
 from textwrap import dedent
 
+from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
@@ -28,7 +29,7 @@ from twisted.internet import defer
 
 from gnuradio import gr
 
-from shinysdr.interfaces import IDemodulator
+from shinysdr.interfaces import IDemodulator, IDemodulatorContext
 
 from shinysdr.plugins.wspr.demodulator import (
     WAVIntervalListener, WSPRDemodulator, WsprdProtocol)
@@ -53,8 +54,8 @@ class FakeWavfileSink(object):
         self._filename = None
 
 
+@implementer(IDemodulatorContext)
 class FakeContext(object):
-    """Someone should declare an interface for this."""
     def __init__(self):
         self.messages = []
 
@@ -269,6 +270,7 @@ class TestWsprdProtocol(unittest.TestCase):
 
 
 class ThreadDeferrer(object):
+    """Imitation of reactor.deferToThread that doesn't use threads."""
     def __init__(self):
         self.deferred_to_thread = []
 
