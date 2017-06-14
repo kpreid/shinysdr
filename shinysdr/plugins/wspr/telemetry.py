@@ -26,6 +26,7 @@ from zope.interface import implementer, Interface
 
 from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, Track
 from shinysdr.types import TimestampT
+from shinysdr import units
 from shinysdr.values import ExportedState, exported_value
 
 
@@ -84,13 +85,13 @@ class WSPRStation(ExportedState):
     def get_last_heard(self):
         return self.__last_heard
 
-    @exported_value(type=unicode, changes='explicit', label='SNR')
+    @exported_value(type=QuantityT(units.dB), changes='explicit', label='SNR')
     def get_snr(self):
-        return '%s dB' % (self.__snr,)
+        return self.__snr
 
-    @exported_value(type=unicode, changes='explicit', label='Frequency')
+    @exported_value(type=QuantityT(units.Hz), changes='explicit', label='Frequency')
     def get_frequency(self):
-        return '%s MHz' % (self.__frequency,)
+        return self.__frequency * 1e6
 
     @exported_value(type=unicode, changes='explicit', label='Call')
     def get_call(self):
@@ -100,9 +101,9 @@ class WSPRStation(ExportedState):
     def get_grid(self):
         return self.__grid
 
-    @exported_value(type=unicode, changes='explicit', label='Tx Power')
+    @exported_value(type=QuantityT(units.dBm), changes='explicit', label='Tx Power')
     def get_txpower(self):
-        return '%s dBm' % (self.__txpower,)
+        return self.__txpower
 
     @exported_value(type=Track, changes='explicit', label='Track')
     def get_track(self):

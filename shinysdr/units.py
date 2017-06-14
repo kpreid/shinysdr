@@ -61,6 +61,7 @@ degree = Unit('°', False)  # degree of angle
 degC = Unit('°C', False)
 degF = Unit('°F', False)
 dB = Unit('dB', False)
+dBm = Unit('dBm', False)
 dBFS = Unit('dBFS', False)
 Hz = Unit('Hz', True)
 ppm = Unit('ppm', False)
