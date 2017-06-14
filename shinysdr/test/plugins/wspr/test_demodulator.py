@@ -81,8 +81,7 @@ class TestIntervalListener(unittest.TestCase):
             self.audio_frequency,
 
             _find_wsprd=self.find_wsprd,
-            _time=self.time,
-        )
+            _time=self.time)
         self.listener._spawnProcess = self.spawnProcess
         self.spawned = []
 
@@ -93,14 +92,12 @@ class TestIntervalListener(unittest.TestCase):
     def find_wsprd(self):
         return self.wsprd_path
 
-    def spawnProcess(
-        self,
-        processProtocol,
-        executable,
-        args,
-        env,
-        path,
-    ):
+    def spawnProcess(self,
+            processProtocol,
+            executable,
+            args,
+            env,
+            path):
         self.spawned.append((processProtocol, executable, args, env, path))
 
     def test_interface(self):

@@ -47,8 +47,7 @@ class TestWAVIntervalSink(unittest.TestCase):
 
             _callLater=self.clock.callLater,
             _time=self.clock.seconds,
-            _deferToThread=self.deferToThread,
-        )
+            _deferToThread=self.deferToThread)
 
     def deferToThread(self, f, *args, **kwargs):
         """What thread?"""

@@ -67,15 +67,13 @@ class WSPRDemodulator(gr.hier_block2, ExportedState):
     __interval = 120
     __duration = __interval - 5
 
-    def __init__(
-        self,
-        mode='WSPR',
-        input_rate=0,
-        context=None,
+    def __init__(self,
+            mode='WSPR',
+            input_rate=0,
+            context=None,
 
-        _mkdtemp=tempfile.mkdtemp,
-        _WAVIntervalSink=WAVIntervalSink,
-    ):
+            _mkdtemp=tempfile.mkdtemp,
+            _WAVIntervalSink=WAVIntervalSink):
         assert input_rate > 0
         gr.hier_block2.__init__(
             self, type(self).__name__,
@@ -92,27 +90,23 @@ class WSPRDemodulator(gr.hier_block2, ExportedState):
         self.connect(
             self,
             wspr_filter,
-            self,
-        )
+            self)
 
         self.connect(
             wspr_filter,
-            self.__make_wav_sink(context, _WAVIntervalSink),
-        )
+            self.__make_wav_sink(context, _WAVIntervalSink))
 
     def __make_wav_sink(self, context, _WAVIntervalSink):
         listener = WAVIntervalListener(
             self.__recording_dir,
             context,
-            self.__audio_frequency,
-        )
+            self.__audio_frequency)
 
         wav_sink = _WAVIntervalSink(
             interval=self.__interval,
             duration=self.__duration,
             listener=listener,
-            sample_rate=self.__demod_rate,
-        )
+            sample_rate=self.__demod_rate)
 
         # would be cool to not have side effects in __init__, though there
         # doesn't seem to be a way around it with the current demodulator
@@ -136,8 +130,7 @@ class WSPRDemodulator(gr.hier_block2, ExportedState):
             pass_low=-100,
             stop_high=250,
             pass_high=100,
-            markers=[],
-        )
+            markers=[])
 
     def get_output_type(self):
         """Implement IDemodulator."""
@@ -180,15 +173,13 @@ class WAVIntervalListener(object):
     _spawnProcess = reactor.spawnProcess
     __start_frequency = 0
 
-    def __init__(
-        self,
-        directory,
-        context,
-        audio_frequency,
+    def __init__(self,
+            directory,
+            context,
+            audio_frequency,
 
-        _find_wsprd=_find_wsprd,
-        _time=time.time,
-    ):
+            _find_wsprd=_find_wsprd,
+            _time=time.time):
         self.directory = directory
         self.context = context
         self.audio_frequency = audio_frequency
@@ -223,8 +214,7 @@ class WAVIntervalListener(object):
             self.__wsprd,
             args=['wsprd', '-d', '-f', str(dial_freq), filename],
             env={},
-            path=self.directory,
-        )
+            path=self.directory)
 
     def filename(self, start_time):
         time_str = time.strftime(b'%y%m%d_%H%M.wav', time.gmtime(start_time))
@@ -237,12 +227,10 @@ class WsprdProtocol(ProcessProtocol):
     _WSPRSpot = WSPRSpot
     _deferToThread = staticmethod(threads.deferToThread)
 
-    def __init__(
-        self,
-        context,
-        wav_filename,
-        decode_time,
-    ):
+    def __init__(self,
+            context,
+            wav_filename,
+            decode_time):
         self.context = context
         self.wav_filename = wav_filename
         self.decode_time = decode_time

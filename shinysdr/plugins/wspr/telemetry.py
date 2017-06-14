@@ -110,8 +110,7 @@ class WSPRStation(ExportedState):
         latitude, longitude = grid_to_lat_long(self.__grid)
         track = Track(
             latitude=TelemetryItem(latitude, time.time()),
-            longitude=TelemetryItem(longitude, time.time()),
-        )
+            longitude=TelemetryItem(longitude, time.time()))
         return track
 
 

@@ -47,8 +47,7 @@ class WAVIntervalSink(gr.hier_block2):
 
     _next_delayed_call = None
 
-    def __init__(
-        self,
+    def __init__(self,
         interval,
         duration,
         listener,
@@ -93,8 +92,7 @@ class WAVIntervalSink(gr.hier_block2):
 
         self._next_delayed_call = self._callLater(
             next_run - now,
-            self._start_recording, next_run,
-        )
+            self._start_recording, next_run)
 
     def _start_recording(self, start_time):
         filename = self.listener.filename(start_time)
@@ -146,8 +144,7 @@ class WSPRFilter(gr.hier_block2):
     # wider to avoid any distortion that would impair decoding, and also catch
     # beacons that might be just outside the band.
 
-    def __init__(
-        self,
+    def __init__(self,
         input_rate,
         output_rate=12000,
         output_frequency=1500,
@@ -189,8 +186,7 @@ class WSPRFilter(gr.hier_block2):
                 attack_rate=8e-1,
                 decay_rate=8e-1),
 
-            self,
-        )
+            self)
 
 
 __all__ = ['WAVIntervalSink', 'WSPRFilter']
