@@ -1,0 +1,45 @@
+# Need newer packages.
+dist: trusty
+language: python
+python:
+  - "2.7"
+
+addons:
+  apt:
+    sources:
+      # Need a newer gnuradio than Ubuntu Trusty has.
+      # These PPAs were recommended by the gqrx project's installation advice.
+      # http://gqrx.dk/download/install-ubuntu
+      - sourceline: 'ppa:bladerf/bladerf'
+      - sourceline: 'ppa:ettusresearch/uhd'
+      - sourceline: 'ppa:myriadrf/drivers'
+      - sourceline: 'ppa:myriadrf/gnuradio'
+    packages:
+      - gnuradio
+      # - gr-air-modes  # Available version is too old.
+      - gr-osmosdr
+      - libhamlib-utils
+
+before_install:
+  - npm install jshint
+  - ./fetch-js-deps.sh
+
+virtualenv:
+  # Make gnuradio Python bindings visible to the virtualenv.
+  system_site_packages: true
+
+install:
+  - pip install ephem
+  - pip install flake8
+  # pylint from APT is too old.
+  - pip install pylint
+  - pip install pyserial
+  - pip install twisted
+  - pip install txws
+
+script:
+  # PATH in order to call jshint, which was installed non-globally above.
+  - PATH="node_modules/.bin/:$PATH" ./lint.sh
+  
+  # PYTHONPATH as otherwise our own modules are not found.
+  - PYTHONPATH=. trial shinysdr
