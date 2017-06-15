@@ -114,7 +114,9 @@ define(['./values'], function (values) {
       globalUpdate();
     }
     showButton.addEventListener('click', toggle, false);
-
+    
+    this.addEventListener('shinysdr:reveal', setVisibleAndUpdate.bind(null, true), false);
+    
     allWindows.push({
       element: this,
       visible: function() { return visible; },

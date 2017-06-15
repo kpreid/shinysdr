@@ -20,19 +20,8 @@ define(['./widgets/appui', './widgets/basic', './widgets/dbui', './widgets/scope
 
   // TODO: This module is leftover from refactoring and only makes the namespace used for looking up widgets by name -- this ought to become something else that better considers plugin extensibility.
 
-  var widgets = Object.create(null);
-  for (var k in widgets_appui) {
-    widgets[k] = widgets_appui[k];
-  }
-  for (var k in widgets_basic) {
-    widgets[k] = widgets_basic[k];
-  }
-  for (var k in widgets_dbui) {
-    widgets[k] = widgets_dbui[k];
-  }
-  for (var k in widgets_spectrum) {
-    widgets[k] = widgets_spectrum[k];
-  }
+  const widgets = Object.create(null);
+  Object.assign(widgets, widgets_appui, widgets_basic, widgets_dbui, widgets_spectrum);
   for (var k in {ScopeControls: 0, ScopePlot: 0}) {
     // special case because this module exports non-widgets
     widgets[k] = widgets_scope[k];

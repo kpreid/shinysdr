@@ -15,16 +15,28 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./coordination', './events', './math', './types', './values'], function (coordination, events, math, types, values) {
+define(['./coordination', './domtools', './events', './math', './types', './values'],
+       (coordination, domtools, events, math, types, values) => {
   'use strict';
   
-  var ConstantCell = values.ConstantCell;
-  var Coordinator = coordination.Coordinator;
-  var DerivedCell = values.DerivedCell;
-  var StorageCell = values.StorageCell;
-  var StorageNamespace = values.StorageNamespace;
-  var makeBlock = values.makeBlock;
-  var mod = math.mod;
+  const {Coordinator} = coordination;
+  const {
+    lifecycleDestroy,
+    lifecycleInit,
+  } = domtools;
+  const {Notifier} = events;
+  const {mod} = math;
+  const {
+    anyT,
+    RangeT,
+  } = types;
+  const {
+    ConstantCell,
+    DerivedCell,
+    StorageCell,
+    StorageNamespace,
+    makeBlock,
+  } = values;
   
   var exports = {};
   
@@ -32,55 +44,6 @@ define(['./coordination', './events', './math', './types', './values'], function
     return event.shiftKey;
   }
   exports.alwaysCreateReceiverFromEvent = alwaysCreateReceiverFromEvent;
-  
-  // HTML element life cycle facility
-  // We want to know "This element has been inserted in the final tree (has layout)" and "This element will no longer be used".
-  
-  function fireLifecycleEvent(element, condition) {
-    //console.log('fire', element, condition);
-    var key = '__shinysdr_lifecycle_' + condition + '__';
-    if (key in element) {
-      element[key].forEach(function(callback) {
-        // TODO: error handling and think about scheduling
-        callback();
-      });
-    }
-  }
-  
-  function addLifecycleListener(element, condition, callback) {
-    var key = '__shinysdr_lifecycle_' + condition + '__';
-    if (!(key in element)) {
-      element[key] = [];
-    }
-    element[key].push(callback);
-  }
-  exports.addLifecycleListener = addLifecycleListener;
-  
-  function lifecycleInit(element) {
-    if (element.__shinysdr_lifecycle__ !== undefined) return;
-    
-    var root = element;
-    while (root.parentNode) root = root.parentNode;
-    if (root.nodeType !== Node.DOCUMENT_NODE) return;
-    
-    element.__shinysdr_lifecycle__ = 'live';
-    fireLifecycleEvent(element, 'init');
-    
-    //Array.prototype.forEach.call(element.children, function (childEl) {
-    //  lifecycleInit(childEl);
-    //});
-  }
-  
-  function lifecycleDestroy(element) {
-    if (element.__shinysdr_lifecycle__ !== 'live') return;
-    
-    element.__shinysdr_lifecycle__ = 'dead';
-    fireLifecycleEvent(element, 'destroy');
-    
-    Array.prototype.forEach.call(element.children, function (childEl) {
-      lifecycleDestroy(childEl);
-    });
-  }
   
   // TODO figure out what this does and give it a better name
   function Context(config) {
@@ -239,9 +202,9 @@ define(['./coordination', './events', './math', './types', './values'], function
       // allow widgets to embed widgets
       createWidgetsInNode(targetCell, context, widget.element);
       
-      addLifecycleListener(newEl, 'destroy', function() {
+      newEl.addEventListener('shinysdr:lifecycledestroy', event => {
         boundedFnEnabled = false;
-      });
+      }, true);
       
       // signal now that we've inserted
       // TODO: Make this less DWIM
@@ -267,7 +230,7 @@ define(['./coordination', './events', './math', './types', './values'], function
       throw new Error('createWidgetExt: missing targetCell');
     }
     return createWidget(
-      new ConstantCell(types.anyT, targetCell),
+      new ConstantCell(anyT, targetCell),
       String(targetCell),
       context,
       node,
@@ -280,7 +243,7 @@ define(['./coordination', './events', './math', './types', './values'], function
   //   rootCell.get().foo.get().bar
   function evalTargetStr(rootCell, str, scheduler) {
     var steps = str.split(/\./);
-    return new DerivedCell(types.anyT, scheduler, function (dirty) {
+    return new DerivedCell(anyT, scheduler, function (dirty) {
       var cell = rootCell;
       steps.forEach(function (name) {
         if (cell !== undefined) cell = cell.depend(dirty)[name];
@@ -298,7 +261,7 @@ define(['./coordination', './events', './math', './types', './values'], function
         targetCellCell = evalTargetStr(rootTargetCell, targetStr, scheduler);
       } else {
         targetStr = "<can't happen>";
-        targetCellCell = new ConstantCell(types.anyT, rootTargetCell);
+        targetCellCell = new ConstantCell(anyT, rootTargetCell);
       }
       
       var typename = node.getAttribute('data-widget');
@@ -368,7 +331,7 @@ define(['./coordination', './events', './math', './types', './values'], function
     var tune = config.actions.tune;
     var self = this;
 
-    var n = this.n = new events.Notifier();
+    var n = this.n = new Notifier();
     
     // per-drawing-frame parameters
     var nyquist, centerFreq, leftFreq, rightFreq, pixelWidth, pixelsPerHertz, analytic;
@@ -380,7 +343,7 @@ define(['./coordination', './events', './math', './types', './values'], function
     var cacheScrollLeft = 0;
     
     // Restore persistent zoom state
-    addLifecycleListener(container, 'init', function() {
+    container.addEventListener('shinysdr:lifecycleinit', event => {
       // TODO: clamp zoom here in the same way changeZoom does
       zoom = parseFloat(storage.getItem('zoom')) || 1;
       var initScroll = parseFloat(storage.getItem('scroll')) || 0;
@@ -721,10 +684,10 @@ define(['./coordination', './events', './math', './types', './values'], function
       return new StorageCell(storage, type, value, key);
     }
     this.parameters = makeBlock({
-      spectrum_split: cc('spectrum_split', new types.RangeT([[0, 1]], false, false), 0.6),
-      spectrum_average: cc('spectrum_average', new types.RangeT([[0.1, 1]], true, false), 0.15),
-      spectrum_level_min: cc('spectrum_level_min', new types.RangeT([[-200, -20]], false, false), -130),
-      spectrum_level_max: cc('spectrum_level_max', new types.RangeT([[-100, 0]], false, false), -20)
+      spectrum_split: cc('spectrum_split', new RangeT([[0, 1]], false, false), 0.6),
+      spectrum_average: cc('spectrum_average', new RangeT([[0.1, 1]], true, false), 0.15),
+      spectrum_level_min: cc('spectrum_level_min', new RangeT([[-200, -20]], false, false), -130),
+      spectrum_level_max: cc('spectrum_level_max', new RangeT([[-100, 0]], false, false), -20)
     });
     
     lifecycleInit(container);

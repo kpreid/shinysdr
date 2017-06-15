@@ -111,19 +111,48 @@
 
 <h2>Code style</h2>
 
+<h3>General</h3>
+
+<ul>
+  <li><p>Every nontrivial source code file shall begin with copyright and license information as seen in existing files (with an appropriate statement of the copyright on that particular file).</p></li>
+
+  <li><p><code>lint.sh</code> runs a set of linting tools (JSHint, Pylint, and flake8) which should produce no new complaints.</p></li>
+</ul>
+
 <h3>Python</h3>
 
 <ul>
 
   <li><p>Follow <a href="http://www.python.org/dev/peps/pep-0008/">PEP 8</a> except as noted. Existing violations (most notably, camel-cased identifiers) are not to be imitated.</p></li>
 
-  <li><p>Blank lines shall match the indentation of their neighbors.</p></li>
+  <li>
+    <p>PEP 8 Exception: Do not break (wrap) lines except at non-arbitrary, semantically significant positions.</p>
+    
+    <p>Good example (one line per method parameter, <code>self</code>-that-is-always-around bundled with the name):</p>
+    <blockquote><pre>def __init__(self,
+        name=None,
+        rx_driver=nullExportedState,
+        tx_driver=nullExportedState,
+        vfo_cell=None,
+        components={}):</pre></blockquote>
+    
+    <p>Bad example (just packed into 79 characters):</p>
+    <blockquote><pre>def __init__(self, name=None, rx_driver=nullExportedState,
+        tx_driver=nullExportedState, vfo_cell=None, components={}):</pre></blockquote>
+  </li>
 
-  <li><p>Every file shall declare:</p><pre>from __future__ import absolute_import, division</pre></li>
+  <li><p>PEP 8 Exception: Blank lines shall match the indentation of their neighbors.</p></li>
+
+  <li>
+    <p>Every Python file (that is not an empty <code>__init__.py</code>) shall declare:</p>
+    <blockquote><pre>from __future__ import absolute_import, division, unicode_literals</pre></blockquote>
+  </li>
+
+  <li><p>All object attributes should use the double underscore “private” prefix unless they are intended to be used otherwise.</p></li>
+
+  <li><p>Every module should define <code>__all__</code> appropriately; listing all names it intends to be used by other code.</p></li>
 
 </ul>
-
-<p>Configuration files are provided for the linting tools <i>flake8</i> (which subsumes <i>pep8</i>) and <i>Pylint</i>. Any false reports from Pylint should be suppressed using the comments pylint recognizes.</p>
 
 <h3>JavaScript</h3>
 

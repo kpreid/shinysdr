@@ -359,9 +359,9 @@ define(['./types', './values', './events'],
             } else {
               // is block
               const block = idMap[id];
-              for (var k in block) { delete block[k]; }
-              for (var k in value) {
-                block[k] = idMap[value[k]];
+              for (var oldKey in block) { delete block[oldKey]; }
+              for (var newKey in value) {
+                block[newKey] = idMap[value[newKey]];
               }
               block._reshapeNotice.notify();
             }

@@ -16,12 +16,12 @@
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 define(['./basic', './dbui',
-        '../database', '../gltools', '../math', '../menus', '../types', '../values', '../widget',
+        '../database', '../domtools', '../gltools', '../math', '../menus', '../types', '../values', '../widget',
         'text!./spectrum-common.glsl',
         'text!./spectrum-graph-f.glsl', 'text!./spectrum-graph-v.glsl',
         'text!./spectrum-waterfall-f.glsl', 'text!./spectrum-waterfall-v.glsl'], 
        (widgets_basic, widgets_dbui,
-        database, gltools, math, menus, types, values, widget,
+        database, domtools, gltools, math, menus, types, values, widget,
         shader_common,
         shader_graph_f, shader_graph_v,
         shader_waterfall_f, shader_waterfall_v) => {
@@ -36,7 +36,6 @@ define(['./basic', './dbui',
   const Menu = menus.Menu;
   const SingleQuad = gltools.SingleQuad;
   const Toggle = widgets_basic.Toggle;
-  const addLifecycleListener = widget.addLifecycleListener;
   const alwaysCreateReceiverFromEvent = widget.alwaysCreateReceiverFromEvent;
   const createWidgetExt = widget.createWidgetExt;
   const emptyDatabase = database.empty;
@@ -89,8 +88,10 @@ define(['./basic', './dbui',
       // Not in overlayContainer because it does not scroll.
       // Works with zero height as the top-of-scale reference.
       // TODO this is currently disabled because its axis scaling is not exactly right, because it is outside the scrolling element and we haven't compensated for the height of the vertical scrollbar
-      // var verticalScaleEl = outerElement.appendChild(document.createElement('div'));
-      // createWidgetExt(context, VerticalScale, verticalScaleEl, {});
+      if (false) {
+        var verticalScaleEl = outerElement.appendChild(document.createElement('div'));
+        createWidgetExt(context, VerticalScale, verticalScaleEl, {});
+      }
 
       var parametersEl = outerElement.appendChild(document.createElement('div'));
       createWidgetExt(context, MonitorDetailedOptions, parametersEl, config.target);
@@ -698,10 +699,10 @@ define(['./basic', './dbui',
       
       var fillStyle = 'white';
       var strokeStyle = 'white';
-      addLifecycleListener(canvas, 'init', function() {
+      canvas.addEventListener('shinysdr:lifecycleinit', event => {
         fillStyle = getComputedStyle(canvas).fill;
         strokeStyle = getComputedStyle(canvas).stroke;
-      });
+      }, true);
       
       function changedSplit() {
         cleared = true;
@@ -971,20 +972,17 @@ define(['./basic', './dbui',
           continue;
         }
         
-        const band_filter_cell = receiver.demodulator.depend(draw).band_filter_shape;
-        let band_filter_now;
-        if (band_filter_cell) {
-          band_filter_now = band_filter_cell.depend(draw);
+        const band_shape_cell = receiver.demodulator.depend(draw).band_shape;
+        let band_shape_now;
+        if (band_shape_cell) {
+          band_shape_now = band_shape_cell.depend(draw);
         }
 
-        if (band_filter_now) {
-          const fl = band_filter_now.low;
-          const fh = band_filter_now.high;
-          const fhw = band_filter_now.width / 2;
+        if (band_shape_now) {
           ctx.fillStyle = '#3A3A3A';
-          drawBand(rec_freq_now + fl - fhw, rec_freq_now + fh + fhw);
+          drawBand(rec_freq_now + band_shape_now.stop_low, rec_freq_now + band_shape_now.stop_high);
           ctx.fillStyle = '#444444';
-          drawBand(rec_freq_now + fl + fhw, rec_freq_now + fh - fhw);
+          drawBand(rec_freq_now + band_shape_now.pass_low, rec_freq_now + band_shape_now.pass_high);
         }
 
         // TODO: marks ought to be part of a distinct widget
@@ -992,10 +990,10 @@ define(['./basic', './dbui',
         if (squelch_threshold_cell) {
           var squelchPower = squelch_threshold_cell.depend(draw);
           var squelchL, squelchR, bandwidth;
-          if (band_filter_now) {
-            squelchL = freqToCoord(rec_freq_now + band_filter_now.low);
-            squelchR = freqToCoord(rec_freq_now + band_filter_now.high);
-            bandwidth = band_filter_now.high - band_filter_now.low;
+          if (band_shape_now) {
+            squelchL = freqToCoord(rec_freq_now + band_shape_now.stop_low);
+            squelchR = freqToCoord(rec_freq_now + band_shape_now.stop_high);
+            bandwidth = (band_shape_now.pass_high - band_shape_now.pass_low);
           } else {
             // dummy
             squelchL = 0;
@@ -1016,16 +1014,28 @@ define(['./basic', './dbui',
           ctx.lineTo(squelchR, squelchY);
           ctx.stroke();
         }
-
+        
+        // prepare to draw hairlines and text
         ctx.strokeStyle = 'white';
-        drawHair(rec_freq_now); // receiver
         ctx.fillStyle = 'white';
-        var textX = freqToCoord(rec_freq_now) + 2;
-        var textY = textOffsetFromTop - textSpacing;
-
+        const textX = freqToCoord(rec_freq_now) + 2;
+        let textY = textOffsetFromTop - textSpacing;
+        
+        // receiver hairline & info
+        drawHair(rec_freq_now);
         ctx.fillText(recKey, textX, textY += textSpacing);
         ctx.fillText(formatFreqInexactVerbose(receiver.rec_freq.depend(draw)), textX, textY += textSpacing);
         ctx.fillText(receiver.mode.depend(draw), textX, textY += textSpacing);
+        
+        // additional hairlines
+        if (band_shape_now) {
+          ctx.strokeStyle = ctx.fillStyle = '#7F7';
+          for (var markerFreqStr in band_shape_now.markers) {
+            const markerAbsFreq = rec_freq_now + (+markerFreqStr);
+            drawHair(markerAbsFreq);
+            ctx.fillText(String(band_shape_now.markers[markerFreqStr]), freqToCoord(markerAbsFreq) + 2, textY + textSpacing);
+          }
+        }
       }
     });
     draw.scheduler = config.scheduler;

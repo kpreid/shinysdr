@@ -109,16 +109,15 @@ define(['./types', './values'], function (types, values) {
     }
     
     
-    var mapPanCallback = null;
+    var mapRevealAndPanCallback = null;
     function navigateMap(trackCell) {
-      // TODO: Also be able to make the map subwindow visible
-      if (mapPanCallback) {
-        mapPanCallback(trackCell);
+      if (mapRevealAndPanCallback) {
+        mapRevealAndPanCallback(trackCell);
       }
     }
     
     function registerMap(callback) {
-      mapPanCallback = callback;
+      mapRevealAndPanCallback = callback;
     }
     
     var selectedRecord = new LocalCell(anyT, undefined);  // TODO should have a type

@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  Copyright 2015, 2016 Kevin Reid <kpreid@switchb.org>
+  Copyright 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
   
   This file is part of ShinySDR.
   
@@ -274,7 +274,7 @@ extendedKeyUsage=critical,serverAuth</pre></blockquote>
 
 <dl class="major-dl">
 
-<dt><code>shinysdr.devices.AudioDevice(rx_device='...', tx_device='...', name='...', sample_rate=44100, channel_mapping='IQ')</code></dt>
+<dt><code>shinysdr.devices.AudioDevice(rx_device='...', tx_device='...', name='...', sample_rate=44100, channel_mapping='IQ', usable_bandwidth=(<var>low</var>, <var>high</var>))</code></dt>
 <dd>
   <p>An system audio input (&ldquo;sound card&rdquo;) device.</p>
   
@@ -296,7 +296,8 @@ config.devices.add(u'fcd', AudioDevice(
 config.devices.add(u'rig', AudioDevice(
   rx_device='USB Audio CODEC ',  # this is how the Yaesu SCU-17 shows up on a Mac, for example
   sample_rate=8000,
-  channel_mapping=1))</pre>
+  channel_mapping=1,
+  usable_bandwidth=(500, 2500)))</pre>
     </li>
     <li>If you wish to use a microphone as an input, any settings will work and I encourage you to play with them. But in this case, you might also be interested in the <a href="/tools/audio-spectrum">standalone audio spectrum display</a>, which uses audio input directly in the browser and therefore has lower latency.</li>
   </ul>
@@ -321,6 +322,8 @@ config.devices.add(u'rig', AudioDevice(
     <li>'QI', for quadrature using the second channel as real and the first channel as imaginary.
     <li>A list of lists specifying a 2 × <var>N</var> matrix where the two rows correspond <var>I</var> and <var>Q</var> and the columns correspond to the audio device's input channels. For example, <code>[[1, 0.1], [0, 0.9]]</code> leaks some of the second channel into <var>I</var> and scales <var>Q</var> down slightly. This can be used to set an arbitrary channel mapping or to compensate for magnitude and phase errors in the analog input.
   </ul>
+
+  <p><code>usable_bandwidth</code> is optional and defaults to <code>(0, sample_rate / 2)</code>. It specifies the frequency range in Hz which contains usable signal, as a tuple of lower frequency and upper frequency (both nonnegative; they will be mirrored for IQ input).</p>
 </dd>
 
 <dt><code>shinysdr.plugins.simulate.SimulatedDevice(name='Simulated RF')</code></dt>
