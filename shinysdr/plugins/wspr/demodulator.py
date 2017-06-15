@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2017 Phil Frost <indigo@bitglue.com>
 # 
 # This file is part of ShinySDR.
@@ -27,7 +28,7 @@ import errno
 
 from gnuradio import gr
 
-from twisted.internet import reactor, threads
+from twisted.internet import defer, reactor, threads
 from twisted.internet.protocol import ProcessProtocol
 from twisted.python import log
 from zope.interface import implementer
@@ -99,6 +100,12 @@ class WSPRDemodulator(gr.hier_block2, ExportedState):
 
         wspr_filter = WSPRFilter(input_rate, output_frequency=self.__audio_frequency)
 
+        self.__listener = WAVIntervalListener(
+            self.__recording_dir,
+            context,
+            self.__audio_frequency,
+            _find_wsprd=self.__find_wsprd)
+
         self.connect(
             self,
             wspr_filter,
@@ -108,17 +115,16 @@ class WSPRDemodulator(gr.hier_block2, ExportedState):
             wspr_filter,
             self.__make_wav_sink(context, _WAVIntervalSink))
 
-    def __make_wav_sink(self, context, _WAVIntervalSink):
-        listener = WAVIntervalListener(
-            self.__recording_dir,
-            context,
-            self.__audio_frequency,
-            _find_wsprd=self.__find_wsprd)
+    # TODO: Make a better way to forward to a cell than overriding state_def
+    def state_def(self, callback):
+        super(WSPRDemodulator, self).state_def(callback)
+        callback(self.__listener.state()['status'])
 
+    def __make_wav_sink(self, context, _WAVIntervalSink):
         wav_sink = _WAVIntervalSink(
             interval=self.__interval,
             duration=self.__duration,
-            listener=listener,
+            listener=self.__listener,
             sample_rate=self.__demod_rate)
 
         # would be cool to not have side effects in __init__, though there
@@ -162,12 +168,19 @@ class WSPRDemodulator(gr.hier_block2, ExportedState):
         self.close()
 
 
+_STATUS_IDLE = 'Waiting for next even minute'
+_STATUS_RECEIVING = 'Receiving'
+_STATUS_DECODING = 'Decoding…'
+_STATUS_DECODING_AND_RECEIVING = 'Decoding previous & receiving'
+
+
 @implementer(IWAVIntervalListener)
-class WAVIntervalListener(object):
+class WAVIntervalListener(ExportedState):
     # pylint: disable=no-member
-    __start_frequency = 0
+    __start_frequency = None
     __frequency_subscription = None
     __invalidated_by_frequency_change = False
+    __decoder_active = None
 
     def __init__(self,
             directory,
@@ -193,9 +206,14 @@ class WAVIntervalListener(object):
             self.__check_modified_frequency,
             SubscriptionContext(reactor=self._reactor, poller=None))
         self.__invalidated_by_frequency_change = False
+        self.state_changed()
 
     def fileClosed(self, filename):
         self.__frequency_subscription.unsubscribe()
+        self.__frequency_subscription = None
+        rf_frequency = self.__start_frequency
+        self.__start_frequency = None
+        self.state_changed()
         if self.__invalidated_by_frequency_change:
             # If the recording started on one frequency, but finished on
             # another, don't decode the file. We especially wouldn't want to
@@ -206,9 +224,11 @@ class WAVIntervalListener(object):
 
         # wsprd expects its -f argument to be as if the recording was made with
         # a USB receiver
-        dial_freq = (self.__start_frequency - self.audio_frequency) / 1e6
+        dial_freq = (rf_frequency - self.audio_frequency) / 1e6
+        self.__decoder_active = defer.Deferred()
+        self.__decoder_active.addBoth(self.__decode_finished)
         self._reactor.spawnProcess(
-            WsprdProtocol(self.context, filename, self._time()),
+            WsprdProtocol(self.context, filename, self._time(), self.__decoder_active),
             self.__wsprd,
             args=['wsprd', '-d', '-f', str(dial_freq), filename],
             env={},
@@ -217,6 +237,10 @@ class WAVIntervalListener(object):
     def __check_modified_frequency(self, value):
         if value != self.__start_frequency:
             self.__invalidated_by_frequency_change = True
+            self.state_changed()
+
+    def __decode_finished(self, _unused_value):
+        self.__decoder_active = None
 
     def filename(self, start_time):
         # TODO: We should be using the same frequency as __start_frequency but
@@ -225,6 +249,19 @@ class WAVIntervalListener(object):
         time_str = time.strftime(b'%y%m%d_%H%M.wav', time.gmtime(start_time))
         filename = b'%s_%s' % (self.context.get_absolute_frequency_cell().get(), time_str)
         return os.path.join(self.directory, filename)
+    
+    @exported_value(type=unicode, label='Status', changes='explicit')
+    def get_status(self):
+        recording = (self.__frequency_subscription and
+            not self.__invalidated_by_frequency_change)
+        if self.__decoder_active and recording:
+            return 'Decoding previous & receiving'
+        elif self.__decoder_active:
+            return 'Decoding…'
+        elif recording:
+            return 'Receiving'
+        else:
+            return 'Waiting for next even minute'
 
 
 class WsprdProtocol(ProcessProtocol):
@@ -235,10 +272,12 @@ class WsprdProtocol(ProcessProtocol):
     def __init__(self,
             context,
             wav_filename,
-            decode_time):
+            decode_time,
+            status_deferred):
         self.context = context
         self.wav_filename = wav_filename
         self.decode_time = decode_time
+        self.__status_deferred = status_deferred
 
     def outReceived(self, data):
         self.__tail += data
@@ -257,6 +296,7 @@ class WsprdProtocol(ProcessProtocol):
 
         self._deferToThread(os.unlink, self.wav_filename).addErrback(log.err)
         self.wav_filename = None
+        self.__status_deferred.callback(None)
 
     def lineReceived(self, line):
         line = line.strip()

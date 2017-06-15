@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2017 Phil Frost <indigo@bitglue.com>
 # 
 # This file is part of ShinySDR.
@@ -34,6 +35,10 @@ from shinysdr.interfaces import IDemodulator, IDemodulatorContext
 from shinysdr.values import LooseCell
 
 from shinysdr.plugins.wspr.demodulator import (
+    _STATUS_IDLE,
+    _STATUS_RECEIVING,
+    _STATUS_DECODING,
+    _STATUS_DECODING_AND_RECEIVING,
     WAVIntervalListener, WSPRDemodulator, WsprdProtocol)
 from shinysdr.plugins.wspr.interfaces import IWAVIntervalListener
 
@@ -134,12 +139,15 @@ class TestIntervalListener(unittest.TestCase):
         self.assertEqual(filename, os.path.join(self.directory, '12345678_170605_0054.wav'))
 
     def test_fileOpened(self):
-        # it doesn't do anything.
+        self.assertEqual(self.listener.get_status(), _STATUS_IDLE)
         self.listener.fileOpened('some file')
+        self.assertEqual(self.listener.get_status(), _STATUS_RECEIVING)
 
     def test_fileClosed(self):
         self.listener.fileOpened('some file')
+        self.assertEqual(self.listener.get_status(), _STATUS_RECEIVING)
         self.listener.fileClosed('some file')
+        self.assertEqual(self.listener.get_status(), _STATUS_DECODING)
         self.assertEqual(len(self.spawned), 1)
 
         protocol, executable, args, _, path = self.spawned[0]
@@ -154,6 +162,9 @@ class TestIntervalListener(unittest.TestCase):
         self.assertIn(str(dial_frequency), args)
 
         self.assertEqual(path, self.directory)
+        
+        protocol.processEnded(None)
+        self.assertEqual(self.listener.get_status(), _STATUS_IDLE)
 
     def test_frequency_change(self):
         """If the frequency changes during the recording, don't decode it.
@@ -162,10 +173,28 @@ class TestIntervalListener(unittest.TestCase):
         happened on another.
         """
         self.listener.fileOpened('some file')
+        self.assertEqual(self.listener.get_status(), _STATUS_RECEIVING)
         self.context.get_absolute_frequency_cell().set(654321)
         self.clockAndSpawn.advance(1)  # Allow cell subscription to fire.
+        self.assertEqual(self.listener.get_status(), _STATUS_IDLE)
         self.listener.fileClosed('some file')
         self.assertFalse(self.spawned)
+        self.assertEqual(self.listener.get_status(), _STATUS_IDLE)
+
+    def test_decode_runs_long_status(self):
+        """Confirm expected behavior if decode and receive overlap."""
+        self.listener.fileOpened('some file')
+        self.assertEqual(self.listener.get_status(), _STATUS_RECEIVING)
+
+        self.listener.fileClosed('some file')
+        self.assertEqual(self.listener.get_status(), _STATUS_DECODING)
+
+        self.listener.fileOpened('some file')
+        self.assertEqual(self.listener.get_status(), _STATUS_DECODING_AND_RECEIVING)
+
+        protocol, _, _, _, _ = self.spawned[0]
+        protocol.processEnded(None)
+        self.assertEqual(self.listener.get_status(), _STATUS_RECEIVING)
 
 
 class FakeWAVIntervalSink(gr.hier_block2):
@@ -222,7 +251,7 @@ class TestWsprdProtocol(unittest.TestCase):
         self.wavfile = self.mktemp()
         self.threads = ThreadDeferrer()
         open(self.wavfile, 'w').write('fake wav file\n')
-        self.proto = WsprdProtocol(self.context, self.wavfile, self.time())
+        self.proto = WsprdProtocol(self.context, self.wavfile, self.time(), defer.Deferred())
         self.proto._deferToThread = self.threads
 
     def test_interface(self):
