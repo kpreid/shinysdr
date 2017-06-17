@@ -49,7 +49,7 @@ class SignalType(object):
             if sample_rate != 0:
                 raise ValueError('Sample rate must be zero for kind {!r}'.format(kind))
         else:
-            if sample_rate < 0:
+            if not sample_rate > 0:
                 raise ValueError('Sample rate must be positive, not {}'.format(sample_rate))
         
         self.__kind = kind
