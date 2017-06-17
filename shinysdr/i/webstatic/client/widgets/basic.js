@@ -340,6 +340,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
       draw();
     }
   }
+  exports.TextTerminal = TextTerminal;
   
   // widget for TimestampT type
   var timestampUpdateClock = new Clock(1);

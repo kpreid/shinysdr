@@ -37,6 +37,7 @@ define(['./basic', './spectrum',
   const Select = widgets_basic.Select;
   const Toggle = widgets_basic.Toggle;
   const createWidgetExt = widget.createWidgetExt;
+  const TextTerminal = widgets_basic.TextTerminal;
 
   const exports = Object.create(null);
 
@@ -401,9 +402,12 @@ define(['./basic', './spectrum',
         addWidget('squelch_threshold', LinSlider, 'Squelch');
       }
       
-      // TODO: VOR plugin stuff; let the plugin handle it
+      // TODO: This is plugin stuff; let the plugin (or server-provided metadata) define it.
+      // VOR
       addWidget('angle', config.context.widgets.VOR$Angle, '');
       ignore('zero_point');
+      // RTTY/PSK31
+      addWidget('text', TextTerminal, '');
     }, true);
   }
   exports['interface:shinysdr.interfaces.IDemodulator'] = Demodulator;
