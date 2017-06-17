@@ -30,6 +30,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
   const RangeT = types.RangeT;
   const TimestampT = types.TimestampT;
   const booleanT = types.booleanT;
+  const getInterfaces = values.getInterfaces;
   const mod = math.mod;
   const numberT = types.numberT;
   const stringT = types.stringT;
@@ -1082,6 +1083,94 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
     draw();
   }
   exports.MeasvizWidget = MeasvizWidget;
+  
+  // TODO: Better name
+  class ObjectInspector {
+    constructor(config) {
+      const target = config.target;
+      const container = this.element = config.element;
+      const baseId = config.element.id;
+      
+      const metaField = container.appendChild(document.createElement(container.tagName === 'DETAILS' ? 'summary' : 'div'));
+      
+      if (config.element.title) {
+        const t = document.createTextNode(config.element.title);
+        config.element.removeAttribute('title');
+        metaField.appendChild(t);
+        metaField.appendChild(oiMetasyntactic(' = '));
+      }
+      
+      metaField.appendChild(document.createTextNode(String(target.type) + ' '));
+      metaField.appendChild(oiMetasyntactic(target.set ? 'RW' : 'RO'));
+      
+      const singleLineContainer = metaField.appendChild(document.createElement('span'));
+      singleLineContainer.classList.add('widget-ObjectInspector-single-line');
+      
+      //container.appendChild(document.createTextNode('\u00A0'));
+      
+      function updateValue() {
+        while (container.lastChild && container.lastChild !== metaField) {
+          container.removeChild(container.lastChild);
+        }
+        
+        const value = config.target.depend(updateValue);
+        if (typeof value === 'object' && value !== null) {
+          getInterfaces(value).forEach(i => {
+            container.appendChild(document.createTextNode(' ' + i));
+          });
+          if (value._reshapeNotice) {
+            // TODO: Use AddKeepDrop instead
+            value._reshapeNotice.listen(updateValue);
+          }
+          const list = container.appendChild(document.createElement('ul'));
+          for (var prop in value) {
+            const childField = list.appendChild(document.createElement('li'));
+            const propValue = value[prop];
+            if (propValue instanceof Cell) {
+              const childDetails = childField.appendChild(document.createElement('details'));
+              childDetails.open = true;
+              childDetails.id = baseId + '.' + prop;
+              childDetails.title = prop;
+              createWidgetExt(config.context, ObjectInspector, childDetails, propValue);
+            } else {
+              childField.appendChild(document.createTextNode(prop));
+              childField.appendChild(oiMetasyntactic(' = not a cell '));
+              childField.appendChild(oiStringify(propValue));
+            }
+          }
+        } else {
+          singleLineContainer.appendChild(oiMetasyntactic(' value= '));
+          singleLineContainer.appendChild(document.createTextNode(typeof value));
+          singleLineContainer.appendChild(oiMetasyntactic(' '));
+          
+          singleLineContainer.appendChild(oiStringify(value));
+        }
+      }
+      updateValue.scheduler = config.scheduler;
+      updateValue();
+    }
+  }
+  exports.ObjectInspector = ObjectInspector;
+  
+  function oiMetasyntactic(text) {
+    const el = document.createElement('span');
+    el.textContent = text;
+    el.classList.add('widget-ObjectInspector-metasyntactic');
+    return el;
+  }
+  
+  function oiStringify(value) {
+    try {
+      return document.createTextNode(JSON.stringify(value));
+    } catch (e) {
+      try {
+        return document.createTextNode(String(value));
+      } catch (e) {
+        return oiMetasyntactic('<error displaying value>');
+      }
+    }
+  }
+  
   
   return Object.freeze(exports);
 });

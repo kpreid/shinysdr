@@ -812,3 +812,25 @@ table.aligned-controls-table {
   
   font-family: monospace;
 }
+
+.widget-ObjectInspector {
+  margin: 0;
+  border: none;
+  padding: 0;
+}
+.widget-ObjectInspector > ul {
+  margin: 0 0 0 1em;
+  border: none;
+  padding: 0;
+}
+.widget-ObjectInspector > ul > li {
+  margin: 0;
+  border-left: 0.1em solid var(--shinysdr-theme-header-bgcolor);
+  padding-left: 0.3em;
+  list-style-type: none;
+  margin: 0 0 0.2em 0;
+}
+.widget-ObjectInspector-metasyntactic, .widget-ObjectInspector ::-webkit-details-marker {
+  /* TODO align wirh theme color */
+  color: blue;
+}

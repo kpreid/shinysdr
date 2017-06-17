@@ -28,7 +28,18 @@
   <meta name="viewport" content="width=device-width" />
 </head><body class="subwindowed">
 
-<div data-widget="PickWidget"></div>
+<shinysdr-subwindow id="section-ordinary">
+  <h2>Normal View</h2>
+  <div class="sidebar frame">
+    <div data-widget="PickWidget"></div>
+  </div>
+</shinysdr-subwindow>
+<shinysdr-subwindow id="section-inspector" class="stretchy">
+  <h2>Inspector</h2>
+  <div class="frame" style="overflow-y: scroll;"> <!-- TODO stylesheet rule -->
+    <div data-widget="ObjectInspector"></div>
+  </div>
+</shinysdr-subwindow>
 
 <script src="/client/require.js"></script>
 <script>
