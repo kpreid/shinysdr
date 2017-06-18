@@ -272,6 +272,8 @@ define([], () => {
             return numberT;
           case 'integer':
             return numberT;
+          case 'string':
+            return stringT;
           case 'shinysdr.telemetry.Track':
             return trackT;
           default:

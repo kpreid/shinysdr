@@ -110,6 +110,7 @@ python_type_registry = {
     float: u'float64',
     int: u'integer',
     long: u'integer',
+    unicode: u'string',
 }
 
 
