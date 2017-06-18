@@ -175,6 +175,10 @@ define(['./coordination', './domtools', './events', './math', './types', './valu
       let widget;
       try {
         widget = new widgetCtor(config);
+        
+        if (!(widget.element instanceof Element)) {
+          throw new TypeError('Widget ' + widget.constructor.name + ' did not provide an element but ' + widget.element);
+        }
       } catch (error) {
         console.error('Error creating widget: ', error);
         console.log(error.stack);
