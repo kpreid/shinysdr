@@ -15,12 +15,41 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['/test/jasmine-glue.js'], (jasmineGlue) => {
+define(['/test/jasmine-glue.js',
+        'coordination', 'database', 'events', 'values'],
+       (jasmineGlue,
+         coordination,   database,   events,   values) => {
   'use strict';
   
-  const {expect, fail} = jasmineGlue.ji;
+  const {afterEach, expect, fail} = jasmineGlue.ji;
+  const {
+    ClientStateObject,
+  } = coordination;
+  const {
+    Table,
+  } = database;
+  const {
+    Scheduler,
+  } = events;
+  const {
+    Index,
+    StorageNamespace,
+  } = values;
   
   const exports = Object.create(null);
+  
+  const cleanupCallbacks = [];
+  afterEach(() => {
+    while (cleanupCallbacks.length) {
+      cleanupCallbacks.pop()();
+    }
+  });
+  function afterThis(cleanupCallback) {
+    if (typeof cleanupCallback !== 'function') {
+      throw new TypeError(cleanupCallback + ' not a function');
+    }
+    cleanupCallbacks.push(cleanupCallback);
+  }
   
   function afterNotificationCycle(scheduler, callback) {
     function wrapper() {
@@ -82,6 +111,76 @@ define(['/test/jasmine-glue.js'], (jasmineGlue) => {
     return listener;
   }
   exports.newListener = newListener;
+  
+  class WidgetTester {
+    constructor(widgetCtor, cell, {delay} = {}) {
+      this._scheduler = new Scheduler(window);
+      this.widgetCtor = widgetCtor;
+      this.cell = cell;
+      this.widget = null;
+      this.config = null;
+      
+      sessionStorage.clear();  // TODO: use a mock storage instead
+      afterThis(this.close.bind(this));
+      
+      this.config = this._mockWidgetConfig(null);
+      if (!delay) {
+        this.instantiate();
+      }
+    }
+    
+    close() {
+      const widget = this.widget;
+      if (widget && widget.element && widget.element.parentNode) {
+        widget.element.parentNode.removeChild(widget.element);
+      }
+    }
+    
+    _mockWidgetConfig(element) {
+      if (!element) element = document.createElement('div');
+      const scheduler = this._scheduler;
+      const cell = this.cell;
+      
+      document.body.appendChild(element);
+      function rebuildMe() { throw new Error('mock rebuildMe not implemented'); }
+      rebuildMe.scheduler = scheduler;
+      const index = new Index(scheduler, cell);
+      const stubCoordinator = {
+        actions: {
+          _registerMap: function () {}  // TODO this is a stub of a kludge and should go away when the kludge does
+        }
+      };
+      const storage = new StorageNamespace(sessionStorage, Math.random() + '.');
+      return {
+        storage: storage,
+        freqDB: new Table('foo', false),
+        element: element,
+        target: cell,
+        scheduler: scheduler,
+        clientState: new ClientStateObject(storage, null),
+        boundedFn: f => f,
+        rebuildMe: rebuildMe,
+        index: index,
+        context: {
+          widgets: {},
+          scheduler: scheduler,
+          index: index,
+          coordinator: stubCoordinator
+        },
+        actions: stubCoordinator.actions,
+      };
+    }
+    
+    instantiate() {
+      if (this.widget) {
+        throw new Error('Cannot reuse WidgetTester');
+      }
+      const widget = new (this.widgetCtor)(this.config);
+      this.widget = widget;
+      return widget;
+    }
+  }
+  exports.WidgetTester = WidgetTester;
   
   return Object.freeze(exports);
 });

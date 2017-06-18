@@ -15,10 +15,25 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['/test/jasmine-glue.js', 'map/map-core'], (jasmineGlue, mapCore) => {
+define(['/test/jasmine-glue.js', 'map/map-core',
+        '/test/testutil.js', 'types', 'values'],
+       (jasmineGlue, mapCore,
+        testutil, types, values) => {
   'use strict';
   
   const {describe, expect, it, jasmine} = jasmineGlue.ji;
+  const {
+    WidgetTester,
+  } = testutil;
+  const {
+    anyT,
+    blockT,
+    numberT,
+  } = types;
+  const {
+    ConstantCell,
+    makeBlock
+  } = values;
   
   describe('map/map-core', function () {
     describe('StripeAllocator', function () {
@@ -85,6 +100,39 @@ define(['/test/jasmine-glue.js', 'map/map-core'], (jasmineGlue, mapCore) => {
         // allocate a bigger thing
         expect(allocator.allocate(9, 'a4', ()=>{})).toBeTruthy();
       });
+    });
+    
+    describe('GeoMap widget', function () {
+      const GeoMap = mapCore.GeoMap;
+      
+      function makeStubTarget() {
+        // TODO stop needing this boilerplate, somehow.
+        return new ConstantCell(blockT, makeBlock({
+          source: new ConstantCell(blockT, makeBlock({
+            freq: new ConstantCell(numberT, 0),
+            rx_driver: new ConstantCell(blockT, makeBlock({
+              output_type: new ConstantCell(anyT, {sample_rate: 1})
+            })),
+            components: new ConstantCell(blockT, makeBlock({}))
+          })),
+          receivers: new ConstantCell(blockT, makeBlock({
+          }))
+        }));
+      }
+    
+      it('exists', function () {
+        expect(typeof GeoMap).toBe('function');
+      });
+    
+      it('should be successfully created', function () {
+        const cell = makeStubTarget();
+        const wt = new WidgetTester(GeoMap, cell);
+        expect(wt.config.storage.getItem('viewCenterLat')).toBe('0');  // TODO: test against public interface -- of some sort -- rather than storage
+        expect(wt.config.storage.getItem('viewCenterLon')).toBe('0');
+        expect(wt.config.storage.getItem('viewZoom')).toBe('1');
+      });
+    
+      // TODO Check reading initial position from PositionedDevice
     });
   });
   

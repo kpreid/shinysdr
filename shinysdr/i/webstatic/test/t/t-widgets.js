@@ -17,36 +17,27 @@
 
 define(['/test/jasmine-glue.js',
         'coordination', 'database', 'events', 'map/map-core',
-        'types', 'values', 'widget', 'widgets', 'widgets/scope'],
+        'types', '/test/testutil.js', 'values', 'widget', 'widgets',
+        'widgets/scope'],
        ( jasmineGlue,
-         coordination,   database,   events,   mapCore, 
-         types,   values,   widget,   widgets,   widgets_scope) => {
+         coordination,   database,   events,   mapCore,
+         types,   testutil,            values,   widget,   widgets,
+         widgets_scope) => {
   'use strict';
-
-  const {afterEach, beforeEach, describe, expect, it} = jasmineGlue.ji;
-  const ClientStateObject = coordination.ClientStateObject;
-  const ConstantCell = values.ConstantCell;
-  const LocalCell = values.LocalCell;
-  const Index = values.Index;
-  const Scheduler = events.Scheduler;
-  const StorageNamespace = values.StorageNamespace;
-  const Table = database.Table;
-  const ValueType = types.ValueType;
-  const makeBlock = values.makeBlock;
-
-  describe('widgets', function () {
-    let scheduler, widget;
-    beforeEach(function () {
-      scheduler = new Scheduler(window);
-      widget = undefined;
-      sessionStorage.clear();
-    });
-    afterEach(function () {
-      if (widget && widget.element && widget.element.parentNode) {
-        widget.element.parentNode.removeChild(widget.element);
-      }
-    });
   
+  const {describe, expect, it} = jasmineGlue.ji;
+  const {
+    WidgetTester,
+  } = testutil;
+  const {
+    ValueType
+  } = types;
+  const {
+    LocalCell,
+    makeBlock,
+  } = values;
+  
+  describe('widgets', () => {
     function simulateKey(key, el) {
       ['keydown', 'keypress', 'keyup'].forEach(type => {
         const e = document.createEvent('KeyboardEvent');
@@ -62,44 +53,13 @@ define(['/test/jasmine-glue.js',
       });
     }
   
-    function mockWidgetConfig(element, cell) {
-      if (!element) element = document.createElement('div');
-      document.body.appendChild(element);
-      function rebuildMe() { throw new Error('mock rebuildMe not implemented'); }
-      rebuildMe.scheduler = scheduler;
-      const index = new Index(scheduler, cell);
-      const stubCoordinator = {
-        actions: {
-          _registerMap: function () {}  // TODO this is a stub of a kludge and should go away when the kludge does
-        }
-      };
-      const storage = new StorageNamespace(sessionStorage, Math.random() + '.');
-      return {
-        storage: storage,
-        freqDB: new Table('foo', false),
-        element: element,
-        target: cell,
-        scheduler: scheduler,
-        clientState: new ClientStateObject(storage, null),
-        boundedFn: f => f,
-        rebuildMe: rebuildMe,
-        index: index,
-        context: {
-          widgets: {},
-          scheduler: scheduler,
-          index: index,
-          coordinator: stubCoordinator
-        },
-        actions: stubCoordinator.actions,
-      };
-    }
-  
     describe('PickWidget', function () {
       // TODO more tests
     
       function t(widgetClass, type, value) {
         const cell = new LocalCell(type, value);
-        widget = new widgets.PickWidget(mockWidgetConfig(null, cell));
+        const wt = new WidgetTester(widgets.PickWidget, cell);
+        const widget = wt.widget;
       
         // Loose but more informative on failure
         if (widget.constructor.name && widgetClass.name) {
@@ -125,21 +85,21 @@ define(['/test/jasmine-glue.js',
       // TODO: PickWidget used to be PickBlock. Add tests for its cell-type-based selection.
       it('should default to Block', function () {
         const cell = new LocalCell(types.blockT, makeBlock({}));
-        widget = new widgets.PickWidget(mockWidgetConfig(null, cell));
+        widget = new WidgetTester(widgets.PickWidget, cell).widget;
         expect(Object.getPrototypeOf(widget)).toBe(widgets.Block.prototype);
       });
     
       it('should match on object interfaces', function () {
         function TestWidget(config) {
-          this.element = config.element;
+          this.element = wt.config.element;
         }
 
         const block = makeBlock({});
         Object.defineProperty(block, '_implements_Foo', {value: true});  // non-enum
         const cell = new LocalCell(types.blockT, block);
-        const config = mockWidgetConfig(null, cell);
-        config.context.widgets['interface:Foo'] = TestWidget;
-        widget = new widgets.PickWidget(config);
+        const wt = new WidgetTester(widgets.PickWidget, cell, {delay: true});
+        wt.config.context.widgets['interface:Foo'] = TestWidget;
+        const widget = wt.instantiate();
         expect(Object.getPrototypeOf(widget)).toBe(TestWidget.prototype);
       });
     });
@@ -147,7 +107,7 @@ define(['/test/jasmine-glue.js',
     describe('Knob', function () {
       it('should hold a negative zero', function () {
         const cell = new LocalCell(types.anyT, 0);
-        widget = new widgets.Knob(mockWidgetConfig(null, cell));
+        widget = new WidgetTester(widgets.Knob, cell).widget;
       
         document.body.appendChild(widget.element);
       
@@ -168,7 +128,7 @@ define(['/test/jasmine-glue.js',
     describe('SmallKnob', function () {
       it('should set limits from a continuous RangeT type', function () {
         const cell = new LocalCell(new types.RangeT([[1, 2]], false, false), 0);
-        widget = new widgets.SmallKnob(mockWidgetConfig(null, cell));
+        widget = new WidgetTester(widgets.SmallKnob, cell).widget;
         const input = widget.element.querySelector('input');
         expect(input.min).toBe('1');
         expect(input.max).toBe('2');
@@ -177,7 +137,7 @@ define(['/test/jasmine-glue.js',
 
       it('should set limits from an integer RangeT type', function () {
         const cell = new LocalCell(new types.RangeT([[1, 2]], false, true), 0);
-        widget = new widgets.SmallKnob(mockWidgetConfig(null, cell));
+        widget = new WidgetTester(widgets.SmallKnob, cell).widget;
         const input = widget.element.querySelector('input');
         expect(input.min).toBe('1');
         expect(input.max).toBe('2');
@@ -197,13 +157,10 @@ define(['/test/jasmine-glue.js',
             new widgets_scope.ScopeParameters(sessionStorage)),
         }));
       
-        widget = new widgets.ScopePlot(mockWidgetConfig(null, root));
+        widget = new WidgetTester(widgets.ScopePlot, root);
         
         expect(1).toBe(1);  // dummy expect for "this does not throw" test
       });
-    });
-  
-    describe('PickWidget', function () {
     });
   
     describe('Radio', function () {
@@ -213,7 +170,7 @@ define(['/test/jasmine-glue.js',
           'b': {'label': 'B', 'description': 'BETA', 'sort_key': '2'},
           'c': {'label': 'C', 'description': 'GAMMA', 'sort_key': '1'}
         }), 'a');
-        widget = new widgets.Radio(mockWidgetConfig(null, cell));
+        widget = new WidgetTester(widgets.Radio, cell).widget;
         document.body.appendChild(widget.element);
         expect(widget.element.textContent).toBe('CBA');
         expect(widget.element.querySelector('label').title).toBe('GAMMA');
@@ -227,46 +184,11 @@ define(['/test/jasmine-glue.js',
             [[1, 1], [20, 20], [300, 300]],
             false, true, {symbol: 'Hz', si_prefix_ok: true}),
           20);
-        widget = new widgets.Select(mockWidgetConfig(null, cell));
+        widget = new WidgetTester(widgets.Select, cell).widget;
         //document.body.appendChild(widget.element);
         expect(widget.element.textContent).toBe('1 Hz20 Hz300 Hz');
         expect(widget.element.querySelector('option').value).toBe('1');
       });
-    });
-  
-    // TODO: This is in a different module and arguably ought to be in a separate test file. It's here because it's a widget and has use for the widget test glue.
-    describe('GeoMap', function () {
-      const GeoMap = mapCore.GeoMap;
-      
-      function makeStubTarget() {
-        // TODO stop needing this boilerplate, somehow.
-        return new ConstantCell(types.blockT, makeBlock({
-          source: new ConstantCell(types.blockT, makeBlock({
-            freq: new ConstantCell(types.numberT, 0),
-            rx_driver: new ConstantCell(types.blockT, makeBlock({
-              output_type: new ConstantCell(types.anyT, {sample_rate: 1})
-            })),
-            components: new ConstantCell(types.blockT, makeBlock({}))
-          })),
-          receivers: new ConstantCell(types.blockT, makeBlock({
-          }))
-        }));
-      }
-    
-      it('exists', function () {
-        expect(typeof GeoMap).toBe('function');
-      });
-    
-      it('should be successfully created', function () {
-        const cell = makeStubTarget();
-        const config = mockWidgetConfig(null, cell);
-        widget = new GeoMap(config);
-        expect(config.storage.getItem('viewCenterLat')).toBe('0');  // TODO: test against public interface -- of some sort -- rather than storage
-        expect(config.storage.getItem('viewCenterLon')).toBe('0');
-        expect(config.storage.getItem('viewZoom')).toBe('1');
-      });
-    
-      // TODO Check reading initial position from PositionedDevice
     });
   });
   
