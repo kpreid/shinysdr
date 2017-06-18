@@ -173,7 +173,8 @@ class RTTYDemodulator(gr.hier_block2, ExportedState):
         if message:
             textstring = self.__text
             textstring += message.to_string().decode('us-ascii')
-            self.__text = textstring[-20:]
+            # TODO: Make the buffer longer and arrange so partial updates rather than the entire buffer can be sent to clients.
+            self.__text = textstring[-100:]
         return self.__text
 
 
