@@ -25,12 +25,23 @@ from gnuradio import blocks
 
 # Note: not testing _ConstantVFOCell, it's just a useful utility
 from shinysdr.devices import _ConstantVFOCell, AudioDevice, Device, FrequencyShift, IDevice, PositionedDevice, _coerce_channel_mapping, find_audio_rx_names, merge_devices
-from shinysdr.test.testutil import DeviceTestCase, StubComponent, StubRXDriver, StubTXDriver
+from shinysdr.test.testutil import DeviceTestCase, StubComponent, StubRXDriver, StubTXDriver, state_smoke_test
 from shinysdr.types import RangeT
 from shinysdr.values import LooseCell, nullExportedState
 
 
 class TestDevice(unittest.TestCase):
+    def test_state_smoke_empty(self):
+        state_smoke_test(Device())
+        
+    def test_state_smoke_full(self):
+        state_smoke_test(Device(
+            name=u'x',
+            rx_driver=StubRXDriver(),
+            tx_driver=StubTXDriver(),
+            vfo_cell=_ConstantVFOCell(1),
+            components={'c': StubComponent()}))
+    
     def test_name(self):
         self.assertEqual(u'x', Device(name='x').get_name())
         self.assertEqual(None, Device().get_name())
