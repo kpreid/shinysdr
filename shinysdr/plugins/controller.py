@@ -73,14 +73,14 @@ class Command(object):
         self.__label = label
         self.__text = text
     
-    def _install_cells(self, callback, send, encoding):
+    def _cells(self, send, encoding):
         if isinstance(self.__text, unicode):
             text = self.__text.encode(encoding)
         else:
             text = self.__text
         # TODO: Autogenerate unique keys instead of requiring the label to be unique.
-        callback(CommandCell(self, self.__label, functools.partial(send, text),
-            label=self.__label))
+        yield self.__label, CommandCell(self, self.__label, functools.partial(send, text),
+            label=self.__label)
 
 
 __all__.append('Command')
@@ -98,16 +98,16 @@ class Selector(object):
         self.__name = name
         self.__type = to_value_type(type)
     
-    def _install_cells(self, callback, send, encoding):
-        callback(LooseCell(
-            # TODO: Autogenerate unique keys instead of requiring __name to be unique.
+    def _cells(self, send, encoding):
+        # TODO: Autogenerate unique keys instead of requiring __name to be unique.
+        yield self.__name, LooseCell(
             key=self.__name,
             type=self.__type,
             value=u'',
             writable=True,
             persists=True,
             post_hook=lambda value: send(unicode(value).encode(encoding)),
-            label=self.__name))
+            label=self.__name)
 
 
 __all__.append('Selector')
@@ -127,9 +127,12 @@ class _ControllerProxy(ExportedState):
         self.__protocol = None
         endpoint.connect(factory).addCallback(self.__got_protocol)
     
-    def state_def(self, callback):
+    def state_def(self):
+        for d in super(_ControllerProxy, self).state_def():
+            yield d
         for element in self.__elements:
-            IElement(element)._install_cells(callback, self.__send, self.__encoding)
+            for d in IElement(element)._cells(self.__send, self.__encoding):
+                yield d
     
     def close(self):
         # TODO: This is used for testing and is not actually called by Device.close. Device.close needs to be extended to support notifying components of close.

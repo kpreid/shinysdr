@@ -57,10 +57,11 @@ class PollerCellsSpecimen(ExportedState):
     def __init__(self):
         self.subscribable = LooseCell(key='subscribable', value='', type=str)
     
-    def state_def(self, callback):
-        super(PollerCellsSpecimen, self).state_def(callback)
+    def state_def(self):
+        for d in super(PollerCellsSpecimen, self).state_def():
+            yield d
         # TODO make this possible to be decorator style
-        callback(self.subscribable)
+        yield 'subscribable', self.subscribable
     
     # force worst-case
     def state_is_dynamic(self):

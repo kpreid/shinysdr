@@ -73,10 +73,12 @@ class _ElecraftReceiver(ExportedState):
         self.__protocol = protocol
         self.__is_sub = is_sub
     
-    def state_def(self, callback):
+    def state_def(self):
         """overrides ExportedState"""
-        super(_ElecraftReceiver, self).state_def(callback)
-        _st.install_cells(self, self.__protocol, callback, is_sub=self.__is_sub)
+        for d in super(_ElecraftReceiver, self).state_def():
+            yield d
+        for d in _st.install_cells(self, self.__protocol, is_sub=self.__is_sub):
+            yield d
 
 
 @implementer(IComponent)
@@ -139,10 +141,12 @@ class _ElecraftRadio(ExportedState):
         submode_cell._subscribe_immediate(changed_iq)
         changed_iq()
     
-    def state_def(self, callback):
+    def state_def(self):
         """overrides ExportedState"""
-        super(_ElecraftRadio, self).state_def(callback)
-        _st.install_cells(self, self.__protocol, callback, is_sub=None)
+        for d in super(_ElecraftRadio, self).state_def():
+            yield d
+        for d in _st.install_cells(self, self.__protocol, is_sub=None):
+            yield d
     
     def close(self):
         """implements IComponent"""
@@ -628,7 +632,7 @@ class _ElecraftStateTable(object):
     def dispatch(self, cmd):
         return self.__command_lookup.get(cmd)
     
-    def install_cells(self, proxy, protocol, state_def_callback, is_sub):
+    def install_cells(self, proxy, protocol, is_sub):
         """
         is_sub: True, False, or None to indicate non-$ fields.
         """
@@ -636,7 +640,7 @@ class _ElecraftStateTable(object):
             cell = row.make_cell(protocol, is_sub)
             if cell is None:
                 continue
-            state_def_callback(cell)
+            yield cell.key(), cell
 
 
 _st = _ElecraftStateTable([

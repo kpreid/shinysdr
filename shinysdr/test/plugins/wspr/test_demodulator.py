@@ -208,7 +208,13 @@ class FakeWAVIntervalSink(gr.hier_block2):
         pass
 
 
-class TestDemodulator(unittest.TestCase):
+# TODO: Enable this once we can clean up afterward
+# class TestDemodulatorBasic(DemodulatorTestCase):
+#     def setUp(self):
+#         self.setUpFor('WSPR', demod_class=WSPRDemodulator)
+
+
+class TestDemodulatorSpecific(unittest.TestCase):
     tempdir = None
 
     def setUp(self):

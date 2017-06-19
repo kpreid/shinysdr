@@ -275,11 +275,12 @@ class RTL433MsgGroup(ExportedState):
         """Overrides ExportedState."""
         return True
     
-    def state_def(self, callback):
+    def state_def(self):
         """Overrides ExportedState."""
-        super(RTL433MsgGroup, self).state_def(callback)
-        for cell in self.__cells.itervalues():
-            callback(cell)
+        for d in super(RTL433MsgGroup, self).state_def():
+            yield d
+        for d in self.__cells.iteritems():
+            yield d
     
     # not exported
     def receive(self, message_wrapper):

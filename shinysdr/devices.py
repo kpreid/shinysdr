@@ -156,7 +156,6 @@ class Device(ExportedState):
         """
         if vfo_cell is None:
             vfo_cell = _stub_vfo
-        assert vfo_cell.key() == 'freq'
         assert isinstance(vfo_cell.type(), RangeT)
         # TODO: Consider using an unconditional wrapper around the VFO cell which sets the cell metadata consistently.
         
@@ -175,9 +174,10 @@ class Device(ExportedState):
     def get_name(self):
         return self.__name
     
-    def state_def(self, callback):
-        super(Device, self).state_def(callback)
-        callback(self.__vfo_cell)
+    def state_def(self):
+        for d in super(Device, self).state_def():
+            yield d
+        yield 'freq', self.__vfo_cell
     
     def can_receive(self):
         return self.rx_driver is not nullExportedState

@@ -252,15 +252,16 @@ class MonitorSink(gr.hier_block2, ExportedState):
         
         self.__do_connect()
     
-    def state_def(self, callback):
-        super(MonitorSink, self).state_def(callback)
+    def state_def(self):
+        for d in super(MonitorSink, self).state_def():
+            yield d
         # TODO make this possible to be decorator style
-        callback(StreamCell(self, 'fft',
+        yield 'fft', StreamCell(self, 'fft',
             type=BulkDataT(array_format='b', info_format='dff'),
-            label='Spectrum'))
-        callback(StreamCell(self, 'scope',
+            label='Spectrum')
+        yield 'scope', StreamCell(self, 'scope',
             type=BulkDataT(array_format='f', info_format='d'),
-            label='Scope'))
+            label='Scope')
 
     def __do_connect(self):
         if self.__signal_type.is_analytic():

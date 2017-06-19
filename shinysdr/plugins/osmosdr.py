@@ -526,14 +526,16 @@ class Gains(ExportedState):
     def close(self):
         self.__sourceref[0] = None
     
-    def state_def(self, callback):
+    def state_def(self):
+        for d in super(Gains, self).state_def():
+            yield d
         sourceref = self.__sourceref
         for name in sourceref[0].get_gain_names():
             # use a function to close over name
-            _install_gain_cell(self, sourceref, name, callback)
+            yield _install_gain_cell(self, sourceref, name)
 
 
-def _install_gain_cell(self, sourceref, name, callback):
+def _install_gain_cell(self, sourceref, name):
     def gain_getter():
         source = sourceref[0]
         return 0 if source is None else source.get_gain(name, ch)
@@ -548,12 +550,12 @@ def _install_gain_cell(self, sourceref, name, callback):
     # TODO: There should be a type of Cell such that we don't have to setattr but still implement the storage unlike LooseCell
     setattr(self, 'get_' + name, gain_getter)
     setattr(self, 'set_' + name, gain_setter)
-    callback(Cell(self, name,
+    return name, Cell(self, name,
         type=gain_range,
         writable=True,
         persists=True,
         changes='this_setter',
-        label=name))
+        label=name)
 
 
 def convert_osmosdr_range(meta_range, add_zero=False, transform=lambda f: f, **kwargs):

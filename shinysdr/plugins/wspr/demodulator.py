@@ -116,9 +116,10 @@ class WSPRDemodulator(gr.hier_block2, ExportedState):
             self.__make_wav_sink(context, _WAVIntervalSink))
 
     # TODO: Make a better way to forward to a cell than overriding state_def
-    def state_def(self, callback):
-        super(WSPRDemodulator, self).state_def(callback)
-        callback(self.__listener.state()['status'])
+    def state_def(self):
+        for d in super(WSPRDemodulator, self).state_def():
+            yield d
+        yield 'status', self.__listener.state()['status']
 
     def __make_wav_sink(self, context, _WAVIntervalSink):
         wav_sink = _WAVIntervalSink(

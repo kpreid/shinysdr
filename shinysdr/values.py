@@ -503,9 +503,16 @@ class _NeverSubscription(object):
 
 
 class ExportedState(object):
-    def state_def(self, callback):
-        """Override this to call the callback with additional cells."""
-        pass
+    __cache = None
+    __setter_cells = None
+    __shape_subscriptions = None
+    
+    def state_def(self):
+        """Yields tuples of (key, cell) which are to be part of the object's exported state.
+        
+        These cells are in addition to to those defined by decorators, not replacing them.
+        """
+        return iter([])
     
     def state_insert(self, key, desc):
         raise ValueError('state_insert not defined on %r' % self)
@@ -515,17 +522,18 @@ class ExportedState(object):
     
     def state(self):
         # pylint: disable=attribute-defined-outside-init
-        if self.state_is_dynamic() or not hasattr(self, '_ExportedState__cache'):
-            cache = {}
-            self.__cache = cache
-            self.__setter_cells = {}
-
-            def callback(cell):
-                cache[cell.key()] = cell
-            self.state_def(callback)
+        if self.state_is_dynamic() or self.__cache is None:
+            cells = dict(self.__decorator_cells())
             
-            for cell in self.__decorator_cells():
-                callback(cell)
+            def insert(key, cell):
+                if key in cells:
+                    raise KeyError('Cannot redefine {!r} from {!r} to {!r}'.format(key, cell, cells[key]))
+                cells[key] = cell
+            
+            for key, cell in self.state_def():
+                insert(key, cell)
+            
+            self.__cache = cells
             
         return self.__cache
     
@@ -534,7 +542,8 @@ class ExportedState(object):
         # this is separate from state_def so that if state_is_dynamic we don't recreate these every time, forgetting subscriptions
         if hasattr(self, '_ExportedState__decorator_cells_cache'):
             return self.__decorator_cells_cache
-        self.__decorator_cells_cache = []
+        self.__decorator_cells_cache = {}
+        self.__setter_cells = {}
         class_obj = type(self)
         for k in dir(class_obj):
             if not hasattr(self, k): continue
@@ -551,17 +560,16 @@ class ExportedState(object):
                     # e.g. a non-exported setter method
                     setter_descriptor = None
                 cell = v.make_cell(self, k, writable=setter_descriptor is not None)
-                self.__setter_cells[setter_descriptor] = cell
-                self.__decorator_cells_cache.append(cell)
+                if setter_descriptor is not None:
+                    self.__setter_cells[setter_descriptor] = cell
+                self.__decorator_cells_cache[k] = cell
             elif isinstance(v, ExportedCommand):
-                self.__decorator_cells_cache.append(v.make_cell(self, k))
+                self.__decorator_cells_cache[k] = v.make_cell(self, k)
         return self.__decorator_cells_cache
     
     def state_subscribe(self, callback, context):
         # pylint: disable=attribute-defined-outside-init, access-member-before-definition
-        try:
-            self.__shape_subscriptions
-        except AttributeError:
+        if self.__shape_subscriptions is None:
             self.__shape_subscriptions = set()
         if self.state_is_dynamic():
             return _SimpleSubscription(callback, context, self.__shape_subscriptions)
@@ -570,9 +578,8 @@ class ExportedState(object):
     
     def state__setter_called(self, setter_descriptor):
         """Called by ExportedSetter when the setter method is called."""
-        try:
-            table = self.__setter_cells
-        except AttributeError:
+        table = self.__setter_cells
+        if table is None:
             # state() has not yet been called, so the cell has not been created, so there are no possible subscriptions to notify, so we don't need to do anything.
             return
         table[setter_descriptor].poll_for_change_from_setter()
@@ -595,9 +602,8 @@ class ExportedState(object):
         This only applies to objects which return True from state_is_dynamic().
         """
         new_state = self.state()
-        try:
-            subscriptions = self.__shape_subscriptions
-        except AttributeError:
+        subscriptions = self.__shape_subscriptions
+        if subscriptions is None:
             return
         for subscription in subscriptions:
             subscription._fire(new_state)
@@ -753,10 +759,11 @@ class CollectionState(ExportedState):
     def state_is_dynamic(self):
         return self.__dynamic
     
-    def state_def(self, callback):
-        super(CollectionState, self).state_def(callback)
+    def state_def(self):
+        for d in super(CollectionState, self).state_def():
+            yield d
         for key in self.__collection:
-            callback(self.__collection.get_cell(key))
+            yield key, self.__collection.get_cell(key)
 
 
 class IWritableCollection(Interface):

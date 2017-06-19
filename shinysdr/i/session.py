@@ -63,17 +63,21 @@ class Session(ExportedState):
     def __init__(self, receive_flowgraph, features):
         self.__receive_flowgraph = receive_flowgraph
     
-    def state_def(self, callback):
-        super(Session, self).state_def(callback)
+    def state_def(self):
+        for d in super(Session, self).state_def():
+            yield d
         rxfs = self.__receive_flowgraph.state()
-        callback(rxfs['monitor'])
-        callback(rxfs['sources'])
-        callback(rxfs['source'])
-        callback(rxfs['receivers'])
-        callback(rxfs['accessories'])
-        callback(rxfs['telemetry_store'])
-        callback(rxfs['source_name'])
-        callback(rxfs['clip_warning'])
+        for name in [
+            'monitor',
+            'sources',
+            'source',
+            'receivers',
+            'accessories',
+            'telemetry_store',
+            'source_name',
+            'clip_warning'
+        ]:
+            yield name, rxfs[name]
 
     def get_type(self):
         """implements IEntryPoint"""

@@ -381,8 +381,9 @@ class _HamlibProxy(ExportedState):
                 'set_' + name_in_cmd,
                 ' '.join(self.__cache[arg_name] for arg_name in self._commands[name_in_cmd]))
     
-    def state_def(self, callback):
-        super(_HamlibProxy, self).state_def(callback)
+    def state_def(self):
+        for d in super(_HamlibProxy, self).state_def():
+            yield d
         for name in self._info:
             can_get = self.__caps.get('Can get ' + name)
             if can_get is None:
@@ -391,10 +392,10 @@ class _HamlibProxy(ExportedState):
                 # TODO: Handle 'E' condition
                 continue
             writable = name in self._how_to_command and self.__caps.get('Can set ' + name) == 'Y'
-            _install_cell(self, name, False, writable, callback, self.__caps)
+            yield _install_cell(self, name, False, writable, self.__caps)
         for level_name in self.__levels:
             # TODO support writable levels
-            _install_cell(self, level_name + ' level', True, False, callback, self.__caps)
+            yield _install_cell(self, level_name + ' level', True, False, self.__caps)
 
     def __poll_fast(self):
         # TODO: Stop if we're getting behind
@@ -426,7 +427,7 @@ class _HamlibProxy(ExportedState):
         raise NotImplementedError()
 
 
-def _install_cell(self, name, is_level, writable, callback, caps):
+def _install_cell(self, name, is_level, writable, caps):
     # this is a function for the sake of the closure variables
     
     if name == 'Frequency':
@@ -478,7 +479,7 @@ def _install_cell(self, name, is_level, writable, callback, caps):
         label=name)  # TODO: supply label values from _info table
     self._cell_updaters[name] = updater
     updater(self._ehs_get(name))
-    callback(cell)
+    return cell_name, cell
 
 
 @implementer(IRig, IHasFrequency)
