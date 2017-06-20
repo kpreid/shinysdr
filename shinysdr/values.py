@@ -60,32 +60,14 @@ class SubscriptionContext(namedtuple('SubscriptionContext', ['reactor', 'poller'
     """
 
 
-class BaseCell(object):
-    def __init__(self,
-            target,
-            key,
-            type,
-            persists=True,
-            writable=False,
-            label=None,
-            description=None,
-            sort_key=None):
-        # The exact relationship of target and key depends on the subtype
+class TargetingMixin(object):
+    # TODO explain/rename this
+    def __init__(self, target, key):
         self._target = target
         self._key = key
-        self._writable = writable
-        # TODO: Also allow specifying metadata object directly.
-        self.__metadata = CellMetadata(
-            value_type=to_value_type(type),
-            persists=bool(persists),
-            naming=EnumRow(
-                associated_key=key,
-                label=label,
-                description=description,
-                sort_key=sort_key))
     
     def __cmp__(self, other):
-        if not isinstance(other, BaseCell):
+        if not isinstance(other, TargetingMixin):
             return cmp(id(self), id(other))  # dummy
         elif self._target == other._target and self._key == other._key:
             # pylint: disable=unidiomatic-typecheck
@@ -99,15 +81,42 @@ class BaseCell(object):
     
     def __hash__(self):
         return hash(self._target) ^ hash(self._key)
+    
+    def __repr__(self):
+        return '<{type} {self._target!r}.{self._key}>'.format(type=type(self).__name__, self=self)
+    
+    def key(self):  # TODO remove this
+        return self._key
+
+
+class BaseCell(TargetingMixin):
+    def __init__(self,
+            target,
+            key,
+            type,
+            persists=True,
+            writable=False,
+            label=None,
+            description=None,
+            sort_key=None):
+        # The exact relationship of target and key depends on the subtype
+        TargetingMixin.__init__(self, target, key)
+        self._writable = writable
+        # TODO: Also allow specifying metadata object directly.
+        self.__metadata = CellMetadata(
+            value_type=to_value_type(type),
+            persists=bool(persists),
+            naming=EnumRow(
+                associated_key=key,
+                label=label,
+                description=description,
+                sort_key=sort_key))
 
     def metadata(self):
         return self.__metadata
 
     def type(self):
         return self.__metadata.value_type
-    
-    def key(self):
-        return self._key
 
     def get(self):
         """Return the value/object held by this cell."""
@@ -152,9 +161,6 @@ class BaseCell(object):
     
     def description(self):
         raise NotImplementedError()
-    
-    def __repr__(self):
-        return '<{type} {self._target!r}.{self._key}>'.format(type=type(self).__name__, self=self)
 
 
 class ValueCell(BaseCell):
@@ -352,7 +358,13 @@ class LooseCell(ValueCell):
         self.__value = value
         self.__subscriptions = set()
         self.__post_hook = post_hook
-
+    
+    def __repr__(self):
+        return '<{type} {value_type} {value}>'.format(
+            type=type(self).__name__,
+            value_type=self.metadata().value_type,
+            value=self.get())
+    
     def get(self):
         return self.__value
     

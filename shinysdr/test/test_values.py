@@ -203,6 +203,13 @@ class TestCell(unittest.TestCase):
         self.assertEqual(cell.metadata().naming, EnumRow(
             label='value',
             sort_key='value'))
+    
+    def test_repr(self):
+        cell = Cell(
+            target=NoInherentCellSpecimen(),
+            key='value',
+            changes='never')
+        self.assertEqual(repr(cell), '<Cell <NoInherentCellSpecimen repr>.value>')
 
 
 class NoInherentCellSpecimen(object):
@@ -211,6 +218,9 @@ class NoInherentCellSpecimen(object):
     
     def get_value(self):
         return self.value
+    
+    def __repr__(self):
+        return '<NoInherentCellSpecimen repr>'
 
 
 # TODO: BlockCell no longer exists, but this test still tests something; rename appropriately
@@ -268,6 +278,9 @@ class TestLooseCell(unittest.TestCase):
         st.unsubscribe()
         self.lc.set(2)
         st.advance()  # check for unwanted callbacks
+    
+    def test_repr(self):
+        self.assertEqual(repr(self.lc), '<LooseCell PythonT(<type \'int\'>) 0>')
 
 
 class TestViewCell(unittest.TestCase):

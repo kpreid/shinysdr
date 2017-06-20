@@ -96,7 +96,12 @@ class PythonT(ValueType):
     
     def __hash__(self):
         return hash(self.__python_type) ^ hash(self.__python_type)
-
+    
+    def __repr__(self):
+        return '{0}({1})'.format(
+            type(self).__name__,
+            self.__python_type)
+        
     def to_json(self):
         return python_type_registry.get(self.__python_type, None)
     
