@@ -62,6 +62,7 @@ class SubscriptionContext(namedtuple('SubscriptionContext', ['reactor', 'poller'
 
 class TargetingMixin(object):
     # TODO explain/rename this
+    # The exact relationship of target and key depends on the subclass
     def __init__(self, target, key):
         self._target = target
         self._key = key
@@ -89,28 +90,25 @@ class TargetingMixin(object):
         return self._key
 
 
-class BaseCell(TargetingMixin):
+class BaseCell(object):
     def __init__(self,
-            target,
-            key,
             type,
             persists=True,
             writable=False,
             label=None,
             description=None,
-            sort_key=None):
-        # The exact relationship of target and key depends on the subtype
-        TargetingMixin.__init__(self, target, key)
+            sort_key=None,
+            associated_key=None):
         self._writable = writable
         # TODO: Also allow specifying metadata object directly.
         self.__metadata = CellMetadata(
             value_type=to_value_type(type),
             persists=bool(persists),
             naming=EnumRow(
-                associated_key=key,
                 label=label,
                 description=description,
-                sort_key=sort_key))
+                sort_key=sort_key,
+                associated_key=associated_key))
 
     def metadata(self):
         return self.__metadata
@@ -167,8 +165,8 @@ class ValueCell(BaseCell):
     # pylint: disable=abstract-method
     # (we are also abstract)
     
-    def __init__(self, target, key, type, **kwargs):
-        BaseCell.__init__(self, target, key, type=type, **kwargs)
+    def __init__(self, type, **kwargs):
+        BaseCell.__init__(self, type=type, **kwargs)
     
     def description(self):
         d = {
@@ -191,7 +189,7 @@ _cell_value_change_schedules = [
 
 
 # TODO this name is historical and should be changed
-class Cell(ValueCell):
+class Cell(ValueCell, TargetingMixin):
     def __init__(self, target, key, changes, type=object, writable=False, persists=None, **kwargs):
         assert changes in _cell_value_change_schedules  # TODO actually use value
         type = to_value_type(type)
@@ -203,12 +201,12 @@ class Cell(ValueCell):
         if changes == u'never' and writable:
             raise ValueError('writable=True changes={!r} doesn\'t make sense'.format(changes))
         
+        TargetingMixin.__init__(self, target, key)
         ValueCell.__init__(self,
-            target,
-            key,
             type=type,
             persists=persists,
             writable=writable,
+            associated_key=key,
             **kwargs)
         
         self.__changes = changes
@@ -312,10 +310,16 @@ class _MessageSplitter(object):
         return value
 
 
-class StreamCell(ValueCell):
+class StreamCell(ValueCell, TargetingMixin):
     def __init__(self, target, key, type, **kwargs):
         assert isinstance(type, BulkDataT)
-        ValueCell.__init__(self, target, key, type=type, writable=False, persists=False, **kwargs)
+        TargetingMixin.__init__(self, target, key)
+        ValueCell.__init__(self,
+            type=type,
+            writable=False,
+            persists=False,
+            associated_key=key,
+            **kwargs)
         self.__dgetter = getattr(self._target, 'get_' + key + '_distributor')
         self.__igetter = getattr(self._target, 'get_' + key + '_info')
     
@@ -347,13 +351,9 @@ class LooseCell(ValueCell):
     """
     
     def __init__(self, key, value, post_hook=None, **kwargs):
-        """
-        The key is not used by the cell itself.
-        """
+        # TODO: Remove unused key parameter
         ValueCell.__init__(
             self,
-            target=object(),
-            key=key,
             **kwargs)
         self.__value = value
         self.__subscriptions = set()
@@ -474,11 +474,9 @@ class Command(BaseCell):
     Its value is (TODO should be something generically useful).
     """
     
-    def __init__(self, target, key, function, **kwargs):
+    def __init__(self, function, **kwargs):
         # TODO: remove writable=true when we have a proper invoke path
         BaseCell.__init__(self,
-            target=target,
-            key=key,
             type=type(None),
             persists=False,
             writable=True,
@@ -878,4 +876,4 @@ class ExportedCommand(object):
             return self.__function.__get__(obj, type)
     
     def make_cell(self, obj, attr):
-        return Command(obj, attr, self.__get__(obj), **self.__cell_kwargs)
+        return Command(self.__get__(obj), associated_key=attr, **self.__cell_kwargs)

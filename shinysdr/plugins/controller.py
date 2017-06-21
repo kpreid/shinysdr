@@ -79,7 +79,7 @@ class Command(object):
         else:
             text = self.__text
         # TODO: Autogenerate unique keys instead of requiring the label to be unique.
-        yield self.__label, CommandCell(self, self.__label, functools.partial(send, text),
+        yield self.__label, CommandCell(functools.partial(send, text),
             label=self.__label)
 
 
