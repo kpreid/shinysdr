@@ -519,7 +519,7 @@ class _Row(object):
                 is_sub=is_sub))
         
         if self.__has_sub == (is_sub is not None):
-            return LooseCell(
+            return key, LooseCell(
                 post_hook=send,
                 **self.__cell_kwargs)
 
@@ -528,6 +528,7 @@ class _NonCommandRow(object):
     def __init__(self, state_key, value_type, default_value, has_sub=False, label=None, type=None):
         # pylint: disable=redefined-builtin
         self.__has_sub = has_sub
+        self.__key = state_key
         self.__cell_kwargs = dict(
             key=state_key,
             value=default_value,
@@ -541,7 +542,7 @@ class _NonCommandRow(object):
     
     def make_cell(self, protocol, is_sub):
         if self.__has_sub == (is_sub is not None):
-            return LooseCell(**self.__cell_kwargs)
+            return self.__key, LooseCell(**self.__cell_kwargs)
 
 
 class _UnusedCommand(object):
@@ -582,8 +583,8 @@ class _VFORow(object):
                 self.__syntax.format(value)))
         
         if is_sub is not None:
-            return LooseCell(
-                key=_FREQ_CELL_KEY,  # necessary to implement IHasFrequency
+            return _FREQ_CELL_KEY, LooseCell(
+                key=_FREQ_CELL_KEY,
                 value=0,
                 type=self.__syntax.default_type(),
                 writable=True,
@@ -637,10 +638,9 @@ class _ElecraftStateTable(object):
         is_sub: True, False, or None to indicate non-$ fields.
         """
         for row in self.__rows:
-            cell = row.make_cell(protocol, is_sub)
-            if cell is None:
-                continue
-            yield cell.key(), cell
+            key_and_cell = row.make_cell(protocol, is_sub)
+            if key_and_cell is not None:
+                yield key_and_cell
 
 
 _st = _ElecraftStateTable([
