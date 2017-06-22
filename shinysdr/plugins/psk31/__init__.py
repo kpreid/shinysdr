@@ -26,7 +26,9 @@ from gnuradio import gr
 try:
     # gr-radioteletype
     # https://github.com/bitglue/gr-radioteletype
-    from radioteletype.demodulators import psk31_demodulator_cbc, varicode_decode_bb
+    from radioteletype.demodulators import (
+        psk31_coherent_demodulator_cc,
+        psk31_constellation_decoder_cb)
     _available = True
 except ImportError:
     _available = False
@@ -68,8 +70,8 @@ class PSK31Demodulator(gr.hier_block2, ExportedState):
         # The output of the channel filter is oversampled so we don't need to
         # interpolate for the audio monitor. So we'll downsample before going into
         # the demodulator.
-        samples_per_symbol = 8
-        downsample = self.__demod_rate / samples_per_symbol / self.__symbol_rate
+        samp_per_sym = 8
+        downsample = self.__demod_rate / samp_per_sym / self.__symbol_rate
         assert downsample % 1 == 0
         downsample = int(downsample)
 
@@ -77,8 +79,10 @@ class PSK31Demodulator(gr.hier_block2, ExportedState):
             self,
             channel_filter,
             blocks.keep_one_in_n(gr.sizeof_gr_complex, downsample),
-            psk31_demodulator_cbc(samples_per_symbol),
-            varicode_decode_bb(),
+            psk31_coherent_demodulator_cc(samp_per_sym=samp_per_sym),
+            psk31_constellation_decoder_cb(
+                varicode_decode=True,
+                differential_decode=True),
             self.__char_sink)
         
         self.connect(
