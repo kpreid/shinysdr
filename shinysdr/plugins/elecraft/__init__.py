@@ -302,7 +302,8 @@ class _ElecraftClientProtocol(Protocol):
         """Normal polling activity."""
         # Get FA (VFO A frequency) so we respond fast.
         # Get BN (band) because if we find out we changed bands we need to update band-dependent things.
-        self.transport.write('FA;BN;')
+        # Get MD (mode) because on KX3, A/B button does not report changes
+        self.transport.write('FA;BN;MD;MD$;')
         self.__schedule_timeout()
     
     def __lineReceived(self, line):
