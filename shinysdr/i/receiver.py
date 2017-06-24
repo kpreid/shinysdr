@@ -30,7 +30,7 @@ from gnuradio import blocks
 from shinysdr.i.modes import get_modes, lookup_mode
 from shinysdr.interfaces import IDemodulator, IDemodulatorContext, IDemodulatorModeChange, ITunableDemodulator
 from shinysdr.math import dB, rotator_inc, to_dB
-from shinysdr.signals import SignalType
+from shinysdr.signals import SignalType, no_signal
 from shinysdr.types import EnumT, QuantityT, RangeT, ReferenceT
 from shinysdr import units
 from shinysdr.values import ExportedState, exported_value, setter, unserialize_exported_state
@@ -122,9 +122,12 @@ class Receiver(gr.hier_block2, ExportedState):
         assert output_type.get_kind() == 'STEREO' or output_type.get_kind() == 'MONO' or output_type.get_kind() == 'NONE'
         self.__demod_output = output_type.get_kind() != 'NONE'
         self.__demod_stereo = output_type.get_kind() == 'STEREO'
-        self.__output_type = SignalType(
-            kind='STEREO',
-            sample_rate=output_type.get_sample_rate() if self.__demod_output else 0)
+        if self.__demod_output:
+            self.__output_type = SignalType(
+                kind='STEREO',
+                sample_rate=output_type.get_sample_rate())
+        else:
+            self.__output_type = no_signal
     
     def __do_connect(self, reason):
         # log.msg(u'receiver do_connect: %s' % (reason,))
