@@ -460,6 +460,8 @@ __all__.append('find_audio_rx_names')
 
 @implementer(IRXDriver)
 class _AudioRXDriver(ExportedState, gr.hier_block2):
+    __source = None
+    
     def __init__(self,
             device_name,
             sample_rate,
@@ -493,21 +495,28 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
             gr.io_signature(0, 0, 0),
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
         )
+    
+        def init_source():
+            self.__source = None
+            self.disconnect_all()
         
-        self.__source = audio_module.source(
-            self.__sample_rate,
-            device_name=self.__device_name,
-            ok_to_block=True)
+            self.__source = audio_module.source(
+                self.__sample_rate,
+                device_name=self.__device_name,
+                ok_to_block=True)
         
-        channel_matrix = blocks.multiply_matrix_ff(channel_mapping)
-        combine = blocks.float_to_complex(1)
-        # TODO: min() is to support mono sources with default channel mapping. Handle this better, and give a warning if an explicit mapping is too big.
-        for i in xrange(0, min(len(channel_mapping[0]),
-                               self.__source.output_signature().max_streams())):
-            self.connect((self.__source, i), (channel_matrix, i))
-        for i in xrange(0, len(channel_mapping)):
-            self.connect((channel_matrix, i), (combine, i))
-        self.connect(combine, self)
+            channel_matrix = blocks.multiply_matrix_ff(channel_mapping)
+            combine = blocks.float_to_complex(1)
+            # TODO: min() is to support mono sources with default channel mapping. Handle this better, and give a warning if an explicit mapping is too big.
+            for i in xrange(0, min(len(channel_mapping[0]),
+                                   self.__source.output_signature().max_streams())):
+                self.connect((self.__source, i), (channel_matrix, i))
+            for i in xrange(0, len(channel_mapping)):
+                self.connect((channel_matrix, i), (combine, i))
+            self.connect(combine, self)
+        
+        self.__init_source = init_source
+        self.__init_source()
     
     # implement IRXDriver
     @exported_value(type=SignalType, changes='never')
@@ -530,7 +539,8 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
     
     # implement IRXDriver
     def notify_reconnecting_or_restarting(self):
-        pass
+        # Under some conditions on Mac, gnuradio.audio.source may stop working when the flowgraph is modified. Therefore, recreate it, which causes a glitch but doesn't leave the device permanently nonfunctional.
+        self.__init_source()
 
 
 @implementer(ITXDriver)
