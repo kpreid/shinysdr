@@ -30,7 +30,6 @@ TODO explain how to link up with soundcard devices
 
 from __future__ import absolute_import, division
 
-import os.path
 import re
 import subprocess
 import time
@@ -43,6 +42,7 @@ from twisted.internet.protocol import ClientFactory, Protocol
 from twisted.internet.task import LoopingCall, deferLater
 from twisted.protocols.basic import LineReceiver
 from twisted.python import log
+from twisted.python.util import sibpath
 from twisted.web import static
 
 from shinysdr.devices import Device, IComponent
@@ -692,5 +692,5 @@ class _HamlibClientProtocol(Protocol):
 
 _plugin_client = ClientResourceDef(
     key=__name__,
-    resource=static.File(os.path.join(os.path.split(__file__)[0], 'client')),
+    resource=static.File(sibpath(__file__, 'client')),
     load_js_path='hamlib.js')

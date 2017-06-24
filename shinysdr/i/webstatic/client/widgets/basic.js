@@ -108,7 +108,10 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
         widgetCtor = widgetType;
       } else if (widgetType === undefined || widgetType === null) {
         widgetCtor = PickWidget;
-        if (typeof name === 'string') optBoxLabel = name;  // TODO kludge; this is not the right thing
+        if (typeof name === 'string' && typeof optBoxLabel !== 'string') {
+          // TODO kludge; this is not the right thing
+          optBoxLabel = name;
+        }
       } else {
         throw new Error('bad widgetType: ' + widgetType);
       }

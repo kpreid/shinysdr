@@ -33,10 +33,12 @@ from twisted.internet import defer
 from twisted.internet.protocol import Protocol
 from twisted.protocols.basic import LineReceiver
 from twisted.python import log
-from zope.interface import implementer
+from twisted.python.util import sibpath
+from twisted.web import static
+from zope.interface import Interface, implementer
 
 from shinysdr.devices import Device, IComponent
-from shinysdr.interfaces import IHasFrequency
+from shinysdr.interfaces import ClientResourceDef, IHasFrequency
 from shinysdr.types import EnumT, NoticeT, RangeT, ReferenceT, to_value_type
 from shinysdr.twisted_ext import FactoryWithArgs, SerialPortEndpoint
 from shinysdr.values import ExportedState, LooseCell, ViewCell, exported_value
@@ -67,7 +69,15 @@ def connect_to_rig(reactor, port, baudrate=38400):
         components={'rig': proxy}))
 
 
-@implementer(IHasFrequency)
+class IElecraftReceiver(Interface):
+    """Marker interface for client."""
+
+
+class IElecraftRadio(Interface):
+    """Marker interface for client."""
+
+
+@implementer(IHasFrequency, IElecraftReceiver)
 class _ElecraftReceiver(ExportedState):
     def __init__(self, protocol, is_sub):
         self.__protocol = protocol
@@ -81,7 +91,7 @@ class _ElecraftReceiver(ExportedState):
             yield d
 
 
-@implementer(IComponent)
+@implementer(IComponent, IElecraftRadio)
 class _ElecraftRadio(ExportedState):
     # TODO: Tell protocol to do no/less polling when nobody is looking.
     
@@ -724,3 +734,9 @@ _st = _ElecraftStateTable([
     _NonCommandRow('scan', bool, False),
     _NonCommandRow('split', bool, False),
 ])
+
+
+_plugin_client = ClientResourceDef(
+    key=__name__,
+    resource=static.File(sibpath(__file__, 'client')),
+    load_js_path='elecraft.js')
