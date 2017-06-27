@@ -67,7 +67,6 @@ class FakeContext(object):
         self.messages = []
         # 12,345,678 Hz, all the time, every day.
         self.__absolute_frequency_cell = LooseCell(
-            key='rec_freq',
             value=12345678,
             type=float,
             writable=False,

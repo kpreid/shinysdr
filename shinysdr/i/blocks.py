@@ -241,7 +241,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__input_center_freq = float(input_center_freq)
         self.__paused = bool(paused)
         
-        self.__interested_cell = LooseCell(key='interested', type=bool, value=False, writable=False, persists=False)
+        self.__interested_cell = LooseCell(type=bool, value=False, writable=False, persists=False)
         
         # stuff created by __do_connect
         self.__gate = None

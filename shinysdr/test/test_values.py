@@ -136,7 +136,6 @@ class TestBaseCell(unittest.TestCase):
         # using LooseCell as an arbitrary concrete subclass
         cell = LooseCell(
             value=0,
-            key='k',
             type=int,
             persists=False,  # the non-default value
             label='mylabel',
@@ -262,7 +261,7 @@ class BlockCellSpecimen(ExportedState):
 
 class TestLooseCell(unittest.TestCase):
     def setUp(self):
-        self.lc = LooseCell(value=0, key='a', type=int)
+        self.lc = LooseCell(value=0, type=int)
     
     def test_get_set(self):
         self.assertEqual(0, self.lc.get())
@@ -285,13 +284,12 @@ class TestLooseCell(unittest.TestCase):
 
 class TestViewCell(unittest.TestCase):
     def setUp(self):
-        self.lc = LooseCell(value=0, key='a', type=RangeT([(-100, 100)]))
+        self.lc = LooseCell(value=0, type=RangeT([(-100, 100)]))
         self.delta = 1
         self.vc = ViewCell(
             base=self.lc,
             get_transform=lambda x: x + self.delta,
             set_transform=lambda x: x - self.delta,
-            key='b',
             type=int)
     
     # TODO: Add tests for behavior when the transform is not perfectly one-to-one (such as due to floating-point error).

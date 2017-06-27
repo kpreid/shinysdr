@@ -231,7 +231,6 @@ def _RetuningTestDevice(freq, has_dc_offset):
     return Device(
         rx_driver=_RetuningTestRXDriver(has_dc_offset),
         vfo_cell=LooseCell(
-            key='freq',
             value=freq,
             type=RangeT([(-1e9, 1e9)]),  # TODO kludge magic numbers
             writable=True,

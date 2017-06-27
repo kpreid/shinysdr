@@ -470,7 +470,6 @@ def _install_cell(self, name, is_level, writable, caps):
             self._ehs_set(name, str(vtype(value)))
     
     cell = LooseCell(
-        key=cell_name,
         value='placeholder',
         type=vtype,
         writable=writable,

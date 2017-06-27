@@ -49,7 +49,6 @@ def SimulatedDevice(name='Simulated RF', freq=0.0, allow_tuning=False):
     return Device(
         name=name,
         vfo_cell=LooseCell(
-            key='freq',
             value=freq,
             type=RangeT([(-1e9, 1e9)]) if allow_tuning else RangeT([(freq, freq)]),  # TODO kludge magic numbers
             writable=True,

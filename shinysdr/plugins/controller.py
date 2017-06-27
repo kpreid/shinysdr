@@ -101,7 +101,6 @@ class Selector(object):
     def _cells(self, send, encoding):
         # TODO: Autogenerate unique keys instead of requiring __name to be unique.
         yield self.__name, LooseCell(
-            key=self.__name,
             type=self.__type,
             value=u'',
             writable=True,

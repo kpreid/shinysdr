@@ -293,7 +293,6 @@ class RTL433MsgGroup(ExportedState):
             if k not in self.__cells:
                 shape_changed = True
                 self.__cells[k] = LooseCell(
-                    key=k,
                     value=None,
                     type=object,
                     writable=False,

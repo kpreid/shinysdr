@@ -144,7 +144,6 @@ class _OsmoSDRTuning(object):
         self.__correction_ppm = correction_ppm
         self.__osmo_block = osmo_block
         self.__vfo_cell = LooseCell(
-            key='freq',
             value=0.0,
             # TODO: Eventually we'd like to be able to make the freq range vary dynamically with the correction setting
             type=convert_osmosdr_range(

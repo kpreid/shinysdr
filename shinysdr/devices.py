@@ -265,7 +265,6 @@ __all__.append('Device')
 def _ConstantVFOCell(value):
     value = float(value)
     return LooseCell(
-        key='freq',
         value=value,
         type=RangeT([(value, value)]),
         writable=False,
@@ -336,7 +335,6 @@ def _merge_vfos(vfos):
                 base=variable_one,
                 get_transform=lambda x: x + fixed,
                 set_transform=lambda x: x - fixed,
-                key='freq',
                 type=variable_one.type().shifted_by(fixed),
                 writable=True,
                 persists=variable_one.metadata().persists)
@@ -405,7 +403,6 @@ def AudioDevice(
     return Device(
         name=full_name,
         vfo_cell=LooseCell(
-            key='freq',
             value=0.0,
             type=RangeT([(0.0, 0.0)]),
             writable=True,

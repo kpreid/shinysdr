@@ -106,13 +106,12 @@ class _ElecraftRadio(ExportedState):
         mode_cell = self.__rx_main.state()['MD']
         sidetone_cell = self.state()['CW']
         submode_cell = self.state()['DT']
-        iq_offset_cell = LooseCell(key='iq_offset', value=0.0, type=float)
+        iq_offset_cell = LooseCell(value=0.0, type=float)
         
         self.__iq_center_cell = ViewCell(
                 base=base_freq_cell,
                 get_transform=lambda x: x + iq_offset_cell.get(),
                 set_transform=lambda x: x - iq_offset_cell.get(),
-                key=_FREQ_CELL_KEY,
                 type=base_freq_cell.type(),  # runtime variable...
                 writable=True,
                 persists=base_freq_cell.metadata().persists)
@@ -507,7 +506,6 @@ class _Row(object):
         self.__syntax = syntax
         self.__has_sub = s
         self.__cell_kwargs = dict(
-            key=command_name,
             value=syntax.default_value(),
             type=type or syntax.default_type(),
             writable=not get_only,
@@ -541,7 +539,6 @@ class _NonCommandRow(object):
         self.__has_sub = has_sub
         self.__key = state_key
         self.__cell_kwargs = dict(
-            key=state_key,
             value=default_value,
             type=value_type,
             writable=False,
@@ -595,7 +592,6 @@ class _VFORow(object):
         
         if is_sub is not None:
             return _FREQ_CELL_KEY, LooseCell(
-                key=_FREQ_CELL_KEY,
                 value=0,
                 type=self.__syntax.default_type(),
                 writable=True,

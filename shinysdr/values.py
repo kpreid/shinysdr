@@ -350,8 +350,7 @@ class LooseCell(ValueCell):
     A cell which stores a value and does not get it from another object; it can therefore reliably provide update notifications.
     """
     
-    def __init__(self, key, value, post_hook=None, **kwargs):
-        # TODO: Remove unused key parameter
+    def __init__(self, value, post_hook=None, **kwargs):
         ValueCell.__init__(
             self,
             **kwargs)
@@ -724,7 +723,6 @@ class CellDict(object):
         else:
             assert self._dynamic
             self.__cells[key] = LooseCell(
-                key=key,
                 value=value,
                 type=self.__member_type,
                 persists=True,

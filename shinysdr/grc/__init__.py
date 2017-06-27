@@ -104,7 +104,6 @@ class _DemodulatorAdapterContext(object):
     def __init__(self, adapter, freq):
         self.__adapter = adapter
         self.__freq_cell = LooseCell(
-            key='rec_freq',
             value=freq,
             type=float,
             persists=False,
