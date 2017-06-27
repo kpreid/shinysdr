@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -181,6 +181,28 @@ class TestCell(unittest.TestCase):
         self.__test_subscription('explicit')
     
     # this_setter is handled in TestExportedState because it involves the decorators
+    
+    def test_metadata_explicit(self):
+        cell = Cell(
+            target=NoInherentCellSpecimen(),
+            key='value',
+            changes='never',
+            label='foo',
+            description='bar',
+            sort_key='baz')
+        self.assertEqual(cell.metadata().naming, EnumRow(
+            label='foo',
+            description='bar',
+            sort_key='baz'))
+    
+    def test_metadata_default(self):
+        cell = Cell(
+            target=NoInherentCellSpecimen(),
+            key='value',
+            changes='never')
+        self.assertEqual(cell.metadata().naming, EnumRow(
+            label='value',
+            sort_key='value'))
 
 
 class NoInherentCellSpecimen(object):
@@ -299,22 +321,28 @@ class TestCommandCell(unittest.TestCase):
     def setUp(self):
         self.specimen = DecoratorCommandSpecimen()
     
-    def test_method(self):
+    def test_call_method(self):
         self.assertEqual(0, self.specimen.count)
         r = self.specimen.cmd()
         self.assertEqual(None, r)
         self.assertEqual(1, self.specimen.count)
     
-    def test_cell(self):
+    def test_call_cell(self):
         self.assertEqual(0, self.specimen.count)
         self.specimen.state()['cmd'].set(None)  # TODO: Stop overloading 'set' to mean 'invoke'
         self.assertEqual(1, self.specimen.count)
     
-    def test_metadata(self):
+    def test_metadata_explicit(self):
         cell = self.specimen.state()['cmd']
         self.assertEqual(cell.metadata().naming, EnumRow(
             label='Do the thing',
             sort_key='cmd'))
+    
+    def test_metadata_default(self):
+        cell = self.specimen.state()['unlabeled']
+        self.assertEqual(cell.metadata().naming, EnumRow(
+            label='unlabeled',
+            sort_key='unlabeled'))
 
 
 class DecoratorCommandSpecimen(ExportedState):
@@ -324,6 +352,10 @@ class DecoratorCommandSpecimen(ExportedState):
     @command(label='Do the thing')
     def cmd(self):
         self.count += 1
+    
+    @command()
+    def unlabeled(self):
+        pass
 
 
 class TestStateInsert(unittest.TestCase):
