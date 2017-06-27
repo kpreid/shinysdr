@@ -238,6 +238,9 @@ class EnumRow(object):
     def __hash__(self):
         return hash(self.to_json())
     
+    def __repr__(self):
+        return u'EnumRow(label={0[label]!r}, description={0[description]!r}, sort_key={0[sort_key]!r})'.format(self.to_json())
+    
     def to_json(self):
         return {
             u'type': u'EnumRow',
