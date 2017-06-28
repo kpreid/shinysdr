@@ -19,6 +19,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from twisted.trial import unittest
 
+from shinysdr.i.modes import lookup_mode
 from shinysdr.i.top import Top
 from shinysdr.plugins.simulate import SimulatedDevice
 from shinysdr.test.testutil import state_smoke_test
@@ -37,5 +38,10 @@ class TestReceiver(unittest.TestCase):
 
     def test_no_audio_demodulator(self):
         """Smoke test for demodulator with no audio output."""
-        # TODO: Allow parameterizing with a different mode table so that we can use a test stub mode rather than a real one
-        self.receiver.set_mode('MODE-S')
+        # TODO: Allow parameterizing with a different mode table so that we can use a test stub mode rather than a real one. Also fix rtl_433 leaving unclean reactor.
+        for mode in ['MODE-S']:
+            if lookup_mode(mode):
+                self.receiver.set_mode(mode)
+                break
+        else:
+            raise unittest.SkipTest('No no-audio mode available.')
