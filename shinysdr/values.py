@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -83,6 +83,25 @@ class ISubscriber(Interface):
         """Be notified of a newer value.
         
         Beware that the value supplied is _not_ necessarily the most current value; it may be obsolete by the time this notification is delivered.
+        """
+
+
+class IDeltaSubscriber(ISubscriber):
+    """Interface for subscribing to cells whose value can be partially updated.
+    
+    The exact meaning of partial updating is not defined by this interface; it is expected that the cell's value type will provide a suitable definition.
+    """
+    
+    def append(patch):
+        """Append this patch to the previously reported/accumulated value.
+        
+        This operation should be used for newly-arriving data.
+        """
+    
+    def prepend(patch):
+        """Prepend this patch to the previously reported/accumulated value.
+        
+        This operation should be used for backfilling old data. The subscriber may ignore it entirely if it already has enough history.
         """
 
 
@@ -207,7 +226,7 @@ class BaseCell(object):
         # TODO: 'subscribe2' name is temporary for easy distinguishing this from other 'subscribe' protocols.
         """Request to be notified when this cell's value changes.
         
-        subscriber: an ISubscriber; called repeatedly with successive new cell values; never immediately.
+        subscriber: an ISubscriber (not necessarily explicitly) and optionally an IDeltaSubscriber; called repeatedly with successive new cell values; never immediately.
         context: a SubscriptionContext.
 
         Returns a tuple of the current value and an ISubscription, which has an `unsubscribe` method which will remove the subscription.
