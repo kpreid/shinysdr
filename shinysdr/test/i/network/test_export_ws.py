@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -24,14 +24,16 @@ from twisted.test.proto_helpers import StringTransport
 from twisted.trial import unittest
 from zope.interface import Interface, implementer
 
+from gnuradio import gr
+
 from shinysdr.i.json import transform_for_json
 # TODO: StateStreamInner is an implementation detail; arrange a better interface to test
 from shinysdr.i.network.export_ws import StateStreamInner, OurStreamProtocol
 from shinysdr.i.roots import CapTable, IEntryPoint
 from shinysdr.signals import SignalType
 from shinysdr.test.testutil import SubscriptionTester
-from shinysdr.types import ReferenceT
-from shinysdr.values import CellDict, CollectionState, ExportedState, NullExportedState, SubscriptionContext, exported_value, nullExportedState, setter
+from shinysdr.types import BulkDataT, ReferenceT
+from shinysdr.values import CellDict, CollectionState, ExportedState, NullExportedState, StreamCell, SubscriptionContext, exported_value, nullExportedState, setter
 
 
 class StateStreamTestCase(unittest.TestCase):
@@ -44,7 +46,10 @@ class StateStreamTestCase(unittest.TestCase):
         self.st = SubscriptionTester()
         
         def send(value):
-            self.updates.extend(json.loads(value))
+            if isinstance(value, unicode):
+                self.updates.extend(json.loads(value))
+            elif isinstance(value, bytes):
+                self.updates.append(['actually_binary', value])
         
         self.stream = StateStreamInner(
             send,
@@ -163,6 +168,20 @@ class TestStateStream(StateStreamTestCase):
         self.assertRaises(KeyError, lambda:
             self.stream.dataReceived(json.dumps(['set', 99999, 100.0, 1234])))
         self.assertEqual(self.getUpdates(), [])
+    
+    def test_stream_cell(self):
+        self.setUpForObject(StreamCellSpecimen())
+        self.assertEqual(self.getUpdates(), transform_for_json([
+            [u'register_block', 1, u'urlroot', []],
+            [u'register_cell', 2, u'urlroot/s', self.object.state()['s'].description()],
+            [u'value', 1, {u's': 2}],
+            [u'value', 0, 1],
+        ]))
+        self.object.queue.insert_tail(gr.message().make_from_string('qu', 0, 1, len('qu')))
+        self.assertEqual(self.getUpdates(), transform_for_json([
+            ['actually_binary', b'\x02\x00\x00\x00q'],
+            ['actually_binary', b'\x02\x00\x00\x00u'],
+        ]))
 
 
 class IFoo(Interface):
@@ -198,6 +217,35 @@ class DuplicateReferenceSpecimen(ExportedState):
     @exported_value(type=ReferenceT(), changes='explicit')
     def get_bar(self):
         return self.bar
+
+
+class StreamCellSpecimen(ExportedState):
+    """Helper for TestStateStream"""
+    
+    def __init__(self):
+        self.queue = None
+    
+    def state_def(self):
+        yield 's', StreamCell(self, 's', type=BulkDataT('', 'b'))
+    
+    def get_s_distributor(self):
+        return self  # shortcut
+    
+    def get_s_info(self):
+        return ()
+    
+    def subscribe(self, queue):
+        # acting as distributor
+        self.queue = queue
+    
+    def unsubscribe(self, queue):
+        # acting as distributor
+        assert self.queue == queue
+        self.queue = None
+    
+    def get(self):
+        # acting as distributor
+        return u'gotten'
 
 
 class TestSerialization(StateStreamTestCase):
