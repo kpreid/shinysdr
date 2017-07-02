@@ -33,7 +33,6 @@ from gnuradio import gr
 
 from shinysdr.i.json import serialize
 from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT
-from shinysdr.i.poller import the_subscription_context
 from shinysdr.signals import SignalType
 from shinysdr.types import ReferenceT
 from shinysdr.values import BaseCell, Cell, ExportedState, StreamCell
@@ -189,7 +188,7 @@ class _StateStreamObjectRegistration(object):
 
 # TODO: Better name for this category of object
 class StateStreamInner(object):
-    def __init__(self, send, root_object, root_url, subscription_context=the_subscription_context):
+    def __init__(self, send, root_object, root_url, subscription_context):
         self.__subscription_context = subscription_context
         self._send = send
         self.__root_object = root_object
@@ -280,9 +279,8 @@ class StateStreamInner(object):
         else:
             # Messages are batched in order to increase client-side efficiency since each incoming WebSocket message is always a separate JS event.
             self._send_batch.append(value)
-            # TODO: Parameterize with reactor so we can test properly
             if not (self.__batch_delay is not None and self.__batch_delay.active()):
-                self.__batch_delay = the_reactor.callLater(0, self._flush)
+                self.__batch_delay = self.__subscription_context.reactor.callLater(0, self._flush)
 
 
 class AudioStreamInner(object):
@@ -349,7 +347,8 @@ class OurStreamProtocol(Protocol):
     
     This protocol's transport should be a txWS WebSocket transport.
     """
-    def __init__(self, caps):
+    def __init__(self, caps, subscription_context):
+        self.__subscription_context = subscription_context
         self._caps = caps
         self._seenValues = {}
         self.inner = None
@@ -386,7 +385,7 @@ class OurStreamProtocol(Protocol):
         elif len(path) >= 1 and path[0] == CAP_OBJECT_PATH_ELEMENT:
             # note _lookup_block may throw. TODO: Better error reporting
             root_object = _lookup_block(root_object, path[1:])
-            self.inner = StateStreamInner(self.__send, root_object, loc)  # note reuse of loc as HTTP path; probably will regret this
+            self.inner = StateStreamInner(self.__send, root_object, loc, self.__subscription_context)  # note reuse of loc as HTTP path; probably will regret this
         else:
             raise Exception('Unknown path: %r' % (path,))
     

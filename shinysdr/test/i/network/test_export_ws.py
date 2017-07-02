@@ -19,6 +19,7 @@ from __future__ import absolute_import, division
 
 import json
 
+from twisted.internet.task import Clock
 from twisted.test.proto_helpers import StringTransport
 from twisted.trial import unittest
 from zope.interface import Interface, implementer
@@ -30,7 +31,7 @@ from shinysdr.i.roots import CapTable, IEntryPoint
 from shinysdr.signals import SignalType
 from shinysdr.test.testutil import SubscriptionTester
 from shinysdr.types import ReferenceT
-from shinysdr.values import CellDict, CollectionState, ExportedState, NullExportedState, exported_value, nullExportedState, setter
+from shinysdr.values import CellDict, CollectionState, ExportedState, NullExportedState, SubscriptionContext, exported_value, nullExportedState, setter
 
 
 class StateStreamTestCase(unittest.TestCase):
@@ -55,7 +56,6 @@ class StateStreamTestCase(unittest.TestCase):
         # pylint: disable=attribute-defined-outside-init
         
         self.st.advance()
-        self.stream._flush()  # warning: implementation poking
         u = self.updates
         self.updates = []
         return u
@@ -232,16 +232,27 @@ class TestOurStreamProtocol(unittest.TestCase):
     def setUp(self):
         cap_table = CapTable(unserializer=None)
         cap_table.add(EntryPointStub(), cap=u'foo')
+        self.clock = Clock()
         self.transport = FakeWebSocketTransport()
-        self.protocol = OurStreamProtocol(caps=cap_table.as_unenumerable_collection())
+        self.protocol = OurStreamProtocol(
+            caps=cap_table.as_unenumerable_collection(),
+            subscription_context=SubscriptionContext(reactor=self.clock, poller=None))
         self.protocol.transport = self.transport
     
-    def __begin(self, url):
+    def begin(self, url):
         self.transport.location = bytes(url)
         self.protocol.dataReceived(b'{}')
     
     def test_dispatch(self):
-        self.__begin('/foo/radio')
+        self.begin('/foo/radio')
+        self.clock.advance(1)
+        self.assertEqual(self.transport.messages(), [
+            [  # batch
+                ['register_block', 1, u'/foo/radio', ['shinysdr.i.roots.IEntryPoint']],
+                [u'value', 1, {}],
+                ['value', 0, 1],
+            ],
+        ])
 
 
 class FakeWebSocketTransport(object):
@@ -254,6 +265,10 @@ class FakeWebSocketTransport(object):
     
     def write(self, data):
         self.__messages.append(data)
+    
+    def messages(self):
+        # assuming no binary messages for now
+        return [json.loads(m) for m in self.__messages]
 
 
 @implementer(IEntryPoint)

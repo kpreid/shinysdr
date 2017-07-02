@@ -43,7 +43,9 @@ from shinysdr.i.modes import get_modes
 from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, SlashedResource, UNIQUE_PUBLIC_CAP, deps_path, prepath_escaped, renderElement, static_resource_path, endpoint_string_to_url, template_path
 from shinysdr.i.network.export_http import BlockResource, CapAccessResource, FlowgraphVizResource
 from shinysdr.i.network.export_ws import OurStreamProtocol
+from shinysdr.i.poller import the_poller
 from shinysdr.twisted_ext import FactoryWithArgs
+from shinysdr.values import SubscriptionContext
 
 
 def not_deletable():
@@ -112,6 +114,8 @@ class WebService(Service):
         self.__visit_path = _make_cap_url(root_cap)
         
         wcommon = WebServiceCommon(ws_endpoint_string=ws_endpoint)
+        # TODO: Create poller actually for the given reactor w/o redundancy -- perhaps there should be a one-poller-per-reactor map
+        subscription_context = SubscriptionContext(reactor=reactor, poller=the_poller)
         
         def BoundSessionResource(session):
             return SessionResource(session, wcommon, reactor, title, read_only_dbs, writable_db, flowgraph_for_debug)
@@ -124,7 +128,7 @@ class WebService(Service):
             server_root.putChild('', Redirect(_make_cap_url(UNIQUE_PUBLIC_CAP)))
             
         self.__ws_protocol = txws.WebSocketFactory(
-            FactoryWithArgs.forProtocol(OurStreamProtocol, cap_table))
+            FactoryWithArgs.forProtocol(OurStreamProtocol, cap_table, subscription_context))
         self.__site = _SiteWithHeaders(server_root)
         
         self.__ws_port_obj = None
