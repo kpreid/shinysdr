@@ -374,8 +374,9 @@ class OurStreamProtocol(Protocol):
         path = [urllib.unquote(x) for x in loc.split('/')]
         assert path[0] == ''
         path[0:1] = []
-        if path[0] in self._caps:
-            root_object = self._caps[path[0].decode('utf-8')]
+        cap_string = path[0].decode('utf-8')  # TODO centralize url decoding
+        if cap_string in self._caps:
+            root_object = self._caps[cap_string]
             path[0:1] = []
         else:
             raise Exception('Unknown cap')  # TODO better error reporting

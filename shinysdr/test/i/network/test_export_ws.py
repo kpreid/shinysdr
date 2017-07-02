@@ -19,12 +19,14 @@ from __future__ import absolute_import, division
 
 import json
 
+from twisted.test.proto_helpers import StringTransport
 from twisted.trial import unittest
-from zope.interface import Interface, implementer  # available via Twisted
+from zope.interface import Interface, implementer
 
 from shinysdr.i.json import transform_for_json
 # TODO: StateStreamInner is an implementation detail; arrange a better interface to test
-from shinysdr.i.network.export_ws import StateStreamInner
+from shinysdr.i.network.export_ws import StateStreamInner, OurStreamProtocol
+from shinysdr.i.roots import CapTable, IEntryPoint
 from shinysdr.signals import SignalType
 from shinysdr.test.testutil import SubscriptionTester
 from shinysdr.types import ReferenceT
@@ -224,3 +226,40 @@ class SerializationSpecimen(ExportedState):
     @exported_value(type=SignalType, changes='explicit')
     def get_st(self):
         return self.st
+
+
+class TestOurStreamProtocol(unittest.TestCase):
+    def setUp(self):
+        cap_table = CapTable(unserializer=None)
+        cap_table.add(EntryPointStub(), cap=u'foo')
+        self.transport = FakeWebSocketTransport()
+        self.protocol = OurStreamProtocol(caps=cap_table.as_unenumerable_collection())
+        self.protocol.transport = self.transport
+    
+    def __begin(self, url):
+        self.transport.location = bytes(url)
+        self.protocol.dataReceived(b'{}')
+    
+    def test_dispatch(self):
+        self.__begin('/foo/radio')
+
+
+class FakeWebSocketTransport(object):
+    def __init__(self):
+        self.__messages = []
+        # faking up stuff!!!
+        self.location = None
+        self.transport = StringTransport()
+        self.transport.dataBuffer = []
+    
+    def write(self, data):
+        self.__messages.append(data)
+
+
+@implementer(IEntryPoint)
+class EntryPointStub(ExportedState):
+    def get_type(self):
+        raise NotImplementedError
+
+    def entry_point_is_deleted(self):
+        return False
