@@ -24,6 +24,7 @@ interface.
 
 from __future__ import absolute_import, division
 
+import array
 import math
 import os
 
@@ -123,7 +124,8 @@ class MessageDistributorSink(gr.hier_block2):
         self.__notify = notify
 
     def get(self):
-        return self.__peek.level()
+        # probe_signal gives us vector of 0..255 whereas queue messages give str. Reformat to be consistent with messages.
+        return array.array('B', self.__peek.level()).tostring()
     
     def get_subscription_count(self):
         return len(self.__subscriptions)
