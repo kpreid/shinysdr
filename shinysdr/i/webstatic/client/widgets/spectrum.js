@@ -648,7 +648,6 @@ define(['./basic', './dbui',
       // secondary canvas to use for image scaling
       var scaler = document.createElement('canvas');
       scaler.height = 1;
-      scaler.width = 4096;  // typical maximum supported width -- TODO use minimum
       var scalerCtx = scaler.getContext('2d');
       if (!scalerCtx) { throw new Error('failed to get headless canvas context'); }
       
@@ -658,7 +657,11 @@ define(['./basic', './dbui',
       var pixelWidthOfFFT;
       
       function paintSlice(imageData, freqOffset, y) {
-        // TODO deal with left/right edge interpolation fringes
+        if (scaler.width < imageData.width) {
+          // TODO detect if we are exceeding maximum supported size
+          scaler.width = imageData.width;
+        }
+        // TODO deal with left/right edge wraparound fringes
         scalerCtx.putImageData(imageData, 0, 0);
         ctx.drawImage(
           scaler,
