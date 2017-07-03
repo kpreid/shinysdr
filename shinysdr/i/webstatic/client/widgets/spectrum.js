@@ -867,8 +867,10 @@ define(['./basic', './dbui',
             graphDataBuffer = new Float32Array(buffer);
           }
 
-          for (var i = 0; i < len; i++) {
-            graphDataBuffer[i] = graphDataBuffer[i] * invAlpha + buffer[i] * alpha;
+          for (let i = 0; i < len; i++) {
+            let v = graphDataBuffer[i] * invAlpha + buffer[i] * alpha;
+            if (!isFinite(v)) v = buffer[i];
+            graphDataBuffer[i] = v;
           }
           
           // Hand data over to waterfall drawing immediately, so that the scrolling occurs and every frame is painted.
