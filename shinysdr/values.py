@@ -57,7 +57,33 @@ class SubscriptionContext(namedtuple('SubscriptionContext', ['reactor', 'poller'
     """A SubscriptionContext is used when subscribing to a cell.
     
     The context's reactor and poller determine how and when the subscription callback is invoked once the cell value has changed.
+    
+    reactor: twisted.internet.interfaces.IReactorTime
+    poller: shinysdr.i.poller.Poller
     """
+    # TODO: Define an interface for the poller or hide it more.
+
+
+class ISubscription(Interface):
+    # pylint: disable=arguments-differ, signature-differs
+    """Just a handle for unsubscribing."""
+    
+    def unsubscribe():
+        pass
+
+
+class ISubscriber(Interface):
+    # pylint: disable=arguments-differ, signature-differs
+    """The callback to be passed to cell.subscribe2().
+    
+    This interface exists for documentation purposes; callbacks are not required to explicitly provide it.
+    """
+    
+    def __call__(value):
+        """Be notified of a newer value.
+        
+        Beware that the value supplied is _not_ necessarily the most current value; it may be obsolete by the time this notification is delivered.
+        """
 
 
 class TargetingMixin(object):
@@ -145,9 +171,10 @@ class BaseCell(object):
         # TODO: 'subscribe2' name is temporary for easy distinguishing this from other 'subscribe' protocols.
         """Request to be notified when this cell's value changes.
         
-        The 'callback' will be called repeatedly with successive new cell values; never immediately.
-        
-        The return value is an object with a 'unsubscribe' method which will remove the subscription.
+        callback: an ISubscriber; called repeatedly with successive new cell values; never immediately.
+        context: a SubscriptionContext.
+
+        Returns an ISubscription, which has an `unsubscribe` method which will remove the subscription.
         """
         raise NotImplementedError(self)
     
@@ -406,6 +433,7 @@ class LooseCell(ValueCell):
         return subscription
 
 
+@implementer(ISubscription)
 class _SimpleSubscription(object):
     def __init__(self, callback, context, subscription_set):
         self.__callback = callback
@@ -424,6 +452,7 @@ class _SimpleSubscription(object):
         return u'<{} calling {}>'.format(type(self).__name__, self.__callback)
 
 
+@implementer(ISubscription)
 class _LooseCellImmediateSubscription(object):
     def __init__(self, callback, subscription_set):
         self._fire = callback
@@ -510,6 +539,7 @@ class Command(BaseCell):
         return _NeverSubscription()
 
 
+@implementer(ISubscription)
 class _NeverSubscription(object):
     def unsubscribe(self):
         pass

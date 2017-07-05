@@ -40,7 +40,7 @@ from shinysdr.i.poller import Poller
 from shinysdr.interfaces import IDemodulator
 from shinysdr.signals import SignalType
 from shinysdr.types import RangeT
-from shinysdr.values import ExportedState, SubscriptionContext, nullExportedState
+from shinysdr.values import ExportedState, ISubscription, SubscriptionContext, nullExportedState
 
 
 # --- Values/types/state test utilities
@@ -77,8 +77,7 @@ class CellSubscriptionTester(SubscriptionTester):
         self.expected = []
         self.seen = []
         self.subscription = cell.subscribe2(self.__callback, self.context)
-        if not self.subscription:
-            raise Exception('missing subscription object')
+        verifyObject(ISubscription, self.subscription)
         self.unsubscribed = False
     
     def __callback(self, value):
