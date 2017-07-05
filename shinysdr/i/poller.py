@@ -20,8 +20,9 @@
 import bisect
 
 from twisted.internet import task, reactor as the_reactor
+from zope.interface import implementer
 
-from shinysdr.values import BaseCell, StreamCell, SubscriptionContext
+from shinysdr.values import BaseCell, ISubscription, StreamCell, SubscriptionContext
 
 __all__ = []  # appended later
 
@@ -121,6 +122,7 @@ class AutomaticPoller(Poller):
             self.__loop_slow.stop()
 
 
+@implementer(ISubscription)
 class _PollerSubscription(object):
     def __init__(self, poller, target, callback, fast):
         self._fire = callback
@@ -164,8 +166,7 @@ class _PollerValueTarget(_PollerTarget):
         value = self.__get()
         if value != self.__previous_value:
             self.__previous_value = value
-            # TODO should pass value in to avoid redundant gets
-            fire()
+            fire(value)
 
 
 class _PollerStreamTarget(_PollerTarget):

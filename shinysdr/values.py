@@ -264,7 +264,7 @@ class Cell(ValueCell, TargetingMixin):
         if changes == u'never':
             return _NeverSubscription()
         elif changes == u'continuous':
-            return context.poller.subscribe(self, lambda: callback(self.get()), fast=True)
+            return context.poller.subscribe(self, callback, fast=True)
         elif changes == u'explicit' or changes == u'this_setter':
             return _SimpleSubscription(callback, context, self.__explicit_subscriptions)
         else:
@@ -351,7 +351,7 @@ class StreamCell(ValueCell, TargetingMixin):
         self.__igetter = getattr(self._target, 'get_' + key + '_info')
     
     def subscribe2(self, callback, context):
-        # poller does StreamCell-specific things, including passing a value where most subscriptions don't. TODO: make Poller uninvolved
+        # poller does StreamCell-specific things. TODO: make Poller uninvolved
         return context.poller.subscribe(self, callback, fast=True)
     
     # TODO: eliminate this specialized protocol used by Poller

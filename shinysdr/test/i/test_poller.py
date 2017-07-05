@@ -30,24 +30,24 @@ class TestPoller(unittest.TestCase):
     
     def test_trivial(self):
         cell = self.cells.state()['foo']
-        called = [0]
+        called = []
         
-        def callback():
-            called[0] += 1
+        def callback(value):
+            called.append(value)
         
         sub = self.poller.subscribe(cell, callback, fast=True)
-        self.assertEqual(0, called[0], 'initial')
+        self.assertEqual([], called, 'initial')
         self.poller.poll(True)
-        self.assertEqual(0, called[0], 'noop poll')
+        self.assertEqual([], called, 'noop poll')
         self.cells.set_foo('a')
-        self.assertEqual(0, called[0], 'after set')
+        self.assertEqual([], called, 'after set')
         self.poller.poll(True)
-        self.assertEqual(1, called[0], 'poll after set')
+        self.assertEqual(['a'], called, 'poll after set')
         
         sub.unsubscribe()
         self.cells.set_subscribable('b')
         self.poller.poll(True)
-        self.assertEqual(1, called[0], 'no poll after unsubscribe')
+        self.assertEqual(['a'], called, 'no poll after unsubscribe')
 
 
 class PollerCellsSpecimen(ExportedState):
