@@ -145,7 +145,6 @@ define(['./types', './values', './events'],
     let lastValue;
     {
       // Kludge because the server doesn't actually know how to deliver this properly in JSON, only binary.
-      console.log(initialValueJson);
       const [info, packed_data] = initialValueJson;
       if (Array.isArray(info) /* as opposed to object */) {
         switch (type.dataFormat) {
