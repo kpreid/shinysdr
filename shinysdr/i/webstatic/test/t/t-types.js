@@ -19,22 +19,37 @@ define(['/test/jasmine-glue.js', 'types'], (jasmineGlue, types) => {
   'use strict';
   
   const {describe, expect, it} = jasmineGlue.ji;
+  const {typeFromDesc} = types;
   
   describe('types', () => {
-    function singletonTypeTest(typeName) {
-      describe(typeName, () => {
+    function singletonTypeTest(identifier, serialization) {
+      describe(identifier, () => {
         it('should exist and have the correct toString', () =>  {
-          expect(types[typeName].toString()).toBe(typeName);
+          expect(types[identifier].toString()).toBe(identifier);
+        });
+        
+        it('should be deserializable', () => {
+          expect(typeFromDesc(serialization)).toBe(types[identifier]);
         });
       });
     }
-    ['booleanT', 'numberT', 'stringT', 'anyT', 'blockT', 'trackT'].forEach(singletonTypeTest);
+    singletonTypeTest('booleanT', 'boolean');
+    singletonTypeTest('numberT', 'float64');
+    singletonTypeTest('stringT', 'string');
+    singletonTypeTest('anyT', null);
+    singletonTypeTest('blockT', 'reference');
+    singletonTypeTest('trackT', 'shinysdr.telemetry.Track');
     
     describe('EnumT', () => {
       const EnumT = types.EnumT;
     
       it('should have the correct toString', () => {
         expect(new EnumT({'a': 'aa'}).toString()).toBe('EnumT("a")');
+      });
+    
+      it('should be deserializable', () => {
+        expect(typeFromDesc({'type': 'EnumT'})).toMatch(/^EnumT\(/);
+        // TODO show that table made it through
       });
     
       it('reports isSingleValued correctly', () => {
@@ -102,6 +117,11 @@ define(['/test/jasmine-glue.js', 'types'], (jasmineGlue, types) => {
         expect(Array.from(frange([[1, 2], [3, 4]]).getEnumTable().keys())).toEqual([1, 2, 3, 4]);
       });
     });
+    
+    describe('typeFromDesc', () => {
+      // TODO: test handling of weird values
+    });
+    
   });
   
   return 'ok';
