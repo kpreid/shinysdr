@@ -20,16 +20,29 @@ define(['/test/jasmine-glue.js', 'types'], (jasmineGlue, types) => {
   
   const {describe, expect, it} = jasmineGlue.ji;
   
-  describe('types', function () {
-    describe('EnumT', function () {
+  describe('types', () => {
+    function singletonTypeTest(typeName) {
+      describe(typeName, () => {
+        it('should exist and have the correct toString', () =>  {
+          expect(types[typeName].toString()).toBe(typeName);
+        });
+      });
+    }
+    ['booleanT', 'numberT', 'stringT', 'anyT', 'blockT', 'trackT'].forEach(singletonTypeTest);
+    
+    describe('EnumT', () => {
       const EnumT = types.EnumT;
     
-      it('reports isSingleValued correctly', function () {
+      it('should have the correct toString', () => {
+        expect(new EnumT({'a': 'aa'}).toString()).toBe('EnumT("a")');
+      });
+    
+      it('reports isSingleValued correctly', () => {
         expect(new EnumT({'a': 'aa', 'b': 'bb'}).isSingleValued()).toBe(false);
         expect(new EnumT({'a': 'aa'}).isSingleValued()).toBe(true);
       });
     
-      it('preserves metadata', function () {
+      it('preserves metadata', () => {
         expect(new EnumT({'a': {
           'label': 'b',
           'description': 'c',
@@ -41,7 +54,7 @@ define(['/test/jasmine-glue.js', 'types'], (jasmineGlue, types) => {
         });
       });
     
-      it('expands metadata', function () {
+      it('expands metadata', () => {
         expect(new EnumT({'a': 'b'}).getEnumTable().get('a')).toEqual({
           'label': 'b',
           'description': null,
@@ -50,13 +63,18 @@ define(['/test/jasmine-glue.js', 'types'], (jasmineGlue, types) => {
       });
     });
   
-    describe('RangeT', function () {
+    describe('RangeT', () => {
       const RangeT = types.RangeT;
       
       function frange(subranges) {
         return new RangeT(subranges, false, false);
       }
-      it('should round at the ends of simple ranges', function () {
+    
+      it('should have the correct toString', () => {
+        expect(frange([[0, 100]]).toString()).toBe('RangeT(lin real [0, 100])');
+      });
+      
+      it('should round at the ends of simple ranges', () => {
         expect(frange([[1, 3]]).round(0, -1)).toBe(1);
         expect(frange([[1, 3]]).round(2, -1)).toBe(2);
         expect(frange([[1, 3]]).round(4, -1)).toBe(3);
@@ -64,7 +82,7 @@ define(['/test/jasmine-glue.js', 'types'], (jasmineGlue, types) => {
         expect(frange([[1, 3]]).round(2, 1)).toBe(2);
         expect(frange([[1, 3]]).round(4, 1)).toBe(3);
       });
-      it('should round in the gaps of split ranges', function () {
+      it('should round in the gaps of split ranges', () => {
         expect(frange([[1, 2], [3, 4]]).round(2.4, 0)).toBe(2);
         expect(frange([[1, 2], [3, 4]]).round(2.4, -1)).toBe(2);
         expect(frange([[1, 2], [3, 4]]).round(2.4, +1)).toBe(3);
@@ -72,7 +90,7 @@ define(['/test/jasmine-glue.js', 'types'], (jasmineGlue, types) => {
         expect(frange([[1, 2], [3, 4]]).round(2.6, +1)).toBe(3);
         expect(frange([[1, 2], [3, 4]]).round(2.6, 0)).toBe(3);
       });
-      it('should round at the ends of split ranges', function () {
+      it('should round at the ends of split ranges', () => {
         expect(frange([[1, 2], [3, 4]]).round(0,  0)).toBe(1);
         expect(frange([[1, 2], [3, 4]]).round(0, -1)).toBe(1);
         expect(frange([[1, 2], [3, 4]]).round(0, +1)).toBe(1);
