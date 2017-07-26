@@ -35,7 +35,7 @@
         const testUrls = [];
         Array.prototype.forEach.call(indexDoc.querySelectorAll('a[href]'), anchor => {
           var url = anchor.href;
-          if (/\/t-.*\.js$/.test(url)) {
+          if (/\/test_.*\.js$/.test(url)) {
             testUrls.push(url);
           }
         });
