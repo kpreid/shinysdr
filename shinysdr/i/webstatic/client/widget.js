@@ -44,6 +44,7 @@ define([
     anyT,
   } = import_types;
   const {
+    Cell,
     ConstantCell,
     DerivedCell,
     StorageNamespace,
@@ -151,6 +152,8 @@ define([
         return;
       }
       
+      let childTargetCell = targetCell;
+      
       lifecycleDestroy(currentWidgetEl);
 
       const newSourceEl = templateStash.cloneNode(true);
@@ -188,7 +191,13 @@ define([
         storage: idPrefix ? new StorageNamespace(localStorage, 'shinysdr.widgetState.' + idPrefix) : null,
         shouldBePanel: shouldBePanel,
         rebuildMe: go,
-        idPrefix: idPrefix
+        idPrefix: idPrefix,
+        overrideChildTarget: tc => {
+          if (!(tc instanceof Cell)) {
+            throw new TypeError('overrideChildTarget: ' + childTargetCell + ' is not a cell');
+          }
+          childTargetCell = tc;
+        }  // TODO: kludge for PaneManager; replace with something better
       });
       let widget;
       try {
@@ -222,7 +231,7 @@ define([
       doPersistentDetails(currentWidgetEl);
       
       // allow widgets to embed widgets
-      createWidgetsInNode(targetCell, context, widget.element);
+      createWidgetsInNode(childTargetCell, context, widget.element);
       
       newEl.addEventListener('shinysdr:lifecycledestroy', event => {
         disableScheduler();

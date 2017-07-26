@@ -90,6 +90,8 @@ shinysdr-subwindow > h2 {
   background: var(--shinysdr-theme-window-title-bgcolor);
   background: var(--shinysdr-theme-window-title-bgfill);
   color: var(--shinysdr-theme-window-title-foreground);
+  
+  overflow: hidden;  /* in case of overly narrow windows */
 }
 .subwindow-menu-button {
   /* reset */
@@ -123,6 +125,11 @@ shinysdr-subwindow > h2 {
 }
 .subwindow-menu-button:disabled img {
   opacity: 0.4;
+}
+
+.widget-PaneImpl-controls {
+  /* TODO: should probably use flexbox, not float */
+  float: right;
 }
 
 /* left sidebar menu which contains window show-buttons and links */

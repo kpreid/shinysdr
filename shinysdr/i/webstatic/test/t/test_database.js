@@ -49,6 +49,7 @@ define([
     let s;
     beforeEach(function () {
       s = new Scheduler(window);
+      // TODO: kill scheduler afterward?
     });
     
     const dummyRecord = Object.freeze({

@@ -25,12 +25,12 @@ define([
   './map/map-core',
   './map/map-layers',
   './network',
+  './pane-manager',
   './plugins',
   './types',
   './values',
   './widget',
   './widgets',
-  './window-manager',
 ], (
   import_audio,
   import_coordination,
@@ -39,12 +39,12 @@ define([
   import_map_core,
   unused_map_layers,  // side effecting
   import_network,
+  import_pane_manager,
   import_plugins,
   import_types,
   import_values,
   import_widget,
-  widgets,
-  unused_window_manager  // side effecting
+  widgets
 ) => {
   const {
     connectAudio,
@@ -68,6 +68,9 @@ define([
   const {
     connect,
   } = import_network;
+  const {
+    PaneManager,
+  } = import_pane_manager;
   const {
     loadCSS,
     getJSModuleIds,
@@ -197,9 +200,9 @@ define([
           audio: new ConstantCell(audioState)
         }));
       
-        var index = new Index(scheduler, everything);
+        const index = new Index(scheduler, everything);
       
-        var context = new Context({
+        const context = new Context({
           // TODO all of this should be narrowed down, read-only, replaced with other means to get it to the widgets that need it, etc.
           widgets: widgets,
           radioCell: remoteCell,
@@ -210,8 +213,14 @@ define([
           scheduler: scheduler,
           coordinator: coordinator
         });
-      
-        // generic control UI widget tree
+        
+        // also causes widget creation
+        const pm = new PaneManager(
+          context,
+          document,
+          everything);
+        
+        // catch widgets not inside of panes
         createWidgets(everything, context, document);
         
         // Map (all geographic data)
