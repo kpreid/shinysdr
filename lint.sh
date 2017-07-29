@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -eu
 declare -a errors skips
 
 only_lang="${1:-all}"

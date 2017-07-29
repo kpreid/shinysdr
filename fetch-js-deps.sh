@@ -2,7 +2,7 @@
 
 # This script will download all the dependencies for ShinySDR which are client-only, and therefore simply files we serve, as opposed to Python or C libraries that might have more complex dependencies themselves.
 
-set -e
+set -eu
 
 # fetches jasmine
 git submodule update --init
