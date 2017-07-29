@@ -15,16 +15,28 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./basic', '../types', '../values', '../events', '../widget', '../database', '../math', '../menus', '../plugins'], function (widgets_basic, types, values, events, widget, database, math, menus, plugins) {
+define(['./basic', '../domtools', '../values', '../widget', '../math', '../plugins'],
+       (widgets_basic, domtools, values, widget, math, plugins) => {
   'use strict';
   
-  var Block = widgets_basic.Block;
-  var Cell = values.Cell;
-  var Toggle = widgets_basic.Toggle;
-  var alwaysCreateReceiverFromEvent = widget.alwaysCreateReceiverFromEvent;
-  var createWidgetExt = widget.createWidgetExt;
-  var formatFreqMHz = math.formatFreqMHz;
-  var modeTable = plugins.getModeTable();
+  const {
+    Block,
+    Toggle,
+  } = widgets_basic;
+  const {
+    isVisibleInLayout,
+  } = domtools;
+  const {
+    Cell,
+  } = values;
+  const {
+    alwaysCreateReceiverFromEvent,
+    createWidgetExt,
+  } = widget;
+  const {
+    formatFreqMHz,
+  } = math;
+  const modeTable = plugins.getModeTable();
 
   var exports = Object.create(null);
 
@@ -80,7 +92,7 @@ define(['./basic', '../types', '../values', '../events', '../widget', '../databa
       
       function draw() {
         info.drawNow();
-        if (record.offsetWidth > 0) { // rough 'is in DOM tree' test
+        if (isVisibleInLayout(info.elements[0])) { // rough 'is in DOM tree' test
           record.n.listen(draw);
         }
       }

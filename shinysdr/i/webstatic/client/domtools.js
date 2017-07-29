@@ -58,6 +58,18 @@ define([], () => {
   }
   exports.lifecycleDestroy = lifecycleDestroy;
   
+  // Is the given element visible in the sense of taking up some space in the visual layout?
+  // Does not check for being obscured by other elements, clipped by a smaller container, etc, but will detect being detached from the DOM or being inside a display:none element.
+  // TODO: This can false-positive if the node has no content.
+  function isVisibleInLayout(node) {
+    const w = node.offsetWidth;
+    if (typeof w !== 'number') {
+      throw new TypeError('isVisibleInLayout: cannot work with ' + node);
+    }
+    return w > 0;
+  }
+  exports.isVisibleInLayout = isVisibleInLayout;
+  
   // "Reveal" facility.
   // To reveal a node is to make it visible on-screen (as opposed to hidden by some hidden/collapsed container).
   // Custom collapsible-things may add event listeners to handle revealing.
@@ -83,8 +95,7 @@ define([], () => {
       }
     }
 
-    if (node.offsetWidth === 0) {
-      // TODO: Find a better test that can't false-positive if the node is currently empty
+    if (!isVisibleInLayout(node)) {
       console.warn('domtools.reveal: apparently failed to reveal', node);
       return false;
     }

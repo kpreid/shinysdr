@@ -23,7 +23,8 @@ define(['/test/jasmine-glue.js',
   
   const {afterEach, beforeEach, describe, expect, it, jasmine} = jasmineGlue.ji;
   const {
-    reveal
+    isVisibleInLayout,
+    reveal,
   } = domtools;
   
   let container;
@@ -36,7 +37,27 @@ define(['/test/jasmine-glue.js',
     }
   });
   
+  // TODO: test lifecycle functions
+  
   describe('domtools', () => {
+    describe('isVisibleInLayout', () => {
+      // TODO: More tests
+      it('should exclude a detached element', () => {
+        const el = document.createElement('button');
+        expect(isVisibleInLayout(el)).toBeFalsy();
+        container.appendChild(el);
+        expect(isVisibleInLayout(el)).toBeTruthy();
+      });
+      
+      it('should exclude an element in a hidden container', () => {
+        const outer = container.appendChild(document.createElement('div'));
+        const el = outer.appendChild(document.createElement('button'));
+        expect(isVisibleInLayout(el)).toBeTruthy();
+        outer.style.display = 'none';
+        expect(isVisibleInLayout(el)).toBeFalsy();
+      });
+    });
+    
     describe('reveal', () => {
       it('should succeed trivially', () => {
         expect(reveal(container)).toBe(true);
@@ -45,12 +66,12 @@ define(['/test/jasmine-glue.js',
       it('should open a <details> parent', () => {
         const d = container.appendChild(document.createElement('details'));
         const target = d.appendChild(document.createElement('input'));
-        expect(target.offsetWidth).toBe(0);
+        expect(isVisibleInLayout(target)).toBeFalsy();
         expect(d.open).toBe(false);
 
         expect(reveal(target)).toBe(true);
 
-        expect(target.offsetWidth).not.toBe(0);
+        expect(isVisibleInLayout(target)).toBeTruthy();
         expect(d.open).toBe(true);
       });
       
