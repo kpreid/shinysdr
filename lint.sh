@@ -1,9 +1,16 @@
 #!/bin/bash
 
 set -eu
-declare -a errors skips
+
+# --- Parse options
 
 only_lang="${1:-all}"
+
+# --- Prepare to lint
+
+declare -a errors skips
+errors=()
+skips=()
 
 function linter {
   local lang="$1"; shift
@@ -16,6 +23,8 @@ function linter {
   fi
 }
 
+# --- Run linters
+
 # JS lint
 linter js jshint shinysdr/i/{webstatic,webparts}
 
@@ -24,7 +33,8 @@ linter js jshint shinysdr/i/{webstatic,webparts}
 linter py flake8 --exclude=deps shinysdr/ *.py
 linter py pylint --rcfile pylintrc shinysdr
 
-# Print summary and return status code
+# --- Print summary and return status code
+
 if [[ ${#errors[*]} -ne 0 ]]; then
   echo "------ $0: Errors found by: ${errors[@]}"
   exit 1
