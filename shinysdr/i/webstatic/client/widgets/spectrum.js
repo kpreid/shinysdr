@@ -78,7 +78,7 @@ define(['./basic', './dbui',
         return new DerivedCell(numberT, config.scheduler, function (dirty) {
           return radioCell.depend(dirty).source.depend(dirty).freq.depend(dirty);
         });
-      }()) : new ConstantCell(numberT, 0);
+      }()) : new ConstantCell(0);
       var freqScaleEl = overlayContainer.appendChild(document.createElement('div'));
       createWidgetExt(context, FreqScale, freqScaleEl, freqCell);
       

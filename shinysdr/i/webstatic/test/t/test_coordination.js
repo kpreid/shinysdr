@@ -16,25 +16,23 @@
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 define(['/test/jasmine-glue.js',
-        'coordination', 'database', 'types', 'values'],
+        'coordination', 'database', 'values'],
        ( jasmineGlue,
-         coordination,   database,   types,   values) => {
+         coordination,   database,   values) => {
   'use strict';
   
   const {describe, expect, it} = jasmineGlue.ji;
   const ConstantCell = values.ConstantCell;
   const Table = database.Table;
-  const blockT = types.blockT;
   const makeBlock = values.makeBlock;
-  const numberT = types.numberT;
   
   describe('Coordinator', function () {
     // TODO reduce the need for this stubbing
-    const stubRadioCell = new ConstantCell(blockT, makeBlock({
-      source: new ConstantCell(blockT, makeBlock({
-        freq: new ConstantCell(numberT, 0),
+    const stubRadioCell = new ConstantCell(makeBlock({
+      source: new ConstantCell(makeBlock({
+        freq: new ConstantCell(0),
       })),
-      receivers: new ConstantCell(blockT, makeBlock(Object.create(Object.prototype, {
+      receivers: new ConstantCell(makeBlock(Object.create(Object.prototype, {
         create: {value: function () {}}
       }))),
     }));

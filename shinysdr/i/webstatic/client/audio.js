@@ -112,7 +112,7 @@ define(['./events', './network', './types', './values'],
         naming: { label: 'Target latency' }}, ''),
       error: new LocalReadCell(new NoticeT(true), ''),
       //averageSkew: new LocalReadCell(Number, 0),
-      monitor: new ConstantCell(types.blockT, analyserAdapter)
+      monitor: new ConstantCell(analyserAdapter)
     });
     Object.defineProperty(info, '_implements_shinysdr.client.audio.AudioStreamStatus', {});
     function updateStatus() {
@@ -471,8 +471,8 @@ define(['./events', './network', './types', './values'],
     
     // Other elements expected by Monitor widget
     Object.defineProperty(this, '_implements_shinysdr.i.blocks.IMonitor', {enumerable: false});
-    this.freq_resolution = new ConstantCell(numberT, length);
-    this.signal_type = new ConstantCell(types.anyT, {kind: 'USB', sample_rate: effectiveSampleRate});
+    this.freq_resolution = new ConstantCell(length);
+    this.signal_type = new ConstantCell({kind: 'USB', sample_rate: effectiveSampleRate}, types.anyT);
   }
   Object.defineProperty(AudioAnalyserAdapter.prototype, '_reshapeNotice', {value: new Neverfier()});
   Object.freeze(AudioAnalyserAdapter.prototype);
@@ -569,8 +569,8 @@ define(['./events', './network', './types', './values'],
     
     // Other elements expected by Monitor widget
     Object.defineProperty(this, '_implements_shinysdr.i.blocks.IMonitor', {enumerable: false});
-    this.freq_resolution = new ConstantCell(numberT, length);
-    this.signal_type = new ConstantCell(types.anyT, {kind: 'USB', sample_rate: audioContext.sampleRate});
+    this.freq_resolution = new ConstantCell(length, numberT);
+    this.signal_type = new ConstantCell({kind: 'USB', sample_rate: audioContext.sampleRate}, types.anyT);
   }
   Object.defineProperty(AudioScopeAdapter.prototype, '_reshapeNotice', {value: new Neverfier()});
   Object.freeze(AudioScopeAdapter.prototype);
@@ -689,8 +689,8 @@ define(['./events', './network', './types', './values'],
     
     // TODO: this is not a good block/cell structure, we are exposing our implementation organization.
     makeBlock(this);
-    this.selector = new ConstantCell(types.blockT, mediaDeviceSelector);
-    this.opener = new ConstantCell(types.blockT, userMediaOpener);
+    this.selector = new ConstantCell(mediaDeviceSelector);
+    this.opener = new ConstantCell(userMediaOpener);
     Object.defineProperty(this, 'source', {value: userMediaOpener.source});
   }
   exports.UserMediaSelector = UserMediaSelector;

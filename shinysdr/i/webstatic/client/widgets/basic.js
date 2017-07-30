@@ -29,6 +29,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
   const QuantityT = types.QuantityT;
   const RangeT = types.RangeT;
   const TimestampT = types.TimestampT;
+  const blockT = types.blockT;
   const booleanT = types.booleanT;
   const getInterfaces = values.getInterfaces;
   const mod = math.mod;
@@ -95,7 +96,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
           wEl.id = config.idPrefix + name;
         }
       } else if (name === null) {
-        targetCell = new ConstantCell(types.blockT, block);
+        targetCell = new ConstantCell(block, blockT);
       } else if ('get' in name) {  // sanity check, not to be used as type discrimination
         targetCell = name;
       } else {

@@ -234,7 +234,7 @@ define(['./coordination', './domtools', './events', './math', './types', './valu
       throw new Error('createWidgetExt: missing targetCell');
     }
     return createWidget(
-      new ConstantCell(anyT, targetCell),
+      new ConstantCell(targetCell, anyT),
       String(targetCell),
       context,
       node,
@@ -265,7 +265,7 @@ define(['./coordination', './domtools', './events', './math', './types', './valu
         targetCellCell = evalTargetStr(rootTargetCell, targetStr, scheduler);
       } else {
         targetStr = "<can't happen>";
-        targetCellCell = new ConstantCell(anyT, rootTargetCell);
+        targetCellCell = new ConstantCell(rootTargetCell, anyT);
       }
       
       var typename = node.getAttribute('data-widget');

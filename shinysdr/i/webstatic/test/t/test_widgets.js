@@ -151,9 +151,9 @@ define(['/test/jasmine-glue.js',
       
         const cell = new LocalCell(types.anyT, [{freq:0, rate:1}, []]);
         cell.subscribe = function() {}; // TODO implement
-        const root = new values.ConstantCell(types.blockT, values.makeBlock({
+        const root = new values.ConstantCell(values.makeBlock({
           scope: cell,
-          parameters: new values.ConstantCell(types.blockT,
+          parameters: new values.ConstantCell(
             new widgets_scope.ScopeParameters(sessionStorage)),
         }));
       

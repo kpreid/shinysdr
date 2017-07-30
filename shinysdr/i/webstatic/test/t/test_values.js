@@ -23,18 +23,58 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
   
   const {beforeEach, describe, expect, it} = jasmineGlue.ji;
   const {newListener} = testutil;
-  const Notifier = events.Notifier;
-  const Scheduler = events.Scheduler;
+  const {
+    Notifier,
+    Scheduler,
+  } = events;
+  const {
+    EnumT,
+    anyT,
+    blockT,
+    booleanT,
+    numberT,
+    stringT,
+  } = types;
+  const {
+    ConstantCell,
+    makeBlock,
+  } = values;
   
   describe('values', function () {
     let s;
     beforeEach(function () {
       s = new Scheduler(window);
     });
-  
+    
+    describe('ConstantCell', () => {
+      it('should infer boolean type', () => {
+        expect(new ConstantCell(false).type).toBe(booleanT);
+      });
+      it('should infer number type', () => {
+        expect(new ConstantCell(0).type).toBe(numberT);
+      });
+      it('should infer string type', () => {
+        expect(new ConstantCell('').type).toBe(stringT);
+      });
+      it('should infer block type', () => {
+        expect(new ConstantCell(makeBlock({})).type).toBe(blockT);
+      });
+      it('should not infer a type for an arbitrary object', () => {
+        expect(() => {
+          new ConstantCell({});
+        }).toThrow();
+      });
+      it('should use an explicit type', () => {
+        const t = new EnumT({'a': 'aa'});
+        const cell = new ConstantCell('not-even-in-type', t);
+        expect(cell.type).toBe(t);
+        expect(cell.get()).toBe('not-even-in-type');
+      });
+    });
+    
     describe('LocalCell', function () {
       it('should not notify immediately after its creation', done => {
-        const cell = new values.LocalCell(types.anyT, 'foo');
+        const cell = new values.LocalCell(anyT, 'foo');
         const l = newListener(s);
         cell.n.listen(l);
         l.expectNotCalled(done);
@@ -50,7 +90,7 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
 
       it('should function as a cell', done => {
         const ns = new values.StorageNamespace(sessionStorage, 'foo.');
-        const cell = new values.StorageCell(ns, types.stringT, 'default', 'bar');
+        const cell = new values.StorageCell(ns, stringT, 'default', 'bar');
         expect(cell.get()).toBe('default');
         cell.set('a');
         expect(cell.get()).toBe('a');
@@ -71,7 +111,7 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
     
       it('should notify if a storage event occurs', done => {
         const ns = new values.StorageNamespace(sessionStorage, 'foo.');
-        const cell = new values.StorageCell(ns, types.stringT, 'default', 'bar');
+        const cell = new values.StorageCell(ns, stringT, 'default', 'bar');
         const l = newListener(s);
         cell.n.listen(l);
       
@@ -86,7 +126,7 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
     
       it('should not notify if an unrelated storage event occurs', done => {
         const ns = new values.StorageNamespace(sessionStorage, 'foo.');
-        const cell = new values.StorageCell(ns, types.stringT, 'default', 'bar');
+        const cell = new values.StorageCell(ns, stringT, 'default', 'bar');
         const l = newListener(s);
         cell.n.listen(l);
       
@@ -101,7 +141,7 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
       it('should tolerate garbage found in storage', function () {
         sessionStorage.setItem('foo.bar', '}Non-JSON for testing');
         const ns = new values.StorageNamespace(sessionStorage, 'foo.');
-        const cell = new values.StorageCell(ns, types.stringT, 'default', 'bar');
+        const cell = new values.StorageCell(ns, stringT, 'default', 'bar');
         expect(cell.get()).toBe('default');
       });
     });
@@ -109,9 +149,9 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
     describe('DerivedCell', function () {
       let base, f, calls;
       beforeEach(function () {
-        base = new values.LocalCell(types.anyT, 1);
+        base = new values.LocalCell(anyT, 1);
         calls = 0;
-        f = new values.DerivedCell(types.anyT, s, function (dirty) {
+        f = new values.DerivedCell(anyT, s, function (dirty) {
           calls++;
           return base.depend(dirty) + 1;
         });
@@ -171,9 +211,9 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
     describe('Index', function () {
       let structure;
       beforeEach(function () {
-        structure = new values.LocalCell(types.blockT, values.makeBlock({
-          foo: new values.LocalCell(types.blockT, values.makeBlock({})),
-          bar: new values.LocalCell(types.blockT, values.makeBlock({}))
+        structure = new values.LocalCell(blockT, makeBlock({
+          foo: new values.LocalCell(blockT, makeBlock({})),
+          bar: new values.LocalCell(blockT, makeBlock({}))
         }));
         Object.defineProperty(structure.get().foo.get(), '_implements_Foo', {value:true});
       });
@@ -194,7 +234,7 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
         const l = newListener(s);
         resultsCell.n.listen(l);
         
-        const newObj = values.makeBlock({});
+        const newObj = makeBlock({});
         Object.defineProperty(newObj, '_implements_Bar', {value:true});
         
         l.expectCalled(() => {
@@ -215,7 +255,7 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
         const l = newListener(s);
         resultsCell.n.listen(l);
         l.expectCalled(() => {
-          structure.get().foo.set(values.makeBlock({}));
+          structure.get().foo.set(makeBlock({}));
         }, () => {
           expect(resultsCell.get().length).toBe(0);
           done();
@@ -228,7 +268,7 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
         };
         Object.defineProperty(dynamic, '_reshapeNotice', {value: new Notifier()});
       
-        const index = new values.Index(s, new values.LocalCell(types.blockT, dynamic));
+        const index = new values.Index(s, new values.LocalCell(blockT, dynamic));
         const resultsCell = index.implementing('Foo');
         const l = newListener(s);
         resultsCell.n.listen(l);

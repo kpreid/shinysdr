@@ -46,7 +46,6 @@ define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
   const makeBlock = values.makeBlock;
   const numberT = types.numberT;
   const reveal = domtools.reveal;
-  const stringT = types.stringT;
   
   var exports = {};
   
@@ -1337,7 +1336,7 @@ define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
     });
     if (!gl) {
       var filler = containerElement.appendChild(document.createElement('div'));
-      createWidgetExt(config.context, Banner, filler, new ConstantCell(stringT, 'Sorry, the map requires WebGL to be supported and enabled.'));
+      createWidgetExt(config.context, Banner, filler, new ConstantCell('Sorry, the map requires WebGL to be supported and enabled.'));
       return;
     }
     containerElement.appendChild(canvas);
@@ -1509,7 +1508,7 @@ define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
       const featureRenderer = lconfig.featureRenderer;
       const clickHandler = lconfig.onclick || function noClick() {};
       // TODO: Instead of a "clickHandler" we should have a more general presentation-style system
-      const controlsCell = new ConstantCell(blockT, lconfig.controls || makeBlock({}));
+      const controlsCell = new ConstantCell(lconfig.controls || makeBlock({}), blockT);
       
       const visibilityCell = new StorageCell(storage, booleanT, true, 'layer-visible.' + label);
       

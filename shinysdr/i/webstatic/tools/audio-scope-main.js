@@ -33,10 +33,10 @@ define(['audio', 'coordination', 'events', 'types', 'values', 'widget',
   const adapter = new audio.AudioScopeAdapter(scheduler, audioContext);
   adapter.connectFrom(selector.source);
   
-  const root = new values.ConstantCell(types.blockT, values.makeBlock({
-    input: new values.ConstantCell(types.blockT, selector),
+  const root = new values.ConstantCell(values.makeBlock({
+    input: new values.ConstantCell(selector),
     scope: adapter.scope,
-    parameters: new values.ConstantCell(types.blockT,
+    parameters: new values.ConstantCell(
       new widgets_scope.ScopeParameters(
         new values.StorageNamespace(storage, 'scope-parameters.'))),
   }));

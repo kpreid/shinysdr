@@ -27,8 +27,6 @@ define(['/test/jasmine-glue.js', 'map/map-core',
   } = testutil;
   const {
     anyT,
-    blockT,
-    numberT,
   } = types;
   const {
     ConstantCell,
@@ -107,15 +105,15 @@ define(['/test/jasmine-glue.js', 'map/map-core',
       
       function makeStubTarget() {
         // TODO stop needing this boilerplate, somehow.
-        return new ConstantCell(blockT, makeBlock({
-          source: new ConstantCell(blockT, makeBlock({
-            freq: new ConstantCell(numberT, 0),
-            rx_driver: new ConstantCell(blockT, makeBlock({
-              output_type: new ConstantCell(anyT, {sample_rate: 1})
+        return new ConstantCell(makeBlock({
+          source: new ConstantCell(makeBlock({
+            freq: new ConstantCell(0),
+            rx_driver: new ConstantCell(makeBlock({
+              output_type: new ConstantCell({sample_rate: 1}, anyT)
             })),
-            components: new ConstantCell(blockT, makeBlock({}))
+            components: new ConstantCell(makeBlock({}))
           })),
-          receivers: new ConstantCell(blockT, makeBlock({
+          receivers: new ConstantCell(makeBlock({
           }))
         }));
       }

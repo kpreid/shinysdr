@@ -28,8 +28,9 @@ define(['types', 'values', 'events', 'widget', 'widgets', 'network', 'database',
   const StorageNamespace = values.StorageNamespace;
   const makeBlock = values.makeBlock;
   const {
+    BulkDataT,
+    anyT,
     booleanT,
-    numberT,
   } = types;
   
   const binCount = 4096;
@@ -42,19 +43,19 @@ define(['types', 'values', 'events', 'widget', 'widgets', 'network', 'database',
   const clientStateStorage = new StorageNamespace(localStorage, 'shinysdr.client.');
   const clientState = new ClientStateObject(clientStateStorage, null);
   
-  const fftcell = new network.BulkDataCell('<dummy spectrum>', [{freq: 0, rate: 0}, []], {naming: {}, value_type: new types.BulkDataT('dff', 'b')});
-  const root = new ConstantCell(types.blockT, makeBlock({
+  const fftcell = new network.BulkDataCell('<dummy spectrum>', [{freq: 0, rate: 0}, []], {naming: {}, value_type: new BulkDataT('dff', 'b')});
+  const root = new ConstantCell(makeBlock({
     unpaused: new StorageCell(clientStateStorage, booleanT, true, '_test_unpaused'),
-    source: new ConstantCell(types.blockT, makeBlock({
-      freq: new ConstantCell(numberT, 0),
+    source: new ConstantCell(makeBlock({
+      freq: new ConstantCell(0),
     })),
-    receivers: new ConstantCell(types.blockT, makeBlock({})),
-    client: new ConstantCell(types.blockT, clientState),
-    //input_rate: new ConstantCell(numberT, sampleRate),
-    monitor: new ConstantCell(types.blockT, makeBlock({
+    receivers: new ConstantCell(makeBlock({})),
+    client: new ConstantCell(clientState),
+    //input_rate: new ConstantCell(sampleRate),
+    monitor: new ConstantCell(makeBlock({
       fft: fftcell,
-      freq_resolution: new ConstantCell(numberT, binCount),
-      signal_type: new ConstantCell(types.anyT, {kind: 'IQ', sample_rate: sampleRate})
+      freq_resolution: new ConstantCell(binCount),
+      signal_type: new ConstantCell({kind: 'IQ', sample_rate: sampleRate}, anyT)
     }))
   }));
   

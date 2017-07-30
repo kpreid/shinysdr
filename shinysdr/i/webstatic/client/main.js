@@ -37,7 +37,6 @@ define(['types', 'values', 'events', 'coordination', 'database', 'network', 'map
   const StorageNamespace = values.StorageNamespace;
   const Index = values.Index;
   const anyT = types.anyT;
-  const blockT = types.blockT;
   const connect = network.connect;
   const connectAudio = audio.connectAudio;
   const createWidgetExt = widget.createWidgetExt;
@@ -63,7 +62,7 @@ define(['types', 'values', 'events', 'coordination', 'database', 'network', 'map
   
   // TODO(kpreid): Client state should be more closely associated with the components that use it.
   const clientState = new ClientStateObject(clientStateStorage, databasePicker);
-  const clientBlockCell = new ConstantCell(blockT, clientState);
+  const clientBlockCell = new ConstantCell(clientState);
   
   function main(stateUrl, audioUrl) {
     log(0.4, 'Loading plugins…');
@@ -113,11 +112,11 @@ define(['types', 'values', 'events', 'coordination', 'database', 'network', 'map
       if (firstConnection) {
         firstConnection = false;
         
-        const everything = new ConstantCell(blockT, makeBlock({
+        const everything = new ConstantCell(makeBlock({
           client: clientBlockCell,
           radio: remoteCell,
-          actions: new ConstantCell(blockT, coordinator.actions),
-          audio: new ConstantCell(blockT, audioState)
+          actions: new ConstantCell(coordinator.actions),
+          audio: new ConstantCell(audioState)
         }));
       
         var index = new Index(scheduler, everything);
