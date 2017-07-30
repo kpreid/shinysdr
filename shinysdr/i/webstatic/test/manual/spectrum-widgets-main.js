@@ -27,7 +27,10 @@ define(['types', 'values', 'events', 'widget', 'widgets', 'network', 'database',
   const StorageCell = values.StorageCell;
   const StorageNamespace = values.StorageNamespace;
   const makeBlock = values.makeBlock;
-  const numberT = types.numberT;
+  const {
+    booleanT,
+    numberT,
+  } = types;
   
   const binCount = 4096;
   const sampleRate = 1e6;
@@ -39,9 +42,9 @@ define(['types', 'values', 'events', 'widget', 'widgets', 'network', 'database',
   const clientStateStorage = new StorageNamespace(localStorage, 'shinysdr.client.');
   const clientState = new ClientStateObject(clientStateStorage, null);
   
-  const fftcell = new network.BulkDataCell('<dummy spectrum>', new types.BulkDataT('dff', 'b'));
+  const fftcell = new network.BulkDataCell('<dummy spectrum>', [{freq: 0, rate: 0}, []], {naming: {}, value_type: new types.BulkDataT('dff', 'b')});
   const root = new ConstantCell(types.blockT, makeBlock({
-    unpaused: new StorageCell(clientStateStorage, Boolean, true, '_test_unpaused'),
+    unpaused: new StorageCell(clientStateStorage, booleanT, true, '_test_unpaused'),
     source: new ConstantCell(types.blockT, makeBlock({
       freq: new ConstantCell(numberT, 0),
     })),
