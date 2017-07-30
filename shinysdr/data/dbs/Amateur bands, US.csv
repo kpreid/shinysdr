@@ -1,22 +1,29 @@
 Frequency,Mode,Name
-1.800-2.000,,160-meter amateur
-3.500-4.000,,80-meter amateur
+1.800-2.000,LSB,"160-meter amateur"
+3.500-3.600,CW,"80-meter amateur, data"
+3.600-4.000,LSB,"80-meter (75-meter) amateur, phone"
 5.3305,USB,60-meter amateur channel 1
 5.3465,USB,60-meter amateur channel 2
 5.3570,USB,60-meter amateur channel 3
 5.3715,USB,60-meter amateur channel 4
 5.4035,USB,60-meter amateur channel 5
-7.000-7.300,,40-meter amateur
-10.100-10.150,,30-meter amateur
-14.000-14.350,,20-meter amateur
-18.068-18.168,,17-meter amateur
-21.000-21.450,,15-meter amateur
-24.890-24.990,,12-meter amateur
-28.000-29.700,,10-meter amateur
+7.000-7.125,CW,"40-meter amateur, data"
+7.125-7.300,LSB,"40-meter amateur, phone"
+10.100-10.150,CW,"30-meter amateur, data"
+14.000-14.150,CW,"20-meter amateur, data"
+14.150-14.350,USB,"20-meter amateur, phone"
+18.068-18.110,CW,"17-meter amateur, data"
+18.110-18.168,USB,"17-meter amateur, phone"
+21.000-21.200,CW,"15-meter amateur, data"
+21.200-21.450,USB,"15-meter amateur, phone"
+24.890-24.930,CW,"12-meter amateur, data"
+24.930-24.990,USB,"12-meter amateur, phone"
+28.000-28.300,CW,"10-meter amateur, data"
+28.300-29.700,USB,"10-meter amateur, phone"
 50.0-54.0,,6-meter amateur
-144.0-148.0,,2-meter amateur
-219.0-225.0,,1.25-meter amateur
-420.0-450.0,,70-cm amateur
+144.0-148.0,FM,2-meter amateur
+219.0-225.0,FM,1.25-meter amateur
+420.0-450.0,FM,70-cm amateur
 902.0-928.0,,33-cm amateur
 1240-1300,,23-cm amateur
 2300-2310,,Amateur
