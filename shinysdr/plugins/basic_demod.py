@@ -541,9 +541,10 @@ pluginDef_nfm = ModeDef(mode='NFM',  # TODO also declare 'FM' mode, and be consi
 
 
 class WFMDemodulator(FMDemodulator):
-    def __init__(self, stereo=True, **kwargs):
-        self.stereo = stereo
+    def __init__(self, decode_stereo=True, **kwargs):
+        self.__decode_stereo = decode_stereo
         self.__audio_int_rate = 40000  # lower than demod rate, higher than audio filter
+        
         FMDemodulator.__init__(self,
             stereo=True,  # config for stereo because we can't change at runtime
             audio_rate=self.__audio_int_rate,
@@ -555,13 +556,15 @@ class WFMDemodulator(FMDemodulator):
             **kwargs)
 
     @exported_value(type=bool, changes='this_setter', label='Stereo')
-    def get_stereo(self):
-        return self.stereo
+    def get_decode_stereo(self):
+        return self.__decode_stereo
     
     @setter
-    def set_stereo(self, value):
-        if value == self.stereo: return
-        self.stereo = bool(value)
+    def set_decode_stereo(self, value):
+        value = bool(value)
+        if value == self.__decode_stereo:
+            return
+        self.__decode_stereo = value
         self.context.lock()
         self.do_connect()
         self.context.unlock()
@@ -605,7 +608,7 @@ class WFMDemodulator(FMDemodulator):
         
         # connections
         self.connect(input_port, mono_channel_filter)
-        if self.stereo:
+        if self.__decode_stereo:
             # stereo pilot tone tracker
             self.connect(
                 input_port,
