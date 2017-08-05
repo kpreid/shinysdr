@@ -555,7 +555,7 @@ class WFMDemodulator(FMDemodulator):
             no_audio_filter=True,  # disable highpass
             **kwargs)
 
-    @exported_value(type=bool, changes='this_setter', label='Stereo')
+    @exported_value(type=bool, changes='this_setter', parameter='decode_stereo', label='Stereo')
     def get_decode_stereo(self):
         return self.__decode_stereo
     
@@ -565,9 +565,7 @@ class WFMDemodulator(FMDemodulator):
         if value == self.__decode_stereo:
             return
         self.__decode_stereo = value
-        self.context.lock()
-        self.do_connect()
-        self.context.unlock()
+        self.context.rebuild_me()
     
     def connect_audio_stage(self, input_port):
         stereo_rate = self.demod_rate
