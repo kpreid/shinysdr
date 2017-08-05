@@ -32,7 +32,7 @@ from zope.interface import Interface, implementer
 
 from gnuradio import gr
 from gnuradio import blocks
-from gnuradio.fft import fft_vcc, window as windows
+from gnuradio.fft import fft_vfc, fft_vcc, window as windows
 
 from shinysdr.filters import make_resampler
 from shinysdr.math import to_dB
@@ -266,6 +266,8 @@ class MonitorSink(gr.hier_block2, ExportedState):
             label='Scope')
 
     def __do_connect(self):
+        itemsize = self.__itemsize
+        
         if self.__signal_type.is_analytic():
             input_length = self.__freq_resolution
             output_length = self.__freq_resolution
@@ -283,23 +285,23 @@ class MonitorSink(gr.hier_block2, ExportedState):
         
         self.__frame_rate_to_decimation_conversion = sample_rate * overlap_factor / input_length
         
-        self.__gate = blocks.copy(gr.sizeof_gr_complex)
+        self.__gate = blocks.copy(itemsize)
         self.__gate.set_enabled(not self.__paused)
         
         overlapper = _OverlappedStreamToVector(
             size=input_length,
             factor=overlap_factor,
-            itemsize=self.__itemsize)
+            itemsize=itemsize)
         
         self.__frame_dec = blocks.keep_one_in_n(
-            itemsize=gr.sizeof_gr_complex * input_length,
+            itemsize=itemsize * input_length,
             n=int(round(self.__frame_rate_to_decimation_conversion / self.__frame_rate)))
         
         # the actual FFT logic, which is similar to GR's logpwrfft_c
         window = windows.blackmanharris(input_length)
         window_power = sum(x * x for x in window)
         # TODO: use fft_vfc when applicable
-        fft_block = fft_vcc(
+        fft_block = (fft_vcc if itemsize == gr.sizeof_gr_complex else fft_vfc)(
             fft_size=input_length,
             forward=True,
             window=window)

@@ -31,11 +31,20 @@ class TestMonitorSink(unittest.TestCase):
         self.tb = RLTB()
         self.context = Context(self.tb)
 
-    def test_smoke(self):
+    def test_smoke_complex(self):
         m = MonitorSink(
             context=self.context,
             signal_type=SignalType(kind='IQ', sample_rate=1000))
         self.tb.connect(blocks.null_source(gr.sizeof_gr_complex), m)
+        self.tb.start()
+        self.tb.stop()
+        self.tb.wait()
+
+    def test_smoke_real(self):
+        m = MonitorSink(
+            context=self.context,
+            signal_type=SignalType(kind='MONO', sample_rate=1000))
+        self.tb.connect(blocks.null_source(gr.sizeof_float), m)
         self.tb.start()
         self.tb.stop()
         self.tb.wait()
