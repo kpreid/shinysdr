@@ -430,7 +430,8 @@ class ContextForDemodulator(object):
         self._enabled = False  # assigned outside
     
     def rebuild_me(self):
-        assert self._enabled
+        print 'rebuild_me'
+        assert self._enabled, 'ContextForReceiver({}) is not currently valid'.format(self._receiver)
         self._receiver._rebuild_demodulator(reason=u'rebuild_me')
 
     def lock(self):
@@ -440,6 +441,7 @@ class ContextForDemodulator(object):
         self._receiver.context.unlock()
     
     def output_message(self, message):
+        assert self._enabled, 'ContextForReceiver({}) is not currently valid'.format(self._receiver)
         self._receiver.context.output_message(message)
     
     def get_absolute_frequency_cell(self):
