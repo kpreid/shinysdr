@@ -284,6 +284,8 @@ h2 input {
   display: flex;
   flex: 1;
   position: relative;  /* allow contents to absolute position relative to this */
+  
+  height: 20em; /* arbitrary height for layout in non-height-having contexts */
 
   /* TODO: We actually want this to be the WaterfallPlot's graph background color, but no good way to express that currently (so the widget is transparent) */
   background: var(--shinysdr-theme-spectrum-bgcolor);
