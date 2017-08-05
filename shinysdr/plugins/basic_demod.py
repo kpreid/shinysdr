@@ -573,8 +573,8 @@ class WFMDemodulator(FMDemodulator):
         stereo_rate = self.demod_rate
         normalizer = TWO_PI / stereo_rate
         pilot_tone = 19000
-        pilot_low = pilot_tone * 0.9
-        pilot_high = pilot_tone * 1.1
+        pilot_low = pilot_tone * 0.98
+        pilot_high = pilot_tone * 1.02
 
         def make_audio_filter():
             return grfilter.fir_filter_fff(
@@ -595,11 +595,11 @@ class WFMDemodulator(FMDemodulator):
                 pilot_high,
                 300))  # TODO magic number from gqrx
         stereo_pilot_pll = analog.pll_refout_cc(
-            0.001,  # TODO magic number from gqrx
-            normalizer * pilot_high,
-            normalizer * pilot_low)
+            loop_bw=0.001,
+            max_freq=normalizer * pilot_high,
+            min_freq=normalizer * pilot_low)
         stereo_pilot_doubler = blocks.multiply_cc()
-        stereo_pilot_out = blocks.complex_to_imag()
+        stereo_pilot_out = blocks.complex_to_real()
         difference_channel_mixer = blocks.multiply_ff()
         difference_channel_filter = make_audio_filter()
         mono_channel_filter = make_audio_filter()
@@ -621,7 +621,10 @@ class WFMDemodulator(FMDemodulator):
             # pick out stereo left-right difference channel (at stereo_rate)
             self.connect(input_port, (difference_channel_mixer, 0))
             self.connect(stereo_pilot_out, (difference_channel_mixer, 1))
-            self.connect(difference_channel_mixer, difference_channel_filter)
+            self.connect(
+                difference_channel_mixer,
+                blocks.multiply_const_ff(50),  # TODO: Completely empirical fudge factor. This should not be necessary. We're losing signal somewhere?
+                difference_channel_filter)
         
             # recover left/right channels (at self.__audio_int_rate)
             self.connect(difference_channel_filter, (mixL, 1))
