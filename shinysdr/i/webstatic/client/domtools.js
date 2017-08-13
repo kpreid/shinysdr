@@ -44,15 +44,16 @@ define(() => {
   exports.lifecycleInit = lifecycleInit;
   
   function lifecycleDestroy(element) {
-    if (lifecycleState.get(element) !== 'live') {
-      // Already dead or never live.
-      return;
+    const stateBeforehand = lifecycleState.get(element);
+    lifecycleState.set(element, 'dead');
+    
+    // Fire a destroy event iff we previously fired an init event.
+    if (stateBeforehand === 'live') {
+      element.dispatchEvent(new CustomEvent('shinysdr:lifecycledestroy', {bubbles: false}));
     }
     
-    lifecycleState.set(element, 'dead');
-    element.dispatchEvent(new CustomEvent('shinysdr:lifecycledestroy', {bubbles: false}));
-    
-    Array.prototype.forEach.call(element.children, function (childEl) {
+    // Destroy descendants.
+    Array.prototype.forEach.call(element.children, childEl => {
       lifecycleDestroy(childEl);
     });
   }

@@ -34,6 +34,8 @@ define([
   }} = import_jasmine;
   const {
     isVisibleInLayout,
+    lifecycleDestroy,
+    lifecycleInit,
     reveal,
   } = import_domtools;
   
@@ -47,9 +49,53 @@ define([
     }
   });
   
-  // TODO: test lifecycle functions
-  
   describe('domtools', () => {
+    describe('lifecycle', () => {
+      // TODO: test lifecycle functions more
+      
+      // TODO this tests more than that in a big lump
+      it('should destroy non-immediate descendants', () => {
+        const a = document.createElement('div');
+        const b = a.appendChild(document.createElement('div'));
+        const c = b.appendChild(document.createElement('div'));
+        
+        let state = [0, 0, 0, 0];
+        a.addEventListener('shinysdr:lifecycleinit', event => {
+          state[0]++;
+        });
+        a.addEventListener('shinysdr:lifecycledestroy', event => {
+          state[1]++;
+        });
+        c.addEventListener('shinysdr:lifecycleinit', event => {
+          state[2]++;
+        });
+        c.addEventListener('shinysdr:lifecycledestroy', event => {
+          state[3]++;
+        });
+        
+        // no effect if not in dom
+        lifecycleInit(a);
+        expect(state).toEqual([0, 0, 0, 0]);
+        
+        // init is not recursive
+        container.appendChild(a);
+        lifecycleInit(a);
+        expect(state).toEqual([1, 0, 0, 0]);
+        
+        // just preparation for destroy
+        lifecycleInit(c);
+        expect(state).toEqual([1, 0, 1, 0]);
+        
+        // destroy does both
+        lifecycleDestroy(a);
+        expect(state).toEqual([1, 1, 1, 1]);
+        
+        // destroy is idempotent
+        lifecycleDestroy(a);
+        expect(state).toEqual([1, 1, 1, 1]);
+      });
+    });
+    
     describe('isVisibleInLayout', () => {
       // TODO: More tests
       it('should exclude a detached element', () => {
