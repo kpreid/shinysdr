@@ -22,7 +22,6 @@ define(['events',  'map/map-core', 'types', 'values', 'widgets',
   'use strict';
   
   const Block = widgets.Block;
-  const BlockSet = widgets.BlockSet;
   const Clock = events.Clock;
   const DerivedCell = values.DerivedCell;
   const anyT = types.anyT;
@@ -104,6 +103,14 @@ define(['events',  'map/map-core', 'types', 'values', 'widgets',
   
   mapCore.register(addAPRSMapLayer);
   
+  function canvasToObjectURLPromise(canvas) {
+    return new Promise(resolve => {
+      canvas.toBlob(blob => {
+        resolve(URL.createObjectURL(blob));
+      });
+    });
+  }
+  
   // Given an image element containing an APRS symbol spritesheet, slice it into an array of URLs for individual images.
   function sliceSpritesheetImage(imageEl) {
     const rows = 6;
@@ -120,11 +127,7 @@ define(['events',  'map/map-core', 'types', 'values', 'widgets',
       for (let x = 0; x < columns; x++) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(imageEl, -x * cellWidth, -y * cellHeight);
-        sprites.push(new Promise(resolve => {
-          canvas.toBlob(blob => {
-            resolve(URL.createObjectURL(blob));
-          });
-        }));
+        sprites.push(canvasToObjectURLPromise(canvas));
       }
     }
     return Promise.all(sprites);

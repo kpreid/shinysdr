@@ -22,8 +22,6 @@ define(['widgets', 'widgets/basic'],
   const {
     Block,
     Knob,
-    PickWidget,
-    Radio,
     Select,
     SmallKnob,
   } = widgets_basic;

@@ -60,7 +60,9 @@ define(['map/map-core', 'widgets', 'math'], function (mapCore, widgets, math) {
       // ticks
       for (var i = 0; i < 36; i++) {
         var t = TAU * i / 36;
-        var d = !(i % 9) ? 3 : !(i % 3) ? 2 : 1;
+        var d = i % 9 === 0 ? 3 :
+                i % 3 === 0 ? 2 :
+                1;
         polar('moveTo', 1.0 - 0.1 * d, t);
         polar('lineTo', 1.0, t);
       }
@@ -117,7 +119,7 @@ define(['map/map-core', 'widgets', 'math'], function (mapCore, widgets, math) {
             lon + Math.sin(angle) * lengthInDegrees
           ]},
         ]]
-      }
+      };
     });
   }
   

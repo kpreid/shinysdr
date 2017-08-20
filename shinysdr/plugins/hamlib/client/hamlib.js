@@ -21,7 +21,6 @@ define(['widgets', 'widgets/basic'], function (widgets, widgets_basic) {
   
   var Banner = widgets_basic.Banner;
   var Block = widgets_basic.Block;
-  var Knob = widgets_basic.Knob;
   var Meter = widgets_basic.Meter;
   var Radio = widgets_basic.Radio;
   

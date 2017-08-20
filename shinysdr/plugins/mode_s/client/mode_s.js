@@ -18,7 +18,6 @@
 define(['map/map-core', 'widgets'], function (mapCore, widgets) {
   'use strict';
   
-  var BlockSet = widgets.BlockSet;
   var Block = widgets.Block;
   var renderTrackFeature = mapCore.renderTrackFeature;
   

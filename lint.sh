@@ -26,7 +26,7 @@ function linter {
 # --- Run linters
 
 # JS lint
-linter js jshint shinysdr/i/{webstatic,webparts}
+linter js jshint shinysdr/i/{webstatic,webparts} shinysdr/plugins
 
 # Python lint
 # pylint is last because it is the slowest linter.
