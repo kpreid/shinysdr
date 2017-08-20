@@ -17,16 +17,34 @@
 
 'use strict';
 
-define(['/test/jasmine-glue.js', '/test/testutil.js',
-        'database', 'events'],
-       ( jasmineGlue, testutil,
-         database,   events) => {
-  const {beforeEach, describe, expect, it} = jasmineGlue.ji;
-  const {newListener} = testutil;
-  const Scheduler = events.Scheduler;
-  const Table = database.Table;
-  const Union = database.Union;
-
+define([
+  '/test/jasmine-glue.js',
+  '/test/testutil.js',
+  'database',
+  'events',
+], (
+  import_jasmine,
+  import_testutil,
+  import_database,
+  import_events
+) => {
+  const {ji: {
+    beforeEach,
+    describe,
+    expect,
+    it
+  }} = import_jasmine;
+  const {
+    newListener,
+  } = import_testutil;
+  const {
+    Table,
+    Union,
+  } = import_database;
+  const {
+    Scheduler
+  } = import_events;
+  
   describe('database', function () {
     let s;
     beforeEach(function () {

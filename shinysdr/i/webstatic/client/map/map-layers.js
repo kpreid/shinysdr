@@ -17,23 +17,44 @@
 
 'use strict';
 
-define(['./map-core',
-        'events', 'math', 'network', 'types', 'values'],
-       (mapCore,
-         events,   math,   network,   types,   values) => {
-  const cos = Math.cos;
-  
-  const DerivedCell = values.DerivedCell;
-  const EnumT = types.EnumT;
-  const LocalReadCell = values.LocalReadCell;
-  const StorageCell = values.StorageCell;
-  const anyT = types.anyT;
-  const externalGet = network.externalGet;
-  const makeBlock = values.makeBlock;
-  const mod = math.mod;
-  const registerMapPlugin = mapCore.register;
-  const renderTrackFeature = mapCore.renderTrackFeature;
-  const stringT = types.stringT;
+define([
+  './map-core',
+  '../math',
+  '../network',
+  '../types',
+  '../values',
+], (
+  import_map_core,
+  import_math,
+  import_network,
+  import_types,
+  import_values
+) => {
+  const {
+    register: registerMapPlugin,
+    renderTrackFeature,
+  } = import_map_core;
+  const {
+    mod
+  } = import_math;
+  const {
+    externalGet,
+  } = import_network;
+  const {
+    EnumT,
+    anyT,
+    stringT,
+  } = import_types;
+  const {
+    DerivedCell,
+    LocalReadCell,
+    StorageCell,
+    makeBlock,
+  } = import_values;
+
+  const {
+    cos,
+  } = Math;
   
   const RADIANS_PER_DEGREE = Math.PI / 180;
   function dcos(x) { return cos(RADIANS_PER_DEGREE * x); }

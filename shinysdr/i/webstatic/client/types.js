@@ -19,8 +19,8 @@
 
 'use strict';
   
-define([], () => {
-  const exports = Object.create(null);
+define(() => {
+  const exports = {};
   
   const noUnit = Object.freeze({
     symbol: '',

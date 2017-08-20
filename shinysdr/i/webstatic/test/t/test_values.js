@@ -17,16 +17,32 @@
 
 'use strict';
 
-define(['/test/jasmine-glue.js', '/test/testutil.js',
-        'events', 'types', 'values'],
-       ( jasmineGlue, testutil,
-         events,   types,   values) => {
-  const {beforeEach, describe, expect, it} = jasmineGlue.ji;
-  const {newListener} = testutil;
+define([
+  '/test/jasmine-glue.js',
+  '/test/testutil.js',
+  'events',
+  'types',
+  'values',
+], (
+  import_jasmine,
+  import_testutil,
+  import_events,
+  import_types,
+  import_values
+) => {
+  const {ji: {
+    beforeEach,
+    describe,
+    expect,
+    it,
+  }} = import_jasmine;
+  const {
+    newListener
+  } = import_testutil;
   const {
     Notifier,
     Scheduler,
-  } = events;
+  } = import_events;
   const {
     EnumT,
     anyT,
@@ -34,11 +50,17 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
     booleanT,
     numberT,
     stringT,
-  } = types;
+  } = import_types;
   const {
     ConstantCell,
+    DerivedCell,
+    Index,
+    LocalCell,
+    StorageCell,
+    StorageNamespace,
+    dependOnPromise,
     makeBlock,
-  } = values;
+  } = import_values;
   
   describe('values', function () {
     let s;
@@ -74,7 +96,7 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
     
     describe('LocalCell', function () {
       it('should not notify immediately after its creation', done => {
-        const cell = new values.LocalCell(anyT, 'foo');
+        const cell = new LocalCell(anyT, 'foo');
         const l = newListener(s);
         cell.n.listen(l);
         l.expectNotCalled(done);
@@ -89,8 +111,8 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
       });
 
       it('should function as a cell', done => {
-        const ns = new values.StorageNamespace(sessionStorage, 'foo.');
-        const cell = new values.StorageCell(ns, stringT, 'default', 'bar');
+        const ns = new StorageNamespace(sessionStorage, 'foo.');
+        const cell = new StorageCell(ns, stringT, 'default', 'bar');
         expect(cell.get()).toBe('default');
         cell.set('a');
         expect(cell.get()).toBe('a');
@@ -110,8 +132,8 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
       }
     
       it('should notify if a storage event occurs', done => {
-        const ns = new values.StorageNamespace(sessionStorage, 'foo.');
-        const cell = new values.StorageCell(ns, stringT, 'default', 'bar');
+        const ns = new StorageNamespace(sessionStorage, 'foo.');
+        const cell = new StorageCell(ns, stringT, 'default', 'bar');
         const l = newListener(s);
         cell.n.listen(l);
       
@@ -125,8 +147,8 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
       });
     
       it('should not notify if an unrelated storage event occurs', done => {
-        const ns = new values.StorageNamespace(sessionStorage, 'foo.');
-        const cell = new values.StorageCell(ns, stringT, 'default', 'bar');
+        const ns = new StorageNamespace(sessionStorage, 'foo.');
+        const cell = new StorageCell(ns, stringT, 'default', 'bar');
         const l = newListener(s);
         cell.n.listen(l);
       
@@ -140,8 +162,8 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
     
       it('should tolerate garbage found in storage', function () {
         sessionStorage.setItem('foo.bar', '}Non-JSON for testing');
-        const ns = new values.StorageNamespace(sessionStorage, 'foo.');
-        const cell = new values.StorageCell(ns, stringT, 'default', 'bar');
+        const ns = new StorageNamespace(sessionStorage, 'foo.');
+        const cell = new StorageCell(ns, stringT, 'default', 'bar');
         expect(cell.get()).toBe('default');
       });
     });
@@ -149,9 +171,9 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
     describe('DerivedCell', function () {
       let base, f, calls;
       beforeEach(function () {
-        base = new values.LocalCell(anyT, 1);
+        base = new LocalCell(anyT, 1);
         calls = 0;
-        f = new values.DerivedCell(anyT, s, function (dirty) {
+        f = new DerivedCell(anyT, s, function (dirty) {
           calls++;
           return base.depend(dirty) + 1;
         });
@@ -192,7 +214,7 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
       it('eventually returns the value of a resolved promise', done => {
         const l = newListener(s);
         const promise = Promise.resolve('b');
-        const call = () => values.dependOnPromise(l, 'a', promise);
+        const call = () => dependOnPromise(l, 'a', promise);
         expect(call()).toBe('a');
         l.expectCalledWhenever(() => {
           expect(call()).toBe('b');
@@ -202,7 +224,7 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
       it('ignores a rejected promise', done => {
         const l = newListener(s);
         const promise = Promise.reject(new Error('Uncaught for testing dependOnPromise'));
-        const call = () => values.dependOnPromise(l, 'a', promise);
+        const call = () => dependOnPromise(l, 'a', promise);
         expect(call()).toBe('a');
         l.expectNotCalled(done);
       });
@@ -211,15 +233,15 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
     describe('Index', function () {
       let structure;
       beforeEach(function () {
-        structure = new values.LocalCell(blockT, makeBlock({
-          foo: new values.LocalCell(blockT, makeBlock({})),
-          bar: new values.LocalCell(blockT, makeBlock({}))
+        structure = new LocalCell(blockT, makeBlock({
+          foo: new LocalCell(blockT, makeBlock({})),
+          bar: new LocalCell(blockT, makeBlock({}))
         }));
         Object.defineProperty(structure.get().foo.get(), '_implements_Foo', {value:true});
       });
     
       it('should index a block', () => {
-        const index = new values.Index(s, structure);
+        const index = new Index(s, structure);
         const results = index.implementing('Foo').get();
         expect(results).toContain(structure.get().foo.get());
         expect(results.length).toBe(1);
@@ -229,7 +251,7 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
       });
     
       it('should index a new block', done => {
-        const index = new values.Index(s, structure);
+        const index = new Index(s, structure);
         const resultsCell = index.implementing('Bar');
         const l = newListener(s);
         resultsCell.n.listen(l);
@@ -250,7 +272,7 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
       });
     
       it('should forget an old block', done => {
-        const index = new values.Index(s, structure);
+        const index = new Index(s, structure);
         const resultsCell = index.implementing('Foo');
         const l = newListener(s);
         resultsCell.n.listen(l);
@@ -268,7 +290,7 @@ define(['/test/jasmine-glue.js', '/test/testutil.js',
         };
         Object.defineProperty(dynamic, '_reshapeNotice', {value: new Notifier()});
       
-        const index = new values.Index(s, new values.LocalCell(blockT, dynamic));
+        const index = new Index(s, new LocalCell(blockT, dynamic));
         const resultsCell = index.implementing('Foo');
         const l = newListener(s);
         resultsCell.n.listen(l);

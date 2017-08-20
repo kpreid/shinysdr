@@ -17,25 +17,49 @@
 
 'use strict';
 
-define(['/test/jasmine-glue.js',
-        'coordination', 'database', 'events', 'map/map-core',
-        'types', '/test/testutil.js', 'values', 'widget', 'widgets',
-        'widgets/scope'],
-       ( jasmineGlue,
-         coordination,   database,   events,   mapCore,
-         types,   testutil,            values,   widget,   widgets,
-         widgets_scope) => {
-  const {describe, expect, it} = jasmineGlue.ji;
+define([
+  '/test/jasmine-glue.js',
+  '/test/testutil.js', 
+  'types', 
+  'values', 
+  'widgets',
+  'widgets/scope',
+], ( 
+  import_jasmine,
+  import_testutil,
+  import_types,
+  import_values,
+  widgets,
+  import_widgets_scope
+) => {
+  const {ji: {
+    describe,
+    expect,
+    it,
+  }} = import_jasmine;
   const {
     WidgetTester,
-  } = testutil;
+  } = import_testutil;
   const {
-    ValueType
-  } = types;
+    EnumT,
+    NoticeT,
+    RangeT,
+    ValueType,
+    anyT,
+    blockT,
+    booleanT,
+    numberT,
+    stringT,
+    TimestampT,
+  } = import_types;
   const {
+    ConstantCell,
     LocalCell,
     makeBlock,
-  } = values;
+  } = import_values;
+  const {
+    ScopeParameters,
+  } = import_widgets_scope;
   
   describe('widgets', () => {
     function simulateKey(key, el) {
@@ -70,22 +94,22 @@ define(['/test/jasmine-glue.js',
       }
     
       // TODO add tests of the cell-is-read-only case.
-      it('should pick for blockT', () => t(widgets.Block, types.blockT, makeBlock({})));
-      it('should pick for booleanT', () => t(widgets.Toggle, types.booleanT, false));
-      it('should pick for EnumT', () => t(widgets.Select, new types.EnumT({}), 0));
-      it('should pick for NoticeT', () => t(widgets.Banner, new types.NoticeT(), ''));
-      it('should pick for numberT', () => t(widgets.SmallKnob, types.numberT, 0));
-      //TODO it('should pick for RangeT', () => t(widgets.LinSlider, new types.RangeT([(0, 0)]), 0));
-      it('should pick for stringT', () => t(widgets.TextBox, types.stringT, ''));
-      it('should pick for TimestampT', () => t(widgets.TimestampWidget, new types.TimestampT(), 0));
-      //TODO it('should pick for trackT', () => t(widgets.TrackWidget, types.trackT, {}));
+      it('should pick for blockT', () => t(widgets.Block, blockT, makeBlock({})));
+      it('should pick for booleanT', () => t(widgets.Toggle, booleanT, false));
+      it('should pick for EnumT', () => t(widgets.Select, new EnumT({}), 0));
+      it('should pick for NoticeT', () => t(widgets.Banner, new NoticeT(), ''));
+      it('should pick for numberT', () => t(widgets.SmallKnob, numberT, 0));
+      //TODO it('should pick for RangeT', () => t(widgets.LinSlider, new RangeT([(0, 0)]), 0));
+      it('should pick for stringT', () => t(widgets.TextBox, stringT, ''));
+      it('should pick for TimestampT', () => t(widgets.TimestampWidget, new TimestampT(), 0));
+      //TODO it('should pick for trackT', () => t(widgets.TrackWidget, trackT, {}));
 
       it('should pick for unknown', () => t(widgets.Generic, new (class FooT extends ValueType {})(), 1));
 
       // TODO: PickWidget used to be PickBlock. Add tests for its cell-type-based selection.
       it('should default to Block', function () {
-        const cell = new LocalCell(types.blockT, makeBlock({}));
-        widget = new WidgetTester(widgets.PickWidget, cell).widget;
+        const cell = new LocalCell(blockT, makeBlock({}));
+        const widget = new WidgetTester(widgets.PickWidget, cell).widget;
         expect(Object.getPrototypeOf(widget)).toBe(widgets.Block.prototype);
       });
     
@@ -96,7 +120,7 @@ define(['/test/jasmine-glue.js',
 
         const block = makeBlock({});
         Object.defineProperty(block, '_implements_Foo', {value: true});  // non-enum
-        const cell = new LocalCell(types.blockT, block);
+        const cell = new LocalCell(blockT, block);
         const wt = new WidgetTester(widgets.PickWidget, cell, {delay: true});
         wt.config.context.widgets['interface:Foo'] = TestWidget;
         const widget = wt.instantiate();
@@ -106,8 +130,8 @@ define(['/test/jasmine-glue.js',
   
     describe('Knob', function () {
       it('should hold a negative zero', function () {
-        const cell = new LocalCell(types.anyT, 0);
-        widget = new WidgetTester(widgets.Knob, cell).widget;
+        const cell = new LocalCell(anyT, 0);
+        const widget = new WidgetTester(widgets.Knob, cell).widget;
       
         document.body.appendChild(widget.element);
       
@@ -127,8 +151,8 @@ define(['/test/jasmine-glue.js',
   
     describe('SmallKnob', function () {
       it('should set limits from a continuous RangeT type', function () {
-        const cell = new LocalCell(new types.RangeT([[1, 2]], false, false), 0);
-        widget = new WidgetTester(widgets.SmallKnob, cell).widget;
+        const cell = new LocalCell(new RangeT([[1, 2]], false, false), 0);
+        const widget = new WidgetTester(widgets.SmallKnob, cell).widget;
         const input = widget.element.querySelector('input');
         expect(input.min).toBe('1');
         expect(input.max).toBe('2');
@@ -136,8 +160,8 @@ define(['/test/jasmine-glue.js',
       });
 
       it('should set limits from an integer RangeT type', function () {
-        const cell = new LocalCell(new types.RangeT([[1, 2]], false, true), 0);
-        widget = new WidgetTester(widgets.SmallKnob, cell).widget;
+        const cell = new LocalCell(new RangeT([[1, 2]], false, true), 0);
+        const widget = new WidgetTester(widgets.SmallKnob, cell).widget;
         const input = widget.element.querySelector('input');
         expect(input.min).toBe('1');
         expect(input.max).toBe('2');
@@ -149,15 +173,15 @@ define(['/test/jasmine-glue.js',
       it('should be successfully created', function () {
         // stub test to exercise the code because it's currently not in the default ui. Should have more tests.
       
-        const cell = new LocalCell(types.anyT, [{freq:0, rate:1}, []]);
+        const cell = new LocalCell(anyT, [{freq:0, rate:1}, []]);
         cell.subscribe = function() {}; // TODO implement
-        const root = new values.ConstantCell(values.makeBlock({
+        const root = new ConstantCell(makeBlock({
           scope: cell,
-          parameters: new values.ConstantCell(
-            new widgets_scope.ScopeParameters(sessionStorage)),
+          parameters: new ConstantCell(
+            new ScopeParameters(sessionStorage)),
         }));
       
-        widget = new WidgetTester(widgets.ScopePlot, root);
+        /* const widget = */ new WidgetTester(widgets.ScopePlot, root);
         
         expect(1).toBe(1);  // dummy expect for "this does not throw" test
       });
@@ -165,12 +189,12 @@ define(['/test/jasmine-glue.js',
   
     describe('Radio', function () {
       it('should use the metadata', function () {
-        const cell = new LocalCell(new types.EnumT({
+        const cell = new LocalCell(new EnumT({
           'a': {'label': 'A', 'description': 'ALPHA', 'sort_key': '3'},
           'b': {'label': 'B', 'description': 'BETA', 'sort_key': '2'},
           'c': {'label': 'C', 'description': 'GAMMA', 'sort_key': '1'}
         }), 'a');
-        widget = new WidgetTester(widgets.Radio, cell).widget;
+        const widget = new WidgetTester(widgets.Radio, cell).widget;
         document.body.appendChild(widget.element);
         expect(widget.element.textContent).toBe('CBA');
         expect(widget.element.querySelector('label').title).toBe('GAMMA');
@@ -180,11 +204,11 @@ define(['/test/jasmine-glue.js',
     describe('Select', function () {
       it('should use a Range type', function () {
         const cell = new LocalCell(
-          new types.RangeT(
+          new RangeT(
             [[1, 1], [20, 20], [300, 300]],
             false, true, {symbol: 'Hz', si_prefix_ok: true}),
           20);
-        widget = new WidgetTester(widgets.Select, cell).widget;
+        const widget = new WidgetTester(widgets.Select, cell).widget;
         //document.body.appendChild(widget.element);
         expect(widget.element.textContent).toBe('1 Hz20 Hz300 Hz');
         expect(widget.element.querySelector('option').value).toBe('1');

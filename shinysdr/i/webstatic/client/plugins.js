@@ -19,7 +19,9 @@
 
 'use strict';
 
-define(['text!plugin-index.json'], function (text) {
+define(['text!plugin-index.json'], (text) => {
+  const exports = {};
+  
   const pluginIndex = JSON.parse(text);
   const moduleIds = Object.freeze(Array.prototype.slice.call(pluginIndex.js));
   
@@ -28,8 +30,6 @@ define(['text!plugin-index.json'], function (text) {
     modeTable[k] = Object.freeze(pluginIndex.modes[k]);
   }
   Object.freeze(modeTable);
-  
-  const exports = Object.create(null);
   
   exports.loadCSS = function () {
     Array.prototype.forEach.call(pluginIndex.css, cssUrl => {

@@ -17,16 +17,24 @@
 
 'use strict';
 
-define(['widgets', 'widgets/basic'], function (widgets, widgets_basic) {
-  var Banner = widgets_basic.Banner;
-  var Block = widgets_basic.Block;
-  var Meter = widgets_basic.Meter;
-  var Radio = widgets_basic.Radio;
+define([
+  'widgets',
+  'widgets/basic',
+], (
+  widgets, 
+  import_widgets_basic
+) => {
+  const {
+    Banner,
+    Block,
+    Meter,
+    Radio,
+  } = import_widgets_basic;
   
-  var exports = {};
+  const exports = {};
   
   function ExtRig(config) {
-    Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
+    Block.call(this, config, (block, addWidget, ignore, setInsertion, setToDetails, getAppend) => {
       ignore('freq');  // is merged into vfo
       if ('Mode' in block) {
         addWidget('Mode', Radio, 'Mode');

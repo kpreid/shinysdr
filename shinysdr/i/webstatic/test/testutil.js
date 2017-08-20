@@ -17,26 +17,39 @@
 
 'use strict';
 
-define(['/test/jasmine-glue.js',
-        'coordination', 'database', 'events', 'values'],
-       (jasmineGlue,
-         coordination,   database,   events,   values) => {
-  const {afterEach, expect, fail} = jasmineGlue.ji;
+define([
+  '/test/jasmine-glue.js',
+  'coordination',
+  'database',
+  'events',
+  'values',
+], (
+  import_jasmine,
+  import_coordination,
+  import_database,
+  import_events,
+  import_values
+) => {
+  const {ji: {
+    afterEach,
+    expect,
+    fail,
+  }} = import_jasmine;
   const {
     ClientStateObject,
-  } = coordination;
+  } = import_coordination;
   const {
     Table,
-  } = database;
+  } = import_database;
   const {
     Scheduler,
-  } = events;
+  } = import_events;
   const {
     Index,
     StorageNamespace,
-  } = values;
+  } = import_values;
   
-  const exports = Object.create(null);
+  const exports = {};
   
   const cleanupCallbacks = [];
   afterEach(() => {

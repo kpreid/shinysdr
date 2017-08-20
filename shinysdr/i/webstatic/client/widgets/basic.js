@@ -17,28 +17,52 @@
 
 'use strict';
 
-define(['../events', '../math', '../measviz', '../types', '../values', '../widget'],
-       (    events,      math, _measvizStub,     types,      values,      widget) => {
-  const Cell = values.Cell;
-  const Clock = events.Clock;
-  const CommandCell = values.CommandCell;
-  const ConstantCell = values.ConstantCell;
-  const DerivedCell = values.DerivedCell;
-  const EnumT = types.EnumT;
-  const NoticeT = types.NoticeT;
-  const QuantityT = types.QuantityT;
-  const RangeT = types.RangeT;
-  const TimestampT = types.TimestampT;
-  const blockT = types.blockT;
-  const booleanT = types.booleanT;
-  const getInterfaces = values.getInterfaces;
-  const mod = math.mod;
-  const numberT = types.numberT;
-  const stringT = types.stringT;
-  const trackT = types.trackT;
-  const createWidgetExt = widget.createWidgetExt;
+define([
+  '../events',
+  '../math',
+  '../measviz',
+  '../types',
+  '../values',
+  '../widget',
+], (
+  import_events,
+  import_math,
+  unused_measviz,  // not a module, creates globals
+  import_types,
+  import_values,
+  import_widget
+) => {
+  const {
+    Clock,
+  } = import_events;
+  const {
+    mod,
+  } = import_math;
+  const {
+    EnumT,
+    NoticeT,
+    QuantityT,
+    RangeT,
+    TimestampT,
+    anyT,
+    blockT,
+    booleanT,
+    numberT,
+    stringT,
+    trackT,
+  } = import_types;
+  const {
+    Cell,
+    CommandCell,
+    ConstantCell,
+    DerivedCell,
+    getInterfaces,
+  } = import_values;
+  const {
+    createWidgetExt,
+  } = import_widget;
   
-  var exports = Object.create(null);
+  const exports = {};
   
   function insertUnitIfPresent(type, container) {
     const unitSymbol = type.getNumericUnit().symbol;
@@ -203,8 +227,8 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
     const context = config.context;
     const cellType = targetCell.type;
     
-    const ctorCell = new DerivedCell(types.anyT, config.scheduler, function (dirty) {
-      if (cellType === types.blockT) {
+    const ctorCell = new DerivedCell(anyT, config.scheduler, function (dirty) {
+      if (cellType === blockT) {
         const block = targetCell.depend(dirty);
       
         // TODO kludgy, need better representation of interfaces. At least pull this into a function itself.
@@ -430,7 +454,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
     const type = target.type;
     // TODO: use integer flag of RangeT, w decimal points?
     function clamp(value, direction) {
-      if (type instanceof types.RangeT) {  // TODO: better type protocol
+      if (type instanceof RangeT) {  // TODO: better type protocol
         return type.round(value, direction);
       } else {
         return value;
@@ -646,7 +670,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
       },
       function initSmallKnob(input, target) {
         var type = target.type;
-        if (type instanceof types.RangeT) {
+        if (type instanceof RangeT) {
           input.min = type.getMin();
           input.max = type.getMax();
           input.step = (type.integer && !type.logarithmic) ? 1 : 'any';
@@ -655,7 +679,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
         input.readOnly = !target.set;
         
         input.addEventListener('input', function(event) {
-          if (type instanceof types.RangeT) {
+          if (type instanceof RangeT) {
             target.set(type.round(input.valueAsNumber, 0));
           } else {
             target.set(input.valueAsNumber);
@@ -703,7 +727,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
         var format = function(n) { return n.toFixed(2); };
 
         var type = target.type;
-        if (type instanceof types.RangeT) {
+        if (type instanceof RangeT) {
           slider.min = getT(type.getMin());
           slider.max = getT(type.getMax());
           slider.step = (type.integer) ? 1 : 'any';
@@ -716,7 +740,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
         slider.disabled = !target.set;
         
         function listener(event) {
-          if (type instanceof types.RangeT) {
+          if (type instanceof RangeT) {
             target.set(type.round(setT(slider.valueAsNumber), 0));
           } else {
             target.set(setT(slider.valueAsNumber));
@@ -773,7 +797,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
         var format = function(n) { return n.toFixed(2); };
         
         var type = target.type;
-        if (type instanceof types.RangeT) {
+        if (type instanceof RangeT) {
           meter.min = type.getMin();
           meter.max = type.getMax();
           if (type.integer) {

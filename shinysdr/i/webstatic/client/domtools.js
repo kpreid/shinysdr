@@ -17,7 +17,7 @@
 
 'use strict';
   
-define([], () => {
+define(() => {
   const exports = {};
   
   // DOM element life cycle facility. It is expected that:

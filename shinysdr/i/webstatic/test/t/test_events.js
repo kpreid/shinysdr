@@ -17,9 +17,22 @@
 
 'use strict';
 
-define(['/test/jasmine-glue.js', 'events'], (jasmineGlue, events) => {
-  const {describe, expect, it, jasmine} = jasmineGlue.ji;
-  const Scheduler = events.Scheduler;
+define([
+  '/test/jasmine-glue.js',
+  'events',
+], (
+  import_jasmine,
+  import_events
+) => {
+  const {ji: {
+    describe,
+    expect,
+    it,
+    jasmine
+  }} = import_jasmine;
+  const {
+    Scheduler
+  } = import_events;
   
   describe('events', () => {
     describe('Scheduler', () => {

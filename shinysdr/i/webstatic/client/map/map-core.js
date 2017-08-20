@@ -17,37 +17,80 @@
 
 'use strict';
 
-define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
-        'widget', 'widgets/basic',
-        'text!./sphere-v.glsl', 'text!./sphere-f.glsl', 'text!./features-v.glsl',
-        'text!./points-f.glsl', 'text!./curves-f.glsl'],
-       (domtools, events, gltools, math, network, types, values,
-        widget, widgets_basic,
-        shader_sphere_v, shader_sphere_f, shader_features_v,
-        shader_points_f, shader_curves_f) => {
-  const sin = Math.sin;
-  const cos = Math.cos;
+define([
+  '../domtools',
+  '../events',
+  '../gltools',
+  '../network',
+  '../types',
+  '../values',
+  '../widget',
+  '../widgets/basic',
+  'text!./sphere-v.glsl',
+  'text!./sphere-f.glsl',
+  'text!./features-v.glsl',
+  'text!./points-f.glsl',
+  'text!./curves-f.glsl',
+], (
+  import_domtools,
+  import_events,
+  import_gltools,
+  import_network,
+  import_types,
+  import_values,
+  import_widget,
+  import_widgets_basic,
+  shader_sphere_v,
+  shader_sphere_f,
+  shader_features_v,
+  shader_points_f,
+  shader_curves_f
+) => {
+  const {
+    reveal,
+  } = import_domtools;
+  const {
+    AddKeepDrop,
+    Clock,
+  } = import_events;
+  const {
+    buildProgram,
+    AttributeLayout,
+    getGL,
+    handleContextLoss,
+  } = import_gltools;
+  const {
+    externalGet,
+  } = import_network;
+  const {
+    anyT,
+    blockT,
+    booleanT,
+    numberT,
+  } = import_types;
+  const {
+    Cell,
+    ConstantCell,
+    DerivedCell,
+    StorageCell,
+    makeBlock,
+  } = import_values;
+  const {
+    createWidgetExt,
+  } = import_widget;
+  const {
+    Banner,
+    PickWidget,
+    SmallKnob,
+    Toggle,
+  } = import_widgets_basic;
   
-  const AddKeepDrop = events.AddKeepDrop;
-  const Banner = widgets_basic.Banner;
-  const Cell = values.Cell;
-  const Clock = events.Clock;
-  const ConstantCell = values.ConstantCell;
-  const DerivedCell = values.DerivedCell;
-  const PickWidget = widgets_basic.PickWidget;
-  const SmallKnob = widgets_basic.SmallKnob;
-  const StorageCell = values.StorageCell;
-  const Toggle = widgets_basic.Toggle;
-  const anyT = types.anyT;
-  const blockT = types.blockT;
-  const booleanT = types.booleanT;
-  const createWidgetExt = widget.createWidgetExt;
-  const externalGet = network.externalGet;
-  const makeBlock = values.makeBlock;
-  const numberT = types.numberT;
-  const reveal = domtools.reveal;
+  const {
+    cos,
+    sin,
+  } = Math;
   
-  var exports = {};
+  const exports = {};
   
   // Degree trig functions.
   // We use degrees in this module because degrees are standard for latitude and longitude, and are also useful for more exact calculations because 360 is exactly representable as a floating-point number whereas 2π is not.
@@ -432,7 +475,7 @@ define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
   
   class GLSphere {
     constructor(gl, redrawCallback) {
-      var program = gltools.buildProgram(gl, shader_sphere_v, shader_sphere_f);
+      var program = buildProgram(gl, shader_sphere_v, shader_sphere_f);
       var att_position = gl.getAttribLocation(program, 'position');
       var att_lonlat = gl.getAttribLocation(program, 'lonlat');
       gl.uniform1i(gl.getUniformLocation(program, 'texture'), 0);
@@ -733,8 +776,8 @@ define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
 
   class GLFeatureLayers {
     constructor(gl, scheduler, primitive, pickingColorAllocator, specialization) {
-      var program = gltools.buildProgram(gl, shader_features_v, specialization.fragmentShader);
-      var attLayout = new gltools.AttributeLayout(gl, program, [
+      var program = buildProgram(gl, shader_features_v, specialization.fragmentShader);
+      var attLayout = new AttributeLayout(gl, program, [
         { name: 'position', components: 3 },
         { name: 'velocityAndTimestamp', components: 4 },
         { name: 'billboard', components: 3 },
@@ -1327,7 +1370,7 @@ define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
     canvas.classList.add('map-canvas');
     
     // Abort if we can't do GL.
-    var gl = gltools.getGL(config, canvas, {
+    var gl = getGL(config, canvas, {
       alpha: false,  // not currently used
       depth: true,
       stencil: false,
@@ -1353,7 +1396,7 @@ define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
     
     // --- Start initializing GL stuff --
     
-    gltools.handleContextLoss(canvas, config.rebuildMe);
+    handleContextLoss(canvas, config.rebuildMe);
     
     gl.enable(gl.CULL_FACE);
     

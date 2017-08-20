@@ -17,16 +17,41 @@
 
 'use strict';
 
-define(['events',  'map/map-core', 'types', 'values', 'widgets',
-        'text!plugins/shinysdr.plugins.aprs/symbol-index'],
-       (events, mapCore, types, values, widgets,
-        symbolIndexJsonText) => {
-  const Block = widgets.Block;
-  const Clock = events.Clock;
-  const DerivedCell = values.DerivedCell;
-  const anyT = types.anyT;
-  const dependOnPromise = values.dependOnPromise;
-  const renderTrackFeature = mapCore.renderTrackFeature;
+define([
+  'events',
+  'map/map-core',
+  'types',
+  'values',
+  'widgets',
+  'widgets/basic',
+  'text!plugins/shinysdr.plugins.aprs/symbol-index',
+], (
+  import_events,
+  import_map_core,
+  import_types,
+  import_values,
+  widgets,
+  import_widgets_basic,
+  symbolIndexJsonText
+) => {
+  const {
+    Clock,
+  } = import_events;
+  const {
+    register,
+    renderTrackFeature,
+  } = import_map_core;
+  const {
+    anyT,
+  } = import_types;
+  const {
+    DerivedCell,
+    dependOnPromise,
+  } = import_values;
+  const {
+    Block,
+  } = import_widgets_basic;
+  
   const symbolIndex = JSON.parse(symbolIndexJsonText);
   
   const exports = {};
@@ -101,7 +126,7 @@ define(['events',  'map/map-core', 'types', 'values', 'widgets',
     });
   }
   
-  mapCore.register(addAPRSMapLayer);
+  register(addAPRSMapLayer);
   
   function canvasToObjectURLPromise(canvas) {
     return new Promise(resolve => {

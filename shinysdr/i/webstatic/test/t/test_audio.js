@@ -17,18 +17,31 @@
 
 'use strict';
 
-define(['/test/jasmine-glue.js', 'audio', 'events'], (jasmineGlue, audio, events) => {
-  const {beforeEach, describe, expect, it} = jasmineGlue.ji;
+define([
+  '/test/jasmine-glue.js',
+  'audio',
+  'events'
+], (
+  import_jasmine,
+  import_audio,
+  import_events
+) => {
+  const {ji: {
+    beforeEach,
+    describe,
+    expect,
+    it,
+  }} = import_jasmine;
   const {
     AudioAnalyserAdapter,
     AudioScopeAdapter, 
     UserMediaSelector,
     handleUserMediaError_ForTesting: handleUserMediaError,
-    minimizeSampleRate_ForTesting: minimizeSampleRate
-  } = audio;
+    minimizeSampleRate_ForTesting: minimizeSampleRate,
+  } = import_audio;
   const {
     Scheduler,
-  } = events;
+  } = import_events;
   
   describe('audio', () => {
     // TODO: test connectAudio (requires server side websocket stub)

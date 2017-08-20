@@ -17,19 +17,25 @@
 
 'use strict';
   
-define(['./types', './values'],
-       (types, values) => {
+define([
+  './types',
+  './values',
+], (
+  import_types,
+  import_values
+) => {
   const {
+    EnumT,
     anyT,
     blockT,
     booleanT,
-  } = types;
+  } = import_types;
   const {
     ConstantCell,
     LocalCell,
     StorageCell,
     makeBlock,
-  } = values;
+  } = import_values;
   
   const exports = {};
   
@@ -144,7 +150,7 @@ define(['./types', './values'],
   function ClientStateObject(clientStateStorage, databasePicker) {
     // TODO: Client state should be more closely associated with the components that use it, rather than centrally defined.
     
-    const themeType = new types.EnumT({
+    const themeType = new EnumT({
       // TODO get list of themes
       '/client/themes/black.css': 'Dark',
       '/client/themes/gray.css': 'Gray',

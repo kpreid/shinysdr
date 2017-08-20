@@ -17,15 +17,25 @@
 
 'use strict';
 
-define(['/test/jasmine-glue.js',
-        'domtools'],
-       ( jasmineGlue,
-         domtools) => {
-  const {afterEach, beforeEach, describe, expect, it, jasmine} = jasmineGlue.ji;
+define([
+  '/test/jasmine-glue.js',
+  'domtools',
+], (
+  import_jasmine,
+  import_domtools
+) => {
+  const {ji: {
+    afterEach,
+    beforeEach,
+    describe,
+    expect,
+    it,
+    jasmine,
+  }} = import_jasmine;
   const {
     isVisibleInLayout,
     reveal,
-  } = domtools;
+  } = import_domtools;
   
   let container;
   beforeEach(() => {

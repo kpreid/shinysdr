@@ -17,16 +17,34 @@
 
 'use strict';
 
-define(['/test/jasmine-glue.js',
-        'coordination', 'database', 'values'],
-       ( jasmineGlue,
-         coordination,   database,   values) => {
-  const {describe, expect, it} = jasmineGlue.ji;
-  const ConstantCell = values.ConstantCell;
-  const Table = database.Table;
-  const makeBlock = values.makeBlock;
+define([
+  '/test/jasmine-glue.js',
+  'coordination',
+  'database',
+  'values'
+], (
+  import_jasmine,
+  import_coordination,
+  import_database,
+  import_values
+) => {
+  const {ji: {
+    describe,
+    expect,
+    it,
+  }} = import_jasmine;
+  const {
+    Coordinator,
+  } = import_coordination;
+  const {
+    Table,
+  } = import_database;
+  const {
+    ConstantCell,
+    makeBlock,
+  } = import_values;
   
-  describe('Coordinator', function () {
+  describe('Coordinator', () => {
     // TODO reduce the need for this stubbing
     const stubRadioCell = new ConstantCell(makeBlock({
       source: new ConstantCell(makeBlock({
@@ -40,7 +58,7 @@ define(['/test/jasmine-glue.js',
     const stubTable = new Table('stubTable', false);
   
     it('selected record should follow tuning', function () {
-      const coordinator = new coordination.Coordinator(
+      const coordinator = new Coordinator(
           'bogus scheduler', stubTable, stubRadioCell);
       const record = new Table('foo', true).add({});
     

@@ -17,14 +17,29 @@
 
 'use strict';
 
-define(['./types', './values', './events'],
-       (   types,     values,     events) => {
-  const BulkDataT = types.BulkDataT;
-  const Cell = values.Cell;
-  const CommandCell = values.CommandCell;
-  const typeFromDesc = types.typeFromDesc;
+define([
+  './events',
+  './types',
+  './values',
+], (
+  import_events,
+  import_types,
+  import_values
+) => {
+  const {
+    Notifier,
+  } = import_events;
+  const {
+    typeFromDesc,
+    BulkDataT,
+    blockT,
+  } = import_types;
+  const {
+    Cell,
+    CommandCell,
+  } = import_values;
   
-  var exports = {};
+  const exports = {};
   
   function identity(x) { return x; }
   
@@ -280,7 +295,7 @@ define(['./types', './values', './events'],
     var block = {};
     // TODO kludges, should be properly facetized and separately namespaced somehow
     setNonEnum(block, '_url', url);
-    setNonEnum(block, '_reshapeNotice', new events.Notifier());
+    setNonEnum(block, '_reshapeNotice', new Notifier());
     interfaces.forEach(function(interfaceName) {
       // TODO: kludge
       setNonEnum(block, '_implements_' + interfaceName, true);
@@ -306,7 +321,7 @@ define(['./types', './values', './events'],
       naming: desc.metadata.naming,
     };
     var cell;
-    if (type === types.blockT) {
+    if (type === blockT) {
       // TODO eliminate special case by making server block cells less special?
       // TODO blocks should not need urls (switch http op to websocket)
       cell = new ReadCell(setter, /* dummy */ makeBlock(url, []), metadata,
@@ -328,7 +343,7 @@ define(['./types', './values', './events'],
   function connect(rootURL, connectionStateCallback) {
     if (!connectionStateCallback) connectionStateCallback = function () {};
     
-    const rootCell = new ReadCell(null, null, types.blockT, identity);
+    const rootCell = new ReadCell(null, null, blockT, identity);
     
     retryingConnection(() => rootURL, connectionStateCallback, ws => {
       ws.binaryType = 'arraybuffer';

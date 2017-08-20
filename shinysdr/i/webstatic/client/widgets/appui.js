@@ -17,29 +17,39 @@
 
 'use strict';
   
-define(['./basic', './spectrum',
-        '../database', '../events', '../types', '../values', '../widget'],
-       (widgets_basic, widgets_spectrum,
-            database,      events,      types,      values,      widget) => {
-  const Banner = widgets_basic.Banner;
-  const Block = widgets_basic.Block;
-  const DerivedCell = values.DerivedCell;
-  const EnumT = types.EnumT;
-  const Knob = widgets_basic.Knob;
-  const LinSlider = widgets_basic.LinSlider;
-  const LocalCell = values.LocalCell;
-  const MeasvizWidget = widgets_basic.MeasvizWidget;
-  const Meter = widgets_basic.Meter;
-  const NoticeT = types.NoticeT;
-  const NumberWidget = widgets_basic.Number;
-  const PickWidget = widgets_basic.PickWidget;
-  const Radio = widgets_basic.Radio;
-  const Select = widgets_basic.Select;
-  const Toggle = widgets_basic.Toggle;
-  const createWidgetExt = widget.createWidgetExt;
-  const TextTerminal = widgets_basic.TextTerminal;
-
-  const exports = Object.create(null);
+define([
+  './basic', 
+  '../types', 
+  '../values', 
+  '../widget'
+], (
+  {
+    Banner,
+    Block,
+    Knob,
+    LinSlider,
+    MeasvizWidget,
+    Meter,
+    Number: NumberWidget,
+    PickWidget,
+    Radio,
+    Select,
+    Toggle,
+    TextTerminal,
+  },
+  {
+    EnumT,
+    NoticeT,
+  },
+  {
+    DerivedCell,
+    LocalCell,
+  },
+  {
+    createWidgetExt,
+  }
+) => {
+  const exports = {};
 
   // Suppresses all visibility of null objects
   function NullWidget(config) {

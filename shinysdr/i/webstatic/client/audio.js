@@ -17,25 +17,44 @@
 
 'use strict';
 
-define(['./events', './network', './types', './values'],
-       (   events,     network,     types,     values) => {
-  const BulkDataT = types.BulkDataT;
-  const Cell = values.Cell;
-  const ConstantCell = values.ConstantCell;
-  const EnumT = types.EnumT;
-  const LocalCell = values.LocalCell;
-  const LocalReadCell = values.LocalReadCell;
-  const NoticeT = types.NoticeT;
-  const Notifier = events.Notifier;
-  const Neverfier = events.Neverfier;
-  const QuantityT = types.QuantityT;
-  const StorageCell = values.StorageCell;
-  const booleanT = types.booleanT;
-  const cellPropOfBlock = values.cellPropOfBlock;
-  const makeBlock = values.makeBlock;
-  const numberT = types.numberT;
-  const retryingConnection = network.retryingConnection;
-  
+define([
+  './events',
+  './network',
+  './types',
+  './values'
+], (
+  import_events,
+  import_network,
+  import_types,
+  import_values
+) => {
+  const {
+    Neverfier,
+    Notifier,
+  } = import_events;
+  const {
+    retryingConnection,
+  } = import_network;
+  const {
+    BulkDataT,
+    EnumT,
+    NoticeT,
+    QuantityT,
+    RangeT,
+    anyT,
+    booleanT,
+    numberT,
+  } = import_types;
+  const {
+    Cell,
+    ConstantCell,
+    LocalCell,
+    LocalReadCell,
+    StorageCell,
+    cellPropOfBlock,
+    makeBlock,
+  } = import_values;
+
   const exports = {};
   
   // In connectAudio, we assume that the maximum audio bandwidth is lower than that suiting this sample rate, so that if the native sample rate is much higher than this we can send a lower one over the network without losing anything of interest.
@@ -106,7 +125,7 @@ define(['./events', './network', './types', './values'],
     }
     var info = makeBlock({
       requested_sample_rate: makeRequestedSampleRateCell(nativeSampleRate, storage),
-      buffered: new LocalReadCell(new types.RangeT([[0, 2]], false, false), 0),
+      buffered: new LocalReadCell(new RangeT([[0, 2]], false, false), 0),
       target: new LocalReadCell({
         value_type: new QuantityT({symbol: 's', si_prefix_ok: false}),
         naming: { label: 'Target latency' }}, ''),
@@ -472,7 +491,7 @@ define(['./events', './network', './types', './values'],
     // Other elements expected by Monitor widget
     Object.defineProperty(this, '_implements_shinysdr.i.blocks.IMonitor', {enumerable: false});
     this.freq_resolution = new ConstantCell(length);
-    this.signal_type = new ConstantCell({kind: 'USB', sample_rate: effectiveSampleRate}, types.anyT);
+    this.signal_type = new ConstantCell({kind: 'USB', sample_rate: effectiveSampleRate}, anyT);
   }
   Object.defineProperty(AudioAnalyserAdapter.prototype, '_reshapeNotice', {value: new Neverfier()});
   Object.freeze(AudioAnalyserAdapter.prototype);
@@ -570,7 +589,7 @@ define(['./events', './network', './types', './values'],
     // Other elements expected by Monitor widget
     Object.defineProperty(this, '_implements_shinysdr.i.blocks.IMonitor', {enumerable: false});
     this.freq_resolution = new ConstantCell(length, numberT);
-    this.signal_type = new ConstantCell({kind: 'USB', sample_rate: audioContext.sampleRate}, types.anyT);
+    this.signal_type = new ConstantCell({kind: 'USB', sample_rate: audioContext.sampleRate}, anyT);
   }
   Object.defineProperty(AudioScopeAdapter.prototype, '_reshapeNotice', {value: new Neverfier()});
   Object.freeze(AudioScopeAdapter.prototype);
@@ -715,7 +734,7 @@ define(['./events', './network', './types', './values'],
     }
     return new StorageCell(
       storage,
-      new types.RangeT(ranges, false, true, {symbol: 'Hz', si_prefix_ok: true}),
+      new RangeT(ranges, false, true, {symbol: 'Hz', si_prefix_ok: true}),
       defaultRate,
       'requested_sample_rate');
   }

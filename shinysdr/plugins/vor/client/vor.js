@@ -17,13 +17,26 @@
 
 'use strict';
 
-define(['map/map-core', 'widgets', 'math'], function (mapCore, widgets, math) {
-  var mod = math.mod;
+define([
+  'map/map-core',
+  'math',
+  'widgets',
+], (
+  import_map_core,
+  import_math,
+  widgets
+) => {
+  const {
+    register,
+  } = import_map_core;
+  const {
+    mod,
+  } = import_math;
   
-  var exports = {};
+  const exports = {};
   
-  var TAU = Math.PI * 2;
-  var RAD_TO_DEG = 360 / TAU;
+  const TAU = Math.PI * 2;
+  const RAD_TO_DEG = 360 / TAU;
   
   function Angle(config) {
     var target = config.target;
@@ -123,7 +136,7 @@ define(['map/map-core', 'widgets', 'math'], function (mapCore, widgets, math) {
     });
   }
   
-  mapCore.register(addVORMapLayer);
+  register(addVORMapLayer);
   
   return Object.freeze(exports);
 });

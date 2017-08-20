@@ -18,7 +18,7 @@
 'use strict';
 
 define(() => {
-  const exports = Object.create(null);
+  const exports = {};
   
   // little abstraction to make the scheduler simpler
   function Queue() {

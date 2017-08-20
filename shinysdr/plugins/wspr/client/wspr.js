@@ -15,17 +15,29 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['map/map-core', 'widgets'], function(mapCore, widgets) {
-  'use strict';
+'use strict';
 
-  var Block = widgets.Block;
-  var renderTrackFeature = mapCore.renderTrackFeature;
-
-  var exports = {};
+define([
+  'map/map-core',
+  'widgets',
+], (
+  import_map_core,
+  widgets
+) => {
+  const {
+    register,
+    renderTrackFeature,
+  } = import_map_core;
+  const {
+    Block,
+    TrackWidget,
+  } = widgets;
+  
+  const exports = {};
 
   function WSPRWidget(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
-      addWidget('track', widgets.TrackWidget);
+      addWidget('track', TrackWidget);
     }, false);
   }
 
@@ -48,7 +60,7 @@ define(['map/map-core', 'widgets'], function(mapCore, widgets) {
     });
   }
 
-  mapCore.register(addWSPRMapLayer);
+  register(addWSPRMapLayer);
 
   return Object.freeze(exports);
 });

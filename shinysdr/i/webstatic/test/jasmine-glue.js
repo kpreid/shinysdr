@@ -6,7 +6,7 @@
 
 'use strict';
 
-define([], () => {
+define(() => {
   const jasmine = jasmineRequire.core(jasmineRequire);
   jasmineRequire.html(jasmine);
 

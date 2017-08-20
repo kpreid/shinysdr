@@ -17,11 +17,24 @@
 
 'use strict';
 
-define(['map/map-core', 'widgets'], function (mapCore, widgets) {
-  var Block = widgets.Block;
-  var renderTrackFeature = mapCore.renderTrackFeature;
+define([
+  'map/map-core',
+  'widgets',
+  'widgets/basic',
+], (
+  import_map_core,
+  widgets,
+  import_widgets_basic
+) => {
+  const {
+    register,
+    renderTrackFeature,
+  } = import_map_core;
+  const {
+    Block,
+  } = import_widgets_basic;
   
-  var exports = {};
+  const exports = {};
   
   function AircraftWidget(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
@@ -58,7 +71,7 @@ define(['map/map-core', 'widgets'], function (mapCore, widgets) {
     });
   }
   
-  mapCore.register(addAircraftMapLayer);
+  register(addAircraftMapLayer);
   
   return Object.freeze(exports);
 });

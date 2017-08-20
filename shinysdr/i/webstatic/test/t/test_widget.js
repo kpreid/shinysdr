@@ -17,20 +17,52 @@
 
 'use strict';
 
-define(['/test/jasmine-glue.js',
-        'domtools', 'events', 'types', 'values', 'widget', 'widgets/basic'],
-       ( jasmineGlue,
-         domtools,   events,   types,   values,   widget,   widgets_basic) => {
-  const {beforeEach, describe, expect, it} = jasmineGlue.ji;
-  const Block = widgets_basic.Block;
-  const Scheduler = events.Scheduler;
+define([
+  '/test/jasmine-glue.js',
+  'events',
+  'types',
+  'values',
+  'widget',
+  'widgets/basic',
+], (
+  import_jasmine,
+  import_events,
+  import_types,
+  import_values,
+  import_widget,
+  import_widgets_basic
+) => {
+  const {ji: {
+    beforeEach,
+    describe,
+    expect,
+    it,
+  }} = import_jasmine;
+  const {
+    Scheduler,
+  } = import_events;
+  const {
+    blockT,
+    numberT,
+  } = import_types;
+  const {
+    LocalCell,
+    makeBlock,
+  } = import_values;
+  const {
+    Context,
+    createWidgetExt,
+  } = import_widget;
+  const {
+    Block,
+  } = import_widgets_basic;
   
   describe('widget', function () {
     let context;
     let scheduler;
     beforeEach(function () {
       scheduler = new Scheduler(window);
-      context = new widget.Context({
+      context = new Context({
         widgets: {},
         scheduler: scheduler
       });
@@ -45,8 +77,8 @@ define(['/test/jasmine-glue.js',
         const container = document.createElement('div');
         document.body.appendChild(container);
         const wEl = container.appendChild(document.createElement('div'));
-        const cell = new values.LocalCell(types.numberT, 0);
-        /* const widgetHandle = */ widget.createWidgetExt(context, TestWidget, wEl, cell);
+        const cell = new LocalCell(numberT, 0);
+        /* const widgetHandle = */ createWidgetExt(context, TestWidget, wEl, cell);
         // implicitly expect not to throw
         expect(container.firstChild.className).toBe('widget-ErrorWidget');
       });
@@ -79,10 +111,10 @@ define(['/test/jasmine-glue.js',
         const container = document.createElement('div');
         document.body.appendChild(container);
         const wEl = container.appendChild(document.createElement('div'));
-        const cell = new values.LocalCell(types.blockT, values.makeBlock({
-          inner: new values.LocalCell(types.numberT, 0)
+        const cell = new LocalCell(blockT, makeBlock({
+          inner: new LocalCell(numberT, 0)
         }));
-        const widgetHandle = widget.createWidgetExt(context, OuterWidget, wEl, cell);
+        const widgetHandle = createWidgetExt(context, OuterWidget, wEl, cell);
         expect(calledInit).toBe(1);
         expect(calledDestroy).toBe(0);
         expect(poked).toBe(0);

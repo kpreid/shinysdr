@@ -17,7 +17,19 @@
 
 'use strict';
 
-define(['./widgets/appui', './widgets/basic', './widgets/dbui', './widgets/scope', './widgets/spectrum'], function (widgets_appui, widgets_basic, widgets_dbui, widgets_scope, widgets_spectrum) {
+define([
+  './widgets/appui',
+  './widgets/basic',
+  './widgets/dbui',
+  './widgets/scope',
+  './widgets/spectrum',
+], (
+  widgets_appui,
+  widgets_basic,
+  widgets_dbui,
+  widgets_scope,
+  widgets_spectrum
+) => {
   // TODO: This module is leftover from refactoring and only makes the namespace used for looking up widgets by name -- this ought to become something else that better considers plugin extensibility.
 
   const widgets = Object.create(null);

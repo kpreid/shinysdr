@@ -17,9 +17,21 @@
 
 'use strict';
 
-define(['/test/jasmine-glue.js', 'types'], (jasmineGlue, types) => {
-  const {describe, expect, it} = jasmineGlue.ji;
-  const {typeFromDesc} = types;
+define([
+  '/test/jasmine-glue.js',
+  'types',
+], (
+  import_jasmine,
+  types
+) => {
+  const {ji: {
+    describe,
+    expect,
+    it,
+  }} = import_jasmine;
+  const {
+    typeFromDesc,
+  } = types;
   
   describe('types', () => {
     function singletonTypeTest(identifier, serialization) {

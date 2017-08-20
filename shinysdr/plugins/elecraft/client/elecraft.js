@@ -17,14 +17,19 @@
 
 'use strict';
 
-define(['widgets', 'widgets/basic'],
-       (widgets, widgets_basic) => {
+define([
+  'widgets',
+  'widgets/basic'
+], (
+  widgets,
+  import_widgets_basic
+) => {
   const {
     Block,
     Knob,
     Select,
     SmallKnob,
-  } = widgets_basic;
+  } = import_widgets_basic;
   
   const exports = {};
   

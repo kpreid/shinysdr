@@ -21,29 +21,64 @@
 requirejs.config({
   baseUrl: '/client/'
 });
-define(['types', 'values', 'events', 'widget', 'widgets', 'network', 'database', 'coordination'], function (types, values, events, widget, widgets, network, database, coordination) {
-  const ClientStateObject = coordination.ClientStateObject;
-  const ConstantCell = values.ConstantCell;
-  const StorageCell = values.StorageCell;
-  const StorageNamespace = values.StorageNamespace;
-  const makeBlock = values.makeBlock;
+define([
+  'coordination',
+  'database',
+  'events',
+  'network',
+  'types',
+  'values',
+  'widget',
+  'widgets',
+], (
+  import_coordination,
+  import_database,
+  import_events,
+  import_network,
+  import_types,
+  import_values,
+  import_widget,
+  widgets
+) => {
+  const {
+    ClientStateObject,
+  } = import_coordination;
+  const {
+    empty,
+  } = import_database;
+  const {
+    Scheduler,
+  } = import_events;
+  const {
+    BulkDataCell,
+  } = import_network;
   const {
     BulkDataT,
     anyT,
     booleanT,
-  } = types;
+  } = import_types;
+  const {
+    ConstantCell,
+    StorageCell,
+    StorageNamespace,
+    makeBlock,
+  } = import_values;
+  const {
+    Context,
+    createWidgets,
+  } = import_widget;
   
   const binCount = 4096;
   const sampleRate = 1e6;
   const minLevel = -130;
   const maxLevel = -20;
   
-  const scheduler = new events.Scheduler();
+  const scheduler = new Scheduler();
 
   const clientStateStorage = new StorageNamespace(localStorage, 'shinysdr.client.');
   const clientState = new ClientStateObject(clientStateStorage, null);
   
-  const fftcell = new network.BulkDataCell('<dummy spectrum>', [{freq: 0, rate: 0}, []], {naming: {}, value_type: new BulkDataT('dff', 'b')});
+  const fftcell = new BulkDataCell('<dummy spectrum>', [{freq: 0, rate: 0}, []], {naming: {}, value_type: new BulkDataT('dff', 'b')});
   const root = new ConstantCell(makeBlock({
     unpaused: new StorageCell(clientStateStorage, booleanT, true, '_test_unpaused'),
     source: new ConstantCell(makeBlock({
@@ -59,12 +94,12 @@ define(['types', 'values', 'events', 'widget', 'widgets', 'network', 'database',
     }))
   }));
   
-  var context = new widget.Context({
+  var context = new Context({
     widgets: widgets,
     radioCell: root,  // TODO: 'radio' name is bogus
     clientState: clientState,
     spectrumView: null,
-    freqDB: new database.Union(),
+    freqDB: empty,
     scheduler: scheduler
   });
   
@@ -103,5 +138,5 @@ define(['types', 'values', 'events', 'widget', 'widgets', 'network', 'database',
   }
   requestAnimationFrame(loop);
   
-  widget.createWidgets(root, context, document);
+  createWidgets(root, context, document);
 });

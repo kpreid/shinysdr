@@ -17,29 +17,46 @@
 
 'use strict';
 
-define(['./basic', '../domtools', '../values', '../widget', '../math', '../plugins'],
-       (widgets_basic, domtools, values, widget, math, plugins) => {
+define([
+  './basic',
+  '../domtools',
+  '../math',
+  '../plugins',
+  '../values',
+  '../widget',
+], (
+  import_widgets_basic,
+  import_domtools,
+  import_math,
+  import_plugins,
+  import_values,
+  import_widget
+) => {
   const {
     Block,
     Toggle,
-  } = widgets_basic;
+  } = import_widgets_basic;
   const {
     isVisibleInLayout,
-  } = domtools;
+  } = import_domtools;
+  const {
+    formatFreqMHz,
+  } = import_math;
+  const {
+    getModeTable,
+  } = import_plugins;
   const {
     Cell,
-  } = values;
+  } = import_values;
   const {
     alwaysCreateReceiverFromEvent,
     createWidgetExt,
-  } = widget;
-  const {
-    formatFreqMHz,
-  } = math;
-  const modeTable = plugins.getModeTable();
-
-  var exports = Object.create(null);
-
+  } = import_widget;
+  
+  const exports = {};
+  
+  const modeTable = getModeTable();
+  
   function FreqList(config) {
     const radioCell = config.radioCell;
     const scheduler = config.scheduler;

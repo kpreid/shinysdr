@@ -17,34 +17,76 @@
 
 'use strict';
 
-define(['./basic', './dbui',
-        '../database', '../domtools', '../gltools', '../math', '../menus', '../types', '../values', '../widget',
-        'text!./spectrum-common.glsl',
-        'text!./spectrum-graph-f.glsl', 'text!./spectrum-graph-v.glsl',
-        'text!./spectrum-waterfall-f.glsl', 'text!./spectrum-waterfall-v.glsl'], 
-       (widgets_basic, widgets_dbui,
-        database, domtools, gltools, math, menus, types, values, widget,
-        shader_common,
-        shader_graph_f, shader_graph_v,
-        shader_waterfall_f, shader_waterfall_v) => {
-  const BareFreqList = widgets_dbui.BareFreqList;
-  const Block = widgets_basic.Block;
-  const ConstantCell = values.ConstantCell;
-  const DerivedCell = values.DerivedCell;
-  const LinSlider = widgets_basic.LinSlider;
-  const LogSlider = widgets_basic.LogSlider;
-  const Menu = menus.Menu;
-  const SingleQuad = gltools.SingleQuad;
-  const Toggle = widgets_basic.Toggle;
-  const alwaysCreateReceiverFromEvent = widget.alwaysCreateReceiverFromEvent;
-  const createWidgetExt = widget.createWidgetExt;
-  const emptyDatabase = database.empty;
-  const formatFreqExact = math.formatFreqExact;
-  const formatFreqInexactVerbose = math.formatFreqInexactVerbose;
-  const mod = math.mod;
-  const numberT = types.numberT;
+define([
+  './basic', 
+  './dbui',
+  '../database',
+  '../gltools', 
+  '../math', 
+  '../menus', 
+  '../types', 
+  '../values', 
+  '../widget',
+  'text!./spectrum-common.glsl',
+  'text!./spectrum-graph-f.glsl', 
+  'text!./spectrum-graph-v.glsl',
+  'text!./spectrum-waterfall-f.glsl', 
+  'text!./spectrum-waterfall-v.glsl',
+], (
+  import_widgets_basic, 
+  import_widgets_dbui,
+  import_database,
+  import_gltools, 
+  import_math, 
+  import_menus, 
+  import_types, 
+  import_values, 
+  import_widget,
+  shader_common,
+  shader_graph_f,
+  shader_graph_v,
+  shader_waterfall_f,
+  shader_waterfall_v
+) => {
+  const {
+    Block,
+    LinSlider,
+    LogSlider,
+    Toggle,
+  } = import_widgets_basic;
+  const {
+    BareFreqList,
+  } = import_widgets_dbui;
+  const {
+    empty: emptyDatabase,
+  } = import_database;
+  const {
+    buildProgram,
+    getGL,
+    handleContextLoss,
+    SingleQuad,
+  } = import_gltools;
+  const {
+    formatFreqExact,
+    formatFreqInexactVerbose,
+    mod,
+  } = import_math;
+  const {
+    Menu,
+  } = import_menus;
+  const {
+    numberT,
+  } = import_types;
+  const {
+    ConstantCell,
+    DerivedCell,
+  } = import_values;
+  const {
+    alwaysCreateReceiverFromEvent,
+    createWidgetExt,
+  } = import_widget;
   
-  const exports = Object.create(null);
+  const exports = {};
   
   // Widget for a monitor block
   function Monitor(config) {
@@ -189,7 +231,7 @@ define(['./basic', './dbui',
       antialias: false,
       preserveDrawingBuffer: false
     };
-    var gl = gltools.getGL(config, canvas, glOptions);
+    var gl = getGL(config, canvas, glOptions);
     var ctx2d = canvas.getContext('2d');
     
     var dataHook = function () {}, drawOuter = function () {};
@@ -223,7 +265,7 @@ define(['./basic', './dbui',
       }
       
       initContext();
-      gltools.handleContextLoss(canvas, initContext);
+      handleContextLoss(canvas, initContext);
     }.call(this)); else if (ctx2d) (function () {
       var drawImpl = build2D(ctx2d, draw);
       dataHook = drawImpl.newData.bind(drawImpl);
@@ -308,12 +350,12 @@ define(['./basic', './dbui',
         + '#line 1 0\n' + shader_common
         + '\n#line 1 1\n';
 
-      var graphProgram = gltools.buildProgram(gl, 
+      var graphProgram = buildProgram(gl, 
         shaderPrefix + shader_graph_v,
         shaderPrefix + shader_graph_f);
       var graphQuad = new SingleQuad(gl, -1, 1, -1, 1, gl.getAttribLocation(graphProgram, 'position'));
 
-      var waterfallProgram = gltools.buildProgram(gl,
+      var waterfallProgram = buildProgram(gl,
         shaderPrefix + shader_waterfall_v,
         '#define BACKGROUND_COLOR ' + backgroundColorGLSL + '\n'
             + shaderPrefix + shader_waterfall_f);

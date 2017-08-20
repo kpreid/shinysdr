@@ -17,8 +17,8 @@
 
 'use strict';
   
-define(function () {
-  var exports = {};
+define(() => {
+  const exports = {};
   
   // true modulo, not %
   function mod(value, modulus) {

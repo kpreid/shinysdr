@@ -17,26 +17,42 @@
 
 'use strict';
 
-define(['/test/jasmine-glue.js', 'map/map-core',
-        '/test/testutil.js', 'types', 'values'],
-       (jasmineGlue, mapCore,
-        testutil, types, values) => {
-  const {describe, expect, it, jasmine} = jasmineGlue.ji;
+define([
+  '/test/jasmine-glue.js',
+  '/test/testutil.js',
+  'map/map-core',
+  'types',
+  'values',
+], (
+  import_jasmine,
+  import_testutil,
+  import_map_core,
+  import_types,
+  import_values
+) => {
+  const {ji: {
+    describe,
+    expect,
+    it,
+    jasmine
+  }} = import_jasmine;
   const {
     WidgetTester,
-  } = testutil;
+  } = import_testutil;
+  const {
+    _StripeAllocatorForTesting: StripeAllocator,
+    GeoMap,
+  } = import_map_core;
   const {
     anyT,
-  } = types;
+  } = import_types;
   const {
     ConstantCell,
     makeBlock
-  } = values;
+  } = import_values;
   
   describe('map/map-core', function () {
     describe('StripeAllocator', function () {
-      const StripeAllocator = mapCore._StripeAllocatorForTesting;
-
       const height = 13;  // arbitrary choice
     
       it('handles simple allocation up to full size', function () {
@@ -101,8 +117,6 @@ define(['/test/jasmine-glue.js', 'map/map-core',
     });
     
     describe('GeoMap widget', function () {
-      const GeoMap = mapCore.GeoMap;
-      
       function makeStubTarget() {
         // TODO stop needing this boilerplate, somehow.
         return new ConstantCell(makeBlock({

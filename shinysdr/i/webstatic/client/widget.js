@@ -17,28 +17,47 @@
 
 'use strict';
 
-define(['./coordination', './domtools', './events', './math', './types', './values'],
-       (coordination, domtools, events, math, types, values) => {
-  const {Coordinator} = coordination;
+define([
+  './coordination', 
+  './domtools', 
+  './events', 
+  './math', 
+  './types', 
+  './values',
+], (
+  import_coordination,
+  import_domtools,
+  import_events,
+  import_math,
+  import_types,
+  import_values
+) => {
+  const {
+    Coordinator,
+  } = import_coordination;
   const {
     lifecycleDestroy,
     lifecycleInit,
-  } = domtools;
-  const {Notifier} = events;
-  const {mod} = math;
+  } = import_domtools;
+  const {
+    Notifier,
+  } = import_events;
+  const {
+    mod,
+  } = import_math;
   const {
     anyT,
     RangeT,
-  } = types;
+  } = import_types;
   const {
     ConstantCell,
     DerivedCell,
     StorageCell,
     StorageNamespace,
     makeBlock,
-  } = values;
+  } = import_values;
   
-  var exports = {};
+  const exports = {};
   
   function alwaysCreateReceiverFromEvent(event) {
     return event.shiftKey;

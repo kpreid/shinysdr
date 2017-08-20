@@ -17,8 +17,8 @@
 
 'use strict';
 
-define(function () {
-  var exports = {};
+define(() => {
+  const exports = {};
   
   exports.getGL = function getGL(config, canvas, options) {
     var useWebGL = config.clientState.opengl.depend(config.rebuildMe);

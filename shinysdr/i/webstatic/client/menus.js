@@ -19,15 +19,29 @@
 
 'use strict';
 
-define(['./types', './values', './widget'], function (types, values, widget) {
-  var anyT = types.anyT;
-  var ConstantCell = values.ConstantCell;
-  var createWidgetExt = widget.createWidgetExt;
-
-  var exports = {};
+define([
+  './types',
+  './values',
+  './widget',
+], (
+  import_types,
+  import_values,
+  import_widget
+) => {
+  const {
+    anyT,
+  } = import_types;
+  const {
+    ConstantCell,
+  } = import_values;
+  const {
+    createWidgetExt,
+  } = import_widget;
   
-  var menuDialog = new WeakMap();
-  var menuInner = new WeakMap();
+  const exports = {};
+  
+  const menuDialog = new WeakMap();
+  const menuInner = new WeakMap();
   function Menu(widgetContext, widgetCtor, target) {
     var dialog = document.createElement('dialog');
     var innerElement = document.createElement('div');

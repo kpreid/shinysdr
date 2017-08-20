@@ -17,11 +17,17 @@
 
 'use strict';
 
-define(['./events', './types'], function (events, types) {
+define([
+  './events',
+  './types',
+], (
+  import_events,
+  import_types
+) => {
   const {
     Neverfier,
-    Notifier
-  } = events;
+    Notifier,
+  } = import_events;
   const {
     anyT,
     booleanT,
@@ -29,9 +35,9 @@ define(['./events', './types'], function (events, types) {
     numberT,
     stringT,
     ValueType,
-  } = types;
+  } = import_types;
   
-  const exports = Object.create(null);
+  const exports = {};
 
   function Cell(type_or_metadata) {
     let type;
