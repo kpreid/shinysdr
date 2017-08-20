@@ -15,12 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+'use strict';
+
 define(['/test/jasmine-glue.js', 'map/map-core',
         '/test/testutil.js', 'types', 'values'],
        (jasmineGlue, mapCore,
         testutil, types, values) => {
-  'use strict';
-  
   const {describe, expect, it, jasmine} = jasmineGlue.ji;
   const {
     WidgetTester,

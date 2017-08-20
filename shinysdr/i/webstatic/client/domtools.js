@@ -15,9 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define([], () => {
-  'use strict';
+'use strict';
   
+define([], () => {
   const exports = {};
   
   // DOM element life cycle facility. It is expected that:

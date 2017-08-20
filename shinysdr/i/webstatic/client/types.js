@@ -17,9 +17,9 @@
 
 // Client-side mirror of shinysdr/types.py
 
-define([], () => {
-  'use strict';
+'use strict';
   
+define([], () => {
   const exports = Object.create(null);
   
   const noUnit = Object.freeze({

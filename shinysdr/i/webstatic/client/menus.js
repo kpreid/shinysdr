@@ -17,9 +17,9 @@
 
 // Manages pop-up context menus
 
-define(['./types', './values', './widget'], function (types, values, widget) {
-  'use strict';
+'use strict';
 
+define(['./types', './values', './widget'], function (types, values, widget) {
   var anyT = types.anyT;
   var ConstantCell = values.ConstantCell;
   var createWidgetExt = widget.createWidgetExt;

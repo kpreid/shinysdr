@@ -15,13 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+'use strict';
+
 requirejs.config({
   baseUrl: '../client/'
 });
 define(['audio', 'coordination', 'events', 'types', 'values', 'widget', 'widgets'],
        ( audio,   coordination,   events,   types,   values,   widget,   widgets ) => {
-  'use strict';
-  
   const scheduler = new events.Scheduler();
   const audioContext = new AudioContext();
   const storage = sessionStorage;  // TODO persistent and namespaced-from-other-pages

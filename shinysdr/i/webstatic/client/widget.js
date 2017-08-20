@@ -15,10 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+'use strict';
+
 define(['./coordination', './domtools', './events', './math', './types', './values'],
        (coordination, domtools, events, math, types, values) => {
-  'use strict';
-  
   const {Coordinator} = coordination;
   const {
     lifecycleDestroy,

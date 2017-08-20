@@ -2,7 +2,7 @@
   "undef": true,
   "unused": "vars",
 
-  "strict": true,
+  "strict": "global",
   "esversion": 6,
   
   // style options noted as "deprecated" (the corresponding warnings will be removed)

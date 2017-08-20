@@ -17,9 +17,9 @@
 
 // This module is basically a shim for the server's plugin-index resource to be loaded as a module (and parsed only once).
 
+'use strict';
+
 define(['text!plugin-index.json'], function (text) {
-  'use strict';
-  
   const pluginIndex = JSON.parse(text);
   const moduleIds = Object.freeze(Array.prototype.slice.call(pluginIndex.js));
   

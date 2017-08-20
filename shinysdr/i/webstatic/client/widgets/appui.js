@@ -15,12 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+'use strict';
+  
 define(['./basic', './spectrum',
         '../database', '../events', '../types', '../values', '../widget'],
        (widgets_basic, widgets_spectrum,
             database,      events,      types,      values,      widget) => {
-  'use strict';
-  
   const Banner = widgets_basic.Banner;
   const Block = widgets_basic.Block;
   const DerivedCell = values.DerivedCell;

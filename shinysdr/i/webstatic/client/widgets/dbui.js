@@ -15,10 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+'use strict';
+
 define(['./basic', '../domtools', '../values', '../widget', '../math', '../plugins'],
        (widgets_basic, domtools, values, widget, math, plugins) => {
-  'use strict';
-  
   const {
     Block,
     Toggle,

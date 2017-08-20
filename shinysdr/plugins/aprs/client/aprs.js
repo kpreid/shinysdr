@@ -15,12 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+'use strict';
+
 define(['events',  'map/map-core', 'types', 'values', 'widgets',
         'text!plugins/shinysdr.plugins.aprs/symbol-index'],
        (events, mapCore, types, values, widgets,
         symbolIndexJsonText) => {
-  'use strict';
-  
   const Block = widgets.Block;
   const Clock = events.Clock;
   const DerivedCell = values.DerivedCell;

@@ -15,10 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-// TODO: May be using the wrong relative module id -- otherwise this should have ..s
+'use strict';
+
 define(['widgets', 'widgets/basic'], function (widgets, widgets_basic) {
-  'use strict';
-  
   var Banner = widgets_basic.Banner;
   var Block = widgets_basic.Block;
   var Meter = widgets_basic.Meter;

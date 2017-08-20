@@ -15,12 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+'use strict';
+
 define(['/test/jasmine-glue.js',
         'domtools'],
        ( jasmineGlue,
          domtools) => {
-  'use strict';
-  
   const {afterEach, beforeEach, describe, expect, it, jasmine} = jasmineGlue.ji;
   const {
     isVisibleInLayout,

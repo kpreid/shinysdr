@@ -16,12 +16,12 @@
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 // TODO post split, reduce deps here
+'use strict';
+
 define(['./basic', '../events', '../gltools', '../math', '../types', '../values',
         'text!./scope-v.glsl', 'text!./scope-f.glsl', 'text!./scope-pp1.glsl', 'text!./scope-pp2.glsl'],
        (widgets_basic, events, gltools, math, types, values,
         shader_dot_vertex, shader_dot_fragment, shader_pp1, shader_pp2) => {
-  'use strict';
-  
   const Block = widgets_basic.Block;
   const DerivedCell = values.DerivedCell;
   const EnumT = types.EnumT;

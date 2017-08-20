@@ -3,9 +3,10 @@
 // It has been modified to:
 //   create a singleton Jasmine environment but not start it onload or define globals
 //   be compatible with RequireJS
+
+'use strict';
+
 define([], () => {
-  'use strict';
-  
   const jasmine = jasmineRequire.core(jasmineRequire);
   jasmineRequire.html(jasmine);
 

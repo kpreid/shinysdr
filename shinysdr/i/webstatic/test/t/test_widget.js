@@ -15,12 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+'use strict';
+
 define(['/test/jasmine-glue.js',
         'domtools', 'events', 'types', 'values', 'widget', 'widgets/basic'],
        ( jasmineGlue,
          domtools,   events,   types,   values,   widget,   widgets_basic) => {
-  'use strict';
-  
   const {beforeEach, describe, expect, it} = jasmineGlue.ji;
   const Block = widgets_basic.Block;
   const Scheduler = events.Scheduler;

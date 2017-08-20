@@ -15,9 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+'use strict';
+
 define(['/test/jasmine-glue.js', 'audio', 'events'], (jasmineGlue, audio, events) => {
-  'use strict';
-  
   const {beforeEach, describe, expect, it} = jasmineGlue.ji;
   const {
     AudioAnalyserAdapter,

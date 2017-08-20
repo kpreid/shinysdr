@@ -15,9 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+'use strict';
+
 define(['types', 'values', 'events', 'coordination', 'database', 'network', 'map/map-core', 'map/map-layers', 'widget', 'widgets', 'audio', 'window-manager', 'plugins'], (types, values, events, coordination, database, network, mapCore, mapLayers, widget, widgets, audio, windowManager, plugins) => {
-  'use strict';
-  
   function log(progressAmount, msg) {
     console.log(msg);
     document.getElementById('loading-information-text')

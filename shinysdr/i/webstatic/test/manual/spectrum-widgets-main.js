@@ -15,13 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+'use strict';
+
 // TODO: remove network module depenency
 requirejs.config({
   baseUrl: '/client/'
 });
 define(['types', 'values', 'events', 'widget', 'widgets', 'network', 'database', 'coordination'], function (types, values, events, widget, widgets, network, database, coordination) {
-  'use strict';
-
   const ClientStateObject = coordination.ClientStateObject;
   const ConstantCell = values.ConstantCell;
   const StorageCell = values.StorageCell;

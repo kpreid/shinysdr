@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+'use strict';
+
 define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
         'widget', 'widgets/basic',
         'text!./sphere-v.glsl', 'text!./sphere-f.glsl', 'text!./features-v.glsl',
@@ -23,8 +25,6 @@ define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
         widget, widgets_basic,
         shader_sphere_v, shader_sphere_f, shader_features_v,
         shader_points_f, shader_curves_f) => {
-  'use strict';
-  
   const sin = Math.sin;
   const cos = Math.cos;
   

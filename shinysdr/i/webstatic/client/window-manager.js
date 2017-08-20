@@ -17,9 +17,9 @@
 
 // Manages hideable tiling subwindows in the ShinySDR UI.
 
-define(['./values'], function (values) {
-  'use strict';
+'use strict';
 
+define(['./values'], function (values) {
   var StorageNamespace = values.StorageNamespace;
   
   var ELEMENT = 'shinysdr-subwindow';

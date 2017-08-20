@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+'use strict';
+
 define(['./basic', './dbui',
         '../database', '../domtools', '../gltools', '../math', '../menus', '../types', '../values', '../widget',
         'text!./spectrum-common.glsl',
@@ -25,8 +27,6 @@ define(['./basic', './dbui',
         shader_common,
         shader_graph_f, shader_graph_v,
         shader_waterfall_f, shader_waterfall_v) => {
-  'use strict';
-  
   const BareFreqList = widgets_dbui.BareFreqList;
   const Block = widgets_basic.Block;
   const ConstantCell = values.ConstantCell;

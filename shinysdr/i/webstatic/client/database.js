@@ -15,10 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+'use strict';
+
 define(['./events', './network', './types', './values'],
        (   events,     network,     types,     values) => {
-  'use strict';
-  
   const AddKeepDrop = events.AddKeepDrop;
   const Notifier = events.Notifier;
   const StorageCell = values.StorageCell;

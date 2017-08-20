@@ -15,10 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+'use strict';
+
 define(['../events', '../math', '../measviz', '../types', '../values', '../widget'],
        (    events,      math, _measvizStub,     types,      values,      widget) => {
-  'use strict';
-  
   const Cell = values.Cell;
   const Clock = events.Clock;
   const CommandCell = values.CommandCell;

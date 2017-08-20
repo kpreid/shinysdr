@@ -15,9 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+'use strict';
+
 define(() => {
-  'use strict';
-  
   const exports = Object.create(null);
   
   // little abstraction to make the scheduler simpler

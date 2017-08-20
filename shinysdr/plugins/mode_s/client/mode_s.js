@@ -15,9 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+'use strict';
+
 define(['map/map-core', 'widgets'], function (mapCore, widgets) {
-  'use strict';
-  
   var Block = widgets.Block;
   var renderTrackFeature = mapCore.renderTrackFeature;
   

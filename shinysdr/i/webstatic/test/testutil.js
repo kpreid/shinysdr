@@ -15,12 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+'use strict';
+
 define(['/test/jasmine-glue.js',
         'coordination', 'database', 'events', 'values'],
        (jasmineGlue,
          coordination,   database,   events,   values) => {
-  'use strict';
-  
   const {afterEach, expect, fail} = jasmineGlue.ji;
   const {
     ClientStateObject,
