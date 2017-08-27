@@ -59,6 +59,8 @@ define([
   
   const exports = {};
   
+  const elementHasWidgetRole = new WeakMap();
+  
   function alwaysCreateReceiverFromEvent(event) {
     return event.shiftKey;
   }
@@ -132,9 +134,14 @@ define([
   
   // Replace the given template/input node with a widget node.
   function createWidget(targetCellCell, targetStr, context, node, widgetCtor) {
+    if (elementHasWidgetRole.has(node)) {
+      throw new Error('node already a widget ' + elementHasWidgetRole.get(node));
+    }
+    
     const scheduler = context.scheduler;
     
-    const originalStash = node;
+    const templateStash = node;
+    elementHasWidgetRole.set(node, 'template');
     
     const container = node.parentNode;
     if (!container) {
@@ -165,7 +172,8 @@ define([
 
       lifecycleDestroy(currentWidgetEl);
 
-      const newSourceEl = originalStash.cloneNode(true);
+      const newSourceEl = templateStash.cloneNode(true);
+      elementHasWidgetRole.set(newSourceEl, 'instance');
       container.replaceChild(newSourceEl, currentWidgetEl);
       
       // TODO: Better interface to the metadata
@@ -209,7 +217,7 @@ define([
       
       const newEl = widget.element;
       const placeMark = newSourceEl.nextSibling;
-      if (newSourceEl.hasAttribute('title') && newSourceEl.getAttribute('title') === originalStash.getAttribute('title')) {
+      if (newSourceEl.hasAttribute('title') && newSourceEl.getAttribute('title') === templateStash.getAttribute('title')) {
         console.warn('Widget ' + widget.constructor.name + ' did not handle title attribute');
       }
       
@@ -242,7 +250,7 @@ define([
     return Object.freeze({
       destroy: function() {
         lifecycleDestroy(currentWidgetEl);
-        container.replaceChild(originalStash, currentWidgetEl);
+        container.replaceChild(templateStash, currentWidgetEl);
       }
     });
   }
