@@ -296,6 +296,7 @@ define([
       }
       
       var typename = node.getAttribute('data-widget');
+      node.removeAttribute('data-widget');  // prevent widgetifying twice
       if (typename === null) {
         console.error('Unspecified widget type:', node);
         return;

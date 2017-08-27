@@ -33,6 +33,7 @@ define([
   import_widgets_basic
 ) => {
   const {ji: {
+    afterEach,
     beforeEach,
     describe,
     expect,
@@ -46,12 +47,14 @@ define([
     numberT,
   } = import_types;
   const {
+    ConstantCell,
     LocalCell,
     makeBlock,
   } = import_values;
   const {
     Context,
     createWidgetExt,
+    createWidgets,
   } = import_widget;
   const {
     Block,
@@ -60,22 +63,26 @@ define([
   describe('widget', function () {
     let context;
     let scheduler;
-    beforeEach(function () {
+    let container;
+    beforeEach(() => {
       scheduler = new Scheduler(window);
       context = new Context({
         widgets: {},
         scheduler: scheduler
       });
+      container = document.createElement('div');
+      document.body.appendChild(container);
+    });
+    afterEach(() => {
+      container.parentNode.removeChild(container);
     });
   
-    describe('createWidget', function () {
-      it('should handle a broken widget', function() {
+    describe('createWidget', () => {
+      it('should handle a broken widget', () => {
         function TestWidget(config) {
           throw new Error('Widget construction error for testing.');
         }
       
-        const container = document.createElement('div');
-        document.body.appendChild(container);
         const wEl = container.appendChild(document.createElement('div'));
         const cell = new LocalCell(numberT, 0);
         /* const widgetHandle = */ createWidgetExt(context, TestWidget, wEl, cell);
@@ -83,7 +90,7 @@ define([
         expect(container.firstChild.className).toBe('widget-ErrorWidget');
       });
 
-      it('should call lifecycle callbacks', function() {
+      it('should call lifecycle callbacks', () => {
         let calledInit = 0;
         let calledDestroy = 0;
         let poked = 0;
@@ -103,7 +110,7 @@ define([
           this.element.addEventListener('shinysdr:lifecycledestroy', event => {
             calledDestroy++;
           });
-          poke = config.boundedFn(function() {
+          poke = config.boundedFn(() => {
             poked++;
           });
         }
@@ -125,6 +132,42 @@ define([
         expect(calledDestroy).toBe(1);
         poke();
         expect(poked).toBe(1);
+      });
+    });
+    
+    describe('createWidgets', () => {
+      // TODO: need basic tests
+      
+      it('should be idempotent', () => {
+        let count = 0;
+        
+        function TestWidget(config) {
+          this.element = config.element;
+          this.element.textContent = 'TestWidget ' + count++;
+        }
+        
+        const wEl = container.appendChild(document.createElement('div'));
+        wEl.setAttribute('data-widget', 'TestWidget');
+        
+        function once() {
+          // note that we are operating on container, not wEl (which will be detached by the first run).
+          createWidgets(
+            new ConstantCell(makeBlock({})), 
+            new Context({
+              widgets: {TestWidget: TestWidget},
+              scheduler: scheduler
+            }),
+            container);
+        }
+        
+        expect(container.textContent).toBe('');
+        expect(count).toBe(0);
+        once();
+        expect(container.textContent).toBe('TestWidget 0');
+        expect(count).toBe(1);
+        once();
+        expect(container.textContent).toBe('TestWidget 0');
+        expect(count).toBe(1);
       });
     });
   });
