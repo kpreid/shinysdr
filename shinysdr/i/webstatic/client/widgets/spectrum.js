@@ -91,22 +91,22 @@ define([
   // Widget for a monitor block
   function Monitor(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
-      var outerElement = this.element = config.element;
+      const outerElement = this.element = config.element;
       outerElement.classList.add('widget-Monitor-outer');
       
-      var scrollElement = outerElement.appendChild(document.createElement('div'));
+      const scrollElement = outerElement.appendChild(document.createElement('div'));
       scrollElement.classList.add('widget-Monitor-scrollable');
       scrollElement.id = config.element.id + '-scrollable';
       
-      var overlayContainer = scrollElement.appendChild(document.createElement('div'));
+      const overlayContainer = scrollElement.appendChild(document.createElement('div'));
       overlayContainer.classList.add('widget-Monitor-scrolled');
 
       // TODO: shouldn't need to have this declared, should be implied by context
-      var isRFSpectrum = config.element.hasAttribute('data-is-rf-spectrum');
-      var context = config.context.withSpectrumView(scrollElement, overlayContainer, block, isRFSpectrum);
+      const isRFSpectrum = config.element.hasAttribute('data-is-rf-spectrum');
+      const context = config.context.withSpectrumView(scrollElement, overlayContainer, block, isRFSpectrum);
       
       function makeOverlayPiece(name) {
-        var el = overlayContainer.appendChild(document.createElement(name));
+        const el = overlayContainer.appendChild(document.createElement(name));
         el.classList.add('widget-Monitor-overlay');
         return el;
       }
@@ -115,27 +115,24 @@ define([
       ignore('fft');
       
       // TODO this is clunky. (Note we're not just using rebuildMe because we don't want to lose waterfall history and reinit GL and and and...)
-      var freqCell = isRFSpectrum ? (function() {
+      const freqCell = isRFSpectrum ? (function() {
         var radioCell = config.radioCell;
         return new DerivedCell(numberT, config.scheduler, function (dirty) {
           return radioCell.depend(dirty).source.depend(dirty).freq.depend(dirty);
         });
       }()) : new ConstantCell(0);
-      var freqScaleEl = overlayContainer.appendChild(document.createElement('div'));
+      const freqScaleEl = overlayContainer.appendChild(document.createElement('div'));
       createWidgetExt(context, FreqScale, freqScaleEl, freqCell);
       
-      var splitHandleEl = overlayContainer.appendChild(document.createElement('div'));
+      const splitHandleEl = overlayContainer.appendChild(document.createElement('div'));
       createWidgetExt(context, VerticalSplitHandle, splitHandleEl, context.spectrumView.parameters.spectrum_split);
       
       // Not in overlayContainer because it does not scroll.
       // Works with zero height as the top-of-scale reference.
-      // TODO this is currently disabled because its axis scaling is not exactly right, because it is outside the scrolling element and we haven't compensated for the height of the vertical scrollbar
-      if (false) {
-        var verticalScaleEl = outerElement.appendChild(document.createElement('div'));
-        createWidgetExt(context, VerticalScale, verticalScaleEl, {});
-      }
+      const verticalScaleEl = outerElement.appendChild(document.createElement('div'));
+      createWidgetExt(context, VerticalScale, verticalScaleEl, new ConstantCell('dummy'));
 
-      var parametersEl = outerElement.appendChild(document.createElement('div'));
+      const parametersEl = outerElement.appendChild(document.createElement('div'));
       createWidgetExt(context, MonitorDetailedOptions, parametersEl, config.target);
       
       // TODO should logically be doing this -- need to support "widget with possibly multiple target elements"
@@ -146,7 +143,7 @@ define([
       
       // kludge to trigger SpectrumView layout computations after it's added to the DOM :(
       setTimeout(function() {
-        var resize = document.createEvent('Event');
+        const resize = document.createEvent('Event');
         resize.initEvent('resize', false, false);
         window.dispatchEvent(resize);
       }, 0);
@@ -1090,41 +1087,56 @@ define([
   }
   
   // Waterfall overlay printing amplitude labels.
-  // TODO this is currently not used because its axis scaling is not exactly right, because it is positioned outside the scrolling element and we haven't compensated for the height of the vertical scrollbar
   function VerticalScale(config) {
     const view = config.view;
     const splitCell = view.parameters.spectrum_split;
     const minLevelCell = view.parameters.spectrum_level_min;
     const maxLevelCell = view.parameters.spectrum_level_max;
     
-    let minLevel = 0, maxLevel = 0;  // updated in draw()
+    let minLevel = 0, maxLevel = 0, pixelHeight = 0;  // updated in draw()
     
-    const outer = this.element = document.createElement("div");
+    const outerEl = this.element = document.createElement('div');
     
     function amplitudeToY(amplitude) {
-      return ((amplitude - maxLevel) / (minLevel - maxLevel)
-          * (1 - splitCell.depend(draw))
-          * 100) + '%';
+      return ((amplitude - maxLevel) / (minLevel - maxLevel) * pixelHeight) + 'px';
     }
     
-    var numberCache = new VisibleItemCache(outer, function (amplitude) {
-      const label = document.createElement('span');
-      label.className = 'widget-VerticalScale-number';
-      label.textContent = '' + amplitude;  // TODO formatting, state units
-      label.my_update = () => {
-        label.style.top = amplitudeToY(amplitude);
+    const numberCache = new VisibleItemCache(outerEl, amplitude => {
+      const labelOuter = document.createElement('div');
+      const labelInner = labelOuter.appendChild(document.createElement('div'));
+      labelOuter.className = 'widget-VerticalScale-mark';
+      labelInner.className = 'widget-VerticalScale-number';
+      labelOuter.my_update = () => {
+        labelInner.textContent = String(amplitude).replace('-', '\u2212');
+        if (labelOuter.show_units) {
+          // TODO: Get units from the cell metadata instead of assuming.
+          labelInner.textContent += '\u00A0dBFS/Hz';
+        }
+        labelOuter.style.top = amplitudeToY(amplitude);
       };
-      return label;
+      return labelOuter;
     });
+    
+    outerEl.tabIndex = 0;
+    outerEl.addEventListener('click', event => {
+      outerEl.classList.toggle('widget-VerticalScale-expanded');
+    }, false);
     
     function draw() {
       minLevel = minLevelCell.depend(draw);
       maxLevel = maxLevelCell.depend(draw);
-      let count = 0;  // sanity check
-      for (let amplitude = Math.floor(maxLevel / 10) * 10;
-           amplitude >= minLevel && count < 50;
+      pixelHeight = view.getVisiblePixelHeight() * (1 - splitCell.depend(draw));
+      view.n.listen(draw);
+      
+      outerEl.style.height = pixelHeight + 'px';
+      
+      for (let amplitude = Math.floor(maxLevel / 10) * 10,
+               count = 0;
+           amplitude >= minLevel && count < 50 /* sanity check */;
            amplitude -= 10, count++) {
-        numberCache.add(amplitude).my_update();
+        const entry = numberCache.add(amplitude);
+        entry.show_units = count == 1;
+        entry.my_update();
       }
       numberCache.flush();
     }

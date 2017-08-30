@@ -594,13 +594,36 @@ h2 input {
   position: absolute;
   left: 0;
   top: 0;
-  pointer-events: none;
-  width: 100%;
+  width: 7em;
   height: 100%;
+  
+  opacity: 0.7;
+  overflow: hidden;
+  
+  cursor: pointer;
+  user-select: none;
+}
+.widget-VerticalScale.widget-VerticalScale-expanded {
+  width: 100%;
+}
+.widget-VerticalScale-mark {
+  position: absolute;
+  border-top: 0.05em solid var(--shinysdr-theme-spectrum-label-foreground);
+  width: 0.4em;
+  
+  color: var(--shinysdr-theme-spectrum-label-foreground);
+}
+.widget-VerticalScale-expanded .widget-VerticalScale-mark {
+  width: 100%;
 }
 .widget-VerticalScale-number {
-  position: absolute;
-  border-top: 1px solid;
+  margin-top: calc(-1em + 0.5ex + 1.8px /* fudge */);
+  margin-left: 0.8em;
+  
+  white-space: nowrap;
+  /*width: 2em;
+  
+  text-align: right;*/
 }
 
 .widget-VerticalSplitHandle-positioner {

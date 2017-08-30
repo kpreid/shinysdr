@@ -486,6 +486,10 @@ define([
     this.getTotalPixelWidth = function getTotalPixelWidth() {
       return pixelWidth * zoom;
     };
+    this.getVisiblePixelHeight = function getVisiblePixelHeight() {
+      // TODO: This being vertical rather than horizontal doesn't fit much with the rest of SpectrumView's job, but it needs to know about innerElement.
+      return innerElement.offsetHeight;
+    };
     
     function clampZoom(zoomValue) {
       var maxZoom = Math.max(
