@@ -138,7 +138,7 @@ define([
           nowViewY: localY  // updated later
         };
       });
-    }, false);
+    }, {capture: true, passive: false});
 
     targetElement.addEventListener('touchmove', function (event) {
       var rect = targetElement.getBoundingClientRect();
@@ -195,11 +195,9 @@ define([
         mean(pansY) - grabPartY,
         deltaScale);
 
-    }, true);
+    }, {capture: true, passive: true});
 
     function touchcancel(event) {
-      // Prevent mouse-emulation handling
-      event.preventDefault();
       Array.prototype.forEach.call(event.changedTouches, function (touch) {
         delete activeTouches[touch.identifier];
       });
@@ -212,7 +210,7 @@ define([
        info.grabViewY = info.nowViewY;
       }
     }
-    targetElement.addEventListener('touchcancel', touchcancel, true);
+    targetElement.addEventListener('touchcancel', touchcancel, {capture: true, passive: true});
 
     targetElement.addEventListener('touchend', function (event) {
       // Prevent mouse-emulation handling
@@ -1294,7 +1292,7 @@ define([
       
           event.preventDefault();  // no scrolling
           event.stopPropagation();
-        }, true);
+        }, {capture: true, passive: false});
       
         new TouchZoomHandler(targetElement, viewChanger, function tapHandler(touch, docX, docY) {
           var featureInfo = pickFromMouseEvent(touch);  // TODO undeclared type punning

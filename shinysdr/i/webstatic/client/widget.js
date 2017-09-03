@@ -574,7 +574,7 @@ define([
           event.preventDefault();
         }
       }
-    }, true);
+    }, {capture: true, passive: false});
     
     function clientXToViewportLeft(clientX) {
       return clientX - container.getBoundingClientRect().left;
@@ -605,7 +605,7 @@ define([
           nowView: x  // updated later
         };
       });
-    }, false);
+    }, {capture: false, passive: false});
     
     container.addEventListener('touchmove', function (event) {
       Array.prototype.forEach.call(event.changedTouches, function (touch) {
@@ -650,21 +650,16 @@ define([
       }
       
       finishZoomUpdate(clampedScroll);
-    }, true);
+    }, {capture: true, passive: true});
     
     function touchcancel(event) {
-      // Prevent mouse-emulation handling
-      event.preventDefault();
       Array.prototype.forEach.call(event.changedTouches, function (touch) {
         delete activeTouches[touch.identifier];
       });
     }
-    container.addEventListener('touchcancel', touchcancel, true);
+    container.addEventListener('touchcancel', touchcancel, {capture: true, passive: true});
     
     container.addEventListener('touchend', function (event) {
-      // Prevent mouse-emulation handling
-      event.preventDefault();
-      
       // Tap-to-tune
       // TODO: The overall touch event handling is disabling clicking on frequency DB labels. We need to recognize them as event targets in _this_ bunch of handlers, so that we can decide whether a gesture is pan or tap-on-label.
       if (mayTapToTune && isRFSpectrum) {
@@ -681,7 +676,7 @@ define([
       
       // Forget the touch
       touchcancel(event);
-    }, true);
+    }, {capture: true, passive: true});
     
     this.addClickToTune = element => {
       if (!isRFSpectrum) return;

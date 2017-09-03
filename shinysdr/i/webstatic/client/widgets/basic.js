@@ -506,7 +506,7 @@ define([
         spin(event.wheelDelta > 0 ? 1 : -1);
         event.preventDefault();
         event.stopPropagation();
-      }, true);
+      }, {capture: true, passive: false});
       function focusNext() {
         if (i > 0) {
           places[i - 1].element.focus();
@@ -611,8 +611,8 @@ define([
           event.stopPropagation();
         }
         // Using these events instead of click event allows the button to work despite the auto-hide-on-focus-loss, in Chrome.
-        button.addEventListener('touchstart', pushListener, false);
-        button.addEventListener('mousedown', pushListener, false);
+        button.addEventListener('touchstart', pushListener, {capture: true, passive: false});
+        button.addEventListener('mousedown', pushListener, {capture: true, passive: false});
         //button.addEventListener('click', pushListener, false);
         // If in the normal tab order, its appearing/disappearing causes trouble
         button.tabIndex = -1;
