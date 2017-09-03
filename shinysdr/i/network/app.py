@@ -104,6 +104,44 @@ class _RadioIndexHtmlResource(Resource):
         return renderElement(request, self.__element)
 
 
+class WebAppManifestResource(Resource):
+    """
+    Per https://www.w3.org/TR/appmanifest/
+    """
+    
+    isLeaf = True
+    
+    def __init__(self, wcommon, title):
+        Resource.__init__(self)
+        self.__title = title
+
+    def render_GET(self, request):
+        request.setHeader(b'Content-Type', b'application/manifest+json')
+        manifest = {
+            'lang': 'en-US',
+            'name': self.__title,
+            'short_name': self.__title if len(self.__title) <= 12 else 'ShinySDR',
+            'scope': '/',
+            'icons': [
+                {
+                    'src': '/client/icon/icon-32.png',
+                    'type': 'image/png',
+                    'sizes': '32x32',
+                },
+                {
+                    'src': '/client/icon/icon.svg',
+                    'type': 'image/svg',
+                    'sizes': 'any',
+                },
+            ],
+            'display': 'minimal-ui',
+            'orientation': 'any',
+            'theme_color': '#B9B9B9',  # same as gray.css --shinysdr-theme-column-bgcolor
+            'background_color': '#2F2F2F',  # note this is our loading screen color
+        }
+        return serialize(manifest).encode('utf-8')
+
+
 class WebService(Service):
     # TODO: Too many parameters
     def __init__(self, reactor, cap_table, read_only_dbs, writable_db, http_endpoint, ws_endpoint, root_cap, title, flowgraph_for_debug):
@@ -121,7 +159,7 @@ class WebService(Service):
             return SessionResource(session, wcommon, reactor, title, read_only_dbs, writable_db, flowgraph_for_debug)
         
         server_root = CapAccessResource(cap_table=cap_table, resource_ctor=BoundSessionResource)
-        _put_root_static(server_root)
+        _put_root_static(wcommon, server_root, title)
         
         if UNIQUE_PUBLIC_CAP in cap_table:
             # TODO: consider factoring out "generate URL for cap"
@@ -175,8 +213,8 @@ class WebService(Service):
             log.msg('Visit ' + url)
 
 
-def _put_root_static(container_resource):
-    """Place all the simple static files."""
+def _put_root_static(wcommon, container_resource, title):
+    """Place all the simple resources, that are not necessarily sourced from files but at least are unchanging and public."""
     
     for name in ['', 'client', 'test', 'manual', 'tools']:
         container_resource.putChild(name, _make_static_resource(os.path.join(static_resource_path, name if name != '' else 'index.html')))
@@ -196,6 +234,11 @@ def _put_root_static(container_resource):
         jasmine.putChild(name, _make_static_resource(os.path.join(
             deps_path, 'jasmine/lib/jasmine-core/', name)))
     
+    # Special cases
+    container_resource.putChild('favicon.ico',
+        _make_static_resource(os.path.join(static_resource_path, 'client/icon/icon-32.png')))
+    container_resource.putChild('web-app-manifest',
+        WebAppManifestResource(wcommon, title))
     _put_plugin_resources(client)
 
 

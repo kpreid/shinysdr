@@ -121,6 +121,14 @@ class TestWebSite(unittest.TestCase):
             self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['image/png'])
             # TODO ...
         return testutil.http_get(reactor, self.url + 'flow-graph').addCallback(callback)
+    
+    def test_manifest(self):
+        def callback((response, data)):
+            self.assertEqual(response.code, http.OK)
+            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/manifest+json'])
+            manifest = json.loads(data)
+            self.assertEqual(manifest['name'], 'test title')
+        return testutil.http_get(reactor, urlparse.urljoin(self.url, '/web-app-manifest')).addCallback(callback)
 
 
 class TestSiteWithoutRootCap(TestWebSite):
