@@ -612,15 +612,18 @@ define([
         activeTouches[touch.identifier].nowView = clientXToViewportLeft(touch.clientX);
       });
       
-      var identifiers = Object.keys(activeTouches);
-      if (identifiers.length >= 2) {
-        // Zoom using first two touches
-        var f1 = activeTouches[0].grabFreq;
-        var f2 = activeTouches[1].grabFreq;
-        var p1 = activeTouches[0].nowView;
-        var p2 = activeTouches[1].nowView;
-        var newPixelsPerHertz = Math.abs(p2 - p1) / Math.abs(f2 - f1);
-        var unzoomedPixelsPerHertz = pixelWidth / (rightFreq - leftFreq);
+      const touchIdentifiers = Object.keys(activeTouches);
+      if (touchIdentifiers.length >= 2) {
+        // Zoom using two touches
+        touchIdentifiers.sort();  // Ensure stable choice (though oldest would be better).
+        const id1 = touchIdentifiers[0];
+        const id2 = touchIdentifiers[1];
+        const f1 = activeTouches[id1].grabFreq;
+        const f2 = activeTouches[id2].grabFreq;
+        const p1 = activeTouches[id1].nowView;
+        const p2 = activeTouches[id2].nowView;
+        const newPixelsPerHertz = Math.abs(p2 - p1) / Math.abs(f2 - f1);
+        const unzoomedPixelsPerHertz = pixelWidth / (rightFreq - leftFreq);
         zoom = clampZoom(newPixelsPerHertz / unzoomedPixelsPerHertz);
         startZoomUpdate();
       }

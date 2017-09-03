@@ -151,19 +151,23 @@ define([
         activeTouches[touch.identifier].nowViewY = localY;
       });
 
-      var deltaScale = 1;
-      if (Object.keys(activeTouches).length >= 2) {
-        // Zoom using first two touches
-        var grab1X = activeTouches[0].grabViewX;
-        var grab1Y = activeTouches[0].grabViewY;
-        var grab2X = activeTouches[1].grabViewX;
-        var grab2Y = activeTouches[1].grabViewY;
-        var now1X = activeTouches[0].nowViewX;
-        var now1Y = activeTouches[0].nowViewY;
-        var now2X = activeTouches[1].nowViewX;
-        var now2Y = activeTouches[1].nowViewY;
-        var deltaScaleX = Math.abs(now2X - now1X) / Math.abs(grab2X - grab1X);
-        var deltaScaleY = Math.abs(now2Y - now1Y) / Math.abs(grab2Y - grab1Y);
+      let deltaScale = 1;
+      const touchIdentifiers = Object.keys(activeTouches);
+      if (touchIdentifiers.length >= 2) {
+        // Zoom using two touches
+        touchIdentifiers.sort();  // Ensure stable choice (though oldest would be better).
+        const id1 = touchIdentifiers[0];
+        const id2 = touchIdentifiers[1];
+        const grab1X = activeTouches[id1].grabViewX;
+        const grab1Y = activeTouches[id1].grabViewY;
+        const grab2X = activeTouches[id2].grabViewX;
+        const grab2Y = activeTouches[id2].grabViewY;
+        const now1X = activeTouches[id1].nowViewX;
+        const now1Y = activeTouches[id1].nowViewY;
+        const now2X = activeTouches[id2].nowViewX;
+        const now2Y = activeTouches[id2].nowViewY;
+        const deltaScaleX = Math.abs(now2X - now1X) / Math.abs(grab2X - grab1X);
+        const deltaScaleY = Math.abs(now2Y - now1Y) / Math.abs(grab2Y - grab1Y);
         deltaScale = (deltaScaleX + deltaScaleY) / 2;
       }
       
