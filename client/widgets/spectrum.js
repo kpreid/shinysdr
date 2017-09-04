@@ -15,56 +15,98 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./basic', './dbui',
-        '../database', '../domtools', '../gltools', '../math', '../menus', '../types', '../values', '../widget',
-        'text!./spectrum-common.glsl',
-        'text!./spectrum-graph-f.glsl', 'text!./spectrum-graph-v.glsl',
-        'text!./spectrum-waterfall-f.glsl', 'text!./spectrum-waterfall-v.glsl'], 
-       (widgets_basic, widgets_dbui,
-        database, domtools, gltools, math, menus, types, values, widget,
-        shader_common,
-        shader_graph_f, shader_graph_v,
-        shader_waterfall_f, shader_waterfall_v) => {
-  'use strict';
+'use strict';
+
+define([
+  './basic', 
+  './dbui',
+  '../database',
+  '../gltools', 
+  '../math', 
+  '../menus', 
+  '../types', 
+  '../values', 
+  '../widget',
+  'text!./spectrum-common.glsl',
+  'text!./spectrum-graph-f.glsl', 
+  'text!./spectrum-graph-v.glsl',
+  'text!./spectrum-waterfall-f.glsl', 
+  'text!./spectrum-waterfall-v.glsl',
+], (
+  import_widgets_basic, 
+  import_widgets_dbui,
+  import_database,
+  import_gltools, 
+  import_math, 
+  import_menus, 
+  import_types, 
+  import_values, 
+  import_widget,
+  shader_common,
+  shader_graph_f,
+  shader_graph_v,
+  shader_waterfall_f,
+  shader_waterfall_v
+) => {
+  const {
+    Block,
+    LinSlider,
+    LogSlider,
+    Toggle,
+  } = import_widgets_basic;
+  const {
+    BareFreqList,
+  } = import_widgets_dbui;
+  const {
+    empty: emptyDatabase,
+  } = import_database;
+  const {
+    buildProgram,
+    getGL,
+    handleContextLoss,
+    SingleQuad,
+  } = import_gltools;
+  const {
+    formatFreqExact,
+    formatFreqInexactVerbose,
+    mod,
+  } = import_math;
+  const {
+    Menu,
+  } = import_menus;
+  const {
+    numberT,
+  } = import_types;
+  const {
+    ConstantCell,
+    DerivedCell,
+  } = import_values;
+  const {
+    alwaysCreateReceiverFromEvent,
+    createWidgetExt,
+  } = import_widget;
   
-  const BareFreqList = widgets_dbui.BareFreqList;
-  const Block = widgets_basic.Block;
-  const ConstantCell = values.ConstantCell;
-  const DerivedCell = values.DerivedCell;
-  const LinSlider = widgets_basic.LinSlider;
-  const LogSlider = widgets_basic.LogSlider;
-  const Menu = menus.Menu;
-  const SingleQuad = gltools.SingleQuad;
-  const Toggle = widgets_basic.Toggle;
-  const alwaysCreateReceiverFromEvent = widget.alwaysCreateReceiverFromEvent;
-  const createWidgetExt = widget.createWidgetExt;
-  const emptyDatabase = database.empty;
-  const formatFreqExact = math.formatFreqExact;
-  const formatFreqInexactVerbose = math.formatFreqInexactVerbose;
-  const mod = math.mod;
-  const numberT = types.numberT;
-  
-  const exports = Object.create(null);
+  const exports = {};
   
   // Widget for a monitor block
   function Monitor(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
-      var outerElement = this.element = config.element;
+      const outerElement = this.element = config.element;
       outerElement.classList.add('widget-Monitor-outer');
       
-      var scrollElement = outerElement.appendChild(document.createElement('div'));
+      const scrollElement = outerElement.appendChild(document.createElement('div'));
       scrollElement.classList.add('widget-Monitor-scrollable');
       scrollElement.id = config.element.id + '-scrollable';
       
-      var overlayContainer = scrollElement.appendChild(document.createElement('div'));
+      const overlayContainer = scrollElement.appendChild(document.createElement('div'));
       overlayContainer.classList.add('widget-Monitor-scrolled');
 
       // TODO: shouldn't need to have this declared, should be implied by context
-      var isRFSpectrum = config.element.hasAttribute('data-is-rf-spectrum');
-      var context = config.context.withSpectrumView(scrollElement, overlayContainer, block, isRFSpectrum);
+      const isRFSpectrum = config.element.hasAttribute('data-is-rf-spectrum');
+      const context = config.context.withSpectrumView(scrollElement, overlayContainer, block, isRFSpectrum);
       
       function makeOverlayPiece(name) {
-        var el = overlayContainer.appendChild(document.createElement(name));
+        const el = overlayContainer.appendChild(document.createElement(name));
         el.classList.add('widget-Monitor-overlay');
         return el;
       }
@@ -73,27 +115,24 @@ define(['./basic', './dbui',
       ignore('fft');
       
       // TODO this is clunky. (Note we're not just using rebuildMe because we don't want to lose waterfall history and reinit GL and and and...)
-      var freqCell = isRFSpectrum ? (function() {
+      const freqCell = isRFSpectrum ? (function() {
         var radioCell = config.radioCell;
         return new DerivedCell(numberT, config.scheduler, function (dirty) {
           return radioCell.depend(dirty).source.depend(dirty).freq.depend(dirty);
         });
-      }()) : new ConstantCell(numberT, 0);
-      var freqScaleEl = overlayContainer.appendChild(document.createElement('div'));
+      }()) : new ConstantCell(0);
+      const freqScaleEl = overlayContainer.appendChild(document.createElement('div'));
       createWidgetExt(context, FreqScale, freqScaleEl, freqCell);
       
-      var splitHandleEl = overlayContainer.appendChild(document.createElement('div'));
+      const splitHandleEl = overlayContainer.appendChild(document.createElement('div'));
       createWidgetExt(context, VerticalSplitHandle, splitHandleEl, context.spectrumView.parameters.spectrum_split);
       
       // Not in overlayContainer because it does not scroll.
       // Works with zero height as the top-of-scale reference.
-      // TODO this is currently disabled because its axis scaling is not exactly right, because it is outside the scrolling element and we haven't compensated for the height of the vertical scrollbar
-      if (false) {
-        var verticalScaleEl = outerElement.appendChild(document.createElement('div'));
-        createWidgetExt(context, VerticalScale, verticalScaleEl, {});
-      }
+      const verticalScaleEl = outerElement.appendChild(document.createElement('div'));
+      createWidgetExt(context, VerticalScale, verticalScaleEl, new ConstantCell('dummy'));
 
-      var parametersEl = outerElement.appendChild(document.createElement('div'));
+      const parametersEl = outerElement.appendChild(document.createElement('div'));
       createWidgetExt(context, MonitorDetailedOptions, parametersEl, config.target);
       
       // TODO should logically be doing this -- need to support "widget with possibly multiple target elements"
@@ -104,7 +143,7 @@ define(['./basic', './dbui',
       
       // kludge to trigger SpectrumView layout computations after it's added to the DOM :(
       setTimeout(function() {
-        var resize = document.createEvent('Event');
+        const resize = document.createEvent('Event');
         resize.initEvent('resize', false, false);
         window.dispatchEvent(resize);
       }, 0);
@@ -189,7 +228,7 @@ define(['./basic', './dbui',
       antialias: false,
       preserveDrawingBuffer: false
     };
-    var gl = gltools.getGL(config, canvas, glOptions);
+    var gl = getGL(config, canvas, glOptions);
     var ctx2d = canvas.getContext('2d');
     
     var dataHook = function () {}, drawOuter = function () {};
@@ -223,7 +262,7 @@ define(['./basic', './dbui',
       }
       
       initContext();
-      gltools.handleContextLoss(canvas, initContext);
+      handleContextLoss(canvas, initContext);
     }.call(this)); else if (ctx2d) (function () {
       var drawImpl = build2D(ctx2d, draw);
       dataHook = drawImpl.newData.bind(drawImpl);
@@ -308,12 +347,12 @@ define(['./basic', './dbui',
         + '#line 1 0\n' + shader_common
         + '\n#line 1 1\n';
 
-      var graphProgram = gltools.buildProgram(gl, 
+      var graphProgram = buildProgram(gl, 
         shaderPrefix + shader_graph_v,
         shaderPrefix + shader_graph_f);
       var graphQuad = new SingleQuad(gl, -1, 1, -1, 1, gl.getAttribLocation(graphProgram, 'position'));
 
-      var waterfallProgram = gltools.buildProgram(gl,
+      var waterfallProgram = buildProgram(gl,
         shaderPrefix + shader_waterfall_v,
         '#define BACKGROUND_COLOR ' + backgroundColorGLSL + '\n'
             + shaderPrefix + shader_waterfall_f);
@@ -648,7 +687,6 @@ define(['./basic', './dbui',
       // secondary canvas to use for image scaling
       var scaler = document.createElement('canvas');
       scaler.height = 1;
-      scaler.width = 4096;  // typical maximum supported width -- TODO use minimum
       var scalerCtx = scaler.getContext('2d');
       if (!scalerCtx) { throw new Error('failed to get headless canvas context'); }
       
@@ -658,7 +696,11 @@ define(['./basic', './dbui',
       var pixelWidthOfFFT;
       
       function paintSlice(imageData, freqOffset, y) {
-        // TODO deal with left/right edge interpolation fringes
+        if (scaler.width < imageData.width) {
+          // TODO detect if we are exceeding maximum supported size
+          scaler.width = imageData.width;
+        }
+        // TODO deal with left/right edge wraparound fringes
         scalerCtx.putImageData(imageData, 0, 0);
         ctx.drawImage(
           scaler,
@@ -867,8 +909,10 @@ define(['./basic', './dbui',
             graphDataBuffer = new Float32Array(buffer);
           }
 
-          for (var i = 0; i < len; i++) {
-            graphDataBuffer[i] = graphDataBuffer[i] * invAlpha + buffer[i] * alpha;
+          for (let i = 0; i < len; i++) {
+            let v = graphDataBuffer[i] * invAlpha + buffer[i] * alpha;
+            if (!isFinite(v)) v = buffer[i];
+            graphDataBuffer[i] = v;
           }
           
           // Hand data over to waterfall drawing immediately, so that the scrolling occurs and every frame is painted.
@@ -1043,41 +1087,56 @@ define(['./basic', './dbui',
   }
   
   // Waterfall overlay printing amplitude labels.
-  // TODO this is currently not used because its axis scaling is not exactly right, because it is positioned outside the scrolling element and we haven't compensated for the height of the vertical scrollbar
   function VerticalScale(config) {
     const view = config.view;
     const splitCell = view.parameters.spectrum_split;
     const minLevelCell = view.parameters.spectrum_level_min;
     const maxLevelCell = view.parameters.spectrum_level_max;
     
-    let minLevel = 0, maxLevel = 0;  // updated in draw()
+    let minLevel = 0, maxLevel = 0, pixelHeight = 0;  // updated in draw()
     
-    const outer = this.element = document.createElement("div");
+    const outerEl = this.element = document.createElement('div');
     
     function amplitudeToY(amplitude) {
-      return ((amplitude - maxLevel) / (minLevel - maxLevel)
-          * (1 - splitCell.depend(draw))
-          * 100) + '%';
+      return ((amplitude - maxLevel) / (minLevel - maxLevel) * pixelHeight) + 'px';
     }
     
-    var numberCache = new VisibleItemCache(outer, function (amplitude) {
-      const label = document.createElement('span');
-      label.className = 'widget-VerticalScale-number';
-      label.textContent = '' + amplitude;  // TODO formatting, state units
-      label.my_update = () => {
-        label.style.top = amplitudeToY(amplitude);
+    const numberCache = new VisibleItemCache(outerEl, amplitude => {
+      const labelOuter = document.createElement('div');
+      const labelInner = labelOuter.appendChild(document.createElement('div'));
+      labelOuter.className = 'widget-VerticalScale-mark';
+      labelInner.className = 'widget-VerticalScale-number';
+      labelOuter.my_update = () => {
+        labelInner.textContent = String(amplitude).replace('-', '\u2212');
+        if (labelOuter.show_units) {
+          // TODO: Get units from the cell metadata instead of assuming.
+          labelInner.textContent += '\u00A0dBFS/Hz';
+        }
+        labelOuter.style.top = amplitudeToY(amplitude);
       };
-      return label;
+      return labelOuter;
     });
+    
+    outerEl.tabIndex = 0;
+    outerEl.addEventListener('click', event => {
+      outerEl.classList.toggle('widget-VerticalScale-expanded');
+    }, false);
     
     function draw() {
       minLevel = minLevelCell.depend(draw);
       maxLevel = maxLevelCell.depend(draw);
-      let count = 0;  // sanity check
-      for (let amplitude = Math.floor(maxLevel / 10) * 10;
-           amplitude >= minLevel && count < 50;
+      pixelHeight = view.getVisiblePixelHeight() * (1 - splitCell.depend(draw));
+      view.n.listen(draw);
+      
+      outerEl.style.height = pixelHeight + 'px';
+      
+      for (let amplitude = Math.floor(maxLevel / 10) * 10,
+               count = 0;
+           amplitude >= minLevel && count < 50 /* sanity check */;
            amplitude -= 10, count++) {
-        numberCache.add(amplitude).my_update();
+        const entry = numberCache.add(amplitude);
+        entry.show_units = count == 1;
+        entry.my_update();
       }
       numberCache.flush();
     }

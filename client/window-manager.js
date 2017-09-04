@@ -17,18 +17,24 @@
 
 // Manages hideable tiling subwindows in the ShinySDR UI.
 
-define(['./values'], function (values) {
-  'use strict';
+'use strict';
 
-  var StorageNamespace = values.StorageNamespace;
+define([
+  './values',
+], (
+  import_values
+) => {
+  const {
+    StorageNamespace,
+  } = import_values;
   
-  var ELEMENT = 'shinysdr-subwindow';
-  var VISIBLE_ATTRIBUTE = 'visible';
-  var WINDOW_LIST_ID = 'shinysdr-subwindow-list';
+  const ELEMENT = 'shinysdr-subwindow';
+  const VISIBLE_ATTRIBUTE = 'visible';
+  const WINDOW_LIST_ID = 'shinysdr-subwindow-list';
 
-  var allWindows = [];
-  var visibleCount = NaN;
-  var firstUpdateDone = false;
+  let allWindows = [];
+  let visibleCount = NaN;
+  let firstUpdateDone = false;
   
   function isWindowListSubwindow(subwindowElement) {
     return subwindowElement.querySelector('#' + WINDOW_LIST_ID) !== null;
@@ -217,7 +223,7 @@ define(['./values'], function (values) {
   }
   
   // Using a custom element allows us to hook insertion/removal.
-  var Subwindow_prototype = Object.create(HTMLElement.prototype);
+  const Subwindow_prototype = Object.create(HTMLElement.prototype);
   Subwindow_prototype.attachedCallback = enroll;
   Subwindow_prototype.detachedCallback = function() {
     allWindows = allWindows.filter(function (record) {

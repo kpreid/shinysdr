@@ -15,30 +15,51 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./coordination', './domtools', './events', './math', './types', './values'],
-       (coordination, domtools, events, math, types, values) => {
-  'use strict';
-  
-  const {Coordinator} = coordination;
+'use strict';
+
+define([
+  './coordination', 
+  './domtools', 
+  './events', 
+  './math', 
+  './types', 
+  './values',
+], (
+  import_coordination,
+  import_domtools,
+  import_events,
+  import_math,
+  import_types,
+  import_values
+) => {
+  const {
+    Coordinator,
+  } = import_coordination;
   const {
     lifecycleDestroy,
     lifecycleInit,
-  } = domtools;
-  const {Notifier} = events;
-  const {mod} = math;
+  } = import_domtools;
+  const {
+    Notifier,
+  } = import_events;
+  const {
+    mod,
+  } = import_math;
   const {
     anyT,
     RangeT,
-  } = types;
+  } = import_types;
   const {
     ConstantCell,
     DerivedCell,
     StorageCell,
     StorageNamespace,
     makeBlock,
-  } = values;
+  } = import_values;
   
-  var exports = {};
+  const exports = {};
+  
+  const elementHasWidgetRole = new WeakMap();
   
   function alwaysCreateReceiverFromEvent(event) {
     return event.shiftKey;
@@ -113,9 +134,14 @@ define(['./coordination', './domtools', './events', './math', './types', './valu
   
   // Replace the given template/input node with a widget node.
   function createWidget(targetCellCell, targetStr, context, node, widgetCtor) {
+    if (elementHasWidgetRole.has(node)) {
+      throw new Error('node already a widget ' + elementHasWidgetRole.get(node));
+    }
+    
     const scheduler = context.scheduler;
     
-    const originalStash = node;
+    const templateStash = node;
+    elementHasWidgetRole.set(node, 'template');
     
     const container = node.parentNode;
     if (!container) {
@@ -146,7 +172,8 @@ define(['./coordination', './domtools', './events', './math', './types', './valu
 
       lifecycleDestroy(currentWidgetEl);
 
-      const newSourceEl = originalStash.cloneNode(true);
+      const newSourceEl = templateStash.cloneNode(true);
+      elementHasWidgetRole.set(newSourceEl, 'instance');
       container.replaceChild(newSourceEl, currentWidgetEl);
       
       // TODO: Better interface to the metadata
@@ -175,6 +202,10 @@ define(['./coordination', './domtools', './events', './math', './types', './valu
       let widget;
       try {
         widget = new widgetCtor(config);
+        
+        if (!(widget.element instanceof Element)) {
+          throw new TypeError('Widget ' + widget.constructor.name + ' did not provide an element but ' + widget.element);
+        }
       } catch (error) {
         console.error('Error creating widget: ', error);
         console.log(error.stack);
@@ -186,7 +217,7 @@ define(['./coordination', './domtools', './events', './math', './types', './valu
       
       const newEl = widget.element;
       const placeMark = newSourceEl.nextSibling;
-      if (newSourceEl.hasAttribute('title') && newSourceEl.getAttribute('title') === originalStash.getAttribute('title')) {
+      if (newSourceEl.hasAttribute('title') && newSourceEl.getAttribute('title') === templateStash.getAttribute('title')) {
         console.warn('Widget ' + widget.constructor.name + ' did not handle title attribute');
       }
       
@@ -219,7 +250,7 @@ define(['./coordination', './domtools', './events', './math', './types', './valu
     return Object.freeze({
       destroy: function() {
         lifecycleDestroy(currentWidgetEl);
-        container.replaceChild(originalStash, currentWidgetEl);
+        container.replaceChild(templateStash, currentWidgetEl);
       }
     });
   }
@@ -230,7 +261,7 @@ define(['./coordination', './domtools', './events', './math', './types', './valu
       throw new Error('createWidgetExt: missing targetCell');
     }
     return createWidget(
-      new ConstantCell(anyT, targetCell),
+      new ConstantCell(targetCell, anyT),
       String(targetCell),
       context,
       node,
@@ -261,10 +292,11 @@ define(['./coordination', './domtools', './events', './math', './types', './valu
         targetCellCell = evalTargetStr(rootTargetCell, targetStr, scheduler);
       } else {
         targetStr = "<can't happen>";
-        targetCellCell = new ConstantCell(anyT, rootTargetCell);
+        targetCellCell = new ConstantCell(rootTargetCell, anyT);
       }
       
       var typename = node.getAttribute('data-widget');
+      node.removeAttribute('data-widget');  // prevent widgetifying twice
       if (typename === null) {
         console.error('Unspecified widget type:', node);
         return;
@@ -454,6 +486,10 @@ define(['./coordination', './domtools', './events', './math', './types', './valu
     this.getTotalPixelWidth = function getTotalPixelWidth() {
       return pixelWidth * zoom;
     };
+    this.getVisiblePixelHeight = function getVisiblePixelHeight() {
+      // TODO: This being vertical rather than horizontal doesn't fit much with the rest of SpectrumView's job, but it needs to know about innerElement.
+      return innerElement.offsetHeight;
+    };
     
     function clampZoom(zoomValue) {
       var maxZoom = Math.max(
@@ -538,7 +574,7 @@ define(['./coordination', './domtools', './events', './math', './types', './valu
           event.preventDefault();
         }
       }
-    }, true);
+    }, {capture: true, passive: false});
     
     function clientXToViewportLeft(clientX) {
       return clientX - container.getBoundingClientRect().left;
@@ -569,22 +605,25 @@ define(['./coordination', './domtools', './events', './math', './types', './valu
           nowView: x  // updated later
         };
       });
-    }, false);
+    }, {capture: false, passive: false});
     
     container.addEventListener('touchmove', function (event) {
       Array.prototype.forEach.call(event.changedTouches, function (touch) {
         activeTouches[touch.identifier].nowView = clientXToViewportLeft(touch.clientX);
       });
       
-      var identifiers = Object.keys(activeTouches);
-      if (identifiers.length >= 2) {
-        // Zoom using first two touches
-        var f1 = activeTouches[0].grabFreq;
-        var f2 = activeTouches[1].grabFreq;
-        var p1 = activeTouches[0].nowView;
-        var p2 = activeTouches[1].nowView;
-        var newPixelsPerHertz = Math.abs(p2 - p1) / Math.abs(f2 - f1);
-        var unzoomedPixelsPerHertz = pixelWidth / (rightFreq - leftFreq);
+      const touchIdentifiers = Object.keys(activeTouches);
+      if (touchIdentifiers.length >= 2) {
+        // Zoom using two touches
+        touchIdentifiers.sort();  // Ensure stable choice (though oldest would be better).
+        const id1 = touchIdentifiers[0];
+        const id2 = touchIdentifiers[1];
+        const f1 = activeTouches[id1].grabFreq;
+        const f2 = activeTouches[id2].grabFreq;
+        const p1 = activeTouches[id1].nowView;
+        const p2 = activeTouches[id2].nowView;
+        const newPixelsPerHertz = Math.abs(p2 - p1) / Math.abs(f2 - f1);
+        const unzoomedPixelsPerHertz = pixelWidth / (rightFreq - leftFreq);
         zoom = clampZoom(newPixelsPerHertz / unzoomedPixelsPerHertz);
         startZoomUpdate();
       }
@@ -611,21 +650,16 @@ define(['./coordination', './domtools', './events', './math', './types', './valu
       }
       
       finishZoomUpdate(clampedScroll);
-    }, true);
+    }, {capture: true, passive: true});
     
     function touchcancel(event) {
-      // Prevent mouse-emulation handling
-      event.preventDefault();
       Array.prototype.forEach.call(event.changedTouches, function (touch) {
         delete activeTouches[touch.identifier];
       });
     }
-    container.addEventListener('touchcancel', touchcancel, true);
+    container.addEventListener('touchcancel', touchcancel, {capture: true, passive: true});
     
     container.addEventListener('touchend', function (event) {
-      // Prevent mouse-emulation handling
-      event.preventDefault();
-      
       // Tap-to-tune
       // TODO: The overall touch event handling is disabling clicking on frequency DB labels. We need to recognize them as event targets in _this_ bunch of handlers, so that we can decide whether a gesture is pan or tap-on-label.
       if (mayTapToTune && isRFSpectrum) {
@@ -642,7 +676,7 @@ define(['./coordination', './domtools', './events', './math', './types', './valu
       
       // Forget the touch
       touchcancel(event);
-    }, true);
+    }, {capture: true, passive: true});
     
     this.addClickToTune = element => {
       if (!isRFSpectrum) return;

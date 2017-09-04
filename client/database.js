@@ -15,19 +15,36 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./events', './network', './types', './values'],
-       (   events,     network,     types,     values) => {
-  'use strict';
-  
-  const AddKeepDrop = events.AddKeepDrop;
-  const Notifier = events.Notifier;
-  const StorageCell = values.StorageCell;
-  const booleanT = types.booleanT;
-  const externalGet = network.externalGet;
-  const statusCategory = network.statusCategory;
-  const xhrpost = network.xhrpost;
-  
-  const exports = Object.create(null);
+'use strict';
+
+define([
+  './events',
+  './network',
+  './types',
+  './values',
+], (
+  import_events,
+  import_network,
+  import_types,
+  import_values
+) => {
+  const {
+    AddKeepDrop,
+    Notifier,
+  } = import_events;
+  const {
+    externalGet,
+    statusCategory,
+    xhrpost,
+  } = import_network;
+  const {
+    booleanT,
+  } = import_types;
+  const {
+    StorageCell,
+  } = import_values;
+
+  const exports = {};
   
   function Source() {
     

@@ -17,17 +17,31 @@
 
 // Manages pop-up context menus
 
-define(['./types', './values', './widget'], function (types, values, widget) {
-  'use strict';
+'use strict';
 
-  var anyT = types.anyT;
-  var ConstantCell = values.ConstantCell;
-  var createWidgetExt = widget.createWidgetExt;
-
-  var exports = {};
+define([
+  './types',
+  './values',
+  './widget',
+], (
+  import_types,
+  import_values,
+  import_widget
+) => {
+  const {
+    anyT,
+  } = import_types;
+  const {
+    ConstantCell,
+  } = import_values;
+  const {
+    createWidgetExt,
+  } = import_widget;
   
-  var menuDialog = new WeakMap();
-  var menuInner = new WeakMap();
+  const exports = {};
+  
+  const menuDialog = new WeakMap();
+  const menuInner = new WeakMap();
   function Menu(widgetContext, widgetCtor, target) {
     var dialog = document.createElement('dialog');
     var innerElement = document.createElement('div');
@@ -41,7 +55,7 @@ define(['./types', './values', './widget'], function (types, values, widget) {
       dialog.close();
     });
     
-    var widgetHandle = createWidgetExt(menuContext, widgetCtor, innerElement, new ConstantCell(anyT, target));
+    var widgetHandle = createWidgetExt(menuContext, widgetCtor, innerElement, new ConstantCell(target, anyT));
     
     dialog.addEventListener('mouseup', function (event) {
       if (event.target === dialog) {  // therefore not on content

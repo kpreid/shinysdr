@@ -16,25 +16,56 @@
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 // TODO post split, reduce deps here
-define(['./basic', '../events', '../gltools', '../math', '../types', '../values',
-        'text!./scope-v.glsl', 'text!./scope-f.glsl', 'text!./scope-pp1.glsl', 'text!./scope-pp2.glsl'],
-       (widgets_basic, events, gltools, math, types, values,
-        shader_dot_vertex, shader_dot_fragment, shader_pp1, shader_pp2) => {
-  'use strict';
+'use strict';
+
+define([
+  './basic',
+  '../gltools',
+  '../math',
+  '../types',
+  '../values',
+  'text!./scope-v.glsl',
+  'text!./scope-f.glsl',
+  'text!./scope-pp1.glsl',
+  'text!./scope-pp2.glsl',
+], (
+  import_widgets_basic,
+  import_gltools,
+  import_math,
+  import_types,
+  import_values,
+  shader_dot_vertex,
+  shader_dot_fragment,
+  shader_pp1,
+  shader_pp2
+) => {
+  const {
+    Block,
+    Radio,
+  } = import_widgets_basic;
+  const {
+    PostProcessor,
+    buildProgram,
+    getGL,
+    handleContextLoss,
+  } = import_gltools;
+  const {
+    dB,
+    mod,
+  } = import_math;
+  const {
+    EnumT,
+    RangeT,
+    anyT,
+    booleanT,
+  } = import_types;
+  const {
+    DerivedCell,
+    StorageCell,
+    makeBlock,
+  } = import_values;
   
-  const Block = widgets_basic.Block;
-  const DerivedCell = values.DerivedCell;
-  const EnumT = types.EnumT;
-  const Radio = widgets_basic.Radio;
-  const RangeT = types.RangeT;
-  const StorageCell = values.StorageCell;
-  const anyT = types.anyT;
-  const booleanT = types.booleanT;
-  const dB = math.dB;
-  const makeBlock = values.makeBlock;
-  const mod = math.mod;
-  
-  const exports = Object.create(null);
+  const exports = {};
   
   function ScopeParameters(storage) {
     function sc(key, type, value) {
@@ -225,7 +256,7 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
     
     const kernelRadius = 10;
 
-    const gl = gltools.getGL(config, canvas, {
+    const gl = getGL(config, canvas, {
       alpha: false,
       depth: false,
       stencil: false,
@@ -270,20 +301,20 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
     let triggerInhibition = 0;
     
     // Takes accumulated dots and applies horizontal kernel.
-    const postProcessor1 = new gltools.PostProcessor(gl, {
+    const postProcessor1 = new PostProcessor(gl, {
       // This is not ideal: since we just want to accumulate dots, the least wasteful would be a 16 or 32-bit integer single-component (LUMINANCE) buffer. But neither larger than 8-bit integers nor LUMINANCE are allowed by WebGL for a framebuffer texture.
       format: gl.RGBA,
       type: gl.FLOAT,
       fragmentShader: 'const int radius = ' + kernelRadius + '; ' + shader_pp1
     });
     
-    const postProcessor2 = new gltools.PostProcessor(gl, {
+    const postProcessor2 = new PostProcessor(gl, {
       format: gl.RGBA,
       type: gl.FLOAT,
       fragmentShader: 'const int radius = ' + kernelRadius + '; ' + shader_pp2
     });
         
-    const program = gltools.buildProgram(gl, shader_dot_vertex, shader_dot_fragment);
+    const program = buildProgram(gl, shader_dot_vertex, shader_dot_fragment);
     const att_relativeTime = gl.getAttribLocation(program, 'relativeTime');
     gl.uniform1i(gl.getUniformLocation(program, 'scopeData'), 0);  // texture
     
@@ -337,7 +368,7 @@ define(['./basic', '../events', '../gltools', '../math', '../types', '../values'
     configureDataBuffer.scheduler = scheduler;
     configureDataBuffer();
       
-    gltools.handleContextLoss(canvas, config.rebuildMe);
+    handleContextLoss(canvas, config.rebuildMe);
     
     let projectionCell = new DerivedCell(/* Float32Array */ anyT, scheduler, dirty => {
       const gainLin = dB(parameters.gain.depend(dirty));

@@ -15,10 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(function () {
-  'use strict';
+'use strict';
   
-  var exports = {};
+define(() => {
+  const exports = {};
   
   // true modulo, not %
   function mod(value, modulus) {

@@ -15,16 +15,31 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./types', './values', './events'],
-       (   types,     values,     events) => {
-  'use strict';
+'use strict';
+
+define([
+  './events',
+  './types',
+  './values',
+], (
+  import_events,
+  import_types,
+  import_values
+) => {
+  const {
+    Notifier,
+  } = import_events;
+  const {
+    typeFromDesc,
+    BulkDataT,
+    blockT,
+  } = import_types;
+  const {
+    Cell,
+    CommandCell,
+  } = import_values;
   
-  const BulkDataT = types.BulkDataT;
-  const Cell = values.Cell;
-  const CommandCell = values.CommandCell;
-  const typeFromDesc = types.typeFromDesc;
-  
-  var exports = {};
+  const exports = {};
   
   function identity(x) { return x; }
   
@@ -139,12 +154,37 @@ define(['./types', './values', './events'],
   RemoteCommandCell.prototype = Object.create(CommandCell.prototype, {constructor: {value: RemoteCommandCell}});
   //exports.CommandCell = CommandCell;  // not yet needed, params in flux, so not exported yet
   
-  function BulkDataCell(setter, metadata) {
+  function BulkDataCell(setter, initialValueJson, metadata) {
     let type = metadata.value_type;
     
-    var fft = new Float32Array(1);
-    fft[0] = -1e50;
-    var lastValue = [{freq:0, rate:1}, fft];
+    let lastValue;
+    {
+      // Kludge because the server doesn't actually know how to deliver this properly in JSON, only binary.
+      const [info, packed_data] = initialValueJson;
+      if (Array.isArray(info) /* as opposed to object */) {
+        switch (type.dataFormat) {
+          case 'spectrum-byte': {
+            const offset = info[2];
+            const unpacked_data = new Float32Array(packed_data.length);
+            for (let i = packed_data.length - 1; i >= 0; i--) {
+              unpacked_data[i] = packed_data[i] - offset;
+            }
+            lastValue = [{freq: info[0], rate: info[1]}, unpacked_data];
+            break;
+          }
+          case 'scope-float': {
+            const rate = info[0];
+            const data = new Float32Array(packed_data);
+            lastValue = [{rate:rate}, data];
+            break;
+          }
+          default:
+            throw new Error('Unknown bulk data format');
+        }
+      } else {
+        lastValue = initialValueJson;
+      }
+    }
 
     // kludge to ensure that widgets get all of the frames
     // TODO: put this on a more general and sound framework
@@ -255,7 +295,7 @@ define(['./types', './values', './events'],
     var block = {};
     // TODO kludges, should be properly facetized and separately namespaced somehow
     setNonEnum(block, '_url', url);
-    setNonEnum(block, '_reshapeNotice', new events.Notifier());
+    setNonEnum(block, '_reshapeNotice', new Notifier());
     interfaces.forEach(function(interfaceName) {
       // TODO: kludge
       setNonEnum(block, '_implements_' + interfaceName, true);
@@ -281,14 +321,14 @@ define(['./types', './values', './events'],
       naming: desc.metadata.naming,
     };
     var cell;
-    if (type === types.blockT) {
+    if (type === blockT) {
       // TODO eliminate special case by making server block cells less special?
       // TODO blocks should not need urls (switch http op to websocket)
       cell = new ReadCell(setter, /* dummy */ makeBlock(url, []), metadata,
         function (id) { return idMap[id]; });
     } else if (type instanceof BulkDataT) {
       // TODO can we eliminate this special case
-      cell = new BulkDataCell(setter, metadata);
+      cell = new BulkDataCell(setter, desc.current, metadata);
     } else if (desc.type === 'command_cell') {
       cell = new RemoteCommandCell(setter, metadata);
     } else if (desc.writable) {
@@ -303,7 +343,7 @@ define(['./types', './values', './events'],
   function connect(rootURL, connectionStateCallback) {
     if (!connectionStateCallback) connectionStateCallback = function () {};
     
-    const rootCell = new ReadCell(null, null, types.blockT, identity);
+    const rootCell = new ReadCell(null, null, blockT, identity);
     
     retryingConnection(() => rootURL, connectionStateCallback, ws => {
       ws.binaryType = 'arraybuffer';

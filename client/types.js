@@ -17,10 +17,10 @@
 
 // Client-side mirror of shinysdr/types.py
 
-define([], () => {
-  'use strict';
+'use strict';
   
-  const exports = Object.create(null);
+define(() => {
+  const exports = {};
   
   const noUnit = Object.freeze({
     symbol: '',
@@ -28,6 +28,11 @@ define([], () => {
   });
   
   class ValueType {
+    // Subclasses should implement toString to produce (loosely) a JS expression
+    toString() {
+      return '[shinysdr.types.ValueType ' + this.constructor.name + ']';
+    }
+
     isSingleValued() {
       return false;
     }
@@ -50,6 +55,15 @@ define([], () => {
       this._jsCoerceFn = jsCoerceFn;
       Object.freeze(this);
     }
+    
+    toString() {
+      // TODO be more well-founded
+      try {
+        return this._jsCoerceFn.name.toLowerCase() + 'T';
+      } catch (e) {
+        return super.toString();
+      }
+    }
   }
   const booleanT = new _JSType(Boolean);
   exports.booleanT = booleanT;
@@ -63,6 +77,14 @@ define([], () => {
       super();
       this.value = value;
       Object.freeze(this);
+    }
+    
+    toString() {
+      try {
+        return 'ConstantT(' + this.value.toString() + ')';
+      } catch (e) {
+        return super.toString();
+      }
     }
     
     // TODO: Implement getEnumTable once we have a use for it
@@ -97,6 +119,19 @@ define([], () => {
       Object.freeze(this);
     }
     
+    toString() {
+      // TODO: Also print metadata?
+      const elems = [];
+      for (var [k,] of this._enumTable) {
+        try {
+          elems.push(JSON.stringify(k));
+        } catch (e) {
+          elems.push(String(k));
+        }
+      }
+      return 'EnumT(' + elems.join(' | ') + ')';
+    }
+    
     getEnumTable() {
       return this._enumTable;
     }
@@ -113,6 +148,10 @@ define([], () => {
       this._unit = unit || noUnit;
     }
     
+    toString() {
+      return 'QuantityT(' + JSON.stringify(this._unit.symbol) + ')';
+    }
+    
     getNumericUnit() { return this._unit; }
   }
   exports.QuantityT = QuantityT;
@@ -125,6 +164,20 @@ define([], () => {
       this.logarithmic = logarithmic;
       this.integer = integer;
       this._unit = unit || noUnit;
+    }
+    
+    toString() {
+      const elems = [];
+      const n = this.mins.length;
+      for (var i = 0; i < n; i++) {
+        elems.push('[' + this.mins[i] + ', ' + this.maxes[i] + ']');
+      }
+      return ('RangeT('
+          + (this.logarithmic ? 'log' : 'lin')
+          + ' '
+          + (this.integer ? 'int' : 'real')
+          + ' ' + elems.join(' ')
+          + ')');
     }
     
     isSingleValued() {
@@ -208,10 +261,17 @@ define([], () => {
       this.alwaysVisible = Boolean(alwaysVisible);
       Object.freeze(this);
     }
+    
+    toString() {
+      return 'NoticeT(alwaysVisible: ' + this.alwaysVisible + ')';
+    }
   }
   exports.NoticeT = NoticeT;
 
   class TimestampT extends ValueType {
+    toString() {
+      return 'TimestampT()';
+    }
   }
   exports.TimestampT = TimestampT;
 
@@ -233,30 +293,35 @@ define([], () => {
 
   const singletonDone = new WeakMap();
   class SingletonValueType extends ValueType {
-    constructor() {
+    constructor(name) {
       super();
       const c = this.constructor;  // TODO: More ES6ish thing to check?
       if (singletonDone.get(c)) {
         throw new Error('singleton error for ' + c);
       }
       singletonDone.set(c, true);
+      this._singletonTypeName = name;
       Object.freeze(this);
+    }
+    
+    toString() {
+      return this._singletonTypeName;
     }
   }
 
   // type for any value at all
   class AnyT extends SingletonValueType {}
-  const anyT = new AnyT();
+  const anyT = new AnyT('anyT');
   exports.anyT = anyT;
 
   // type for any block
   class BlockT extends SingletonValueType {}
-  const blockT = new BlockT();
+  const blockT = new BlockT('blockT');
   exports.blockT = blockT;
 
   // type for track objects
   class TrackT extends SingletonValueType {}
-  const trackT = new TrackT();
+  const trackT = new TrackT('trackT');
   exports.trackT = trackT;
 
   function typeFromDesc(desc) {
@@ -272,6 +337,8 @@ define([], () => {
             return numberT;
           case 'integer':
             return numberT;
+          case 'string':
+            return stringT;
           case 'shinysdr.telemetry.Track':
             return trackT;
           default:

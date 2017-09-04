@@ -15,16 +15,29 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./events', './types'], function (events, types) {
-  'use strict';
+'use strict';
+
+define([
+  './events',
+  './types',
+], (
+  import_events,
+  import_types
+) => {
+  const {
+    Neverfier,
+    Notifier,
+  } = import_events;
+  const {
+    anyT,
+    booleanT,
+    blockT,
+    numberT,
+    stringT,
+    ValueType,
+  } = import_types;
   
-  const Neverfier = events.Neverfier;
-  const Notifier = events.Notifier;
-  const ValueType = types.ValueType;
-  const anyT = types.anyT;
-  const blockT = types.blockT;
-  
-  const exports = Object.create(null);
+  const exports = {};
 
   function Cell(type_or_metadata) {
     let type;
@@ -107,7 +120,24 @@ define(['./events', './types'], function (events, types) {
   exports.LocalReadCell = LocalReadCell;
   
   // Cell which cannot be set
-  function ConstantCell(type_or_metadata, value) {
+  const IMPLICIT_TYPE_PUMPKIN = {};
+  function ConstantCell(value, type_or_metadata=IMPLICIT_TYPE_PUMPKIN) {
+    if (type_or_metadata == IMPLICIT_TYPE_PUMPKIN) {
+      switch (typeof value) {
+        case 'boolean': type_or_metadata = booleanT; break;
+        case 'number': type_or_metadata = numberT; break;
+        case 'string': type_or_metadata = stringT; break;
+        case 'object':
+          if (value !== null && value._reshapeNotice) {
+            type_or_metadata = blockT;
+            break;
+          }
+          throw new Error('ConstantCell: type inference for object ' + JSON.stringify(value) + ' not supported');
+        default:
+          throw new Error('ConstantCell: type inference for value of type ' + (typeof value) + ' not supported');
+      }
+    }
+    
     Cell.call(this, type_or_metadata);
     this._value = value;
     this.n = new Neverfier();  // TODO throwing away super's value, unclean
@@ -317,7 +347,7 @@ define(['./events', './types'], function (events, types) {
   exports.cellPropOfBlockCell = cellPropOfBlockCell;
   
   function cellPropOfBlock(scheduler, obj, prop, restrictToBlock) {
-    return cellPropOfBlockCell(scheduler, new ConstantCell(blockT, obj), prop, restrictToBlock);
+    return cellPropOfBlockCell(scheduler, new ConstantCell(obj, blockT), prop, restrictToBlock);
   }
   exports.cellPropOfBlock = cellPropOfBlock;
   

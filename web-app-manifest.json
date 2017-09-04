@@ -1,0 +1,15 @@
+{
+  "lang": "en-US",
+  "icons": [
+    {
+      "sizes": "32x32",
+      "src": "/client/icon/icon-32.png",
+      "type": "image/png"
+    },
+    {
+      "sizes": "any",
+      "src": "/client/icon/icon.svg",
+      "type": "image/svg"
+    }
+  ]
+}

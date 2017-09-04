@@ -15,38 +15,74 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+'use strict';
+
 requirejs.config({
   baseUrl: '../client/'
 });
-define(['audio', 'coordination', 'events', 'types', 'values', 'widget',
-        'widgets', 'widgets/scope'],
-       ( audio,   coordination,   events,   types,   values,   widget,
-         widgets,   widgets_scope) => {
-  'use strict';
+define([
+  'audio',
+  'coordination',
+  'events',
+  'values',
+  'widget',
+  'widgets',
+  'widgets/scope',
+], (
+  import_audio,
+  import_coordination,
+  import_events,
+  import_values,
+  import_widget,
+  widgets,
+  import_widgets_scope
+) => {
+  const {
+    AudioScopeAdapter,
+    UserMediaSelector,
+  } = import_audio;
+  const {
+    ClientStateObject,
+  } = import_coordination;
+  const {
+    Scheduler,
+  } = import_events;
+  const {
+    ConstantCell,
+    StorageNamespace,
+    makeBlock,
+  } = import_values;
+  const {
+    Context,
+    createWidgets,
+  } = import_widget;
+  const {
+    ScopeParameters,
+  } = import_widgets_scope;
   
-  const scheduler = new events.Scheduler();
+  const scheduler = new Scheduler();
   const audioContext = new AudioContext();
   const storage = sessionStorage;  // TODO persistent and namespaced-from-other-pages
   
-  const selector = new audio.UserMediaSelector(scheduler, audioContext, navigator.mediaDevices,
-    new values.StorageNamespace(storage, 'input-selector.'));
-  const adapter = new audio.AudioScopeAdapter(scheduler, audioContext);
+  const selector = new UserMediaSelector(scheduler, audioContext, navigator.mediaDevices,
+    new StorageNamespace(storage, 'input-selector.'));
+  const adapter = new AudioScopeAdapter(scheduler, audioContext);
   adapter.connectFrom(selector.source);
   
-  const root = new values.ConstantCell(types.blockT, values.makeBlock({
-    input: new values.ConstantCell(types.blockT, selector),
+  const root = new ConstantCell(makeBlock({
+    input: new ConstantCell(selector),
     scope: adapter.scope,
-    parameters: new values.ConstantCell(types.blockT,
-      new widgets_scope.ScopeParameters(
-        new values.StorageNamespace(storage, 'scope-parameters.'))),
+    parameters: new ConstantCell(
+      new ScopeParameters(
+        new StorageNamespace(storage, 'scope-parameters.'))),
   }));
   
-  const context = new widget.Context({
+  const context = new Context({
     widgets: widgets,
     // Using sessionStorage because we want default settings and because our storage usage doesn't yet distinguish between different pages.
-    clientState: new coordination.ClientStateObject(sessionStorage, null),
+    clientState: new ClientStateObject(sessionStorage, null),
     scheduler: scheduler
   });
   
-  widget.createWidgets(root, context, document);
+  createWidgets(root, context, document);
 });

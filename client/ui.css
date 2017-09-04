@@ -284,6 +284,8 @@ h2 input {
   display: flex;
   flex: 1;
   position: relative;  /* allow contents to absolute position relative to this */
+  
+  height: 20em; /* arbitrary height for layout in non-height-having contexts */
 
   /* TODO: We actually want this to be the WaterfallPlot's graph background color, but no good way to express that currently (so the widget is transparent) */
   background: var(--shinysdr-theme-spectrum-bgcolor);
@@ -592,13 +594,33 @@ h2 input {
   position: absolute;
   left: 0;
   top: 0;
-  pointer-events: none;
-  width: 100%;
+  width: 7em;
   height: 100%;
+  
+  opacity: 0.7;
+  overflow: hidden;
+  
+  cursor: pointer;
+  user-select: none;
+}
+.widget-VerticalScale.widget-VerticalScale-expanded {
+  width: 100%;
+}
+.widget-VerticalScale-mark {
+  position: absolute;
+  border-top: 0.05em solid var(--shinysdr-theme-spectrum-label-foreground);
+  width: 0.4em;
+  
+  color: var(--shinysdr-theme-spectrum-label-foreground);
+}
+.widget-VerticalScale-expanded .widget-VerticalScale-mark {
+  width: 100%;
 }
 .widget-VerticalScale-number {
-  position: absolute;
-  border-top: 1px solid;
+  margin-top: calc(-1em + 0.5ex + 1.8px /* fudge */);
+  margin-left: 0.8em;
+  
+  white-space: nowrap;
 }
 
 .widget-VerticalSplitHandle-positioner {
@@ -804,4 +826,33 @@ table.aligned-controls-table {
 }
 .widget-Banner-hidden {
   display: none;
+}
+
+.widget-TextTerminal textarea, textarea.widget-TextTerminal {
+  width: 100%;
+  box-sizing: border-box;
+  
+  font-family: monospace;
+}
+
+.widget-ObjectInspector {
+  margin: 0;
+  border: none;
+  padding: 0;
+}
+.widget-ObjectInspector > ul {
+  margin: 0 0 0 1em;
+  border: none;
+  padding: 0;
+}
+.widget-ObjectInspector > ul > li {
+  margin: 0;
+  border-left: 0.1em solid var(--shinysdr-theme-header-bgcolor);
+  padding-left: 0.3em;
+  list-style-type: none;
+  margin: 0 0 0.2em 0;
+}
+.widget-ObjectInspector-metasyntactic, .widget-ObjectInspector ::-webkit-details-marker {
+  /* TODO align wirh theme color */
+  color: blue;
 }

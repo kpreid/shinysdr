@@ -15,10 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(function () {
-  'use strict';
-  
-  var exports = {};
+'use strict';
+
+define(() => {
+  const exports = {};
   
   exports.getGL = function getGL(config, canvas, options) {
     var useWebGL = config.clientState.opengl.depend(config.rebuildMe);

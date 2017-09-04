@@ -15,18 +15,29 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./types', './values'], function (types, values) {
-  'use strict';
-
-  const ConstantCell = values.ConstantCell;
-  const LocalCell = values.LocalCell;
-  const StorageCell = values.StorageCell;
-  const anyT = types.anyT;
-  const blockT = types.blockT;
-  const booleanT = types.booleanT;
-  const makeBlock = values.makeBlock;
-
-  var exports = {};
+'use strict';
+  
+define([
+  './types',
+  './values',
+], (
+  import_types,
+  import_values
+) => {
+  const {
+    EnumT,
+    anyT,
+    blockT,
+    booleanT,
+  } = import_types;
+  const {
+    ConstantCell,
+    LocalCell,
+    StorageCell,
+    makeBlock,
+  } = import_values;
+  
+  const exports = {};
   
   // The Coordinator manages relationships between user interface elements and the objects they control, and between user interface elements.
   function Coordinator(scheduler, freqDB, radioCell) {
@@ -139,7 +150,7 @@ define(['./types', './values'], function (types, values) {
   function ClientStateObject(clientStateStorage, databasePicker) {
     // TODO: Client state should be more closely associated with the components that use it, rather than centrally defined.
     
-    const themeType = new types.EnumT({
+    const themeType = new EnumT({
       // TODO get list of themes
       '/client/themes/black.css': 'Dark',
       '/client/themes/gray.css': 'Gray',
@@ -153,7 +164,7 @@ define(['./types', './values'], function (types, values) {
       theme: cc('theme', themeType, defaultTheme),
       opengl: cc('opengl', booleanT, true),
       opengl_float: cc('opengl_float', booleanT, true),
-      databases: new ConstantCell(blockT, databasePicker)
+      databases: new ConstantCell(databasePicker, blockT),
     });
   }
   exports.ClientStateObject = ClientStateObject;

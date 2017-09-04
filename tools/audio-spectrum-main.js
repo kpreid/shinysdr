@@ -15,35 +15,67 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+'use strict';
+
 requirejs.config({
   baseUrl: '../client/'
 });
-define(['audio', 'coordination', 'events', 'types', 'values', 'widget', 'widgets'],
-       ( audio,   coordination,   events,   types,   values,   widget,   widgets ) => {
-  'use strict';
+define([
+  'audio', 
+  'coordination', 
+  'events', 
+  'values', 
+  'widget', 
+  'widgets',
+], (
+  import_audio,
+  import_coordination,
+  import_events,
+  import_values,
+  import_widget,
+  widgets
+) => {
+  const {
+    AudioAnalyserAdapter,
+    UserMediaSelector,
+  } = import_audio;
+  const {
+    ClientStateObject,
+  } = import_coordination;
+  const {
+    Scheduler,
+  } = import_events;
+  const {
+    ConstantCell,
+    StorageNamespace,
+  } = import_values;
+  const {
+    Context,
+    createWidgets,
+  } = import_widget;
   
-  const scheduler = new events.Scheduler();
+  const scheduler = new Scheduler();
   const audioContext = new AudioContext();
   const storage = sessionStorage;  // TODO persistent and namespaced-from-other-pages
   
-  const selector = new audio.UserMediaSelector(scheduler, audioContext, navigator.mediaDevices,
-    new values.StorageNamespace(storage, 'input-selector.'));
-  const adapter = new audio.AudioAnalyserAdapter(scheduler, audioContext);
+  const selector = new UserMediaSelector(scheduler, audioContext, navigator.mediaDevices,
+    new StorageNamespace(storage, 'input-selector.'));
+  const adapter = new AudioAnalyserAdapter(scheduler, audioContext);
   adapter.connectFrom(selector.source);
   adapter.paused.set(false);
   
   // kludge: stick extra property on adapter so it gets in the options menu UI.
   // TODO: Replace this by adding flexibility to the UI system.
-  adapter.input = new values.ConstantCell(types.blockT, selector);
+  adapter.input = new ConstantCell(selector);
   
-  const root = new values.ConstantCell(types.blockT, adapter);
+  const root = new ConstantCell(adapter);
   
-  const context = new widget.Context({
+  const context = new Context({
     widgets: widgets,
     // Using sessionStorage because we want default settings and because our storage usage doesn't yet distinguish between different pages.
-    clientState: new coordination.ClientStateObject(sessionStorage, null),
+    clientState: new ClientStateObject(sessionStorage, null),
     scheduler: scheduler
   });
   
-  widget.createWidgets(root, context, document);
+  createWidgets(root, context, document);
 });

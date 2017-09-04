@@ -15,24 +15,44 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./events', './network', './widget', './widgets'],
-       (events, network, widget, widgets) => {
-  'use strict';
-  
-  const exports = Object.create(null);
+'use strict';
+
+define([
+  './events',
+  './network',
+  './widget',
+  './widgets',
+], (
+  import_events,
+  import_network,
+  import_widget,
+  widgets
+) => {
+  const {
+    Scheduler,
+  } = import_events;
+  const {
+    connect,
+  } = import_network;
+  const {
+    Context,
+    createWidgets,
+  } = import_widget;
+
+  const exports = {};
   
   function run(stateUrl) {
-    const scheduler = new events.Scheduler();
+    const scheduler = new Scheduler();
     
-    const context = new widget.Context({
+    const context = new Context({
       widgets: widgets,
       scheduler: scheduler
     });
     
-    const remoteCell = network.connect(stateUrl);
+    const remoteCell = connect(stateUrl);
     
     function connected() {
-      widget.createWidgets(remoteCell, context, document);
+      createWidgets(remoteCell, context, document);
       
       // globals for debugging / interactive programming purposes only
       window.Dcell = remoteCell;

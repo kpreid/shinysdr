@@ -15,30 +15,41 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./basic', './spectrum',
-        '../database', '../events', '../types', '../values', '../widget'],
-       (widgets_basic, widgets_spectrum,
-            database,      events,      types,      values,      widget) => {
-  'use strict';
+'use strict';
   
-  const Banner = widgets_basic.Banner;
-  const Block = widgets_basic.Block;
-  const DerivedCell = values.DerivedCell;
-  const EnumT = types.EnumT;
-  const Knob = widgets_basic.Knob;
-  const LinSlider = widgets_basic.LinSlider;
-  const LocalCell = values.LocalCell;
-  const MeasvizWidget = widgets_basic.MeasvizWidget;
-  const Meter = widgets_basic.Meter;
-  const NoticeT = types.NoticeT;
-  const NumberWidget = widgets_basic.Number;
-  const PickWidget = widgets_basic.PickWidget;
-  const Radio = widgets_basic.Radio;
-  const Select = widgets_basic.Select;
-  const Toggle = widgets_basic.Toggle;
-  const createWidgetExt = widget.createWidgetExt;
-
-  const exports = Object.create(null);
+define([
+  './basic', 
+  '../types', 
+  '../values', 
+  '../widget'
+], (
+  {
+    Banner,
+    Block,
+    Knob,
+    LinSlider,
+    MeasvizWidget,
+    Meter,
+    Number: NumberWidget,
+    PickWidget,
+    Radio,
+    Select,
+    Toggle,
+    TextTerminal,
+  },
+  {
+    EnumT,
+    NoticeT,
+  },
+  {
+    DerivedCell,
+    LocalCell,
+  },
+  {
+    createWidgetExt,
+  }
+) => {
+  const exports = {};
 
   // Suppresses all visibility of null objects
   function NullWidget(config) {
@@ -401,9 +412,12 @@ define(['./basic', './spectrum',
         addWidget('squelch_threshold', LinSlider, 'Squelch');
       }
       
-      // TODO: VOR plugin stuff; let the plugin handle it
+      // TODO: This is plugin stuff; let the plugin (or server-provided metadata) define it.
+      // VOR
       addWidget('angle', config.context.widgets.VOR$Angle, '');
       ignore('zero_point');
+      // RTTY/PSK31
+      addWidget('text', TextTerminal, '');
     }, true);
   }
   exports['interface:shinysdr.interfaces.IDemodulator'] = Demodulator;

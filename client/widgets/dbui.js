@@ -15,19 +15,48 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['./basic', '../types', '../values', '../events', '../widget', '../database', '../math', '../menus', '../plugins'], function (widgets_basic, types, values, events, widget, database, math, menus, plugins) {
-  'use strict';
+'use strict';
+
+define([
+  './basic',
+  '../domtools',
+  '../math',
+  '../plugins',
+  '../values',
+  '../widget',
+], (
+  import_widgets_basic,
+  import_domtools,
+  import_math,
+  import_plugins,
+  import_values,
+  import_widget
+) => {
+  const {
+    Block,
+    Toggle,
+  } = import_widgets_basic;
+  const {
+    isVisibleInLayout,
+  } = import_domtools;
+  const {
+    formatFreqMHz,
+  } = import_math;
+  const {
+    getModeTable,
+  } = import_plugins;
+  const {
+    Cell,
+  } = import_values;
+  const {
+    alwaysCreateReceiverFromEvent,
+    createWidgetExt,
+  } = import_widget;
   
-  var Block = widgets_basic.Block;
-  var Cell = values.Cell;
-  var Toggle = widgets_basic.Toggle;
-  var alwaysCreateReceiverFromEvent = widget.alwaysCreateReceiverFromEvent;
-  var createWidgetExt = widget.createWidgetExt;
-  var formatFreqMHz = math.formatFreqMHz;
-  var modeTable = plugins.getModeTable();
-
-  var exports = Object.create(null);
-
+  const exports = {};
+  
+  const modeTable = getModeTable();
+  
   function FreqList(config) {
     const radioCell = config.radioCell;
     const scheduler = config.scheduler;
@@ -80,7 +109,7 @@ define(['./basic', '../types', '../values', '../events', '../widget', '../databa
       
       function draw() {
         info.drawNow();
-        if (record.offsetWidth > 0) { // rough 'is in DOM tree' test
+        if (isVisibleInLayout(info.elements[0])) { // rough 'is in DOM tree' test
           record.n.listen(draw);
         }
       }

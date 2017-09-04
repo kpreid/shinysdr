@@ -15,40 +15,82 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
-        'widget', 'widgets/basic',
-        'text!./sphere-v.glsl', 'text!./sphere-f.glsl', 'text!./features-v.glsl',
-        'text!./points-f.glsl', 'text!./curves-f.glsl'],
-       (domtools, events, gltools, math, network, types, values,
-        widget, widgets_basic,
-        shader_sphere_v, shader_sphere_f, shader_features_v,
-        shader_points_f, shader_curves_f) => {
-  'use strict';
+'use strict';
+
+define([
+  '../domtools',
+  '../events',
+  '../gltools',
+  '../network',
+  '../types',
+  '../values',
+  '../widget',
+  '../widgets/basic',
+  'text!./sphere-v.glsl',
+  'text!./sphere-f.glsl',
+  'text!./features-v.glsl',
+  'text!./points-f.glsl',
+  'text!./curves-f.glsl',
+], (
+  import_domtools,
+  import_events,
+  import_gltools,
+  import_network,
+  import_types,
+  import_values,
+  import_widget,
+  import_widgets_basic,
+  shader_sphere_v,
+  shader_sphere_f,
+  shader_features_v,
+  shader_points_f,
+  shader_curves_f
+) => {
+  const {
+    reveal,
+  } = import_domtools;
+  const {
+    AddKeepDrop,
+    Clock,
+  } = import_events;
+  const {
+    buildProgram,
+    AttributeLayout,
+    getGL,
+    handleContextLoss,
+  } = import_gltools;
+  const {
+    externalGet,
+  } = import_network;
+  const {
+    anyT,
+    blockT,
+    booleanT,
+    numberT,
+  } = import_types;
+  const {
+    Cell,
+    ConstantCell,
+    DerivedCell,
+    StorageCell,
+    makeBlock,
+  } = import_values;
+  const {
+    createWidgetExt,
+  } = import_widget;
+  const {
+    Banner,
+    PickWidget,
+    SmallKnob,
+    Toggle,
+  } = import_widgets_basic;
   
-  const sin = Math.sin;
-  const cos = Math.cos;
+  const {
+    cos,
+    sin,
+  } = Math;
   
-  const AddKeepDrop = events.AddKeepDrop;
-  const Banner = widgets_basic.Banner;
-  const Cell = values.Cell;
-  const Clock = events.Clock;
-  const ConstantCell = values.ConstantCell;
-  const DerivedCell = values.DerivedCell;
-  const PickWidget = widgets_basic.PickWidget;
-  const SmallKnob = widgets_basic.SmallKnob;
-  const StorageCell = values.StorageCell;
-  const Toggle = widgets_basic.Toggle;
-  const anyT = types.anyT;
-  const blockT = types.blockT;
-  const booleanT = types.booleanT;
-  const createWidgetExt = widget.createWidgetExt;
-  const externalGet = network.externalGet;
-  const makeBlock = values.makeBlock;
-  const numberT = types.numberT;
-  const reveal = domtools.reveal;
-  const stringT = types.stringT;
-  
-  var exports = {};
+  const exports = {};
   
   // Degree trig functions.
   // We use degrees in this module because degrees are standard for latitude and longitude, and are also useful for more exact calculations because 360 is exactly representable as a floating-point number whereas 2π is not.
@@ -96,7 +138,7 @@ define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
           nowViewY: localY  // updated later
         };
       });
-    }, false);
+    }, {capture: true, passive: false});
 
     targetElement.addEventListener('touchmove', function (event) {
       var rect = targetElement.getBoundingClientRect();
@@ -109,19 +151,23 @@ define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
         activeTouches[touch.identifier].nowViewY = localY;
       });
 
-      var deltaScale = 1;
-      if (Object.keys(activeTouches).length >= 2) {
-        // Zoom using first two touches
-        var grab1X = activeTouches[0].grabViewX;
-        var grab1Y = activeTouches[0].grabViewY;
-        var grab2X = activeTouches[1].grabViewX;
-        var grab2Y = activeTouches[1].grabViewY;
-        var now1X = activeTouches[0].nowViewX;
-        var now1Y = activeTouches[0].nowViewY;
-        var now2X = activeTouches[1].nowViewX;
-        var now2Y = activeTouches[1].nowViewY;
-        var deltaScaleX = Math.abs(now2X - now1X) / Math.abs(grab2X - grab1X);
-        var deltaScaleY = Math.abs(now2Y - now1Y) / Math.abs(grab2Y - grab1Y);
+      let deltaScale = 1;
+      const touchIdentifiers = Object.keys(activeTouches);
+      if (touchIdentifiers.length >= 2) {
+        // Zoom using two touches
+        touchIdentifiers.sort();  // Ensure stable choice (though oldest would be better).
+        const id1 = touchIdentifiers[0];
+        const id2 = touchIdentifiers[1];
+        const grab1X = activeTouches[id1].grabViewX;
+        const grab1Y = activeTouches[id1].grabViewY;
+        const grab2X = activeTouches[id2].grabViewX;
+        const grab2Y = activeTouches[id2].grabViewY;
+        const now1X = activeTouches[id1].nowViewX;
+        const now1Y = activeTouches[id1].nowViewY;
+        const now2X = activeTouches[id2].nowViewX;
+        const now2Y = activeTouches[id2].nowViewY;
+        const deltaScaleX = Math.abs(now2X - now1X) / Math.abs(grab2X - grab1X);
+        const deltaScaleY = Math.abs(now2Y - now1Y) / Math.abs(grab2Y - grab1Y);
         deltaScale = (deltaScaleX + deltaScaleY) / 2;
       }
       
@@ -149,11 +195,9 @@ define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
         mean(pansY) - grabPartY,
         deltaScale);
 
-    }, true);
+    }, {capture: true, passive: true});
 
     function touchcancel(event) {
-      // Prevent mouse-emulation handling
-      event.preventDefault();
       Array.prototype.forEach.call(event.changedTouches, function (touch) {
         delete activeTouches[touch.identifier];
       });
@@ -166,7 +210,7 @@ define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
        info.grabViewY = info.nowViewY;
       }
     }
-    targetElement.addEventListener('touchcancel', touchcancel, true);
+    targetElement.addEventListener('touchcancel', touchcancel, {capture: true, passive: true});
 
     targetElement.addEventListener('touchend', function (event) {
       // Prevent mouse-emulation handling
@@ -433,7 +477,7 @@ define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
   
   class GLSphere {
     constructor(gl, redrawCallback) {
-      var program = gltools.buildProgram(gl, shader_sphere_v, shader_sphere_f);
+      var program = buildProgram(gl, shader_sphere_v, shader_sphere_f);
       var att_position = gl.getAttribLocation(program, 'position');
       var att_lonlat = gl.getAttribLocation(program, 'lonlat');
       gl.uniform1i(gl.getUniformLocation(program, 'texture'), 0);
@@ -734,8 +778,8 @@ define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
 
   class GLFeatureLayers {
     constructor(gl, scheduler, primitive, pickingColorAllocator, specialization) {
-      var program = gltools.buildProgram(gl, shader_features_v, specialization.fragmentShader);
-      var attLayout = new gltools.AttributeLayout(gl, program, [
+      var program = buildProgram(gl, shader_features_v, specialization.fragmentShader);
+      var attLayout = new AttributeLayout(gl, program, [
         { name: 'position', components: 3 },
         { name: 'velocityAndTimestamp', components: 4 },
         { name: 'billboard', components: 3 },
@@ -1248,7 +1292,7 @@ define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
       
           event.preventDefault();  // no scrolling
           event.stopPropagation();
-        }, true);
+        }, {capture: true, passive: false});
       
         new TouchZoomHandler(targetElement, viewChanger, function tapHandler(touch, docX, docY) {
           var featureInfo = pickFromMouseEvent(touch);  // TODO undeclared type punning
@@ -1328,7 +1372,7 @@ define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
     canvas.classList.add('map-canvas');
     
     // Abort if we can't do GL.
-    var gl = gltools.getGL(config, canvas, {
+    var gl = getGL(config, canvas, {
       alpha: false,  // not currently used
       depth: true,
       stencil: false,
@@ -1337,7 +1381,7 @@ define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
     });
     if (!gl) {
       var filler = containerElement.appendChild(document.createElement('div'));
-      createWidgetExt(config.context, Banner, filler, new ConstantCell(stringT, 'Sorry, the map requires WebGL to be supported and enabled.'));
+      createWidgetExt(config.context, Banner, filler, new ConstantCell('Sorry, the map requires WebGL to be supported and enabled.'));
       return;
     }
     containerElement.appendChild(canvas);
@@ -1354,7 +1398,7 @@ define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
     
     // --- Start initializing GL stuff --
     
-    gltools.handleContextLoss(canvas, config.rebuildMe);
+    handleContextLoss(canvas, config.rebuildMe);
     
     gl.enable(gl.CULL_FACE);
     
@@ -1509,7 +1553,7 @@ define(['domtools', 'events', 'gltools', 'math', 'network', 'types', 'values',
       const featureRenderer = lconfig.featureRenderer;
       const clickHandler = lconfig.onclick || function noClick() {};
       // TODO: Instead of a "clickHandler" we should have a more general presentation-style system
-      const controlsCell = new ConstantCell(blockT, lconfig.controls || makeBlock({}));
+      const controlsCell = new ConstantCell(lconfig.controls || makeBlock({}), blockT);
       
       const visibilityCell = new StorageCell(storage, booleanT, true, 'layer-visible.' + label);
       

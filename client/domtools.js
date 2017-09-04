@@ -15,9 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define([], () => {
-  'use strict';
+'use strict';
   
+define(() => {
   const exports = {};
   
   // DOM element life cycle facility. It is expected that:
@@ -44,19 +44,32 @@ define([], () => {
   exports.lifecycleInit = lifecycleInit;
   
   function lifecycleDestroy(element) {
-    if (lifecycleState.get(element) !== 'live') {
-      // Already dead or never live.
-      return;
+    const stateBeforehand = lifecycleState.get(element);
+    lifecycleState.set(element, 'dead');
+    
+    // Fire a destroy event iff we previously fired an init event.
+    if (stateBeforehand === 'live') {
+      element.dispatchEvent(new CustomEvent('shinysdr:lifecycledestroy', {bubbles: false}));
     }
     
-    lifecycleState.set(element, 'dead');
-    element.dispatchEvent(new CustomEvent('shinysdr:lifecycledestroy', {bubbles: false}));
-    
-    Array.prototype.forEach.call(element.children, function (childEl) {
+    // Destroy descendants.
+    Array.prototype.forEach.call(element.children, childEl => {
       lifecycleDestroy(childEl);
     });
   }
   exports.lifecycleDestroy = lifecycleDestroy;
+  
+  // Is the given element visible in the sense of taking up some space in the visual layout?
+  // Does not check for being obscured by other elements, clipped by a smaller container, etc, but will detect being detached from the DOM or being inside a display:none element.
+  // TODO: This can false-positive if the node has no content.
+  function isVisibleInLayout(node) {
+    const w = node.offsetWidth;
+    if (typeof w !== 'number') {
+      throw new TypeError('isVisibleInLayout: cannot work with ' + node);
+    }
+    return w > 0;
+  }
+  exports.isVisibleInLayout = isVisibleInLayout;
   
   // "Reveal" facility.
   // To reveal a node is to make it visible on-screen (as opposed to hidden by some hidden/collapsed container).
@@ -83,8 +96,7 @@ define([], () => {
       }
     }
 
-    if (node.offsetWidth === 0) {
-      // TODO: Find a better test that can't false-positive if the node is currently empty
+    if (!isVisibleInLayout(node)) {
       console.warn('domtools.reveal: apparently failed to reveal', node);
       return false;
     }

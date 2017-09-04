@@ -15,8 +15,78 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['types', 'values', 'events', 'coordination', 'database', 'network', 'map/map-core', 'map/map-layers', 'widget', 'widgets', 'audio', 'window-manager', 'plugins'], (types, values, events, coordination, database, network, mapCore, mapLayers, widget, widgets, audio, windowManager, plugins) => {
-  'use strict';
+'use strict';
+
+define([
+  './audio',
+  './coordination',
+  './database',
+  './events',
+  './map/map-core',
+  './map/map-layers',
+  './network',
+  './plugins',
+  './types',
+  './values',
+  './widget',
+  './widgets',
+  './window-manager',
+], (
+  import_audio,
+  import_coordination,
+  import_database,
+  import_events,
+  import_map_core,
+  unused_map_layers,  // side effecting
+  import_network,
+  import_plugins,
+  import_types,
+  import_values,
+  import_widget,
+  widgets,
+  unused_window_manager  // side effecting
+) => {
+  const {
+    connectAudio,
+  } = import_audio;
+  const {
+    ClientStateObject,
+    Coordinator,
+  } = import_coordination;
+  const {
+    DatabasePicker,
+    arrayFromCatalog,
+    fromURL: databaseFromURL,
+    systematics,
+  } = import_database;
+  const {
+    Scheduler,
+  } = import_events;
+  const {
+    GeoMap,
+  } = import_map_core;
+  const {
+    connect,
+  } = import_network;
+  const {
+    loadCSS,
+    getJSModuleIds,
+  } = import_plugins;
+  const {
+    anyT,
+  } = import_types;
+  const {
+    ConstantCell,
+    LocalCell,
+    StorageNamespace,
+    Index,
+    makeBlock,
+  } = import_values;
+  const {
+    Context,
+    createWidgetExt,
+    createWidgets,
+  } = import_widget;
   
   function log(progressAmount, msg) {
     console.log(msg);
@@ -26,33 +96,15 @@ define(['types', 'values', 'events', 'coordination', 'database', 'network', 'map
     progress.value += (1 - progress.value) * progressAmount;
   }
   
-  const ClientStateObject = coordination.ClientStateObject;
-  const ConstantCell = values.ConstantCell;
-  const Context = widget.Context;
-  const Coordinator = coordination.Coordinator;
-  const DatabasePicker = database.DatabasePicker;
-  const GeoMap = mapCore.GeoMap;
-  const LocalCell = values.LocalCell;
-  const Scheduler = events.Scheduler;
-  const StorageNamespace = values.StorageNamespace;
-  const Index = values.Index;
-  const anyT = types.anyT;
-  const blockT = types.blockT;
-  const connect = network.connect;
-  const connectAudio = audio.connectAudio;
-  const createWidgetExt = widget.createWidgetExt;
-  const createWidgets = widget.createWidgets;
-  const makeBlock = values.makeBlock;
-  
   const scheduler = new Scheduler();
 
-  var clientStateStorage = new StorageNamespace(localStorage, 'shinysdr.client.');
+  const clientStateStorage = new StorageNamespace(localStorage, 'shinysdr.client.');
   
-  const writableDB = database.fromURL('wdb/');
-  const databasesCell = new LocalCell(anyT, database.systematics.concat([
+  const writableDB = databaseFromURL('wdb/');
+  const databasesCell = new LocalCell(anyT, systematics.concat([
     writableDB,  // kludge till we have proper UI for selection of write targets
   ]));
-  database.arrayFromCatalog('dbs/', dbs => {   // TODO get url from server
+  arrayFromCatalog('dbs/', dbs => {   // TODO get url from server
     databasesCell.set(databasesCell.get().concat(dbs));
   });
   const databasePicker = new DatabasePicker(
@@ -63,12 +115,12 @@ define(['types', 'values', 'events', 'coordination', 'database', 'network', 'map
   
   // TODO(kpreid): Client state should be more closely associated with the components that use it.
   const clientState = new ClientStateObject(clientStateStorage, databasePicker);
-  const clientBlockCell = new ConstantCell(blockT, clientState);
+  const clientBlockCell = new ConstantCell(clientState);
   
   function main(stateUrl, audioUrl) {
     log(0.4, 'Loading plugins…');
-    plugins.loadCSS();
-    requirejs(plugins.getJSModuleIds(), function (plugins) {
+    loadCSS();
+    requirejs(getJSModuleIds(), function (plugins) {
       connectRadio(stateUrl, audioUrl);
     }, function (err) {
       log(0, 'Failed to load plugins.\n  ' + err.requireModules + '\n  ' + err.requireType);
@@ -113,11 +165,11 @@ define(['types', 'values', 'events', 'coordination', 'database', 'network', 'map
       if (firstConnection) {
         firstConnection = false;
         
-        const everything = new ConstantCell(blockT, makeBlock({
+        const everything = new ConstantCell(makeBlock({
           client: clientBlockCell,
           radio: remoteCell,
-          actions: new ConstantCell(blockT, coordinator.actions),
-          audio: new ConstantCell(blockT, audioState)
+          actions: new ConstantCell(coordinator.actions),
+          audio: new ConstantCell(audioState)
         }));
       
         var index = new Index(scheduler, everything);

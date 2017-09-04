@@ -15,28 +15,54 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['../events', '../math', '../measviz', '../types', '../values', '../widget'],
-       (    events,      math, _measvizStub,     types,      values,      widget) => {
-  'use strict';
+'use strict';
+
+define([
+  '../events',
+  '../math',
+  '../measviz',
+  '../types',
+  '../values',
+  '../widget',
+], (
+  import_events,
+  import_math,
+  unused_measviz,  // not a module, creates globals
+  import_types,
+  import_values,
+  import_widget
+) => {
+  const {
+    Clock,
+  } = import_events;
+  const {
+    mod,
+  } = import_math;
+  const {
+    EnumT,
+    NoticeT,
+    QuantityT,
+    RangeT,
+    TimestampT,
+    anyT,
+    blockT,
+    booleanT,
+    numberT,
+    stringT,
+    trackT,
+  } = import_types;
+  const {
+    Cell,
+    CommandCell,
+    ConstantCell,
+    DerivedCell,
+    getInterfaces,
+  } = import_values;
+  const {
+    createWidgetExt,
+  } = import_widget;
   
-  const Cell = values.Cell;
-  const Clock = events.Clock;
-  const CommandCell = values.CommandCell;
-  const ConstantCell = values.ConstantCell;
-  const DerivedCell = values.DerivedCell;
-  const EnumT = types.EnumT;
-  const NoticeT = types.NoticeT;
-  const QuantityT = types.QuantityT;
-  const RangeT = types.RangeT;
-  const TimestampT = types.TimestampT;
-  const booleanT = types.booleanT;
-  const mod = math.mod;
-  const numberT = types.numberT;
-  const stringT = types.stringT;
-  const trackT = types.trackT;
-  const createWidgetExt = widget.createWidgetExt;
-  
-  var exports = Object.create(null);
+  const exports = {};
   
   function insertUnitIfPresent(type, container) {
     const unitSymbol = type.getNumericUnit().symbol;
@@ -94,7 +120,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
           wEl.id = config.idPrefix + name;
         }
       } else if (name === null) {
-        targetCell = new ConstantCell(types.blockT, block);
+        targetCell = new ConstantCell(block, blockT);
       } else if ('get' in name) {  // sanity check, not to be used as type discrimination
         targetCell = name;
       } else {
@@ -108,7 +134,10 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
         widgetCtor = widgetType;
       } else if (widgetType === undefined || widgetType === null) {
         widgetCtor = PickWidget;
-        if (typeof name === 'string') optBoxLabel = name;  // TODO kludge; this is not the right thing
+        if (typeof name === 'string' && typeof optBoxLabel !== 'string') {
+          // TODO kludge; this is not the right thing
+          optBoxLabel = name;
+        }
       } else {
         throw new Error('bad widgetType: ' + widgetType);
       }
@@ -198,8 +227,8 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
     const context = config.context;
     const cellType = targetCell.type;
     
-    const ctorCell = new DerivedCell(types.anyT, config.scheduler, function (dirty) {
-      if (cellType === types.blockT) {
+    const ctorCell = new DerivedCell(anyT, config.scheduler, function (dirty) {
+      if (cellType === blockT) {
         const block = targetCell.depend(dirty);
       
         // TODO kludgy, need better representation of interfaces. At least pull this into a function itself.
@@ -322,6 +351,26 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
   }
   exports.Banner = Banner;
   
+  class TextTerminal {
+    constructor(config) {
+      const target = config.target;
+      this.element = config.element;
+      
+      const textarea = config.element.appendChild(document.createElement('textarea'));
+      textarea.readOnly = true;
+      textarea.rows = 3;
+      textarea.cols = 40;
+      
+      const draw = config.boundedFn(function drawImpl() {
+        textarea.textContent = String(target.depend(draw));
+        textarea.scrollTop = textarea.scrollHeight;  // TODO better sticky behavior
+      });
+      draw.scheduler = config.scheduler;
+      draw();
+    }
+  }
+  exports.TextTerminal = TextTerminal;
+  
   // widget for TimestampT type
   var timestampUpdateClock = new Clock(1);
   function TimestampWidget(config) {
@@ -405,7 +454,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
     const type = target.type;
     // TODO: use integer flag of RangeT, w decimal points?
     function clamp(value, direction) {
-      if (type instanceof types.RangeT) {  // TODO: better type protocol
+      if (type instanceof RangeT) {  // TODO: better type protocol
         return type.round(value, direction);
       } else {
         return value;
@@ -457,7 +506,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
         spin(event.wheelDelta > 0 ? 1 : -1);
         event.preventDefault();
         event.stopPropagation();
-      }, true);
+      }, {capture: true, passive: false});
       function focusNext() {
         if (i > 0) {
           places[i - 1].element.focus();
@@ -562,8 +611,8 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
           event.stopPropagation();
         }
         // Using these events instead of click event allows the button to work despite the auto-hide-on-focus-loss, in Chrome.
-        button.addEventListener('touchstart', pushListener, false);
-        button.addEventListener('mousedown', pushListener, false);
+        button.addEventListener('touchstart', pushListener, {capture: true, passive: false});
+        button.addEventListener('mousedown', pushListener, {capture: true, passive: false});
         //button.addEventListener('click', pushListener, false);
         // If in the normal tab order, its appearing/disappearing causes trouble
         button.tabIndex = -1;
@@ -621,7 +670,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
       },
       function initSmallKnob(input, target) {
         var type = target.type;
-        if (type instanceof types.RangeT) {
+        if (type instanceof RangeT) {
           input.min = type.getMin();
           input.max = type.getMax();
           input.step = (type.integer && !type.logarithmic) ? 1 : 'any';
@@ -630,7 +679,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
         input.readOnly = !target.set;
         
         input.addEventListener('input', function(event) {
-          if (type instanceof types.RangeT) {
+          if (type instanceof RangeT) {
             target.set(type.round(input.valueAsNumber, 0));
           } else {
             target.set(input.valueAsNumber);
@@ -678,7 +727,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
         var format = function(n) { return n.toFixed(2); };
 
         var type = target.type;
-        if (type instanceof types.RangeT) {
+        if (type instanceof RangeT) {
           slider.min = getT(type.getMin());
           slider.max = getT(type.getMax());
           slider.step = (type.integer) ? 1 : 'any';
@@ -691,7 +740,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
         slider.disabled = !target.set;
         
         function listener(event) {
-          if (type instanceof types.RangeT) {
+          if (type instanceof RangeT) {
             target.set(type.round(setT(slider.valueAsNumber), 0));
           } else {
             target.set(setT(slider.valueAsNumber));
@@ -748,7 +797,7 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
         var format = function(n) { return n.toFixed(2); };
         
         var type = target.type;
-        if (type instanceof types.RangeT) {
+        if (type instanceof RangeT) {
           meter.min = type.getMin();
           meter.max = type.getMax();
           if (type.integer) {
@@ -1059,6 +1108,94 @@ define(['../events', '../math', '../measviz', '../types', '../values', '../widge
     draw();
   }
   exports.MeasvizWidget = MeasvizWidget;
+  
+  // TODO: Better name
+  class ObjectInspector {
+    constructor(config) {
+      const target = config.target;
+      const container = this.element = config.element;
+      const baseId = config.element.id;
+      
+      const metaField = container.appendChild(document.createElement(container.tagName === 'DETAILS' ? 'summary' : 'div'));
+      
+      if (config.element.title) {
+        const t = document.createTextNode(config.element.title);
+        config.element.removeAttribute('title');
+        metaField.appendChild(t);
+        metaField.appendChild(oiMetasyntactic(' = '));
+      }
+      
+      metaField.appendChild(document.createTextNode(String(target.type) + ' '));
+      metaField.appendChild(oiMetasyntactic(target.set ? 'RW' : 'RO'));
+      
+      const singleLineContainer = metaField.appendChild(document.createElement('span'));
+      singleLineContainer.classList.add('widget-ObjectInspector-single-line');
+      
+      //container.appendChild(document.createTextNode('\u00A0'));
+      
+      function updateValue() {
+        while (container.lastChild && container.lastChild !== metaField) {
+          container.removeChild(container.lastChild);
+        }
+        
+        const value = config.target.depend(updateValue);
+        if (typeof value === 'object' && value !== null) {
+          getInterfaces(value).forEach(i => {
+            container.appendChild(document.createTextNode(' ' + i));
+          });
+          if (value._reshapeNotice) {
+            // TODO: Use AddKeepDrop instead
+            value._reshapeNotice.listen(updateValue);
+          }
+          const list = container.appendChild(document.createElement('ul'));
+          for (var prop in value) {
+            const childField = list.appendChild(document.createElement('li'));
+            const propValue = value[prop];
+            if (propValue instanceof Cell) {
+              const childDetails = childField.appendChild(document.createElement('details'));
+              childDetails.open = true;
+              childDetails.id = baseId + '.' + prop;
+              childDetails.title = prop;
+              createWidgetExt(config.context, ObjectInspector, childDetails, propValue);
+            } else {
+              childField.appendChild(document.createTextNode(prop));
+              childField.appendChild(oiMetasyntactic(' = not a cell '));
+              childField.appendChild(oiStringify(propValue));
+            }
+          }
+        } else {
+          singleLineContainer.appendChild(oiMetasyntactic(' value= '));
+          singleLineContainer.appendChild(document.createTextNode(typeof value));
+          singleLineContainer.appendChild(oiMetasyntactic(' '));
+          
+          singleLineContainer.appendChild(oiStringify(value));
+        }
+      }
+      updateValue.scheduler = config.scheduler;
+      updateValue();
+    }
+  }
+  exports.ObjectInspector = ObjectInspector;
+  
+  function oiMetasyntactic(text) {
+    const el = document.createElement('span');
+    el.textContent = text;
+    el.classList.add('widget-ObjectInspector-metasyntactic');
+    return el;
+  }
+  
+  function oiStringify(value) {
+    try {
+      return document.createTextNode(JSON.stringify(value));
+    } catch (e) {
+      try {
+        return document.createTextNode(String(value));
+      } catch (e) {
+        return oiMetasyntactic('<error displaying value>');
+      }
+    }
+  }
+  
   
   return Object.freeze(exports);
 });
