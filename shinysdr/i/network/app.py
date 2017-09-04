@@ -234,10 +234,10 @@ def _put_root_static(wcommon, container_resource, title):
         jasmine.putChild(name, _make_static_resource(os.path.join(
             deps_path, 'jasmine/lib/jasmine-core/', name)))
     
-    # Special cases
+    # Special resources
     container_resource.putChild('favicon.ico',
         _make_static_resource(os.path.join(static_resource_path, 'client/icon/icon-32.png')))
-    container_resource.putChild('web-app-manifest',
+    client.putChild('web-app-manifest.json',
         WebAppManifestResource(wcommon, title))
     _put_plugin_resources(client)
 

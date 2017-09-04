@@ -128,7 +128,7 @@ class TestWebSite(unittest.TestCase):
             self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/manifest+json'])
             manifest = json.loads(data)
             self.assertEqual(manifest['name'], 'test title')
-        return testutil.http_get(reactor, urlparse.urljoin(self.url, '/web-app-manifest')).addCallback(callback)
+        return testutil.http_get(reactor, urlparse.urljoin(self.url, '/client/web-app-manifest.json')).addCallback(callback)
 
 
 class TestSiteWithoutRootCap(TestWebSite):
