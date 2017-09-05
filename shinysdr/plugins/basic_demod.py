@@ -552,6 +552,7 @@ class WFMDemodulator(FMDemodulator):
             deviation=75000,
             band_filter=80000,
             band_filter_transition=20000,
+            tau=None,  # disable deemphasis because it is too early
             no_audio_filter=True,  # disable highpass
             **kwargs)
 
@@ -621,20 +622,26 @@ class WFMDemodulator(FMDemodulator):
             self.connect(stereo_pilot_out, (difference_channel_mixer, 1))
             self.connect(
                 difference_channel_mixer,
-                blocks.multiply_const_ff(50),  # TODO: Completely empirical fudge factor. This should not be necessary. We're losing signal somewhere?
+                blocks.multiply_const_ff(6),  # TODO: Completely empirical fudge factor. This should not be necessary. I believe this is at least partly due to phase error in the pilot signal.
                 difference_channel_filter)
         
             # recover left/right channels (at self.__audio_int_rate)
             self.connect(difference_channel_filter, (mixL, 1))
             self.connect(difference_channel_filter, (mixR, 1))
-            resamplerL = self._make_resampler((mixL, 0), self.__audio_int_rate)
-            resamplerR = self._make_resampler((mixR, 0), self.__audio_int_rate)
             self.connect(mono_channel_filter, (mixL, 0))
             self.connect(mono_channel_filter, (mixR, 0))
-            self.connect_audio_output(resamplerL, resamplerR)
+            resamplerL = self._make_resampler((mixL, 0), self.__audio_int_rate)
+            resamplerR = self._make_resampler((mixR, 0), self.__audio_int_rate)
+            deemphL = fm_emph.fm_deemph(self.__audio_int_rate, 75e-6)
+            deemphR = fm_emph.fm_deemph(self.__audio_int_rate, 75e-6)
+            self.connect(resamplerL, deemphL)
+            self.connect(resamplerR, deemphR)
+            self.connect_audio_output(deemphL, deemphR)
         else:
             resampler = self._make_resampler(mono_channel_filter, self.__audio_int_rate)
-            self.connect_audio_output(resampler, resampler)
+            deemph = fm_emph.fm_deemph(self.__audio_int_rate, 75e-6)
+            self.connect(resampler, deemph)
+            self.connect_audio_output(deemph, deemph)
 
 
 pluginDef_wfm = ModeDef(mode='WFM',
