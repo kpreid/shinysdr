@@ -45,62 +45,80 @@ define(() => {
     }
   };
   
-  // internal function of Scheduler
-  function schedulerRAFCallback() {
-    // jshint validthis: true
-    const queue = this._queue;
-    let limit = 1000;
-    try {
-      while (queue.nonempty() && limit-- > 0) {
-        const queued = queue.dequeue();
-        if (queued._scheduler_scheduled) {
-          queued._scheduler_scheduled = false;
-          queued();
+  class Scheduler {
+    constructor(window) {
+      const i = new SchedulerImpl(window, this);
+      this.enqueue = i.enqueue.bind(i);
+      this.callNow = i.callNow.bind(i);
+      this.syncEventCallback = i.syncEventCallback.bind(i);
+    }
+  }
+  exports.Scheduler = Scheduler;
+  
+  class SchedulerImpl {
+    constructor(window, scheduler) {
+      this._window = window;
+      this._scheduler = scheduler;  // caution: scheduler is not yet fully constructed
+      
+      // Things to do in the next requestAnimationFrame callback
+      this._queue = new Queue();
+      
+      // Whether we have an outstanding requestAnimationFrame callback
+      this._queue_scheduled = false;
+      
+      // Bound callback to pass to requestAnimationFrame
+      this._callback = this._RAFCallback.bind(this);
+    }
+    
+    enqueue(callback) {
+      if (callback.scheduler !== this._scheduler) throw new Error('Wrong scheduler');
+      if (callback._scheduler_scheduled) return;
+      var wasNonempty = this._queue.nonempty();
+      this._queue.enqueue(callback);
+      callback._scheduler_scheduled = true;  // TODO: use a WeakMap instead once ES6 is out
+      if (!wasNonempty && !this._queue_scheduled) { // just became nonempty
+        this._queue_scheduled = true;
+        window.requestAnimationFrame(this._callback);
+      }
+    }
+    
+    callNow(callback) {
+      if (callback.scheduler !== this._scheduler) throw new Error('Wrong scheduler');
+      callback._scheduler_scheduled = false;
+      // TODO: Revisit whether we should catch errors here
+      callback();
+    }
+    
+    // Kludge for when we need the consequences of user interaction to happen promptly (before the event handler returns). Requirement: use this only to wrap 'top level' callbacks called with nothing significant on the stack.
+    syncEventCallback(eventCallback) {
+      return function wrappedForSync() {
+        // note no error catching -- don't think it needs it
+        var value = eventCallback();
+        this._callback();
+        return value;
+      }.bind(this);
+    }
+    
+    _RAFCallback() {
+      const queue = this._queue;
+      let limit = 1000;
+      try {
+        while (queue.nonempty() && limit-- > 0) {
+          const queued = queue.dequeue();
+          if (queued._scheduler_scheduled) {
+            queued._scheduler_scheduled = false;
+            queued();
+          }
+        }
+      } finally {
+        if (queue.nonempty()) {
+          window.requestAnimationFrame(this._callback);
+        } else {
+          this._queue_scheduled = false;
         }
       }
-    } finally {
-      if (queue.nonempty()) {
-        window.requestAnimationFrame(this._callback);
-      } else {
-        this._queue_scheduled = false;
-      }
     }
   }
-  
-  function Scheduler(window) {
-    // Things to do in the next requestAnimationFrame callback
-    this._queue = new Queue();
-    // Whether we have an outstanding requestAnimationFrame callback
-    this._queue_scheduled = false;
-    this._callback = schedulerRAFCallback.bind(this);
-  }
-  Scheduler.prototype.enqueue = function (callback) {
-    if (callback.scheduler !== this) throw new Error('Wrong scheduler');
-    if (callback._scheduler_scheduled) return;
-    var wasNonempty = this._queue.nonempty();
-    this._queue.enqueue(callback);
-    callback._scheduler_scheduled = true;  // TODO: use a WeakMap instead once ES6 is out
-    if (!wasNonempty && !this._queue_scheduled) { // just became nonempty
-      this._queue_scheduled = true;
-      window.requestAnimationFrame(this._callback);
-    }
-  };
-  Scheduler.prototype.callNow = function (callback) {
-    if (callback.scheduler !== this) throw new Error('Wrong scheduler');
-    callback._scheduler_scheduled = false;
-    // TODO: Revisit whether we should catch errors here
-    callback();
-  };
-  // Kludge for when we need the consequences of user interaction to happen promptly (before the event handler returns). Requirement: use this only to wrap 'top level' callbacks called with nothing significant on the stack.
-  Scheduler.prototype.syncEventCallback = function (eventCallback) {
-    return function wrappedForSync() {
-      // note no error catching -- don't think it needs it
-      var value = eventCallback();
-      this._callback();
-      return value;
-    }.bind(this);
-  };
-  exports.Scheduler = Scheduler;
   
   function nSchedule(fn) {
     //console.log('Notifier scheduling ' + fn.toString().split('\n')[0]);
