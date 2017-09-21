@@ -66,16 +66,19 @@ define(() => {
       // Whether we have an outstanding requestAnimationFrame callback
       this._queue_scheduled = false;
       
+      // Contains every function which is to be called. Every function in the queue either is also in this set or was called early by .callNow().
+      this._functionIsScheduled = new Set();
+      
       // Bound callback to pass to requestAnimationFrame
       this._callback = this._RAFCallback.bind(this);
     }
     
     enqueue(callback) {
       if (callback.scheduler !== this._scheduler) throw new Error('Wrong scheduler');
-      if (callback._scheduler_scheduled) return;
+      if (this._functionIsScheduled.has(callback)) return;
       var wasNonempty = this._queue.nonempty();
       this._queue.enqueue(callback);
-      callback._scheduler_scheduled = true;  // TODO: use a WeakMap instead once ES6 is out
+      this._functionIsScheduled.add(callback);
       if (!wasNonempty && !this._queue_scheduled) { // just became nonempty
         this._queue_scheduled = true;
         window.requestAnimationFrame(this._callback);
@@ -84,7 +87,7 @@ define(() => {
     
     callNow(callback) {
       if (callback.scheduler !== this._scheduler) throw new Error('Wrong scheduler');
-      callback._scheduler_scheduled = false;
+      this._functionIsScheduled.delete(callback);
       // TODO: Revisit whether we should catch errors here
       callback();
     }
@@ -105,8 +108,8 @@ define(() => {
       try {
         while (queue.nonempty() && limit-- > 0) {
           const queued = queue.dequeue();
-          if (queued._scheduler_scheduled) {
-            queued._scheduler_scheduled = false;
+          if (this._functionIsScheduled.has(queued)) {
+            this._functionIsScheduled.delete(queued);
             queued();
           }
         }
