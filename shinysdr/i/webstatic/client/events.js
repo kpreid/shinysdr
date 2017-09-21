@@ -48,9 +48,20 @@ define(() => {
   class Scheduler {
     constructor(window) {
       const i = new SchedulerImpl(window, this);
+      this.claim = i.claim.bind(i);
       this.enqueue = i.enqueue.bind(i);
       this.callNow = i.callNow.bind(i);
       this.syncEventCallback = i.syncEventCallback.bind(i);
+    }
+    
+    startNow(callback) {
+      this.claim(callback);
+      callback();
+    }
+    
+    startLater(callback) {
+      this.claim(callback);
+      this.enqueue(callback);
     }
   }
   exports.Scheduler = Scheduler;
@@ -71,6 +82,15 @@ define(() => {
       
       // Bound callback to pass to requestAnimationFrame
       this._callback = this._RAFCallback.bind(this);
+    }
+    
+    claim(callback) {
+      // TODO: convert this to a common WeakMap
+      if (callback.scheduler !== undefined) {
+        throw new Error('Already claimed by a different scheduler');
+      }
+      callback.scheduler = this._scheduler;
+      return callback;
     }
     
     enqueue(callback) {

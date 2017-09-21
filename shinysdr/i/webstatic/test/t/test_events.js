@@ -36,6 +36,29 @@ define([
   
   describe('events', () => {
     describe('Scheduler', () => {
+      describe('startNow', () => {
+        it('should do that', () => {
+          const scheduler = new Scheduler(window);
+          const cb = jasmine.createSpy('cb');
+          scheduler.startNow(cb);
+          expect(cb.calls.count()).toBe(1);
+          scheduler.enqueue(cb);  // If this succeeds then the function was associated with the scheduler.
+        });
+      });
+
+      describe('startLater', () => {
+        it('should do that', done => {
+          const scheduler = new Scheduler(window);
+          const cb = jasmine.createSpy('cb');
+          scheduler.startLater(cb);
+          expect(cb.calls.count()).toBe(0);
+          scheduler.startLater(() => {
+            expect(cb.calls.count()).toBe(1);
+            done();
+          });
+        });
+      });
+      
       describe('callNow', () => {
         // TODO: figure out how to work with Jasmine async to be less awkward about use of it() here.
         
