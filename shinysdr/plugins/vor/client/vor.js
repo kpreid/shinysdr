@@ -53,7 +53,7 @@ define([
       ctx[method](cx + pr*r * Math.sin(angle), cy - pr*r * Math.cos(angle));
     }
     
-    function draw() {
+    config.scheduler.start(function draw() {
       var valueAngle = target.depend(draw);
       
       text.nodeValue = mod(valueAngle * RAD_TO_DEG, 360).toFixed(2) + '\u00B0';
@@ -87,9 +87,7 @@ define([
       ctx.moveTo(cx, cy);
       polar('lineTo', 1.0, valueAngle);
       ctx.stroke();
-    }
-    draw.scheduler = config.scheduler;
-    draw();
+    });
   }
   
   // TODO: Better widget-plugin system so we're not modifying should-be-static tables

@@ -187,11 +187,11 @@ define([
         console.error('audio:', reason);
         ws.close(4000);  // first "application-specific" error code
       }
-      lose.scheduler = scheduler;
+      scheduler.claim(lose);
       function changeSampleRate() {
         lose('changing sample rate');
       }
-      changeSampleRate.scheduler = scheduler;
+      scheduler.claim(changeSampleRate);
       info.requested_sample_rate.n.listen(changeSampleRate);
       ws.onmessage = function(event) {
         var wsDataValue = event.data;
@@ -461,7 +461,7 @@ define([
         }
       }
     }
-    maybeScheduleUpdate.scheduler = scheduler;
+    scheduler.claim(maybeScheduleUpdate);
     
     Object.defineProperty(this, 'setLockout', {value: function (value) {
       lockout = !!value;
@@ -671,7 +671,7 @@ define([
       previousSource = newSource;
     }
     
-    function update() {
+    scheduler.startNow(function update() {
       const deviceId = deviceIdCell.depend(update);
       if (typeof deviceId !== 'string') {
         setOutput(null);
@@ -696,9 +696,7 @@ define([
               'open audio device ' + JSON.stringify(deviceId));
         });
       }
-    }
-    update.scheduler = scheduler;
-    update();
+    });
   }
 
   function UserMediaSelector(scheduler, audioContext, mediaDevices, storage) {

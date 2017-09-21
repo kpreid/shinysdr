@@ -132,7 +132,7 @@ define([
     log(0.5, 'Connecting to server…');
     var firstConnection = true;
     var firstFailure = true;
-    initialStateReady.scheduler = scheduler;
+    scheduler.claim(initialStateReady);
     var remoteCell = connect(stateUrl, connectionCallback);
     remoteCell.n.listen(initialStateReady);
     

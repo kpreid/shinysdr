@@ -65,11 +65,9 @@ define([
   }
   
   function afterNotificationCycle(scheduler, callback) {
-    function wrapper() {
+    scheduler.startLater(function wrapper() {
       callback();
-    }
-    wrapper.scheduler = scheduler;
-    scheduler.enqueue(wrapper);
+    });
   }
   exports.afterNotificationCycle = afterNotificationCycle;
   
@@ -81,7 +79,7 @@ define([
       calls++;
       pr(null);
     }
-    listener.scheduler = scheduler;
+    scheduler.claim(listener);
     
     listener.expectNotCalled = function (callback) {
       expect(1).toBe(1);  // dummy to suppress "SPEC HAS NO EXPECTATIONS". TODO: better way?
@@ -156,7 +154,7 @@ define([
       
       document.body.appendChild(element);
       function rebuildMe() { throw new Error('mock rebuildMe not implemented'); }
-      rebuildMe.scheduler = scheduler;
+      scheduler.claim(rebuildMe);
       const index = new Index(scheduler, cell);
       const stubCoordinator = {
         actions: {

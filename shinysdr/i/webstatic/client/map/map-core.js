@@ -879,7 +879,7 @@ define([
           };
           //console.log('adding', feature.label, iconIndex, textIndex);
         
-          function updateFeatureRendering() {
+          scheduler.startNow(function updateFeatureRendering() {
             if (indexAndFlag.dead) return;
             var animated = specialization.updateFeatureRendering(layerState, updateFeatureRendering, indexFreeList, feature, writeVertex, spInfo, renderer, pickingColor);
             if (animated) {
@@ -889,9 +889,7 @@ define([
             }
             vertBufferNeedsWrite = true;
             scheduler.enqueue(redrawCallback);
-          }
-          updateFeatureRendering.scheduler = scheduler;
-          updateFeatureRendering();
+          });
           return indexAndFlag;
         }, function featureRemoved(feature, indexAndFlag) {
           //console.log('removing', feature.label, index);
@@ -902,18 +900,16 @@ define([
           vertBufferNeedsWrite = true;
           scheduler.enqueue(redrawCallback);
         });
-      
-        function dumpArray() {
+        
+        scheduler.startNow(function dumpArray() {
           bufferAllocations.begin();
           var array = arrayCell.depend(dumpArray);
           array.forEach(function (feature) {
             bufferAllocations.add(feature);
           });
           bufferAllocations.end();
-        }
-        dumpArray.scheduler = scheduler;
-        dumpArray();
-      
+        });
+        
         return {
           draw: function (picking) {
             specialization.beforeDraw(program);
@@ -1346,7 +1342,7 @@ define([
         // TODO initial zoom, interpolation, possible absence of actual lat/lon values
         changedView();
       }
-      updateFromCell.scheduler = scheduler;
+      scheduler.claim(updateFromCell);
     
       coordActions._registerMap(function navigateMapCallback(trackCell) {
         reveal(elementForReveal);
@@ -1491,7 +1487,7 @@ define([
       
       gl.disable(gl.DEPTH_TEST);
     });
-    draw.scheduler = scheduler;
+    scheduler.claim(draw);
     window.addEventListener('resize', function (event) {
       // immediate to ensure smooth animation
       scheduler.callNow(draw);
@@ -1562,7 +1558,7 @@ define([
           draw.scheduler.enqueue(draw);
         }
       }
-      redrawLayer.scheduler = scheduler;
+      scheduler.claim(redrawLayer);
       
       var layerInt = {
         glDrawPoints: points.createLayer(featuresCell, featureRenderer, clickHandler, redrawLayer),
@@ -1581,11 +1577,9 @@ define([
       var controlsInner = controlsOuter.appendChild(document.createElement('div'));
       createWidgetExt(config.context, PickWidget, controlsInner, controlsCell);
       
-      function layerControlsVisibilityHook() {
+      scheduler.startNow(function layerControlsVisibilityHook() {
         controlsOuter.style.display = visibilityCell.depend(layerControlsVisibilityHook) ? 'block' : 'none';
-      }
-      layerControlsVisibilityHook.scheduler = scheduler;
-      layerControlsVisibilityHook();
+      });
       
       scheduler.enqueue(draw);
       return layerExt;

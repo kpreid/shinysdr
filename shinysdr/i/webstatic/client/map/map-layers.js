@@ -198,7 +198,7 @@ define([
             radioStateInfo.n.listen(checkInfo);
           }
         }
-        checkInfo.scheduler = scheduler;
+        scheduler.claim(checkInfo);
         var info = radioStateInfo.depend(checkInfo);
         var inSourceBand = info.lower < record.freq && record.freq < info.upper;
         var isReceiving = info.receiving.has(record.freq);

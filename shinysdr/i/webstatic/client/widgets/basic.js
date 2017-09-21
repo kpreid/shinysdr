@@ -298,8 +298,7 @@ define([
       var value = target.depend(draw);
       update(value, draw);
     });
-    draw.scheduler = config.scheduler;
-    draw();
+    config.scheduler.startNow(draw);
   }
   
   function Generic(config) {
@@ -365,8 +364,7 @@ define([
         textarea.textContent = String(target.depend(draw));
         textarea.scrollTop = textarea.scrollHeight;  // TODO better sticky behavior
       });
-      draw.scheduler = config.scheduler;
-      draw();
+      config.scheduler.startNow(draw);
     }
   }
   exports.TextTerminal = TextTerminal;
@@ -643,8 +641,7 @@ define([
         marks[i].classList[i < numMarks ? 'remove' : 'add']('knob-dim');
       }
     });
-    draw.scheduler = config.scheduler;
-    draw();
+    config.scheduler.startNow(draw);
   }
   exports.Knob = Knob;
   
@@ -929,14 +926,13 @@ define([
         target.set(numeric ? +rb.value : rb.value);
       }, false);
     });
-    var draw = config.boundedFn(function drawImpl() {
+    const draw = config.boundedFn(function drawImpl() {
       var value = config.target.depend(draw);
       Array.prototype.forEach.call(container.querySelectorAll('input[type=radio]'), function (rb) {
         rb.checked = rb.value === '' + value;
       });
     });
-    draw.scheduler = config.scheduler;
-    draw();
+    config.scheduler.startNow(draw);
   }
   exports.Radio = Radio;
   
@@ -1099,13 +1095,11 @@ define([
     }
     container.appendChild(graph.element);
     
-    function draw() {
+    config.scheduler.startNow(function draw() {
       buffer[index] = target.depend(draw) * scale;
       index = mod(index + 1, buffer.length);
       graph.draw();
-    }
-    draw.scheduler = config.scheduler;
-    draw();
+    });
   }
   exports.MeasvizWidget = MeasvizWidget;
   
@@ -1133,7 +1127,7 @@ define([
       
       //container.appendChild(document.createTextNode('\u00A0'));
       
-      function updateValue() {
+      config.scheduler.startNow(function updateValue() {
         while (container.lastChild && container.lastChild !== metaField) {
           container.removeChild(container.lastChild);
         }
@@ -1170,9 +1164,7 @@ define([
           
           singleLineContainer.appendChild(oiStringify(value));
         }
-      }
-      updateValue.scheduler = config.scheduler;
-      updateValue();
+      });
     }
   }
   exports.ObjectInspector = ObjectInspector;

@@ -225,7 +225,7 @@ define([
       paintValueAxis([0, 1, 0]);
       paintTimeAxis();
     });
-    draw.scheduler = scheduler;
+    scheduler.claim(draw);
     
     // TODO: This is a kludge and will never get properly removed; we need a general solution for this and other pixel-layout-dependent stuff
     window.addEventListener('resize', event => {
@@ -627,7 +627,7 @@ define([
       
       draw.scheduler.enqueue(draw);
     }
-    newScopeFrame.scheduler = config.scheduler;
+    config.scheduler.claim(newScopeFrame);
 
     new ScopeGraticule(config, graticuleCanvas, parameters, projectionCell);
 

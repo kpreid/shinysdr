@@ -387,7 +387,7 @@ define([
       var propCells = Object.create(null);
       var interfaces = [];
       
-      function update() {
+      scheduler.startNow(function update() {
         var object = cell.depend(update);
         
         interfaces.forEach(flush);
@@ -430,10 +430,7 @@ define([
         if ('_reshapeNotice' in object) {  // TODO mandatory
           object._reshapeNotice.listen(update);
         }
-      }
-      update.scheduler = scheduler;
-      
-      update();
+      });
     }
     
     insert(rootCell);

@@ -154,7 +154,7 @@ define([
     const id = node.id;
     const idPrefix = id === '' ? null : node.id + '.';
     
-    function go() {
+    scheduler.startNow(function go() {
       const targetCell = targetCellCell.depend(go);
       if (!targetCell) {
         if (node.parentNode) { // TODO: This condition shouldn't be necessary?
@@ -243,9 +243,7 @@ define([
       setTimeout(function() {
         lifecycleInit(newEl);
       }, 0);
-    }
-    go.scheduler = scheduler;
-    go();
+    });
     
     return Object.freeze({
       destroy: function() {
@@ -315,7 +313,7 @@ define([
       
       var html = document.createDocumentFragment();
       while (node.firstChild) html.appendChild(node.firstChild);
-      function go() {
+      scheduler.start(function go() {
         // TODO defend against JS-significant keys
         var target = evalTargetStr(rootTargetCell, node.getAttribute('data-target'), scheduler).depend(go);
         if (!target) {
@@ -326,9 +324,7 @@ define([
         node.textContent = ''; // fast clear
         node.appendChild(html.cloneNode(true));
         createWidgetsInNode(target, context, node);
-      }
-      go.scheduler = scheduler;
-      go();
+      });
 
     }()); else {
       doPersistentDetails(node);
@@ -381,13 +377,12 @@ define([
       var initScroll = parseFloat(storage.getItem('scroll')) || 0;
       innerElement.style.width = (container.offsetWidth * zoom) + 'px';
       prepare();
-      function later() {  // gack kludge
+      scheduler.startLater(function later() {
+        // Delay kludge because the container is potentially zero width at initialization time and therefore cannot actually be scrolled.
         container.scrollLeft = Math.floor(initScroll);
         fractionalScroll = mod(initScroll, 1);
         prepare();
-      }
-      later.scheduler = scheduler;
-      scheduler.enqueue(later);
+      });
     });
     
     function prepare() {
@@ -432,7 +427,7 @@ define([
       cacheScrollLeft = container.scrollLeft;
       n.notify();
     }
-    prepare.scheduler = config.scheduler;
+    scheduler.claim(prepare);
     prepare();
     
     window.addEventListener('resize', function (event) {

@@ -498,15 +498,13 @@ define([
       const cell = new StorageCell(storage, booleanT, true, key);
       self[key] = cell;
       // TODO unbreakable notify loop. consider switching Union to work like, or to take a, DerivedCell.
-      function updateUnionFromCell() {
+      scheduler.startNow(function updateUnionFromCell() {
         if (cell.depend(updateUnionFromCell)) {
           result.add(source);
         } else {
           result.remove(source);
         }
-      }
-      updateUnionFromCell.scheduler = scheduler;
-      updateUnionFromCell();
+      });
       
       self._reshapeNotice.notify();
     }, function removeSource() {
@@ -514,16 +512,14 @@ define([
     });
     
     // TODO generic glue copied from map-core.js, should be a feature of AddKeepDrop itself
-    function dumpArray() {
+    scheduler.startNow(function dumpArray() {
       sourceAKD.begin();
       var array = sourcesCell.depend(dumpArray);
       array.forEach(function (feature) {
         sourceAKD.add(feature);
       });
       sourceAKD.end();
-    }
-    dumpArray.scheduler = scheduler;
-    dumpArray();
+    });
   }
   exports.DatabasePicker = DatabasePicker;
   

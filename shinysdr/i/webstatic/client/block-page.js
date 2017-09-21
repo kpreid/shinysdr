@@ -51,14 +51,12 @@ define([
     
     const remoteCell = connect(stateUrl);
     
-    function connected() {
+    remoteCell.n.listen(scheduler.claim(function connected() {
       createWidgets(remoteCell, context, document);
       
       // globals for debugging / interactive programming purposes only
       window.Dcell = remoteCell;
-    }
-    connected.scheduler = scheduler;
-    remoteCell.n.listen(connected);
+    }));
   }
   exports.run = run;
   

@@ -113,7 +113,7 @@ define([
           record.n.listen(draw);
         }
       }
-      draw.scheduler = scheduler;
+      scheduler.claim(draw);
       redrawHooks.set(info, draw);
       draw();
       
@@ -155,7 +155,7 @@ define([
       var count = currentFilter.getAll().length;
       receiveAllButton.disabled = !(count > 0 && count <= 10);
     });
-    draw.scheduler = scheduler;
+    config.scheduler.startNow(draw);
 
     refilter();
   }
@@ -302,7 +302,7 @@ define([
       return field;
     }
     function formFieldHooks(field, cell) {
-      var draw = config.boundedFn(function drawImpl() {
+      const draw = config.boundedFn(function drawImpl() {
         var now = cell.depend(draw);
         if (now === NO_RECORD) {
           field.disabled = true;
@@ -311,13 +311,12 @@ define([
           if (field.value !== now) field.value = now;
         }
       });
-      draw.scheduler = config.scheduler;
+      config.scheduler.startNow(draw);
       field.addEventListener('change', function(event) {
         if (field.value !== cell.get()) {
           cell.set(field.value);
         }
       });
-      draw();
     }
     function input(cell, name) {
       var field = document.createElement('input');

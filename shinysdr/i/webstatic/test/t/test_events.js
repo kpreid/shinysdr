@@ -64,11 +64,11 @@ define([
         
         const scheduler = new Scheduler(window);
         const cb = jasmine.createSpy('cb');
-        cb.scheduler = scheduler;
+        scheduler.claim(cb);
       
         it('should call the function immediately', done => {
           function waiter() { done(); }
-          waiter.scheduler = scheduler;
+          scheduler.claim(waiter);
           
           scheduler.enqueue(cb);
           scheduler.enqueue(waiter);
@@ -87,20 +87,20 @@ define([
         const scheduler = new Scheduler(window);
       
         const cb1 = jasmine.createSpy('cb1');
-        cb1.scheduler = scheduler;
+        scheduler.claim(cb1);
         const cb2base = jasmine.createSpy('cb2');
         function cb2() {
           cb2base();
           throw new Error('Uncaught error for testing.');
         }
-        cb2.scheduler = scheduler;
+        scheduler.claim(cb2);
         function cb3() {
           expect(cb1).toHaveBeenCalled();
           expect(cb2base).toHaveBeenCalled();
           // we are cb3 and were therefore called.
           done();
         }
-        cb3.scheduler = scheduler;
+        scheduler.claim(cb3);
       
         scheduler.enqueue(cb1);
         scheduler.enqueue(cb2);
