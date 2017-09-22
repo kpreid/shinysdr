@@ -25,20 +25,22 @@ define([
   import_events
 ) => {
   const {ji: {
+    beforeEach,
     describe,
     expect,
     it,
     jasmine
   }} = import_jasmine;
   const {
-    Scheduler
+    Scheduler,
+    SubScheduler,
   } = import_events;
   
   describe('events', () => {
-    describe('Scheduler', () => {
+    function itIsAScheduler(factory) {
       describe('startNow', () => {
         it('should do that', () => {
-          const scheduler = new Scheduler(window);
+          const scheduler = factory();
           const cb = jasmine.createSpy('cb');
           scheduler.startNow(cb);
           expect(cb.calls.count()).toBe(1);
@@ -48,7 +50,7 @@ define([
 
       describe('startLater', () => {
         it('should do that', done => {
-          const scheduler = new Scheduler(window);
+          const scheduler = factory();
           const cb = jasmine.createSpy('cb');
           scheduler.startLater(cb);
           expect(cb.calls.count()).toBe(0);
@@ -62,7 +64,7 @@ define([
       describe('callNow', () => {
         // TODO: figure out how to work with Jasmine async to be less awkward about use of it() here.
         
-        const scheduler = new Scheduler(window);
+        const scheduler = factory();
         const cb = jasmine.createSpy('cb');
         scheduler.claim(cb);
       
@@ -84,7 +86,7 @@ define([
       });
     
       it('should invoke callbacks after one which throws', done => {
-        const scheduler = new Scheduler(window);
+        const scheduler = factory();
       
         const cb1 = jasmine.createSpy('cb1');
         scheduler.claim(cb1);
@@ -106,6 +108,75 @@ define([
         scheduler.enqueue(cb2);
         scheduler.enqueue(cb3);
       });
+      
+      // TODO: Test just basic functionality (.claim and .enqueue, deduplicating enqueues, etc)
+      // TODO: Test behavior of .syncEventCallback
+    }
+    
+    describe('Scheduler', () => {
+      itIsAScheduler(() => new Scheduler(window));
+    });
+    
+    describe('SubScheduler', () => {
+      // Run basic scheduler tests. (This will have an extra beforeEach but that's harmless.)
+      itIsAScheduler(() => new SubScheduler(new Scheduler(window), () => {}));
+      
+      let disable, rootScheduler, scheduler;
+      beforeEach(() => {
+        rootScheduler = new Scheduler(window);
+        scheduler = new SubScheduler(rootScheduler, (d) => {
+          disable = d;
+        });
+      });
+      
+      it('should not call callbacks previously scheduled', done => {
+        const cb1 = jasmine.createSpy('cb1');
+        scheduler.claim(cb1);
+        scheduler.enqueue(cb1);
+        disable();
+        rootScheduler.startLater(() => {
+          expect(cb1.calls.count()).toBe(0);
+          done();
+        });
+      });
+      
+      it('should not call callbacks newly scheduled', done => {
+        const cb1 = jasmine.createSpy('cb1');
+        scheduler.claim(cb1);
+        disable();
+        scheduler.enqueue(cb1);
+        rootScheduler.startLater(() => {
+          expect(cb1.calls.count()).toBe(0);
+          done();
+        });
+      });
+      
+      it('should startNow even if disabled', done => {
+        // Rationale: Code that does startNow may depend on the side effects of the callback for it to finish successfully.
+        const cb1 = jasmine.createSpy('cb1');
+        disable();
+        scheduler.startNow(cb1);
+        expect(cb1.calls.count()).toBe(1);
+        rootScheduler.startLater(() => {
+          expect(cb1.calls.count()).toBe(1);
+          done();
+        });
+      });
+      
+      it('should callNow even if disabled', done => {
+        // Rationale: Code that does callNow may depend on the side effects of the callback for it to finish successfully.
+        const cb1 = jasmine.createSpy('cb1');
+        scheduler.claim(cb1);
+        disable();
+        scheduler.callNow(cb1);
+        expect(cb1.calls.count()).toBe(1);
+        rootScheduler.startLater(() => {
+          expect(cb1.calls.count()).toBe(1);
+          done();
+        });
+      });
+      
+      // TODO: Decide on and test behavior of .syncEventCallback
     });
   });
   

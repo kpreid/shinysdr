@@ -151,6 +151,63 @@ define(() => {
     }
   }
   
+  class SubScheduler extends AbstractScheduler {
+    constructor(superScheduler, disableConditionBinder) {
+      super();
+      const i = new SubSchedulerImpl(superScheduler, this);
+      this.enqueue = i.enqueue.bind(i);
+      this.callNow = i.callNow.bind(i);
+      this.syncEventCallback = i.syncEventCallback.bind(i);
+      disableConditionBinder(i.disableSubScheduler.bind(i));
+    }
+  }
+  exports.SubScheduler = SubScheduler;
+  
+  class SubSchedulerImpl {
+    constructor(superScheduler, scheduler) {
+      this._superScheduler = superScheduler;
+      this._enabled = true;
+      this._wrappers = new WeakMap();
+    }
+    
+    disableSubScheduler() {
+      this._enabled = false;
+    }
+    
+    _wrap(callback) {
+      let subSchedulerWrapper = this._wrappers.get(callback);
+      if (!subSchedulerWrapper) {
+        // Note the wrapper's .name is taken from the variable.
+        subSchedulerWrapper = () => {
+          if (this._enabled) {
+            callback();
+          }
+        };
+        this._superScheduler.claim(subSchedulerWrapper);
+        this._wrappers.set(callback, subSchedulerWrapper);
+      }
+      return subSchedulerWrapper;
+    }
+    
+    enqueue(callback) {
+      this._superScheduler.enqueue(this._wrap(callback));
+    }
+    
+    callNow(callback) {
+      if (this._enabled) {
+        this._superScheduler.callNow(this._wrap(callback));
+      } else {
+        // Call the callback whether-or-not we are disabled.
+        // Rationale: Code that does callNow may depend on the side effects of the callback for it to finish successfully.
+        callback();
+      }
+    }
+    
+    syncEventCallback(eventCallback) {
+      return this._superScheduler.syncEventCallback(eventCallback);
+    }
+  }
+  
   function nSchedule(fn) {
     //console.log('Notifier scheduling ' + fn.toString().split('\n')[0]);
     fn.scheduler.enqueue(fn);
