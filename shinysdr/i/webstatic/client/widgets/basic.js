@@ -1124,6 +1124,7 @@ define([
       //container.appendChild(document.createTextNode('\u00A0'));
       
       config.scheduler.startNow(function updateValue() {
+        singleLineContainer.textContent = '';
         while (container.lastChild && container.lastChild !== metaField) {
           container.removeChild(container.lastChild);
         }
