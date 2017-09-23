@@ -45,13 +45,16 @@ define(() => {
     }
   };
   
-  class Scheduler {
-    constructor(window) {
-      const i = new SchedulerImpl(window, this);
-      this.claim = i.claim.bind(i);
-      this.enqueue = i.enqueue.bind(i);
-      this.callNow = i.callNow.bind(i);
-      this.syncEventCallback = i.syncEventCallback.bind(i);
+  class AbstractScheduler {
+    // All methods of schedulers that can be defined in terms of others.
+    
+    claim(callback) {
+      // TODO: convert this to a common WeakMap
+      if (callback.scheduler !== undefined) {
+        throw new Error('Already claimed by a different scheduler');
+      }
+      callback.scheduler = this;
+      return callback;  // Allow `return claim(function ...);` pattern.
     }
     
     startNow(callback) {
@@ -62,6 +65,20 @@ define(() => {
     startLater(callback) {
       this.claim(callback);
       this.enqueue(callback);
+    }
+    
+    enqueue(callback) { throw new Error('not implemented'); }
+    callNow(callback) { throw new Error('not implemented'); }
+    syncEventCallback(eventCallback) { throw new Error('not implemented'); }
+  }
+  
+  class Scheduler extends AbstractScheduler {
+    constructor(window) {
+      super();
+      const i = new SchedulerImpl(window, this);
+      this.enqueue = i.enqueue.bind(i);
+      this.callNow = i.callNow.bind(i);
+      this.syncEventCallback = i.syncEventCallback.bind(i);
     }
   }
   exports.Scheduler = Scheduler;
@@ -82,15 +99,6 @@ define(() => {
       
       // Bound callback to pass to requestAnimationFrame
       this._callback = this._RAFCallback.bind(this);
-    }
-    
-    claim(callback) {
-      // TODO: convert this to a common WeakMap
-      if (callback.scheduler !== undefined) {
-        throw new Error('Already claimed by a different scheduler');
-      }
-      callback.scheduler = this._scheduler;
-      return callback;
     }
     
     enqueue(callback) {
