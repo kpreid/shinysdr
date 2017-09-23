@@ -32,6 +32,7 @@ define([
     jasmine
   }} = import_jasmine;
   const {
+    AddKeepDrop,
     Scheduler,
     SubScheduler,
   } = import_events;
@@ -177,6 +178,42 @@ define([
       });
       
       // TODO: Decide on and test behavior of .syncEventCallback
+    });
+    
+    describe('AddKeepDrop', () => {
+      function akdLogger() {
+        const log = [];
+        let i = 0;
+        return [
+          new AddKeepDrop({
+            add: function (...a) { log.push(['add'].concat(a)); return i++; },
+            remove: function (...a) { log.push(['remove'].concat(a)); },
+          }),
+          log
+        ];
+      }
+      
+      it('should add and remove things', () => {
+        const [akd, log] = akdLogger();
+        akd.update(['a', 'b']);
+        akd.update(['a', 'c']);
+        expect(log).toEqual([
+          ['add', 'a'],
+          ['add', 'b'],
+          ['remove', 'b', 1],
+          ['add', 'c'],
+        ]);
+      });
+      
+      it('should ignore duplicate adds', () => {
+        const [akd, log] = akdLogger();
+        akd.update(['a', 'a']);
+        akd.update([]);
+        expect(log).toEqual([
+          ['add', 'a'],
+          ['remove', 'a', 0],
+        ]);
+      });
     });
   });
   
