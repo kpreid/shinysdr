@@ -297,7 +297,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         
         self.connect(self.__source, self)
         
-        self.__gains = Gains(source)
+        self.__gains = Gains(source, self)
         
         # Misc state
         self.dc_state = DCOffsetOff
@@ -359,6 +359,8 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
     @setter
     def set_gain(self, value):
         self.__source.set_gain(float(value), ch)
+        # The single gain and individual-stage gain controls have an unspecified relationship to each other. Thus, changing one must poll the other.
+        self.__gains.state_changed()
     
     @exported_value(
         type_fn=lambda self: bool if self.__profile.agc else ConstantT(False),
@@ -450,7 +452,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         self.__source = osmosdr.source('numchan=1 ' + self.__osmo_device)
         self.__source.set_sample_rate(self.__signal_type.get_sample_rate())
         self.__tuning.set_block(self.__source)
-        self.__gains = Gains(self.__source)
+        self.__gains = Gains(self.__source, self)
         self.connect(self.__source, self)
         self.state_from_json(self.__state_while_inactive)
 
@@ -518,33 +520,39 @@ class _OsmoSDRTXDriver(ExportedState, gr.hier_block2):
 
 
 class Gains(ExportedState):
-    def __init__(self, source):
-        self.__sourceref = [source]
+    def __init__(self, source, rxd):
+        self.__source_ref = [source]
+        self.__rxd_ref = [rxd]
     
-    # be able to drop source ref
+    # be able to drop source ref even from the cells
     def close(self):
-        self.__sourceref[0] = None
+        self.__source_ref[0] = None
+        self.__rxd_ref[0] = None
     
     def state_def(self):
         for d in super(Gains, self).state_def():
             yield d
-        sourceref = self.__sourceref
-        for name in sourceref[0].get_gain_names():
+        source_ref = self.__source_ref
+        for name in source_ref[0].get_gain_names():
             # use a function to close over name
-            yield _install_gain_cell(self, sourceref, name)
+            yield _install_gain_cell(self, source_ref, self.__rxd_ref, name)
 
 
-def _install_gain_cell(self, sourceref, name):
+def _install_gain_cell(self, source_ref, rxd_ref, name):
     def gain_getter():
-        source = sourceref[0]
+        source = source_ref[0]
         return 0 if source is None else source.get_gain(name, ch)
     
     def gain_setter(value):
-        source = sourceref[0]
+        source = source_ref[0]
         if source is not None:
             source.set_gain(float(value), name, ch)
+        rxd = rxd_ref[0]
+        if rxd is not None:
+            # The single gain and individual-stage gain controls have an unspecified relationship to each other. Thus, changing one must poll the other.
+            rxd.state_changed('gain')
     
-    gain_range = convert_osmosdr_range(sourceref[0].get_gain_range(name, ch), unit=units.dB)
+    gain_range = convert_osmosdr_range(source_ref[0].get_gain_range(name, ch), unit=units.dB)
     
     # TODO: There should be a type of Cell such that we don't have to setattr but still implement the storage unlike LooseCell
     setattr(self, 'get_' + name, gain_getter)
