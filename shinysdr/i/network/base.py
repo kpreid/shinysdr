@@ -26,6 +26,7 @@ from twisted.web import template
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 from twisted.internet import endpoints
+from twisted.python.filepath import FilePath
 from twisted.python.util import sibpath
 
 # TODO: Change this constant to something more generic, but save that for when we're changing the URL layout for other reasons anyway.
@@ -35,6 +36,7 @@ UNIQUE_PUBLIC_CAP = 'public'
 
 static_resource_path = sibpath(__file__, '../webstatic')
 template_path = sibpath(__file__, '../webparts')
+template_filepath = FilePath(template_path)
 deps_path = sibpath(__file__, '../../deps')
 
 

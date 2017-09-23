@@ -20,7 +20,6 @@
 from __future__ import absolute_import, division
 
 import json
-import os.path
 import urllib
 import weakref
 
@@ -30,7 +29,7 @@ from twisted.web.server import NOT_DONE_YET
 from twisted.web import template
 
 from shinysdr.i.json import serialize
-from shinysdr.i.network.base import prepath_escaped, renderElement, template_path
+from shinysdr.i.network.base import prepath_escaped, renderElement, template_filepath
 from shinysdr.values import IWritableCollection
 
 
@@ -164,7 +163,7 @@ class _BlockHtmlElement(template.Element):
     """
     Template element for HTML page for an arbitrary block.
     """
-    loader = template.XMLFile(os.path.join(template_path, 'block.template.xhtml'))
+    loader = template.XMLFile(template_filepath.child('block.template.xhtml'))
     
     def __init__(self, wcommon):
         super(_BlockHtmlElement, self).__init__()
