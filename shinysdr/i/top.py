@@ -129,6 +129,11 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         
         self._do_connect()
 
+    def state_def(self):
+        for d in super(Top, self).state_def():
+            yield d
+        yield 'clip_warning', self.__clip_probe.state()['clip_warning']
+
     def add_receiver(self, mode, key=None, state=None):
         if len(self._receivers) >= 100:
             # Prevent storage-usage DoS attack
@@ -393,15 +398,6 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.source_name = value
         self._do_connect()
     
-    @exported_value(type=NoticeT(always_visible=False), changes='continuous')
-    def get_clip_warning(self):
-        level = self.__clip_probe.level()
-        # We assume that our sample source's absolute limits on I and Q values are the range -1.0 to 1.0. This is a square region; therefore the magnitude observed can be up to sqrt(2) = 1.414 above this, allowing us some opportunity to measure the amount of excess, and also to detect clipping even if the device doesn't produce exactly +-1.0 valus.
-        if level >= 1.0:
-            return u'Input amplitude too high (%.2f \u2265 1.0). Reduce gain.' % math.sqrt(level)
-        else:
-            return u''
-    
     # TODO: This becomes useless w/ Session fix
     @exported_value(type=float, changes='continuous')
     def get_cpu_use(self):
@@ -522,16 +518,22 @@ def _find_in_usable_bandwidth(usable_bandwidth_range, receiver):
         return offset_negative
 
 
-class MaxProbe(gr.hier_block2):
+class MaxProbe(gr.hier_block2, ExportedState):
     """
     A probe whose level is the maximum magnitude-squared occurring within the specified window of samples.
+    
+    Also provides a cell with a message assuming magnitudes over 1.0 are too high.
     """
+    
+    __ABSURD_MAGNITUDE_SQUARED = 2.01
+    
     def __init__(self, window=10000):
         gr.hier_block2.__init__(
             self, type(self).__name__,
             gr.io_signature(1, 1, gr.sizeof_gr_complex),
             gr.io_signature(0, 0, 0))
         self.__sink = None  # quiet pylint
+        self.__absurd = False
         self.set_window_and_reconnect(window)
     
     def level(self):
@@ -543,6 +545,9 @@ class MaxProbe(gr.hier_block2):
         """
         Must be called while the flowgraph is locked already.
         """
+        
+        self.__absurd = False
+        
         # Use a power-of-2 window size to satisfy gnuradio allocation alignment without going overboard.
         window = int(2 ** math.floor(math.log(window, 2)))
         self.disconnect_all()
@@ -556,6 +561,18 @@ class MaxProbe(gr.hier_block2):
         
         # shortcut method implementation
         self.level = self.__sink.level
+    
+    @exported_value(type=NoticeT(always_visible=False), changes='continuous')
+    def get_clip_warning(self):
+        if not self.__absurd:
+            magnitude_squared = self.level()
+            # We assume that our input's absolute limits on I and Q values are the range -1.0 to 1.0. This is a square region; therefore the magnitude observed can be up to sqrt(2) = 1.414 above this, allowing us some opportunity to measure the amount of excess, and also to detect clipping even if the device doesn't produce exactly +-1.0 values.
+            if magnitude_squared >= self.__ABSURD_MAGNITUDE_SQUARED:
+                # Oops, our assumption of 1.0 being the limit was wrong. Disable warning.
+                self.__absurd = True
+            elif magnitude_squared >= 1.0:
+                return u'Input amplitude too high (%.2f \u2265 1.0). Reduce gain.' % math.sqrt(magnitude_squared)
+        return u''
 
 
 def base26(x):
