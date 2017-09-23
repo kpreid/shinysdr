@@ -68,7 +68,7 @@ define([
     var dataCell = new LocalReadCell(anyT, null);
     // TODO: externalGet into a cell ought to be factored out
     // TODO: UI-visible error report when there are parse errors at any level
-    externalGet(url, 'text', function(jsonString) {
+    externalGet(url, 'text').then(jsonString => {
       var geojson = JSON.parse(jsonString);
       dataCell._update(geojson);
     });

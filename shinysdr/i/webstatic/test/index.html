@@ -32,7 +32,7 @@
     });
     
     requirejs(['network', '/test/jasmine-glue.js',], (network, {ji, start}) => {
-      network.externalGet('t/', 'document', indexDoc => {
+      network.externalGet('t/', 'document').then(indexDoc => {
         const testUrls = [];
         Array.prototype.forEach.call(indexDoc.querySelectorAll('a[href]'), anchor => {
           var url = anchor.href;

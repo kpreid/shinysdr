@@ -298,7 +298,7 @@ define([
   function arrayFromCatalog(url, callback) {
     //var union = new Union();
     var out = [];
-    externalGet(url, 'document', function(indexDoc) {
+    externalGet(url, 'document').then(indexDoc => {
       var anchors = indexDoc.querySelectorAll('a[href]');
       //console.log('Fetched database index with ' + anchors.length + ' links.');
       Array.prototype.forEach.call(anchors, function (anchor) {
@@ -316,7 +316,7 @@ define([
       false,
       function (init) {
         // TODO (implicitly) check mime type
-        externalGet(url, 'text', function(jsonString) {
+        externalGet(url, 'text').then(jsonString => {
           var databaseJson = JSON.parse(jsonString);
           if (databaseJson.writable) {
             init.makeWritable();
@@ -396,7 +396,7 @@ define([
       // flags to avoid racing spammy updates
       var updating = false;
       var needAgain = false;
-      var sendUpdate = function () {
+      var sendUpdate = () => {
         if (!this._oldState) throw new Error('too early');
         if (!this._url) return;
         if (updating) {
@@ -407,19 +407,19 @@ define([
         needAgain = false;
         var newState = this.toJSON();
         // TODO: PATCH method would be more specific
-        xhrpost(this._url, JSON.stringify({old: this._oldState, new: newState}), function () {
+        xhrpost(this._url, JSON.stringify({old: this._oldState, new: newState})).then(() => {
           // TODO: Warn user / retry on network errors. Since we don't know whether the server has accepted the change we should retrieve it as new oldState and maybe merge
           updating = false;
           if (needAgain) sendUpdate();
         });
         this._oldState = newState;
-      }.bind(this);
+      };
       
-      this._hook = function() {
+      this._hook = () => {
         if (changeHook) changeHook();
         // TODO: Changing lowerFreq + upperFreq sends double updates; see if we can coalesce
         sendUpdate();
-      }.bind(this);
+      };
     } else {
       this._hook = null;
     }
@@ -464,7 +464,7 @@ define([
     }},
     _remoteCreate: { value: function (addURL) {
       if (this._url) throw new Error('url already set');
-      xhrpost(addURL, JSON.stringify({new: this.toJSON()}), function (r) {
+      xhrpost(addURL, JSON.stringify({new: this.toJSON()})).then(r => {
         if (statusCategory(r.status) === 2) {
           if (this._url) throw new Error('url already set');
           this._url = r.getResponseHeader('Location');
@@ -474,7 +474,7 @@ define([
           // TODO: retry/buffer creation or make the record defunct
           console.error('Record creation failed! ' + r.status, r);
         }
-      }.bind(this));
+      });
       
     }}
   });

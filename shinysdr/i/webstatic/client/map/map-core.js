@@ -484,8 +484,8 @@ define([
     
       function fetchSun() {
         // TODO relative url bad idea
-        externalGet('ephemeris', 'text', function (response) {
-          var xyz = JSON.parse(response);
+        externalGet('ephemeris', 'text').then(response => {
+          const xyz = JSON.parse(response);
       
           gl.useProgram(program);
           gl.uniform3fv(gl.getUniformLocation(program, 'sun'), xyz);
