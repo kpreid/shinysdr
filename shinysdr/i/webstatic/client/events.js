@@ -284,29 +284,64 @@ define(() => {
   
   // Utility for turning "this list was updated" into "these items were added and removed".
   // TODO: Doesn't really fit with the rest of this module.
-  function AddKeepDrop(addCallback, removeCallback) {
+  //
+  // handler: object with methods
+  //    .add(key) => value
+  //    .remove(key, value)
+  // where value is helpfully remembered by the AddKeepDrop but not used otherwise.
+  //
+  // Either do
+  //   akd.begin(); for (...) akd.add(key); akd.end()
+  // or call update() with an iterable.
+  function AddKeepDrop(handler) {
+    if (!('add' in handler && 'remove' in handler)) {
+      throw new Error('AddKeepDrop: handler methods missing');
+    }
+    
     const have = new Map();
     const keep = new Set();
+    let active = false;
     return {
-      begin: function () {
+      begin() {
+        if (active) {
+          throw new Error('AddKeepDrop: misnested begin');
+        }
         keep.clear();
+        active = true;
       },
-      add: function (key) {
+      
+      add(key) {
+        if (!active) {
+          throw new Error('AddKeepDrop: misnested add');
+        }
         keep.add(key);
       },
-      end: function() {
+      
+      end() {
+        if (!active) {
+          throw new Error('AddKeepDrop: misnested add');
+        }
+        active = false;
         have.forEach((value, key) => {
           if (!keep.has(key)) {
-            removeCallback(key, value);
+            handler.remove(key, value);
             have.delete(key);
           }
         });
         keep.forEach(key => {
           if (!have.has(key)) {
-            have.set(key, addCallback(key));
+            have.set(key, handler.add(key));
           }
         });
-        keep.clear();
+        keep.clear();  // Don't prevent GC of dropped items.
+      },
+      
+      update(iterable) {
+        this.begin();
+        for (var key of iterable) {
+          this.add(key);
+        }
+        this.end();
       }
     };
   }

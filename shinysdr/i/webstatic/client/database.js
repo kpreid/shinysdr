@@ -480,8 +480,8 @@ define([
   });
   
   function DatabasePicker(scheduler, sourcesCell, storage) {
-    var self = this;
-    var result = new Union();
+    const self = this;
+    const result = new Union();
     
     this._reshapeNotice = new Notifier();
     Object.defineProperty(this, '_reshapeNotice', {enumerable: false});
@@ -490,35 +490,32 @@ define([
     this.getUnion = function () { return result; };    // TODO facet instead of giving add/remove access
     Object.defineProperty(this, 'getUnion', {enumerable: false});
     
-    var i = 0;
-    var sourceAKD = new AddKeepDrop(function addSource(source) {
-      // TODO get clean stable unique names from the sources
-      const label = source.getTableLabel ? source.getTableLabel() : (i++);
-      const key = 'enabled_' + label; 
-      const cell = new StorageCell(storage, booleanT, true, key);
-      self[key] = cell;
-      // TODO unbreakable notify loop. consider switching Union to work like, or to take a, DerivedCell.
-      scheduler.startNow(function updateUnionFromCell() {
-        if (cell.depend(updateUnionFromCell)) {
-          result.add(source);
-        } else {
-          result.remove(source);
-        }
-      });
-      
-      self._reshapeNotice.notify();
-    }, function removeSource() {
-      throw new Error('Removal not implemented');
+    let i = 0;
+    const sourceAKD = new AddKeepDrop({
+      add(source) {
+        // TODO get clean stable unique names from the sources
+        const label = source.getTableLabel ? source.getTableLabel() : (i++);
+        const key = 'enabled_' + label; 
+        const cell = new StorageCell(storage, booleanT, true, key);
+        self[key] = cell;
+        // TODO unbreakable notify loop. consider switching Union to work like, or to take a, DerivedCell.
+        scheduler.startNow(function updateUnionFromCell() {
+          if (cell.depend(updateUnionFromCell)) {
+            result.add(source);
+          } else {
+            result.remove(source);
+          }
+        });
+        
+        self._reshapeNotice.notify();
+      },
+      remove(source) {
+        throw new Error('Removal not implemented');
+      }
     });
     
-    // TODO generic glue copied from map-core.js, should be a feature of AddKeepDrop itself
-    scheduler.startNow(function dumpArray() {
-      sourceAKD.begin();
-      var array = sourcesCell.depend(dumpArray);
-      array.forEach(function (feature) {
-        sourceAKD.add(feature);
-      });
-      sourceAKD.end();
+    scheduler.startNow(function updateAKD() {
+      sourceAKD.update(sourcesCell.depend(updateAKD));
     });
   }
   exports.DatabasePicker = DatabasePicker;

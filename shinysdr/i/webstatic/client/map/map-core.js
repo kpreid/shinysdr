@@ -861,53 +861,51 @@ define([
           vertBufferArray[base + o_pickingColor + 2] = ((pickingColor >> 16) & 0xFF) / 255;
           vertBufferArray[base + o_pickingColor + 3] = ((pickingColor >> 24) & 0xFF) / 255;
         }
-
-        var vertBufferNeedsWrite = true;
-      
-        var bufferAllocations = new AddKeepDrop(function featureAdded(feature) {
-          var pickingColorAlloc = pickingColorAllocator.allocate();
-          var pickingColor = pickingColorAlloc.index;
-          pickingColorAlloc.assign({
-            feature: feature,
-            clickOnFeature: function () { clickHandler(feature); }
-          });
-          var spInfo = specialization.allocateFeature(vertBufferArray, indexFreeList, feature);
-          var indexAndFlag = {
-            spInfo: spInfo,
-            dead: false,
-            pickingColorAlloc: pickingColorAlloc
-          };
-          //console.log('adding', feature.label, iconIndex, textIndex);
         
-          scheduler.startNow(function updateFeatureRendering() {
-            if (indexAndFlag.dead) return;
-            var animated = specialization.updateFeatureRendering(layerState, updateFeatureRendering, indexFreeList, feature, writeVertex, spInfo, renderer, pickingColor);
-            if (animated) {
-              currentAnimatedFeatures.add(feature);
-            } else {
-              currentAnimatedFeatures.delete(feature);
-            }
+        let vertBufferNeedsWrite = true;
+      
+        const bufferAllocations = new AddKeepDrop({
+          add(feature) {
+            var pickingColorAlloc = pickingColorAllocator.allocate();
+            var pickingColor = pickingColorAlloc.index;
+            pickingColorAlloc.assign({
+              feature: feature,
+              clickOnFeature: function () { clickHandler(feature); }
+            });
+            var spInfo = specialization.allocateFeature(vertBufferArray, indexFreeList, feature);
+            var indexAndFlag = {
+              spInfo: spInfo,
+              dead: false,
+              pickingColorAlloc: pickingColorAlloc
+            };
+            //console.log('adding', feature.label, iconIndex, textIndex);
+        
+            scheduler.startNow(function updateFeatureRendering() {
+              if (indexAndFlag.dead) return;
+              var animated = specialization.updateFeatureRendering(layerState, updateFeatureRendering, indexFreeList, feature, writeVertex, spInfo, renderer, pickingColor);
+              if (animated) {
+                currentAnimatedFeatures.add(feature);
+              } else {
+                currentAnimatedFeatures.delete(feature);
+              }
+              vertBufferNeedsWrite = true;
+              scheduler.enqueue(redrawCallback);
+            });
+            return indexAndFlag;
+          },
+          remove(feature, indexAndFlag) {
+            //console.log('removing', feature.label, index);
+            indexAndFlag.dead = true;
+            specialization.deallocateFeature(layerState, writeVertex, indexFreeList, feature, indexAndFlag.spInfo);
+            pickingColorAllocator.deallocate(indexAndFlag.pickingColorAlloc);
+            currentAnimatedFeatures.delete(feature);
             vertBufferNeedsWrite = true;
             scheduler.enqueue(redrawCallback);
-          });
-          return indexAndFlag;
-        }, function featureRemoved(feature, indexAndFlag) {
-          //console.log('removing', feature.label, index);
-          indexAndFlag.dead = true;
-          specialization.deallocateFeature(layerState, writeVertex, indexFreeList, feature, indexAndFlag.spInfo);
-          pickingColorAllocator.deallocate(indexAndFlag.pickingColorAlloc);
-          currentAnimatedFeatures.delete(feature);
-          vertBufferNeedsWrite = true;
-          scheduler.enqueue(redrawCallback);
+          }
         });
         
         scheduler.startNow(function dumpArray() {
-          bufferAllocations.begin();
-          var array = arrayCell.depend(dumpArray);
-          array.forEach(function (feature) {
-            bufferAllocations.add(feature);
-          });
-          bufferAllocations.end();
+          bufferAllocations.update(arrayCell.depend(dumpArray));
         });
         
         return {
