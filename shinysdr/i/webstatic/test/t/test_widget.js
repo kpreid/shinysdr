@@ -93,8 +93,6 @@ define([
       it('should call lifecycle callbacks', () => {
         let calledInit = 0;
         let calledDestroy = 0;
-        let poked = 0;
-        let poke;
       
         function OuterWidget(config) {
           Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
@@ -110,9 +108,6 @@ define([
           this.element.addEventListener('shinysdr:lifecycledestroy', event => {
             calledDestroy++;
           });
-          poke = config.boundedFn(() => {
-            poked++;
-          });
         }
       
         const container = document.createElement('div');
@@ -124,14 +119,10 @@ define([
         const widgetHandle = createWidgetExt(context, OuterWidget, wEl, cell);
         expect(calledInit).toBe(1);
         expect(calledDestroy).toBe(0);
-        expect(poked).toBe(0);
-        poke();
-        expect(poked).toBe(1);
         widgetHandle.destroy();
         expect(calledInit).toBe(1);
         expect(calledDestroy).toBe(1);
-        poke();
-        expect(poked).toBe(1);
+        // TODO: Test subscheduler being disabled
       });
     });
     

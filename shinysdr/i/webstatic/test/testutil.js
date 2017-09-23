@@ -169,7 +169,6 @@ define([
         target: cell,
         scheduler: scheduler,
         clientState: new ClientStateObject(storage, null),
-        boundedFn: f => f,
         rebuildMe: rebuildMe,
         index: index,
         context: {

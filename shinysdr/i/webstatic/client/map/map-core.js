@@ -1432,7 +1432,7 @@ define([
     updateRenderbufferSize();
     
     
-    var draw = config.boundedFn(function drawImpl() {
+    function draw() {
       var w, h;
       // Fit current layout
       w = canvas.offsetWidth;
@@ -1486,8 +1486,9 @@ define([
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       
       gl.disable(gl.DEPTH_TEST);
-    });
+    }
     scheduler.claim(draw);
+    // TODO: remove this event listener when appropriate
     window.addEventListener('resize', function (event) {
       // immediate to ensure smooth animation
       scheduler.callNow(draw);

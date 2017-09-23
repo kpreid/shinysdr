@@ -294,11 +294,10 @@ define([
     
     const update = initDataEl(dataElement, target);
     
-    const draw = config.boundedFn(function drawImpl() {
+    config.scheduler.startNow(function draw() {
       var value = target.depend(draw);
       update(value, draw);
     });
-    config.scheduler.startNow(draw);
   }
   
   function Generic(config) {
@@ -360,11 +359,10 @@ define([
       textarea.rows = 3;
       textarea.cols = 40;
       
-      const draw = config.boundedFn(function drawImpl() {
+      config.scheduler.startNow(function draw() {
         textarea.textContent = String(target.depend(draw));
         textarea.scrollTop = textarea.scrollHeight;  // TODO better sticky behavior
       });
-      config.scheduler.startNow(draw);
     }
   }
   exports.TextTerminal = TextTerminal;
@@ -623,7 +621,7 @@ define([
     
     places[places.length - 1].element.tabIndex = 0; // initial tabbable digit
     
-    const draw = config.boundedFn(function drawImpl() {
+    config.scheduler.startNow(function draw() {
       const value = target.depend(draw);
       let valueStr = String(Math.round(value));
       if (valueStr === '0' && value === 0 && 1/value === -Infinity) {
@@ -641,7 +639,6 @@ define([
         marks[i].classList[i < numMarks ? 'remove' : 'add']('knob-dim');
       }
     });
-    config.scheduler.startNow(draw);
   }
   exports.Knob = Knob;
   
@@ -926,13 +923,12 @@ define([
         target.set(numeric ? +rb.value : rb.value);
       }, false);
     });
-    const draw = config.boundedFn(function drawImpl() {
+    config.scheduler.startNow(function draw() {
       var value = config.target.depend(draw);
       Array.prototype.forEach.call(container.querySelectorAll('input[type=radio]'), function (rb) {
         rb.checked = rb.value === '' + value;
       });
     });
-    config.scheduler.startNow(draw);
   }
   exports.Radio = Radio;
   

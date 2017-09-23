@@ -131,7 +131,7 @@ define([
       }
     }
     
-    const draw = config.boundedFn(function drawImpl() {
+    function draw() {
       //console.group('draw');
       //console.log(currentFilter.getAll().map(function (r) { return r.label; }));
       currentFilter.n.listen(draw);
@@ -154,9 +154,9 @@ define([
       // sanity check
       var count = currentFilter.getAll().length;
       receiveAllButton.disabled = !(count > 0 && count <= 10);
-    });
+    }
     config.scheduler.startNow(draw);
-
+    
     refilter();
   }
   exports.FreqList = FreqList;
@@ -302,7 +302,7 @@ define([
       return field;
     }
     function formFieldHooks(field, cell) {
-      const draw = config.boundedFn(function drawImpl() {
+      config.scheduler.startNow(function draw() {
         var now = cell.depend(draw);
         if (now === NO_RECORD) {
           field.disabled = true;
@@ -311,8 +311,7 @@ define([
           if (field.value !== now) field.value = now;
         }
       });
-      config.scheduler.startNow(draw);
-      field.addEventListener('change', function(event) {
+      field.addEventListener('change', event => {
         if (field.value !== cell.get()) {
           cell.set(field.value);
         }

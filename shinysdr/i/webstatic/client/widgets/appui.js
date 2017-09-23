@@ -463,7 +463,7 @@ define([
         throw new Error('wrong element ' + element.nodeName);
       }
       
-      const update = config.boundedFn(function updateImpl() {
+      config.scheduler.startNow(function update() {
         let themeUrl = target.depend(update);
         // If value is not valid take a valid one
         // TODO: implement client side coercion and remove this instanceof
@@ -472,7 +472,6 @@ define([
         }
         element.href = themeUrl;
       });
-      config.scheduler.startNow(update);
     }
   }
   exports.ThemeApplier = ThemeApplier;

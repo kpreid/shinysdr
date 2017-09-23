@@ -41,6 +41,7 @@ define([
   } = import_domtools;
   const {
     Notifier,
+    SubScheduler,
   } = import_events;
   const {
     mod,
@@ -138,8 +139,6 @@ define([
       throw new Error('node already a widget ' + elementHasWidgetRole.get(node));
     }
     
-    const scheduler = context.scheduler;
-    
     const templateStash = node;
     elementHasWidgetRole.set(node, 'template');
     
@@ -154,7 +153,8 @@ define([
     const id = node.id;
     const idPrefix = id === '' ? null : node.id + '.';
     
-    scheduler.startNow(function go() {
+    context.scheduler.startNow(function go() {
+      // TODO: Unbreakable notify loop on targetCellCell. We could stop it on explicit destroy, but explicit destroy doesn't happen very much!
       const targetCell = targetCellCell.depend(go);
       if (!targetCell) {
         if (node.parentNode) { // TODO: This condition shouldn't be necessary?
@@ -163,13 +163,6 @@ define([
         return;
       }
       
-      let boundedFnEnabled = true;
-      function boundedFn(f) {
-        return function boundedFnWrapper() {
-          if (boundedFnEnabled) f.apply(undefined, arguments);
-        };
-      }
-
       lifecycleDestroy(currentWidgetEl);
 
       const newSourceEl = templateStash.cloneNode(true);
@@ -181,8 +174,11 @@ define([
         newSourceEl.setAttribute('title', targetCell.metadata.naming.label);
       }
       
+      let disableScheduler;
       const config = Object.freeze({
-        scheduler: scheduler,
+        scheduler: new SubScheduler(context.scheduler, disable => {
+          disableScheduler = disable;
+        }),
         target: targetCell,
         element: newSourceEl,
         context: context, // TODO redundant values -- added for programmatic widget-creation; maybe facetize createWidget. Also should remove text-named widget table from this to make it more tightly scoped, perhaps.
@@ -196,7 +192,6 @@ define([
         storage: idPrefix ? new StorageNamespace(localStorage, 'shinysdr.widgetState.' + idPrefix) : null,
         shouldBePanel: shouldBePanel,
         rebuildMe: go,
-        boundedFn: boundedFn,
         idPrefix: idPrefix
       });
       let widget;
@@ -234,8 +229,8 @@ define([
       createWidgetsInNode(targetCell, context, widget.element);
       
       newEl.addEventListener('shinysdr:lifecycledestroy', event => {
-        boundedFnEnabled = false;
-      }, true);
+        disableScheduler();
+      }, false);
       
       // signal now that we've inserted
       // TODO: Make this less DWIM

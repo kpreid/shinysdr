@@ -233,7 +233,7 @@ define([
     
     var dataHook = function () {}, drawOuter = function () {};
     
-    const draw = config.scheduler.claim(config.boundedFn(function drawOuterTrampoline() {
+    const draw = config.scheduler.claim(function drawOuterTrampoline() {
       view.n.listen(draw);
       
       // Update canvas position and dimensions.
@@ -250,7 +250,7 @@ define([
       }
       
       drawOuter(cleared);
-    }));
+    });
     
     if (gl) (function() {
       function initContext() {
@@ -749,7 +749,7 @@ define([
       }
       config.scheduler.claim(changedSplit);
       
-      var performDraw = config.boundedFn(function performDrawImpl(clearedIn) {
+      function performDraw(clearedIn) {
         commonBeforeDraw(draw);
         
         cleared = cleared || clearedIn;
@@ -885,7 +885,7 @@ define([
 
         dataToDraw = null;
         cleared = false;
-      });
+      }
 
       var dataToDraw = null;  // TODO this is a data flow kludge
       return {
@@ -972,7 +972,7 @@ define([
       ctx.fillRect(x1, 0, x2 - x1, ctx.canvas.height);
     }
     
-    var draw = config.boundedFn(function drawImpl() {
+    function draw() {
       view.n.listen(draw);
       var visibleDevice = radioCell.depend(draw).source_name.depend(draw);
       lvf = view.leftVisibleFreq();
@@ -1078,7 +1078,7 @@ define([
           }
         }
       }
-    });
+    }
     config.scheduler.startLater(draw);  // must draw after widget inserted to get proper layout
   }
   
@@ -1245,7 +1245,7 @@ define([
     var scale_fine1 = 4;
     var scale_fine2 = 2;
     
-    const draw = config.boundedFn(function drawImpl() {
+    config.scheduler.startNow(function draw() {
       view.n.listen(draw);
       lower = view.leftFreq();
       upper = view.rightFreq();
@@ -1290,7 +1290,6 @@ define([
       });
       labelCache.flush();
     });
-    config.scheduler.startNow(draw);
   }
   
   // A collection/algorithm which allocates integer indexes to provided intervals such that no overlapping intervals have the same index.
