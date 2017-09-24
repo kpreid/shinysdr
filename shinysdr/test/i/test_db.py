@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import json
 import os
@@ -27,7 +27,6 @@ import textwrap
 
 from twisted.trial import unittest
 from twisted.internet import reactor
-from twisted.web import client
 from twisted.web import http
 from twisted.web import server
 
@@ -294,11 +293,11 @@ class TestDBWeb(unittest.TestCase):
                 print data
             self.assertEqual(response.code, http.NO_CONTENT)
             
-            def check(s):
-                j = json.loads(s)
+            def check((read_response, read_data)):
+                j = json.loads(read_data)
                 self.assertEqual(j[u'records'], modified)
             
-            return client.getPage(self.__url('/')).addCallback(check)
+            return testutil.http_get(reactor, self.__url('/')).addCallback(check)
         d.addCallback(proceed)
         return d
 
@@ -320,10 +319,10 @@ class TestDBWeb(unittest.TestCase):
             url = 'ONLYONE'.join(response.headers.getRawHeaders('Location'))
             self.assertEqual(url, self.__url('/3'))  # URL of new entry
             
-            def check(s):
-                j = json.loads(s)
+            def check((read_response, read_data)):
+                j = json.loads(read_data)
                 self.assertEqual(j[u'records'][u'3'], db.normalize_record(new_record))
             
-            return client.getPage(self.__url('/')).addCallback(check)
+            return testutil.http_get(reactor, self.__url('/')).addCallback(check)
         d.addCallback(proceed)
         return d

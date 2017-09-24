@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import json
 import StringIO
@@ -339,14 +339,14 @@ def http_get(reactor, url, accept=None):
     headers = Headers()
     if accept is not None:
         headers.addRawHeader('Accept', str(accept))
-    d = agent.request('GET', url, headers=headers)
+    d = agent.request(b'GET', str(url), headers=headers)
     return _handle_agent_response(d)
 
 
 def http_post(reactor, url, value):
     agent = client.Agent(reactor)
-    d = agent.request('POST', url,
-        headers=client.Headers({'Content-Type': ['application/json']}),
+    d = agent.request(b'POST', str(url),
+        headers=client.Headers({b'Content-Type': [b'application/json']}),
         # in principle this could be streaming if we had a pipe-thing to glue between json.dump and FileBodyProducer
         bodyProducer=client.FileBodyProducer(StringIO.StringIO(json.dumps(value))))
     return _handle_agent_response(d)
@@ -371,7 +371,7 @@ class _Accumulator(Protocol):
     # TODO eliminate this boilerplate
     def __init__(self, finished):
         self.finished = finished
-        self.data = ''
+        self.data = b''
 
     def dataReceived(self, data):
         self.data += data

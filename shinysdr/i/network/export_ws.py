@@ -17,7 +17,7 @@
 
 """Exports ExportedState/Cell object interfaces over WebSockets."""
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import json
 import struct
@@ -379,8 +379,8 @@ class OurStreamProtocol(Protocol):
             path[0:1] = []
         else:
             raise Exception('Unknown cap')  # TODO better error reporting
-        if len(path) == 1 and path[0].startswith('audio?rate='):
-            rate = int(json.loads(urllib.unquote(path[0][len('audio?rate='):])))
+        if len(path) == 1 and path[0].startswith(b'audio?rate='):
+            rate = int(json.loads(urllib.unquote(path[0][len(b'audio?rate='):])))
             self.inner = AudioStreamInner(the_reactor, self.__send, root_object, rate)
         elif len(path) >= 1 and path[0] == CAP_OBJECT_PATH_ELEMENT:
             # note _lookup_block may throw. TODO: Better error reporting

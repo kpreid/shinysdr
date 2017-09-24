@@ -17,7 +17,7 @@
 
 """Code defining the API that is actually exposed over HTTP."""
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import os
 import urllib
@@ -65,10 +65,10 @@ class IClientResourceDef(Interface):
 def _make_static_resource(pathname):
     # str() because if we happen to pass unicode as the pathname then directory listings break (discovered with Twisted 16.4.1).
     r = static.File(str(pathname),
-        defaultType='text/plain',
-        ignoredExts=['.html'])
-    r.contentTypes['.csv'] = 'text/csv'
-    r.indexNames = ['index.html']
+        defaultType=b'text/plain',
+        ignoredExts=[b'.html'])
+    r.contentTypes[b'.csv'] = b'text/csv'
+    r.indexNames = [b'index.html']
     return r
 
 
@@ -270,7 +270,7 @@ def _put_plugin_resources(client_resource):
         u'css': load_list_css,
         u'js': load_list_js,
         u'modes': mode_table,
-    }).encode('utf-8'), 'application/json'))
+    }).encode('utf-8'), b'application/json'))
 
 
 class SessionResource(SlashedResource):
@@ -302,16 +302,16 @@ class _SiteWithHeaders(server.Site):
         """overrides Site"""
         # TODO remove unsafe-inline (not that it really matters as we are not doing sloppy templating)
         # TODO: Once we know our own hostname(s), or if we start using the same port for WebSockets, tighten the connect-src policy
-        request.setHeader('Content-Security-Policy', ';'.join([
-            "default-src 'self' 'unsafe-inline'",
-            "connect-src 'self' ws://*:* wss://*:*",
-            "img-src 'self' data: blob:",
-            "object-src 'none'",
-            "base-uri 'self'",
-            "block-all-mixed-content",
+        request.setHeader(b'Content-Security-Policy', b';'.join([
+            b"default-src 'self' 'unsafe-inline'",
+            b"connect-src 'self' ws://*:* wss://*:*",
+            b"img-src 'self' data: blob:",
+            b"object-src 'none'",
+            b"base-uri 'self'",
+            b"block-all-mixed-content",
         ]))
-        request.setHeader('Referrer-Policy', 'no-referrer')
-        request.setHeader('X-Content-Type-Options', 'nosniff')
+        request.setHeader(b'Referrer-Policy', b'no-referrer')
+        request.setHeader(b'X-Content-Type-Options', b'nosniff')
         return server.Site.getResourceFor(self, request)
 
 
@@ -323,10 +323,10 @@ class WebServiceCommon(object):
     def make_websocket_url(self, request, path):
         return endpoint_string_to_url(self.__ws_endpoint_string,
             hostname=request.getRequestHostname(),
-            scheme='ws',
+            scheme=b'ws',
             path=path)
 
 
 def _make_cap_url(cap):
     assert isinstance(cap, unicode)
-    return '/' + urllib.quote(cap.encode('utf-8'), safe='') + '/'
+    return b'/' + urllib.quote(cap.encode('utf-8'), safe='') + b'/'

@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 from datetime import datetime
 
@@ -59,7 +59,7 @@ class TestAPRSParser(unittest.TestCase):
     def test_not_ascii(self):
         # TODO: Obtain an actual sample non-ASCII APRS message for testing. This one is just made up because previous code crashed without logging the problematic message.
         self.__check_parsed(
-            'FOO>BAR:>a\xB0b',
+            b'FOO>BAR:>a\xB0b',
             facts=[Status(u'a\uFFFDb')],
             errors=[],
             comment='')

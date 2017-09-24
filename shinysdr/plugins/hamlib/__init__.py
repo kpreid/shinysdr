@@ -1,4 +1,4 @@
-# Copyright 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -28,7 +28,7 @@ config.devices.add('my-other-radio',
 TODO explain how to link up with soundcard devices
 """
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import re
 import subprocess
@@ -602,7 +602,7 @@ class _HamlibClientProtocol(Protocol):
         self.__server_name = server_name
         self.__connected_deferred = connected_deferred
         self.__line_receiver = LineReceiver()
-        self.__line_receiver.delimiter = '\n'
+        self.__line_receiver.delimiter = b'\n'
         self.__line_receiver.lineReceived = self.__lineReceived
         self.__waiting_for_responses = []
         self.__receive_cmd = None
@@ -620,6 +620,7 @@ class _HamlibClientProtocol(Protocol):
         self.__line_receiver.dataReceived(data)
     
     def __lineReceived(self, line):
+        line = unicode(line, 'us-ascii')  # TODO verify best choice of encoding
         if self.__receive_cmd is None:
             match = re.match(r'^(\w+):\s*(.*)$', line)
             if match is not None:
@@ -683,7 +684,7 @@ class _HamlibClientProtocol(Protocol):
             raise ValueError('Syntactically invalid command name %r' % (cmd,))
         if not re.match(r'^[^\r\n]*$', argstr):  # no newlines
             raise ValueError('Syntactically invalid arguments string %r' % (cmd,))
-        self.transport.write('+\\' + cmd + ' ' + argstr + '\n')
+        self.transport.write(('+\\' + cmd + ' ' + argstr + '\n').encode('us-ascii'))
         d = defer.Deferred()
         self.__waiting_for_responses.append((cmd, d))
         return d

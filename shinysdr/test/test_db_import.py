@@ -1,4 +1,4 @@
-# Copyright 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2016, 2017 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -16,7 +16,7 @@
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import StringIO
 import os

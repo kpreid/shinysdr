@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -20,7 +20,7 @@
 # pylint: disable=no-member
 # (no-member: Twisted reactor)
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import argparse
 import logging

@@ -24,7 +24,7 @@ As of this writing, has only been tested with a KX3 and is known to be missing f
 Designed to be combined with a device supplying I/Q signals from the KX3's “RX I/Q” port.
 """
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 from collections import defaultdict
 import struct
@@ -213,7 +213,7 @@ class _ElecraftClientProtocol(Protocol):
     def __init__(self, reactor):
         self.__reactor = reactor
         self.__line_receiver = LineReceiver()
-        self.__line_receiver.delimiter = ';'
+        self.__line_receiver.delimiter = b';'
         self.__line_receiver.lineReceived = self.__lineReceived
         self.__communication_error = u'not_responding'
         
@@ -252,7 +252,9 @@ class _ElecraftClientProtocol(Protocol):
         
         If wait=True, return a Deferred.
         """
-        assert cmd_text == '' or cmd_text.endswith(';')
+        if isinstance(cmd_text, unicode):
+            cmd_text = cmd_text.encode('us-ascii')  # TODO: correct choice of encoding
+        assert cmd_text == b'' or cmd_text.endswith(b';')
         self.transport.write(cmd_text)
     
     def get(self, name):
@@ -268,8 +270,8 @@ class _ElecraftClientProtocol(Protocol):
     def __reinitialize(self):
         # TODO: Use ID, K3, and OM commands to confirm identity and customize
         self.transport.write(
-            'AI2;'  # Auto-Info Mode 2; notification of any change (delayed)
-            'K31;')  # enable extended response, important for FW command
+            b'AI2;'  # Auto-Info Mode 2; notification of any change (delayed)
+            b'K31;')  # enable extended response, important for FW command
         self.request_all()  # also triggers polling cycle
     
     def __schedule_timeout(self):
@@ -284,17 +286,17 @@ class _ElecraftClientProtocol(Protocol):
     
     def request_all(self):
         self.transport.write(
-            'IF;'
-            'AG;AG$;AN;AP;BN;BN$;BW;BW$;CP;CW;DV;ES;FA;FB;FI;FR;FT;GT;IS;KS;'
-            'LK;LK$;LN;MC;MD;MD$;MG;ML;NB;NB$;PA;PA$;PC;RA;RA$;RG;RG$;SB;SQ;'
-            'SQ$;VX;XF;XF$;')
+            b'IF;'
+            b'AG;AG$;AN;AP;BN;BN$;BW;BW$;CP;CW;DV;ES;FA;FB;FI;FR;FT;GT;IS;KS;'
+            b'LK;LK$;LN;MC;MD;MD$;MG;ML;NB;NB$;PA;PA$;PC;RA;RA$;RG;RG$;SB;SQ;'
+            b'SQ$;VX;XF;XF$;')
         # If we don't get a response, this fires
         self.__schedule_timeout()
     
     def __poll_doubtful(self):
         """If this method is called then we didn't get a prompt response."""
         self.__communication_error = 'not_responding'
-        self.transport.write('FA;')
+        self.transport.write(b'FA;')
         self.__schedule_timeout()
     
     def __poll_fast_reactive(self):
@@ -302,7 +304,7 @@ class _ElecraftClientProtocol(Protocol):
         # Get FA (VFO A frequency) so we respond fast.
         # Get BN (band) because if we find out we changed bands we need to update band-dependent things.
         # Get MD (mode) because on KX3, A/B button does not report changes
-        self.transport.write('FA;BN;MD;MD$;')
+        self.transport.write(b'FA;BN;MD;MD$;')
         self.__schedule_timeout()
     
     def __lineReceived(self, line):
@@ -735,5 +737,5 @@ _st = _ElecraftStateTable([
 
 _plugin_client = ClientResourceDef(
     key=__name__,
-    resource=static.File(sibpath(__file__, 'client')),
-    load_js_path='elecraft.js')
+    resource=static.File(sibpath(__file__, b'client')),
+    load_js_path=b'elecraft.js')

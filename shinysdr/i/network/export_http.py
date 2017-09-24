@@ -17,7 +17,7 @@
 
 """Exports ExportedState/Cell object interfaces over HTTP."""
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import json
 import urllib
@@ -116,11 +116,11 @@ class BlockResource(Resource):
     
     def render_GET(self, request):
         accept = request.getHeader('Accept')
-        if accept is not None and 'application/json' in accept:  # TODO: Implement or obtain correct Accept interpretation
-            request.setHeader('Content-Type', 'application/json')
+        if accept is not None and b'application/json' in accept:  # TODO: Implement or obtain correct Accept interpretation
+            request.setHeader(b'Content-Type', b'application/json')
             return serialize(self.__describe_block()).encode('utf-8')
         else:
-            request.setHeader('Content-Type', 'text/html;charset=utf-8')
+            request.setHeader(b'Content-Type', b'text/html;charset=utf-8')
             return renderElement(request, self.__element)
     
     def render_POST(self, request):
@@ -128,19 +128,19 @@ class BlockResource(Resource):
         block = self._block
         if not IWritableCollection.providedBy(block):
             raise Exception('Block is not a writable collection')
-        assert request.getHeader('Content-Type') == 'application/json'
+        assert request.getHeader(b'Content-Type') == b'application/json'
         reqjson = json.load(request.content)
         key = block.create_child(reqjson)  # note may fail
-        url = request.prePathURL() + '/receivers/' + urllib.quote(key, safe='')
+        url = request.prePathURL() + b'/receivers/' + urllib.quote(key, safe='')
         request.setResponseCode(201)  # Created
-        request.setHeader('Location', url)
+        request.setHeader(b'Location', url)
         # TODO consider a more useful response
         return serialize(url).encode('utf-8')
     
     def render_DELETE(self, request):
         self._deleteSelf()
         request.setResponseCode(204)  # No Content
-        return ''
+        return b''
     
     def __describe_block(self):
         # note: this JSON format is legacy and not actually used by anything (but occasionally useful for debugging)
@@ -206,12 +206,12 @@ class FlowgraphVizResource(Resource):
         self.__block = block
     
     def render_GET(self, request):
-        request.setHeader('Content-Type', 'image/png')
+        request.setHeader(b'Content-Type', b'image/png')
         process = self.__reactor.spawnProcess(
             _DotProcessProtocol(request),
-            '/usr/bin/env',
+            b'/usr/bin/env',
             env=None,  # inherit environment
-            args=['env', 'dot', '-Tpng'],
+            args=[b'env', b'dot', b'-Tpng'],
             childFDs={
                 0: 'w',
                 1: 'r',

@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 from twisted.trial import unittest
 
@@ -74,21 +74,21 @@ class TestOsmoSDRProfile(unittest.TestCase):
         # TODO: This test shouldn't be repeating the tune_delay values from the code.
         self.assertEqual(
             OsmoSDRProfile(),
-            profile_from_device_string(''))
+            profile_from_device_string(b''))
         # Strictly speaking, RTL devices may have DC offsets, but current production uses the R820T or similar tuners, which do not, so this is a reasonable default.
         self.assertEqual(
             OsmoSDRProfile(agc=True, dc_cancel=False, dc_offset=False, tune_delay=0.13),
-            profile_from_device_string('rtl=0'))
+            profile_from_device_string(b'rtl=0'))
         self.assertEqual(
             OsmoSDRProfile(tx=True, agc=False, dc_cancel=False, dc_offset=True, tune_delay=0.045),
-            profile_from_device_string('hackrf=0'))
+            profile_from_device_string(b'hackrf=0'))
         self.assertEqual(
             OsmoSDRProfile(agc=False, dc_cancel=False, dc_offset=False, tune_delay=0.0),
-            profile_from_device_string('file=foo.bin'))
+            profile_from_device_string(b'file=foo.bin'))
     
     def test_parser(self):
-        self.assertEqual(False, profile_from_device_string('testarg=\',hackrf\',rtl').dc_offset)
-        self.assertEqual(True, profile_from_device_string('testarg=\',rtl\',hackrf').dc_offset)
+        self.assertEqual(False, profile_from_device_string(b'testarg=\',hackrf\',rtl').dc_offset)
+        self.assertEqual(True, profile_from_device_string(b'testarg=\',rtl\',hackrf').dc_offset)
 
 
 class TestOsmoSDRRange(unittest.TestCase):

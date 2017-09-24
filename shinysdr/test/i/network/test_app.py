@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import json
 import urlparse
@@ -29,7 +29,7 @@ from gnuradio import gr
 
 from shinysdr.i.db import DatabaseModel
 from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, UNIQUE_PUBLIC_CAP
-from shinysdr.i.network.app import WebService
+from shinysdr.i.network.app import _make_cap_url, WebService
 from shinysdr.i.roots import IEntryPoint
 from shinysdr.values import ExportedState
 from shinysdr.test import testutil
@@ -89,8 +89,8 @@ class TestWebSite(unittest.TestCase):
         def callback((response, data)):
             self.assertEqual(response.code, http.OK)
             self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['text/html'])
-            self.assertIn('</html>', data)  # complete
-            self.assertIn('<title>test title</title>', data)
+            self.assertIn(b'</html>', data)  # complete
+            self.assertIn(b'<title>test title</title>', data)
             # TODO: Probably not here, add an end-to-end test for page title _default_.
         
         return testutil.http_get(reactor, self.url).addCallback(callback)
@@ -100,7 +100,7 @@ class TestWebSite(unittest.TestCase):
         def callback((response, data)):
             self.assertEqual(response.code, http.OK)
             self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['text/html;charset=utf-8'])
-            self.assertIn('</html>', data)
+            self.assertIn(b'</html>', data)
         return testutil.http_get(reactor, self.url + CAP_OBJECT_PATH_ELEMENT, accept='text/html').addCallback(callback)
     
     def test_resource_page_json(self):
@@ -120,7 +120,7 @@ class TestWebSite(unittest.TestCase):
             self.assertEqual(response.code, http.OK)
             self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['image/png'])
             # TODO ...
-        return testutil.http_get(reactor, self.url + 'flow-graph').addCallback(callback)
+        return testutil.http_get(reactor, self.url + b'flow-graph').addCallback(callback)
     
     def test_manifest(self):
         def callback((response, data)):
@@ -128,7 +128,17 @@ class TestWebSite(unittest.TestCase):
             self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/manifest+json'])
             manifest = json.loads(data)
             self.assertEqual(manifest['name'], 'test title')
-        return testutil.http_get(reactor, urlparse.urljoin(self.url, '/client/web-app-manifest.json')).addCallback(callback)
+        return testutil.http_get(reactor, urlparse.urljoin(self.url, b'/client/web-app-manifest.json')).addCallback(callback)
+    
+    def test_plugin_index(self):
+        def callback((response, data)):
+            self.assertEqual(response.code, http.OK)
+            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
+            index = json.loads(data)
+            self.assertIn('css', index)
+            self.assertIn('js', index)
+            self.assertIn('modes', index)
+        return testutil.http_get(reactor, urlparse.urljoin(self.url, b'/client/plugin-index.json')).addCallback(callback)
 
 
 class TestSiteWithoutRootCap(TestWebSite):
@@ -149,7 +159,7 @@ class TestSiteWithoutRootCap(TestWebSite):
         self.url = str(self._service.get_url())
     
     def test_expected_url(self):
-        self.assertEqual('/' + UNIQUE_PUBLIC_CAP + '/', self._service.get_host_relative_url())
+        self.assertEqual(_make_cap_url(UNIQUE_PUBLIC_CAP), self._service.get_host_relative_url())
 
 
 def assert_common(self, url):
@@ -159,22 +169,22 @@ def assert_common(self, url):
         self.assertNotEqual(response.code, http.NOT_FOUND)
         
         self.assertEqual(
-            [';'.join([
-                "default-src 'self' 'unsafe-inline'",
-                "connect-src 'self' ws://*:* wss://*:*",
-                "img-src 'self' data: blob:",
-                "object-src 'none'",
-                "base-uri 'self'",
-                "block-all-mixed-content",
+            [b';'.join([
+                b"default-src 'self' 'unsafe-inline'",
+                b"connect-src 'self' ws://*:* wss://*:*",
+                b"img-src 'self' data: blob:",
+                b"object-src 'none'",
+                b"base-uri 'self'",
+                b"block-all-mixed-content",
             ])],
-            response.headers.getRawHeaders('Content-Security-Policy'))
-        self.assertEqual(['no-referrer'], response.headers.getRawHeaders('Referrer-Policy'))
-        self.assertEqual(['nosniff'], response.headers.getRawHeaders('X-Content-Type-Options'))
+            response.headers.getRawHeaders(b'Content-Security-Policy'))
+        self.assertEqual([b'no-referrer'], response.headers.getRawHeaders(b'Referrer-Policy'))
+        self.assertEqual([b'nosniff'], response.headers.getRawHeaders(b'X-Content-Type-Options'))
         
-        content_type = response.headers.getRawHeaders('Content-Type')
-        if data.startswith('{'):
+        content_type = response.headers.getRawHeaders(b'Content-Type')
+        if data.startswith(b'{'):
             self.assertEqual(['application/json'], content_type)
-        elif data.startswith('<'):
+        elif data.startswith(b'<'):
             self.assertEqual(['text/html'], content_type)
         else:
             raise Exception('Don\'t know what content type to expect', data[0], content_type)

@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import json
 
@@ -177,7 +177,7 @@ class TestStateStream(StateStreamTestCase):
             [u'value', 1, {u's': 2}],
             [u'value', 0, 1],
         ]))
-        self.object.queue.insert_tail(gr.message().make_from_string('qu', 0, 1, len('qu')))
+        self.object.queue.insert_tail(gr.message().make_from_string(b'qu', 0, 1, len('qu')))
         self.assertEqual(self.getUpdates(), transform_for_json([
             ['actually_binary', b'\x02\x00\x00\x00q'],
             ['actually_binary', b'\x02\x00\x00\x00u'],

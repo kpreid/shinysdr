@@ -23,7 +23,7 @@ The "public" operations on these objects are used by configuration files to spec
 """
 
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import os
 import os.path
@@ -304,6 +304,8 @@ def write_default_config(new_config_path):
         audio_rx_name = ''
     
     config_text = '''\
+# -*- coding: utf-8 -*-
+
 # This is a ShinySDR configuration file. For more information about what can
 # be put here, read the manual section on it, available from the running
 # ShinySDR server at: http://localhost:8100/manual/configuration
@@ -347,7 +349,7 @@ config.serve_web(
     
     os.mkdir(new_config_path)
     with open(os.path.join(new_config_path, 'config.py'), 'w') as f:
-        f.write(config_text)
+        f.write(config_text.encode('utf-8'))
     os.mkdir(os.path.join(new_config_path, 'dbs-read-only'))
 
 

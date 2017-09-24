@@ -31,7 +31,7 @@ from twisted.python.util import sibpath
 
 # TODO: Change this constant to something more generic, but save that for when we're changing the URL layout for other reasons anyway.
 CAP_OBJECT_PATH_ELEMENT = b'radio'
-UNIQUE_PUBLIC_CAP = 'public'
+UNIQUE_PUBLIC_CAP = u'public'
 
 
 static_resource_path = sibpath(__file__, '../webstatic')

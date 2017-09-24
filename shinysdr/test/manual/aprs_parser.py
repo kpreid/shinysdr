@@ -21,7 +21,7 @@
 Test for APRS parser. Accepts lines and prints the parsed form.
 """
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import string
 import sys
