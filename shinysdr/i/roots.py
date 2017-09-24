@@ -89,10 +89,10 @@ __all__.append('CapTable')
 
 
 class IEntryPoint(Interface):
-    def get_type(self):
+    def get_type():
         """Returns type for persistence... TODO explain or replace this."""
     
-    def entry_point_is_deleted(self):
+    def entry_point_is_deleted():
         """Returns whether this entry point's existence is to be hidden and, when CapTable.garbage_collect is called, removed."""
 
 
