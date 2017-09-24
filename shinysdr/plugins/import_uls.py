@@ -24,7 +24,7 @@ Reference material:
 '''
 
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 from collections import defaultdict
 
@@ -48,7 +48,7 @@ class ULSImporter(object):
     
     def __put(self, line, line_number, warning_callback):
         line = line.strip()
-        fields = line.split('|')
+        fields = line.split(b'|')
         # TODO: Instead of working line-by-line, expect a certain number of columns and ignore newlines in the wrong place
         
         if len(fields) < 2:

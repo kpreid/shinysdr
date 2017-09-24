@@ -22,7 +22,7 @@ To obtain the input data, and for documentation on the format, see:
 http://www.hfcc.org/data/guidepost.phtml
 '''
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 from collections import namedtuple
 import os.path

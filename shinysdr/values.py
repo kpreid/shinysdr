@@ -20,7 +20,7 @@
 # pylint: disable=redefined-builtin
 # (we have keyword args named 'type')
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import array
 from collections import namedtuple
@@ -110,7 +110,8 @@ class TargetingMixin(object):
         return hash(self._target) ^ hash(self._key)
     
     def __repr__(self):
-        return '<{type} {self._target!r}.{self._key}>'.format(type=type(self).__name__, self=self)
+        # bogus warning <https://github.com/PyCQA/pylint/issues/1676> pylint disable=redundant-keyword-arg
+        return b'<{type} {self._target!r}.{self._key}>'.format(type=type(self).__name__, self=self)
     
     def key(self):  # TODO remove this
         return self._key

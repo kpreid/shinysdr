@@ -21,7 +21,7 @@ This module contains utilities building on the Twisted framework
 had to write ourselves.
 """
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import subprocess
 

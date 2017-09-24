@@ -21,7 +21,7 @@ Type definitions for ShinySDR value cells etc.
 See docs for ValueType in this module for more information.
 """
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import bisect
 import math

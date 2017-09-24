@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import json
 import time
@@ -89,11 +89,11 @@ class RTL433Demodulator(gr.hier_block2, ExportedState):
             '/usr/bin/env',
             env=None,  # inherit environment
             args=[
-                'env', 'rtl_433',
-                '-F', 'json',
-                '-r', '-',  # read from stdin
-                '-m', '3',  # complex float input
-                '-s', str(demod_rate),
+                b'env', b'rtl_433',
+                b'-F', b'json',
+                b'-r', b'-',  # read from stdin
+                b'-m', b'3',  # complex float input
+                b'-s', str(demod_rate),
             ],
             childFDs={
                 0: 'w',

@@ -19,7 +19,7 @@
 # (maybe-no-member: GR swig)
 # (no-member: Twisted reactor)
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import os.path
 import time
@@ -64,7 +64,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
     def __init__(self, mode='MODE-S', input_rate=0, context=None):
         assert input_rate > 0
         gr.hier_block2.__init__(
-            self, 'Mode S/ADS-B/1090 demodulator',
+            self, type(self).__name__,
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
             gr.io_signature(0, 0, 0))
         

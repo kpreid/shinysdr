@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import cgi
 import contextlib
@@ -182,7 +182,7 @@ class _DbIndexResource(resource.Resource):
         self.__instantiate = instantiate
     
     def render_GET(self, request):
-        request.setHeader('Content-Type', 'application/json')
+        request.setHeader(b'Content-Type', b'application/json')
         return json.dumps({
             u'records': self.__database.records,
             u'writable': self.__database.writable
@@ -192,8 +192,8 @@ class _DbIndexResource(resource.Resource):
         desc = json.load(request.content)
         if not self.__database.writable:
             request.setResponseCode(http.FORBIDDEN)
-            request.setHeader('Content-Type', 'text/plain')
-            return 'This database is not writable.'
+            request.setHeader(b'Content-Type', b'text/plain')
+            return b'This database is not writable.'
         record = normalize_record(desc['new'])
 
         dbdict = self.__database.records
@@ -205,8 +205,8 @@ class _DbIndexResource(resource.Resource):
         self.__instantiate(rkey)
         url = request.prePathURL() + str(rkey)
         request.setResponseCode(http.CREATED)
-        request.setHeader('Content-Type', 'text/plain')
-        request.setHeader('Location', url)
+        request.setHeader(b'Content-Type', b'text/plain')
+        request.setHeader(b'Location', url)
         return url
 
 
@@ -219,14 +219,14 @@ class _RecordResource(resource.Resource):
         self.__record = record
     
     def render_GET(self, request):
-        request.setHeader('Content-Type', 'application/json')
+        request.setHeader(b'Content-Type', b'application/json')
         return json.dumps(self.__record)
     
     def render_POST(self, request):
-        assert request.getHeader('Content-Type') == 'application/json'
+        assert request.getHeader(b'Content-Type') == b'application/json'
         if not self.__database.writable:
             request.setResponseCode(http.FORBIDDEN)
-            request.setHeader('Content-Type', 'text/plain')
+            request.setHeader(b'Content-Type', b'text/plain')
             return 'The database containing this record is not writable.'
         patch = json.load(request.content)
         old = normalize_record(patch['old'])
@@ -236,11 +236,11 @@ class _RecordResource(resource.Resource):
             self.__record.update(new)
             self.__database.dirty()
             request.setResponseCode(http.NO_CONTENT)
-            return ''
+            return b''
         else:
             request.setResponseCode(http.CONFLICT)
-            request.setHeader('Content-Type', 'text/plain')
-            return 'Old values did not match: %r vs %r' % (old, self.__record)
+            request.setHeader(b'Content-Type', b'text/plain')
+            return b'Old values did not match: %r vs %r' % (old, self.__record)
 
 
 def _parse_csv_file(csvfile):

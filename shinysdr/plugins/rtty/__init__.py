@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import math
 
@@ -83,7 +83,7 @@ class RTTYDemodulator(gr.hier_block2, ExportedState):
         assert input_rate > 0
         self.__input_rate = input_rate
         gr.hier_block2.__init__(
-            self, 'RTTY demodulator',
+            self, type(self).__name__,
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
             gr.io_signature(1, 1, gr.sizeof_float * 1))
         

@@ -28,7 +28,7 @@ misparsed. No success yet in figuring out where the discrepancy is.
 Patches welcome.
 """
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import array
 import struct
@@ -84,11 +84,11 @@ class _DspserverProtocol(protocol.Protocol):
     def __init__(self, top):
         self._top = top
         self._req_width = None
-        self.__msgbuf = ''
+        self.__msgbuf = b''
         self._poller = task.LoopingCall(self.__poll)
         self.__splitter = top.monitor.state()['fft'].subscribe_to_stream()
         self.__audio_queue = gr.msg_queue(limit=100)
-        self.__audio_buffer = ''
+        self.__audio_buffer = b''
         self._top.add_audio_queue(self.__audio_queue, 8000)
 
     def dataReceived(self, data):
@@ -109,11 +109,11 @@ class _DspserverProtocol(protocol.Protocol):
         return receiver
     
     def __messageReceived(self, data):
-        null = data.find('\0')
+        null = data.find(b'\0')
         if null > -1:
             data = data[:null]
-        print 'Message received: ' + data
-        sep = data.find(' ')
+        print b'Message received: ' + data
+        sep = data.find(b' ')
         if sep > -1:
             cmd = data[0:sep]
             argstr = data[sep + 1:]

@@ -17,7 +17,7 @@
 
 """Mathematical algorithms."""
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 from math import log10, pi
 import time

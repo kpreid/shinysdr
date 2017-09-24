@@ -22,7 +22,7 @@ had to write ourselves -- which do not fit into better categories
 within the ShinySDR package.
 """
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 __all__ = []  # appended later
 

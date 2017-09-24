@@ -17,7 +17,7 @@
 
 """Adapters to use ShinySDR components in GNU Radio Companion."""
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 from zope.interface import implementer
 
@@ -81,7 +81,7 @@ class DemodulatorAdapter(gr.hier_block2):
                     self.connect(demod, (self, 1))
             else:
                 if not quiet:
-                    gr.log.info('{}: Native {} demodulated rate is {}; resampling to {}'.format(
+                    gr.log.info(b'{}: Native {} demodulated rate is {}; resampling to {}'.format(
                         type(self).__name__, mode, demod_output_rate, output_rate))
                 if stereo:
                     self.connect((splitter, 0), make_resampler(demod_output_rate, output_rate), (self, 0))
@@ -165,7 +165,7 @@ class ModulatorAdapter(gr.hier_block2):
         if from_rate == to_rate:
             self.connect(from_endpoint, to_endpoint)
         else:
-            gr.log.info('{}: Resampling {} to {}'.format(
+            gr.log.info(b'{}: Resampling {} to {}'.format(
                 type(self).__name__, from_rate, to_rate))
             resampler = make_resampler(from_rate, to_rate, complex=complex)
             self.connect(from_endpoint, resampler, to_endpoint)

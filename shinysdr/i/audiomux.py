@@ -19,7 +19,7 @@
 GR blocks and such supporting receiver audio delivery.
 """
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 from twisted.python import log
 

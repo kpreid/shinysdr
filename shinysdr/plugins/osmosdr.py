@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 from zope.interface import implementer  # available via Twisted
 
@@ -220,7 +220,7 @@ def OsmoSDRDevice(
     if profile is None:
         profile = profile_from_device_string(osmo_device)
     
-    source = osmosdr.source('numchan=1 ' + osmo_device)
+    source = osmosdr.source(b'numchan=1 ' + osmo_device)
     if source.get_num_channels() < 1:
         # osmosdr.source doesn't throw an exception, allegedly because gnuradio can't handle it in a hier_block2 initializer. But we want to fail understandably, so recover by detecting it (sample rate = 0, which is otherwise nonsense)
         raise LookupError('OsmoSDR device not found (device string = %r)' % osmo_device)
@@ -283,7 +283,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
             name,
             tuning):
         gr.hier_block2.__init__(
-            self, 'RX ' + name,
+            self, b'RX ' + str(name),
             gr.io_signature(0, 0, 0),
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
         )
@@ -466,7 +466,7 @@ class _OsmoSDRTXDriver(ExportedState, gr.hier_block2):
             tuning,
             sample_rate):
         gr.hier_block2.__init__(
-            self, 'TX ' + name,
+            self, b'TX ' + str(name),
             gr.io_signature(1, 1, gr.sizeof_gr_complex),
             gr.io_signature(0, 0, 0))
         

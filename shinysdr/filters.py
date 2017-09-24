@@ -19,7 +19,7 @@
 GNU Radio blocks which automatically compute appropriate filter designs.
 """
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 from fractions import gcd
 from math import pi, sin, cos
@@ -326,7 +326,7 @@ class MultistageChannelFilter(gr.hier_block2):
     The multistage aspect improves CPU efficiency and also enables high decimations/sharp filters that would otherwise run into buffer length limits. Or at least, those were the problems I was seeing which I wrote this to fix.
     """
     def __init__(self,
-            name='Multistage Channel Filter',
+            name=b'MultistageChannelFilter',
             input_rate=0,
             output_rate=0,
             cutoff_freq=0,
@@ -349,7 +349,7 @@ class MultistageChannelFilter(gr.hier_block2):
         self.__plan = plan
         
         gr.hier_block2.__init__(
-            self, name,
+            self, str(name),
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
         )

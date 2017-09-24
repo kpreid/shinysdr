@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import time
 
@@ -68,8 +68,7 @@ class Receiver(gr.hier_block2, ExportedState):
         assert audio_destination is not None
         assert device_name is not None
         gr.hier_block2.__init__(
-            # str() because insists on non-unicode
-            self, str('%s receiver' % (mode,)),
+            self, type(self).__name__,
             gr.io_signature(1, 1, gr.sizeof_gr_complex),
             gr.io_signature(1, 1, gr.sizeof_float * audio_channels))
         

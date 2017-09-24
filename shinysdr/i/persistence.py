@@ -17,7 +17,7 @@
 
 """Tools for persisting ExportedState state to disk."""
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import json
 import os.path
@@ -64,7 +64,7 @@ class PersistenceFileGlue(object):
             root_object.state_from_json(state_json)
             # make a backup in case this code version misreads the state and loses things on save (but only if the load succeeded, in case the file but not its backup is bad)
             # TODO: should automatically use backup if main file is missing or broken
-            shutil.copyfile(filename, filename + '~')
+            shutil.copyfile(filename, filename + b'~')
         else:
             apply_defaults()
         

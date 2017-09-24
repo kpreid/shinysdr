@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import math
 import time
@@ -70,7 +70,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         if len(devices) <= 0:
             raise ValueError('Must have at least one RF device')
         
-        gr.top_block.__init__(self, "SDR top block")
+        gr.top_block.__init__(self, type(self).__name__)
         self.__running = False  # duplicate of GR state we can't reach, see __start_or_stop
         self.__has_a_useful_receiver = False
 

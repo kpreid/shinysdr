@@ -17,7 +17,7 @@
 
 # TODO: fully clean up this GRC-generated file
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import math
 import os.path
@@ -160,7 +160,7 @@ class VORModulator(gr.hier_block2, ExportedState):
 
     def __init__(self, context, mode, angle=0.0):
         gr.hier_block2.__init__(
-            self, 'SimulatedDevice VOR modulator',
+            self, type(self).__name__,
             gr.io_signature(1, 1, gr.sizeof_float * 1),
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
         )

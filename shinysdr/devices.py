@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 from collections import Counter
 
@@ -362,7 +362,7 @@ __all__.append('FrequencyShift')
 
 
 def AudioDevice(
-        rx_device='',  # may be used positionally, not recommented
+        rx_device=b'',  # may be used positionally, not recommented
         tx_device=None,
         name=None,
         sample_rate=44100,
@@ -379,9 +379,9 @@ def AudioDevice(
     channel_mapping = _coerce_channel_mapping(channel_mapping)
     
     if name is None:
-        full_name = u'Audio ' + rx_device
+        full_name = u'Audio ' + unicode(rx_device)
         if tx_device is not None:
-            full_name += '/' + tx_device
+            full_name += '/' + unicode(tx_device)
     else:
         full_name = unicode(name)
 
@@ -446,8 +446,8 @@ def _coerce_channel_mapping(channel_mapping):
 def find_audio_rx_names(_module=gr_audio):
     # TODO: request that gnuradio support device enumeration
     try:
-        AudioDevice(rx_device='', _module=_module)
-        return ['']
+        AudioDevice(rx_device=b'', _module=_module)
+        return [b'']
     except RuntimeError:  # thrown by gnuradio
         return []
 

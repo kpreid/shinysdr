@@ -22,7 +22,7 @@ It connects to something (such as a serial port) and sends arbitrary strings def
 """
 # TODO: Write user documentation for this device. Maybe think about making it easier to configure first.
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import functools
 
@@ -148,7 +148,7 @@ class _ControllerProxy(ExportedState):
 class _ControllerProtocol(Protocol):
     def __init__(self):
         self.__line_receiver = LineReceiver()
-        self.__line_receiver.delimiter = ';'
+        self.__line_receiver.delimiter = b';'
         self.__line_receiver.lineReceived = self.__lineReceived
     
     def connectionMade(self):

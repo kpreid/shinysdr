@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import math
 
@@ -87,7 +87,7 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
 
     def __init__(self, name, add_transmitters):
         gr.hier_block2.__init__(
-            self, name,
+            self, type(self).__name__ + b' ' + str(name),
             gr.io_signature(0, 0, 0),
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
         )
@@ -212,7 +212,7 @@ class _SimulatedTransmitter(gr.hier_block2, ExportedState):
         modulator = IModulator(modulator)
         
         gr.hier_block2.__init__(
-            self, 'SimulatedChannel',
+            self, type(self).__name__,
             gr.io_signature(1, 1, gr.sizeof_float * 1),
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
         )

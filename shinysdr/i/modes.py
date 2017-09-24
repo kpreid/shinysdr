@@ -17,7 +17,7 @@
 
 # TODO write module documentation, or revisit whether this module needs to exist
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 from twisted.plugin import getPlugins
 from zope.interface import Interface

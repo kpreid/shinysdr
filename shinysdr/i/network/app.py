@@ -146,9 +146,9 @@ class WebService(Service):
     # TODO: Too many parameters
     def __init__(self, reactor, cap_table, read_only_dbs, writable_db, http_endpoint, ws_endpoint, root_cap, title, flowgraph_for_debug):
         # Constants
-        self.__http_endpoint_string = http_endpoint
-        self.__http_endpoint = endpoints.serverFromString(reactor, http_endpoint)
-        self.__ws_endpoint = endpoints.serverFromString(reactor, ws_endpoint)
+        self.__http_endpoint_string = str(http_endpoint)
+        self.__http_endpoint = endpoints.serverFromString(reactor, self.__http_endpoint_string)
+        self.__ws_endpoint = endpoints.serverFromString(reactor, str(ws_endpoint))
         self.__visit_path = _make_cap_url(root_cap)
         
         wcommon = WebServiceCommon(ws_endpoint_string=ws_endpoint)

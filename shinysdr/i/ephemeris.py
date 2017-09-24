@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import json
 import math
@@ -53,7 +53,7 @@ class EphemerisResource(Resource):
         y = math.cos(sun.az) * math.cos(sun.alt)
         z = -math.sin(sun.alt)
         
-        request.setHeader('Content-Type', 'application/json')
+        request.setHeader(b'Content-Type', b'application/json')
         return json.dumps([x, y, z])
 
 

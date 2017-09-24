@@ -18,7 +18,7 @@
 # pylint: disable=no-member
 # (no-member: Twisted reactor)
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, unicode_literals
 
 import time
 import warnings
@@ -54,7 +54,7 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
     
     def __init__(self, protocol, context, multimon_demod_args):
         gr.hier_block2.__init__(
-            self, '%s(%r, %r)' % (type(self).__name__, multimon_demod_args, protocol),
+            self, b'%s(%r, %r)' % (type(self).__name__, multimon_demod_args, protocol),
             gr.io_signature(1, 1, gr.sizeof_float * 1),
             gr.io_signature(1, 1, gr.sizeof_float * 1),
         )
