@@ -4,11 +4,6 @@ language: python
 python:
   - "2.7"
 
-# Temporary workaround recommended by support@travis-ci.com for issue with
-# system_site_packages support in June 21 Trusty image.
-sudo: required
-group: deprecated-2017Q2
-
 addons:
   apt:
     sources:
