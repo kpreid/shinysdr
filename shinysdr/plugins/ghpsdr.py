@@ -163,7 +163,8 @@ class _DspserverProtocol(protocol.Protocol):
             abuf = self.__audio_buffer[:size_in_bytes]
             self.__audio_buffer = self.__audio_buffer[size_in_bytes:]
             print 'Sending audio', len(abuf)  # TODO: Remove debugging
-            unpacker = array.array('f')
+            # b'' is for Python 2.7.6 compatibility (array.array module requires a str rather than unicode string)
+            unpacker = array.array(b'f')
             unpacker.fromstring(abuf)
             nsamples = len(unpacker)
             msg = struct.pack('BBBH' + str(nsamples) + 'B',

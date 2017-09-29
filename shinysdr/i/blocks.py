@@ -125,7 +125,8 @@ class MessageDistributorSink(gr.hier_block2):
 
     def get(self):
         # probe_signal gives us vector of 0..255 whereas queue messages give str. Reformat to be consistent with messages.
-        return array.array('B', self.__peek.level()).tostring()
+        # b'' is for Python 2.7.6 compatibility (array.array requires a str rather than unicode string)
+        return array.array(b'B', self.__peek.level()).tostring()
     
     def get_subscription_count(self):
         return len(self.__subscriptions)

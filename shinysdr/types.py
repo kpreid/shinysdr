@@ -464,7 +464,8 @@ class BulkDataT(ValueType):
     def __init__(self, info_format, array_format):
         # TODO: Document the format parameters
         self.__info_format = info_format
-        self.__array_format = array_format
+        # str() is for Python 2.7.6 compatibility (array.array requires a str rather than unicode string)
+        self.__array_format = str(array_format)
     
     def to_json(self):
         return {
