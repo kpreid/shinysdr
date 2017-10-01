@@ -22,9 +22,7 @@ from __future__ import absolute_import, division, unicode_literals
 import urllib
 
 from twisted.web import http
-from twisted.web import template
 from twisted.web.resource import Resource
-from twisted.web.server import NOT_DONE_YET
 from twisted.internet import endpoints
 from twisted.python.filepath import FilePath
 from twisted.python.util import sibpath
@@ -66,23 +64,6 @@ def endpoint_string_to_url(desc, scheme='http', hostname='localhost', path='/', 
     else:
         # TODO better error return
         return '???'
-
-
-def renderElement(request, element):
-    # per http://stackoverflow.com/questions/8160061/twisted-web-resource-resource-with-twisted-web-template-element-example
-    # should be replaced with twisted.web.template.renderElement once we have Twisted >= 12.1.0 available in MacPorts.
-    
-    # TODO: Instead of this kludge (here because it would be a syntax error in the XHTML template}, serve XHTML and fix the client-side issues that pop up due to element-name capitalization.
-    request.write(b'<!doctype html>')
-    
-    d = template.flatten(request, element, request.write)
-    
-    def done(ignored):
-        request.finish()
-        return ignored
-    
-    d.addBoth(done)
-    return NOT_DONE_YET
 
 
 def prepath_escaped(request):

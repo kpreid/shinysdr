@@ -29,7 +29,7 @@ from twisted.web.server import NOT_DONE_YET
 from twisted.web import template
 
 from shinysdr.i.json import serialize
-from shinysdr.i.network.base import prepath_escaped, renderElement, template_filepath
+from shinysdr.i.network.base import prepath_escaped, template_filepath
 from shinysdr.values import IWritableCollection
 
 
@@ -121,7 +121,7 @@ class BlockResource(Resource):
             return serialize(self.__describe_block()).encode('utf-8')
         else:
             request.setHeader(b'Content-Type', b'text/html;charset=utf-8')
-            return renderElement(request, self.__element)
+            return template.renderElement(request, self.__element)
     
     def render_POST(self, request):
         """currently only meaningful to create children of CollectionResources"""

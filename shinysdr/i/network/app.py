@@ -39,7 +39,7 @@ import shinysdr.i.db
 from shinysdr.i.ephemeris import EphemerisResource
 from shinysdr.i.json import serialize
 from shinysdr.i.modes import get_modes
-from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, SlashedResource, UNIQUE_PUBLIC_CAP, deps_path, prepath_escaped, renderElement, static_resource_path, endpoint_string_to_url, template_filepath
+from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, SlashedResource, UNIQUE_PUBLIC_CAP, deps_path, prepath_escaped, static_resource_path, endpoint_string_to_url, template_filepath
 from shinysdr.i.network.export_http import BlockResource, CapAccessResource, FlowgraphVizResource
 from shinysdr.i.network.export_ws import OurStreamProtocol
 from shinysdr.i.poller import the_poller
@@ -93,7 +93,7 @@ class _RadioIndexHtmlResource(Resource):
         self.__element = _RadioIndexHtmlElement(wcommon, title)
 
     def render_GET(self, request):
-        return renderElement(request, self.__element)
+        return template.renderElement(request, self.__element)
 
 
 class WebAppManifestResource(Resource):
