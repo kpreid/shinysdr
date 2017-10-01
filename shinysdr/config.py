@@ -124,7 +124,6 @@ class Config(object):
             return WebService(
                 reactor=self.reactor,
                 cap_table=cap_table.as_unenumerable_collection(),
-                flowgraph_for_debug=app.get_receive_flowgraph(),  # TODO: Once we have the diagnostics or admin page however that turns out to work, this goes away
                 read_only_dbs=self.databases._get_read_only_databases(),
                 writable_db=self.databases._get_writable_database(),
                 http_endpoint=http_endpoint,

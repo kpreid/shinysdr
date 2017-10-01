@@ -28,9 +28,9 @@ from zope.interface import implementer
 from gnuradio import gr
 
 from shinysdr.i.db import DatabaseModel
-from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, UNIQUE_PUBLIC_CAP
+from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, IWebEntryPoint, UNIQUE_PUBLIC_CAP
 from shinysdr.i.network.app import _make_cap_url, WebService
-from shinysdr.i.roots import IEntryPoint
+from shinysdr.i.network.session_http import SessionResource
 from shinysdr.values import ExportedState
 from shinysdr.test import testutil
 
@@ -48,7 +48,6 @@ class TestWebSite(unittest.TestCase):
             read_only_dbs={},
             writable_db=DatabaseModel(reactor, {}),
             cap_table={u'ROOT': SiteStateStub()},
-            flowgraph_for_debug=gr.top_block(),
             title='test title')
         self._service.startService()
         self.url = str(self._service.get_url())
@@ -153,7 +152,6 @@ class TestSiteWithoutRootCap(TestWebSite):
             read_only_dbs={},
             writable_db=DatabaseModel(reactor, {}),
             cap_table={UNIQUE_PUBLIC_CAP: SiteStateStub()},
-            flowgraph_for_debug=gr.top_block(),
             title='test title')
         self._service.startService()
         self.url = str(self._service.get_url())
@@ -192,6 +190,11 @@ def assert_common(self, url):
     return testutil.http_get(reactor, self.url).addCallback(callback)
 
 
-@implementer(IEntryPoint)
+@implementer(IWebEntryPoint)
 class SiteStateStub(ExportedState):
-    pass
+    def get_entry_point_resource(self, **kwargs):
+        return SessionResource(self, **kwargs)
+    
+    def flowgraph_for_debug(self):
+        # called by SessionResource
+        return gr.top_block()

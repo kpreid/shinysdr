@@ -19,9 +19,11 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+import importlib
+
 from zope.interface import implementer
 
-from shinysdr.i.roots import IEntryPoint
+from shinysdr.i.network.base import IWebEntryPoint
 from shinysdr.i.top import Top
 from shinysdr.types import ReferenceT
 from shinysdr.values import ExportedState, exported_value
@@ -58,7 +60,7 @@ class AppRoot(ExportedState):
         self.__receive_flowgraph.close_all_devices()
 
 
-@implementer(IEntryPoint)
+@implementer(IWebEntryPoint)
 class Session(ExportedState):
     def __init__(self, receive_flowgraph, features):
         self.__receive_flowgraph = receive_flowgraph
@@ -88,6 +90,14 @@ class Session(ExportedState):
         """implements IEntryPoint"""
         # TODO stub for multisession refactoring
         return False
+    
+    def get_entry_point_resource(self, **kwargs):
+        # TODO: Don't just forward args
+        return importlib.import_module('shinysdr.i.session_http').SessionResource(session=self, **kwargs)
+    
+    def flowgraph_for_debug(self):
+        # TODO: Refactor so this is exported/accessed/faceted in some more sensible way.
+        return self.__receive_flowgraph
     
     def add_audio_queue(self, queue, queue_rate):
         return self.__receive_flowgraph.add_audio_queue(queue, queue_rate)

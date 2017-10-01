@@ -24,7 +24,7 @@ import urllib
 import weakref
 
 from twisted.internet.protocol import ProcessProtocol
-from twisted.web.resource import Resource
+from twisted.web.resource import IResource, Resource
 from twisted.web.server import NOT_DONE_YET
 from twisted.web import template
 
@@ -180,17 +180,17 @@ class _BlockHtmlElement(template.Element):
 
 
 class CapAccessResource(Resource):
-    def __init__(self, cap_table, resource_ctor):
+    def __init__(self, cap_table, resource_factory):
         Resource.__init__(self)
         self.__cap_table = cap_table
-        self.__resource_ctor = resource_ctor
+        self.__resource_factory = resource_factory
     
     def getChild(self, path, request):
         """override Resource"""
         # TODO: Either add a cache here or throw out the cache in BlockResource which this is defeating, depending on a performance comparison
         path = path.decode('utf-8')  # TODO centralize this 'urls are utf-8'
         if path in self.__cap_table:
-            return self.__resource_ctor(self.__cap_table[path])
+            return IResource(self.__resource_factory(self.__cap_table[path]))
         else:
             # old-style-class super call
             return Resource.getChild(self, path, request)
