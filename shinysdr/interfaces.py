@@ -30,10 +30,9 @@ from __future__ import absolute_import, division, unicode_literals
 from collections import namedtuple
 
 from twisted.plugin import IPlugin
-from zope.interface import Interface, implementer
+from zope.interface import Attribute, Interface, implementer
 
 from shinysdr.i.modes import IModeDef
-from shinysdr.i.network.app import IClientResourceDef
 from shinysdr.types import EnumRow
 
 __all__ = []  # appended later
@@ -267,9 +266,33 @@ class ModeDef(object):
 __all__.append('ModeDef')
 
 
-@implementer(IPlugin, IClientResourceDef)
+class _IClientResourceDef(Interface):
+    """
+    Client plugin interface object. 
+
+    This interface is needed to make the plugin system work and is not intended to be reimplemented; just use ClientResourceDef.
+    """
+    
+    key = Attribute("""A unique string, prefixed by the plugin's package name.""")
+    resource = Attribute(
+        """A twisted.web.resource.Resource to be added to the web server.
+    
+        Must not provide any authority (e.g. just static CSS/JS files are OK).
+        """)
+    load_css_path = Attribute("""Optional path relative to within `resource` to load as CSS.""")
+    load_js_path = Attribute("""Optional path relative to within `resource` to load as JavaScript.""")
+
+
+@implementer(IPlugin, _IClientResourceDef)
 class ClientResourceDef(object):
     def __init__(self, key, resource, load_css_path=None, load_js_path=None):
+        """
+        key: A unique string, prefixed by the plugin's package name.
+        resource: A twisted.web.resource.Resource to be added to the web server.
+            Must not provide any authority (e.g. just static CSS/JS files are OK).
+        load_css_path: Optional path relative to within `resource` to load as CSS.
+        load_js_path: Optional path relative to within `resource` to load as JavaScript.
+        """
         self.key = key
         self.resource = resource
         self.load_css_path = load_css_path

@@ -32,7 +32,6 @@ from twisted.web import server
 from twisted.web import template
 from twisted.web.resource import Resource
 from twisted.web.util import Redirect
-from zope.interface import Interface
 
 import txws
 
@@ -44,6 +43,7 @@ from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, SlashedResource, UN
 from shinysdr.i.network.export_http import BlockResource, CapAccessResource, FlowgraphVizResource
 from shinysdr.i.network.export_ws import OurStreamProtocol
 from shinysdr.i.poller import the_poller
+from shinysdr.interfaces import _IClientResourceDef
 from shinysdr.twisted_ext import FactoryWithArgs
 from shinysdr.values import SubscriptionContext
 
@@ -52,14 +52,6 @@ def not_deletable():
     # TODO audit uses of this function
     # TODO plumb up a user-friendly (proper HTTP code) error
     raise Exception('Attempt to delete session root')
-
-
-class IClientResourceDef(Interface):
-    """
-    Client plugin interface object
-    """
-    # Only needed to make the plugin system work
-    # TODO write interface methods anyway
 
 
 def _make_static_resource(pathname):
@@ -249,7 +241,7 @@ def _put_plugin_resources(client_resource):
     mode_table = {}
     plugin_resources = Resource()
     client_resource.putChild('plugins', plugin_resources)
-    for resource_def in getPlugins(IClientResourceDef, shinysdr.plugins):
+    for resource_def in getPlugins(_IClientResourceDef, shinysdr.plugins):
         # Add the plugin's resource to static serving
         plugin_resources.putChild(resource_def.key, resource_def.resource)
         plugin_resource_url = '/client/plugins/' + urllib.quote(resource_def.key, safe='') + '/'
