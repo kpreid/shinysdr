@@ -220,7 +220,31 @@ class TestDirectory(unittest.TestCase):
         self.assertIn('Error opening database directory', str(diagnostics[0][1]))
 
 
-class TestDBWeb(unittest.TestCase):
+class TestDatabasesResource(unittest.TestCase):
+    def setUp(self):
+        db_model = db.DatabaseModel(reactor, {}, writable=True)
+        dbs_resource = db.DatabasesResource({'foo&bar': db_model})
+        self.port = reactor.listenTCP(0, server.Site(dbs_resource), interface="127.0.0.1")
+    
+    def tearDown(self):
+        return self.port.stopListening()
+    
+    def __url(self, path):
+        return 'http://127.0.0.1:%i%s' % (self.port.getHost().port, path)
+    
+    def test_index_response(self):
+        def callback((response, data)):
+            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['text/html'])
+            self.assertEqual(data, textwrap.dedent('''\
+                <html><title>Databases</title><ul>
+                <li><a href="foo%26bar/">foo&amp;bar</a>
+                </ul>
+            '''))
+        return testutil.http_get(reactor, self.__url('/')).addCallback(callback)
+
+
+
+class TestDatabaseResource(unittest.TestCase):
     test_records = {
         1: db.normalize_record({
             u'type': u'channel',

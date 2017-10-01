@@ -152,11 +152,11 @@ class _DbsIndexResource(resource.Resource):
     
     def render_GET(self, request):
         request.setHeader('Content-Type', 'text/html')
-        request.write('<html><title>Databases</title><ul>')
+        request.write(b'<html><title>Databases</title><ul>\n')
         for name in self.dbs_resource.names:
-            request.write('<li><a href="%s/">%s</a>' % (cgi.escape(urllib.quote(name, '')), name))
-        request.write('</ul>')
-        return ''
+            request.write(b'<li><a href="%s/">%s</a>\n' % (str(cgi.escape(urllib.quote(name, ''))), str(cgi.escape(name))))
+        request.write(b'</ul>\n')
+        return b''
 
 
 class DatabaseResource(resource.Resource):
