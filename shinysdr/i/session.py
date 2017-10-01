@@ -95,15 +95,13 @@ class Session(ExportedState):
         # TODO stub for multisession refactoring
         return False
     
-    def get_entry_point_resource(self, reactor, wcommon, title):
+    def get_entry_point_resource(self, wcommon):
         # TODO: Don't just forward args
         return importlib.import_module('shinysdr.i.network.session_http').SessionResource(
             session=self,
             read_only_dbs=self.__read_only_dbs,
             writable_db=self.__writable_db,
-            reactor=reactor,
-            wcommon=wcommon,
-            title=title)
+            wcommon=wcommon)
     
     def flowgraph_for_debug(self):
         # TODO: Quick refactoring; make this interface more sensible/faceted. Used by SessionResource

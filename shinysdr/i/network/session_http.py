@@ -1,4 +1,4 @@
-# Copyright 2017 Kevin Reid <kpreid@switchb.org>
+# Copyright 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -33,12 +33,12 @@ from shinysdr.i.network.export_http import BlockResource, FlowgraphVizResource
 
 
 class SessionResource(SlashedResource):
-    # TODO Too many parameters; some of this stuff shouldn't be per-session in the same way
-    def __init__(self, session, wcommon, reactor, title, read_only_dbs, writable_db):
+    # TODO ask the session for the dbs
+    def __init__(self, session, wcommon, read_only_dbs, writable_db):
         SlashedResource.__init__(self)
         
         # UI entry point
-        self.putChild('', _RadioIndexHtmlResource(wcommon=wcommon, title=title))
+        self.putChild('', _RadioIndexHtmlResource(wcommon=wcommon))
         
         # Exported radio control objects
         self.putChild(CAP_OBJECT_PATH_ELEMENT, BlockResource(session, wcommon, _not_deletable))
@@ -48,7 +48,7 @@ class SessionResource(SlashedResource):
         self.putChild('wdb', shinysdr.i.db.DatabaseResource(writable_db))
         
         # Debug graph
-        self.putChild('flow-graph', FlowgraphVizResource(reactor, session.flowgraph_for_debug()))
+        self.putChild('flow-graph', FlowgraphVizResource(wcommon.reactor, session.flowgraph_for_debug()))
         
         # Ephemeris
         self.putChild('ephemeris', EphemerisResource())
@@ -57,14 +57,13 @@ class SessionResource(SlashedResource):
 class _RadioIndexHtmlElement(template.Element):
     loader = template.XMLFile(template_filepath.child('index.template.xhtml'))
     
-    def __init__(self, wcommon, title):
+    def __init__(self, wcommon):
         super(_RadioIndexHtmlElement, self).__init__()
         self.__wcommon = wcommon
-        self.__title = unicode(title)
     
     @template.renderer
     def title(self, request, tag):
-        return tag(self.__title)
+        return tag(self.__wcommon.title)
 
     @template.renderer
     def quoted_state_url(self, request, tag):
@@ -78,9 +77,9 @@ class _RadioIndexHtmlElement(template.Element):
 class _RadioIndexHtmlResource(Resource):
     isLeaf = True
 
-    def __init__(self, wcommon, title):
+    def __init__(self, wcommon):
         Resource.__init__(self)
-        self.__element = _RadioIndexHtmlElement(wcommon, title)
+        self.__element = _RadioIndexHtmlElement(wcommon)
 
     def render_GET(self, request):
         return template.renderElement(request, self.__element)

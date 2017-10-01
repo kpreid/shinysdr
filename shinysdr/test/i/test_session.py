@@ -22,6 +22,7 @@ from twisted.internet import reactor as the_reactor
 from twisted.trial import unittest
 
 from shinysdr.i.db import DatabaseModel
+from shinysdr.i.network.base import WebServiceCommon
 from shinysdr.i.session import Session
 from shinysdr.i.top import Top
 from shinysdr.plugins.simulate import SimulatedDevice
@@ -42,6 +43,7 @@ class TestSession(unittest.TestCase):
     # TODO: Write more tests than this one of SessionResource linked to a real session
     def test_resource_smoke(self):
         IResource(self.session.get_entry_point_resource(
+            wcommon=WebServiceCommon(
                 reactor=the_reactor,
-                wcommon=None,
-                title='dummy'))
+                title='a title',
+                ws_endpoint_string='dummy')))

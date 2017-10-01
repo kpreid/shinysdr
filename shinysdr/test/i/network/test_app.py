@@ -188,11 +188,11 @@ def assert_common(self, url):
 
 @implementer(IWebEntryPoint)
 class SiteStateStub(ExportedState):
-    def get_entry_point_resource(self, **kwargs):
+    def get_entry_point_resource(self, wcommon):
         return SessionResource(self,
             read_only_dbs={},
             writable_db=DatabaseModel(the_reactor, {}, writable=True),
-            **kwargs)
+            wcommon=wcommon)
     
     def flowgraph_for_debug(self):
         # called by SessionResource
