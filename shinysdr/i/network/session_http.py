@@ -15,7 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-# TODO: Unclear whether this module makes sense.
+"""Session-specific HTTP-specific code.
+
+TODO: Not sure whether this module makes sense.
+"""
 
 from __future__ import absolute_import, division, unicode_literals
 

@@ -96,7 +96,7 @@ class WebAppManifestResource(Resource):
 
 class WebService(Service):
     # TODO: Too many parameters
-    def __init__(self, reactor, cap_table, read_only_dbs, writable_db, http_endpoint, ws_endpoint, root_cap, title):
+    def __init__(self, reactor, cap_table, http_endpoint, ws_endpoint, root_cap, title):
         # Constants
         self.__http_endpoint_string = str(http_endpoint)
         self.__http_endpoint = endpoints.serverFromString(reactor, self.__http_endpoint_string)
@@ -112,12 +112,9 @@ class WebService(Service):
             return IWebEntryPoint(entry_point).get_entry_point_resource(
                 # TODO: Have fewer miscellaneous parameters.
                 # reactor should maybe be in wcommon.
-                # DBs should be held by the session already
                 reactor=reactor,
                 wcommon=wcommon,
-                title=title,
-                read_only_dbs=read_only_dbs,
-                writable_db=writable_db)
+                title=title)
         
         server_root = CapAccessResource(cap_table=cap_table, resource_factory=resource_factory)
         _put_root_static(wcommon, server_root, title)

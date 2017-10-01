@@ -30,7 +30,7 @@ from shinysdr.values import ExportedState, exported_value
 
 
 class AppRoot(ExportedState):
-    def __init__(self, devices, audio_config, features):
+    def __init__(self, devices, audio_config, read_only_dbs, writable_db, features):
         self.__receive_flowgraph = Top(
             devices=devices,
             audio_config=audio_config,
@@ -38,6 +38,8 @@ class AppRoot(ExportedState):
         # TODO: only one session while we sort out other things
         self.__session = Session(
             receive_flowgraph=self.__receive_flowgraph,
+            read_only_dbs=read_only_dbs,
+            writable_db=writable_db,
             features=features)
     
     @exported_value(type=ReferenceT(), changes='never')
@@ -62,8 +64,10 @@ class AppRoot(ExportedState):
 
 @implementer(IWebEntryPoint)
 class Session(ExportedState):
-    def __init__(self, receive_flowgraph, features):
+    def __init__(self, receive_flowgraph, read_only_dbs, writable_db, features):
         self.__receive_flowgraph = receive_flowgraph
+        self.__read_only_dbs = read_only_dbs
+        self.__writable_db = writable_db
     
     def state_def(self):
         for d in super(Session, self).state_def():
@@ -91,12 +95,18 @@ class Session(ExportedState):
         # TODO stub for multisession refactoring
         return False
     
-    def get_entry_point_resource(self, **kwargs):
+    def get_entry_point_resource(self, reactor, wcommon, title):
         # TODO: Don't just forward args
-        return importlib.import_module('shinysdr.i.session_http').SessionResource(session=self, **kwargs)
+        return importlib.import_module('shinysdr.i.network.session_http').SessionResource(
+            session=self,
+            read_only_dbs=self.__read_only_dbs,
+            writable_db=self.__writable_db,
+            reactor=reactor,
+            wcommon=wcommon,
+            title=title)
     
     def flowgraph_for_debug(self):
-        # TODO: Refactor so this is exported/accessed/faceted in some more sensible way.
+        # TODO: Quick refactoring; make this interface more sensible/faceted. Used by SessionResource
         return self.__receive_flowgraph
     
     def add_audio_queue(self, queue, queue_rate):

@@ -21,7 +21,7 @@ import json
 import urlparse
 
 from twisted.trial import unittest
-from twisted.internet import reactor
+from twisted.internet import reactor as the_reactor
 from twisted.web import http
 from zope.interface import implementer
 
@@ -41,12 +41,10 @@ class TestWebSite(unittest.TestCase):
     def setUp(self):
         # TODO: arrange so we don't need to pass as many bogus strings
         self._service = WebService(
-            reactor=reactor,
+            reactor=the_reactor,
             http_endpoint='tcp:0',
             ws_endpoint='tcp:0',
             root_cap=u'ROOT',
-            read_only_dbs={},
-            writable_db=DatabaseModel(reactor, {}),
             cap_table={u'ROOT': SiteStateStub()},
             title='test title')
         self._service.startService()
@@ -82,7 +80,7 @@ class TestWebSite(unittest.TestCase):
                 urlparse.urljoin(url_without_slash,
                     'ONLYONE'.join(response.headers.getRawHeaders('Location'))))
         
-        return testutil.http_get(reactor, url_without_slash).addCallback(callback)
+        return testutil.http_get(the_reactor, url_without_slash).addCallback(callback)
     
     def test_index_page(self):
         def callback((response, data)):
@@ -92,7 +90,7 @@ class TestWebSite(unittest.TestCase):
             self.assertIn(b'<title>test title</title>', data)
             # TODO: Probably not here, add an end-to-end test for page title _default_.
         
-        return testutil.http_get(reactor, self.url).addCallback(callback)
+        return testutil.http_get(the_reactor, self.url).addCallback(callback)
     
     def test_resource_page_html(self):
         # TODO: This ought to be a separate test of block-resources
@@ -100,7 +98,7 @@ class TestWebSite(unittest.TestCase):
             self.assertEqual(response.code, http.OK)
             self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['text/html;charset=utf-8'])
             self.assertIn(b'</html>', data)
-        return testutil.http_get(reactor, self.url + CAP_OBJECT_PATH_ELEMENT, accept='text/html').addCallback(callback)
+        return testutil.http_get(the_reactor, self.url + CAP_OBJECT_PATH_ELEMENT, accept='text/html').addCallback(callback)
     
     def test_resource_page_json(self):
         # TODO: This ought to be a separate test of block-resources
@@ -112,14 +110,14 @@ class TestWebSite(unittest.TestCase):
                 u'kind': u'block',
                 u'children': {},
             })
-        return testutil.http_get(reactor, self.url + CAP_OBJECT_PATH_ELEMENT, accept='application/json').addCallback(callback)
+        return testutil.http_get(the_reactor, self.url + CAP_OBJECT_PATH_ELEMENT, accept='application/json').addCallback(callback)
     
     def test_flowgraph_page(self):
         def callback((response, data)):
             self.assertEqual(response.code, http.OK)
             self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['image/png'])
             # TODO ...
-        return testutil.http_get(reactor, self.url + b'flow-graph').addCallback(callback)
+        return testutil.http_get(the_reactor, self.url + b'flow-graph').addCallback(callback)
     
     def test_manifest(self):
         def callback((response, data)):
@@ -127,7 +125,7 @@ class TestWebSite(unittest.TestCase):
             self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/manifest+json'])
             manifest = json.loads(data)
             self.assertEqual(manifest['name'], 'test title')
-        return testutil.http_get(reactor, urlparse.urljoin(self.url, b'/client/web-app-manifest.json')).addCallback(callback)
+        return testutil.http_get(the_reactor, urlparse.urljoin(self.url, b'/client/web-app-manifest.json')).addCallback(callback)
     
     def test_plugin_index(self):
         def callback((response, data)):
@@ -137,7 +135,7 @@ class TestWebSite(unittest.TestCase):
             self.assertIn('css', index)
             self.assertIn('js', index)
             self.assertIn('modes', index)
-        return testutil.http_get(reactor, urlparse.urljoin(self.url, b'/client/plugin-index.json')).addCallback(callback)
+        return testutil.http_get(the_reactor, urlparse.urljoin(self.url, b'/client/plugin-index.json')).addCallback(callback)
 
 
 class TestSiteWithoutRootCap(TestWebSite):
@@ -145,12 +143,10 @@ class TestSiteWithoutRootCap(TestWebSite):
     def setUp(self):
         # TODO: arrange so we don't need to pass as many bogus strings
         self._service = WebService(
-            reactor=reactor,
+            reactor=the_reactor,
             http_endpoint='tcp:0',
             ws_endpoint='tcp:0',
             root_cap=UNIQUE_PUBLIC_CAP,
-            read_only_dbs={},
-            writable_db=DatabaseModel(reactor, {}),
             cap_table={UNIQUE_PUBLIC_CAP: SiteStateStub()},
             title='test title')
         self._service.startService()
@@ -187,13 +183,16 @@ def assert_common(self, url):
         else:
             raise Exception('Don\'t know what content type to expect', data[0], content_type)
     
-    return testutil.http_get(reactor, self.url).addCallback(callback)
+    return testutil.http_get(the_reactor, self.url).addCallback(callback)
 
 
 @implementer(IWebEntryPoint)
 class SiteStateStub(ExportedState):
     def get_entry_point_resource(self, **kwargs):
-        return SessionResource(self, **kwargs)
+        return SessionResource(self,
+            read_only_dbs={},
+            writable_db=DatabaseModel(the_reactor, {}, writable=True),
+            **kwargs)
     
     def flowgraph_for_debug(self):
         # called by SessionResource
