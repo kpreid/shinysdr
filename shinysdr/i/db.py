@@ -17,7 +17,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import cgi
 import contextlib
 import csv
 import json
@@ -28,8 +27,10 @@ import urllib
 from twisted.python import log
 from twisted.web import http
 from twisted.web import resource
+from twisted.web import template
 
 from shinysdr.types import EnumT, to_value_type
+from shinysdr.i.network.base import template_filepath
 
 
 _NO_DEFAULT = object()
@@ -148,15 +149,25 @@ class _DbsIndexResource(resource.Resource):
     
     def __init__(self, dbs_resource):
         resource.Resource.__init__(self)
-        self.dbs_resource = dbs_resource
-    
+        self.__element = _DbsIndexListElement(dbs_resource)
+
     def render_GET(self, request):
-        request.setHeader('Content-Type', 'text/html')
-        request.write(b'<html><title>Databases</title><ul>\n')
-        for name in self.dbs_resource.names:
-            request.write(b'<li><a href="%s/">%s</a>\n' % (str(cgi.escape(urllib.quote(name, ''))), str(cgi.escape(name))))
-        request.write(b'</ul>\n')
-        return b''
+        return template.renderElement(request, self.__element)
+
+
+class _DbsIndexListElement(template.Element):
+    loader = template.XMLFile(template_filepath.child('database-list.template.xhtml'))
+    
+    def __init__(self, dbs_resource):
+        super(_DbsIndexListElement, self).__init__()
+        self.__dbs_resource = dbs_resource
+    
+    @template.renderer
+    def list_items(self, request, tag):
+        for db_name in self.__dbs_resource.names:
+            yield tag.clone().fillSlots(
+                db_name=db_name,
+                db_url='{}/'.format(urllib.quote(db_name, '')))
 
 
 class DatabaseResource(resource.Resource):
