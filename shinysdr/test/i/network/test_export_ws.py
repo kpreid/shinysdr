@@ -19,7 +19,9 @@ from __future__ import absolute_import, division, unicode_literals
 
 import json
 
-from twisted.internet.task import Clock
+from twisted.internet import defer
+from twisted.internet import reactor as the_reactor
+from twisted.internet.task import Clock, deferLater
 from twisted.test.proto_helpers import StringTransport
 from twisted.trial import unittest
 from zope.interface import Interface, implementer
@@ -276,6 +278,9 @@ class SerializationSpecimen(ExportedState):
         return self.st
 
 
+_FAKE_SAMPLES = b'\x00\x01\xFE\xFF'
+
+
 class TestOurStreamProtocol(unittest.TestCase):
     def setUp(self):
         cap_table = CapTable(unserializer=None)
@@ -301,6 +306,28 @@ class TestOurStreamProtocol(unittest.TestCase):
                 ['value', 0, 1],
             ],
         ])
+    
+    @defer.inlineCallbacks
+    def test_audio(self):
+        self.begin('/foo/audio?rate=1')
+        try:
+            self.clock.advance(1)
+            # the audio queue is checked by a thread so we must have an actual delay :(
+            yield deferLater(the_reactor, 0.2, lambda: None)
+        finally:
+            # If we don't do this cleanup we get a deadlock, probably because of the blocking audio queue thread?
+            self.protocol.connectionLost(None)
+        self.assertEqual(self.transport.messages(), [
+            {
+                u'signal_type': {
+                    u'type': u'SignalType',
+                    u'kind': u'MONO',
+                    u'sample_rate': 1.0
+                },
+                u'type': u'audio_stream_metadata'
+            },
+            _FAKE_SAMPLES,
+        ])
 
 
 class FakeWebSocketTransport(object):
@@ -315,8 +342,7 @@ class FakeWebSocketTransport(object):
         self.__messages.append(data)
     
     def messages(self):
-        # assuming no binary messages for now
-        return [json.loads(m) for m in self.__messages]
+        return [json.loads(m) if isinstance(m, unicode) else m for m in self.__messages]
 
 
 @implementer(IEntryPoint)
@@ -326,3 +352,13 @@ class EntryPointStub(ExportedState):
 
     def entry_point_is_deleted(self):
         return False
+    
+    def add_audio_queue(self, queue, queue_rate):
+        deferLater(the_reactor, 0.1, lambda:
+            queue.insert_tail(gr.message().make_from_string(_FAKE_SAMPLES, 0, 1, len(_FAKE_SAMPLES))))
+    
+    def remove_audio_queue(self, queue):
+        pass
+        
+    def get_audio_queue_channels(self):
+        return 1

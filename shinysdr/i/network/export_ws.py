@@ -321,7 +321,7 @@ class AudioStreamInner(object):
 def _AudioStream_read_loop(reactor, queue, deliver, running):
     # RUNS IN A SEPARATE THREAD.
     while running[0]:
-        buf = ''
+        buf = b''
         message = queue.delete_head()  # blocking call
         buf += message.to_string()
         # Collect more queue contents to batch data
