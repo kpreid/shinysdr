@@ -38,6 +38,9 @@ class IModeDef(Interface):
     # TODO write interface methods anyway
 
 
+# TODO: Refactor _ModeTable so that it can be tested (does not hardcode getPlugins)
+
+
 # Object for memoizing results of getPlugins(IModeDef)
 class _ModeTable(object):
     def __init__(self):
@@ -47,10 +50,13 @@ class _ModeTable(object):
              for d in self.__all_modes.itervalues()
              if d.available}
     
-    def get_modes(self):
-        return self.__available_modes.values()
+    def get_modes(self, include_unavailable):
+        if include_unavailable:
+            return self.__all_modes.values()
+        else:
+            return self.__available_modes.values()
     
-    def lookup_mode(self, mode, include_unavailable=False):
+    def lookup_mode(self, mode, include_unavailable):
         if include_unavailable:
             return self.__all_modes.get(mode)
         else:
@@ -69,8 +75,8 @@ def _get_mode_table():
     return _mode_table
 
 
-def get_modes():
-    return _get_mode_table().get_modes()
+def get_modes(include_unavailable=False):
+    return _get_mode_table().get_modes(include_unavailable=include_unavailable)
 
 
 __all__.append('get_modes')
