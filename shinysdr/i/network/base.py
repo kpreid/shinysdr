@@ -56,11 +56,19 @@ class SlashedResource(Resource):
 
 class WebServiceCommon(object):
     """Ugly collection of stuff web resources need which is not noteworthy authority."""
+    
+    @classmethod
+    def stub(cls, reactor):
+        return cls(
+            reactor=reactor,
+            title='[ShinySDR Test Server]',
+            ws_endpoint_string='tcp:99999')  # parseable but nonsense
+    
     def __init__(self, reactor, title, ws_endpoint_string):
         self.reactor = reactor
         self.title = unicode(title)
         self.__ws_endpoint_string = ws_endpoint_string
-
+    
     def make_websocket_url(self, request, path):
         return endpoint_string_to_url(self.__ws_endpoint_string,
             hostname=request.getRequestHostname(),

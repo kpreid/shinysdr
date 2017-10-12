@@ -43,7 +43,4 @@ class TestSession(unittest.TestCase):
     # TODO: Write more tests than this one of SessionResource linked to a real session
     def test_resource_smoke(self):
         IResource(self.session.get_entry_point_resource(
-            wcommon=WebServiceCommon(
-                reactor=the_reactor,
-                title='a title',
-                ws_endpoint_string='dummy')))
+            wcommon=WebServiceCommon.stub(reactor=the_reactor)))
