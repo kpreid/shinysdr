@@ -31,7 +31,6 @@ from shinysdr.i.audiomux import AudioManager
 from shinysdr.i.blocks import MonitorSink, RecursiveLockBlockMixin, Context
 from shinysdr.i.poller import the_subscription_context
 from shinysdr.i.receiver import Receiver
-from shinysdr.math import LazyRateCalculator
 from shinysdr.signals import SignalType
 from shinysdr.telemetry import TelemetryStore
 from shinysdr.types import EnumT, NoticeT, ReferenceT
@@ -117,7 +116,6 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self.__in_reconnect = False
         self.receiver_key_counter = 0
         self.receiver_default_state = {}
-        self.__cpu_calculator = LazyRateCalculator(lambda: time.clock())
         
         # Initialization
         
@@ -397,11 +395,6 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
             raise ValueError('Source %r does not exist' % (value,))
         self.source_name = value
         self._do_connect()
-    
-    # TODO: This becomes useless w/ Session fix
-    @exported_value(type=float, changes='continuous')
-    def get_cpu_use(self):
-        return round(self.__cpu_calculator.get(), 2)
     
     def _get_rx_device_type(self):
         """for ContextForReceiver only"""
