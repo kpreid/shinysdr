@@ -300,11 +300,11 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         
         self.__gains = Gains(source, self)
         
-        # Misc state
-        self.dc_state = DCOffsetOff
-        self.iq_state = IQBalanceOff
-        source.set_dc_offset_mode(self.dc_state, ch)  # no getter, set to known state
-        source.set_iq_balance_mode(self.iq_state, ch)  # no getter, set to known state
+        # State of the source that there are no getters for, so we must keep our own copy of
+        self.__track_dc_offset_mode = DCOffsetOff
+        self.__track_iq_balance_mode = IQBalanceOff
+        source.set_dc_offset_mode(self.__track_dc_offset_mode, ch)
+        source.set_iq_balance_mode(self.__track_iq_balance_mode, ch)
         
         # Blocks
         self.__state_while_inactive = {}
@@ -388,13 +388,13 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         # TODO we should have a provision for restricting antenna selection when transmit is possible to avoid hardware damage
         self.__source.set_antenna(str(self.__antenna_type(value)), ch)
     
-    # Note: dc_cancel has a 'manual' mode we are not yet exposing
+    # Note: dc_offset_mode has a 'manual' mode we are not yet exposing, which is why the internal tracking is an enum integer but the exported value is a boolean
     @exported_value(
         type_fn=lambda self: bool if self.__profile.dc_cancel else ConstantT(False),
         changes='this_setter',
         label='Use DC cancellation')
     def get_dc_cancel(self):
-        return bool(self.dc_state)
+        return bool(self.__track_dc_offset_mode)
     
     @setter
     def set_dc_cancel(self, value):
@@ -402,14 +402,15 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
             mode = DCOffsetAutomatic
         else:
             mode = DCOffsetOff
-        self.dc_state = self.__source.set_dc_offset_mode(mode, ch)
+        self.__source.set_dc_offset_mode(mode, ch)
+        self.__track_dc_offset_mode = mode
     
-    # Note: iq_balance has a 'manual' mode we are not yet exposing
+    # Note: iq_balance_mode has a 'manual' mode we are not yet exposing, which is why the internal tracking is an enum integer but the exported value is a boolean
     @exported_value(type=bool,    # TODO: detect gr-iqbal
         changes='this_setter',
         label='Use IQ balancer')
     def get_iq_balance(self):
-        return bool(self.iq_state)
+        return bool(self.__track_iq_balance_mode)
 
     @setter
     def set_iq_balance(self, value):
@@ -417,7 +418,8 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
             mode = IQBalanceAutomatic
         else:
             mode = IQBalanceOff
-        self.iq_state = self.__source.set_iq_balance_mode(mode, ch)
+        self.__source.set_iq_balance_mode(mode, ch)
+        self.__track_iq_balance_mode = mode
     
     # add_zero because zero means automatic setting based on sample rate.
     # TODO: Display automaticness in the UI rather than having a zero value.
