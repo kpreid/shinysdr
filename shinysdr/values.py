@@ -219,7 +219,7 @@ _cell_value_change_schedules = [
 # TODO this name is historical and should be changed
 class Cell(ValueCell, TargetingMixin):
     def __init__(self, target, key, changes, type=object, writable=False, persists=None, **kwargs):
-        assert changes in _cell_value_change_schedules  # TODO actually use value
+        assert changes in _cell_value_change_schedules
         type = to_value_type(type)
         if persists is None:
             persists = writable or type.is_reference()
