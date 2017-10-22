@@ -28,7 +28,7 @@ from shinysdr.devices import Device, IRXDriver, ITXDriver
 from shinysdr.signals import SignalType
 from shinysdr.types import ConstantT, EnumT, QuantityT, RangeT, ReferenceT
 from shinysdr import units
-from shinysdr.values import Cell, ExportedState, LooseCell, exported_value, nullExportedState, setter
+from shinysdr.values import ExportedState, LooseCell, PollingCell, exported_value, nullExportedState, setter
 
 
 __all__ = []
@@ -560,7 +560,7 @@ def _install_gain_cell(self, source_ref, rxd_ref, name):
     # TODO: There should be a type of Cell such that we don't have to setattr but still implement the storage unlike LooseCell
     setattr(self, 'get_' + name, gain_getter)
     setattr(self, 'set_' + name, gain_setter)
-    return name, Cell(self, name,
+    return name, PollingCell(self, name,
         type=gain_range,
         writable=True,
         persists=True,

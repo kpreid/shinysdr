@@ -207,7 +207,7 @@ class ValueCell(BaseCell):
         return d
 
 
-# The possible values of the 'changes' parameter to a cell of type Cell, which determine when the cell's getter is polled to check for changes.
+# The possible values of the 'changes' parameter to a cell of type PollingCell, which determine when the cell's getter is polled to check for changes.
 _cell_value_change_schedules = [
     u'never',  # never changes at all for the lifetime of the cell
     u'continuous',  # a different value almost every time
@@ -216,8 +216,7 @@ _cell_value_change_schedules = [
 ]
 
 
-# TODO this name is historical and should be changed
-class Cell(ValueCell, TargetingMixin):
+class PollingCell(ValueCell, TargetingMixin):
     __explicit_subscriptions = None
     __last_polled_value = None
     __setter = None
@@ -598,7 +597,7 @@ class ExportedState(object):
             # TODO use an interface here and move the check inside
             if isinstance(v, ExportedGetter):
                 if not k.startswith('get_'):
-                    # TODO factor out attribute name usage in Cell so this restriction is moot for non-settable cells
+                    # TODO factor out attribute name usage in PollingCell so this restriction is moot for non-settable cells
                     raise LookupError('Bad getter name', k)
                 else:
                     k = k[len('get_'):]
@@ -819,7 +818,7 @@ class IWritableCollection(Interface):
 
 
 def exported_value(parameter=None, **cell_kwargs):
-    """Returns a decorator for exported state; takes Cell's kwargs."""
+    """Returns a decorator for exported state; takes PollingCell's kwargs."""
     def decorator(f):
         return ExportedGetter(f, parameter, cell_kwargs)
     return decorator
@@ -867,7 +866,7 @@ class ExportedGetter(object):
             kwargs = kwargs.copy()
             kwargs['type'] = kwargs['type_fn'](obj)
             del kwargs['type_fn']
-        return Cell(obj, attr, writable=writable, **kwargs)
+        return PollingCell(obj, attr, writable=writable, **kwargs)
     
     def state_to_kwargs(self, value):
         # clunky: invoked by unserialize_exported_state via a type test

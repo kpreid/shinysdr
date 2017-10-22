@@ -21,7 +21,7 @@ import unittest
 
 from shinysdr.test.testutil import CellSubscriptionTester
 from shinysdr.types import EnumRow, RangeT, ReferenceT, to_value_type
-from shinysdr.values import Cell, CellDict, CollectionState, ExportedState, LooseCell, ViewCell, command, exported_value, nullExportedState, setter, unserialize_exported_state
+from shinysdr.values import CellDict, CollectionState, ExportedState, LooseCell, PollingCell, ViewCell, command, exported_value, nullExportedState, setter, unserialize_exported_state
 
 
 class TestExportedState(unittest.TestCase):
@@ -149,12 +149,12 @@ class TestBaseCell(unittest.TestCase):
             sort_key='mysortkey'))
 
 
-class TestCell(unittest.TestCase):
+class TestPollingCell(unittest.TestCase):
     # TODO write other tests, as appropriate - this is the 'normal' cell type which most other stuff wouldn't work without
     
     def __test_subscription(self, changes):
         o = NoInherentCellSpecimen()
-        cell = Cell(o, 'value', changes=changes)
+        cell = PollingCell(o, 'value', changes=changes)
         st = CellSubscriptionTester(cell)
         o.value = 1
         if changes == 'explicit':
@@ -168,7 +168,7 @@ class TestCell(unittest.TestCase):
     
     def test_subscription_never(self):
         o = NoInherentCellSpecimen()
-        cell = Cell(o, 'value', changes='never')
+        cell = PollingCell(o, 'value', changes='never')
         st = CellSubscriptionTester(cell)
         o.value = 1
         st.advance()  # expected no callback even if we lie
@@ -182,7 +182,7 @@ class TestCell(unittest.TestCase):
     # this_setter is handled in TestExportedState because it involves the decorators
     
     def test_metadata_explicit(self):
-        cell = Cell(
+        cell = PollingCell(
             target=NoInherentCellSpecimen(),
             key='value',
             changes='never',
@@ -195,7 +195,7 @@ class TestCell(unittest.TestCase):
             sort_key='baz'))
     
     def test_metadata_default(self):
-        cell = Cell(
+        cell = PollingCell(
             target=NoInherentCellSpecimen(),
             key='value',
             changes='never')
@@ -204,11 +204,11 @@ class TestCell(unittest.TestCase):
             sort_key='value'))
     
     def test_repr(self):
-        cell = Cell(
+        cell = PollingCell(
             target=NoInherentCellSpecimen(),
             key='value',
             changes='never')
-        self.assertEqual(repr(cell), '<Cell <NoInherentCellSpecimen repr>.value>')
+        self.assertEqual(repr(cell), '<PollingCell <NoInherentCellSpecimen repr>.value>')
 
 
 class NoInherentCellSpecimen(object):

@@ -35,7 +35,7 @@ from shinysdr.i.json import serialize
 from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT
 from shinysdr.signals import SignalType
 from shinysdr.types import ReferenceT
-from shinysdr.values import BaseCell, Cell, ExportedState, StreamCell
+from shinysdr.values import BaseCell, ExportedState, PollingCell, StreamCell
 
 
 _NOT_SPECIFIED_PUMPKIN = object()
@@ -192,7 +192,7 @@ class StateStreamInner(object):
         self.__subscription_context = subscription_context
         self._send = send
         self.__root_object = root_object
-        self._cell = Cell(self, '_root_object', type=ReferenceT(), changes='never')
+        self._cell = PollingCell(self, '_root_object', type=ReferenceT(), changes='never')
         self._lastSerial = 0
         root_registration = _StateStreamObjectRegistration(ssi=self, subscription_context=self.__subscription_context, obj=self._cell, serial=0, url=root_url, refcount=0)
         self._registered_objs = {self._cell: root_registration}
