@@ -218,6 +218,10 @@ _cell_value_change_schedules = [
 
 # TODO this name is historical and should be changed
 class Cell(ValueCell, TargetingMixin):
+    __explicit_subscriptions = None
+    __last_polled_value = None
+    __setter = None
+    
     def __init__(self, target, key, changes, type=object, writable=False, persists=None, **kwargs):
         assert changes in _cell_value_change_schedules
         type = to_value_type(type)
@@ -242,14 +246,12 @@ class Cell(ValueCell, TargetingMixin):
             self.__explicit_subscriptions = set()
             self.__last_polled_value = object()
         
-        self._getter = getattr(self._target, 'get_' + key)
+        self.__getter = getattr(self._target, 'get_' + key)
         if writable:
-            self._setter = getattr(self._target, 'set_' + key)
-        else:
-            self._setter = None
+            self.__setter = getattr(self._target, 'set_' + key)
     
     def get(self):
-        value = self._getter()
+        value = self.__getter()
         if self.type().is_reference():
             # informative-failure debugging aid
             assert isinstance(value, ExportedState), (self._target, self._key)
@@ -258,7 +260,7 @@ class Cell(ValueCell, TargetingMixin):
     def set(self, value):
         if not self.isWritable():
             raise Exception('Not writable.')
-        return self._setter(self.metadata().value_type(value))
+        return self.__setter(self.metadata().value_type(value))
     
     def subscribe2(self, callback, context):
         changes = self.__changes
@@ -272,7 +274,8 @@ class Cell(ValueCell, TargetingMixin):
             raise ValueError('shouldn\'t happen unrecognized changes value: {!r}'.format(changes))
 
     def poll_for_change(self, specific_cell):
-        if not hasattr(self, '_Cell__explicit_subscriptions'):
+        if self.__explicit_subscriptions is None:
+            # Note that this is "we are not a kind of cell that has explicit subscriptions", not "we have no subscriptions". Doing the latter would mean that a new subscription might fire after subscribing not because the value actually changed but only because poll_for_changed was called.
             return
         value = self.get()
         if value != self.__last_polled_value:
