@@ -216,16 +216,15 @@ def _to_bits(code):
     """
     ITA2 code number to _HALF_BITS_PER_CODE-element array
     """
-    l = [0, 0]
+    bit_list = [0, 0]
     for i in xrange(_DATA_BITS):
         j = _DATA_BITS - 1 - i
-        l.append((code >> j) & 1)
-        l.append((code >> j) & 1)
-    l.append(1)
-    l.append(1)
-    l.append(1)
-    # pylint: disable=no-member
-    return numpy.array(l, dtype=numpy.float32)
+        bit_list.append((code >> j) & 1)
+        bit_list.append((code >> j) & 1)
+    bit_list.append(1)
+    bit_list.append(1)
+    bit_list.append(1)
+    return numpy.array(bit_list, dtype=numpy.float32)  # pylint: disable=no-member
 
 
 def _reverse_table():

@@ -47,13 +47,13 @@ class TestDevice(unittest.TestCase):
         self.assertEqual(None, Device().get_name())
     
     def test_close(self):
-        l = set()
+        log = set()
         Device(
-            rx_driver=_ShutdownDetectorRX(l, 'rx'),
-            tx_driver=_ShutdownDetectorTX(l, 'tx'),
-            components={'c': _ShutdownDetector(l, 'c')}
+            rx_driver=_ShutdownDetectorRX(log, 'rx'),
+            tx_driver=_ShutdownDetectorTX(log, 'tx'),
+            components={'c': _ShutdownDetector(log, 'c')}
         ).close()
-        self.assertEqual(l, set(['rx', 'tx', 'c']))
+        self.assertEqual(log, set(['rx', 'tx', 'c']))
     
     def test_rx_absent(self):
         d = Device()

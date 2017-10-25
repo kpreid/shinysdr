@@ -122,13 +122,13 @@ class TestTop(unittest.TestCase):
         top.remove_audio_queue(queue)
     
     def test_close(self):
-        l = []
+        log = []
         top = Top(devices={'m':
             merge_devices([
                 SimulatedDeviceForTest(),
-                Device(components={'c': _DeviceShutdownDetector(l)})])})
+                Device(components={'c': _DeviceShutdownDetector(log)})])})
         top.close_all_devices()
-        self.assertEqual(l, ['close'])
+        self.assertEqual(log, ['close'])
     
     @defer.inlineCallbacks
     def test_monitor_interest(self):
@@ -257,9 +257,9 @@ class _RetuningTestRXDriver(StubRXDriver):
 
 @implementer(IComponent)
 class _DeviceShutdownDetector(ExportedState):
-    def __init__(self, dest):
+    def __init__(self, log):
         super(_DeviceShutdownDetector, self).__init__()
-        self.__dest = dest
+        self.__log = log
         
     def close(self):
-        self.__dest.append('close')
+        self.__log.append('close')
