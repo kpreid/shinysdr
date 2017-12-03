@@ -214,6 +214,26 @@ define([
         expect(widget.element.querySelector('option').value).toBe('1');
       });
     });
+    
+    describe('BlockSet', () => {
+      it('should be successfully created', function () {
+        const cell = new ConstantCell(makeBlock({
+          a: new ConstantCell(makeBlock({label: new ConstantCell('A')})),
+          b: new ConstantCell(makeBlock({label: new ConstantCell('B')})),
+        }));
+        
+        function entryBuilder(setElement, block, name, setInsertion) {
+          const el = setElement.appendChild(document.createElement('div'));
+          el.appendChild(document.createTextNode('[' + name + ']'));
+          return el;
+        }
+        const TestBlockSet = widgets.BlockSet(widgets.PickWidget, entryBuilder);
+        
+        const widget = new WidgetTester(TestBlockSet, cell).widget;
+        
+        expect(widget.element.textContent).toBe('[a]label: A[b]label: B');
+      });
+    });
   });
   
   return 'ok';

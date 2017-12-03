@@ -19,6 +19,7 @@
   
 define([
   './basic', 
+  '../events',
   '../types', 
   '../values', 
   '../widget'
@@ -36,6 +37,9 @@ define([
     Select,
     Toggle,
     TextTerminal,
+  },
+  {
+    AddKeepDrop,
   },
   {
     EnumT,
@@ -96,37 +100,29 @@ define([
       // TODO: We ought to display these in some way.
       config.element.removeAttribute('title');
       
-      // Keys are block keys
-      const childWidgetElements = Object.create(null);
-
-      const createChild = name => {
-        // buildContainer must append exactly one child. TODO: cleaner
-        const widgetPlaceholder = buildEntry(childContainer, block, name);
-        if (idPrefix) {
-          widgetPlaceholder.id = idPrefix + name;
+      const childrenAKD = new AddKeepDrop({
+        add(name) {
+          // buildContainer must append exactly one child. TODO: cleaner
+          const widgetPlaceholder = buildEntry(childContainer, block, name);
+          if (idPrefix) {
+            widgetPlaceholder.id = idPrefix + name;
+          }
+          const widgetContainer = childContainer.lastChild;
+          const widgetHandle = createWidgetExt(config.context, widgetCtor, widgetPlaceholder, block[name]);
+          return {
+            widgetHandle: widgetHandle,
+            element: widgetContainer
+          };
+        },
+        remove(name, parts) {
+          parts.widgetHandle.destroy();
+          childContainer.removeChild(parts.element);
         }
-        const widgetContainer = childContainer.lastChild;
-        const widgetHandle = createWidgetExt(config.context, widgetCtor, widgetPlaceholder, block[name]);
-        return {
-          widgetHandle: widgetHandle,
-          element: widgetContainer
-        };
-      };
+      });
 
       config.scheduler.startNow(function handleReshape() {
         block._reshapeNotice.listen(handleReshape);
-        Object.keys(block).forEach(name => {
-          if (!childWidgetElements[name]) {
-            childWidgetElements[name] = createChild(name);
-          }
-        });
-        for (var oldName in childWidgetElements) {
-          if (!(oldName in block)) {
-            childWidgetElements[oldName].widgetHandle.destroy();
-            childContainer.removeChild(childWidgetElements[oldName].element);
-            delete childWidgetElements[oldName];
-          }
-        }
+        childrenAKD.update(Object.keys(block));
       });
     };
   }
