@@ -33,6 +33,7 @@ define([
   import_widget
 ) => {
   const {
+    AddKeepDrop,
     Clock,
   } = import_events;
   const {
@@ -56,6 +57,7 @@ define([
     CommandCell,
     ConstantCell,
     DerivedCell,
+    LocalReadCell,
     getInterfaces,
   } = import_values;
   const {
@@ -1185,6 +1187,131 @@ define([
     }
   }
   
+  const TABLE_COLUMN_HEADER_MARKER = '_HEADER';  // could be any unique object but this is helpful
+  const TABLE_ROW_HEADER_MARKER = {};  // not a string
+  
+  class TableLayoutContext {
+    constructor() {
+      this._columnsSeen = new Set();
+      this._columnKeysCell = new LocalReadCell(anyT, Object.freeze([TABLE_ROW_HEADER_MARKER]));
+    }
+    
+    extractColumns(block) {
+      const newColumns = [];
+      for (var k in block) {
+        if (!this._columnsSeen.has(k)) {
+          this._columnsSeen.add(k);
+          newColumns.push(k);
+        }
+      }
+      // TODO: sort
+      this._columnKeysCell._update(Object.freeze(this._columnKeysCell.get().concat(newColumns)));
+    }
+    
+    columnKeysCell() {
+      return this._columnKeysCell;
+    }
+  }
+  
+  function TableWidget(config) {
+    const block = config.target.depend(config.rebuildMe);
+    const idPrefix = config.idPrefix;
+    const tableContext = config.context.withLayoutContext(new TableLayoutContext());
+    
+    // TODO: We ought to display these in some way.
+    config.element.removeAttribute('title');
+    
+    let tableEl = config.element;
+    if (tableEl.tagName !== 'TABLE') {
+      tableEl = document.createElement('table');
+    }
+    this.element = tableEl;
+    
+    const headerRowEl = tableEl.appendChild(document.createElement('tr'));
+    createWidgetExt(tableContext, TableRowWidget, headerRowEl, new ConstantCell(TABLE_COLUMN_HEADER_MARKER));
+    
+    const childrenAKD = new AddKeepDrop({
+      add(name) {
+        // TODO: allow multi-row entries
+        const rowEl = tableEl.appendChild(document.createElement('tr'));
+        if (idPrefix) {
+          rowEl.id = idPrefix + name;
+        }
+        rowEl.title = name;  // TODO use metadata? have widget get it from id?
+        const widgetHandle = createWidgetExt(tableContext, TableRowWidget, rowEl, block[name]);
+        return {
+          widgetHandle: widgetHandle,
+          element: rowEl
+        };
+      },
+      remove(name, parts) {
+        parts.widgetHandle.destroy();
+        tableEl.removeChild(parts.element);
+      }
+    });
+
+    config.scheduler.startNow(function handleReshape() {
+      block._reshapeNotice.listen(handleReshape);
+      childrenAKD.update(Object.keys(block));
+    });
+  }
+  exports.TableWidget = TableWidget;
+  
+  // Helper for TableWidget
+  function TableRowWidget(config) {
+    // Currently not bothering to check and substitute element.
+    const block = config.target.depend(config.rebuildMe);
+    const rowEl = config.element;
+    this.element = rowEl;
+    const tableContext = config.getLayoutContext(TableLayoutContext);
+    
+    let label = null;
+    if (config.element.title) {
+      label = config.element.title;
+      config.element.removeAttribute('title');
+    }
+    
+    const childrenAKD = new AddKeepDrop({
+      add(columnKey) {
+        const cellEl = rowEl.appendChild(document.createElement(block === TABLE_COLUMN_HEADER_MARKER ? 'th' : 'td'));
+        
+        let widgetHandle;
+        if (block === TABLE_COLUMN_HEADER_MARKER) {
+          if (columnKey !== TABLE_ROW_HEADER_MARKER) {
+            cellEl.textContent = columnKey;  // TODO pretty names
+          }
+        } else if (columnKey === TABLE_ROW_HEADER_MARKER) {
+          cellEl.textContent = label;
+        } else if (block[columnKey]) {
+          cellEl.title = '';  // Specify we want to hide titles.
+          widgetHandle = createWidgetExt(config.context, PickWidget, cellEl, block[columnKey]);
+        } else {
+          cellEl.textContent = 'n/a';
+        }
+        
+        return () => {
+          if (widgetHandle) widgetHandle.destroy();
+          rowEl.removeChild(cellEl);
+        };
+      },
+      remove(name, remover) {
+        remover();
+      }
+    });
+
+    // Send local shape info to table context
+    if (block !== TABLE_COLUMN_HEADER_MARKER) {
+      config.scheduler.startNow(function handleReshape() {
+        block._reshapeNotice.listen(handleReshape);
+        tableContext.extractColumns(block);
+      });
+    }
+    
+    // Get aggregated shape info from table context.
+    config.scheduler.startNow(function handleColumnChange() {
+      childrenAKD.update(tableContext.columnKeysCell().depend(handleColumnChange));
+    });
+  }
   
   return Object.freeze(exports);
 });
