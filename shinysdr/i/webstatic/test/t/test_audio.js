@@ -1,4 +1,4 @@
-// Copyright 2016 Kevin Reid <kpreid@switchb.org>
+// Copyright 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -20,10 +20,12 @@
 define([
   '/test/jasmine-glue.js',
   'audio',
+  'audio/bufferer',
   'events'
 ], (
   import_jasmine,
   import_audio,
+  import_audio_bufferer,
   import_events
 ) => {
   const {ji: {
@@ -36,13 +38,25 @@ define([
     AudioAnalyserAdapter,
     AudioContext,
     AudioScopeAdapter, 
-    UserMediaSelector,
     handleUserMediaError_ForTesting: handleUserMediaError,
     minimizeSampleRate_ForTesting: minimizeSampleRate,
+    UserMediaSelector,
   } = import_audio;
+  const {
+    AudioBuffererImpl: AudioBuffererImpl,
+  } = import_audio_bufferer;
   const {
     Scheduler,
   } = import_events;
+  
+
+  function waitForOnePostMessage() {
+    return new Promise(resolve => {
+      const {port1, port2} = new MessageChannel();
+      port2.onmessage = event => { resolve(); };
+      port1.postMessage('dummy');
+    });
+  }
   
   describe('audio', () => {
     // TODO: test connectAudio (requires server side websocket stub)
@@ -53,6 +67,32 @@ define([
     let scheduler;
     beforeEach(() => {
       scheduler = new Scheduler();
+    });
+    
+    describe('AudioBuffererImpl', () => {
+      it('should copy samples', done => {
+        const channel = new MessageChannel();
+        const post = channel.port1.postMessage.bind(channel.port1);
+        const b = new AudioBuffererImpl(10000, channel.port2);
+        post(['setFormat', 2, 10000]);
+        
+        function read(n) {
+          const l = new Float32Array(n);
+          const r = new Float32Array(n);
+          b.produceSamples(l, r);
+          return [Array.prototype.slice.call(l), Array.prototype.slice.call(r)];
+        }
+        
+        const samples = new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        post(['acceptSamples', samples]);
+        
+        // We need to wait for the messages to be delivered. There is nothing in the interface to allow us to wait directly for it.
+        waitForOnePostMessage().then(() => {
+          expect(read(4)).toEqual([[1, 3, 5, 7], [2, 4, 6, 8]]);
+          expect(read(4)).toEqual([[9, 9, 9, 9], [10, 10, 10, 10]]);
+          done();
+        });
+      });
     });
 
     describe('AudioAnalyserAdapter', () => {

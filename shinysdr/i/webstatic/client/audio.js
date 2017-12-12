@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -18,16 +18,23 @@
 'use strict';
 
 define([
+  './audio/bufferer',
   './events',
   './network',
   './types',
-  './values'
+  './values',
 ], (
+  import_audio_bufferer,
   import_events,
   import_network,
   import_types,
   import_values
 ) => {
+  const {
+    AudioBuffererImpl,
+    MessageHandlerAdapter,
+    delayToBufferSize,
+  } = import_audio_bufferer;
   const {
     Neverfier,
     Notifier,
@@ -60,8 +67,6 @@ define([
   // In connectAudio, we assume that the maximum audio bandwidth is lower than that suiting this sample rate, so that if the native sample rate is much higher than this we can send a lower one over the network without losing anything of interest.
   const ASSUMED_USEFUL_SAMPLE_RATE = 40000;
   
-  const EMPTY_CHUNK = Object.freeze([]);
-  
   // webkitAudioContext required for Safari as of version 10.1
   const AudioContext = (window.AudioContext || window.webkitAudioContext);
   exports.AudioContext = AudioContext;
@@ -71,48 +76,14 @@ define([
     var nativeSampleRate = audio.sampleRate;
     
     // Stream parameters
-    var numAudioChannels = null;
-    var streamSampleRate = null;
+    let numAudioChannels = null;
+    let streamSampleRate = null;
     
-    // Queue size management
-    // The queue should be large to avoid underruns due to bursty processing/delivery.
-    // The queue should be small to minimize latency.
-    var targetQueueSize = Math.round(0.2 * nativeSampleRate);  // units: sample count
-    // Circular buffer of queue fullness history.
-    var queueHistory = new Int32Array(200);
-    var queueHistoryPtr = 0;
-    
-    // Size of data chunks we get from network and the audio context wants, used for tuning our margins
-    var inputChunkSizeSample = 0;
-    var outputChunkSizeSample = 0;
-    
-    // Queue of chunks
-    var queue = [];
-    var queueSampleCount = 0;
-    
-    // Chunk currently being copied into audio node buffer
-    var audioStreamChunk = EMPTY_CHUNK;
-    var chunkIndex = 0;
-    var prevUnderrun = 0;
-    
-    // Placeholder sample value
-    var fillL = 0;
-    var fillR = 0;
+    let queueNotEmpty = false;
     
     // Flags for start/stop handling
-    var started = false;
-    var startStopTickle = false;
-    
-    //var averageSkew = 0;
-    
-    // local synth for debugging glitches
-    //var fakePhase = 0;
-    //function fake(arr) {
-    //  for (let i = 0; i < arr.length; i++) {
-    //    arr[i] = Math.sin(fakePhase) * 0.1;
-    //    fakePhase += (Math.PI * 2) * (600 / nativeSampleRate);
-    //  }
-    //}
+    let started = false;
+    let startStopTickle = false;
     
     // Analyser for display
     var analyserAdapter = new AudioAnalyserAdapter(scheduler, audio);
@@ -135,34 +106,19 @@ define([
       monitor: new ConstantCell(analyserAdapter)
     });
     Object.defineProperty(info, '_implements_shinysdr.client.audio.AudioStreamStatus', {});
-    function updateStatus() {
-      // TODO: I think we are mixing up per-channel and total samples here  (queueSampleCount counts both channels individually)
-      var buffered = (queueSampleCount + audioStreamChunk.length - chunkIndex) / nativeSampleRate;
-      var target = targetQueueSize / nativeSampleRate;
-      info.buffered._update(buffered / target);
-      info.target._update(+target.toFixed(2));  // TODO formatting kludge, should be in type instead
-      //info.averageSkew._update(averageSkew);
+    function setStatus({bufferedFraction, targetSeconds, queueNotEmpty: newQueueNotEmpty}) {
+      info.buffered._update(bufferedFraction);
+      info.target._update(+targetSeconds.toFixed(2));  // TODO formatting kludge, should be in type instead
       if (errorTime < Date.now()) {
         info.error._update('');
       }
+      queueNotEmpty = newQueueNotEmpty;
     }
     
      // Force sample rate to be a value valid for the current nativeSampleRate, which may not be the same as when the value was written to localStorage.
      info.requested_sample_rate.set(
          info.requested_sample_rate.type.round(
            info.requested_sample_rate.get(), 0));
-    
-    function updateParameters() {
-      // Update queue size management
-      queueHistory[queueHistoryPtr] = queueSampleCount;
-      queueHistoryPtr = (queueHistoryPtr + 1) % queueHistory.length;
-      var least = Math.min.apply(undefined, queueHistory);
-      var most = Math.max.apply(undefined, queueHistory);
-      targetQueueSize = Math.max(1, Math.round(
-        ((most - least) + Math.max(inputChunkSizeSample, outputChunkSizeSample))));
-      
-      updateStatus();
-    }
     
     // Antialiasing filters for interpolated signal, cascaded for more attenuation.
     // Note that the cutoff frequency is set from the network callback, not here.
@@ -181,6 +137,20 @@ define([
     
     const interpolationGainNode = audio.createGain();
     
+    const buffererMessageChannel = new MessageChannel();
+    const buffererMessagePort = buffererMessageChannel.port1;
+    const audioBufferer = new AudioBuffererImpl(nativeSampleRate, buffererMessageChannel.port2);
+    buffererMessagePort.onmessage = new MessageHandlerAdapter({
+      error: error,
+      setStatus: setStatus,
+      checkStartStop: function checkStartStop() {
+        if (!startStopTickle) {
+          setTimeout(startStop, 1000);
+          startStopTickle = true;
+        }
+      }
+    });
+    
     retryingConnection(() => url + '?rate=' + encodeURIComponent(JSON.stringify(info.requested_sample_rate.get())), null, ws => {
       ws.binaryType = 'arraybuffer';
       function lose(reason) {
@@ -198,44 +168,17 @@ define([
         var wsDataValue = event.data;
         if (wsDataValue instanceof ArrayBuffer) {
           // Audio data.
-          
-          // Don't buffer huge amounts of data.
-          if (queue.length > 1000) {
-            console.log('Extreme audio overrun.');
-            queue.length = 0;
-            queueSampleCount = 0;
-            return;
-          }
-          
           if (numAudioChannels === null) {
             lose('Did not receive number-of-channels message before first chunk');
             return;
           }
-          
-          // Read in floats and zero-stuff.
-          const interpolation = nativeSampleRate / streamSampleRate;  // TODO fail if not integer
-          const streamRateChunk = new Float32Array(event.data);
-          const nSamples = streamRateChunk.length / numAudioChannels;
-          
-          // Insert zeros to change sample rate, e.g. with interpolation = 3,
-          //     [l r l r l r] becomes [l r 0 0 0 0 l r 0 0 0 0 l r 0 0 0 0]
-          var nativeRateChunk = new Float32Array(nSamples * numAudioChannels * interpolation);  // TODO: With partial-chunk processing we could avoid allocating new buffers all the time -- use a circular buffer? (But we can't be allocation-free anyway since the WebSocket isn't.)
-          var rightChannelIndex = numAudioChannels - 1;
-          var step = interpolation * numAudioChannels;
-          for (let i = 0; i < nSamples; i++) {
-            nativeRateChunk[i * step] = streamRateChunk[i * numAudioChannels];
-            nativeRateChunk[i * step + rightChannelIndex] = streamRateChunk[i * numAudioChannels + rightChannelIndex];
-          }
-          
-          queue.push(nativeRateChunk);
-          queueSampleCount += nativeRateChunk.length;
-          inputChunkSizeSample = nativeRateChunk.length;
-          updateParameters();
+        
+          buffererMessagePort.postMessage(['acceptSamples', wsDataValue]);
           if (!started) startStop();
-          
+        
         } else if (typeof wsDataValue === 'string') {
           // Metadata.
-          
+        
           var message;
           try {
             message = JSON.parse(wsDataValue);
@@ -253,7 +196,8 @@ define([
           }
           numAudioChannels = message.signal_type.kind === 'STEREO' ? 2 : 1;
           streamSampleRate = message.signal_type.sample_rate;
-          
+          buffererMessagePort.postMessage(['setFormat', numAudioChannels, streamSampleRate]);
+        
           // TODO: We should not update the filter frequency now, but when the audio callback starts reading the new-rate samples. (This could be done by stuffing the message into the queue.) But unless it's a serious problem, let's not bother until Audio Workers are available at which time we'll need to rewrite much of this anyway.
           antialiasFilters.forEach(filter => {
             // Yes, this cutoff value is above the Nyquist limit, but the actual cascaded filter works out to be about what we want.
@@ -261,13 +205,13 @@ define([
           });
           const interpolation = nativeSampleRate / streamSampleRate;
           interpolationGainNode.gain.value = interpolation;
-          
+        
           console.log('Streaming', streamSampleRate, numAudioChannels + 'ch', 'audio and converting to', nativeSampleRate);
-          
+        
         } else {
           lose('Unexpected type from WebSocket message event: ' + wsDataValue);
           return;
-        }        
+        }
       };
       ws.addEventListener('close', function (event) {
         error('Disconnected.');
@@ -277,78 +221,12 @@ define([
       // Starting the audio ScriptProcessor will be taken care of by the onmessage handler
     });
     
-    var rxBufferSize = delayToBufferSize(nativeSampleRate, 0.15);
-    
-    const ascr = audio.createScriptProcessor(rxBufferSize, 0, 2);
-    ascr.onaudioprocess = function audioCallback(event) {
+    const ascr = audio.createScriptProcessor(audioBufferer.rxBufferSize, 0, 2);
+    ascr.onaudioprocess = function audioprocessEventHandler(event) {
       const abuf = event.outputBuffer;
-      const outputChunkSize = abuf.length;
-      outputChunkSizeSample = outputChunkSize;
       const l = abuf.getChannelData(0);
       const r = abuf.getChannelData(1);
-      const rightChannelIndex = numAudioChannels - 1;
-      
-      let totalOverrun = 0;
-      
-      let j;
-      for (j = 0;
-           chunkIndex < audioStreamChunk.length && j < outputChunkSize;
-           chunkIndex += numAudioChannels, j++) {
-        l[j] = audioStreamChunk[chunkIndex];
-        r[j] = audioStreamChunk[chunkIndex + rightChannelIndex];
-      }
-      while (j < outputChunkSize) {
-        // Get next chunk
-        // TODO: shift() is expensive
-        audioStreamChunk = queue.shift() || EMPTY_CHUNK;
-        queueSampleCount -= audioStreamChunk.length;
-        chunkIndex = 0;
-        if (audioStreamChunk.length === 0) {
-          break;
-        }
-        for (;
-             chunkIndex < audioStreamChunk.length && j < outputChunkSize;
-             chunkIndex += numAudioChannels, j++) {
-          l[j] = audioStreamChunk[chunkIndex];
-          r[j] = audioStreamChunk[chunkIndex + rightChannelIndex];
-        }
-        if (queueSampleCount > targetQueueSize) {
-          let drop = Math.ceil((queueSampleCount - targetQueueSize) / 1024);
-          j = Math.max(0, j - drop);
-          totalOverrun += drop;
-        }
-      }
-      if (j > 0) {
-        fillL = l[j-1];
-        fillR = r[j-1];
-      }
-      var underrun = outputChunkSize - j;
-      if (underrun > 0) {
-        // Fill any underrun
-        for (; j < outputChunkSize; j++) {
-          l[j] = fillL;
-          r[j] = fillR;
-        }
-      }
-      if (prevUnderrun !== 0 && underrun !== rxBufferSize) {
-        // Report underrun, but only if it's not just due to the stream stopping
-        error('Underrun by ' + prevUnderrun + ' samples.');
-      }
-      prevUnderrun = underrun;
-
-      if (totalOverrun > 50) {  // ignore small clock-skew-ish amounts of overrun
-        error('Overrun; dropping ' + totalOverrun + ' samples.');
-      }
-      //var totalSkew = totalOverrun - underrun;
-      //averageSkew = averageSkew * 15/16 + totalSkew * 1/16;
-
-      if (underrun > 0 && !startStopTickle) {
-        // Consider stopping the audio callback
-        setTimeout(startStop, 1000);
-        startStopTickle = true;
-      }
-
-      updateParameters();
+      audioBufferer.produceSamples(l, r);
     };
     
     // TODO: If interpolation is 1, omit the filter from the chain. (This requires reconnecting dynamically.)
@@ -358,10 +236,10 @@ define([
     
     function startStop() {
       startStopTickle = false;
-      if (queue.length > 0 || audioStreamChunk !== EMPTY_CHUNK) {
+      if (queueNotEmpty) {
         if (!started) {
           // Avoid unnecessary click because previous fill value is not being played.
-          fillL = fillR = 0;
+          buffererMessagePort.postMessage(['resetFill']);
           
           started = true;
           nodeBeforeDestination.connect(audio.destination);
@@ -380,9 +258,8 @@ define([
     
     return info;
   }
-  
   exports.connectAudio = connectAudio;
-
+  
   // TODO adapter should have gui settable parameters and include these
   // These options create a less meaningful and more 'decorative' result.
   const FREQ_ADJ = false;    // Compensate for typical frequency dependence in music so peaks are equal.
@@ -421,7 +298,7 @@ define([
     
       let absolute_adj;
       if (TIME_ADJ) {
-        var medianBuffer = Array.prototype.slice.call(fftBuffer);
+        const medianBuffer = Array.prototype.slice.call(fftBuffer);
         medianBuffer.sort(function(a, b) {return a - b; });
         absolute_adj = -100 - medianBuffer[length / 2];
       } else {
@@ -712,15 +589,6 @@ define([
     Object.defineProperty(this, 'source', {value: userMediaOpener.source});
   }
   exports.UserMediaSelector = UserMediaSelector;
-  
-  // Given a maximum acceptable delay, calculate the largest power-of-two buffer size for a ScriptProcessorNode which does not result in more than that delay.
-  function delayToBufferSize(sampleRate, maxDelayInSeconds) {
-    var maxBufferSize = sampleRate * maxDelayInSeconds;
-    var powerOfTwoBufferSize = 1 << Math.floor(Math.log(maxBufferSize) / Math.LN2);
-    // Size limits defined by the Web Audio API specification.
-    powerOfTwoBufferSize = Math.max(256, Math.min(16384, powerOfTwoBufferSize));
-    return powerOfTwoBufferSize;
-  }
   
   function makeRequestedSampleRateCell(nativeSampleRate, storage) {
     const defaultRate = minimizeSampleRate(nativeSampleRate, ASSUMED_USEFUL_SAMPLE_RATE);
