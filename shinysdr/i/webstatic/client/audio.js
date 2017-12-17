@@ -72,8 +72,9 @@ define([
   exports.AudioContext = AudioContext;
   
   function connectAudio(scheduler, url, storage) {
-    var audio = new AudioContext();
-    var nativeSampleRate = audio.sampleRate;
+    const audio = new AudioContext();
+    const nativeSampleRate = audio.sampleRate;
+    const useScriptProcessor = !('audioWorklet' in audio);
     
     // Stream parameters
     let numAudioChannels = null;
@@ -137,25 +138,70 @@ define([
     
     const interpolationGainNode = audio.createGain();
     
-    const buffererMessageChannel = new MessageChannel();
-    const buffererMessagePort = buffererMessageChannel.port1;
-    const audioBufferer = new AudioBuffererImpl(nativeSampleRate, buffererMessageChannel.port2);
-    buffererMessagePort.onmessage = new MessageHandlerAdapter({
-      error: error,
-      setStatus: setStatus,
-      checkStartStop: function checkStartStop() {
-        if (!startStopTickle) {
-          setTimeout(startStop, 1000);
-          startStopTickle = true;
+    // TODO: If interpolation is 1, omit the filter from the chain. (This requires reconnecting dynamically.)
+    let nodeAfterSampleSource = antialiasFilters[0];
+    antialiasFilters[antialiasFilters.length - 1].connect(interpolationGainNode);
+    const nodeBeforeDestination = interpolationGainNode;
+    
+    let buffererMessagePortPromise;
+    if (useScriptProcessor) {
+      const buffererMessageChannel = new MessageChannel();
+      const buffererMessagePort = buffererMessageChannel.port1;
+      buffererMessagePortPromise = Promise.resolve(buffererMessagePort);
+      const audioBufferer = new AudioBuffererImpl(nativeSampleRate, buffererMessageChannel.port2);
+      const ascr = audio.createScriptProcessor(audioBufferer.rxBufferSize, 0, 2);
+      ascr.onaudioprocess = function audioprocessEventHandler(event) {
+        const abuf = event.outputBuffer;
+        const l = abuf.getChannelData(0);
+        const r = abuf.getChannelData(1);
+        audioBufferer.produceSamples(l, r);
+      };
+      ascr.connect(nodeAfterSampleSource);
+    } else {
+      buffererMessagePortPromise = audio.audioWorklet.addModule('/client/audio/bufferer.js').then(() => {
+        const workletNode = new AudioWorkletNode(audio, 'WorkletBufferer', {
+          numberOfInputs: 0,
+          numberOfOutputs: 1,
+          outputChannelCount: [2],
+        });
+        workletNode.addEventListener('processorstatechange', event => {
+          if (workletNode.processorState !== 'running') {
+            console.error('Audio: Unexpected WorkletNode state change to', workletNode.processorState);
+          }
+        });
+        
+        // TODO need to handle port not being ready
+        workletNode.connect(nodeAfterSampleSource);
+        
+        return workletNode.port;
+      }, e => {
+        error('' + e);
+      });
+    }
+    
+    buffererMessagePortPromise.then(buffererMessagePort => {
+      buffererMessagePort.onmessage = new MessageHandlerAdapter({
+        error: error,
+        setStatus: setStatus,
+        checkStartStop: function checkStartStop() {
+          if (!startStopTickle) {
+            setTimeout(startStop, 1000);
+            startStopTickle = true;
+          }
         }
-      }
+      });
+      
+      retryingConnection(
+        () => url + '?rate=' + encodeURIComponent(JSON.stringify(info.requested_sample_rate.get())),
+        null,
+        ws => handleWebSocket(ws, buffererMessagePort));
     });
     
-    retryingConnection(() => url + '?rate=' + encodeURIComponent(JSON.stringify(info.requested_sample_rate.get())), null, ws => {
+    function handleWebSocket(ws, buffererMessagePort) {
       ws.binaryType = 'arraybuffer';
       function lose(reason) {
         // TODO: Arrange to trigger exponential backoff if we get this kind of error promptly (maybe retryingConnection should just have a time threshold)
-        console.error('audio:', reason);
+        console.error('Audio:', reason);
         ws.close(4000);  // first "application-specific" error code
       }
       scheduler.claim(lose);
@@ -172,13 +218,13 @@ define([
             lose('Did not receive number-of-channels message before first chunk');
             return;
           }
-        
+          
           buffererMessagePort.postMessage(['acceptSamples', wsDataValue]);
           if (!started) startStop();
-        
+          
         } else if (typeof wsDataValue === 'string') {
           // Metadata.
-        
+          
           var message;
           try {
             message = JSON.parse(wsDataValue);
@@ -197,17 +243,17 @@ define([
           numAudioChannels = message.signal_type.kind === 'STEREO' ? 2 : 1;
           streamSampleRate = message.signal_type.sample_rate;
           buffererMessagePort.postMessage(['setFormat', numAudioChannels, streamSampleRate]);
-        
-          // TODO: We should not update the filter frequency now, but when the audio callback starts reading the new-rate samples. (This could be done by stuffing the message into the queue.) But unless it's a serious problem, let's not bother until Audio Workers are available at which time we'll need to rewrite much of this anyway.
+          
+          // TODO: We should not update the filter frequency now, but when the AudioBuffererImpl starts reading the new-rate samples. We will need to keep track of the relationship of AudioContext timestamps to samples in order to do this.
           antialiasFilters.forEach(filter => {
             // Yes, this cutoff value is above the Nyquist limit, but the actual cascaded filter works out to be about what we want.
             filter.frequency.value = Math.min(streamSampleRate * 0.8, nativeSampleRate * 0.5);
           });
           const interpolation = nativeSampleRate / streamSampleRate;
           interpolationGainNode.gain.value = interpolation;
-        
-          console.log('Streaming', streamSampleRate, numAudioChannels + 'ch', 'audio and converting to', nativeSampleRate);
-        
+          
+          console.log('Streaming using', useScriptProcessor ? 'ScriptProcessor' : 'AudioWorklet', streamSampleRate, numAudioChannels + 'ch', 'audio and converting to', nativeSampleRate);
+          
         } else {
           lose('Unexpected type from WebSocket message event: ' + wsDataValue);
           return;
@@ -218,28 +264,14 @@ define([
         numAudioChannels = null;
         setTimeout(startStop, 0);
       });
-      // Starting the audio ScriptProcessor will be taken care of by the onmessage handler
-    });
-    
-    const ascr = audio.createScriptProcessor(audioBufferer.rxBufferSize, 0, 2);
-    ascr.onaudioprocess = function audioprocessEventHandler(event) {
-      const abuf = event.outputBuffer;
-      const l = abuf.getChannelData(0);
-      const r = abuf.getChannelData(1);
-      audioBufferer.produceSamples(l, r);
-    };
-    
-    // TODO: If interpolation is 1, omit the filter from the chain. (This requires reconnecting dynamically.)
-    ascr.connect(antialiasFilters[0]);
-    antialiasFilters[antialiasFilters.length - 1].connect(interpolationGainNode);
-    const nodeBeforeDestination = interpolationGainNode;
+    }
     
     function startStop() {
       startStopTickle = false;
       if (queueNotEmpty) {
         if (!started) {
           // Avoid unnecessary click because previous fill value is not being played.
-          buffererMessagePort.postMessage(['resetFill']);
+          buffererMessagePortPromise.then(port => { port.postMessage(['resetFill']); });
           
           started = true;
           nodeBeforeDestination.connect(audio.destination);

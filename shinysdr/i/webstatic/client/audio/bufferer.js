@@ -103,7 +103,7 @@
       
         // Don't buffer huge amounts of data.
         if (queue.length > 100) {
-          console.log('Extreme audio overrun.');
+          console.log('Extreme audio overrun.');  // TODO send a proper feedback message
           queue.length = 0;
           queueSampleCount = 0;
           return;
@@ -245,13 +245,14 @@
       
       constructor(options) {
         super(options);
-        
         this._b = new AudioBuffererImpl(/* (global) */ sampleRate, this.port);
       }
       
       process(inputs, outputs, parameters) {
-        const output = outputs[0];
-        this._b.produceSamples(output[0], output[1]);
+        const soleOutput = outputs[0];
+        // Be robust against mono output even though we shouldn't ever get it.
+        this._b.produceSamples(soleOutput[0], soleOutput[soleOutput.length - 1]);
+        return true;  // indicate we are an active source
       }
     });
   }

@@ -13,6 +13,7 @@
   "devel": true,
   "predef": [
     "AudioContext",
+    "AudioWorkletNode",
     
     "define",
     "requirejs",
