@@ -180,7 +180,6 @@ define([
           radioCell: remoteCell,
           index: index,
           clientState: clientState,
-          spectrumView: null,
           freqDB: freqDB,
           writableDB: writableDB,
           scheduler: scheduler,

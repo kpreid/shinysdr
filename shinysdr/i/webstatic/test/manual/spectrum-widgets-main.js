@@ -98,7 +98,6 @@ define([
     widgets: widgets,
     radioCell: root,  // TODO: 'radio' name is bogus
     clientState: clientState,
-    spectrumView: null,
     freqDB: empty,
     scheduler: scheduler
   });

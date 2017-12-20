@@ -110,7 +110,7 @@ define([
   // Moves as if the space is linear but can tolerate it not actually being.
   // Does not provide rotation or tilt.
   function TouchZoomHandler(targetElement, view, tapHandler) {
-    // TODO: This was derived from the touch handling in SpectrumView. Now that we've gener
+    // TODO: This was derived from the touch handling in SpectrumLayoutContext. Now that we've gener
     var activeTouches = Object.create(null);
     var touchCanBeTap = false;
     var stateAtStart = null;

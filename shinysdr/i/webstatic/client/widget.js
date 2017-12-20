@@ -21,14 +21,12 @@ define([
   './coordination', 
   './domtools', 
   './events', 
-  './math', 
   './types', 
   './values',
 ], (
   import_coordination,
   import_domtools,
   import_events,
-  import_math,
   import_types,
   import_values
 ) => {
@@ -40,22 +38,15 @@ define([
     lifecycleInit,
   } = import_domtools;
   const {
-    Notifier,
     SubScheduler,
   } = import_events;
   const {
-    mod,
-  } = import_math;
-  const {
     anyT,
-    RangeT,
   } = import_types;
   const {
     ConstantCell,
     DerivedCell,
-    StorageCell,
     StorageNamespace,
-    makeBlock,
   } = import_values;
   
   const exports = {};
@@ -76,26 +67,16 @@ define([
     this.scheduler = config.scheduler;
     this.freqDB = config.freqDB;
     this.writableDB = config.writableDB;
-    this.spectrumView = config.spectrumView;
+    this.layoutContext = config.layoutContext || null;
     // TODO reconsider this unusual handling. Required to avoid miscellaneous things needing to define a coordinator.
     this.coordinator = config.coordinator || new Coordinator(this.scheduler, this.freqDB, this.radioCell);
     this.actionCompleted = config.actionCompleted || function actionCompletedNoop() {};
     Object.freeze(this);
   }
-  Context.prototype.withSpectrumView = function (outerElement, innerElement, monitor, isRFSpectrum) {
-    var id = outerElement.id || innerElement.id;
-    if (!id) throw new Error('spectrum view element must have an id for persistence');
-    var ns = new StorageNamespace(localStorage, 'shinysdr.viewState.' + id + '.');
-    var view = new SpectrumView({
-      scheduler: this.scheduler,
-      radioCell: this.radioCell,
-      outerElement: outerElement,
-      innerElement: innerElement,
-      storage: ns,
-      isRFSpectrum: isRFSpectrum,
-      signalTypeCell: monitor.signal_type,
-      actions: this.coordinator.actions
-    });
+  Context.prototype.withLayoutContext = function (layoutContext) {
+    if (typeof layoutContext !== 'object') {
+      throw new TypeError('bad layoutContext');
+    }
     return new Context({
       widgets: this.widgets,
       radioCell: this.radioCell,
@@ -104,7 +85,7 @@ define([
       freqDB: this.freqDB,
       writableDB: this.writableDB,
       scheduler: this.scheduler,
-      spectrumView: view,
+      layoutContext: layoutContext,
       coordinator: this.coordinator,
       actionCompleted: this.actionCompleted
     });
@@ -118,7 +99,7 @@ define([
       freqDB: this.freqDB,
       writableDB: this.writableDB,
       scheduler: this.scheduler,
-      spectrumView: null,
+      layoutContext: null,  // menu is also a new default layout context
       coordinator: this.coordinator,
       actionCompleted: function actionCompletedWrapper() {  // wrapper to suppress this
         closeCallback();
@@ -182,7 +163,15 @@ define([
         target: targetCell,
         element: newSourceEl,
         context: context, // TODO redundant values -- added for programmatic widget-creation; maybe facetize createWidget. Also should remove text-named widget table from this to make it more tightly scoped, perhaps.
-        view: context.spectrumView,
+        getLayoutContext(contextType) {
+          if (context.layoutContext instanceof contextType) {
+            return context.layoutContext;
+          } else if (context.layoutContext === null) {
+            throw new Error('missing expected layout context');
+          } else {
+            throw new Error('wrong layout context type');
+          }
+        },
         clientState: context.clientState,
         freqDB: context.freqDB, // TODO: remove the need for this
         writableDB: context.writableDB, // TODO: remove the need for this
@@ -339,384 +328,6 @@ define([
       }).observe(node, {attributes: true, attributeFilter: ['open']});
     }
   }
-  
-  // Defines the display parameters and coordinate calculations of the spectrum widgets
-  // TODO: Revisit whether this should be in widgets.js -- it is closely tied to the spectrum widgets, but also managed by the widget framework.
-  var MAX_ZOOM_BINS = 60; // Maximum zoom shows this many FFT bins
-  function SpectrumView(config) {
-    var radioCell = config.isRFSpectrum ? config.radioCell : null;
-    var container = config.outerElement;
-    var innerElement = config.innerElement;
-    var scheduler = config.scheduler;
-    var storage = config.storage;
-    var isRFSpectrum = config.isRFSpectrum;
-    var signalTypeCell = config.signalTypeCell;
-    var tune = config.actions.tune;
-    var self = this;
-
-    var n = this.n = new Notifier();
-    
-    // per-drawing-frame parameters
-    var nyquist, centerFreq, leftFreq, rightFreq, pixelWidth, pixelsPerHertz, analytic;
-    
-    // Zoom state variables
-    // We want the cursor point to stay fixed, but scrollLeft quantizes to integer; fractionalScroll stores a virtual fractional part.
-    var zoom = 1;
-    var fractionalScroll = 0;
-    var cacheScrollLeft = 0;
-    
-    // Restore persistent zoom state
-    container.addEventListener('shinysdr:lifecycleinit', event => {
-      // TODO: clamp zoom here in the same way changeZoom does
-      zoom = parseFloat(storage.getItem('zoom')) || 1;
-      var initScroll = parseFloat(storage.getItem('scroll')) || 0;
-      innerElement.style.width = (container.offsetWidth * zoom) + 'px';
-      prepare();
-      scheduler.startLater(function later() {
-        // Delay kludge because the container is potentially zero width at initialization time and therefore cannot actually be scrolled.
-        container.scrollLeft = Math.floor(initScroll);
-        fractionalScroll = mod(initScroll, 1);
-        prepare();
-      });
-    });
-    
-    function prepare() {
-      // TODO: unbreakable notify loop here; need to be lazy
-      var sourceType = signalTypeCell.depend(prepare);
-      if (isRFSpectrum) {
-        // Note that this uses source.freq, not the spectrum data center freq. This is correct because we want to align the coords with what we have selected, not the current data; and the WaterfallPlot is aware of this distinction.
-        centerFreq = radioCell.depend(prepare).source.depend(prepare).freq.depend(prepare);
-      } else {
-        centerFreq = 0;
-      }
-      nyquist = sourceType.sample_rate / 2;
-      analytic = sourceType.kind === 'IQ';  // TODO have glue code
-      leftFreq = analytic ? centerFreq - nyquist : centerFreq;
-      rightFreq = centerFreq + nyquist;
-      pixelsPerHertz = pixelWidth / (rightFreq - leftFreq) * zoom;
-      
-      if (!isFinite(fractionalScroll)) {
-        console.error("Shouldn't happen: SpectrumView fractionalScroll =", fractionalScroll);
-        fractionalScroll = 0;
-      }
-      
-      // Adjust scroll to match possible viewport size change.
-      // (But if we are hidden or zero size, then the new scroll position would be garbage, so keep the old state.)
-      if (container.offsetWidth > 0 && pixelWidth !== container.offsetWidth) {
-        // Compute change (with case for first time initialization)
-        var scaleChange = isFinite(pixelWidth) ? container.offsetWidth / pixelWidth : 1;
-        var scrollValue = (cacheScrollLeft + fractionalScroll) * scaleChange;
-        
-        pixelWidth = container.offsetWidth;
-        
-        // Update scrollable range
-        var w = pixelWidth * zoom;
-        innerElement.style.width = w + 'px';
-        
-        // Apply change
-        container.scrollLeft = scrollValue;
-        fractionalScroll = scrollValue - container.scrollLeft;
-      }
-      
-      // accessing scrollLeft triggers relayout, so cache it
-      cacheScrollLeft = container.scrollLeft;
-      n.notify();
-    }
-    scheduler.claim(prepare);
-    prepare();
-    
-    window.addEventListener('resize', function (event) {
-      // immediate to ensure smooth animation and to allow scroll adjustment
-      scheduler.callNow(prepare);
-    }.bind(this));
-    
-    container.addEventListener('scroll', scheduler.syncEventCallback(function (event) {
-      storage.setItem('scroll', String(container.scrollLeft + fractionalScroll));
-      // immediate to ensure smooth animation and interaction
-      scheduler.callNow(prepare);
-    }), false);
-    
-    // exported for the sake of createWidgets -- TODO proper factoring?
-    this.scheduler = scheduler;
-    
-    this.isRFSpectrum = function () {
-      return isRFSpectrum;
-    };
-    this.isRealFFT = function isRealFFT(freq) {
-      // When posible, prefer the coordinate-conversion functions to this one. But sometimes this is much more direct.
-      return !analytic;
-    };
-    this.freqToCSSLeft = function freqToCSSLeft(freq) {
-      return ((freq - leftFreq) * pixelsPerHertz) + 'px';
-    };
-    this.freqToCSSRight = function freqToCSSRight(freq) {
-      return (pixelWidth - (freq - leftFreq) * pixelsPerHertz) + 'px';
-    };
-    this.freqToCSSLength = function freqToCSSLength(freq) {
-      return (freq * pixelsPerHertz) + 'px';
-    };
-    this.leftFreq = function getLeftFreq() {
-      return leftFreq;
-    };
-    this.rightFreq = function getRightFreq() {
-      return rightFreq;
-    };
-    this.leftVisibleFreq = function leftVisibleFreq() {
-      return leftFreq + cacheScrollLeft / pixelsPerHertz;
-    };
-    this.rightVisibleFreq = function rightVisibleFreq() {
-      return leftFreq + (cacheScrollLeft + pixelWidth) / pixelsPerHertz;
-    };
-    this.getCenterFreq = function getCenterFreq() {
-      return centerFreq;
-    };
-    this.getVisiblePixelWidth = function getVisiblePixelWidth() {
-      return pixelWidth;
-    };
-    this.getTotalPixelWidth = function getTotalPixelWidth() {
-      return pixelWidth * zoom;
-    };
-    this.getVisiblePixelHeight = function getVisiblePixelHeight() {
-      // TODO: This being vertical rather than horizontal doesn't fit much with the rest of SpectrumView's job, but it needs to know about innerElement.
-      return innerElement.offsetHeight;
-    };
-    
-    function clampZoom(zoomValue) {
-      var maxZoom = Math.max(
-        1,  // at least min zoom,
-        Math.max(
-          nyquist / 3e3, // at least 3 kHz
-          radioCell
-            ? radioCell.get().monitor.get().freq_resolution.get() / MAX_ZOOM_BINS
-            : 0));
-      return Math.min(maxZoom, Math.max(1.0, zoomValue));
-    }
-    function clampScroll(scrollValue) {
-      return Math.max(0, Math.min(pixelWidth * (zoom - 1), scrollValue));
-    }
-    function startZoomUpdate() {
-      // Force scrollable range to update, for when zoom and scrollLeft change together.
-      // The (temporary) range is the max of the old and new ranges.
-      var w = pixelWidth * zoom;
-      var oldWidth = parseInt(innerElement.style.width);
-      innerElement.style.width = Math.max(w, oldWidth) + 'px';
-    }
-    function finishZoomUpdate(scrollValue) {
-      scrollValue = clampScroll(scrollValue);
-      
-      // Final scroll-range update.
-      var w = pixelWidth * zoom;
-      innerElement.style.width = w + 'px';
-      
-      container.scrollLeft = scrollValue;
-      fractionalScroll = scrollValue - container.scrollLeft;
-      
-      storage.setItem('zoom', String(zoom));
-      storage.setItem('scroll', String(scrollValue));
-      
-      // recompute with new scrollLeft/fractionalScroll
-      scheduler.callNow(prepare);
-    }
-    
-    this.changeZoom = function changeZoom(delta, cursorX) {
-      cursorX += fractionalScroll;
-      var cursor01 = cursorX / pixelWidth;
-      
-      // Find frequency to keep under the cursor
-      var cursorFreq = this.leftVisibleFreq() * (1-cursor01) + this.rightVisibleFreq() * cursor01;
-      
-      // Adjust and clamp zoom
-      zoom *= Math.exp(-delta * 0.0005);
-      zoom = clampZoom(zoom);
-      
-      // Recompute parameters now so we can adjust pan (scroll)
-      scheduler.callNow(prepare);
-      
-      var unadjustedCursorFreq = this.leftVisibleFreq() * (1-cursor01) + this.rightVisibleFreq() * cursor01;
-      
-      // Force scrollable range to update
-      startZoomUpdate();
-      // Current virtual scroll
-      var scroll = container.scrollLeft + fractionalScroll;
-      // Adjust
-      scroll = scroll + (cursorFreq - unadjustedCursorFreq) * pixelsPerHertz;
-      // Write back
-      finishZoomUpdate(scroll);
-    };
-    
-    // TODO: mousewheel event is allegedly nonstandard and inconsistent among browsers, notably not in Firefox (not that we're currently FF-compatible due to the socket issue).
-    container.addEventListener('mousewheel', function(event) {
-      if (Math.abs(event.wheelDeltaY) > Math.abs(event.wheelDeltaX)) {
-        // Vertical scrolling: override to zoom.
-        self.changeZoom(-event.wheelDeltaY, event.clientX - container.getBoundingClientRect().left);
-        event.preventDefault();
-        event.stopPropagation();
-      } else {
-        // Horizontal scrolling (or diagonal w/ useless vertical component): if hits edge, change frequency.
-        if (event.wheelDeltaX > 0 && cacheScrollLeft === 0
-            || event.wheelDeltaX < 0 && cacheScrollLeft === (container.scrollWidth - container.clientWidth)) {
-          if (isRFSpectrum) {
-            var freqCell = radioCell.get().source.get().freq;
-            freqCell.set(freqCell.get() + (event.wheelDeltaX * -0.12) / pixelsPerHertz);
-          }
-          
-          // This shouldn't be necessary, but Chrome treats horizontal scroll events from touchpad as a back/forward gesture.
-          event.preventDefault();
-        }
-      }
-    }, {capture: true, passive: false});
-    
-    function clientXToViewportLeft(clientX) {
-      return clientX - container.getBoundingClientRect().left;
-    }
-    function clientXToHardLeft(clientX) {  // left in the content not the viewport
-      return clientXToViewportLeft(clientX) + cacheScrollLeft;
-    }
-    function clientXToFreq(clientX) {
-      return clientXToHardLeft(clientX) / pixelsPerHertz + leftFreq;
-    }
-    
-    var activeTouches = Object.create(null);
-    var mayTapToTune = false;
-    
-    container.addEventListener('touchstart', function (event) {
-      // Prevent mouse-emulation handling
-      event.preventDefault();
-      
-      // Tap-to-tune requires exactly one touch just starting
-      mayTapToTune = Object.keys(activeTouches) === 0 && event.changedTouches.length === 1;
-      
-      // Record the frequency the user has touched
-      Array.prototype.forEach.call(event.changedTouches, function (touch) {
-        var x = clientXToViewportLeft(touch.clientX);
-        activeTouches[touch.identifier] = {
-          grabFreq: clientXToFreq(touch.clientX),
-          grabView: x,  // fixed
-          nowView: x  // updated later
-        };
-      });
-    }, {capture: false, passive: false});
-    
-    container.addEventListener('touchmove', function (event) {
-      Array.prototype.forEach.call(event.changedTouches, function (touch) {
-        activeTouches[touch.identifier].nowView = clientXToViewportLeft(touch.clientX);
-      });
-      
-      const touchIdentifiers = Object.keys(activeTouches);
-      if (touchIdentifiers.length >= 2) {
-        // Zoom using two touches
-        touchIdentifiers.sort();  // Ensure stable choice (though oldest would be better).
-        const id1 = touchIdentifiers[0];
-        const id2 = touchIdentifiers[1];
-        const f1 = activeTouches[id1].grabFreq;
-        const f2 = activeTouches[id2].grabFreq;
-        const p1 = activeTouches[id1].nowView;
-        const p2 = activeTouches[id2].nowView;
-        const newPixelsPerHertz = Math.abs(p2 - p1) / Math.abs(f2 - f1);
-        const unzoomedPixelsPerHertz = pixelWidth / (rightFreq - leftFreq);
-        zoom = clampZoom(newPixelsPerHertz / unzoomedPixelsPerHertz);
-        startZoomUpdate();
-      }
-      
-      // Compute scroll pos, using NEW zoom value
-      var scrolls = [];
-      for (var idString in activeTouches) {
-        var info = activeTouches[idString];
-        var grabbedFreq = info.grabFreq;
-        var touchedPixelNow = info.nowView;
-        var newScrollLeft = (grabbedFreq - leftFreq) * pixelsPerHertz - touchedPixelNow;
-        scrolls.push(newScrollLeft);
-      }
-      
-      var avgScroll = scrolls.reduce(function (a, b) { return a + b; }, 0) / scrolls.length;
-      
-      // Frequency pan
-      var clampedScroll = clampScroll(avgScroll);
-      var overrun = avgScroll - clampedScroll;
-      if (overrun !== 0 && isRFSpectrum) {
-        // TODO repeated code -- abstract "cell to use to change freq"
-        var freqCell = radioCell.get().source.get().freq;
-        freqCell.set(freqCell.get() + overrun / pixelsPerHertz);
-      }
-      
-      finishZoomUpdate(clampedScroll);
-    }, {capture: true, passive: true});
-    
-    function touchcancel(event) {
-      Array.prototype.forEach.call(event.changedTouches, function (touch) {
-        delete activeTouches[touch.identifier];
-      });
-    }
-    container.addEventListener('touchcancel', touchcancel, {capture: true, passive: true});
-    
-    container.addEventListener('touchend', function (event) {
-      // Tap-to-tune
-      // TODO: The overall touch event handling is disabling clicking on frequency DB labels. We need to recognize them as event targets in _this_ bunch of handlers, so that we can decide whether a gesture is pan or tap-on-label.
-      if (mayTapToTune && isRFSpectrum) {
-        var touch = event.changedTouches[0];  // known to be exactly one
-        var info = activeTouches[touch.identifier];
-        var newViewX = clientXToViewportLeft(touch.clientX);
-        if (Math.abs(newViewX - info.grabView) < 20) {  // TODO justify choice of slop
-          tune({
-            freq: info.grabFreq,  // use initial touch pos, not final, because I expect it to be more precise
-            alwaysCreate: alwaysCreateReceiverFromEvent(event)
-          });
-        }
-      }
-      
-      // Forget the touch
-      touchcancel(event);
-    }, {capture: true, passive: true});
-    
-    this.addClickToTune = element => {
-      if (!isRFSpectrum) return;
-      
-      let dragReceiver = null;
-      
-      function clickTune(event) {
-        const firstEvent = event.type === 'mousedown';
-        const freq = clientXToFreq(event.clientX);
-        
-        if (!firstEvent && !dragReceiver) {
-          // We sent the request to create a receiver, but it doesn't exist on the client yet. Do nothing.
-          // TODO: Check for the appearance of the receiver and start dragging it.
-        } else {
-          dragReceiver = tune({
-            receiver: dragReceiver,
-            freq: freq,
-            alwaysCreate: firstEvent && alwaysCreateReceiverFromEvent(event)
-          });
-          
-          // handled event
-          event.stopPropagation();
-          event.preventDefault(); // no drag selection
-        }
-      }
-      element.addEventListener('mousedown', function(event) {
-        if (event.button !== 0) return;  // don't react to right-clicks etc.
-        event.preventDefault();
-        document.addEventListener('mousemove', clickTune, true);
-        document.addEventListener('mouseup', function(event) {
-          dragReceiver = null;
-          document.removeEventListener('mousemove', clickTune, true);
-        }, true);
-        clickTune(event);
-      }, false);
-    };
-    
-    function cc(key, type, value) {
-      return new StorageCell(storage, type, value, key);
-    }
-    this.parameters = makeBlock({
-      spectrum_split: cc('spectrum_split', new RangeT([[0, 1]], false, false), 0.6),
-      spectrum_average: cc('spectrum_average', new RangeT([[0.1, 1]], true, false), 0.15),
-      spectrum_level_min: cc('spectrum_level_min', new RangeT([[-200, -20]], false, false), -130),
-      spectrum_level_max: cc('spectrum_level_max', new RangeT([[-100, 0]], false, false), -20)
-    });
-    
-    lifecycleInit(container);
-  }
-  exports.SpectrumView = SpectrumView;
   
   function ErrorWidget(config, widgetCtor, error) {
     this.element = document.createElement('div');
