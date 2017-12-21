@@ -1188,28 +1188,55 @@ define([
   }
   
   const TABLE_COLUMN_HEADER_MARKER = '_HEADER';  // could be any unique object but this is helpful
-  const TABLE_ROW_HEADER_MARKER = {};  // not a string
+  const TABLE_ROW_HEADER_COLUMN = {
+    headerText() {
+      return '';
+    },
+    lookupIn(block, rowName) {
+      if (typeof rowName === 'string') {
+        return new ConstantCell(rowName);
+      } else {
+        return undefined;
+      }
+    }
+  };
   
   class TableLayoutContext {
     constructor() {
-      this._columnsSeen = new Set();
-      this._columnKeysCell = new LocalReadCell(anyT, Object.freeze([TABLE_ROW_HEADER_MARKER]));
+      this._columnLookup = new Map();
+      this._columnsCell = new LocalReadCell(anyT, Object.freeze([TABLE_ROW_HEADER_COLUMN]));
     }
     
     extractColumns(block) {
       const newColumns = [];
-      for (var k in block) {
-        if (!this._columnsSeen.has(k)) {
-          this._columnsSeen.add(k);
-          newColumns.push(k);
+      for (var key in block) {
+        const cell = block[key];
+        if (!(cell instanceof Cell)) continue;  // don't crash...
+        
+        // Use the entire metadata as a lookup key so that we don't conflate different titles
+        const metadata = cell.metadata;
+        const keyWithMetadata = JSON.stringify([key, metadata]);
+        
+        if (!this._columnLookup.has(keyWithMetadata)) {
+          const keyConst = key;
+          const column = {
+            headerText() {
+              return metadata.naming.label || keyConst;
+            },
+            lookupIn(block, rowName) {
+              return block[keyConst];
+            }
+          };
+          this._columnLookup.set(keyWithMetadata, column);
+          newColumns.push(column);
         }
       }
       // TODO: sort
-      this._columnKeysCell._update(Object.freeze(this._columnKeysCell.get().concat(newColumns)));
+      this._columnsCell._update(Object.freeze(this._columnsCell.get().concat(newColumns)));
     }
     
-    columnKeysCell() {
-      return this._columnKeysCell;
+    columnsCell() {
+      return this._columnsCell;
     }
   }
   
@@ -1272,19 +1299,15 @@ define([
     }
     
     const childrenAKD = new AddKeepDrop({
-      add(columnKey) {
+      add(column) {
         const cellEl = rowEl.appendChild(document.createElement(block === TABLE_COLUMN_HEADER_MARKER ? 'th' : 'td'));
         
-        let widgetHandle;
+        let widgetHandle, cell;
         if (block === TABLE_COLUMN_HEADER_MARKER) {
-          if (columnKey !== TABLE_ROW_HEADER_MARKER) {
-            cellEl.textContent = columnKey;  // TODO pretty names
-          }
-        } else if (columnKey === TABLE_ROW_HEADER_MARKER) {
-          cellEl.textContent = label;
-        } else if (block[columnKey]) {
+          cellEl.textContent = column.headerText();
+        } else if (cell = column.lookupIn(block, label)) {
           cellEl.title = '';  // Specify we want to hide titles.
-          widgetHandle = createWidgetExt(config.context, PickWidget, cellEl, block[columnKey]);
+          widgetHandle = createWidgetExt(config.context, PickWidget, cellEl, cell);
         } else {
           cellEl.textContent = 'n/a';
         }
@@ -1294,7 +1317,7 @@ define([
           rowEl.removeChild(cellEl);
         };
       },
-      remove(name, remover) {
+      remove(column, remover) {
         remover();
       }
     });
@@ -1309,7 +1332,7 @@ define([
     
     // Get aggregated shape info from table context.
     config.scheduler.startNow(function handleColumnChange() {
-      childrenAKD.update(tableContext.columnKeysCell().depend(handleColumnChange));
+      childrenAKD.update(tableContext.columnsCell().depend(handleColumnChange));
     });
   }
   
