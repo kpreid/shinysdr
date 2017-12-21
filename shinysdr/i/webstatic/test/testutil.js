@@ -23,12 +23,14 @@ define([
   'database',
   'events',
   'values',
+  'widget',
 ], (
   import_jasmine,
   import_coordination,
   import_database,
   import_events,
-  import_values
+  import_values,
+  import_widget
 ) => {
   const {ji: {
     afterEach,
@@ -48,6 +50,9 @@ define([
     Index,
     StorageNamespace,
   } = import_values;
+  const {
+    Context,
+  } = import_widget;
   
   const exports = {};
   
@@ -161,6 +166,12 @@ define([
           _registerMap: function () {}  // TODO this is a stub of a kludge and should go away when the kludge does
         }
       };
+      const context = new Context({
+        widgets: {},
+        scheduler: scheduler,
+        index: index,
+        coordinator: stubCoordinator,
+      });
       const storage = new StorageNamespace(sessionStorage, Math.random() + '.');
       return {
         storage: storage,
@@ -171,12 +182,7 @@ define([
         clientState: new ClientStateObject(storage, null),
         rebuildMe: rebuildMe,
         index: index,
-        context: {
-          widgets: {},
-          scheduler: scheduler,
-          index: index,
-          coordinator: stubCoordinator
-        },
+        context: context,
         actions: stubCoordinator.actions,
       };
     }
