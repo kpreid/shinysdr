@@ -305,7 +305,9 @@ define([
   function Generic(config) {
     SimpleElementWidget.call(this, config, undefined,
       function buildPanel(container) {
-        container.appendChild(document.createTextNode(container.getAttribute('title') + ': '));
+        if (container.getAttribute('title')) {
+          container.appendChild(document.createTextNode(container.getAttribute('title') + ': '));
+        }
         container.removeAttribute('title');
         const node = container.appendChild(document.createTextNode(''));
         insertUnitIfPresent(config.target.type, container);
@@ -1193,13 +1195,19 @@ define([
       return '';
     },
     lookupIn(block, rowName) {
-      if (typeof rowName === 'string') {
-        return new ConstantCell(rowName);
-      } else {
-        return undefined;
-      }
+      return new ConstantCell(rowName, stringT);
     }
   };
+  function RegularTableColumn(metadata, key) {
+    return {
+      headerText() {
+        return metadata.naming.label || key;
+      },
+      lookupIn(block, rowName) {
+        return block[key];
+      }
+    };
+  }
   
   class TableLayoutContext {
     constructor() {
@@ -1218,15 +1226,7 @@ define([
         const keyWithMetadata = JSON.stringify([key, metadata]);
         
         if (!this._columnLookup.has(keyWithMetadata)) {
-          const keyConst = key;
-          const column = {
-            headerText() {
-              return metadata.naming.label || keyConst;
-            },
-            lookupIn(block, rowName) {
-              return block[keyConst];
-            }
-          };
+          const column = RegularTableColumn(metadata, key);
           this._columnLookup.set(keyWithMetadata, column);
           newColumns.push(column);
         }
@@ -1305,7 +1305,7 @@ define([
         let widgetHandle, cell;
         if (block === TABLE_COLUMN_HEADER_MARKER) {
           cellEl.textContent = column.headerText();
-        } else if (cell = column.lookupIn(block, label)) {
+        } else if ((cell = column.lookupIn(block, label))) {
           cellEl.title = '';  // Specify we want to hide titles.
           widgetHandle = createWidgetExt(config.context, PickWidget, cellEl, cell);
         } else {

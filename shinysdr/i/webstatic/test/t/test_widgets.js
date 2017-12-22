@@ -234,6 +234,22 @@ define([
         expect(widget.element.textContent).toBe('[a]label: A[b]label: B');
       });
     });
+    
+    describe('TableWidget', () => {
+      it('should have the correct contents', function () {
+        const cell = new ConstantCell(makeBlock({
+          a: new ConstantCell(makeBlock({col1: new ConstantCell('A1')})),
+          b: new ConstantCell(makeBlock({
+            col1: new ConstantCell('B1'),
+            col2: new ConstantCell('B2'),
+          })),
+        }));
+        
+        const widget = new WidgetTester(widgets.TableWidget, cell).widget;
+        
+        expect(widget.element.textContent).toBe('aA1bB1B2');
+      });
+    });
   });
   
   return 'ok';
