@@ -238,8 +238,17 @@ define([
   }
   
   function createWidgetExt(context, widgetCtor, node, targetCell) {
+    // catch a likely early error
+    if (!context) {
+      throw new Error('createWidgetExt: missing context');
+    }
+    if (!widgetCtor) {
+      throw new Error('createWidgetExt: missing widgetCtor');
+    }
+    if (!node) {
+      throw new Error('createWidgetExt: missing node');
+    }
     if (!targetCell) {
-      // catch a likely early error
       throw new Error('createWidgetExt: missing targetCell');
     }
     return createWidget(
