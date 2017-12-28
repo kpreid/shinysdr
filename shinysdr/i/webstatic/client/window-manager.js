@@ -153,7 +153,7 @@ define([
     
     // TODO: Don't rebuild entire structure every time; this approach is a relic of a different design.
     if (!windowListElement) {
-      console.warn('#' + WINDOW_LIST_ID + ' not present in document.');
+      console.warn('#' + WINDOW_LIST_ID + ' not present in document. Subwindow hiding disabled.');
     } else { 
       var windowListSubwindow;
       visibleCount = 0;
