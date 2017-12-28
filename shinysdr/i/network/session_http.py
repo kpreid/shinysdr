@@ -23,12 +23,11 @@ TODO: Not sure whether this module makes sense.
 from __future__ import absolute_import, division, unicode_literals
 
 from twisted.web import template
-from twisted.web.resource import Resource
 
 import shinysdr.i.db
 from shinysdr.i.ephemeris import EphemerisResource
 from shinysdr.i.json import serialize
-from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, SlashedResource, prepath_escaped, template_filepath
+from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, ElementRenderingResource, EntryPointIndexElement, SlashedResource, prepath_escaped, template_filepath
 from shinysdr.i.network.export_http import BlockResource, FlowgraphVizResource
 
 
@@ -38,7 +37,7 @@ class SessionResource(SlashedResource):
         SlashedResource.__init__(self)
         
         # UI entry point
-        self.putChild('', _RadioIndexHtmlResource(wcommon=wcommon))
+        self.putChild('', ElementRenderingResource(_RadioIndexHtmlElement(wcommon)))
         
         # Exported radio control objects
         self.putChild(CAP_OBJECT_PATH_ELEMENT, BlockResource(session, wcommon, _not_deletable))
@@ -54,35 +53,16 @@ class SessionResource(SlashedResource):
         self.putChild('ephemeris', EphemerisResource())
 
 
-class _RadioIndexHtmlElement(template.Element):
+class _RadioIndexHtmlElement(EntryPointIndexElement):
     loader = template.XMLFile(template_filepath.child('index.template.xhtml'))
-    
-    def __init__(self, wcommon):
-        super(_RadioIndexHtmlElement, self).__init__()
-        self.__wcommon = wcommon
     
     @template.renderer
     def title(self, request, tag):
-        return tag(self.__wcommon.title)
-
-    @template.renderer
-    def quoted_state_url(self, request, tag):
-        return tag(serialize(self.__wcommon.make_websocket_url(request, prepath_escaped(request) + CAP_OBJECT_PATH_ELEMENT)))
+        return tag(self.entry_point_wcommon.title)
 
     @template.renderer
     def quoted_audio_url(self, request, tag):
-        return tag(serialize(self.__wcommon.make_websocket_url(request, prepath_escaped(request) + 'audio')))
-
-
-class _RadioIndexHtmlResource(Resource):
-    isLeaf = True
-
-    def __init__(self, wcommon):
-        Resource.__init__(self)
-        self.__element = _RadioIndexHtmlElement(wcommon)
-
-    def render_GET(self, request):
-        return template.renderElement(request, self.__element)
+        return tag(serialize(self.entry_point_wcommon.make_websocket_url(request, prepath_escaped(request) + 'audio')))
 
 
 def _not_deletable():

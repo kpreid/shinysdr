@@ -26,7 +26,9 @@ from twisted.web.resource import Resource
 from twisted.internet import endpoints
 from twisted.python.filepath import FilePath
 from twisted.python.util import sibpath
+from twisted.web import template
 
+from shinysdr.i.json import serialize
 from shinysdr.i.roots import IEntryPoint
 
 # TODO: Change this constant to something more generic, but save that for when we're changing the URL layout for other reasons anyway.
@@ -45,6 +47,25 @@ class IWebEntryPoint(IEntryPoint):
         """Returns a twisted.web.resource.IResource."""
 
 
+class EntryPointIndexElement(template.Element):
+    """Useful base class for IWebEntryPoint's index (.../) resources.
+    
+    Subclasses should define the loader attribute and any additional template.renderers.
+    """
+    
+    def __init__(self, wcommon):
+        super(EntryPointIndexElement, self).__init__()
+        self.entry_point_wcommon = wcommon
+    
+    @template.renderer
+    def title(self, request, tag):
+        return tag(self.entry_point_wcommon.title)
+
+    @template.renderer
+    def quoted_state_url(self, request, tag):
+        return tag(serialize(self.entry_point_wcommon.make_websocket_url(request, prepath_escaped(request) + CAP_OBJECT_PATH_ELEMENT)))
+
+
 class SlashedResource(Resource):
     """Redirects /.../this to /.../this/."""
     
@@ -52,6 +73,16 @@ class SlashedResource(Resource):
         request.setHeader(b'Location', request.childLink(b''))
         request.setResponseCode(http.MOVED_PERMANENTLY)
         return b''
+
+
+class ElementRenderingResource(Resource):
+    """Resource which just renders a specified template element."""
+    def __init__(self, element):
+        Resource.__init__(self)
+        self.__element = element
+
+    def render_GET(self, request):
+        return template.renderElement(request, self.__element)
 
 
 class WebServiceCommon(object):

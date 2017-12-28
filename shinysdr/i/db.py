@@ -30,7 +30,7 @@ from twisted.web import resource
 from twisted.web import template
 
 from shinysdr.types import EnumT, to_value_type
-from shinysdr.i.network.base import template_filepath
+from shinysdr.i.network.base import ElementRenderingResource, template_filepath
 
 
 _NO_DEFAULT = object()
@@ -136,23 +136,12 @@ class DatabasesResource(resource.Resource):
     
     def __init__(self, databases):
         resource.Resource.__init__(self)
-        self.putChild('', _DbsIndexResource(self))
+        self.putChild('', ElementRenderingResource(_DbsIndexListElement(self)))
         self.names = []
         for (name, database) in databases.iteritems():
             self.putChild(name, DatabaseResource(database))
             self.names.append(name)
         self.names.sort()  # TODO reconsider case/locale
-
-
-class _DbsIndexResource(resource.Resource):
-    isLeaf = True
-    
-    def __init__(self, dbs_resource):
-        resource.Resource.__init__(self)
-        self.__element = _DbsIndexListElement(dbs_resource)
-
-    def render_GET(self, request):
-        return template.renderElement(request, self.__element)
 
 
 class _DbsIndexListElement(template.Element):
