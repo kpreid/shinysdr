@@ -32,13 +32,13 @@
 <shinysdr-subwindow id="section-ordinary">
   <h2>Normal View</h2>
   <div class="sidebar frame">
-    <div data-widget="PickWidget"></div>
+    <div data-widget="PickWidget" data-target="root_object"></div>
   </div>
 </shinysdr-subwindow>
 <shinysdr-subwindow id="section-inspector" class="stretchy">
   <h2>Inspector</h2>
   <div class="frame" style="overflow-y: scroll;"> <!-- TODO stylesheet rule -->
-    <div data-widget="ObjectInspector"></div>
+    <div data-widget="ObjectInspector" data-target="root_object"></div>
   </div>
 </shinysdr-subwindow>
 
@@ -48,8 +48,10 @@
   requirejs.config({
     baseUrl: "/client",
   });
-  requirejs(['block-page'], function (blockPage) {
-    blockPage.run(<t:transparent t:render='quoted_state_url'/>);
+  requirejs(['main'], function (main) {
+    main({
+      stateUrl: <t:transparent t:render='quoted_state_url'/>,
+    });
   });
 </script>
 </body></html>
