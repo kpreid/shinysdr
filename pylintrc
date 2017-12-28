@@ -1,3 +1,9 @@
+[MASTER]
+
+# empirically chosen parallelism
+jobs=4
+
+
 [REPORTS]
 
 reports=no
