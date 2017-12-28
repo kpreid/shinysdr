@@ -55,8 +55,8 @@
 </shinysdr-subwindow>
 
 <shinysdr-subwindow id="section-spectrum" class="stretchy" visible="true">
-  <h2>RF Spectrum <span data-target="radio.monitor" data-widget="MonitorQuickOptions"></span></h2>
-  <div id="rf-spectrum-monitor" data-widget="Monitor" data-target="radio.monitor" data-is-rf-spectrum=""></div>
+  <h2>RF Spectrum <span data-target="root_object.monitor" data-widget="MonitorQuickOptions"></span></h2>
+  <div id="rf-spectrum-monitor" data-widget="Monitor" data-target="root_object.monitor" data-is-rf-spectrum=""></div>
 </shinysdr-subwindow>
 
 <shinysdr-subwindow id="section-audio-spectrum" class="stretchy" visible="false">
@@ -71,13 +71,13 @@
 
 <shinysdr-subwindow id="section-telemetry" visible="false">
   <h2>Telemetry</h2>
-  <div class="sidebar frame" data-widget="PickWidget" data-target="radio.telemetry_store"></div>
+  <div class="sidebar frame" data-widget="PickWidget" data-target="root_object.telemetry_store"></div>
 </shinysdr-subwindow>
 
 <shinysdr-subwindow id="section-radio" visible="true">
   <h2>Radio Config</h2>
   <div class="sidebar">
-    <div data-widget="Top" data-target="radio" id="_radio"></div>
+    <div data-widget="Top" data-target="root_object" id="_radio"></div>
   </div>
 </shinysdr-subwindow>
 
@@ -102,9 +102,12 @@
     baseUrl: "/client",
   });
   requirejs(['main'], function (main) {
-    main(
-      <t:transparent t:render='quoted_state_url'/>,
-      <t:transparent t:render='quoted_audio_url'/>);
+    main({
+      stateUrl: <t:transparent t:render='quoted_state_url'/>,
+      audioUrl: <t:transparent t:render='quoted_audio_url'/>,
+      databasesUrl: 'dbs/',
+      writableDatabaseUrl: 'wdb/',
+    });
   });
 </script>
 </body></html>
