@@ -872,6 +872,8 @@ class ExportedGetter(object):
         # clunky: invoked by unserialize_exported_state via a type test
         if self.__parameter is not None:
             return {self.__parameter: self.__cell_kwargs['type'](value)}
+        else:
+            return None
 
 
 class ExportedSetter(object):

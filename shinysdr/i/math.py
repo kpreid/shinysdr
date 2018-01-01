@@ -64,6 +64,8 @@ def small_factor_at_least(n, limit, _force_approx=False):
 
     A rough approximation is used if 'n' nas many factors; finding the smallest such factor is equivalent to the knapsack problem. Ref: http://mathoverflow.net/q/79322/57423 (TODO: Better ref / check claim)
     """
+    # pylint: disable=inconsistent-return-statements
+    # (apparent false positive)
     if n % limit == 0:
         # a better answer in easy case; e.g. for (100, 10) we'd return 25 otherwise
         return limit

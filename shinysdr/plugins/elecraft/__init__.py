@@ -533,6 +533,8 @@ class _Row(object):
             return key, LooseCell(
                 post_hook=send,
                 **self.__cell_kwargs)
+        else:
+            return None
 
 
 class _NonCommandRow(object):
@@ -553,6 +555,8 @@ class _NonCommandRow(object):
     def make_cell(self, protocol, is_sub):
         if self.__has_sub == (is_sub is not None):
             return self.__key, LooseCell(**self.__cell_kwargs)
+        else:
+            return None
 
 
 class _UnusedCommand(object):
@@ -599,6 +603,8 @@ class _VFORow(object):
                 writable=True,
                 persists=False,
                 post_hook=send_vfo)
+        else:
+            return None
 
 
 class _IFRow(object):

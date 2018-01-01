@@ -70,7 +70,7 @@ class TestWebSite(unittest.TestCase):
     
     def test_app_redirect(self):
         if 'ROOT' not in self.url:
-            return  # test does not apply
+            return None  # test does not apply
             
         url_without_slash = self.url[:-1]
         
