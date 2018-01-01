@@ -32,7 +32,7 @@ class TestHamlibRig(unittest.TestCase):
     __rig = None
     
     def setUp(self):
-        d = connect_to_rig(reactor, options=['-m', '1'], port=4530)
+        d = connect_to_rig(reactor, options=['-m', '1'])
         
         def on_connect(rig_device):
             self.__rig = rig_device.get_components_dict()['rig']
@@ -77,7 +77,7 @@ class TestHamlibRotator(unittest.TestCase):
     __rotator = None
     
     def setUp(self):
-        d = connect_to_rotator(reactor, options=['-m', '1'], port=4531)
+        d = connect_to_rotator(reactor, options=['-m', '1'])
         
         def on_connect(rotator_device):
             self.__rotator = rotator_device.get_components_dict()['rotator']

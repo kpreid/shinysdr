@@ -38,9 +38,10 @@ from zope.interface import implementer, Interface
 
 from twisted.internet import defer
 from twisted.internet.error import ConnectionRefusedError
-from twisted.internet.protocol import ClientFactory, Protocol
+from twisted.internet.protocol import ClientFactory, Protocol, ServerFactory
 from twisted.internet.task import LoopingCall, deferLater
 from twisted.protocols.basic import LineReceiver
+from twisted.protocols.wire import Discard
 from twisted.python import log
 from twisted.python.util import sibpath
 from twisted.web import static
@@ -176,14 +177,14 @@ def _connect_to_daemon(reactor, host, port, server_name, proxy_ctor):
     defer.returnValue(proxy)
 
 
-def connect_to_rig(reactor, options=None, port=4532):
+def connect_to_rig(reactor, options=None, port=None):
     """
     Start a rigctld process and connect to it.
     
     options: list of rigctld options, e.g. ['-m', '123', '-r', '/dev/ttyUSB0'].
     Do not specify host or port in the options.
     
-    port: A free port number to use.
+    port: A known free port number to use, or None to attempt to pick one.
     """
     return _connect_to_device(
         reactor=reactor,
@@ -196,14 +197,14 @@ def connect_to_rig(reactor, options=None, port=4532):
 __all__.append('connect_to_rig')
 
 
-def connect_to_rotator(reactor, options=None, port=4533):
+def connect_to_rotator(reactor, options=None, port=None):
     """
     Start a rotctld process and connect to it.
     
     options: list of rotctld options, e.g. ['-m', '1102', '-r', '/dev/ttyUSB0'].
     Do not specify host or port in the options.
     
-    port: A free port number to use.
+    port: A known free port number to use, or None to attempt to pick one.
     """
     return _connect_to_device(
         reactor=reactor,
@@ -225,14 +226,18 @@ def _connect_to_device(reactor, options, port, daemon, connect_func):
     # We use rigctld instead of rigctl, because rigctl will only execute one command at a time and does not have the better-structured response formats.
     # If it were possible, we'd rather connect to rigctld over a pipe or unix-domain socket to avoid port allocation issues.
 
-    # Make sure that there isn't (as best we can check) something using the port already.
-    fake_connected = defer.Deferred()
-    reactor.connectTCP(host, port, _HamlibClientFactory('(probe) %s' % (daemon,), fake_connected))
-    try:
-        yield fake_connected
-        raise Exception('Something is already using port %i!' % port)
-    except ConnectionRefusedError:
-        pass
+    if port is not None:
+        # Make sure that there isn't (as best we can check) something using the port already.
+        fake_connected = defer.Deferred()
+        reactor.connectTCP(host, port, _HamlibClientFactory('(probe) %s' % (daemon,), fake_connected))
+        try:
+            yield fake_connected
+            raise Exception('Something is already using port %i!' % port)
+        except ConnectionRefusedError:
+            pass
+    else:
+        # Pick a port number (unfortunately the hamlib daemons will not accept port 0 and report the assigned port).
+        port = _find_free_tcp_port_number(reactor)
     
     process = subprocess.Popen(
         args=['/usr/bin/env', daemon, '-T', host, '-t', str(port)] + options,
@@ -688,6 +693,15 @@ class _HamlibClientProtocol(Protocol):
         d = defer.Deferred()
         self.__waiting_for_responses.append((cmd, d))
         return d
+
+
+def _find_free_tcp_port_number(reactor):
+    # Twisted sets SO_REUSEADDR by default, so we don't have to worry about that. What we do have to worry about is getting another process randomly taking this port in the window between when we stop listening and the hamlib daemon starts.
+    listening_port = reactor.listenTCP(0, ServerFactory.forProtocol(Discard), interface='127.0.0.1')
+    port_number = listening_port.getHost().port
+    listening_port.stopListening()
+    assert port_number > 0
+    return port_number
 
 
 _plugin_client = ClientResourceDef(
