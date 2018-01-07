@@ -33,38 +33,22 @@ from shinysdr.i.network.base import prepath_escaped, template_filepath
 from shinysdr.values import IWritableCollection
 
 
-class _CellResource(Resource):
+class ValueCellResource(Resource):
     isLeaf = True
-
+    
     def __init__(self, cell, wcommon):
         Resource.__init__(self)
         self._cell = cell
-
-    def grparse(self, value):
-        raise NotImplementedError()
-
-    def grrender(self, value, request):
-        return str(value)
-
+    
     def render_GET(self, request):
-        return self.grrender(self._cell.get(), request)
-
+        request.setHeader(b'Content-Type', b'application/json')
+        return serialize(self._cell.get()).encode('utf-8')
+    
     def render_PUT(self, request):
         data = request.content.read()
-        self._cell.set(self.grparse(data))
+        self._cell.set(json.loads(data))
         request.setResponseCode(204)
         return ''
-
-
-class ValueCellResource(_CellResource):
-    def __init__(self, cell, wcommon):
-        _CellResource.__init__(self, cell, wcommon)
-
-    def grparse(self, value):
-        return json.loads(value)
-
-    def grrender(self, value, request):
-        return serialize(value).encode('utf-8')
 
 
 class BlockResource(Resource):

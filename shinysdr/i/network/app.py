@@ -28,7 +28,6 @@ from twisted.internet import endpoints
 from twisted.plugin import getPlugins
 from twisted.python import log
 from twisted.web import static
-from twisted.web import server
 from twisted.web.resource import Resource
 from twisted.web.util import Redirect
 
@@ -37,7 +36,7 @@ import txws
 import shinysdr.i.db
 from shinysdr.i.json import serialize
 from shinysdr.i.modes import get_modes
-from shinysdr.i.network.base import IWebEntryPoint, SlashedResource, UNIQUE_PUBLIC_CAP, WebServiceCommon, deps_path, static_resource_path, endpoint_string_to_url
+from shinysdr.i.network.base import IWebEntryPoint, SiteWithDefaultHeaders, SlashedResource, UNIQUE_PUBLIC_CAP, WebServiceCommon, deps_path, static_resource_path, endpoint_string_to_url
 from shinysdr.i.network.export_http import CapAccessResource
 from shinysdr.i.network.export_ws import OurStreamProtocol
 from shinysdr.i.poller import the_poller
@@ -123,7 +122,7 @@ class WebService(Service):
             
         self.__ws_protocol = txws.WebSocketFactory(
             FactoryWithArgs.forProtocol(OurStreamProtocol, cap_table, subscription_context))
-        self.__site = _SiteWithHeaders(server_root)
+        self.__site = SiteWithDefaultHeaders(server_root)
         
         self.__ws_port_obj = None
         self.__http_port_obj = None
@@ -227,26 +226,6 @@ def _put_plugin_resources(client_resource):
         u'js': load_list_js,
         u'modes': mode_table,
     }).encode('utf-8'), b'application/json'))
-
-
-class _SiteWithHeaders(server.Site):
-    """Subclass of Site which provides some default headers for all resources."""
-    
-    def getResourceFor(self, request):
-        """overrides Site"""
-        # TODO remove unsafe-inline (not that it really matters as we are not doing sloppy templating)
-        # TODO: Once we know our own hostname(s), or if we start using the same port for WebSockets, tighten the connect-src policy
-        request.setHeader(b'Content-Security-Policy', b';'.join([
-            b"default-src 'self' 'unsafe-inline'",
-            b"connect-src 'self' ws://*:* wss://*:*",
-            b"img-src 'self' data: blob:",
-            b"object-src 'none'",
-            b"base-uri 'self'",
-            b"block-all-mixed-content",
-        ]))
-        request.setHeader(b'Referrer-Policy', b'no-referrer')
-        request.setHeader(b'X-Content-Type-Options', b'nosniff')
-        return server.Site.getResourceFor(self, request)
 
 
 def _make_cap_url(cap):

@@ -57,16 +57,16 @@ class TestWebSite(unittest.TestCase):
         self.assertEqual('/ROOT/', self._service.get_host_relative_url())
     
     def test_common_root(self):
-        return assert_common(self, self.url)
+        return testutil.assert_http_resource_properties(self, self.url)
     
     def test_common_client_example(self):
-        return assert_common(self, urlparse.urljoin(self.url, '/client/main.js'))
+        return testutil.assert_http_resource_properties(self, urlparse.urljoin(self.url, '/client/main.js'))
     
     def test_common_object(self):
-        return assert_common(self, urlparse.urljoin(self.url, CAP_OBJECT_PATH_ELEMENT))
+        return testutil.assert_http_resource_properties(self, urlparse.urljoin(self.url, CAP_OBJECT_PATH_ELEMENT))
     
     def test_common_ephemeris(self):
-        return assert_common(self, urlparse.urljoin(self.url, 'ephemeris'))
+        return testutil.assert_http_resource_properties(self, urlparse.urljoin(self.url, 'ephemeris'))
     
     def test_app_redirect(self):
         if 'ROOT' not in self.url:
@@ -85,7 +85,7 @@ class TestWebSite(unittest.TestCase):
     def test_index_page(self):
         def callback((response, data)):
             self.assertEqual(response.code, http.OK)
-            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['text/html'])
+            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['text/html;charset=utf-8'])
             self.assertIn(b'</html>', data)  # complete
             self.assertIn(b'<title>test title</title>', data)
             # TODO: Probably not here, add an end-to-end test for page title _default_.
@@ -154,36 +154,6 @@ class TestSiteWithoutRootCap(TestWebSite):
     
     def test_expected_url(self):
         self.assertEqual(_make_cap_url(UNIQUE_PUBLIC_CAP), self._service.get_host_relative_url())
-
-
-def assert_common(self, url):
-    """Common properties all HTTP resources should have."""
-    def callback((response, data)):
-        # If this fails, we probably made a mistake
-        self.assertNotEqual(response.code, http.NOT_FOUND)
-        
-        self.assertEqual(
-            [b';'.join([
-                b"default-src 'self' 'unsafe-inline'",
-                b"connect-src 'self' ws://*:* wss://*:*",
-                b"img-src 'self' data: blob:",
-                b"object-src 'none'",
-                b"base-uri 'self'",
-                b"block-all-mixed-content",
-            ])],
-            response.headers.getRawHeaders(b'Content-Security-Policy'))
-        self.assertEqual([b'no-referrer'], response.headers.getRawHeaders(b'Referrer-Policy'))
-        self.assertEqual([b'nosniff'], response.headers.getRawHeaders(b'X-Content-Type-Options'))
-        
-        content_type = response.headers.getRawHeaders(b'Content-Type')
-        if data.startswith(b'{'):
-            self.assertEqual(['application/json'], content_type)
-        elif data.startswith(b'<'):
-            self.assertEqual(['text/html'], content_type)
-        else:
-            raise Exception('Don\'t know what content type to expect', data[0], content_type)
-    
-    return testutil.http_get(the_reactor, self.url).addCallback(callback)
 
 
 @implementer(IWebEntryPoint)

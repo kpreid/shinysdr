@@ -28,9 +28,9 @@ import textwrap
 from twisted.trial import unittest
 from twisted.internet import reactor
 from twisted.web import http
-from twisted.web import server
 
 from shinysdr.i import db
+from shinysdr.i.network.base import SiteWithDefaultHeaders
 from shinysdr.test import testutil
 
 
@@ -224,7 +224,7 @@ class TestDatabasesResource(unittest.TestCase):
     def setUp(self):
         db_model = db.DatabaseModel(reactor, {}, writable=True)
         dbs_resource = db.DatabasesResource({'foo&bar': db_model})
-        self.port = reactor.listenTCP(0, server.Site(dbs_resource), interface="127.0.0.1")  # pylint: disable=no-member
+        self.port = reactor.listenTCP(0, SiteWithDefaultHeaders(dbs_resource), interface="127.0.0.1")  # pylint: disable=no-member
     
     def tearDown(self):
         return self.port.stopListening()
@@ -232,9 +232,12 @@ class TestDatabasesResource(unittest.TestCase):
     def __url(self, path):
         return 'http://127.0.0.1:%i%s' % (self.port.getHost().port, path)
     
+    def test_index_common(self):
+        return testutil.assert_http_resource_properties(self, self.__url('/'))
+    
     def test_index_response(self):
         def callback((response, data)):
-            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['text/html'])
+            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['text/html;charset=utf-8'])
             # TODO: Actually parse/check-that-parses the document
             self.assertSubstring(textwrap.dedent('''\
                 <li><a href="foo%26bar/">foo&amp;bar</a></li>
@@ -271,13 +274,16 @@ class TestDatabaseResource(unittest.TestCase):
     def setUp(self):
         db_model = db.DatabaseModel(reactor, dict(self.test_records), writable=True)
         dbResource = db.DatabaseResource(db_model)
-        self.port = reactor.listenTCP(0, server.Site(dbResource), interface="127.0.0.1")  # pylint: disable=no-member
+        self.port = reactor.listenTCP(0, SiteWithDefaultHeaders(dbResource), interface="127.0.0.1")  # pylint: disable=no-member
     
     def tearDown(self):
         return self.port.stopListening()
     
     def __url(self, path):
         return 'http://127.0.0.1:%i%s' % (self.port.getHost().port, path)
+    
+    def test_index_common(self):
+        return testutil.assert_http_resource_properties(self, self.__url('/'))
     
     def test_index_response(self):
         def callback((response, data)):
@@ -286,6 +292,9 @@ class TestDatabaseResource(unittest.TestCase):
             self.assertEqual(j, self.response_json)
         return testutil.http_get(reactor, self.__url('/')).addCallback(callback)
 
+    def test_record_common(self):
+        return testutil.assert_http_resource_properties(self, self.__url('/1'))
+    
     def test_record_response(self):
         def callback((response, data)):
             self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
@@ -304,7 +313,7 @@ class TestDatabaseResource(unittest.TestCase):
         modified = dict(self.response_json[u'records'])
         modified[index] = db.normalize_record(new_data)
 
-        d = testutil.http_post(reactor, self.__url('/' + str(index)), {
+        d = testutil.http_post_json(reactor, self.__url('/' + str(index)), {
             'old': self.response_json[u'records'][index],
             'new': new_data
         })
@@ -329,7 +338,7 @@ class TestDatabaseResource(unittest.TestCase):
             u'upperFreq': 20e6,
         }
 
-        d = testutil.http_post(reactor, self.__url('/'), {
+        d = testutil.http_post_json(reactor, self.__url('/'), {
             'new': new_record
         })
 

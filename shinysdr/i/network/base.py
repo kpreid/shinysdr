@@ -27,6 +27,7 @@ from twisted.internet import endpoints
 from twisted.python.filepath import FilePath
 from twisted.python.util import sibpath
 from twisted.web import template
+from twisted.web.server import Site
 
 from shinysdr.i.json import serialize
 from shinysdr.i.roots import IEntryPoint
@@ -82,6 +83,7 @@ class ElementRenderingResource(Resource):
         self.__element = element
 
     def render_GET(self, request):
+        request.setHeader(b'Content-Type', b'text/html;charset=utf-8')
         return template.renderElement(request, self.__element)
 
 
@@ -105,6 +107,26 @@ class WebServiceCommon(object):
             hostname=request.getRequestHostname(),
             scheme=b'ws',
             path=path)
+
+
+class SiteWithDefaultHeaders(Site):
+    """Subclass of Site which provides some default security-improving headers for all resources."""
+    
+    def getResourceFor(self, request):
+        """overrides Site"""
+        # TODO remove unsafe-inline (not that it really matters as we are not doing sloppy templating)
+        # TODO: Once we know our own hostname(s), or if we start using the same port for WebSockets, tighten the connect-src policy
+        request.setHeader(b'Content-Security-Policy', b';'.join([
+            b"default-src 'self' 'unsafe-inline'",
+            b"connect-src 'self' ws://*:* wss://*:*",
+            b"img-src 'self' data: blob:",
+            b"object-src 'none'",
+            b"base-uri 'self'",
+            b"block-all-mixed-content",
+        ]))
+        request.setHeader(b'Referrer-Policy', b'no-referrer')
+        request.setHeader(b'X-Content-Type-Options', b'nosniff')
+        return Site.getResourceFor(self, request)
 
 
 def endpoint_string_to_url(desc, scheme='http', hostname='localhost', path='/', listening_port=None):

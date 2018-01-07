@@ -23,6 +23,7 @@ import StringIO
 from gnuradio import blocks
 from gnuradio import gr
 
+from twisted.internet import reactor as the_reactor
 from twisted.internet.defer import Deferred
 from twisted.internet.protocol import Protocol
 from twisted.internet.task import Clock
@@ -335,20 +336,31 @@ class StubTXDriver(gr.hier_block2, ExportedState):
 
 
 def http_get(reactor, url, accept=None):
+    # This is nearly an alias for http_request but reads better
+    return http_request(reactor, url, method='GET', accept=accept)
+
+
+def http_post_json(reactor, url, value):
+    # in principle this could be streaming if we had a pipe-thing to glue between json.dump and FileBodyProducer, but it isn't worth building that for tests
+    return http_request(reactor, url,
+        method='POST',
+        body=json.dumps(value),
+        more_headers={'Content-Type': 'application/json'})
+
+
+def http_request(reactor, url, method, body=None, accept=None, more_headers=None):
     agent = client.Agent(reactor)
     headers = Headers()
     if accept is not None:
         headers.addRawHeader('Accept', str(accept))
-    d = agent.request(b'GET', str(url), headers=headers)
-    return _handle_agent_response(d)
-
-
-def http_post(reactor, url, value):
-    agent = client.Agent(reactor)
-    d = agent.request(b'POST', str(url),
-        headers=client.Headers({b'Content-Type': [b'application/json']}),
-        # in principle this could be streaming if we had a pipe-thing to glue between json.dump and FileBodyProducer
-        bodyProducer=client.FileBodyProducer(StringIO.StringIO(json.dumps(value))))
+    if more_headers:
+        for k, v in more_headers.iteritems():
+            headers.addRawHeader(str(k), str(v))
+    d = agent.request(
+        method=str(method),
+        uri=str(url),
+        headers=headers,
+        bodyProducer=client.FileBodyProducer(StringIO.StringIO(str(body))) if body else None)
     return _handle_agent_response(d)
 
 
@@ -379,3 +391,36 @@ class _Accumulator(Protocol):
     def connectionLost(self, reason):
         # pylint: disable=signature-differs
         self.finished.callback(self.data)
+
+
+def assert_http_resource_properties(test_case, url):
+    """Common properties all HTTP resources should have."""
+    def callback((response, data)):
+        # If this fails, we probably made a mistake
+        test_case.assertNotEqual(response.code, http.NOT_FOUND)
+        
+        test_case.assertEqual(
+            [b';'.join([
+                b"default-src 'self' 'unsafe-inline'",
+                b"connect-src 'self' ws://*:* wss://*:*",
+                b"img-src 'self' data: blob:",
+                b"object-src 'none'",
+                b"base-uri 'self'",
+                b"block-all-mixed-content",
+            ])],
+            response.headers.getRawHeaders(b'Content-Security-Policy'))
+        test_case.assertEqual([b'no-referrer'], response.headers.getRawHeaders(b'Referrer-Policy'))
+        test_case.assertEqual([b'nosniff'], response.headers.getRawHeaders(b'X-Content-Type-Options'))
+        
+        content_type = response.headers.getRawHeaders(b'Content-Type')[0]
+        if content_type == 'application/json':
+            json.loads(data)  # raises error if it doesn't parse
+        elif content_type.startswith('text/html'):
+            test_case.assertRegex(content_type, r'(?i)text/html;\s*charset=utf-8')
+            test_case.assertRegex(data, br'(?i)<!doctype html>')
+        elif content_type in ('application/javascript', 'text/javascript'):
+            pass
+        else:
+            raise Exception('Don\'t know what content type checking to do', data[0], content_type)
+    
+    return http_get(the_reactor, url).addCallback(callback)
