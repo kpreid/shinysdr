@@ -306,7 +306,7 @@ define([
       
       var html = document.createDocumentFragment();
       while (node.firstChild) html.appendChild(node.firstChild);
-      scheduler.start(function go() {
+      scheduler.startNow(function go() {
         // TODO defend against JS-significant keys
         var target = evalTargetStr(rootTargetCell, node.getAttribute('data-target'), scheduler).depend(go);
         if (!target) {
