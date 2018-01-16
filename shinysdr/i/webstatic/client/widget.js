@@ -53,6 +53,14 @@ define([
   
   const elementHasWidgetRole = new WeakMap();
   
+  function assertNotAlreadySomeWidgetRole(node) {
+    if (elementHasWidgetRole.has(node)) {
+      // console can allow inspecting the object
+      console.error('node already a widget ' + elementHasWidgetRole.get(node), node);
+      throw new Error('node already a widget ' + elementHasWidgetRole.get(node) + ': ' + node);
+    }
+  }
+  
   function alwaysCreateReceiverFromEvent(event) {
     return event.shiftKey;
   }
@@ -116,9 +124,7 @@ define([
   
   // Replace the given template/input node with a widget node.
   function createWidget(targetCellCell, targetStr, context, node, widgetCtor) {
-    if (elementHasWidgetRole.has(node)) {
-      throw new Error('node already a widget ' + elementHasWidgetRole.get(node));
-    }
+    assertNotAlreadySomeWidgetRole(node);
     
     const templateStash = node;
     elementHasWidgetRole.set(node, 'template');
@@ -276,6 +282,10 @@ define([
   
   function createWidgets(rootTargetCell, context, node) {
     var scheduler = context.scheduler;
+    if (elementHasWidgetRole.get(node)) {
+      // Don't walk into existing structure managed by widgets.
+      return;
+    }
     if (node.hasAttribute && node.hasAttribute('data-widget')) {
       var targetCellCell, targetStr;
       if (node.hasAttribute('data-target')) {
@@ -302,10 +312,19 @@ define([
       createWidget(targetCellCell, targetStr, context, node, widgetCtor);
       
     } else if (node.hasAttribute && node.hasAttribute('data-target')) (function () {
+      // TODO: this is an oddball a bit like a widget itself (e.g. it uses cloneNode similarly), maybe turn it into a widget
+      
+      assertNotAlreadySomeWidgetRole(node);
+      elementHasWidgetRole.set(node, 'targeted container');
+      
       doPersistentDetails(node);
       
       var html = document.createDocumentFragment();
-      while (node.firstChild) html.appendChild(node.firstChild);
+      while (node.firstChild) {
+        assertNotAlreadySomeWidgetRole(node.firstChild);
+        elementHasWidgetRole.set(node, 'targeted container child');
+        html.appendChild(node.firstChild);
+      }
       scheduler.startNow(function go() {
         // TODO defend against JS-significant keys
         var target = evalTargetStr(rootTargetCell, node.getAttribute('data-target'), scheduler).depend(go);
