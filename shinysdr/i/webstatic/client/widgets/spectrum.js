@@ -155,7 +155,6 @@ define([
       analytic = sourceType.kind === 'IQ';  // TODO have glue code
       leftFreq = analytic ? centerFreq - nyquist : centerFreq;
       rightFreq = centerFreq + nyquist;
-      pixelsPerHertz = pixelWidth / (rightFreq - leftFreq) * zoom;
       
       if (!isFinite(fractionalScroll)) {
         console.error("Shouldn't happen: SpectrumLayoutContext fractionalScroll =", fractionalScroll);
@@ -170,6 +169,7 @@ define([
         const scrollValue = (cacheScrollLeft + fractionalScroll) * scaleChange;
         
         pixelWidth = container.offsetWidth;
+        pixelsPerHertz = pixelWidth / (rightFreq - leftFreq) * zoom;
         
         // Update scrollable range
         const w = pixelWidth * zoom;
