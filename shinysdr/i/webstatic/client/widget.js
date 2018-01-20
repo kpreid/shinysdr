@@ -68,17 +68,18 @@ define([
   
   // TODO figure out what this does and give it a better name
   function Context(config) {
-    this.widgets = config.widgets;
-    this.radioCell = config.radioCell;
-    this.index = config.index;
-    this.clientState = config.clientState;
-    this.scheduler = config.scheduler;
-    this.freqDB = config.freqDB;
-    this.writableDB = config.writableDB;
+    this.widgets = config.widgets || Object.freeze({});
+    this.clientState = config.clientState || null;  // TODO: make mandatory or stub
+    this.scheduler = config.scheduler || (() => {
+      throw new Error('Context: Missing scheduler argument');
+    })();
+    this.radioCell = config.radioCell || null;
+    this.index = config.index || null;  // TODO: create stub empty index
+    this.freqDB = config.freqDB || null;
+    this.writableDB = config.writableDB || null;
     this.layoutContext = config.layoutContext || null;
-    // TODO reconsider this unusual handling. Required to avoid miscellaneous things needing to define a coordinator.
     this.coordinator = config.coordinator || new Coordinator(this.scheduler, this.freqDB, this.radioCell);
-    this.actionCompleted = config.actionCompleted || function actionCompletedNoop() {};
+    this.actionCompleted = config.actionCompleted || Object.freeze(function actionCompletedNoop() {});
     Object.freeze(this);
   }
   Context.prototype.withLayoutContext = function (layoutContext) {
