@@ -18,26 +18,26 @@
   along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 -->
 
-<html lang="en" class="subwindowed-page"><head>
+<html lang="en" class="pane-structured-page"><head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <title>Spectrum widgets tester</title>
   <link rel="manifest" href="/client/web-app-manifest.json">
   <link rel="stylesheet" href="/client/ui.css">
   <link rel="stylesheet" href="/client/themes/gray.css" />
   <meta name="viewport" content="width=device-width">
-</head><body class="subwindowed">
+</head><body class="pane-structured-body">
 
-<shinysdr-subwindow class="stretchy" visible="true">
+<shinysdr-pane class="stretchy" visible="true">
 <h2>Spectrum Test</h2>
 <div id="monitor" data-widget="Monitor" data-target="monitor" style="height: 100%; display: flex;"></div>
-</shinysdr-subwindow>
+</shinysdr-pane>
 
-<shinysdr-subwindow visible="true">
+<shinysdr-pane visible="true">
   <h2>Config</h2>
   <div class="sidebar panel frame">
     <div data-target="unpaused" data-widget="Toggle" title="Run"></div>
   </div>
-</shinysdr-subwindow>
+</shinysdr-pane>
 
 <script src="/client/require.js" data-main="spectrum-widgets-main.js"></script>
 </body></html>

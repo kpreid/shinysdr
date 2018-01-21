@@ -187,7 +187,7 @@ define(['/test/jasmine-glue.js', 'domtools', 'events', 'pane-manager',
       
       it('should create panes with widgets from existing HTML', () => {
         // TODO: this element name (using an element name at all) is legacy
-        const templateFrameEl = container.appendChild(document.createElement('shinysdr-subwindow'));
+        const templateFrameEl = container.appendChild(document.createElement('shinysdr-pane'));
         templateFrameEl.appendChild(document.createElement('h2'))
             .appendChild(document.createTextNode('existing title'));
         

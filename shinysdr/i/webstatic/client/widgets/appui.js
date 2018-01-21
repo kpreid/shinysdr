@@ -156,15 +156,15 @@ define([
   }
   
   function windowEntryBuilder(setElement, block, name, setInsertion) {
-    var subwindow = document.createElement('shinysdr-subwindow');
-    subwindow.id = 'section-' + name;  // TODO match block id system instead of this (need context)
-    var header = subwindow.appendChild(document.createElement('h2'));
+    var paneEl = document.createElement('shinysdr-pane');
+    paneEl.id = 'section-' + name;  // TODO match block id system instead of this (need context)
+    var header = paneEl.appendChild(document.createElement('h2'));
     header.appendChild(document.createTextNode(name));  // TODO formatting
-    var body = subwindow.appendChild(document.createElement('div'));
+    var body = paneEl.appendChild(document.createElement('div'));
     body.classList.add('sidebar');  // TODO not quite right class -- we want main-ness but scrolling
     body.classList.add('frame');
     
-    setElement.appendChild(subwindow);
+    setElement.appendChild(paneEl);
     return body.appendChild(document.createElement('div'));
   }
   

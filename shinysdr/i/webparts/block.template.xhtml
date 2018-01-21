@@ -20,27 +20,27 @@
     xmlns="http://www.w3.org/1999/xhtml"
     xmlns:t="http://twistedmatrix.com/ns/twisted.web.template/0.1"
     lang="en"
-    class="subwindowed-page"><head>
+    class="pane-structured-page"><head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <title t:render="title"></title>
   <link rel="manifest" href="/client/web-app-manifest.json" />
   <link rel="stylesheet" href="/client/ui.css" />
   <link rel="stylesheet" href="/client/themes/gray.css" /> <!-- TODO: everyone gets theme switcher -->
   <meta name="viewport" content="width=device-width" />
-</head><body class="subwindowed">
+</head><body class="pane-structured-body">
 
-<shinysdr-subwindow id="section-ordinary">
+<shinysdr-pane id="section-ordinary">
   <h2>Normal View</h2>
   <div class="sidebar frame">
     <div data-widget="PickWidget" data-target="root_object"></div>
   </div>
-</shinysdr-subwindow>
-<shinysdr-subwindow id="section-inspector" class="stretchy">
+</shinysdr-pane>
+<shinysdr-pane id="section-inspector" class="stretchy">
   <h2>Inspector</h2>
   <div class="frame" style="overflow-y: scroll;"> <!-- TODO stylesheet rule -->
     <div data-widget="ObjectInspector" data-target="root_object"></div>
   </div>
-</shinysdr-subwindow>
+</shinysdr-pane>
 
 <script src="/client/require.js"></script>
 <script>

@@ -62,7 +62,7 @@ define([
   // We assume that panes are the top-level organization of the page. h2 is the appropriate element for that level.
   const TITLE_BAR_ELEMENT_NAME = 'H2';
   
-  const WINDOW_LIST_ID = 'shinysdr-subwindow-list';
+  const WINDOW_LIST_ID = 'shinysdr-pane-list';
   
   // Not used in a very standard widget fashion, but using the widget machinery gets us lots of useful things, like a context for widgets within with all the supporting bits (scheduler, storage, ID prefix...)
   class PaneWidget {
@@ -265,7 +265,7 @@ define([
         if (listPaneImpl) {
           // Show-this-pane button to be displayed elsewhere.
           const showButton = document.createElement('button');
-          showButton.classList.add('subwindow-menu-button');
+          showButton.classList.add('pane-menu-button');
           const showButtonIcon = showButton.appendChild(document.createElement('img'));
           showButtonIcon.src = '/client/menu.svg';
           showButtonIcon.alt = '\u2261';
@@ -290,7 +290,7 @@ define([
     }
     
     _addExisting(container) {
-      container.querySelectorAll('shinysdr-subwindow').forEach(element => {
+      container.querySelectorAll('shinysdr-pane').forEach(element => {
         const titleBarElement = element.querySelector(TITLE_BAR_ELEMENT_NAME);
         const title = titleBarElement ? titleBarElement.textContent : '';
         const titleCell = new ConstantCell(title);
@@ -403,8 +403,8 @@ define([
           updateTitle.scheduler = config.scheduler;  // TODO: sub-scheduler or break update loop
           updateTitle();
         
-          listItem.classList.add('subwindow-show-button');
-          listItem.classList[paneImpl.getVisible() ? 'add' : 'remove']('subwindow-show-button-shown');
+          listItem.classList.add('pane-show-button');
+          listItem.classList[paneImpl.getVisible() ? 'add' : 'remove']('pane-show-button-shown');
         
           return listItem;
         },
