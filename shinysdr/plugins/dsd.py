@@ -26,10 +26,15 @@ from zope.interface import implementer
 from gnuradio import gr
 
 try:
-    from dsd import block_ff as dsd_block_ff
-    _available = True
+    from dsd import dsd_block_ff
+    import dsd
+    _available_version = 2
 except ImportError:
-    _available = False
+    try:
+        from dsd import block_ff as dsd_block_ff
+        _available_version = 1
+    except ImportError:
+        _available_version = None
 
 from shinysdr.filters import make_resampler
 from shinysdr.interfaces import BandShape, ModeDef, IDemodulator
@@ -39,6 +44,7 @@ from shinysdr.types import EnumRow, ReferenceT
 from shinysdr.values import ExportedState, exported_value
 
 
+_debug_print = True  # TODO turn this off
 _demod_rate = 48000  # hardcoded in gr-dsd
 
 
@@ -62,11 +68,21 @@ class DSDDemodulator(gr.hier_block2, ExportedState):
 
         self.__output_type = SignalType(kind='MONO', sample_rate=8000)
         
+        if _available_version == 1:
+            # backwards compatibility
+            decoder = dsd_block_ff()
+        else:
+            decoder = dsd_block_ff(
+                frame=dsd.dsd_FRAME_AUTO_DETECT,
+                mod=dsd.dsd_MOD_AUTO_SELECT,
+                uvquality=3,  # TODO figure out what this does
+                errorbars=_debug_print,
+                verbosity=2 if _debug_print else 0)
         self.connect(
             self,
             self.__fm_demod,
             make_resampler(fm_audio_rate, _demod_rate),
-            dsd_block_ff(),
+            decoder,
             self)
     
     @exported_value(type=ReferenceT(), changes='never')
@@ -84,4 +100,4 @@ class DSDDemodulator(gr.hier_block2, ExportedState):
 _modeDef = ModeDef(mode=u'DSD',  # TODO: Ought to declare all the individual modes that DSD can decode -- once we have a way to not spam the mode selector with that.
     info=EnumRow(label=u'DSD', description=u'All modes DSD can decode (P25, DMR, D-STAR, …)'),
     demod_class=DSDDemodulator,
-    available=_available)
+    available=bool(_available_version))
