@@ -169,7 +169,6 @@ define([
         const scrollValue = (cacheScrollLeft + fractionalScroll) * scaleChange;
         
         pixelWidth = container.offsetWidth;
-        pixelsPerHertz = pixelWidth / (rightFreq - leftFreq) * zoom;
         
         // Update scrollable range
         const w = pixelWidth * zoom;
@@ -179,6 +178,9 @@ define([
         container.scrollLeft = scrollValue;
         fractionalScroll = scrollValue - container.scrollLeft;
       }
+      
+      // Display scale. Note that this must be calculated after the pixelWidth update, but also even if only zoom and not pixelWidth changes.
+      pixelsPerHertz = pixelWidth / (rightFreq - leftFreq) * zoom;
       
       // accessing scrollLeft triggers relayout, so cache it
       cacheScrollLeft = container.scrollLeft;
