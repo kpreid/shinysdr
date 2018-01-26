@@ -326,7 +326,8 @@ define([
       }
       if (!visibleCount) {
         // TODO handle window list better
-        reveal(this._container.querySelector('#' + WINDOW_LIST_ID));
+        const list = this._container.querySelector('#' + WINDOW_LIST_ID);
+        if (list) reveal(list);
         // This will cause another _globalCheckAndResize if it works right, but at least we're consistent even in failure cases.
       }
       

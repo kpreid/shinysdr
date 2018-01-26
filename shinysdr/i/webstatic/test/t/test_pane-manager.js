@@ -39,7 +39,8 @@ define([
     beforeEach,
     describe,
     expect,
-    it
+    it,
+    xit
   }} = import_jasmine;
   const {
     isVisibleInLayout,
@@ -109,12 +110,14 @@ define([
 
         const frameElement = getFrameEl(pane);  // also checks contentElement
         expect(frameElement.classList.contains('pane-frame')).toBeTruthy();
-        
-        const hideButton = frameElement.querySelector('.pane-hide-button');
-        expect(hideButton).toBeTruthy();
+
+        // TODO: Feature temporarily disabled.
+        // const hideButton = frameElement.querySelector('.pane-hide-button');
+        // expect(hideButton).toBeTruthy();
       });
       
-      it('should hide a pane from the UI', () => {
+      // TODO: Feature temporarily disabled.
+      xit('should hide a pane from the UI', () => {
         const pm = newPM();
         const pane = pm.newPane();
         const el = getFrameEl(pane);
@@ -140,14 +143,23 @@ define([
         expect(isVisibleInLayout(el)).toBeTruthy();
       });
       
-      it('should fire resize events', () => {
+      it('should fire resize events', done => {
         // TODO: Consider building a custom non-global resize notifiation for everyone to use.
-        let resized = 0;
-        window.addEventListener('resize', () => { resized++; }, false);
-        const pane = newPM().newPane();
-        expect(resized).toBe(0);  // TODO: Actually, adding new visible panes should count as resize.
-        pane.hide();
-        expect(resized).toBe(1);
+        
+        // Resize events are global. First, let any already-queued ones from other tests fire.
+        requestAnimationFrame(() => {
+          
+          let resized = 0;
+          window.addEventListener('resize', () => { resized++; }, false);
+          expect(resized).toBe(0);  // sanity check
+          const pane = newPM().newPane();
+          expect(resized).toBe(1);  // new visible panes counts as resize
+          pane.hide();
+          requestAnimationFrame(() => {  // wait for async
+            expect(resized).toBe(2);
+            done();
+          });
+        });
       });
       
       it('should allow removing panes and fire lifecycle events', () => {
@@ -185,11 +197,11 @@ define([
         const titleCell = new LocalCell(stringT, 'testTitle');
         const pm = newPM();
         const pane = pm.newPane({titleCell: titleCell});
-        expect(getFrameEl(pane).querySelector('h2').firstChild.textContent).toBe('testTitle');
+        expect(getFrameEl(pane).querySelector('h2').textContent).toBe('testTitle');
         titleCell.set('title2');
         // TODO: Wait for a notification cycle and THEN delay
         requestAnimationFrame(() => {
-          expect(getFrameEl(pane).querySelector('h2').firstChild.textContent).toBe('title2');
+          expect(getFrameEl(pane).querySelector('h2').textContent).toBe('title2');
           done();
         });
       });
