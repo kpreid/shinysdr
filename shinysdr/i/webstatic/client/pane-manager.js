@@ -251,7 +251,7 @@ define([
         
         // Find which pane contains the list
         let listPaneImpl = null;
-        for (var paneImpl of this._paneImpls) {
+        for (const paneImpl of this._paneImpls) {
           if (paneImpl.frameElement.contains(widgetizedListEl)) {
             listPaneImpl = paneImpl;
             break;
@@ -359,7 +359,7 @@ define([
       if (document.body.scrollWidth > document.body.offsetWidth) {
         var bestToClose = null;
         var bestTime = Date.now();
-        for (var paneImpl of this._paneImpls) {
+        for (const paneImpl of this._paneImpls) {
           if (paneImpl.usefulToCloseForWidth() && paneImpl.lastInteractionTime < bestTime) {
             bestToClose = paneImpl;
             bestTime = paneImpl.lastInteractionTime;
@@ -414,7 +414,7 @@ define([
       function check() {
         paneManager._paneListNotifier.listen(check);
         updateListAKD.begin();
-        for (var paneImpl of paneManager._paneImpls) {
+        for (const paneImpl of paneManager._paneImpls) {
           updateListAKD.add(paneImpl);
         }
         updateListAKD.end();

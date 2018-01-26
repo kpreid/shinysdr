@@ -96,7 +96,7 @@ define(() => {
   class EnumT extends ValueType {
     constructor(tableIn) {
       const table = new Map();
-      for (var k in tableIn) {
+      for (const k in tableIn) {
         const row = tableIn[k];
         switch (typeof row) {
           case 'string':
@@ -122,7 +122,7 @@ define(() => {
     toString() {
       // TODO: Also print metadata?
       const elems = [];
-      for (var [k,] of this._enumTable) {
+      for (const [k,] of this._enumTable) {
         try {
           elems.push(JSON.stringify(k));
         } catch (e) {
@@ -169,7 +169,7 @@ define(() => {
     toString() {
       const elems = [];
       const n = this.mins.length;
-      for (var i = 0; i < n; i++) {
+      for (let i = 0; i < n; i++) {
         elems.push('[' + this.mins[i] + ', ' + this.maxes[i] + ']');
       }
       return ('RangeT('

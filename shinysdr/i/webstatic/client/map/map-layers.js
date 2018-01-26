@@ -162,7 +162,7 @@ define([
       var receiving = new Map();
       var receivers = radio.receivers.depend(dirty);
       receivers._reshapeNotice.listen(dirty);
-      for (var key in receivers) {
+      for (const key in receivers) {
         const receiver = receivers[key].depend(dirty);
         receiving.set(receiver.rec_freq.depend(dirty), receiver);
       }
@@ -266,7 +266,7 @@ define([
     }
     function addLinesAndMarks(features, axis, otherCoord, otherAxisPos, lowBound, highBound, logStep) {
       var spacingStep = Math.pow(10, logStep);
-      for (var x = floorTo(lowBound, spacingStep); x < highBound + spacingStep; x += spacingStep) {
+      for (let x = floorTo(lowBound, spacingStep); x < highBound + spacingStep; x += spacingStep) {
         features.push(axis + 'Line,' + x);
         features.push(axis + 'Label,' + x + ',' + logStep + ',' + otherCoord);
       }
@@ -289,7 +289,7 @@ define([
       var mlon = (lon + 180) / 360;
       var mlat = (lat + 90) / 180;
       var code = '';
-      for (var i = 0; i < lonDepth || i < latDepth; i++) {
+      for (let i = 0; i < lonDepth || i < latDepth; i++) {
         var table = symbolSets[i];
         var n = table.length;
         mlon *= n;
@@ -301,7 +301,7 @@ define([
     }
     var MAX_LINES_IN_VIEW = 10;
     function maidenheadDepth(x) {
-      for (var i = granularities.length - 1; i >= 0; i--) {
+      for (let i = granularities.length - 1; i >= 0; i--) {
         if (granularities[i] * x <= MAX_LINES_IN_VIEW) {
           return i;
         }
@@ -364,9 +364,9 @@ define([
           var lonStep = 360 / granularities[lonDepth];
           var latStep = 180 / granularities[latDepth];
           var depthStr = ',' + lonDepth + ',' + latDepth;
-          for (var lon = floorTo(visLonMin, lonStep); lon < visLonMax + lonStep*0.5; lon += lonStep) {
+          for (let lon = floorTo(visLonMin, lonStep); lon < visLonMax + lonStep*0.5; lon += lonStep) {
             features.push('lonLine,' + lon);
-            for (var lat = floorTo(visLatMin + 90, latStep) - 90; lat < visLatMax + latStep*0.5; lat += latStep) {
+            for (let lat = floorTo(visLatMin + 90, latStep) - 90; lat < visLatMax + latStep*0.5; lat += latStep) {
               features.push('latLine,' + lat);  // duplicates will be coalesced
               features.push('maidenhead,' + (lon + lonStep*0.5) + ',' + (lat + latStep*0.5) + depthStr);
             }

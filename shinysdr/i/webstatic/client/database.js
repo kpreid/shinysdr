@@ -322,7 +322,7 @@ define([
             init.makeWritable();
           }
           var recordsJson = databaseJson.records;
-          for (var key in recordsJson) {
+          for (const key in recordsJson) {
             init.add(recordsJson[key], url + encodeURIComponent(key));
           }
         });
@@ -427,7 +427,7 @@ define([
       n: { enumerable: false, value: new Notifier() },
       _initializing: { enumerable: false, writable: true, value: true }
     });
-    for (var name in recordProps) {
+    for (const name in recordProps) {
       this[name] = initial.propertyIsEnumerable(name) ? initial[name] : recordProps[name]._my_default;
     }
     if (isFinite(initial.freq)) {
@@ -453,7 +453,7 @@ define([
     },
     toJSON: { value: function () {
       var out = {};
-      for (var k in this) {
+      for (const k in this) {
         if (recordProps.hasOwnProperty(k)) {
           var value = this[k];
           if (typeof value === 'number' && isNaN(value)) value = null;  // JSON.stringify does this too; this is just to be canonical even if not stringified

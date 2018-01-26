@@ -107,7 +107,7 @@ define([
     // local synth for debugging glitches
     //var fakePhase = 0;
     //function fake(arr) {
-    //  for (var i = 0; i < arr.length; i++) {
+    //  for (let i = 0; i < arr.length; i++) {
     //    arr[i] = Math.sin(fakePhase) * 0.1;
     //    fakePhase += (Math.PI * 2) * (600 / nativeSampleRate);
     //  }
@@ -221,7 +221,7 @@ define([
           var nativeRateChunk = new Float32Array(nSamples * numAudioChannels * interpolation);  // TODO: With partial-chunk processing we could avoid allocating new buffers all the time -- use a circular buffer? (But we can't be allocation-free anyway since the WebSocket isn't.)
           var rightChannelIndex = numAudioChannels - 1;
           var step = interpolation * numAudioChannels;
-          for (var i = 0; i < nSamples; i++) {
+          for (let i = 0; i < nSamples; i++) {
             nativeRateChunk[i * step] = streamRateChunk[i * numAudioChannels];
             nativeRateChunk[i * step + rightChannelIndex] = streamRateChunk[i * numAudioChannels + rightChannelIndex];
           }

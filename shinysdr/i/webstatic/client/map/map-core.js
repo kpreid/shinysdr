@@ -176,7 +176,7 @@ define([
       var grabsY = [];
       var pansX = [];
       var pansY = [];
-      for (var idString in activeTouches) {
+      for (const idString in activeTouches) {
         var info = activeTouches[idString];
         grabsX.push(info.grabViewX - rect.width / 2);
         grabsY.push(info.grabViewY - rect.height / 2);
@@ -204,7 +204,7 @@ define([
       
       // Each time a touch goes away, lock in the current view mapping.
       stateAtStart = view.captureState();
-      for (var idString in activeTouches) {
+      for (const idString in activeTouches) {
         var info = activeTouches[idString];
        info.grabViewX = info.nowViewX;
        info.grabViewY = info.nowViewY;
@@ -265,10 +265,10 @@ define([
     mat[matInd(3, 3)] = 1;
   }
   function multMat(out, a, b) {
-    for (var i = 0; i < 4; i++) {
-      for (var j = 0; j < 4; j++) {
+    for (let i = 0; i < 4; i++) {
+      for (let j = 0; j < 4; j++) {
         var sum = 0;
-        for (var k = 0; k < 4; k++) {
+        for (let k = 0; k < 4; k++) {
           sum += a[matInd(i, k)] * b[matInd(k, j)];
         }
         out[matInd(i, j)] = sum;
@@ -339,7 +339,7 @@ define([
         throw new Error('size must be a positive integer');
       }
       // Just find an arbitrary entry of adequate size.
-      for (var span of this._spans) {
+      for (const span of this._spans) {
         if (span.end - span.start >= size) {
           const remainderStart = span.start + size;
           this._removeFree(span);
@@ -763,7 +763,7 @@ define([
   expectedRenderedKeys['opacity'] = 1;
   Object.freeze(expectedRenderedKeys);
   function checkRendered(rendered) {
-    for (var key in rendered) {
+    for (const key in rendered) {
       if (!(key in expectedRenderedKeys)) {
         console.warn('Rendered feature: unexpected key: ' + key);
       }
@@ -1056,7 +1056,7 @@ define([
         },
         deallocateFeature: function (layerState, writeVertex, indexFreeList, feature, info) {
           var indices = info.allocatedIndices;
-          for (var i = 0; i < indices.length; i++) {
+          for (let i = 0; i < indices.length; i++) {
             var index = indices[i];
             writeVertex(index, 0, {}, {}, 'n', 'n', NO_PICKING_COLOR);
             writeVertex(index, 1, {}, {}, 'p', 'p', NO_PICKING_COLOR);
@@ -1092,9 +1092,9 @@ define([
         
           // In GeoJSON terms, polylines is a MultiLineString (but the coordinates are the general 'rendered' structure instead of lon-lat tuples.
           var lineStrings = rendered.polylines || [];
-          for (var lineStringIndex = 0; lineStringIndex < lineStrings.length; lineStringIndex++) {
+          for (let lineStringIndex = 0; lineStringIndex < lineStrings.length; lineStringIndex++) {
             var lineString = lineStrings[lineStringIndex];
-            for (var lineIndex = 0; lineIndex < lineString.length - 1; lineIndex++) {
+            for (let lineIndex = 0; lineIndex < lineString.length - 1; lineIndex++) {
               var bufferIndexIndex = bufferIndexAlloc++;
               var bufferIndex = allocatedIndices[bufferIndexIndex];
               if (bufferIndex === undefined) {
@@ -1604,7 +1604,7 @@ define([
         const receivers = radio.receivers.depend(dirty);
         receivers._reshapeNotice.listen(dirty);
         const out = [];
-        for (var key in receivers) {
+        for (const key in receivers) {
           const receiver = receivers[key].depend(dirty);
           if (receiver.mode.depend(dirty) === filterMode) {
             out.push(receiver);

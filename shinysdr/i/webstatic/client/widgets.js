@@ -34,7 +34,7 @@ define([
 
   const widgets = Object.create(null);
   Object.assign(widgets, widgets_appui, widgets_basic, widgets_dbui, widgets_spectrum);
-  for (var k in {ScopeControls: 0, ScopePlot: 0}) {
+  for (const k in {ScopeControls: 0, ScopePlot: 0}) {
     // special case because this module exports non-widgets
     widgets[k] = widgets_scope[k];
   }

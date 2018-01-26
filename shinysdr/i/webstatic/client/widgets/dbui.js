@@ -82,7 +82,7 @@ define([
     receiveAllButton.textContent = 'Receive all in search';
     receiveAllButton.addEventListener('click', function (event) {
       const receivers = radioCell.get().receivers.get();
-      for (var key in receivers) {
+      for (const key in receivers) {
         receivers.delete(key);
       }
       currentFilter.forEach(function(p) {
@@ -280,7 +280,7 @@ define([
   
   var dbModeTable = Object.create(null);
   dbModeTable[''] = '—';
-  for (var key in modeTable) {
+  for (const key in modeTable) {
     dbModeTable[key] = modeTable[key].info_enum_row.label;
   }
   
@@ -324,7 +324,7 @@ define([
     }
     function menu(cell, name, values) {
       var field = document.createElement('select');
-      for (var key in values) {
+      for (const key in values) {
         var option = field.appendChild(document.createElement('option'));
         option.value = key;
         option.textContent = values[key];
@@ -352,7 +352,7 @@ define([
   function DatabasePickerWidget(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       var list = getAppend(); // TODO should be a <ul> with styling
-      for (var key in block) {
+      for (const key in block) {
         var match = /^enabled_(.*)$/.exec(key);
         if (match) {
           const label = list.appendChild(document.createElement('div'))

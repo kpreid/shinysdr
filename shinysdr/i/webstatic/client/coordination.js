@@ -78,7 +78,7 @@ define([
       var fit = Infinity;
       if (!receiver && !alwaysCreate) {
         // Search for nearest matching receiver
-        for (var recKey in receivers) {
+        for (const recKey in receivers) {
           var candidate = receivers[recKey].get();
           if (!candidate.rec_freq) continue;  // sanity check
           var sameMode = candidate.mode.get() === mode;

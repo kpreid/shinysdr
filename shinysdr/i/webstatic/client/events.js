@@ -338,7 +338,7 @@ define(() => {
       
       update(iterable) {
         this.begin();
-        for (var key of iterable) {
+        for (const key of iterable) {
           this.add(key);
         }
         this.end();

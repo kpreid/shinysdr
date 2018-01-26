@@ -174,7 +174,7 @@ define([
     // Ignore anything named in an "ignore: <name>" comment as an immediate child node.
     // TODO: Write a test for this feature
     (function() {
-      for (var node = config.element.firstChild; node; node = node.nextSibling) {
+      for (let node = config.element.firstChild; node; node = node.nextSibling) {
         if (node.nodeType === 8 /* comment */) {
           var match = /^\s*ignore:\s*(\S*)\s*$/.exec(node.nodeValue);
           if (match) {
@@ -1143,7 +1143,7 @@ define([
             value._reshapeNotice.listen(updateValue);
           }
           const list = container.appendChild(document.createElement('ul'));
-          for (var prop in value) {
+          for (let prop in value) {
             const childField = list.appendChild(document.createElement('li'));
             const propValue = value[prop];
             if (propValue instanceof Cell) {
@@ -1217,7 +1217,7 @@ define([
     
     extractColumns(block) {
       const newColumns = [];
-      for (var key in block) {
+      for (const key in block) {
         const cell = block[key];
         if (!(cell instanceof Cell)) continue;  // don't crash...
         

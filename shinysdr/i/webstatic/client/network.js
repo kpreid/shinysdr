@@ -401,8 +401,8 @@ define([
             } else {
               // is block
               const block = idMap[id];
-              for (var oldKey in block) { delete block[oldKey]; }
-              for (var newKey in value) {
+              for (const oldKey in block) { delete block[oldKey]; }
+              for (const newKey in value) {
                 block[newKey] = idMap[value[newKey]];
               }
               block._reshapeNotice.notify();

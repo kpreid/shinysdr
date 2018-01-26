@@ -71,7 +71,7 @@ define([
       // circle
       ctx.arc(cx, cy, r, 0, TAU, false);
       // ticks
-      for (var i = 0; i < 36; i++) {
+      for (let i = 0; i < 36; i++) {
         var t = TAU * i / 36;
         var d = i % 9 === 0 ? 3 :
                 i % 3 === 0 ? 2 :

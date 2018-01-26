@@ -382,7 +382,7 @@ define([
       
       // Compute scroll pos, using NEW zoom value
       var scrolls = [];
-      for (var idString in activeTouches) {
+      for (const idString in activeTouches) {
         const info = activeTouches[idString];
         const grabbedFreq = info.grabFreq;
         const touchedPixelNow = info.nowView;
@@ -808,7 +808,7 @@ define([
         var stretch = 10;
         var limit = (colors.length - 1) * stretch + 1;
         var gradientInit = new Uint8Array(limit * components);
-        for (var i = 0; i < limit; i++) {
+        for (let i = 0; i < limit; i++) {
           interpolateColor(i / (limit - 1), gradientInit, i * 4);
         }
 
@@ -1008,7 +1008,7 @@ define([
             var minLevel = minLevelCell.get();
             var maxLevel = maxLevelCell.get();
             var cscale = 255 / (maxLevel - minLevel);
-            for (var i = 0; i < fftSize; i++) {
+            for (let i = 0; i < fftSize; i++) {
               intConversionBuffer[i] = (buffer[i] - minLevel) * cscale;
             }
             gl.texSubImage2D(
@@ -1136,7 +1136,7 @@ define([
       function graphPath() {
         ctx.beginPath();
         ctx.moveTo(xNegBandwidthCoord - xScale, h + 2);
-        for (var i = firstPoint; i <= lastPoint; i++) {
+        for (let i = firstPoint; i <= lastPoint; i++) {
           ctx.lineTo(gxZero + i * xScale, yZero + graphDataBuffer[mod(i, fftLen)] * yScale);
         }
         ctx.lineTo(xPosBandwidthCoord + xScale, h + 2);
@@ -1206,7 +1206,7 @@ define([
           var cScale = 1 / (maxLevelCell.get() - minLevelCell.get());
           var cZero = 1 - maxLevelCell.get() * cScale;
           var data = ibuf.data;
-          for (var x = 0; x < fftLength; x++) {
+          for (let x = 0; x < fftLength; x++) {
             var base = x * 4;
             var colorVal = buffer[mod(x + xZero, fftLength)] * cScale + cZero;
             interpolateColor(colorVal, data, base);
@@ -1239,7 +1239,7 @@ define([
           
           const sliceCount = slices.length;
           let y;
-          for (var i = sliceCount - 1; i >= 0; i--) {
+          for (let i = sliceCount - 1; i >= 0; i--) {
             const slice = slices[mod(i + slicePtr, sliceCount)];
             y = topOfWaterfall + sliceCount - i - 1;
             if (y >= h) break;
@@ -1415,7 +1415,7 @@ define([
       
       var receivers = radioCell.depend(draw).receivers.depend(draw);
       receivers._reshapeNotice.listen(draw);
-      for (var recKey in receivers) {
+      for (const recKey in receivers) {
         var receiver = receivers[recKey].depend(draw);
         var device_name_now = receiver.device_name.depend(draw);
         var rec_freq_now = receiver.rec_freq.depend(draw);
@@ -1482,7 +1482,7 @@ define([
         // additional hairlines
         if (band_shape_now) {
           ctx.strokeStyle = ctx.fillStyle = '#7F7';
-          for (var markerFreqStr in band_shape_now.markers) {
+          for (const markerFreqStr in band_shape_now.markers) {
             const markerAbsFreq = rec_freq_now + (+markerFreqStr);
             drawHair(markerAbsFreq);
             ctx.fillText(String(band_shape_now.markers[markerFreqStr]), freqToCoord(markerAbsFreq) + 2, textY + textSpacing);
@@ -1681,7 +1681,7 @@ define([
         step /= scale_fine2;
       }
       
-      for (var i = lower - mod(lower, step), sanity = 1000;
+      for (let i = lower - mod(lower, step), sanity = 1000;
            sanity > 0 && i <= upper;
            sanity--, i += step) {
         numberCache.add(i).my_update();
@@ -1714,8 +1714,9 @@ define([
   // Find index of value in the array, or index to insert at
   IntervalStacker.prototype._search1 = function (position) {
     // if it turns out to matter, replace this with a binary search
-    var array = this._elements;
-    for (var i = 0; i < array.length; i++) {
+    const array = this._elements;
+    let i;
+    for (i = 0; i < array.length; i++) {
       if (array[i].key >= position) return i;
     }
     return i;

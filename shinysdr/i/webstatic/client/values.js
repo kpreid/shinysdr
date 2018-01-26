@@ -410,7 +410,7 @@ define([
         interfaces = nu;
         
         // Add all cells found in this object
-        for (var key in object) {
+        for (const key in object) {
           var childCell = object[key];
           // TODO: centralize this is-a-cell test and any others like it
           if (!(childCell !== null && typeof childCell === 'object' && 'get' in childCell)) {
