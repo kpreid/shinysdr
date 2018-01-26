@@ -34,6 +34,7 @@ define([
   }} = import_jasmine;
   const {
     AudioAnalyserAdapter,
+    AudioContext,
     AudioScopeAdapter, 
     UserMediaSelector,
     handleUserMediaError_ForTesting: handleUserMediaError,

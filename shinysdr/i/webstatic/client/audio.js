@@ -64,6 +64,7 @@ define([
   
   // webkitAudioContext required for Safari as of version 10.1
   const AudioContext = (window.AudioContext || window.webkitAudioContext);
+  exports.AudioContext = AudioContext;
   
   function connectAudio(scheduler, url, storage) {
     var audio = new AudioContext();
