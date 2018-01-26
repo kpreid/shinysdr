@@ -1,4 +1,4 @@
-// Copyright 2017 Kevin Reid <kpreid@switchb.org>
+// Copyright 2017, 2018 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -34,7 +34,6 @@ define([
 ) => {
   const {
     lifecycleDestroy,
-    lifecycleInit,
     reveal,
   } = import_domtools;
   const {
@@ -49,7 +48,6 @@ define([
   const {
     ConstantCell,
     LocalCell,
-    StorageNamespace,
   } = import_values;
   const {
     createWidgetExt,
@@ -81,16 +79,15 @@ define([
         const existing = frameElement.querySelector(TITLE_BAR_ELEMENT_NAME);
         if (existing) {
           return existing;
-        } else {
-          const newTitleEl = frameElement.insertBefore(document.createElement(TITLE_BAR_ELEMENT_NAME), frameElement.firstChild);
-          const paneTitleNode = newTitleEl.appendChild(document.createTextNode(''));
-          function updateTitleInPane() {
-            paneTitleNode.data = titleCell.depend(updateTitleInPane);
-          }
-          updateTitleInPane.scheduler = config.scheduler;
-          updateTitleInPane();
-          return newTitleEl;
         }
+        const newTitleEl = frameElement.insertBefore(document.createElement(TITLE_BAR_ELEMENT_NAME), frameElement.firstChild);
+        const paneTitleNode = newTitleEl.appendChild(document.createTextNode(''));
+        function updateTitleInPane() {
+          paneTitleNode.data = titleCell.depend(updateTitleInPane);
+        }
+        updateTitleInPane.scheduler = config.scheduler;
+        updateTitleInPane();
+        return newTitleEl;
       })();
       
       paneImpl.containerForMenuButton = titleBarElement;
@@ -128,7 +125,7 @@ define([
       const lastInteractionTimeCell = new LocalCell(numberT, Date.now());
       bindPropertyToCell(this, 'lastInteractionTime', lastInteractionTimeCell);
       
-      const widgetHandle = createWidgetExt(paneManager._context, PaneWidget, bootstrapFrameElement, new ConstantCell(this, blockT));
+      createWidgetExt(paneManager._context, PaneWidget, bootstrapFrameElement, new ConstantCell(this, blockT));
       
       if (!this.contentElement) {
         // This property, among others, is assigned by the widget
@@ -322,7 +319,7 @@ define([
       
       // Ensure that at least the pane list is visible.
       let visibleCount = 0;
-      for (var paneImpl of this._paneImpls) {
+      for (const paneImpl of this._paneImpls) {
         if (paneImpl.getVisible()) {
           visibleCount++;
         }
@@ -336,7 +333,7 @@ define([
       // Place the list's toggle button
       if (this._listShowButton) {
         let bestPlace = null;
-        for (var paneImpl of this._paneImpls) {
+        for (const paneImpl of this._paneImpls) {
           const place = paneImpl.containerForMenuButton;
           if (paneImpl.getVisible() && (!bestPlace || elementOrderSort(place, bestPlace) > 0)) {
             bestPlace = place;
@@ -381,7 +378,6 @@ define([
   class PaneListWidget {
     constructor(config) {
       const paneManager = config.target.depend(config.rebuildMe);
-      const scheduler = config.scheduler;
       const list = this.element = config.element;
       
       const updateListAKD = new AddKeepDrop({

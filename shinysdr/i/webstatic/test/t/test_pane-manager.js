@@ -1,4 +1,4 @@
-// Copyright 2017 Kevin Reid <kpreid@switchb.org>
+// Copyright 2017, 2018 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -15,37 +15,56 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-define(['/test/jasmine-glue.js', 'domtools', 'events', 'pane-manager',
-        'types', 'values', 'widget'],
-       ( jasmineGlue, domtools, events, paneManagerModule,
-         types, values, widget) => {
-  'use strict';
-  
-  const {afterEach, beforeEach, describe, expect, it, jasmine} = jasmineGlue.ji;
+'use strict';
+
+define([
+  '/test/jasmine-glue.js',
+  'domtools',
+  'events',
+  'pane-manager',
+  'types',
+  'values',
+  'widget',
+], (
+  import_jasmine,
+  import_domtools,
+  import_events,
+  import_pane_manager,
+  import_types,
+  import_values,
+  import_widget
+) => {
+  const {ji: {
+    afterEach,
+    beforeEach,
+    describe,
+    expect,
+    it
+  }} = import_jasmine;
   const {
     isVisibleInLayout,
     lifecycleInit,
     reveal,
-  } = domtools;
+  } = import_domtools;
   const {
     Scheduler,
-  } = events;
+  } = import_events;
   const {
     PaneListWidget,
     PaneManager,
-  } = paneManagerModule;
+  } = import_pane_manager;
   const {
     stringT,
-  } = types;
+  } = import_types;
   const {
     ConstantCell,
     LocalCell,
     makeBlock,
-  } = values;
+  } = import_values;
   const {
     Context,
     createWidgetExt,
-  } = widget;
+  } = import_widget;
   
   describe('pane-manager', () => {
     let container, context, paneListElement;
@@ -148,7 +167,7 @@ define(['/test/jasmine-glue.js', 'domtools', 'events', 'pane-manager',
         pane.delete();
         expect(isVisibleInLayout(testElement)).toBeFalsy();
         expect(seen).toBe(1);
-      })
+      });
       
       it('should support reveal()', () => {
         const pm = newPM();
@@ -160,7 +179,7 @@ define(['/test/jasmine-glue.js', 'domtools', 'events', 'pane-manager',
         expect(isVisibleInLayout(el)).toBeFalsy();
         reveal(pane.contentElement);
         expect(isVisibleInLayout(el)).toBeTruthy();
-      })
+      });
       
       it('should display a title for a pane', done => {
         const titleCell = new LocalCell(stringT, 'testTitle');
@@ -177,7 +196,7 @@ define(['/test/jasmine-glue.js', 'domtools', 'events', 'pane-manager',
       
       it('should maintain a list of panes', done => {
         const pm = newPM();
-        const pane = pm.newPane({titleCell: new ConstantCell('foo')});
+        pm.newPane({titleCell: new ConstantCell('foo')});
         
         requestAnimationFrame(() => {
           expect(paneListElement.textContent).toContain('foo');
@@ -191,7 +210,7 @@ define(['/test/jasmine-glue.js', 'domtools', 'events', 'pane-manager',
         templateFrameEl.appendChild(document.createElement('h2'))
             .appendChild(document.createTextNode('existing title'));
         
-        const pm = newPM();
+        newPM();
         
         // TODO: check widget nature of new pane
         expect(paneListElement.textContent).toContain('existing title');

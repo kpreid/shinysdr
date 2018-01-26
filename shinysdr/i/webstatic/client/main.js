@@ -215,7 +215,7 @@ define([
         });
         
         // also causes widget creation
-        const pm = new PaneManager(
+        new PaneManager(
           context,
           document,
           everything);
