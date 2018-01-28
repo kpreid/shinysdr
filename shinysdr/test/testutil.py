@@ -77,11 +77,11 @@ class CellSubscriptionTester(SubscriptionTester):
         self.cell = cell
         self.expected = []
         self.seen = []
-        self.subscription = cell.subscribe2(self.__callback, self.context)
+        self.subscription = cell.subscribe2(self.__subscriber, self.context)
         verifyObject(ISubscription, self.subscription)
         self.unsubscribed = False
     
-    def __callback(self, value):
+    def __subscriber(self, value):
         if self.unsubscribed:
             raise Exception('unexpected subscription callback after unsubscribe from {!r}, with value {!r}'.format(self.cell, value))
         self.seen.append(value)

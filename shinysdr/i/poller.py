@@ -43,7 +43,7 @@ class Poller(object):
         }
         self.__functions = []
     
-    def subscribe(self, cell, callback, fast):
+    def subscribe(self, cell, subscriber, fast):
         if not isinstance(cell, BaseCell):
             # we're not actually against duck typing here; this is a sanity check
             raise TypeError('Poller given a non-cell %r' % (cell,))
@@ -51,7 +51,7 @@ class Poller(object):
             target = _PollerStreamTarget(cell)
         else:
             target = _PollerValueTarget(cell)
-        return _PollerSubscription(self, target, callback, fast)
+        return _PollerSubscription(self, target, subscriber, fast)
     
     def _add_subscription(self, target, subscription):
         self.__targets[subscription.fast].add(target, subscription)
@@ -126,8 +126,8 @@ class AutomaticPoller(Poller):
 
 @implementer(ISubscription)
 class _PollerSubscription(object):
-    def __init__(self, poller, target, callback, fast):
-        self._fire = callback
+    def __init__(self, poller, target, subscriber, fast):
+        self._fire = subscriber
         self._target = target
         self._poller = poller
         self.fast = fast

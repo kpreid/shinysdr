@@ -56,7 +56,7 @@ class CellMetadata(namedtuple('CellMetadata', [
 class SubscriptionContext(namedtuple('SubscriptionContext', ['reactor', 'poller'])):
     """A SubscriptionContext is used when subscribing to a cell.
     
-    The context's reactor and poller determine how and when the subscription callback is invoked once the cell value has changed.
+    The context's reactor and poller determine how and when the subscriber is invoked once the cell value has changed.
     
     reactor: twisted.internet.interfaces.IReactorTime
     poller: shinysdr.i.poller.Poller
@@ -76,7 +76,7 @@ class ISubscriber(Interface):
     # pylint: disable=arguments-differ, signature-differs
     """The callback to be passed to cell.subscribe2().
     
-    This interface exists for documentation purposes; callbacks are not required to explicitly provide it.
+    This interface exists for documentation purposes; subscribers are not required to explicitly provide it.
     """
     
     def __call__(value):
@@ -168,11 +168,11 @@ class BaseCell(object):
         else:
             self.set(state)
     
-    def subscribe2(self, callback, context):
+    def subscribe2(self, subscriber, context):
         # TODO: 'subscribe2' name is temporary for easy distinguishing this from other 'subscribe' protocols.
         """Request to be notified when this cell's value changes.
         
-        callback: an ISubscriber; called repeatedly with successive new cell values; never immediately.
+        subscriber: an ISubscriber; called repeatedly with successive new cell values; never immediately.
         context: a SubscriptionContext.
 
         Returns an ISubscription, which has an `unsubscribe` method which will remove the subscription.
@@ -261,14 +261,14 @@ class PollingCell(ValueCell, TargetingMixin):
             raise Exception('Not writable.')
         return self.__setter(self.metadata().value_type(value))
     
-    def subscribe2(self, callback, context):
+    def subscribe2(self, subscriber, context):
         changes = self.__changes
         if changes == u'never':
             return _NeverSubscription()
         elif changes == u'continuous':
-            return context.poller.subscribe(self, callback, fast=True)
+            return context.poller.subscribe(self, subscriber, fast=True)
         elif changes == u'explicit' or changes == u'this_setter':
-            return _SimpleSubscription(callback, context, self.__explicit_subscriptions)
+            return _SimpleSubscription(subscriber, context, self.__explicit_subscriptions)
         else:
             raise ValueError('shouldn\'t happen unrecognized changes value: {!r}'.format(changes))
 
@@ -353,9 +353,9 @@ class StreamCell(ValueCell, TargetingMixin):
         self.__dgetter = getattr(self._target, 'get_' + key + '_distributor')
         self.__igetter = getattr(self._target, 'get_' + key + '_info')
     
-    def subscribe2(self, callback, context):
+    def subscribe2(self, subscriber, context):
         # poller does StreamCell-specific things. TODO: make Poller uninvolved
-        return context.poller.subscribe(self, callback, fast=True)
+        return context.poller.subscribe(self, subscriber, fast=True)
     
     # TODO: eliminate this specialized protocol used by Poller
     def subscribe_to_stream(self):
@@ -425,40 +425,40 @@ class LooseCell(ValueCell):
         for subscription in self.__subscriptions:
             subscription._fire(value)
     
-    def subscribe2(self, callback, context):
-        subscription = _SimpleSubscription(callback, context, self.__subscriptions)
+    def subscribe2(self, subscriber, context):
+        subscription = _SimpleSubscription(subscriber, context, self.__subscriptions)
         return subscription
     
-    def _subscribe_immediate(self, callback):
+    def _subscribe_immediate(self, subscriber):
         """for use by ViewCell only"""
         # TODO: replace this with a better mechanism
-        subscription = _LooseCellImmediateSubscription(callback, self.__subscriptions)
+        subscription = _LooseCellImmediateSubscription(subscriber, self.__subscriptions)
         return subscription
 
 
 @implementer(ISubscription)
 class _SimpleSubscription(object):
-    def __init__(self, callback, context, subscription_set):
-        self.__callback = callback
+    def __init__(self, subscriber, context, subscription_set):
+        self.__subscriber = subscriber
         self.__reactor = context.reactor
         self.__subscription_set = subscription_set
         subscription_set.add(self)
     
     def _fire(self, value):
         # TODO: This is calling with a maybe-stale-when-it-arrives value. Do we want to tighten up and prohibit that in the specification of subscribe2?
-        self.__reactor.callLater(0, self.__callback, value)
+        self.__reactor.callLater(0, self.__subscriber, value)
     
     def unsubscribe(self):
         self.__subscription_set.remove(self)
     
     def __repr__(self):
-        return u'<{} calling {}>'.format(type(self).__name__, self.__callback)
+        return u'<{} calling {}>'.format(type(self).__name__, self.__subscriber)
 
 
 @implementer(ISubscription)
 class _LooseCellImmediateSubscription(object):
-    def __init__(self, callback, subscription_set):
-        self._fire = callback
+    def __init__(self, subscriber, subscription_set):
+        self._fire = subscriber
         self.__subscription_set = subscription_set
         subscription_set.add(self)
     
@@ -537,7 +537,7 @@ class Command(BaseCell):
         # TODO: Make a separate command-triggering path, because this is a HORRIBLE KLUDGE.
         self.__function()
     
-    def subscribe2(self, callback, context):
+    def subscribe2(self, subscriber, context):
         """implements BaseCell"""
         return _NeverSubscription()
 
@@ -613,12 +613,12 @@ class ExportedState(object):
                 self.__decorator_cells_cache[k] = v.make_cell(self, k)
         return self.__decorator_cells_cache
     
-    def state_subscribe(self, callback, context):
+    def state_subscribe(self, subscriber, context):
         # pylint: disable=attribute-defined-outside-init, access-member-before-definition
         if self.__shape_subscriptions is None:
             self.__shape_subscriptions = set()
         if self.state_is_dynamic():
-            return _SimpleSubscription(callback, context, self.__shape_subscriptions)
+            return _SimpleSubscription(subscriber, context, self.__shape_subscriptions)
         else:
             return _NeverSubscription()
     
