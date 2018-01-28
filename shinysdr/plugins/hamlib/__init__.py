@@ -30,6 +30,7 @@ TODO explain how to link up with soundcard devices
 
 from __future__ import absolute_import, division, unicode_literals
 
+import random
 import re
 import subprocess
 import time
@@ -38,10 +39,9 @@ from zope.interface import implementer, Interface
 
 from twisted.internet import defer
 from twisted.internet.error import ConnectionRefusedError
-from twisted.internet.protocol import ClientFactory, Protocol, ServerFactory
+from twisted.internet.protocol import ClientFactory, Protocol
 from twisted.internet.task import LoopingCall, deferLater
 from twisted.protocols.basic import LineReceiver
-from twisted.protocols.wire import Discard
 from twisted.python import log
 from twisted.python.util import sibpath
 from twisted.web import static
@@ -235,38 +235,57 @@ def _connect_to_device(reactor, options, port, daemon, connect_func):
             raise Exception('Something is already using port %i!' % port)
         except ConnectionRefusedError:
             pass
+    
+    for _ in xrange(4 if port is None else 1):  # loop to try available port numbers in case of collision (hamlib will not bind to 0 and report)
+        
+        if port is None:
+            actual_port = random.randint(49152, 65535)
+        else:
+            actual_port = port
+        
+        process = subprocess.Popen(
+            args=['/usr/bin/env', daemon, '-T', host, '-t', str(actual_port)] + options,
+            stdin=None,
+            stdout=None,
+            stderr=None,
+            close_fds=True)
+    
+        # Retry connecting with exponential backoff, because the daemon process won't tell us when it's started listening.
+        proxy_device = None
+        refused = Exception('this shouldn\'t be raised')
+        for i in xrange(0, 4):
+            try:
+                proxy_device = yield connect_func(
+                    reactor=reactor,
+                    host=host,
+                    port=actual_port)
+                
+                break
+            except ConnectionRefusedError as e:
+                refused = e
+                if process.poll() is not None:
+                    # If the process has terminated already, then it is probably due to either a rig communication problem or due to a port number collision.
+                    break
+                yield deferLater(reactor, 0.1 * (2 ** i), lambda: None)
+        else:
+            raise refused
+        
+        if proxy_device is None:
+            # If we get here, then we aborted the loop by the process.poll() check.
+            continue
+        
+        # TODO: Sometimes we fail to kill the process because there was a protocol error during the connection stages. Refactor so that doesn't happen.
+        _install_closed_hook(proxy_device, process)    
+        
+        defer.returnValue(proxy_device)
+        break  # defer.returnValue exits by raise; this is just for lint
     else:
-        # Pick a port number (unfortunately the hamlib daemons will not accept port 0 and report the assigned port).
-        port = _find_free_tcp_port_number(reactor)
-    
-    process = subprocess.Popen(
-        args=['/usr/bin/env', daemon, '-T', host, '-t', str(port)] + options,
-        stdin=None,
-        stdout=None,
-        stderr=None,
-        close_fds=True)
-    
-    # Retry connecting with exponential backoff, because the daemon process won't tell us when it's started listening.
-    proxy_device = None
-    refused = Exception('this shouldn\'t be raised')
-    for i in xrange(0, 5):
-        try:
-            proxy_device = yield connect_func(
-                reactor=reactor,
-                host=host,
-                port=port)
-            break
-        except ConnectionRefusedError as e:
-            refused = e
-            yield deferLater(reactor, 0.1 * (2 ** i), lambda: None)
-    else:
-        raise refused
-    
-    # TODO: Sometimes we fail to kill the process because there was a protocol error during the connection stages. Refactor so that doesn't happen.
+        raise Exception('Failed to start {}'.format(daemon))
+
+
+def _install_closed_hook(proxy_device, process):
     for proxy in proxy_device.get_components_dict().itervalues():  # only expect one, but CellDict is minimal for now
         proxy.when_closed().addCallback(lambda _: process.kill())
-    
-    defer.returnValue(proxy_device)
 
 
 @implementer(IComponent, IProxy)
@@ -693,15 +712,6 @@ class _HamlibClientProtocol(Protocol):
         d = defer.Deferred()
         self.__waiting_for_responses.append((cmd, d))
         return d
-
-
-def _find_free_tcp_port_number(reactor):
-    # Twisted sets SO_REUSEADDR by default, so we don't have to worry about that. What we do have to worry about is getting another process randomly taking this port in the window between when we stop listening and the hamlib daemon starts.
-    listening_port = reactor.listenTCP(0, ServerFactory.forProtocol(Discard), interface='127.0.0.1')
-    port_number = listening_port.getHost().port
-    listening_port.stopListening()
-    assert port_number > 0
-    return port_number
 
 
 _plugin_client = ClientResourceDef(
