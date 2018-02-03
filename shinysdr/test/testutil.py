@@ -79,8 +79,12 @@ class CellSubscriptionTester(SubscriptionTester):
         self.seen = []
         self.unsubscribed = False
         
-        self.subscription = cell.subscribe2(self.__subscriber, self.context)
+        gotten_value = cell.get()
+        initial_value, self.subscription = cell.subscribe2(self.__subscriber, self.context)
         verifyObject(ISubscription, self.subscription)
+        if initial_value != gotten_value:
+            raise Exception('claimed initial value {!r} did not match current get() value {!r}; this is not prohibited but likely a mistake if it occurs in tests'
+                .format(initial_value, gotten_value))
         
         if len(self.seen) > 0:
             raise Exception('unexpected callback on subscription from {!r}, with value {!r}'.format(self.cell, self.seen[0]))

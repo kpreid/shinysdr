@@ -202,8 +202,7 @@ class WAVIntervalListener(ExportedState):
 
     def fileOpened(self, filename):
         rf_frequency_cell = self.context.get_absolute_frequency_cell()
-        self.__start_frequency = rf_frequency_cell.get()
-        self.__frequency_subscription = rf_frequency_cell.subscribe2(
+        self.__start_frequency, self.__frequency_subscription = rf_frequency_cell.subscribe2(
             self.__check_modified_frequency,
             SubscriptionContext(reactor=self._reactor, poller=None))
         self.__invalidated_by_frequency_change = False

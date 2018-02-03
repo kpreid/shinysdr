@@ -151,7 +151,8 @@ class PersistenceChangeDetector(object):
     
     def __add_subscription(self, subscribe_fn):
         # TODO: It would be a reasonable strengthening to arrange so that even if the subscriptions misbehave, we do not ever 
-        self.__subscriptions.append(subscribe_fn(self.__do_callback, self.__subscription_context))
+        _value, subscription = subscribe_fn(self.__do_callback, self.__subscription_context)
+        self.__subscriptions.append(subscription)
     
     def __do_callback(self, _value):
         # ignore value because it is from an arbitrary element

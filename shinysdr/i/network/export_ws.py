@@ -38,9 +38,6 @@ from shinysdr.types import ReferenceT
 from shinysdr.values import BaseCell, ExportedState, PollingCell, StreamCell
 
 
-_NOT_SPECIFIED_PUMPKIN = object()
-
-
 class _StateStreamObjectRegistration(object):
     # TODO messy
     def __init__(self, ssi, subscription_context, obj, serial, url, refcount):
@@ -55,17 +52,21 @@ class _StateStreamObjectRegistration(object):
         if isinstance(obj, BaseCell):
             self.__obj_is_cell = True
             if isinstance(obj, StreamCell):  # TODO kludge
-                self.__subscription = obj.subscribe2(self.__listen_binary_stream, subscription_context)
+                _, self.__subscription = obj.subscribe2(self.__listen_binary_stream, subscription_context)
+                self.send_initial_value = lambda: None
                 self.send_now_if_needed = lambda: None
             else:
-                self.__subscription = obj.subscribe2(self.__listen_cell, subscription_context)
-                self.send_now_if_needed = self.__listen_cell
+                initial_value, self.__subscription = obj.subscribe2(self.__listen_cell, subscription_context)
+                self.send_initial_value = lambda: self.__listen_cell(initial_value)
+                self.send_now_if_needed = lambda: self.__listen_cell(obj.get())
         elif isinstance(obj, ExportedState):
             self.__obj_is_cell = False
-            if obj.state_is_dynamic():
-                self.__subscription = obj.state_subscribe(self.__listen_state, subscription_context)
+            if obj.state_is_dynamic():  # TODO: can we not bother checking? this may be a relic from polling
+                initial_value, self.__subscription = obj.state_subscribe(self.__listen_state, subscription_context)
             else:
+                initial_value = obj.state()
                 self.__subscription = None
+            self.send_initial_value = lambda: self.__listen_state(initial_value)
             self.send_now_if_needed = lambda: self.__listen_state(self.obj.state())
         else:
             raise TypeError('not a cell or ExportedState: {!r}'.format(obj))
@@ -84,9 +85,13 @@ class _StateStreamObjectRegistration(object):
         self.value_is_references = is_references
     
     def send_initial_value(self):
-        """kludge to get initial state sent"""
+        """Send the initial value obtained when subscribing on the stream."""
+        # pylint: disable=method-hidden
+        # should be overridden in instance
+        raise Exception('This placeholder should never get called')
     
     def send_now_if_needed(self):
+        """Ensure that the latest value has been put on the stream."""
         # pylint: disable=method-hidden
         # should be overridden in instance
         raise Exception('This placeholder should never get called')
@@ -96,21 +101,16 @@ class _StateStreamObjectRegistration(object):
             raise Exception('This object is not a cell')
         return self.obj
     
-    def __listen_cell(self, value=_NOT_SPECIFIED_PUMPKIN):
-        # TODO: get rid of the optional arg and make calls consistent
-        if value is _NOT_SPECIFIED_PUMPKIN:
-            value = self.obj.get()
+    def __listen_cell(self, value):
         if self.__dead:
             return
         obj = self.obj
         if isinstance(obj, StreamCell):
             raise Exception("shouldn't happen: StreamCell here")
-        value = obj.get()
         if obj.type().is_reference():
             self.__ssi._lookup_or_register(value, self.url)
             self.__maybesend_reference({u'value': value}, True)
         else:
-            value = obj.get()
             self.__maybesend(value, value)
     
     def __listen_binary_stream(self, value):
@@ -200,7 +200,7 @@ class StateStreamInner(object):
         self._send_batch = []
         self.__batch_delay = None
         self.__root_url = root_url
-        root_registration.send_now_if_needed()
+        root_registration.send_initial_value()
     
     def connectionLost(self, reason):
         # pylint: disable=consider-iterating-dictionary
@@ -260,7 +260,7 @@ class StateStreamInner(object):
             else:
                 # TODO: not implemented on client (but shouldn't happen)
                 self._send1(False, ('register', serial, url))
-            registration.send_now_if_needed()
+            registration.send_initial_value()
             return registration
     
     def _flush(self):  # exposed for testing

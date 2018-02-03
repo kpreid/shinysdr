@@ -175,7 +175,7 @@ class BaseCell(object):
         subscriber: an ISubscriber; called repeatedly with successive new cell values; never immediately.
         context: a SubscriptionContext.
 
-        Returns an ISubscription, which has an `unsubscribe` method which will remove the subscription.
+        Returns a tuple of the current value and an ISubscription, which has an `unsubscribe` method which will remove the subscription.
         """
         raise NotImplementedError(self)
     
@@ -264,13 +264,14 @@ class PollingCell(ValueCell, TargetingMixin):
     def subscribe2(self, subscriber, context):
         changes = self.__changes
         if changes == u'never':
-            return _NeverSubscription()
+            subscription = _NeverSubscription()
         elif changes == u'continuous':
-            return context.poller.subscribe(self, subscriber, fast=True)
+            subscription = context.poller.subscribe(self, subscriber, fast=True)
         elif changes == u'explicit' or changes == u'this_setter':
-            return _SimpleSubscription(subscriber, context, self.__explicit_subscriptions)
+            subscription = _SimpleSubscription(subscriber, context, self.__explicit_subscriptions)
         else:
             raise ValueError('shouldn\'t happen unrecognized changes value: {!r}'.format(changes))
+        return self.get(), subscription
 
     def poll_for_change(self, specific_cell):
         if self.__explicit_subscriptions is None:
@@ -355,7 +356,7 @@ class StreamCell(ValueCell, TargetingMixin):
     
     def subscribe2(self, subscriber, context):
         # poller does StreamCell-specific things. TODO: make Poller uninvolved
-        return context.poller.subscribe(self, subscriber, fast=True)
+        return self.get(), context.poller.subscribe(self, subscriber, fast=True)
     
     # TODO: eliminate this specialized protocol used by Poller
     def subscribe_to_stream(self):
@@ -426,8 +427,7 @@ class LooseCell(ValueCell):
             subscription._fire(value)
     
     def subscribe2(self, subscriber, context):
-        subscription = _SimpleSubscription(subscriber, context, self.__subscriptions)
-        return subscription
+        return self.get(), _SimpleSubscription(subscriber, context, self.__subscriptions)
     
     def _subscribe_immediate(self, subscriber):
         """for use by ViewCell only"""
@@ -539,7 +539,7 @@ class Command(BaseCell):
     
     def subscribe2(self, subscriber, context):
         """implements BaseCell"""
-        return _NeverSubscription()
+        return self.get(), _NeverSubscription()
 
 
 @implementer(ISubscription)
@@ -618,9 +618,9 @@ class ExportedState(object):
         if self.__shape_subscriptions is None:
             self.__shape_subscriptions = set()
         if self.state_is_dynamic():
-            return _SimpleSubscription(subscriber, context, self.__shape_subscriptions)
+            return self.state(), _SimpleSubscription(subscriber, context, self.__shape_subscriptions)
         else:
-            return _NeverSubscription()
+            return self.state(), _NeverSubscription()
     
     def state__setter_called(self, setter_descriptor):
         """Called by ExportedSetter when the setter method is called."""
