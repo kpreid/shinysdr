@@ -103,6 +103,17 @@ define([
   
   const exports = {};
   
+  function testForFirefoxFlexboxIssue() {
+    // The CSS structure we use for a horizontally-scrollable element inside flexbox columns does not currently work on Firefox. Test for the bad layout consequence.
+    const tester = document.body.appendChild(document.createElement('div'));
+    tester.innerHTML = '<div style="width: 100px; display: flex; flex-direction: row;"><div style="border: solid; flex: 1 2; width: 1px;"><div style="overflow-x: scroll;"><div style="width: 1000px">foo</div></div></div></div>';
+    const x = tester.firstChild.firstChild.offsetWidth;
+    tester.parentNode.removeChild(tester);
+    return x > 500;
+  }
+  
+  const DISABLE_SPECTRUM_ZOOM = testForFirefoxFlexboxIssue();
+  
   // Defines the display parameters and coordinate calculations of the spectrum widgets
   // TODO: Revisit whether this should be in widgets.js -- it is closely tied to the spectrum widgets, but also managed by the widget framework.
   var MAX_ZOOM_BINS = 60; // Maximum zoom shows this many FFT bins
@@ -133,7 +144,7 @@ define([
       // TODO: clamp zoom here in the same way changeZoom does
       zoom = parseFloat(storage.getItem('zoom')) || 1;
       const initScroll = parseFloat(storage.getItem('scroll')) || 0;
-      innerElement.style.width = (container.offsetWidth * zoom) + 'px';
+      if (!DISABLE_SPECTRUM_ZOOM) innerElement.style.width = (container.offsetWidth * zoom) + 'px';
       prepare();
       scheduler.startLater(function later() {
         // Delay kludge because the container is potentially zero width at initialization time and therefore cannot actually be scrolled.
@@ -173,7 +184,7 @@ define([
         
         // Update scrollable range
         const w = pixelWidth * zoom;
-        innerElement.style.width = w + 'px';
+        if (!DISABLE_SPECTRUM_ZOOM) innerElement.style.width = w + 'px';
         
         // Apply change
         container.scrollLeft = scrollValue;
@@ -247,6 +258,9 @@ define([
     };
     
     function clampZoom(zoomValue) {
+      if (DISABLE_SPECTRUM_ZOOM) {
+        return 1;
+      }
       const maxZoom = Math.max(
         1,  // at least min zoom,
         Math.max(
@@ -264,14 +278,14 @@ define([
       // The (temporary) range is the max of the old and new ranges.
       const w = pixelWidth * zoom;
       const oldWidth = parseInt(innerElement.style.width);
-      innerElement.style.width = Math.max(w, oldWidth) + 'px';
+      if (!DISABLE_SPECTRUM_ZOOM) innerElement.style.width = Math.max(w, oldWidth) + 'px';
     }
     function finishZoomUpdate(scrollValue) {
       scrollValue = clampScroll(scrollValue);
       
       // Final scroll-range update.
       const w = pixelWidth * zoom;
-      innerElement.style.width = w + 'px';
+      if (!DISABLE_SPECTRUM_ZOOM) innerElement.style.width = w + 'px';
       
       container.scrollLeft = scrollValue;
       fractionalScroll = scrollValue - container.scrollLeft;
@@ -311,7 +325,7 @@ define([
     
     container.addEventListener('wheel', event => {
       const [dx, dy] = pixelsFromWheelEvent(event);
-      if (Math.abs(dy) > Math.abs(dx)) {
+      if (Math.abs(dy) > Math.abs(dx) && !DISABLE_SPECTRUM_ZOOM) {
         // Vertical scrolling: override to zoom.
         self.changeZoom(dy, event.clientX - container.getBoundingClientRect().left);
         event.preventDefault();
@@ -509,6 +523,7 @@ define([
       
       const scrollElement = outerElement.appendChild(document.createElement('div'));
       scrollElement.classList.add('widget-Monitor-scrollable');
+      if (DISABLE_SPECTRUM_ZOOM) scrollElement.style.overflow = 'visible';
       scrollElement.id = config.element.id + '-scrollable';
       
       const overlayContainer = scrollElement.appendChild(document.createElement('div'));
