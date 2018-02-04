@@ -1254,14 +1254,14 @@ define([
       
         // pan and click
         // TOOD: duplicated code w/ other widgets, consider abstracting
-        targetElement.addEventListener('mousedown', function(downEvent) {
-          if (event.button !== 0) return;  // don't react to right-clicks etc.
+        targetElement.addEventListener('mousedown', downEvent => {
+          if (downEvent.button !== 0) return;  // don't react to right-clicks etc.
           downEvent.preventDefault();
           document.addEventListener('mousemove', drag, true);
           document.addEventListener('mouseup', function upTemp(upEvent) {
-            var delta = Math.hypot(upEvent.clientX - downEvent.clientX, upEvent.clientY - downEvent.clientY);
+            const delta = Math.hypot(upEvent.clientX - downEvent.clientX, upEvent.clientY - downEvent.clientY);
             if (delta < 5) {  // TODO justify slop
-              var featureInfo = pickFromMouseEvent(downEvent);
+              const featureInfo = pickFromMouseEvent(downEvent);
               if (featureInfo) {
                 featureInfo.clickOnFeature();
               }
