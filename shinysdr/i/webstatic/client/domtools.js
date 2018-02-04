@@ -104,5 +104,15 @@ define(() => {
   }
   exports.reveal = reveal;
   
+  function pixelsFromWheelEvent(event) {
+    // deltaMode: 0 = pixels, 1 = "lines", 2 = "pages"; we have no notion of "pages" so treat it as "lines".
+    const scaling = event.deltaMode ? 30 : 1;
+    return [
+      event.deltaX * scaling,
+      event.deltaY * scaling,
+    ];
+  }
+  exports.pixelsFromWheelEvent = pixelsFromWheelEvent;
+  
   return Object.freeze(exports);
 });

@@ -66,6 +66,7 @@ define([
   } = import_database;
   const {
     lifecycleInit,
+    pixelsFromWheelEvent,
   } = import_domtools;
   const {
     Notifier,
@@ -308,20 +309,20 @@ define([
       finishZoomUpdate(scroll);
     };
     
-    // TODO: mousewheel event is allegedly nonstandard and inconsistent among browsers, notably not in Firefox (not that we're currently FF-compatible due to the socket issue).
-    container.addEventListener('mousewheel', function(event) {
-      if (Math.abs(event.wheelDeltaY) > Math.abs(event.wheelDeltaX)) {
+    container.addEventListener('wheel', event => {
+      const [dx, dy] = pixelsFromWheelEvent(event);
+      if (Math.abs(dy) > Math.abs(dx)) {
         // Vertical scrolling: override to zoom.
-        self.changeZoom(-event.wheelDeltaY, event.clientX - container.getBoundingClientRect().left);
+        self.changeZoom(dy, event.clientX - container.getBoundingClientRect().left);
         event.preventDefault();
         event.stopPropagation();
       } else {
         // Horizontal scrolling (or diagonal w/ useless vertical component): if hits edge, change frequency.
-        if (event.wheelDeltaX > 0 && cacheScrollLeft === 0
-            || event.wheelDeltaX < 0 && cacheScrollLeft === (container.scrollWidth - container.clientWidth)) {
+        if (dx < 0 && cacheScrollLeft === 0
+            || dx > 0 && cacheScrollLeft === (container.scrollWidth - container.clientWidth)) {
           if (isRFSpectrum) {
             const freqCell = radioCell.get().source.get().freq;
-            freqCell.set(freqCell.get() + (event.wheelDeltaX * -0.12) / pixelsPerHertz);
+            freqCell.set(freqCell.get() + dx / pixelsPerHertz);
           }
           
           // This shouldn't be necessary, but Chrome treats horizontal scroll events from touchpad as a back/forward gesture.

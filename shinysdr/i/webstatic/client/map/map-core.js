@@ -47,6 +47,7 @@ define([
   shader_curves_f
 ) => {
   const {
+    pixelsFromWheelEvent,
     reveal,
   } = import_domtools;
   const {
@@ -1271,18 +1272,18 @@ define([
         }, false);
 
         // zoom
-        // TODO: mousewheel event is allegedly nonstandard and inconsistent among browsers, notably not in Firefox (not that we're currently FF-compatible due to the socket issue).
-        targetElement.addEventListener('mousewheel', function(event) {
-          var rect = targetElement.getBoundingClientRect();
-          var x = event.clientX - rect.left - rect.width / 2;
-          var y = event.clientY - rect.top - rect.height / 2;
+        targetElement.addEventListener('wheel', event => {
+          const [/* dx */, dy] = pixelsFromWheelEvent(event);
+          const rect = targetElement.getBoundingClientRect();
+          const x = event.clientX - rect.left - rect.width / 2;
+          const y = event.clientY - rect.top - rect.height / 2;
           viewChanger.setState(
             viewChanger.captureState(),
             -x,
             -y,
             x,
             y,
-            Math.exp(event.wheelDeltaY * 0.001));
+            Math.exp(-dy * 0.001));
       
           event.preventDefault();  // no scrolling
           event.stopPropagation();
