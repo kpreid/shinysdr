@@ -200,7 +200,7 @@ define([
           // Audio data.
           
           // Don't buffer huge amounts of data.
-          if (queue.length > 100) {
+          if (queue.length > 1000) {
             console.log('Extreme audio overrun.');
             queue.length = 0;
             queueSampleCount = 0;
