@@ -82,7 +82,7 @@ define([
     receiveAllButton.textContent = 'Receive all in search';
     receiveAllButton.addEventListener('click', function (event) {
       const receivers = radioCell.get().receivers.get();
-      for (var key in receivers) {
+      for (const key in receivers) {
         receivers.delete(key);
       }
       currentFilter.forEach(function(p) {
@@ -113,7 +113,7 @@ define([
           record.n.listen(draw);
         }
       }
-      draw.scheduler = scheduler;
+      scheduler.claim(draw);
       redrawHooks.set(info, draw);
       draw();
       
@@ -131,7 +131,7 @@ define([
       }
     }
     
-    const draw = config.boundedFn(function drawImpl() {
+    function draw() {
       //console.group('draw');
       //console.log(currentFilter.getAll().map(function (r) { return r.label; }));
       currentFilter.n.listen(draw);
@@ -154,9 +154,9 @@ define([
       // sanity check
       var count = currentFilter.getAll().length;
       receiveAllButton.disabled = !(count > 0 && count <= 10);
-    });
-    draw.scheduler = scheduler;
-
+    }
+    config.scheduler.startNow(draw);
+    
     refilter();
   }
   exports.FreqList = FreqList;
@@ -280,7 +280,7 @@ define([
   
   var dbModeTable = Object.create(null);
   dbModeTable[''] = '—';
-  for (var key in modeTable) {
+  for (const key in modeTable) {
     dbModeTable[key] = modeTable[key].info_enum_row.label;
   }
   
@@ -302,7 +302,7 @@ define([
       return field;
     }
     function formFieldHooks(field, cell) {
-      var draw = config.boundedFn(function drawImpl() {
+      config.scheduler.startNow(function draw() {
         var now = cell.depend(draw);
         if (now === NO_RECORD) {
           field.disabled = true;
@@ -311,13 +311,11 @@ define([
           if (field.value !== now) field.value = now;
         }
       });
-      draw.scheduler = config.scheduler;
-      field.addEventListener('change', function(event) {
+      field.addEventListener('change', event => {
         if (field.value !== cell.get()) {
           cell.set(field.value);
         }
       });
-      draw();
     }
     function input(cell, name) {
       var field = document.createElement('input');
@@ -326,7 +324,7 @@ define([
     }
     function menu(cell, name, values) {
       var field = document.createElement('select');
-      for (var key in values) {
+      for (const key in values) {
         var option = field.appendChild(document.createElement('option'));
         option.value = key;
         option.textContent = values[key];
@@ -354,7 +352,7 @@ define([
   function DatabasePickerWidget(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       var list = getAppend(); // TODO should be a <ul> with styling
-      for (var key in block) {
+      for (const key in block) {
         var match = /^enabled_(.*)$/.exec(key);
         if (match) {
           const label = list.appendChild(document.createElement('div'))

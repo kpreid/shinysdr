@@ -26,7 +26,7 @@ define(['text!plugin-index.json'], (text) => {
   const moduleIds = Object.freeze(Array.prototype.slice.call(pluginIndex.js));
   
   const modeTable = Object.create(null);
-  for (var k in pluginIndex.modes) {
+  for (const k in pluginIndex.modes) {
     modeTable[k] = Object.freeze(pluginIndex.modes[k]);
   }
   Object.freeze(modeTable);

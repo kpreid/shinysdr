@@ -19,6 +19,7 @@
   
 define([
   './basic', 
+  '../events',
   '../types', 
   '../values', 
   '../widget'
@@ -36,6 +37,9 @@ define([
     Select,
     Toggle,
     TextTerminal,
+  },
+  {
+    AddKeepDrop,
   },
   {
     EnumT,
@@ -96,40 +100,30 @@ define([
       // TODO: We ought to display these in some way.
       config.element.removeAttribute('title');
       
-      // Keys are block keys
-      const childWidgetElements = Object.create(null);
-
-      const createChild = name => {
-        // buildContainer must append exactly one child. TODO: cleaner
-        const widgetPlaceholder = buildEntry(childContainer, block, name);
-        if (idPrefix) {
-          widgetPlaceholder.id = idPrefix + name;
+      const childrenAKD = new AddKeepDrop({
+        add(name) {
+          // buildContainer must append exactly one child. TODO: cleaner
+          const widgetPlaceholder = buildEntry(childContainer, block, name);
+          if (idPrefix) {
+            widgetPlaceholder.id = idPrefix + name;
+          }
+          const widgetContainer = childContainer.lastChild;
+          const widgetHandle = createWidgetExt(config.context, widgetCtor, widgetPlaceholder, block[name]);
+          return {
+            widgetHandle: widgetHandle,
+            element: widgetContainer
+          };
+        },
+        remove(name, parts) {
+          parts.widgetHandle.destroy();
+          childContainer.removeChild(parts.element);
         }
-        const widgetContainer = childContainer.lastChild;
-        const widgetHandle = createWidgetExt(config.context, widgetCtor, widgetPlaceholder, block[name]);
-        return {
-          widgetHandle: widgetHandle,
-          element: widgetContainer
-        };
-      };
+      });
 
-      function handleReshape() {
+      config.scheduler.startNow(function handleReshape() {
         block._reshapeNotice.listen(handleReshape);
-        Object.keys(block).forEach(name => {
-          if (!childWidgetElements[name]) {
-            childWidgetElements[name] = createChild(name);
-          }
-        });
-        for (var oldName in childWidgetElements) {
-          if (!(oldName in block)) {
-            childWidgetElements[oldName].widgetHandle.destroy();
-            childContainer.removeChild(childWidgetElements[oldName].element);
-            delete childWidgetElements[oldName];
-          }
-        }
-      }
-      handleReshape.scheduler = config.scheduler;
-      handleReshape();
+        childrenAKD.update(Object.keys(block));
+      });
     };
   }
   exports.BlockSet = BlockSet;
@@ -162,15 +156,15 @@ define([
   }
   
   function windowEntryBuilder(setElement, block, name, setInsertion) {
-    var subwindow = document.createElement('shinysdr-subwindow');
-    subwindow.id = 'section-' + name;  // TODO match block id system instead of this (need context)
-    var header = subwindow.appendChild(document.createElement('h2'));
+    var paneEl = document.createElement('shinysdr-pane');
+    paneEl.id = 'section-' + name;  // TODO match block id system instead of this (need context)
+    var header = paneEl.appendChild(document.createElement('h2'));
     header.appendChild(document.createTextNode(name));  // TODO formatting
-    var body = subwindow.appendChild(document.createElement('div'));
+    var body = paneEl.appendChild(document.createElement('div'));
     body.classList.add('sidebar');  // TODO not quite right class -- we want main-ness but scrolling
     body.classList.add('frame');
     
-    setElement.appendChild(subwindow);
+    setElement.appendChild(paneEl);
     return body.appendChild(document.createElement('div'));
   }
   
@@ -245,25 +239,20 @@ define([
             cell.set(value);
           }
         }
-        function bindGainModeSet() {
+        config.scheduler.startNow(function bindGainModeSet() {
           const mode = gainModeCell.depend(bindGainModeSet);
           if (hasAGC) {
             setIfDifferent(block.agc, mode === 'auto');
           }
-        }
-        bindGainModeSet.scheduler = config.scheduler;
-        bindGainModeSet();
-        function bindGainModeGet() {
+        });
+        config.scheduler.startNow(function bindGainModeGet() {
           if (hasAGC && block.agc.depend(bindGainModeGet)) {
             setIfDifferent(gainModeCell, 'auto');
           } else if (gainModeCell.get() === 'auto') {
             setIfDifferent(gainModeCell, 'single');
           }
-        }
-        bindGainModeGet.scheduler = config.scheduler;
-        bindGainModeGet();
-
-        function updateUI() {
+        });
+        config.scheduler.startNow(function updateUI() {
           var mode = gainModeCell.depend(updateUI);
           if (hasSingleGain) {
             singleGainPanel.style.display = mode === 'single' ? 'block' : 'none';
@@ -271,9 +260,7 @@ define([
           if (hasMultipleGain) {
             multipleGainPanel.style.display = mode === 'stages' ? 'block' : 'none';
           }
-        }
-        updateUI.scheduler = config.scheduler;
-        updateUI();
+        });
       }());
       
       setToDetails();
@@ -357,18 +344,19 @@ define([
       var gainNumber = gainRow.appendChild(document.createElement('td')).appendChild(document.createElement('tt'));
       createWidgetExt(config.context, NumberWidget, gainNumber, block.audio_gain);
       
-      var otherRow = audioPanel.appendChild(document.createElement('tr'));
+      const otherRow = audioPanel.appendChild(document.createElement('tr'));
       otherRow.appendChild(document.createElement('th')).appendChild(document.createTextNode('Dest'));
-      var otherCell = otherRow.appendChild(document.createElement('td'));
+      const otherCell = otherRow.appendChild(document.createElement('td'));
       otherCell.colSpan = 2;
-      var otherBox = otherCell.appendChild(document.createElement('span'));
+      const otherBox = otherCell.appendChild(document.createElement('span'));
+      otherBox.classList.add('widget-Receiver-audio-dest-controls');
       ignore('audio_destination');
-      var dest = otherBox.appendChild(document.createElement('select'));
+      const dest = otherBox.appendChild(document.createElement('select'));
       createWidgetExt(config.context, Select, dest, block.audio_destination);
       if (!block.audio_pan.type.isSingleValued()) {
         ignore('audio_pan');
-        otherBox.appendChild(document.createTextNode('L'));
-        var panSlider = otherBox.appendChild(document.createElement('input'));
+        otherBox.appendChild(document.createTextNode(' L'));
+        const panSlider = otherBox.appendChild(document.createElement('input'));
         panSlider.type = 'range';
         createWidgetExt(config.context, LinSlider, panSlider, block.audio_pan);
         otherBox.appendChild(document.createTextNode('R'));
@@ -472,7 +460,7 @@ define([
         throw new Error('wrong element ' + element.nodeName);
       }
       
-      const update = config.boundedFn(function updateImpl() {
+      config.scheduler.startNow(function update() {
         let themeUrl = target.depend(update);
         // If value is not valid take a valid one
         // TODO: implement client side coercion and remove this instanceof
@@ -481,8 +469,6 @@ define([
         }
         element.href = themeUrl;
       });
-      update.scheduler = config.scheduler;
-      update();
     }
   }
   exports.ThemeApplier = ThemeApplier;

@@ -45,62 +45,168 @@ define(() => {
     }
   };
   
-  // internal function of Scheduler
-  function schedulerRAFCallback() {
-    // jshint validthis: true
-    const queue = this._queue;
-    let limit = 1000;
-    try {
-      while (queue.nonempty() && limit-- > 0) {
-        const queued = queue.dequeue();
-        if (queued._scheduler_scheduled) {
-          queued._scheduler_scheduled = false;
-          queued();
-        }
+  class AbstractScheduler {
+    // All methods of schedulers that can be defined in terms of others.
+    
+    claim(callback) {
+      // TODO: convert this to a common WeakMap
+      if (callback.scheduler !== undefined) {
+        throw new Error('Already claimed by a different scheduler');
       }
-    } finally {
-      if (queue.nonempty()) {
+      callback.scheduler = this;
+      return callback;  // Allow `return claim(function ...);` pattern.
+    }
+    
+    startNow(callback) {
+      this.claim(callback);
+      callback();
+    }
+    
+    startLater(callback) {
+      this.claim(callback);
+      this.enqueue(callback);
+    }
+    
+    enqueue(callback) { throw new Error('not implemented'); }
+    callNow(callback) { throw new Error('not implemented'); }
+    syncEventCallback(eventCallback) { throw new Error('not implemented'); }
+  }
+  
+  class Scheduler extends AbstractScheduler {
+    constructor(window) {
+      super();
+      const i = new SchedulerImpl(window, this);
+      this.enqueue = i.enqueue.bind(i);
+      this.callNow = i.callNow.bind(i);
+      this.syncEventCallback = i.syncEventCallback.bind(i);
+    }
+  }
+  exports.Scheduler = Scheduler;
+  
+  class SchedulerImpl {
+    constructor(window, scheduler) {
+      this._window = window;
+      this._scheduler = scheduler;  // caution: scheduler is not yet fully constructed
+      
+      // Things to do in the next requestAnimationFrame callback
+      this._queue = new Queue();
+      
+      // Whether we have an outstanding requestAnimationFrame callback
+      this._queue_scheduled = false;
+      
+      // Contains every function which is to be called. Every function in the queue either is also in this set or was called early by .callNow().
+      this._functionIsScheduled = new Set();
+      
+      // Bound callback to pass to requestAnimationFrame
+      this._callback = this._RAFCallback.bind(this);
+    }
+    
+    enqueue(callback) {
+      if (callback.scheduler !== this._scheduler) throw new Error('Wrong scheduler');
+      if (this._functionIsScheduled.has(callback)) return;
+      var wasNonempty = this._queue.nonempty();
+      this._queue.enqueue(callback);
+      this._functionIsScheduled.add(callback);
+      if (!wasNonempty && !this._queue_scheduled) { // just became nonempty
+        this._queue_scheduled = true;
         window.requestAnimationFrame(this._callback);
-      } else {
-        this._queue_scheduled = false;
+      }
+    }
+    
+    callNow(callback) {
+      if (callback.scheduler !== this._scheduler) throw new Error('Wrong scheduler');
+      this._functionIsScheduled.delete(callback);
+      // TODO: Revisit whether we should catch errors here
+      callback();
+    }
+    
+    // Kludge for when we need the consequences of user interaction to happen promptly (before the event handler returns). Requirement: use this only to wrap 'top level' callbacks called with nothing significant on the stack.
+    syncEventCallback(eventCallback) {
+      return function wrappedForSync() {
+        // note no error catching -- don't think it needs it
+        var value = eventCallback();
+        this._callback();
+        return value;
+      }.bind(this);
+    }
+    
+    _RAFCallback() {
+      const queue = this._queue;
+      let limit = 1000;
+      try {
+        while (queue.nonempty() && limit-- > 0) {
+          const queued = queue.dequeue();
+          if (this._functionIsScheduled.has(queued)) {
+            this._functionIsScheduled.delete(queued);
+            queued();
+          }
+        }
+      } finally {
+        if (queue.nonempty()) {
+          window.requestAnimationFrame(this._callback);
+        } else {
+          this._queue_scheduled = false;
+        }
       }
     }
   }
   
-  function Scheduler(window) {
-    // Things to do in the next requestAnimationFrame callback
-    this._queue = new Queue();
-    // Whether we have an outstanding requestAnimationFrame callback
-    this._queue_scheduled = false;
-    this._callback = schedulerRAFCallback.bind(this);
-  }
-  Scheduler.prototype.enqueue = function (callback) {
-    if (callback.scheduler !== this) throw new Error('Wrong scheduler');
-    if (callback._scheduler_scheduled) return;
-    var wasNonempty = this._queue.nonempty();
-    this._queue.enqueue(callback);
-    callback._scheduler_scheduled = true;  // TODO: use a WeakMap instead once ES6 is out
-    if (!wasNonempty && !this._queue_scheduled) { // just became nonempty
-      this._queue_scheduled = true;
-      window.requestAnimationFrame(this._callback);
+  class SubScheduler extends AbstractScheduler {
+    constructor(superScheduler, disableConditionBinder) {
+      super();
+      const i = new SubSchedulerImpl(superScheduler, this);
+      this.enqueue = i.enqueue.bind(i);
+      this.callNow = i.callNow.bind(i);
+      this.syncEventCallback = i.syncEventCallback.bind(i);
+      disableConditionBinder(i.disableSubScheduler.bind(i));
     }
-  };
-  Scheduler.prototype.callNow = function (callback) {
-    if (callback.scheduler !== this) throw new Error('Wrong scheduler');
-    callback._scheduler_scheduled = false;
-    // TODO: Revisit whether we should catch errors here
-    callback();
-  };
-  // Kludge for when we need the consequences of user interaction to happen promptly (before the event handler returns). Requirement: use this only to wrap 'top level' callbacks called with nothing significant on the stack.
-  Scheduler.prototype.syncEventCallback = function (eventCallback) {
-    return function wrappedForSync() {
-      // note no error catching -- don't think it needs it
-      var value = eventCallback();
-      this._callback();
-      return value;
-    }.bind(this);
-  };
-  exports.Scheduler = Scheduler;
+  }
+  exports.SubScheduler = SubScheduler;
+  
+  class SubSchedulerImpl {
+    constructor(superScheduler, scheduler) {
+      this._superScheduler = superScheduler;
+      this._enabled = true;
+      this._wrappers = new WeakMap();
+    }
+    
+    disableSubScheduler() {
+      this._enabled = false;
+    }
+    
+    _wrap(callback) {
+      let subSchedulerWrapper = this._wrappers.get(callback);
+      if (!subSchedulerWrapper) {
+        // Note the wrapper's .name is taken from the variable.
+        subSchedulerWrapper = () => {
+          if (this._enabled) {
+            callback();
+          }
+        };
+        this._superScheduler.claim(subSchedulerWrapper);
+        this._wrappers.set(callback, subSchedulerWrapper);
+      }
+      return subSchedulerWrapper;
+    }
+    
+    enqueue(callback) {
+      this._superScheduler.enqueue(this._wrap(callback));
+    }
+    
+    callNow(callback) {
+      if (this._enabled) {
+        this._superScheduler.callNow(this._wrap(callback));
+      } else {
+        // Call the callback whether-or-not we are disabled.
+        // Rationale: Code that does callNow may depend on the side effects of the callback for it to finish successfully.
+        callback();
+      }
+    }
+    
+    syncEventCallback(eventCallback) {
+      return this._superScheduler.syncEventCallback(eventCallback);
+    }
+  }
   
   function nSchedule(fn) {
     //console.log('Notifier scheduling ' + fn.toString().split('\n')[0]);
@@ -178,29 +284,64 @@ define(() => {
   
   // Utility for turning "this list was updated" into "these items were added and removed".
   // TODO: Doesn't really fit with the rest of this module.
-  function AddKeepDrop(addCallback, removeCallback) {
+  //
+  // handler: object with methods
+  //    .add(key) => value
+  //    .remove(key, value)
+  // where value is helpfully remembered by the AddKeepDrop but not used otherwise.
+  //
+  // Either do
+  //   akd.begin(); for (...) akd.add(key); akd.end()
+  // or call update() with an iterable.
+  function AddKeepDrop(handler) {
+    if (!('add' in handler && 'remove' in handler)) {
+      throw new Error('AddKeepDrop: handler methods missing');
+    }
+    
     const have = new Map();
     const keep = new Set();
+    let active = false;
     return {
-      begin: function () {
+      begin() {
+        if (active) {
+          throw new Error('AddKeepDrop: misnested begin');
+        }
         keep.clear();
+        active = true;
       },
-      add: function (key) {
+      
+      add(key) {
+        if (!active) {
+          throw new Error('AddKeepDrop: misnested add');
+        }
         keep.add(key);
       },
-      end: function() {
+      
+      end() {
+        if (!active) {
+          throw new Error('AddKeepDrop: misnested add');
+        }
+        active = false;
         have.forEach((value, key) => {
           if (!keep.has(key)) {
-            removeCallback(key, value);
+            handler.remove(key, value);
             have.delete(key);
           }
         });
         keep.forEach(key => {
           if (!have.has(key)) {
-            have.set(key, addCallback(key));
+            have.set(key, handler.add(key));
           }
         });
-        keep.clear();
+        keep.clear();  // Don't prevent GC of dropped items.
+      },
+      
+      update(iterable) {
+        this.begin();
+        for (const key of iterable) {
+          this.add(key);
+        }
+        this.end();
       }
     };
   }

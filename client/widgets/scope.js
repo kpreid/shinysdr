@@ -120,7 +120,7 @@ define([
     const scheduler = config.scheduler;
     const ctx = canvas.getContext('2d');
     
-    const draw = config.boundedFn(function drawImpl() {
+    function draw() {
       const w = canvas.offsetWidth;
       const h = canvas.offsetHeight;
       if (canvas.width !== w || canvas.height !== h) {
@@ -224,8 +224,8 @@ define([
       paintValueAxis([1, 0, 0]);
       paintValueAxis([0, 1, 0]);
       paintTimeAxis();
-    });
-    draw.scheduler = scheduler;
+    }
+    scheduler.claim(draw);
     
     // TODO: This is a kludge and will never get properly removed; we need a general solution for this and other pixel-layout-dependent stuff
     window.addEventListener('resize', event => {
@@ -318,7 +318,7 @@ define([
     const att_relativeTime = gl.getAttribLocation(program, 'relativeTime');
     gl.uniform1i(gl.getUniformLocation(program, 'scopeData'), 0);  // texture
     
-    const configureDataBuffer = config.boundedFn(function configureDataBufferImpl() {
+    scheduler.startNow(function configureDataBuffer() {
       // TODO: Once we have proper non-linear interpolation, we will want to interpolate even if drawing lines.
       interpScale =
           parameters.draw_line.depend(configureDataBuffer) ? 1 :
@@ -365,8 +365,6 @@ define([
         // This is the size of a "one-dot" step in scopeDataTexture's x coordinate (i.e. interpScale * interpStep is one texel) used for implementing interpolation.
         1 / (numberOfSamples * numberOfDots));
     });
-    configureDataBuffer.scheduler = scheduler;
-    configureDataBuffer();
       
     handleContextLoss(canvas, config.rebuildMe);
     
@@ -435,7 +433,7 @@ define([
       };
     })();
     
-    const draw = config.boundedFn(function drawImpl() {
+    function draw() {
       let w, h;
       // Fit current layout
       w = canvas.offsetWidth;
@@ -529,8 +527,8 @@ define([
       postProcessor2.endInput();
       
       postProcessor2.drawOutput();
-    });
-    draw.scheduler = config.scheduler;
+    }
+    config.scheduler.claim(draw);
     
     function contiguousWrite(array) {
       const samples = array.length / numberOfChannels;
@@ -627,7 +625,7 @@ define([
       
       draw.scheduler.enqueue(draw);
     }
-    newScopeFrame.scheduler = config.scheduler;
+    config.scheduler.claim(newScopeFrame);
 
     new ScopeGraticule(config, graticuleCanvas, parameters, projectionCell);
 

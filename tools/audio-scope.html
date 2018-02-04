@@ -18,28 +18,28 @@
   along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 -->
 
-<html lang="en" class="subwindowed-page"><head>
+<html lang="en" class="pane-structured-page"><head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <title>Audio Oscilloscope — ShinySDR</title>
   <link rel="manifest" href="../client/web-app-manifest.json">
   <link rel="stylesheet" href="../client/ui.css">
   <link rel="stylesheet" href="../client/themes/black.css" />
   <meta name="viewport" content="width=device-width">
-</head><body class="subwindowed">
+</head><body class="pane-structured-body">
 
-<shinysdr-subwindow id="section-controls" visible="true">
+<shinysdr-pane id="section-controls" visible="true">
   <div class="sidebar">
     <div data-widget="PickWidget" data-target="input"></div>
     <div data-widget="ScopeControls" data-target="parameters"></div>
   </div>
-</shinysdr-subwindow>
+</shinysdr-pane>
 
-<shinysdr-subwindow id="section-audio-spectrum" class="stretchy">
+<shinysdr-pane id="section-audio-spectrum" class="stretchy">
   <div id="scope"
      data-widget="ScopePlot"
      style="display: block; height: 100%; width: 100%;">
   </div>
-</shinysdr-subwindow>
+</shinysdr-pane>
 
 <script src="../client/require.js" data-main="audio-scope-main.js"></script>
 </body></html>

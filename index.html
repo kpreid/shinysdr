@@ -47,8 +47,8 @@
   the user interface works the same everywhere.</p>
 
   <p>Requires network capacity of 3 Mb/s or greater, depending on settings.
-  Requires Google Chrome.
-  Phone/tablet compatible (excluding iOS).</p>
+  Google Chrome (excluding Chrome for iOS) is recommended.
+  Phone/tablet compatible.</p>
 
   <p>Internet access is not required for local or LAN operation.</p>
 </li>
@@ -100,16 +100,14 @@
 
 <p>ShinySDR operates as a specialized web server, running on the machine which has your SDR hardware attached. ShinySDR is known to be compatible with Mac OS X and Linux; in principle, you can use anything which can also run GNU Radio and Python and has enough CPU power (a Raspberry Pi will not do).</p>
 
-<p>The only web browser currently supported as a ShinySDR client is <a href="https://www.google.com/chrome/">Google Chrome</a> (excluding Chrome for iPhone or iPad).
-While it is not <em>intended</em> to be Chrome-only, no attempt has been made to avoid using facilities which are <em>not yet</em> implemented in other browsers.
-Safari (as of version 10.1) will succeed in connecting but important elements of the UI will not work; Firefox (as of version 53.0) has WebSocket compatibility issues.</p>
+<p><a href="https://www.google.com/chrome/">Google Chrome</a> (excluding Chrome for iPhone or iPad) is the recommended browser as the most testing has been done with it. Some functionality may be missing or broken on other browsers.</p>
 
 <p>Currently, the client must have the same endianness and floating-point format as the server.
 This may be fixed in the future (if I ever hear of this actually being a problem, or if the data in question is switched to fixed-point to reduce data rate).</p>
 
 <h2>Copyright and License</h2>
 
-<p>ShinySDR (and this web site) &copy; 2013, 2014, 2015, 2016 <a href="http://switchb.org/kpreid/">Kevin Reid</a> &lt;<a href="mailto:kpreid@switchb.org">kpreid@switchb.org</a>&gt; and distributed under the GNU General Public License. For more information, see the relevant source code repositories.</p>
+<p>ShinySDR (and this web site) &copy; 2013, 2014, 2015, 2016, 2017, 2018 <a href="http://switchb.org/kpreid/">Kevin Reid</a> &lt;<a href="mailto:kpreid@switchb.org">kpreid@switchb.org</a>&gt; and distributed under the GNU General Public License. For more information, see the relevant source code repositories.</p>
 
 <script async src="client/require.js" data-main="about/waterfall-bg.js"></script>
 

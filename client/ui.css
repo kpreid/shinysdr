@@ -19,7 +19,7 @@
 @import "measviz.css";
 
 /* global structure */
-html.subwindowed-page, .subwindowed-page body {
+html.pane-structured-page, .pane-structured-page body {
   margin: 0;
   width: 100%;
   height: 100%;
@@ -47,39 +47,39 @@ html.subwindowed-page, .subwindowed-page body {
   box-sizing: border-box;
   width: 100%;
 }
-.main-not-yet-run.subwindowed > shinysdr-subwindow {
+.main-not-yet-run.pane-structured-body > shinysdr-pane {
   /* hide unfinished UI (but still allow it to layout, i.e. avoid display: none) */
   visibility: hidden;
 }
 
-/* container for subwindows */
-.subwindowed {
+/* container for panes */
+.pane-structured-body {
   height: 100%;
   display: flex;
   flex-direction: row;
   justify-content: center;
   
-  /* This background color shows up only where there is no subwindow to fill the space. */
+  /* This background color shows up only where there is no pane to fill the space. */
   background: #333;
   background-image: linear-gradient(45deg, #2F2F2F 26%, #333 26%, #333 51%, #2F2F2F 51%, #2F2F2F 76%, #333 76%);
   background-size: 1em 1em;
   color: white;
 }
-shinysdr-subwindow {
+shinysdr-pane {
   background: var(--shinysdr-theme-column-bgfill);
   color: var(--shinysdr-theme-foreground);
 }
-.subwindowed > shinysdr-subwindow {
+.pane-structured-body > shinysdr-pane {
   display: flex;
   flex-direction: column;
   flex: 0 1 auto;
   height: 100%; /* doesn't change layout height, but enables percentage height to work inside */
 }
-.subwindowed > shinysdr-subwindow.stretchy {
+.pane-structured-body > shinysdr-pane.stretchy {
   flex: 1 2;
-  width: 1px;  /* This width is not actually wanted, but leaving it unset or auto causes sized content such as in the spectrum subwindow to overrun the intended flexible width. It is 1px because it will act as a minimum width. */
+  width: 1px;  /* This width is not actually wanted, but leaving it unset or auto causes sized content such as in the spectrum pane to overrun the intended flexible width. It is 1px because it will act as a minimum width. */
 }
-shinysdr-subwindow > h2 {
+shinysdr-pane > h2 {
   font-size: 100%;
   margin: 0;
   padding: .2em;
@@ -90,8 +90,10 @@ shinysdr-subwindow > h2 {
   background: var(--shinysdr-theme-window-title-bgcolor);
   background: var(--shinysdr-theme-window-title-bgfill);
   color: var(--shinysdr-theme-window-title-foreground);
+  
+  overflow: hidden;  /* in case of overly narrow windows */
 }
-.subwindow-menu-button {
+.pane-menu-button {
   /* reset */
   border: none;
   background: none;
@@ -116,13 +118,18 @@ shinysdr-subwindow > h2 {
   
   cursor: pointer;
 }
-.subwindow-menu-button img {
+.pane-menu-button img {
   display: inline-block;
   width: 80%;
   height: 80%;
 }
-.subwindow-menu-button:disabled img {
+.pane-menu-button:disabled img {
   opacity: 0.4;
+}
+
+.widget-PaneImpl-controls {
+  /* TODO: should probably use flexbox, not float */
+  float: right;
 }
 
 /* left sidebar menu which contains window show-buttons and links */
@@ -159,11 +166,11 @@ ul.system-menu-list, .system-menu-list ul { /* TODO doesn't fit here, is styling
 
   cursor: pointer;
 }
-.system-menu-list .subwindow-show-button-shown {
+.system-menu-list .pane-show-button-shown {
   /* TODO: theme might want this to be darkening */
   background: rgba(255, 255, 255, 0.2);
 }
-.system-menu-list .subwindow-show-button:hover {
+.system-menu-list .pane-show-button:hover {
   /* TODO: theme might want this to be darkening */
   background: rgba(255, 255, 255, 0.4);
 }
@@ -587,6 +594,20 @@ h2 input {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
+}
+.widget-Receiver-audio-dest-controls {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.widget-Receiver-audio-dest-controls input[type=range] {
+  flex: 1 1;
+  width: auto;  /* on Firefox, removes undesirable default sizing */
+  
+  /* reduce big default margins */
+  margin-left: .1em;
+  margin-right: .1em;
 }
 
 /* Vertical scales on spectrum. See also combined styles with FreqScale. */

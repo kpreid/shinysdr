@@ -48,53 +48,55 @@ define([
   }
   exports.statusCategory = statusCategory;
   
-  function makeXhrStateCallback(r, whenReady) {
-    return function() {
-      if (r.readyState === 4) {
-        whenReady(r);
+  function makeXhrStateCallback(xhr, resolve) {
+    return () => {
+      if (xhr.readyState === 4) {
+        resolve(xhr);
       }
     };
   }
   
-  function xhrpost(url, data, opt_callback) {
-    var r = new XMLHttpRequest();
-    r.open('POST', url, true);
-    r.setRequestHeader('Content-Type', 'application/json');
-    r.onreadystatechange = makeXhrStateCallback(r,
-      function postDone(r) {
-        if (opt_callback) opt_callback(r);
-      });
-    r.send(data);
-    console.log(url, data);
+  // TODO: this family of XHR wrappers is highly ad-hoc. Clean it up.
+  
+  function xhrpost(url, data) {
+    return new Promise(resolve => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url, true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.onreadystatechange = makeXhrStateCallback(xhr, resolve);
+      xhr.send(data);
+      console.log(url, data);
+    });
   }
   exports.xhrpost = xhrpost;
   
-  function xhrdelete(url, opt_callback) {
-    var r = new XMLHttpRequest();
-    r.open('DELETE', url, true);
-    r.onreadystatechange = makeXhrStateCallback(r,
-      function delDone(r) {
-        if (opt_callback) opt_callback(r);
-      });
-    r.send();
-    console.log('DELETE', url);
+  function xhrdelete(url) {
+    return new Promise(resolve => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('DELETE', url, true);
+      xhr.onreadystatechange = makeXhrStateCallback(xhr, resolve);
+      xhr.send();
+      console.log('DELETE', url);
+    });
   }
   exports.xhrdelete = xhrdelete;
   
-  function externalGet(url, responseType, callback) {
-    var r = new XMLHttpRequest();
-    r.open('GET', url, true);
-    r.responseType = responseType;
-    r.onreadystatechange = function() {
-      if (r.readyState === 4) {
-        if (statusCategory(r.status) === 2) {
-          callback(r.response);
-        } else {
-          //TODO error handling in UI
+  function externalGet(url, responseType) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', url, true);
+      xhr.responseType = responseType;
+      xhr.onreadystatechange = () => {
+        if (xhr.readyState === 4) {
+          if (statusCategory(xhr.status) === 2) {
+            resolve(xhr.response);
+          } else {
+            reject(new Error('externalGet: ' + xhr.status + ' ' + xhr.statusText));
+          }
         }
-      }
-    };
-    r.send();
+      };
+      xhr.send();
+    });
   }
   exports.externalGet = externalGet;
   
@@ -399,8 +401,8 @@ define([
             } else {
               // is block
               const block = idMap[id];
-              for (var oldKey in block) { delete block[oldKey]; }
-              for (var newKey in value) {
+              for (const oldKey in block) { delete block[oldKey]; }
+              for (const newKey in value) {
                 block[newKey] = idMap[value[newKey]];
               }
               block._reshapeNotice.notify();

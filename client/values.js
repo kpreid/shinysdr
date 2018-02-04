@@ -387,7 +387,7 @@ define([
       var propCells = Object.create(null);
       var interfaces = [];
       
-      function update() {
+      scheduler.startNow(function update() {
         var object = cell.depend(update);
         
         interfaces.forEach(flush);
@@ -410,7 +410,7 @@ define([
         interfaces = nu;
         
         // Add all cells found in this object
-        for (var key in object) {
+        for (const key in object) {
           var childCell = object[key];
           // TODO: centralize this is-a-cell test and any others like it
           if (!(childCell !== null && typeof childCell === 'object' && 'get' in childCell)) {
@@ -430,10 +430,7 @@ define([
         if ('_reshapeNotice' in object) {  // TODO mandatory
           object._reshapeNotice.listen(update);
         }
-      }
-      update.scheduler = scheduler;
-      
-      update();
+      });
     }
     
     insert(rootCell);

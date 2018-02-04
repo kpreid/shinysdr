@@ -25,12 +25,12 @@ define([
   './map/map-core',
   './map/map-layers',
   './network',
+  './pane-manager',
   './plugins',
   './types',
   './values',
   './widget',
   './widgets',
-  './window-manager',
 ], (
   import_audio,
   import_coordination,
@@ -39,12 +39,12 @@ define([
   import_map_core,
   unused_map_layers,  // side effecting
   import_network,
+  import_pane_manager,
   import_plugins,
   import_types,
   import_values,
   import_widget,
-  widgets,
-  unused_window_manager  // side effecting
+  widgets
 ) => {
   const {
     connectAudio,
@@ -69,6 +69,9 @@ define([
     connect,
   } = import_network;
   const {
+    PaneManager,
+  } = import_pane_manager;
+  const {
     loadCSS,
     getJSModuleIds,
   } = import_plugins;
@@ -90,55 +93,80 @@ define([
   
   function log(progressAmount, msg) {
     console.log(msg);
-    document.getElementById('loading-information-text')
-        .appendChild(document.createTextNode('\n' + msg));
-    const progress = document.getElementById('loading-information-progress');
-    progress.value += (1 - progress.value) * progressAmount;
+    const logEl = document.getElementById('loading-information-text');
+    if (logEl) {
+      logEl.appendChild(document.createTextNode('\n' + msg));
+    }
+    const progressEl = document.getElementById('loading-information-progress');
+    if (progressEl) {
+      progressEl.value += (1 - progressEl.value) * progressAmount;
+    }
   }
   
   const scheduler = new Scheduler();
-
   const clientStateStorage = new StorageNamespace(localStorage, 'shinysdr.client.');
   
-  const writableDB = databaseFromURL('wdb/');
-  const databasesCell = new LocalCell(anyT, systematics.concat([
-    writableDB,  // kludge till we have proper UI for selection of write targets
-  ]));
-  arrayFromCatalog('dbs/', dbs => {   // TODO get url from server
-    databasesCell.set(databasesCell.get().concat(dbs));
-  });
-  const databasePicker = new DatabasePicker(
-    scheduler,
-    databasesCell,
-    new StorageNamespace(clientStateStorage, 'databases.'));
-  const freqDB = databasePicker.getUnion();
-  
-  // TODO(kpreid): Client state should be more closely associated with the components that use it.
-  const clientState = new ClientStateObject(clientStateStorage, databasePicker);
-  const clientBlockCell = new ConstantCell(clientState);
-  
-  function main(stateUrl, audioUrl) {
+  function main(configuration) {
     log(0.4, 'Loading plugins…');
     loadCSS();
-    requirejs(getJSModuleIds(), function (plugins) {
-      connectRadio(stateUrl, audioUrl);
-    }, function (err) {
+    requirejs(getJSModuleIds(), plugins => {
+      connectRadio(configuration);
+    }, err => {
       log(0, 'Failed to load plugins.\n  ' + err.requireModules + '\n  ' + err.requireType);
       // TODO: There's no reason we can't continue without the plugin. The problem is that right now there's no good way to report the failure, and silent failures are bad.
     });
   }
   
-  function connectRadio(stateUrl, audioUrl) {
+  function connectRadio({
+      stateUrl,
+      audioUrl,
+      databasesUrl,
+      writableDatabaseUrl,
+  }) {
+    if (!stateUrl) {
+      throw new TypeError('main() cannot proceed without stateUrl');
+    }
+
+    const databasesCell = new LocalCell(anyT, systematics);
+    // TODO: distinguished writableDB is a kludge till we have proper UI for selection of write targets
+    let writableDB = null;
+    if (writableDatabaseUrl) {
+      writableDB = databaseFromURL(writableDatabaseUrl);
+      databasesCell.set(databasesCell.get().concat([
+        writableDB,  
+      ]));
+    }
+    if (databasesUrl) {
+      // TODO switch to Promise-based interface
+      arrayFromCatalog(databasesUrl, dbs => {
+        databasesCell.set(databasesCell.get().concat(dbs));
+      });
+    }
+    const databasePicker = new DatabasePicker(
+      scheduler,
+      databasesCell,
+      new StorageNamespace(clientStateStorage, 'databases.'));
+    const freqDB = databasePicker.getUnion();
+  
+    // TODO: Client state should be more closely associated with the components that use it.
+    const clientState = new ClientStateObject(clientStateStorage, databasePicker);
+    const clientBlockCell = new ConstantCell(clientState);
+    
     log(0.5, 'Connecting to server…');
     var firstConnection = true;
     var firstFailure = true;
-    initialStateReady.scheduler = scheduler;
+    scheduler.claim(initialStateReady);
     var remoteCell = connect(stateUrl, connectionCallback);
     remoteCell.n.listen(initialStateReady);
     
     var coordinator = new Coordinator(scheduler, freqDB, remoteCell);
     
-    var audioState = connectAudio(scheduler, audioUrl, new StorageNamespace(localStorage, 'shinysdr.audio.'));
+    let audioState;
+    if (audioUrl) {
+      audioState = connectAudio(scheduler, audioUrl, new StorageNamespace(localStorage, 'shinysdr.audio.'));
+    } else {
+      audioState = makeBlock({});
+    }
 
     function connectionCallback(state) {
       switch (state) {
@@ -167,31 +195,39 @@ define([
         
         const everything = new ConstantCell(makeBlock({
           client: clientBlockCell,
-          radio: remoteCell,
+          root_object: remoteCell,
           actions: new ConstantCell(coordinator.actions),
           audio: new ConstantCell(audioState)
         }));
       
-        var index = new Index(scheduler, everything);
+        const index = new Index(scheduler, everything);
       
-        var context = new Context({
+        const context = new Context({
           // TODO all of this should be narrowed down, read-only, replaced with other means to get it to the widgets that need it, etc.
           widgets: widgets,
           radioCell: remoteCell,
           index: index,
           clientState: clientState,
-          spectrumView: null,
           freqDB: freqDB,
           writableDB: writableDB,
           scheduler: scheduler,
           coordinator: coordinator
         });
-      
-        // generic control UI widget tree
+        
+        // also causes widget creation
+        new PaneManager(
+          context,
+          document,
+          everything);
+        
+        // catch widgets not inside of panes
         createWidgets(everything, context, document);
         
         // Map (all geographic data)
-        createWidgetExt(context, GeoMap, document.getElementById('map'), remoteCell);
+        const mapEl = document.getElementById('map');
+        if (mapEl) {
+          createWidgetExt(context, GeoMap, mapEl, remoteCell);
+        }
       
         // Now that the widgets are live, show the full UI, with a tiny pause for progress display completion and in case of last-minute jank
         log(1.0, 'Ready.');

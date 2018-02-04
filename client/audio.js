@@ -64,6 +64,7 @@ define([
   
   // webkitAudioContext required for Safari as of version 10.1
   const AudioContext = (window.AudioContext || window.webkitAudioContext);
+  exports.AudioContext = AudioContext;
   
   function connectAudio(scheduler, url, storage) {
     var audio = new AudioContext();
@@ -107,7 +108,7 @@ define([
     // local synth for debugging glitches
     //var fakePhase = 0;
     //function fake(arr) {
-    //  for (var i = 0; i < arr.length; i++) {
+    //  for (let i = 0; i < arr.length; i++) {
     //    arr[i] = Math.sin(fakePhase) * 0.1;
     //    fakePhase += (Math.PI * 2) * (600 / nativeSampleRate);
     //  }
@@ -187,11 +188,11 @@ define([
         console.error('audio:', reason);
         ws.close(4000);  // first "application-specific" error code
       }
-      lose.scheduler = scheduler;
+      scheduler.claim(lose);
       function changeSampleRate() {
         lose('changing sample rate');
       }
-      changeSampleRate.scheduler = scheduler;
+      scheduler.claim(changeSampleRate);
       info.requested_sample_rate.n.listen(changeSampleRate);
       ws.onmessage = function(event) {
         var wsDataValue = event.data;
@@ -199,7 +200,7 @@ define([
           // Audio data.
           
           // Don't buffer huge amounts of data.
-          if (queue.length > 100) {
+          if (queue.length > 1000) {
             console.log('Extreme audio overrun.');
             queue.length = 0;
             queueSampleCount = 0;
@@ -221,7 +222,7 @@ define([
           var nativeRateChunk = new Float32Array(nSamples * numAudioChannels * interpolation);  // TODO: With partial-chunk processing we could avoid allocating new buffers all the time -- use a circular buffer? (But we can't be allocation-free anyway since the WebSocket isn't.)
           var rightChannelIndex = numAudioChannels - 1;
           var step = interpolation * numAudioChannels;
-          for (var i = 0; i < nSamples; i++) {
+          for (let i = 0; i < nSamples; i++) {
             nativeRateChunk[i * step] = streamRateChunk[i * numAudioChannels];
             nativeRateChunk[i * step + rightChannelIndex] = streamRateChunk[i * numAudioChannels + rightChannelIndex];
           }
@@ -461,7 +462,7 @@ define([
         }
       }
     }
-    maybeScheduleUpdate.scheduler = scheduler;
+    scheduler.claim(maybeScheduleUpdate);
     
     Object.defineProperty(this, 'setLockout', {value: function (value) {
       lockout = !!value;
@@ -671,7 +672,7 @@ define([
       previousSource = newSource;
     }
     
-    function update() {
+    scheduler.startNow(function update() {
       const deviceId = deviceIdCell.depend(update);
       if (typeof deviceId !== 'string') {
         setOutput(null);
@@ -696,9 +697,7 @@ define([
               'open audio device ' + JSON.stringify(deviceId));
         });
       }
-    }
-    update.scheduler = scheduler;
-    update();
+    });
   }
 
   function UserMediaSelector(scheduler, audioContext, mediaDevices, storage) {

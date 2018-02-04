@@ -298,7 +298,7 @@ define([
   function arrayFromCatalog(url, callback) {
     //var union = new Union();
     var out = [];
-    externalGet(url, 'document', function(indexDoc) {
+    externalGet(url, 'document').then(indexDoc => {
       var anchors = indexDoc.querySelectorAll('a[href]');
       //console.log('Fetched database index with ' + anchors.length + ' links.');
       Array.prototype.forEach.call(anchors, function (anchor) {
@@ -316,13 +316,13 @@ define([
       false,
       function (init) {
         // TODO (implicitly) check mime type
-        externalGet(url, 'text', function(jsonString) {
+        externalGet(url, 'text').then(jsonString => {
           var databaseJson = JSON.parse(jsonString);
           if (databaseJson.writable) {
             init.makeWritable();
           }
           var recordsJson = databaseJson.records;
-          for (var key in recordsJson) {
+          for (const key in recordsJson) {
             init.add(recordsJson[key], url + encodeURIComponent(key));
           }
         });
@@ -396,7 +396,7 @@ define([
       // flags to avoid racing spammy updates
       var updating = false;
       var needAgain = false;
-      var sendUpdate = function () {
+      var sendUpdate = () => {
         if (!this._oldState) throw new Error('too early');
         if (!this._url) return;
         if (updating) {
@@ -407,19 +407,19 @@ define([
         needAgain = false;
         var newState = this.toJSON();
         // TODO: PATCH method would be more specific
-        xhrpost(this._url, JSON.stringify({old: this._oldState, new: newState}), function () {
+        xhrpost(this._url, JSON.stringify({old: this._oldState, new: newState})).then(() => {
           // TODO: Warn user / retry on network errors. Since we don't know whether the server has accepted the change we should retrieve it as new oldState and maybe merge
           updating = false;
           if (needAgain) sendUpdate();
         });
         this._oldState = newState;
-      }.bind(this);
+      };
       
-      this._hook = function() {
+      this._hook = () => {
         if (changeHook) changeHook();
         // TODO: Changing lowerFreq + upperFreq sends double updates; see if we can coalesce
         sendUpdate();
-      }.bind(this);
+      };
     } else {
       this._hook = null;
     }
@@ -427,7 +427,7 @@ define([
       n: { enumerable: false, value: new Notifier() },
       _initializing: { enumerable: false, writable: true, value: true }
     });
-    for (var name in recordProps) {
+    for (const name in recordProps) {
       this[name] = initial.propertyIsEnumerable(name) ? initial[name] : recordProps[name]._my_default;
     }
     if (isFinite(initial.freq)) {
@@ -453,7 +453,7 @@ define([
     },
     toJSON: { value: function () {
       var out = {};
-      for (var k in this) {
+      for (const k in this) {
         if (recordProps.hasOwnProperty(k)) {
           var value = this[k];
           if (typeof value === 'number' && isNaN(value)) value = null;  // JSON.stringify does this too; this is just to be canonical even if not stringified
@@ -464,7 +464,7 @@ define([
     }},
     _remoteCreate: { value: function (addURL) {
       if (this._url) throw new Error('url already set');
-      xhrpost(addURL, JSON.stringify({new: this.toJSON()}), function (r) {
+      xhrpost(addURL, JSON.stringify({new: this.toJSON()})).then(r => {
         if (statusCategory(r.status) === 2) {
           if (this._url) throw new Error('url already set');
           this._url = r.getResponseHeader('Location');
@@ -474,14 +474,14 @@ define([
           // TODO: retry/buffer creation or make the record defunct
           console.error('Record creation failed! ' + r.status, r);
         }
-      }.bind(this));
+      });
       
     }}
   });
   
   function DatabasePicker(scheduler, sourcesCell, storage) {
-    var self = this;
-    var result = new Union();
+    const self = this;
+    const result = new Union();
     
     this._reshapeNotice = new Notifier();
     Object.defineProperty(this, '_reshapeNotice', {enumerable: false});
@@ -490,40 +490,33 @@ define([
     this.getUnion = function () { return result; };    // TODO facet instead of giving add/remove access
     Object.defineProperty(this, 'getUnion', {enumerable: false});
     
-    var i = 0;
-    var sourceAKD = new AddKeepDrop(function addSource(source) {
-      // TODO get clean stable unique names from the sources
-      const label = source.getTableLabel ? source.getTableLabel() : (i++);
-      const key = 'enabled_' + label; 
-      const cell = new StorageCell(storage, booleanT, true, key);
-      self[key] = cell;
-      // TODO unbreakable notify loop. consider switching Union to work like, or to take a, DerivedCell.
-      function updateUnionFromCell() {
-        if (cell.depend(updateUnionFromCell)) {
-          result.add(source);
-        } else {
-          result.remove(source);
-        }
+    let i = 0;
+    const sourceAKD = new AddKeepDrop({
+      add(source) {
+        // TODO get clean stable unique names from the sources
+        const label = source.getTableLabel ? source.getTableLabel() : (i++);
+        const key = 'enabled_' + label; 
+        const cell = new StorageCell(storage, booleanT, true, key);
+        self[key] = cell;
+        // TODO unbreakable notify loop. consider switching Union to work like, or to take a, DerivedCell.
+        scheduler.startNow(function updateUnionFromCell() {
+          if (cell.depend(updateUnionFromCell)) {
+            result.add(source);
+          } else {
+            result.remove(source);
+          }
+        });
+        
+        self._reshapeNotice.notify();
+      },
+      remove(source) {
+        throw new Error('Removal not implemented');
       }
-      updateUnionFromCell.scheduler = scheduler;
-      updateUnionFromCell();
-      
-      self._reshapeNotice.notify();
-    }, function removeSource() {
-      throw new Error('Removal not implemented');
     });
     
-    // TODO generic glue copied from map-core.js, should be a feature of AddKeepDrop itself
-    function dumpArray() {
-      sourceAKD.begin();
-      var array = sourcesCell.depend(dumpArray);
-      array.forEach(function (feature) {
-        sourceAKD.add(feature);
-      });
-      sourceAKD.end();
-    }
-    dumpArray.scheduler = scheduler;
-    dumpArray();
+    scheduler.startNow(function updateAKD() {
+      sourceAKD.update(sourcesCell.depend(updateAKD));
+    });
   }
   exports.DatabasePicker = DatabasePicker;
   
