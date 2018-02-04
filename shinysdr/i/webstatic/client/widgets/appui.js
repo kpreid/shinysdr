@@ -344,18 +344,19 @@ define([
       var gainNumber = gainRow.appendChild(document.createElement('td')).appendChild(document.createElement('tt'));
       createWidgetExt(config.context, NumberWidget, gainNumber, block.audio_gain);
       
-      var otherRow = audioPanel.appendChild(document.createElement('tr'));
+      const otherRow = audioPanel.appendChild(document.createElement('tr'));
       otherRow.appendChild(document.createElement('th')).appendChild(document.createTextNode('Dest'));
-      var otherCell = otherRow.appendChild(document.createElement('td'));
+      const otherCell = otherRow.appendChild(document.createElement('td'));
       otherCell.colSpan = 2;
-      var otherBox = otherCell.appendChild(document.createElement('span'));
+      const otherBox = otherCell.appendChild(document.createElement('span'));
+      otherBox.classList.add('widget-Receiver-audio-dest-controls');
       ignore('audio_destination');
-      var dest = otherBox.appendChild(document.createElement('select'));
+      const dest = otherBox.appendChild(document.createElement('select'));
       createWidgetExt(config.context, Select, dest, block.audio_destination);
       if (!block.audio_pan.type.isSingleValued()) {
         ignore('audio_pan');
-        otherBox.appendChild(document.createTextNode('L'));
-        var panSlider = otherBox.appendChild(document.createElement('input'));
+        otherBox.appendChild(document.createTextNode(' L'));
+        const panSlider = otherBox.appendChild(document.createElement('input'));
         panSlider.type = 'range';
         createWidgetExt(config.context, LinSlider, panSlider, block.audio_pan);
         otherBox.appendChild(document.createTextNode('R'));

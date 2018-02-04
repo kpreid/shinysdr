@@ -595,6 +595,20 @@ h2 input {
   flex-direction: row;
   justify-content: space-between;
 }
+.widget-Receiver-audio-dest-controls {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.widget-Receiver-audio-dest-controls input[type=range] {
+  flex: 1 1;
+  width: auto;  /* on Firefox, removes undesirable default sizing */
+  
+  /* reduce big default margins */
+  margin-left: .1em;
+  margin-right: .1em;
+}
 
 /* Vertical scales on spectrum. See also combined styles with FreqScale. */
 .widget-VerticalScale {
