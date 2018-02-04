@@ -146,7 +146,7 @@ define([
             stubMediaError('NotReadableError'),  // an example we have seen from Firefox
             m => { message = m; },
             'testing1');
-        expect(message).toBe('Failed to testing1 (could not open device). blah');
+        expect(message).toMatch(/^Failed to testing1 \(could not open device\)\. blah(\nPlease try reloading or reopening the tab.)?$/);
       });
       it('should resort to throwing on an arbitrary object', () => {
         let message;
