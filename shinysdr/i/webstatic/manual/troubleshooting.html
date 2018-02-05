@@ -30,6 +30,8 @@
 
 <h1><a href="./">ShinySDR Manual</a>: Troubleshooting &amp; FAQ</h1>
 
+<h2>Operation</h2>
+
 <dl>
   <dt>How can I make ShinySDR more CPU-efficient?</dt>
   <dd>
@@ -63,26 +65,35 @@
       </li>
       <li>
         <p>There is too much work for the CPU.</p>
-        <p>See the section on efficiency.</p>
+        <p>See the section above on efficiency.</p>
       </li>
     </ul>
   </dd>
-  
+</dl>
+
+<h2>Errors</h2>
+
+<dl>
   <dt><code>WebSocket connection failed</code></dt>
   <dd>
-    <ul>
-      <li>
-        <p>If you are attempting to use Firefox: Firefox's WebSocket client implementation is known to be incompatible with the WebSocket server implementation ShinySDR uses. This might be fixed in the future by switching to a different WebSocket server library.</p>
-      </li>
-      <li>
-        <p>ShinySDR uses two TCP ports. If you have a firewall or NAT, make sure that both ports specified in the config file are allowed.</p>
-      </li>
-    </ul>
+    <p>
+      ShinySDR uses two TCP ports.
+      If you have a firewall or NAT, make sure that both ports specified in the config file are allowed.
+    </p>
   </dd>
   
   <dt><code>exceptions.RuntimeError: list contains invalid format!</code></dt>
   <dd>
     <p>You have installed two different versions of GNU Radio, such that the Python library version that was found is not the same as the C++ library version. Uninstall the one you don't want, or ensure your <code>PYTHONPATH</code> environment variable points to the right place.</p>
+  </dd>
+</dl>
+
+<h2>Programming</h2>
+
+<dl>
+  <dt>I am writing a plugin and I'm getting errors like it's looking for an old version of my code.</dt>
+  <dd>
+    <p>Delete the file <code>shinysdr/plugins/dropin.cache</code> located in whichever <code>sys.path</code>  directory your plugin is. This file is managed by <a href="https://twistedmatrix.com/documents/current/core/howto/plugin.html">the Twisted plugin system</a> and will usually be updated when you modify files but can get out of sync in some circumstances.</p>
   </dd>
 </dl>
 
