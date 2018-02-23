@@ -19,7 +19,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from twisted.trial import unittest
 
-from shinysdr.types import ConstantT, EnumT, EnumRow, RangeT
+from shinysdr.types import BulkDataElement, ConstantT, EnumT, EnumRow, RangeT
 from shinysdr import units
 
 
@@ -201,3 +201,10 @@ class TestRangeT(unittest.TestCase):
                             RangeT([(1, 2)], logarithmic=True))
         self.assertNotEqual(RangeT([(1, 2)]),
                             RangeT([(1, 2)], strict=False))
+
+
+class TestBulkData(unittest.TestCase):
+    def test_element_serialization(self):
+        self.assertEqual(
+            BulkDataElement(info=(123,), data=b'\xFF').to_json(),
+            [(123,), [-1]])

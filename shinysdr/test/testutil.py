@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -41,7 +41,7 @@ from shinysdr.i.poller import Poller
 from shinysdr.interfaces import IDemodulator
 from shinysdr.signals import SignalType
 from shinysdr.types import RangeT
-from shinysdr.values import ExportedState, InterestTracker, ISubscription, SubscriptionContext, nullExportedState
+from shinysdr.values import ExportedState, InterestTracker, IDeltaSubscriber, ISubscription, SubscriptionContext, nullExportedState
 
 
 # --- Values/types/state test utilities
@@ -72,7 +72,7 @@ class SubscriptionTester(object):
 
 class CellSubscriptionTester(SubscriptionTester):
     """Subscribes to a single cell and checks the subscription's behavior."""
-    def __init__(self, cell, interest_tracking=True):
+    def __init__(self, cell, delta=False, interest_tracking=True):
         SubscriptionTester.__init__(self)
         self.cell = cell
         self.__interest_tracking = interest_tracking
@@ -83,6 +83,11 @@ class CellSubscriptionTester(SubscriptionTester):
         
         if interest_tracking and not isinstance(cell.interest_tracker, LoopbackInterestTracker):
             raise Exception('cell\'s interest_tracker must be a LoopbackInterestTracker or interest testing must be disabled')
+        
+        if delta:
+            self.__subscriber = _DeltaSubscriber(self)
+        else:
+            self.__subscriber = _DeltaSubscriber(self).__call__
         
         gotten_value = cell.get()
         if interest_tracking and cell.interest_tracker.interested:
@@ -98,26 +103,28 @@ class CellSubscriptionTester(SubscriptionTester):
         if len(self.seen) > 0:
             raise Exception('unexpected callback on subscription from {!r}, with value {!r}'.format(self.cell, self.seen[0]))
     
-    def __subscriber(self, value):
+    def _log_subscriber_call(self, kind, value):
         if self.unsubscribed:
             raise Exception('unexpected subscription callback after unsubscribe from {!r}, with value {!r}'.format(self.cell, value))
-        self.seen.append(value)
+        # TODO distinguish kinds
+        self.seen.append((kind, value))
     
-    def expect_now(self, expected_value):
+    def expect_now(self, expected_value, kind='value'):
         if len(self.seen) > len(self.expected):
             actual_value = self.seen[len(self.expected)]
             raise Exception('too-soon callback from {!r}; saw {!r}'.format(self.cell, actual_value))
         self.advance()
-        self.should_have_seen(expected_value)
+        self.should_have_seen(expected_value, kind=kind)
     
-    def should_have_seen(self, expected_value):
+    def should_have_seen(self, expected_value, kind='value'):
+        expected_kind_and_value = kind, expected_value
         i = len(self.expected)
         self.expected.append(expected_value)
         if len(self.seen) < len(self.expected):
             raise Exception('no subscription callback from {!r}; expected {!r}'.format(self.cell, expected_value))
-        actual_value = self.seen[i]
-        if actual_value != expected_value:
-            raise Exception('expected {!r} from {!r}; saw {!r}'.format(expected_value, self.cell, actual_value))
+        actual_kind_and_value = self.seen[i]
+        if actual_kind_and_value != expected_kind_and_value:
+            raise Exception('expected {!r} from {!r}; saw {!r}'.format(expected_kind_and_value, self.cell, actual_kind_and_value))
     
     def unsubscribe(self):
         assert not self.unsubscribed
@@ -137,6 +144,21 @@ class LoopbackInterestTracker(InterestTracker):
     
     def __set(self, interested):
         self.interested = interested
+
+
+@implementer(IDeltaSubscriber)
+class _DeltaSubscriber(object):
+    def __init__(self, subscription_tester):
+        self.__subscription_tester = subscription_tester
+    
+    def __call__(self, value):
+        self.__subscription_tester._log_subscriber_call('value', value)
+    
+    def append(self, patch):
+        self.__subscription_tester._log_subscriber_call('append', patch)
+    
+    def prepend(self, patch):
+        self.__subscription_tester._log_subscriber_call('prepend', patch)
 
 
 # --- Radio test utilities ---

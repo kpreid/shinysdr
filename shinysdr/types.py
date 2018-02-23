@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -23,8 +23,11 @@ See docs for ValueType in this module for more information.
 
 from __future__ import absolute_import, division, unicode_literals
 
+import array
 import bisect
+from collections import namedtuple
 import math
+import struct
 
 from zope.interface import implementer
 
@@ -459,8 +462,23 @@ class TimestampT(ValueType):
 __all__.append('TimestampT')
 
 
+# TODO: This module otherwise contains only types and related, not the value implementations. Relocate once a proper place exists for it _and_ BulkDataT.
+@implementer(IJsonSerializable)
+class BulkDataElement(namedtuple('BulkDataElement', [
+    'info',
+    'data',
+])):
+    def to_json(self):
+        unpacker = array.array('b')
+        unpacker.fromstring(self.data)
+        return [self.info, unpacker.tolist()]
+
+
+__all__.append('BulkDataElement')
+
+
 class BulkDataT(ValueType):
-    """Type for arrays of numbers which, particularly, are delivered to the client in efficient binary form rather than JSON."""
+    """Type for arrays of BulkDataElement objects which, particularly, are delivered to the client in efficient binary form rather than JSON."""
     def __init__(self, info_format, array_format):
         # TODO: Document the format parameters
         self.__info_format = info_format
@@ -479,6 +497,9 @@ class BulkDataT(ValueType):
     
     def get_array_format(self):
         return self.__array_format
+    
+    def pack(self, value):
+        return struct.pack(self.get_info_format(), *value.info) + value.data
     
     def __call__(self, specimen):
         raise Exception('Coerce not implemented for BulkDataT')

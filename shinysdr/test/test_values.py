@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -19,9 +19,11 @@ from __future__ import absolute_import, division, unicode_literals
 
 import unittest
 
+from gnuradio import gr
+
 from shinysdr.test.testutil import CellSubscriptionTester, LoopbackInterestTracker
-from shinysdr.types import EnumRow, RangeT, ReferenceT, to_value_type
-from shinysdr.values import CellDict, CollectionState, ExportedState, LooseCell, PollingCell, ViewCell, command, exported_value, nullExportedState, setter, unserialize_exported_state
+from shinysdr.types import BulkDataElement, BulkDataT, EnumRow, RangeT, ReferenceT, to_value_type
+from shinysdr.values import CellDict, CollectionState, ExportedState, LooseCell, GRMsgQueueCell, PollingCell, ViewCell, command, exported_value, nullExportedState, setter, unserialize_exported_state
 
 
 class TestExportedState(unittest.TestCase):
@@ -257,6 +259,56 @@ class BlockCellSpecimen(ExportedState):
     def replace_block(self, block):
         self.__block = block
         self.state_changed('block')
+
+
+class TestGRMsgQueueCell(unittest.TestCase):
+    def setUp(self):
+        self.info_value = 1000
+        
+        def info_getter():
+            self.info_value += 1
+            return (self.info_value,)
+        
+        self.queue = gr.msg_queue()
+        self.cell = GRMsgQueueCell(
+            queue=self.queue,
+            info_getter=info_getter,
+            type=BulkDataT(array_format='f', info_format='d'),
+            interest_tracker=LoopbackInterestTracker())
+    
+    def test_get_before_and_after_poll(self):
+        self.queue.insert_tail(gr.message().make_from_string(b'ab', 0, 1, len('ab')))
+        gotten = self.cell.get()
+        self.assertEqual(gotten, [])
+        st = CellSubscriptionTester(self.cell, delta=True)
+        st.advance()
+        self.assertEqual(self.cell.get(), [
+            BulkDataElement(data=b'a', info=(1001,)),
+            BulkDataElement(data=b'b', info=(1001,))
+        ])
+        self.assertEqual(gotten, [])  # not mutating list
+    
+    def test_with_delta_subscriber(self):
+        st = CellSubscriptionTester(self.cell, delta=True)
+        self.queue.insert_tail(gr.message().make_from_string(b'ab', 0, 1, len('ab')))
+        st.expect_now([
+            BulkDataElement(data=b'a', info=(1001,)),
+            BulkDataElement(data=b'b', info=(1001,))
+        ], kind='append')
+        st.unsubscribe()
+        self.queue.insert_tail(gr.message().make_from_string(b'ignored', 0, 1, len('ignored')))
+        st.advance()
+    
+    def test_without_delta_subscriber(self):
+        st = CellSubscriptionTester(self.cell, delta=False)
+        self.queue.insert_tail(gr.message().make_from_string(b'ab', 0, 1, len('ab')))
+        st.expect_now([
+            BulkDataElement(data=b'a', info=(1001,)),
+            BulkDataElement(data=b'b', info=(1001,))
+        ], kind='value')
+        st.unsubscribe()
+        self.queue.insert_tail(gr.message().make_from_string(b'ignored', 0, 1, len('ignored')))
+        st.advance()
 
 
 class TestLooseCell(unittest.TestCase):

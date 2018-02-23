@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -25,7 +25,7 @@ from twisted.internet import task, reactor as the_reactor
 from twisted.logger import Logger
 from zope.interface import implementer
 
-from shinysdr.values import BaseCell, ISubscription, StreamCell, SubscriptionContext, never_subscription
+from shinysdr.values import BaseCell, IDeltaSubscriber, ISubscriber, ISubscription, StreamCell, SubscriptionContext, never_subscription
 
 __all__ = []  # appended later
 
@@ -46,13 +46,15 @@ class Poller(object):
         }
         self.__functions = []
     
-    def subscribe(self, cell, subscriber, fast):
+    def subscribe(self, cell, subscriber, fast, delegate_polling_to_me=False):
         if not isinstance(cell, BaseCell):
             # we're not actually against duck typing here; this is a sanity check
             raise TypeError('Poller given a non-cell %r' % (cell,))
         try:
             if isinstance(cell, StreamCell):  # TODO kludge; use generic interface
                 target = _PollerStreamTarget(cell)
+            elif delegate_polling_to_me:
+                target = _PollerDelegateTarget(cell)
             else:
                 target = _PollerValueTarget(cell)
             return _PollerSubscription(self, target, subscriber, fast)
@@ -70,12 +72,7 @@ class Poller(object):
     
     def poll(self, rate_key):
         for target, subscriptions in self.__targets[rate_key].iter_snapshot():
-            # pylint: disable=cell-var-from-loop
-            def fire(*args, **kwargs):
-                for s in subscriptions:
-                    s._fire(*args, **kwargs)
-            
-            target.poll(fire)
+            target.poll(_AggregatedSubscriber(subscriptions))
         
         functions = self.__functions
         if len(functions) > 0:
@@ -130,10 +127,43 @@ class AutomaticPoller(Poller):
             self.__loop_slow.stop()
 
 
+@implementer(ISubscriber, IDeltaSubscriber)
+class _AggregatedSubscriber(object):
+    def __init__(self, subscriptions):
+        self.__plain_subscriptions = []
+        self.__delta_subscriptions = []
+        for s in subscriptions:
+            assert isinstance(s, _PollerSubscription)
+            if IDeltaSubscriber.providedBy(s._subscriber):
+                self.__delta_subscriptions.append(s)
+            else:
+                self.__plain_subscriptions.append(s)
+    
+    # TODO: use callLater rather than calling subscribers directly
+    
+    def __call__(self, value):
+        for s in self.__plain_subscriptions:
+            s._subscriber(value)
+        for s in self.__delta_subscriptions:
+            s._subscriber(value)
+    
+    def append(self, patch):
+        value = patch  # TODO: This does not work in general; we need an actual accumulator
+        for s in self.__plain_subscriptions:
+            s._subscriber(value)
+        for s in self.__delta_subscriptions:
+            s._subscriber.append(patch)
+    
+    def prepend(self, patch):
+        # No use to plain subscribers
+        for s in self.__delta_subscriptions:
+            s._subscriber(patch)
+
+
 @implementer(ISubscription)
 class _PollerSubscription(object):
     def __init__(self, poller, target, subscriber, fast):
-        self._fire = subscriber
+        self._subscriber = subscriber
         self._target = target
         self._poller = poller
         self.fast = fast
@@ -208,6 +238,14 @@ class _PollerStreamTarget(_PollerCellTarget):
     def unsubscribe(self):
         self.__subscription.close()
         super(_PollerStreamTarget, self).unsubscribe()
+
+
+class _PollerDelegateTarget(_PollerCellTarget):
+    def __init__(self, cell):
+        _PollerCellTarget.__init__(self, cell)
+
+    def poll(self, fire):
+        self._obj._poll_from_poller(fire)
 
 
 class _SortedMultimap(object):

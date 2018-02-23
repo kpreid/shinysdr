@@ -33,7 +33,7 @@ from zope.interface import Interface, implementer  # available via Twisted
 from gnuradio import gr
 
 from shinysdr.gr_ext import safe_delete_head_nowait
-from shinysdr.types import BulkDataT, EnumRow, ReferenceT, to_value_type
+from shinysdr.types import BulkDataElement, BulkDataT, EnumRow, ReferenceT, to_value_type
 
 
 class CellMetadata(namedtuple('CellMetadata', [
@@ -352,6 +352,71 @@ class PollingCell(TargetingMixin, ValueCell):
     def poll_for_change_from_setter(self):
         if self.__changes == u'this_setter':
             self.poll_for_change(specific_cell=True)
+
+
+class GRMsgQueueCell(ValueCell):
+    # TODO: Some of this should be extractable to a general stream cell class, but none of it obviously is yet.
+    """A cell which consumes a gr.msg_queue, with items in the format blocks.message_sink generates, and provides its contents as the streaming cell value."""
+    
+    # TODO: Less magic number. This was defined as enough data to give the client-side averaging filter its full window.
+    __history_length = 32
+    
+    def __init__(self, queue, info_getter, type, **kwargs):
+        assert isinstance(type, BulkDataT)
+        ValueCell.__init__(self,
+            type=type,
+            writable=False,
+            persists=False,
+            **kwargs)
+        
+        # parameters
+        self.__queue = queue
+        self.__info_getter = info_getter
+        
+        # internal buffer -- caution, mutable
+        self.__latest = []
+    
+    def get(self):
+        """implement abstract"""
+        return self.__latest[:]
+    
+    def set(self, value):
+        """implement abstract"""
+        # TODO: There should be a standard exception to raise, or base class should do it for us
+        raise Exception('Not writable')
+    
+    def subscribe2(self, subscriber, context):
+        """implement abstract"""
+        return self.get(), context.poller.subscribe(self, subscriber, fast=True, delegate_polling_to_me=True)
+    
+    def _poll_from_poller(self, fire):
+        """Extract all items currently in the queue and deliver them."""
+        got_info = False
+        latest_info = None        
+        while True:
+            message = safe_delete_head_nowait(self.__queue)
+            if not message:
+                break
+            if not got_info:
+                got_info = True
+                latest_info = self.__info_getter()
+            string = message.to_string()
+            itemsize = int(message.arg1())
+            count = int(message.arg2())
+            if not count: return
+            
+            parsed_items = []
+            for index in xrange(count):
+                # extract value
+                item_string = string[itemsize * index:itemsize * (index + 1)]
+                parsed_items.append(BulkDataElement(
+                    data=item_string,
+                    info=latest_info))
+            
+            self.__latest.extend(parsed_items)
+            self.__latest[:-self.__history_length] = []
+            
+            fire.append(parsed_items)
 
 
 class _MessageSplitter(object):
