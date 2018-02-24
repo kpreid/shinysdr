@@ -73,10 +73,11 @@ class DSDDemodulator(gr.hier_block2, ExportedState):
         fm_audio_rate = self.__fm_demod.get_output_type().get_sample_rate()
         self.__resampler = make_resampler(fm_audio_rate, _demod_rate)
         
-        self.__do_connect()
+        self.__do_connect(False)
     
-    def __do_connect(self):
-        self.__context.lock()
+    def __do_connect(self, not_init):
+        # TODO: figure out why tests, but not the real server, have a hanging problem if we lock always
+        if not_init: self.__context.lock()
         try:
             self.disconnect_all()
             if _available_version == 1:
@@ -97,7 +98,7 @@ class DSDDemodulator(gr.hier_block2, ExportedState):
                 decoder,
                 self)
         finally:
-            self.__context.unlock()
+            if not_init: self.__context.unlock()
     
     @exported_value(type=ReferenceT(), changes='never')
     def get_fm_demod(self):
@@ -116,7 +117,7 @@ class DSDDemodulator(gr.hier_block2, ExportedState):
             value = _uvquality_range(value)
             if self.__uvquality != value:
                 self.__uvquality = value
-                self.__do_connect()
+                self.__do_connect(True)
     
     def get_output_type(self):
         return self.__output_type
