@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -39,7 +39,7 @@ from shinysdr.math import to_dB
 from shinysdr.signals import SignalType
 from shinysdr.types import BulkDataT, RangeT
 from shinysdr import units
-from shinysdr.values import ExportedState, InterestTracker, LooseCell, StreamCell, exported_value, setter
+from shinysdr.values import ExportedState, InterestTracker, LooseCell, GRMsgQueueCell, exported_value, setter
 
 
 class RecursiveLockBlockMixin(object):
@@ -249,6 +249,9 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__interested_cell = LooseCell(type=bool, value=False, writable=False, persists=False)
         self.__has_subscriptions = False
         self.__interest = InterestTracker(self.__cell_interest_callback)
+
+        self.__fft_queue = gr.msg_queue()
+        self.__scope_queue = gr.msg_queue()
         
         # stuff created by __do_connect
         self.__gate = None
@@ -263,11 +266,15 @@ class MonitorSink(gr.hier_block2, ExportedState):
         for d in super(MonitorSink, self).state_def():
             yield d
         # TODO make this possible to be decorator style
-        yield 'fft', StreamCell(self, 'fft',
+        yield 'fft', GRMsgQueueCell(
+            queue=self.__fft_queue,
+            info_getter=self._get_fft_info,
             type=BulkDataT(array_format='b', info_format='dff'),
             interest_tracker=self.__interest,
             label='Spectrum')
-        yield 'scope', StreamCell(self, 'scope',
+        yield 'scope', GRMsgQueueCell(
+            queue=self.__scope_queue,
+            info_getter=self._get_scope_info,
             type=BulkDataT(array_format='f', info_format='d'),
             interest_tracker=self.__interest,
             label='Scope')
@@ -325,15 +332,8 @@ class MonitorSink(gr.hier_block2, ExportedState):
         # It would make slightly more sense to use unsigned chars, but blocks.float_to_uchar does not support vlen.
         self.__fft_converter = blocks.float_to_char(vlen=self.__freq_resolution, scale=1.0)
         
-        self.__fft_sink = MessageDistributorSink(
-            itemsize=output_length * gr.sizeof_char,
-            context=self.__context,
-            migrate=self.__fft_sink)
-    
-        self.__scope_sink = MessageDistributorSink(
-            itemsize=self.__time_length * gr.sizeof_gr_complex,
-            context=self.__context,
-            migrate=self.__scope_sink)
+        self.__fft_sink = blocks.message_sink(output_length * gr.sizeof_char, self.__fft_queue, True)
+        self.__scope_sink = blocks.message_sink(self.__time_length * gr.sizeof_gr_complex, self.__scope_queue, True)
         scope_chunker = blocks.stream_to_vector_decimator(
             item_size=gr.sizeof_gr_complex,
             sample_rate=sample_rate,
@@ -445,18 +445,11 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__update_interested()
 
     # exported via state_def
-    def get_fft_info(self):
+    def _get_fft_info(self):
         return (self.__input_center_freq, self.__signal_type.get_sample_rate(), self.__power_offset)
     
-    def get_fft_distributor(self):
-        return self.__fft_sink
-    
-    # exported via state_def
-    def get_scope_info(self):
+    def _get_scope_info(self):
         return (self.__signal_type.get_sample_rate(),)
-    
-    def get_scope_distributor(self):
-        return self.__scope_sink
 
 
 # this is in shinysdr.i.blocks rather than shinysdr.filters because I don't consider it public (yet?)

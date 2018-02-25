@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -47,10 +47,11 @@ class TestTop(unittest.TestCase):
             's1': SimulatedDeviceForTest(freq=freq1),
             's2': SimulatedDeviceForTest(freq=freq2),
         })
+        # TODO: using get_fft_info is digging into the implementation
         top.set_source_name('s1')
-        self.assertEqual(top.state()['monitor'].get().get_fft_info()[0], freq1)
+        self.assertEqual(top.state()['monitor'].get()._get_fft_info()[0], freq1)
         top.set_source_name('s2')
-        self.assertEqual(top.state()['monitor'].get().get_fft_info()[0], freq2)
+        self.assertEqual(top.state()['monitor'].get()._get_fft_info()[0], freq2)
 
     @defer.inlineCallbacks
     def test_monitor_vfo_change(self):
@@ -58,10 +59,11 @@ class TestTop(unittest.TestCase):
         freq2 = 2e6
         dev = SimulatedDeviceForTest(freq=freq1, allow_tuning=True)
         top = Top(devices={'s1': dev})
-        self.assertEqual(top.state()['monitor'].get().get_fft_info()[0], freq1)
+        # TODO: using get_fft_info is digging into the implementation
+        self.assertEqual(top.state()['monitor'].get()._get_fft_info()[0], freq1)
         dev.set_freq(freq2)
         yield deferLater(the_reactor, 0.1, lambda: None)  # wait for tune delay
-        self.assertEqual(top.state()['monitor'].get().get_fft_info()[0], freq2)
+        self.assertEqual(top.state()['monitor'].get()._get_fft_info()[0], freq2)
         # TODO: Also test value found in data stream
 
     def test_receiver_source_switch(self):

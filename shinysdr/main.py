@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -36,6 +36,7 @@ from twisted.python import log
 from shinysdr.config import Config, write_default_config, execute_config
 from shinysdr.i.dependencies import DependencyTester
 from shinysdr.i.persistence import PersistenceFileGlue
+from shinysdr.i.poller import the_subscription_context
 
 __all__ = []  # appended later
 
@@ -119,9 +120,8 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
     
     if args.force_run:
         log.msg('force_run')
-        from gnuradio.gr import msg_queue
         # TODO kludge, make this less digging into guts
-        app.get_receive_flowgraph().monitor.get_fft_distributor().subscribe(msg_queue(limit=2))
+        app.get_receive_flowgraph().get_monitor().state()['fft'].subscribe2(lambda v: None, the_subscription_context)
     
     if _abort_for_test:
         services.stopService()
