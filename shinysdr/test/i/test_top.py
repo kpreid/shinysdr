@@ -26,6 +26,7 @@ from zope.interface import implementer  # available via Twisted
 from gnuradio import gr
 
 from shinysdr.devices import Device, IComponent, merge_devices
+from shinysdr.i.poller import the_subscription_context
 from shinysdr.i.top import Top
 from shinysdr.plugins.simulate import SimulatedDeviceForTest
 from shinysdr.signals import SignalType
@@ -132,13 +133,14 @@ class TestTop(unittest.TestCase):
     
     @defer.inlineCallbacks
     def test_monitor_interest(self):
-        queue = gr.msg_queue()
         top = Top(devices={'s1': SimulatedDeviceForTest()})
         self.assertFalse(top._Top__running)
-        top.get_monitor().get_fft_distributor().subscribe(queue)
-        yield deferLater(the_reactor, 0.1, lambda: None)
-        self.assertTrue(top._Top__running)
-        top.get_monitor().get_fft_distributor().unsubscribe(queue)
+        _, subscription = top.get_monitor().state()['fft'].subscribe2(lambda v: None, the_subscription_context)
+        try:
+            yield deferLater(the_reactor, 0.1, lambda: None)
+            self.assertTrue(top._Top__running)
+        finally:
+            subscription.unsubscribe()
         yield deferLater(the_reactor, 0.1, lambda: None)
         self.assertFalse(top._Top__running)
 

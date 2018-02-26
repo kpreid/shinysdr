@@ -137,10 +137,12 @@ class _PollerSubscription(object):
         self._poller._remove_subscription(self._target, self)
 
 
-class _PollerTarget(object):
-    def __init__(self, obj):
-        self._obj = obj
+class _PollerCellTarget(object):
+    def __init__(self, cell):
+        self._obj = cell  # TODO: rename to _cell for clarity
         self._subscriptions = []
+        self.__interest_token = object()
+        cell.interest_tracker.set(self.__interest_token, True)
     
     def __cmp__(self, other):
         return cmp(type(self), type(other)) or cmp(self._obj, other._obj)
@@ -153,12 +155,12 @@ class _PollerTarget(object):
         raise NotImplementedError()
     
     def unsubscribe(self):
-        pass
+        self._obj.interest_tracker.set(self.__interest_token, False)
 
 
-class _PollerValueTarget(_PollerTarget):
+class _PollerValueTarget(_PollerCellTarget):
     def __init__(self, cell):
-        _PollerTarget.__init__(self, cell)
+        _PollerCellTarget.__init__(self, cell)
         self.__previous_value = self.__get()
 
     def __get(self):
@@ -171,10 +173,10 @@ class _PollerValueTarget(_PollerTarget):
             fire(value)
 
 
-class _PollerStreamTarget(_PollerTarget):
+class _PollerStreamTarget(_PollerCellTarget):
     # TODO there are no tests for stream subscriptions
     def __init__(self, cell):
-        _PollerTarget.__init__(self, cell)
+        _PollerCellTarget.__init__(self, cell)
         self.__subscription = cell.subscribe_to_stream()
 
     def poll(self, fire):

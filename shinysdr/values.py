@@ -86,6 +86,39 @@ class ISubscriber(Interface):
         """
 
 
+class InterestTracker(object):
+    """Collects expressions of interest in some cells' values to track whether there currently are any."""
+    
+    def __init__(self, listener):
+        assert callable(listener)
+        self.__listener = listener
+        self.__tokens = set()
+    
+    def set(self, token, interested):
+        # print 'set', token, interested
+        if interested:
+            was_empty = not self.__tokens
+            self.__tokens.add(token)
+            if was_empty:
+                # print '-> firing true'
+                # TODO: Need non-immediate callbacks
+                self.__listener(True)
+        else:
+            was_nonempty = bool(self.__tokens)
+            self.__tokens.remove(token)
+            if was_nonempty and not self.__tokens:
+                # print '-> firing false'
+                self.__listener(False)
+
+
+class NullInterestTracker(object):
+    def set(self, token, interest):
+        pass
+
+
+nullInterestTracker = NullInterestTracker()
+
+
 class TargetingMixin(object):
     # TODO explain/rename this
     # The exact relationship of target and key depends on the subclass
@@ -122,6 +155,7 @@ class BaseCell(object):
             type,
             persists=True,
             writable=False,
+            interest_tracker=nullInterestTracker,
             label=None,
             description=None,
             sort_key=None,
@@ -136,6 +170,7 @@ class BaseCell(object):
                 description=description,
                 sort_key=sort_key,
                 associated_key=associated_key))
+        self.interest_tracker = interest_tracker
 
     def metadata(self):
         return self.__metadata
@@ -145,11 +180,11 @@ class BaseCell(object):
 
     def get(self):
         """Return the value/object held by this cell."""
-        raise NotImplementedError()
+        raise NotImplementedError(self)
     
     def set(self, value):
         """Set the value held by this cell."""
-        raise NotImplementedError()
+        raise NotImplementedError(self)
     
     def get_state(self, subscriber=lambda _: None):
         """Return the value, or state of the object, held by this cell.
@@ -186,7 +221,7 @@ class BaseCell(object):
         return self._writable
     
     def description(self):
-        raise NotImplementedError()
+        raise NotImplementedError(self)
 
 
 class ValueCell(BaseCell):
@@ -216,16 +251,27 @@ _cell_value_change_schedules = [
 ]
 
 
-class PollingCell(ValueCell, TargetingMixin):
+class PollingCell(TargetingMixin, ValueCell):
     __explicit_subscriptions = None
     __last_polled_value = None
     __setter = None
     
-    def __init__(self, target, key, changes, type=object, writable=False, persists=None, **kwargs):
+    def __init__(self,
+            target,
+            key,
+            changes,
+            type=object,
+            writable=False,
+            persists=None,
+            interest_tracker=nullInterestTracker,
+            **kwargs):
         assert changes in _cell_value_change_schedules
         type = to_value_type(type)
         if persists is None:
             persists = writable or type.is_reference()
+        if changes == u'never':
+            # no need to track
+            interest_tracker = nullInterestTracker
         
         if changes == u'continuous' and persists:
             raise ValueError('persists=True changes={!r} is not allowed'.format(changes))
@@ -238,6 +284,7 @@ class PollingCell(ValueCell, TargetingMixin):
             persists=persists,
             writable=writable,
             associated_key=key,
+            interest_tracker=interest_tracker,
             **kwargs)
         
         self.__changes = changes
@@ -268,7 +315,7 @@ class PollingCell(ValueCell, TargetingMixin):
         elif changes == u'continuous':
             subscription = context.poller.subscribe(self, subscriber, fast=True)
         elif changes == u'explicit' or changes == u'this_setter':
-            subscription = _SimpleSubscription(subscriber, context, self.__explicit_subscriptions)
+            subscription = _SimpleSubscription(subscriber, context, self.__explicit_subscriptions, self.interest_tracker)
         else:
             raise ValueError('shouldn\'t happen unrecognized changes value: {!r}'.format(changes))
         return self.get(), subscription
@@ -427,21 +474,24 @@ class LooseCell(ValueCell):
             subscription._fire(value)
     
     def subscribe2(self, subscriber, context):
-        return self.get(), _SimpleSubscription(subscriber, context, self.__subscriptions)
+        return self.get(), _SimpleSubscription(subscriber, context, self.__subscriptions, self.interest_tracker)
     
     def _subscribe_immediate(self, subscriber):
         """for use by ViewCell only"""
         # TODO: replace this with a better mechanism
-        subscription = _LooseCellImmediateSubscription(subscriber, self.__subscriptions)
+        subscription = _LooseCellImmediateSubscription(subscriber, self.__subscriptions, self.interest_tracker)
         return subscription
 
 
 @implementer(ISubscription)
 class _SimpleSubscription(object):
-    def __init__(self, subscriber, context, subscription_set):
+    def __init__(self, subscriber, context, subscription_set, interest_tracker):
         self.__subscriber = subscriber
         self.__reactor = context.reactor
         self.__subscription_set = subscription_set
+        self.__interest_token = object()
+        self.__interest_tracker = interest_tracker
+        self.__interest_tracker.set(self.__interest_token, True)
         subscription_set.add(self)
     
     def _fire(self, value):
@@ -450,6 +500,7 @@ class _SimpleSubscription(object):
     
     def unsubscribe(self):
         self.__subscription_set.remove(self)
+        self.__interest_tracker.set(self.__interest_token, False)
     
     def __repr__(self):
         return u'<{} calling {}>'.format(type(self).__name__, self.__subscriber)
@@ -457,13 +508,17 @@ class _SimpleSubscription(object):
 
 @implementer(ISubscription)
 class _LooseCellImmediateSubscription(object):
-    def __init__(self, subscriber, subscription_set):
+    def __init__(self, subscriber, subscription_set, interest_tracker):
         self._fire = subscriber
         self.__subscription_set = subscription_set
+        self.__interest_token = object()
+        self.__interest_tracker = interest_tracker
+        self.__interest_tracker.set(self.__interest_token, True)
         subscription_set.add(self)
     
     def unsubscribe(self):
         self.__subscription_set.remove(self)
+        self.__interest_tracker.set(self.__interest_token, False)
 
 
 def ViewCell(base, get_transform, set_transform, **kwargs):
@@ -618,7 +673,7 @@ class ExportedState(object):
         if self.__shape_subscriptions is None:
             self.__shape_subscriptions = set()
         if self.state_is_dynamic():
-            return self.state(), _SimpleSubscription(subscriber, context, self.__shape_subscriptions)
+            return self.state(), _SimpleSubscription(subscriber, context, self.__shape_subscriptions, nullInterestTracker)
         else:
             return self.state(), _NeverSubscription()
     

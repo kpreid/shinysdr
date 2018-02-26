@@ -39,7 +39,7 @@ from shinysdr.math import to_dB
 from shinysdr.signals import SignalType
 from shinysdr.types import BulkDataT, RangeT
 from shinysdr import units
-from shinysdr.values import ExportedState, LooseCell, StreamCell, exported_value, setter
+from shinysdr.values import ExportedState, InterestTracker, LooseCell, StreamCell, exported_value, setter
 
 
 class RecursiveLockBlockMixin(object):
@@ -244,7 +244,11 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__input_center_freq = float(input_center_freq)
         self.__paused = bool(paused)
         
+        # interest tracking
+        # this is indirect because we ignore interest when paused
         self.__interested_cell = LooseCell(type=bool, value=False, writable=False, persists=False)
+        self.__has_subscriptions = False
+        self.__interest = InterestTracker(self.__cell_interest_callback)
         
         # stuff created by __do_connect
         self.__gate = None
@@ -261,9 +265,11 @@ class MonitorSink(gr.hier_block2, ExportedState):
         # TODO make this possible to be decorator style
         yield 'fft', StreamCell(self, 'fft',
             type=BulkDataT(array_format='b', info_format='dff'),
+            interest_tracker=self.__interest,
             label='Spectrum')
         yield 'scope', StreamCell(self, 'scope',
             type=BulkDataT(array_format='f', info_format='d'),
+            interest_tracker=self.__interest,
             label='Scope')
 
     def __do_connect(self):
@@ -322,14 +328,12 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__fft_sink = MessageDistributorSink(
             itemsize=output_length * gr.sizeof_char,
             context=self.__context,
-            migrate=self.__fft_sink,
-            notify=self.__update_interested)
+            migrate=self.__fft_sink)
     
         self.__scope_sink = MessageDistributorSink(
             itemsize=self.__time_length * gr.sizeof_gr_complex,
             context=self.__context,
-            migrate=self.__scope_sink,
-            notify=self.__update_interested)
+            migrate=self.__scope_sink)
         scope_chunker = blocks.stream_to_vector_decimator(
             item_size=gr.sizeof_gr_complex,
             sample_rate=sample_rate,
@@ -363,13 +367,16 @@ class MonitorSink(gr.hier_block2, ExportedState):
             self.__context.unlock()
     
     # non-exported
+    # TODO: now that InterestTracker exists maybe use that interface instead
     def get_interested_cell(self):
         return self.__interested_cell
     
+    def __cell_interest_callback(self, interested):
+        self.__has_subscriptions = interested
+        self.__update_interested()
+    
     def __update_interested(self):
-        self.__interested_cell.set_internal(not self.__paused and (
-            self.__fft_sink.get_subscription_count() > 0 or
-            self.__scope_sink.get_subscription_count() > 0))
+        self.__interested_cell.set_internal(not self.__paused and self.__has_subscriptions)
     
     @exported_value(type=SignalType, changes='explicit')
     def get_signal_type(self):

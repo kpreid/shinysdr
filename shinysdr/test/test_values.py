@@ -19,7 +19,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 import unittest
 
-from shinysdr.test.testutil import CellSubscriptionTester
+from shinysdr.test.testutil import CellSubscriptionTester, LoopbackInterestTracker
 from shinysdr.types import EnumRow, RangeT, ReferenceT, to_value_type
 from shinysdr.values import CellDict, CollectionState, ExportedState, LooseCell, PollingCell, ViewCell, command, exported_value, nullExportedState, setter, unserialize_exported_state
 
@@ -69,7 +69,7 @@ class TestExportedState(unittest.TestCase):
     # see TestCell for other subscription cases
     def test_subscription_this_setter(self):
         o = ValueAndBlockSpecimen()
-        st = CellSubscriptionTester(o.state()['value'])
+        st = CellSubscriptionTester(o.state()['value'], interest_tracking=False)
         o.set_value(1)
         st.expect_now(1)
         st.unsubscribe()
@@ -154,7 +154,7 @@ class TestPollingCell(unittest.TestCase):
     
     def __test_subscription(self, changes):
         o = NoInherentCellSpecimen()
-        cell = PollingCell(o, 'value', changes=changes)
+        cell = PollingCell(o, 'value', changes=changes, interest_tracker=LoopbackInterestTracker())
         st = CellSubscriptionTester(cell)
         o.value = 1
         if changes == 'explicit':
@@ -168,8 +168,8 @@ class TestPollingCell(unittest.TestCase):
     
     def test_subscription_never(self):
         o = NoInherentCellSpecimen()
-        cell = PollingCell(o, 'value', changes='never')
-        st = CellSubscriptionTester(cell)
+        cell = PollingCell(o, 'value', changes='never', interest_tracker=LoopbackInterestTracker())
+        st = CellSubscriptionTester(cell, interest_tracking=False)
         o.value = 1
         st.advance()  # expected no callback even if we lie
     
@@ -234,7 +234,7 @@ class TestBlockCell(unittest.TestCase):
     
     def test_subscription(self):
         o = BlockCellSpecimen(self.obj_value)
-        st = CellSubscriptionTester(o.state()['block'])
+        st = CellSubscriptionTester(o.state()['block'], interest_tracking=False)
         new = ExportedState()
         o.replace_block(new)
         st.expect_now(new)
@@ -261,7 +261,7 @@ class BlockCellSpecimen(ExportedState):
 
 class TestLooseCell(unittest.TestCase):
     def setUp(self):
-        self.lc = LooseCell(value=0, type=int)
+        self.lc = LooseCell(value=0, type=int, interest_tracker=LoopbackInterestTracker())
     
     def test_get_set(self):
         self.assertEqual(0, self.lc.get())
@@ -290,9 +290,12 @@ class TestViewCell(unittest.TestCase):
             base=self.lc,
             get_transform=lambda x: x + self.delta,
             set_transform=lambda x: x - self.delta,
-            type=int)
+            type=int,
+            interest_tracker=LoopbackInterestTracker())
     
     # TODO: Add tests for behavior when the transform is not perfectly one-to-one (such as due to floating-point error).
+    
+    # TODO: Test propagation of interest
     
     def test_get_set(self):
         self.assertEqual(0, self.lc.get())
