@@ -34,7 +34,7 @@ from gnuradio import gr
 from shinysdr.i.json import serialize
 from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT
 from shinysdr.signals import SignalType
-from shinysdr.types import ReferenceT
+from shinysdr.types import BulkDataT, ReferenceT
 from shinysdr.values import BaseCell, ExportedState, PollingCell, StreamCell
 
 
@@ -127,7 +127,14 @@ class _StateStreamObjectRegistration(object):
     def __maybesend(self, compare_value, update_value):
         if not self.has_previous_value or compare_value != self.previous_value[u'value']:
             self.set_previous({u'value': compare_value}, False)
-            self.__ssi._send1(False, ('value', self.serial, update_value))
+            
+            # TODO this is the wrong place to put it, really
+            value_type = self.obj.type()
+            if isinstance(value_type, BulkDataT):
+                for bulk in update_value:
+                    self.__ssi._send1(True, struct.pack('I', self.serial) + value_type.pack(bulk))
+            else:
+                self.__ssi._send1(False, ('value', self.serial, update_value))
     
     def __maybesend_reference(self, objs, is_single):
         registrations = {
@@ -250,11 +257,12 @@ class StateStreamInner(object):
             self._registered_objs[obj] = registration
             self.__registered_serials[serial] = registration
             if isinstance(obj, BaseCell):
-                self._send1(False, ('register_cell', serial, url, obj.description()))
+                description = obj.description()
+                self._send1(False, ('register_cell', serial, url, description))
                 if isinstance(obj, StreamCell):  # TODO kludge
                     pass
                 elif not obj.type().is_reference():  # TODO condition is a kludge due to block cell values being gook
-                    registration.set_previous({u'value': obj.get()}, False)
+                    registration.set_previous({'value': description['current']}, False)
             elif isinstance(obj, ExportedState):
                 self._send1(False, ('register_block', serial, url, _get_interfaces(obj)))
             else:

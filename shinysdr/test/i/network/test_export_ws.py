@@ -35,7 +35,7 @@ from shinysdr.i.roots import CapTable, IEntryPoint
 from shinysdr.signals import SignalType
 from shinysdr.test.testutil import SubscriptionTester
 from shinysdr.types import BulkDataT, ReferenceT
-from shinysdr.values import CellDict, CollectionState, ExportedState, NullExportedState, StreamCell, SubscriptionContext, exported_value, nullExportedState, setter
+from shinysdr.values import CellDict, CollectionState, ExportedState, GRMsgQueueCell, NullExportedState, StreamCell, SubscriptionContext, exported_value, nullExportedState, setter
 
 
 class StateStreamTestCase(unittest.TestCase):
@@ -69,6 +69,8 @@ class StateStreamTestCase(unittest.TestCase):
 
 
 class TestStateStream(StateStreamTestCase):
+    maxDiff = 4000
+    
     def test_init_and_mutate(self):
         self.setUpForObject(StateSpecimen())
         self.assertEqual(self.getUpdates(), transform_for_json([
@@ -186,6 +188,37 @@ class TestStateStream(StateStreamTestCase):
             ['actually_binary', b'\x02\x00\x00\x00q'],
             ['actually_binary', b'\x02\x00\x00\x00u'],
         ]))
+    
+    def test_bulk_data(self):
+        self.setUpForObject(BulkDataSpecimen())
+        cell = self.object.state()['s']
+        self.object.queue.insert_tail(gr.message().make_from_string(b'ab', 0, 1, len('ab')))
+        
+        # TODO: do this once initial values are processed correctly rather than having extra get()s
+        # poll cell to force queue contents to show up in initial state to test json representation
+        # st = SubscriptionTester()
+        # _, subscription = cell.subscribe2(lambda v: None, st.context)
+        # st.advance()
+        # subscription.unsubscribe()
+        
+        description = cell.description()
+        self.assertEqual(description['current'], [
+            # BulkDataElement(data='a', info=(1,)),
+            # BulkDataElement(data='b', info=(1,)),
+        ])
+        self.assertEqual(self.getUpdates(), transform_for_json([
+            [u'register_block', 1, u'urlroot', []],
+            [u'register_cell', 2, u'urlroot/s', description],
+            [u'value', 1, {u's': 2}],
+            [u'value', 0, 1],
+            ['actually_binary', b'\x02\x00\x00\x00\x01a'],
+            ['actually_binary', b'\x02\x00\x00\x00\x01b'],
+        ]))
+        self.object.queue.insert_tail(gr.message().make_from_string(b'cd', 0, 1, len('cd')))
+        self.assertEqual(self.getUpdates(), transform_for_json([
+            ['actually_binary', b'\x02\x00\x00\x00\x02c'],
+            ['actually_binary', b'\x02\x00\x00\x00\x02d'],
+        ]))
 
 
 class IFoo(Interface):
@@ -250,6 +283,23 @@ class StreamCellSpecimen(ExportedState):
     def get(self):
         # acting as distributor
         return b'\x01\x02\x11'
+
+
+class BulkDataSpecimen(ExportedState):
+    """Helper for TestStateStream"""
+    
+    def __init__(self):
+        self.queue = gr.msg_queue()
+        self.info_value = 0
+    
+    def state_def(self):
+        def info_getter():
+            self.info_value += 1
+            return (self.info_value,)
+        yield 's', GRMsgQueueCell(
+            queue=self.queue,
+            info_getter=info_getter,
+            type=BulkDataT('b', 'b'))
 
 
 class TestSerialization(StateStreamTestCase):
