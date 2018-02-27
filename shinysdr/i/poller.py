@@ -25,7 +25,7 @@ from twisted.internet import task, reactor as the_reactor
 from twisted.logger import Logger
 from zope.interface import implementer
 
-from shinysdr.values import BaseCell, IDeltaSubscriber, ISubscriber, ISubscription, StreamCell, SubscriptionContext, never_subscription
+from shinysdr.values import BaseCell, IDeltaSubscriber, ISubscriber, ISubscription, SubscriptionContext, never_subscription
 
 __all__ = []  # appended later
 
@@ -51,9 +51,7 @@ class Poller(object):
             # we're not actually against duck typing here; this is a sanity check
             raise TypeError('Poller given a non-cell %r' % (cell,))
         try:
-            if isinstance(cell, StreamCell):  # TODO kludge; use generic interface
-                target = _PollerStreamTarget(cell)
-            elif delegate_polling_to_me:
+            if delegate_polling_to_me:
                 target = _PollerDelegateTarget(cell)
             else:
                 target = _PollerValueTarget(cell)
@@ -220,24 +218,6 @@ class _PollerValueTarget(_PollerCellTarget):
         if value != self.__previous_value:
             self.__previous_value = value
             fire(value)
-
-
-class _PollerStreamTarget(_PollerCellTarget):
-    # TODO there are no tests for stream subscriptions
-    def __init__(self, cell):
-        _PollerCellTarget.__init__(self, cell)
-        self.__subscription = cell.subscribe_to_stream()
-
-    def poll(self, fire):
-        subscription = self.__subscription
-        while True:
-            value = subscription.get(binary=True)  # TODO inflexible
-            if value is None: break
-            fire(value)
-
-    def unsubscribe(self):
-        self.__subscription.close()
-        super(_PollerStreamTarget, self).unsubscribe()
 
 
 class _PollerDelegateTarget(_PollerCellTarget):

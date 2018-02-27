@@ -35,7 +35,7 @@ from shinysdr.i.roots import CapTable, IEntryPoint
 from shinysdr.signals import SignalType
 from shinysdr.test.testutil import SubscriptionTester
 from shinysdr.types import BulkDataT, ReferenceT
-from shinysdr.values import CellDict, CollectionState, ExportedState, GRMsgQueueCell, NullExportedState, StreamCell, SubscriptionContext, exported_value, nullExportedState, setter
+from shinysdr.values import CellDict, CollectionState, ExportedState, GRMsgQueueCell, NullExportedState, SubscriptionContext, exported_value, nullExportedState, setter
 
 
 class StateStreamTestCase(unittest.TestCase):
@@ -173,22 +173,6 @@ class TestStateStream(StateStreamTestCase):
             self.stream.dataReceived(json.dumps(['set', 99999, 100.0, 1234])))
         self.assertEqual(self.getUpdates(), [])
     
-    def test_stream_cell(self):
-        self.setUpForObject(StreamCellSpecimen())
-        description = self.object.state()['s'].description()
-        self.assertEqual(description['current'], [((), [1, 2, 17])])  # numbers come from the specimen's get()
-        self.assertEqual(self.getUpdates(), transform_for_json([
-            [u'register_block', 1, u'urlroot', []],
-            [u'register_cell', 2, u'urlroot/s', description],
-            [u'value', 1, {u's': 2}],
-            [u'value', 0, 1],
-        ]))
-        self.object.queue.insert_tail(gr.message().make_from_string(b'qu', 0, 1, len('qu')))
-        self.assertEqual(self.getUpdates(), transform_for_json([
-            ['actually_binary', b'\x02\x00\x00\x00q'],
-            ['actually_binary', b'\x02\x00\x00\x00u'],
-        ]))
-    
     def test_bulk_data(self):
         self.setUpForObject(BulkDataSpecimen())
         cell = self.object.state()['s']
@@ -254,35 +238,6 @@ class DuplicateReferenceSpecimen(ExportedState):
     @exported_value(type=ReferenceT(), changes='explicit')
     def get_bar(self):
         return self.bar
-
-
-class StreamCellSpecimen(ExportedState):
-    """Helper for TestStateStream"""
-    
-    def __init__(self):
-        self.queue = None
-    
-    def state_def(self):
-        yield 's', StreamCell(self, 's', type=BulkDataT('', 'b'))
-    
-    def get_s_distributor(self):
-        return self  # shortcut
-    
-    def get_s_info(self):
-        return ()
-    
-    def subscribe(self, queue):
-        # acting as distributor
-        self.queue = queue
-    
-    def unsubscribe(self, queue):
-        # acting as distributor
-        assert self.queue == queue
-        self.queue = None
-    
-    def get(self):
-        # acting as distributor
-        return b'\x01\x02\x11'
 
 
 class BulkDataSpecimen(ExportedState):

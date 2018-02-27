@@ -35,7 +35,7 @@ from shinysdr.i.json import serialize
 from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT
 from shinysdr.signals import SignalType
 from shinysdr.types import BulkDataT, ReferenceT
-from shinysdr.values import BaseCell, ExportedState, PollingCell, StreamCell
+from shinysdr.values import BaseCell, ExportedState, PollingCell
 
 
 class _StateStreamObjectRegistration(object):
@@ -51,14 +51,9 @@ class _StateStreamObjectRegistration(object):
         self.__dead = False
         if isinstance(obj, BaseCell):
             self.__obj_is_cell = True
-            if isinstance(obj, StreamCell):  # TODO kludge
-                _, self.__subscription = obj.subscribe2(self.__listen_binary_stream, subscription_context)
-                self.send_initial_value = lambda: None
-                self.send_now_if_needed = lambda: None
-            else:
-                initial_value, self.__subscription = obj.subscribe2(self.__listen_cell, subscription_context)
-                self.send_initial_value = lambda: self.__listen_cell(initial_value)
-                self.send_now_if_needed = lambda: self.__listen_cell(obj.get())
+            initial_value, self.__subscription = obj.subscribe2(self.__listen_cell, subscription_context)
+            self.send_initial_value = lambda: self.__listen_cell(initial_value)
+            self.send_now_if_needed = lambda: self.__listen_cell(obj.get())
         elif isinstance(obj, ExportedState):
             self.__obj_is_cell = False
             if obj.state_is_dynamic():  # TODO: can we not bother checking? this may be a relic from polling
@@ -105,8 +100,6 @@ class _StateStreamObjectRegistration(object):
         if self.__dead:
             return
         obj = self.obj
-        if isinstance(obj, StreamCell):
-            raise Exception("shouldn't happen: StreamCell here")
         if obj.type().is_reference():
             self.__ssi._lookup_or_register(value, self.url)
             self.__maybesend_reference({u'value': value}, True)
@@ -259,9 +252,7 @@ class StateStreamInner(object):
             if isinstance(obj, BaseCell):
                 description = obj.description()
                 self._send1(False, ('register_cell', serial, url, description))
-                if isinstance(obj, StreamCell):  # TODO kludge
-                    pass
-                elif not obj.type().is_reference():  # TODO condition is a kludge due to block cell values being gook
+                if not obj.type().is_reference():  # TODO condition is a kludge due to block cell values being gook
                     registration.set_previous({'value': description['current']}, False)
             elif isinstance(obj, ExportedState):
                 self._send1(False, ('register_block', serial, url, _get_interfaces(obj)))

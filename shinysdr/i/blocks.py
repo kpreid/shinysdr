@@ -24,7 +24,6 @@ interface.
 
 from __future__ import absolute_import, division, unicode_literals
 
-import array
 import math
 import os
 
@@ -93,66 +92,6 @@ class _NoContext(object):
     
     def unlock(self):
         pass
-
-
-class MessageDistributorSink(gr.hier_block2):
-    """Like gnuradio.blocks.message_sink, but copies its messages to a dynamic set of queues and saves the most recent item.
-    
-    Never blocks."""
-    def __init__(self, itemsize, context, migrate=None, notify=None):
-        gr.hier_block2.__init__(
-            self, type(self).__name__,
-            gr.io_signature(1, 1, itemsize),
-            gr.io_signature(0, 0, 0),
-        )
-        self.__itemsize = itemsize
-        self.__context = _NoContext()
-        self.__peek = blocks.probe_signal_vb(itemsize)
-        self.__subscriptions = {}
-        self.__notify = None
-        
-        self.connect(self, self.__peek)
-        
-        if migrate is not None:
-            assert isinstance(migrate, MessageDistributorSink)  # sanity check
-            for queue in migrate.__subscriptions.keys():
-                migrate.unsubscribe(queue)
-                self.subscribe(queue)
-        
-        # set now, not earlier, so as not to trigger anything while migrating
-        self.__context = context
-        self.__notify = notify
-
-    def get(self):
-        # probe_signal gives us vector of 0..255 whereas queue messages give str. Reformat to be consistent with messages.
-        # b'' is for Python 2.7.6 compatibility (array.array requires a str rather than unicode string)
-        return array.array(b'B', self.__peek.level()).tostring()
-    
-    def get_subscription_count(self):
-        return len(self.__subscriptions)
-    
-    def subscribe(self, queue):
-        assert queue not in self.__subscriptions
-        sink = blocks.message_sink(self.__itemsize, queue, True)
-        self.__subscriptions[queue] = sink
-        try:
-            self.__context.lock()
-            self.connect(self, sink)
-        finally:
-            self.__context.unlock()
-        if self.__notify:
-            self.__notify()
-    
-    def unsubscribe(self, queue):
-        sink = self.__subscriptions[queue]
-        del self.__subscriptions[queue]
-        try:
-            self.__context.lock()
-            self.disconnect(self, sink)
-        finally:
-            self.__context.unlock()
-        if self.__notify:
-            self.__notify()
 
 
 _maximum_fft_rate = 500

@@ -22,15 +22,11 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import array
 from collections import namedtuple
-import struct
 import weakref
 
 from twisted.python import log
 from zope.interface import Interface, implementer  # available via Twisted
-
-from gnuradio import gr
 
 from shinysdr.gr_ext import safe_delete_head_nowait
 from shinysdr.types import BulkDataElement, BulkDataT, EnumRow, ReferenceT, to_value_type
@@ -417,98 +413,6 @@ class GRMsgQueueCell(ValueCell):
             self.__latest[:-self.__history_length] = []
             
             fire.append(parsed_items)
-
-
-class _MessageSplitter(object):
-    """Wraps a gr.msg_queue, whose arg1 and arg2 are as in blocks.message_sink, to allow extracting one data item at a time by polling."""
-    def __init__(self, queue, info_getter, close, type):
-        """
-        queue: a gr.msg_queue
-        info_getter: function () -> anything; returned with data
-        close: function () -> None; provided as a method
-        type: a BulkDataT
-        """
-        # config
-        self.__queue = queue
-        self.__igetter = info_getter
-        self.__type = type
-        self.close = close  # provided as method
-        
-        # state
-        self.__splitting = None
-    
-    def get(self, binary=False):
-        if self.__splitting is not None:
-            (string, itemsize, count, index) = self.__splitting
-        else:
-            queue = self.__queue
-            # we would use .delete_head_nowait() but it returns a crashy wrapper instead of a sensible value like None. So implement a test (which is safe as long as we're the only reader)
-            message = safe_delete_head_nowait(queue)
-            if not message:
-                return None
-            string = message.to_string()
-            itemsize = int(message.arg1())
-            count = int(message.arg2())
-            index = 0
-        assert index < count
-        
-        # update state
-        if index == count - 1:
-            self.__splitting = None
-        else:
-            self.__splitting = (string, itemsize, count, index + 1)
-        
-        # extract value
-        # TODO: this should be a separate concern, refactor
-        item_string = string[itemsize * index:itemsize * (index + 1)]
-        if binary:
-            # In binary mode, pack info with already-binary data.
-            value = struct.pack(self.__type.get_info_format(), *self.__igetter()) + item_string
-        else:
-            # In python-value mode, unpack binary data.
-            unpacker = array.array(self.__type.get_array_format())
-            unpacker.fromstring(item_string)
-            value = (self.__igetter(), unpacker.tolist())
-        return value
-
-
-class StreamCell(ValueCell, TargetingMixin):
-    def __init__(self, target, key, type, **kwargs):
-        assert isinstance(type, BulkDataT)
-        TargetingMixin.__init__(self, target, key)
-        ValueCell.__init__(self,
-            type=type,
-            writable=False,
-            persists=False,
-            associated_key=key,
-            **kwargs)
-        self.__dgetter = getattr(self._target, 'get_' + key + '_distributor')
-        self.__igetter = getattr(self._target, 'get_' + key + '_info')
-    
-    def subscribe2(self, subscriber, context):
-        # poller does StreamCell-specific things. TODO: make Poller uninvolved
-        return self.get(), context.poller.subscribe(self, subscriber, fast=True)
-    
-    # TODO: eliminate this specialized protocol used by Poller
-    def subscribe_to_stream(self):
-        queue = gr.msg_queue()
-        self.__dgetter().subscribe(queue)
-        
-        def close():
-            self.__dgetter().unsubscribe(queue)
-        
-        return _MessageSplitter(queue, self.__igetter, close, self.type())
-    
-    def get(self):
-        """Return the most recent item(s) in the stream."""
-        # TODO: Duplicated code with _MessageSplitter.get.
-        item_string = self.__dgetter().get()
-        unpacker = array.array(self.type().get_array_format())
-        unpacker.fromstring(item_string)
-        return [(self.__igetter(), unpacker.tolist())]
-    
-    def set(self, value):
-        raise Exception('StreamCell is not writable.')
 
 
 class LooseCell(ValueCell):
