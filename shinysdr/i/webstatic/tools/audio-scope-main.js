@@ -43,7 +43,7 @@ define([
     AudioScopeAdapter,
   } = import_audio_analyser;
   const {
-    UserMediaSelector,
+    AudioSourceSelector,
   } = import_audio_client_source;
   const {
     ClientStateObject,
@@ -68,7 +68,7 @@ define([
   const audioContext = new AudioContext();
   const storage = sessionStorage;  // TODO persistent and namespaced-from-other-pages
   
-  const selector = new UserMediaSelector(scheduler, audioContext, navigator.mediaDevices,
+  const selector = new AudioSourceSelector(scheduler, audioContext, navigator.mediaDevices,
     new StorageNamespace(storage, 'input-selector.'));
   const adapter = new AudioScopeAdapter(scheduler, audioContext);
   adapter.connectFrom(selector.source);

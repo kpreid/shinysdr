@@ -120,9 +120,9 @@ class SiteWithDefaultHeaders(Site):
             b"default-src 'self' 'unsafe-inline'",
             b"connect-src 'self' ws://*:* wss://*:*",
             b"img-src 'self' data: blob:",
+            b"media-src http: https: file: blob:",  # client audio tools wish to load user-specified audio
             b"object-src 'none'",
             b"base-uri 'self'",
-            b"block-all-mixed-content",
         ]))
         request.setHeader(b'Referrer-Policy', b'no-referrer')
         request.setHeader(b'X-Content-Type-Options', b'nosniff')

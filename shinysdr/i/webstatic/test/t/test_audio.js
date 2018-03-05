@@ -49,7 +49,7 @@ define([
   } = import_audio_bufferer;
   const {
     handleUserMediaError_ForTesting: handleUserMediaError,
-    UserMediaSelector,
+    AudioSourceSelector,
   } = import_audio_client_source;
   const {
     AudioContext,
@@ -221,7 +221,7 @@ define([
       });
     });
   
-    describe('UserMediaSelector', () => {
+    describe('AudioSourceSelector', () => {
       const stubMediaDevices = Object.freeze({
         addEventListener(name, listener, useCapture) {},
         
@@ -235,7 +235,7 @@ define([
       });
       
       it('should be instantiable', () => {
-        new UserMediaSelector(scheduler, audioContext, stubMediaDevices, sessionStorage);
+        new AudioSourceSelector(scheduler, audioContext, stubMediaDevices, sessionStorage);
         expect(1).toBe(1);  // dummy expect for "this does not throw" test
       });
       

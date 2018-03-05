@@ -430,16 +430,18 @@ def assert_http_resource_properties(test_case, url):
         # If this fails, we probably made a mistake
         test_case.assertNotEqual(response.code, http.NOT_FOUND)
         
+        csp = response.headers.getRawHeaders(b'Content-Security-Policy')
+        test_case.assertEqual(1, len(csp))
         test_case.assertEqual(
-            [b';'.join([
+            [
                 b"default-src 'self' 'unsafe-inline'",
                 b"connect-src 'self' ws://*:* wss://*:*",
                 b"img-src 'self' data: blob:",
+                b"media-src http: https: file: blob:",
                 b"object-src 'none'",
                 b"base-uri 'self'",
-                b"block-all-mixed-content",
-            ])],
-            response.headers.getRawHeaders(b'Content-Security-Policy'))
+            ],
+            csp[0].split(b';'))
         test_case.assertEqual([b'no-referrer'], response.headers.getRawHeaders(b'Referrer-Policy'))
         test_case.assertEqual([b'nosniff'], response.headers.getRawHeaders(b'X-Content-Type-Options'))
         
