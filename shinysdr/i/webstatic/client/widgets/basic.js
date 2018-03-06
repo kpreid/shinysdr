@@ -501,9 +501,9 @@ define([
       function spin(direction) {
         target.set(clamp(direction * scale + target.get(), direction));
       }
-      digit.addEventListener("mousewheel", function(event) { // Not in FF
+      digit.addEventListener('wheel', event => {
         // TODO: deal with high-res/accelerated scrolling
-        spin(event.wheelDelta > 0 ? 1 : -1);
+        spin((event.deltaY || event.deltaX) > 0 ? 1 : -1);
         event.preventDefault();
         event.stopPropagation();
       }, {capture: true, passive: false});
