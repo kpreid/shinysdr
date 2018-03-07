@@ -21,14 +21,16 @@ requirejs.config({
   baseUrl: '../client/'
 });
 define([
-  'audio', 
+  'audio/analyser',
+  'audio/client-source',
   'coordination', 
   'events', 
   'values', 
   'widget', 
   'widgets',
 ], (
-  import_audio,
+  import_audio_analyser,
+  import_audio_client_source,
   import_coordination,
   import_events,
   import_values,
@@ -37,8 +39,10 @@ define([
 ) => {
   const {
     AudioAnalyserAdapter,
+  } = import_audio_analyser;
+  const {
     UserMediaSelector,
-  } = import_audio;
+  } = import_audio_client_source;
   const {
     ClientStateObject,
   } = import_coordination;

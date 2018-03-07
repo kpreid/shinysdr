@@ -19,13 +19,19 @@
 
 define([
   '/test/jasmine-glue.js',
-  'audio',
+  'audio/analyser',
   'audio/bufferer',
+  'audio/client-source',
+  'audio/util',
+  'audio/ws-stream',
   'events'
 ], (
   import_jasmine,
-  import_audio,
+  import_audio_analyser,
   import_audio_bufferer,
+  import_audio_client_source,
+  import_audio_util,
+  import_audio_ws_stream,
   import_events
 ) => {
   const {ji: {
@@ -36,15 +42,21 @@ define([
   }} = import_jasmine;
   const {
     AudioAnalyserAdapter,
-    AudioContext,
-    AudioScopeAdapter, 
-    handleUserMediaError_ForTesting: handleUserMediaError,
-    minimizeSampleRate_ForTesting: minimizeSampleRate,
-    UserMediaSelector,
-  } = import_audio;
+    AudioScopeAdapter,
+  } = import_audio_analyser;
   const {
     AudioBuffererImpl: AudioBuffererImpl,
   } = import_audio_bufferer;
+  const {
+    handleUserMediaError_ForTesting: handleUserMediaError,
+    UserMediaSelector,
+  } = import_audio_client_source;
+  const {
+    AudioContext,
+  } = import_audio_util;
+  const {
+    minimizeSampleRate_ForTesting: minimizeSampleRate,
+  } = import_audio_ws_stream;
   const {
     Scheduler,
   } = import_events;
