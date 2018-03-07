@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2018 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -60,19 +60,35 @@ __all__.append('fork_deferred')
 
 
 def test_subprocess(args, substring, shell=False):
-    """Check the stdout or stderr of the specified command for a specified string."""
+    """Check the stdout or stderr of the specified command for a specified string.
+    
+    Returns None on success or a user-friendly string describing the failure to match.
+    """
     # TODO: establish resource and output size limits
     # TODO: Use Twisted subprocess facilities instead to avoid possible conflicts
+    def failure(msg, **kwargs):
+        return msg.format(
+            cmd=args if isinstance(args, basestring) else ' '.join(args),
+            substring=substring,
+            **kwargs)
+    
     try:
         output = subprocess.check_output(
             args=args,
             shell=shell,
             stderr=subprocess.STDOUT)
-        return substring in output
+        if substring in output:
+            return None
+        else:
+            return failure(
+                'Expected `{cmd}` to give output containing "{substring}", but the actual output was:\n{output}',
+                output=output)
     except OSError:
-        return False
-    except subprocess.CalledProcessError:
-        return False
+        return failure('Expected `{cmd}` to succeed but it could not be started.')
+    except subprocess.CalledProcessError as e:
+        return failure(
+            'Expected `{cmd}` to succeed but it exited with an error {e.returncode} and:\n{output}',
+            e=e)
 
 
 __all__.append('test_subprocess')

@@ -32,9 +32,9 @@ try:
     # gr-radioteletype
     # https://github.com/bitglue/gr-radioteletype
     from radioteletype.demodulators import rtty_demod_cb
-    _available = True
-except ImportError:
-    _available = False
+    _unavailability = None
+except ImportError as e:
+    _unavailability = unicode(e)
 
 from shinysdr.gr_ext import safe_delete_head_nowait
 from shinysdr.math import dB, rotator_inc
@@ -289,4 +289,4 @@ pluginMode = ModeDef(mode='RTTY',
     info='RTTY',
     demod_class=RTTYDemodulator,
     mod_class=RTTYModulator,
-    available=_available)
+    unavailability=_unavailability)

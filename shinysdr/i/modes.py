@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2018 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -20,6 +20,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from twisted.plugin import getPlugins
+from twisted.python import log
 from zope.interface import Interface
 
 from shinysdr import plugins
@@ -43,12 +44,20 @@ class IModeDef(Interface):
 
 # Object for memoizing results of getPlugins(IModeDef)
 class _ModeTable(object):
-    def __init__(self):
-        self.__all_modes = {d.mode: d
-            for d in getPlugins(IModeDef, plugins)}
-        self.__available_modes = {d.mode: d
-             for d in self.__all_modes.itervalues()
-             if d.available}
+    def __init__(self, plugin_package):
+        self.__all_modes = {}
+        self.__available_modes = {}
+        log.msg('Loading mode plugins...')
+        for mode_def in getPlugins(IModeDef, plugin_package):
+            if mode_def.mode in self.__all_modes:
+                raise Exception('Mode name conflict for mode {!r}'.format(mode_def.mode))
+            self.__all_modes[mode_def.mode] = mode_def
+            if mode_def.available:
+                # log.msg('  Mode: {0.mode}'.format(mode_def))
+                self.__available_modes[mode_def.mode] = mode_def
+            else:
+                log.msg('Mode {0.mode} unavailable\n{0.unavailability}'.format(mode_def))
+        log.msg('...done mode plugins.')
     
     def get_modes(self, include_unavailable):
         if include_unavailable:
@@ -71,7 +80,7 @@ _mode_table = None
 def _get_mode_table():
     global _mode_table
     if _mode_table is None:
-        _mode_table = _ModeTable()
+        _mode_table = _ModeTable(plugins)
     return _mode_table
 
 

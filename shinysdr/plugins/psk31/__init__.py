@@ -29,9 +29,9 @@ try:
     from radioteletype.demodulators import (
         psk31_coherent_demodulator_cc,
         psk31_constellation_decoder_cb)
-    _available = True
-except ImportError:
-    _available = False
+    _unavailability = None
+except ImportError as e:
+    _unavailability = unicode(e)
 
 from shinysdr.math import dB, rotator_inc
 from shinysdr.filters import MultistageChannelFilter
@@ -136,4 +136,4 @@ class PSK31Demodulator(gr.hier_block2, ExportedState):
 pluginMode = ModeDef(mode='PSK31',
     info='PSK31',
     demod_class=PSK31Demodulator,
-    available=_available)
+    unavailability=_unavailability)

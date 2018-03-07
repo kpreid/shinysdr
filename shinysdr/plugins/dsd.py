@@ -130,4 +130,4 @@ class DSDDemodulator(gr.hier_block2, ExportedState):
 _modeDef = ModeDef(mode=u'DSD',  # TODO: Ought to declare all the individual modes that DSD can decode -- once we have a way to not spam the mode selector with that.
     info=EnumRow(label=u'DSD', description=u'All modes DSD can decode (P25, DMR, D-STAR, …)'),
     demod_class=DSDDemodulator,
-    available=bool(_available_version))
+    unavailability=None if _available_version else 'dsd.dsd_block_ff not found.')

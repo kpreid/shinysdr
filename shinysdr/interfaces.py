@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -247,20 +247,27 @@ class ModeDef(object):
             info,
             demod_class,
             mod_class=None,
-            available=True):
+            unavailability=None):
         """
         mode: String uniquely identifying this mode, typically a standard abbreviation written in uppercase letters (e.g. "USB", "WFM").
         info: An EnumRow object with a label for the mode, or a string.
             The EnumRow sort key should be like the mode value but organized for sorting with space as a separator of qualifiers (e.g. "SSB U", "FM W").
         demod_class: Class (or factory function) to instantiate to create a demodulator for this mode. Should provide IDemodulatorFactory but need not declare it.
         mod_class: Class (or factory function) to instantiate to create a modulator for this mode. Should provide IModulatorFactory but need not declare it.
-        available: If false, this mode definition will be ignored.
+        unavailability: This mode definition will be ignored if this is a string rather than None. The string should be an error message informative to the user (plain text, significant whitespace).
         """
+        if isinstance(unavailability, bool):
+            raise Exception('unavailability should be a string or None')
+        
         self.mode = unicode(mode)
         self.info = EnumRow(info)
         self.demod_class = demod_class
         self.mod_class = mod_class
-        self.available = bool(available)
+        self.unavailability = None if unavailability is None else unicode(unavailability)
+        
+    @property
+    def available(self):
+        return self.unavailability is None
 
 
 __all__.append('ModeDef')

@@ -1,4 +1,4 @@
-# Copyright 2017 Phil Frost <indigo@bitglue.com>
+# Copyright 2018 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -17,21 +17,21 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from twisted.python.util import sibpath
-from twisted.web import static
+from twisted.trial import unittest
 
-from shinysdr.interfaces import ModeDef, ClientResourceDef
+from shinysdr.test.i import test_modes_cases as package
+from shinysdr.i.modes import _ModeTable
 
-from .demodulator import WSPRDemodulator, find_wsprd
 
-plugin_mode = ModeDef(mode='WSPR',
-    info='WSPR',
-    demod_class=WSPRDemodulator,
-    unavailability=None if find_wsprd() else 'wsprd not found.')
-
-plugin_client = ClientResourceDef(
-    key=__name__,
-    resource=static.File(sibpath(__file__, 'client')),
-    load_js_path='wspr.js')
-
-__all__ = []
+class TestModeTable(unittest.TestCase):
+    table = _ModeTable(package)
+    
+    def test_list_all(self):
+        self.assertEqual(
+            {d.mode for d in self.table.get_modes(include_unavailable=True)},
+            {'available', 'unavailable'})
+    
+    def test_list_available(self):
+        self.assertEqual(
+            {d.mode for d in self.table.get_modes(include_unavailable=False)},
+            {'available'})

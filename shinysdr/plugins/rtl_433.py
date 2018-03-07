@@ -316,8 +316,7 @@ class RTL433MsgGroup(ExportedState):
         return self.__last_heard_time
 
 
-# TODO: Arrange for a way for the user to see why it is unavailable.
-_rtl_433_available = test_subprocess(
+_rtl_433_unavailability = test_subprocess(
     ['rtl_433', '-r', '/dev/null'],
     'Reading samples from file',
     shell=False)
@@ -326,4 +325,4 @@ _rtl_433_available = test_subprocess(
 plugin_mode = ModeDef(mode='433',
     info=EnumRow(label='rtl_433', description='OOK telemetry decoded by rtl_433 mostly found at 433 MHz'),
     demod_class=RTL433Demodulator,
-    available=_rtl_433_available)
+    unavailability=_rtl_433_unavailability)

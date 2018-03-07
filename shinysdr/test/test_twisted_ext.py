@@ -1,4 +1,4 @@
-# Copyright 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2016, 2018 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -16,6 +16,8 @@
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, unicode_literals
+
+import textwrap
 
 from twisted.trial import unittest
 from twisted.internet import defer
@@ -41,10 +43,14 @@ class TestForkDeferred(unittest.TestCase):
 
 class TestTestSubprocess(unittest.TestCase):
     def test_stdout_success(self):
-        self.assertTrue(test_subprocess(['echo', 'x'], 'x', shell=False))
+        self.assertFalse(test_subprocess(['echo', 'x'], 'x', shell=False))
     
     def test_stdout_failure(self):
-        self.assertFalse(test_subprocess(['echo', 'y'], 'x', shell=False))
+        self.assertEquals(test_subprocess(['echo', 'y'], 'x', shell=False),
+            textwrap.dedent("""\
+                Expected `echo y` to give output containing "x", but the actual output was:
+                y
+                """))
     
     # TODO test command-not-found
     # TODO test stderr

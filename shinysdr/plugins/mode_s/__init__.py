@@ -34,9 +34,9 @@ from gnuradio import gru
 
 try:
     import air_modes
-    _available = True
-except ImportError:
-    _available = False
+    _unavailability = None
+except ImportError as e:
+    _unavailability = unicode(e)
 
 from shinysdr.filters import MultistageChannelFilter
 from shinysdr.interfaces import BandShape, ClientResourceDef, IDemodulator, ModeDef
@@ -286,7 +286,7 @@ class Aircraft(ExportedState):
 plugin_mode = ModeDef(mode='MODE-S',
     info=EnumRow(label='Mode S', description='Aviation telemetry found at 1090 MHz'),
     demod_class=ModeSDemodulator,
-    available=_available)
+    unavailability=_unavailability)
 plugin_client = ClientResourceDef(
     key=__name__,
     resource=static.File(os.path.join(os.path.split(__file__)[0], 'client')),
