@@ -561,6 +561,7 @@ define([
       createWidgetExt(context, VerticalScale, verticalScaleEl, new ConstantCell('dummy'));
 
       const parametersEl = outerElement.appendChild(document.createElement('div'));
+      if (config.idPrefix) parametersEl.id = config.idPrefix + 'parameters';
       createWidgetExt(context, MonitorDetailedOptions, parametersEl, config.target);
       
       // TODO should logically be doing this -- need to support "widget with possibly multiple target elements"
@@ -612,6 +613,7 @@ define([
       var details = getAppend().appendChild(document.createElement('details'));
       details.appendChild(document.createElement('summary'))
           .appendChild(document.createTextNode('Options'));
+      if (config.idPrefix) details.id = config.idPrefix + 'details';
       setInsertion(details);
       
       const layoutContext = config.getLayoutContext(SpectrumLayoutContext);

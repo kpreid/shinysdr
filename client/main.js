@@ -18,7 +18,7 @@
 'use strict';
 
 define([
-  './audio',
+  './audio/ws-stream',
   './coordination',
   './database',
   './events',
@@ -32,7 +32,7 @@ define([
   './widget',
   './widgets',
 ], (
-  import_audio,
+  import_audio_ws_stream,
   import_coordination,
   import_database,
   import_events,
@@ -48,7 +48,7 @@ define([
 ) => {
   const {
     connectAudio,
-  } = import_audio;
+  } = import_audio_ws_stream;
   const {
     ClientStateObject,
     Coordinator,

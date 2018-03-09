@@ -21,14 +21,16 @@ requirejs.config({
   baseUrl: '../client/'
 });
 define([
-  'audio', 
+  'audio/analyser',
+  'audio/client-source',
   'coordination', 
   'events', 
   'values', 
   'widget', 
   'widgets',
 ], (
-  import_audio,
+  import_audio_analyser,
+  import_audio_client_source,
   import_coordination,
   import_events,
   import_values,
@@ -37,8 +39,10 @@ define([
 ) => {
   const {
     AudioAnalyserAdapter,
-    UserMediaSelector,
-  } = import_audio;
+  } = import_audio_analyser;
+  const {
+    AudioSourceSelector,
+  } = import_audio_client_source;
   const {
     ClientStateObject,
   } = import_coordination;
@@ -58,7 +62,7 @@ define([
   const audioContext = new AudioContext();
   const storage = sessionStorage;  // TODO persistent and namespaced-from-other-pages
   
-  const selector = new UserMediaSelector(scheduler, audioContext, navigator.mediaDevices,
+  const selector = new AudioSourceSelector(scheduler, audioContext, navigator.mediaDevices,
     new StorageNamespace(storage, 'input-selector.'));
   const adapter = new AudioAnalyserAdapter(scheduler, audioContext);
   adapter.connectFrom(selector.source);

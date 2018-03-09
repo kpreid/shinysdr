@@ -877,3 +877,20 @@ table.aligned-controls-table {
   /* TODO align wirh theme color */
   color: blue;
 }
+
+.widget-AudioSourceSelectorWidget, .widget-AudioSourceBlockWidget {
+  display: flex;
+  flex-direction: column;
+}
+.widget-AudioSourceSelectorWidget-subpanel {
+  display: flex;
+  flex-direction: row;
+}
+.widget-AudioSourceSelectorWidget input {
+  flex: 1 1;
+}
+.widget-AudioSourceSelectorWidget audio {
+  margin: none; /* ensure sizing works as intended */
+  box-sizing: border-box;
+  width: 100%;
+}
