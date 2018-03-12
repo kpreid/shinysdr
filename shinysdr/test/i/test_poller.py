@@ -17,7 +17,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import unittest
+from twisted.trial import unittest
 
 from shinysdr.i.poller import Poller
 from shinysdr.values import ExportedState, LooseCell, exported_value, setter
@@ -26,10 +26,13 @@ from shinysdr.values import ExportedState, LooseCell, exported_value, setter
 class TestPoller(unittest.TestCase):
     def setUp(self):
         self.poller = Poller()
-        self.cells = PollerCellsSpecimen()
     
-    def test_trivial(self):
-        cell = self.cells.state()['foo']
+    def tearDown(self):
+        self.flushLoggedErrors(DummyBrokenGetterException)
+    
+    def test_trivial_direct(self):
+        cells = PollerCellsSpecimen()
+        cell = cells.state()['foo']
         called = []
         
         def callback(value):
@@ -39,15 +42,52 @@ class TestPoller(unittest.TestCase):
         self.assertEqual([], called, 'initial')
         self.poller.poll(True)
         self.assertEqual([], called, 'noop poll')
-        self.cells.set_foo('a')
+        cells.set_foo('a')
         self.assertEqual([], called, 'after set')
         self.poller.poll(True)
         self.assertEqual(['a'], called, 'poll after set')
         
         sub.unsubscribe()
-        self.cells.set_subscribable('b')
+        cells.set_subscribable('b')
         self.poller.poll(True)
         self.assertEqual(['a'], called, 'no poll after unsubscribe')
+    
+    def test_initially_throwing_getter(self):
+        """Check fallback behavior when a cell getter throws."""
+        called = []
+        
+        def callback(value):
+            called.append(value)
+        
+        broken_cell = BrokenGetterSpecimen(True).state()['foo']
+        self.poller.subscribe(broken_cell, callback, fast=True)
+        
+        self.assertEqual(called, [])
+        self.poller.poll(True)
+        self.assertEqual(called, [])
+        
+    def test_later_throwing_getter(self):
+        called = []
+        
+        def make_callback(key):
+            def callback(value):
+                called.append((key, value))
+            return callback
+        
+        bgs = BrokenGetterSpecimen(False)
+        not_broken_1 = PollerCellsSpecimen().state()['foo']
+        broken = bgs.state()['foo']
+        not_broken_2 = PollerCellsSpecimen().state()['foo']
+        self.poller.subscribe(not_broken_1, make_callback('1'), fast=True)
+        self.poller.subscribe(broken, make_callback('b'), fast=True)
+        self.poller.subscribe(not_broken_2, make_callback('2'), fast=True)
+        self.assertEqual(called, [])
+        bgs.broken = True
+        self.poller.poll(True)
+        self.assertEqual(called, [])
+    
+    # TODO: test multiple subscription behavior wrt throwing
+    # TODO: test interest updates on initial throw
 
 
 class PollerCellsSpecimen(ExportedState):
@@ -80,3 +120,19 @@ class PollerCellsSpecimen(ExportedState):
     
     def set_subscribable(self, value):
         self.subscribable.set(value)
+
+
+class BrokenGetterSpecimen(ExportedState):
+    def __init__(self, initially_broken):
+        self.broken = initially_broken
+    
+    @exported_value(changes='continuous', persists=False)
+    def get_foo(self):
+        if self.broken:
+            raise DummyBrokenGetterException()
+        else:
+            return 1000
+
+
+class DummyBrokenGetterException(Exception):
+    pass

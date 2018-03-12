@@ -311,7 +311,7 @@ class PollingCell(TargetingMixin, ValueCell):
     def subscribe2(self, subscriber, context):
         changes = self.__changes
         if changes == u'never':
-            subscription = _NeverSubscription()
+            subscription = never_subscription
         elif changes == u'continuous':
             subscription = context.poller.subscribe(self, subscriber, fast=True)
         elif changes == u'explicit' or changes == u'this_setter':
@@ -594,13 +594,16 @@ class Command(BaseCell):
     
     def subscribe2(self, subscriber, context):
         """implements BaseCell"""
-        return self.get(), _NeverSubscription()
+        return self.get(), never_subscription
 
 
 @implementer(ISubscription)
 class _NeverSubscription(object):
     def unsubscribe(self):
         pass
+
+
+never_subscription = _NeverSubscription()
 
 
 class ExportedState(object):

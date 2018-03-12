@@ -22,11 +22,14 @@ from __future__ import absolute_import, division, unicode_literals
 import bisect
 
 from twisted.internet import task, reactor as the_reactor
+from twisted.logger import Logger
 from zope.interface import implementer
 
-from shinysdr.values import BaseCell, ISubscription, StreamCell, SubscriptionContext
+from shinysdr.values import BaseCell, ISubscription, StreamCell, SubscriptionContext, never_subscription
 
 __all__ = []  # appended later
+
+_log = Logger()
 
 
 class Poller(object):
@@ -47,11 +50,14 @@ class Poller(object):
         if not isinstance(cell, BaseCell):
             # we're not actually against duck typing here; this is a sanity check
             raise TypeError('Poller given a non-cell %r' % (cell,))
-        if isinstance(cell, StreamCell):  # TODO kludge; use generic interface
-            target = _PollerStreamTarget(cell)
-        else:
-            target = _PollerValueTarget(cell)
-        return _PollerSubscription(self, target, subscriber, fast)
+        try:
+            if isinstance(cell, StreamCell):  # TODO kludge; use generic interface
+                target = _PollerStreamTarget(cell)
+            else:
+                target = _PollerValueTarget(cell)
+            return _PollerSubscription(self, target, subscriber, fast)
+        except _FailureToSubscribe:
+            return never_subscription
     
     def _add_subscription(self, target, subscription):
         self.__targets[subscription.fast].add(target, subscription)
@@ -161,13 +167,26 @@ class _PollerCellTarget(object):
 class _PollerValueTarget(_PollerCellTarget):
     def __init__(self, cell):
         _PollerCellTarget.__init__(self, cell)
-        self.__previous_value = self.__get()
+        try:
+            self.__previous_value = self.__get()
+        except Exception:
+            _log.failure("Exception in {cell}.get()", cell=cell)
+            self.unsubscribe()  # cancel effects of super __init__
+            raise _FailureToSubscribe()
+        self.__broken = False
 
     def __get(self):
         return self._obj.get()
 
     def poll(self, fire):
-        value = self.__get()
+        try:
+            value = self.__get()
+        except Exception:  # pylint: disable=broad-except
+            if not self.__broken:
+                _log.failure("Exception in {cell}.get()", cell=self._obj)
+            self.__broken = True
+            # TODO: Also feed this info out so callers can decide to give up / report failure to user
+            return
         if value != self.__previous_value:
             self.__previous_value = value
             fire(value)
@@ -247,6 +266,13 @@ class _SortedMultimap(object):
     
     def count_values(self):
         return self.__value_count
+
+
+class _FailureToSubscribe(Exception):
+    """Indicates that the cell being subscribed to failed to cooperate.
+    
+    Should not be observed outside of this module. Should not be logged; the original cause will already have been.
+    """
 
 
 # this is done last for load order
