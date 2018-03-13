@@ -302,7 +302,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
         
         self.__frame_dec = blocks.keep_one_in_n(
             itemsize=itemsize * input_length,
-            n=int(round(self.__frame_rate_to_decimation_conversion / self.__frame_rate)))
+            n=max(1, int(round(self.__frame_rate_to_decimation_conversion / self.__frame_rate))))
         
         # the actual FFT logic, which is similar to GR's logpwrfft_c
         window = windows.blackmanharris(input_length)
