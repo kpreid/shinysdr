@@ -250,26 +250,16 @@ define([
     });
   }
   
-  function openWebSocket(wsURL) {
-    // TODO: Have server deliver websocket URL, remove port number requirement
-    var ws = new WebSocket(wsURL);
-    ws.addEventListener('open', function (event) {
-      ws.send(''); // dummy required due to server limitation
-    }, true);
-    return ws;
-  }
-  
   const minRetryTime = 1000;
   const maxRetryTime = 20000;
   const backoff = 1.05;
-  function retryingConnection(wsURLFunc, connectionStateCallback, callback) {
+  function retryingConnection(attemptFn, connectionStateCallback, callback) {
     if (!connectionStateCallback) connectionStateCallback = function () {};
 
     var timeout = minRetryTime;
     var succeeded = false;
     function go() {
-      const wsURL = wsURLFunc();
-      const ws = openWebSocket(wsURL);
+      const ws = attemptFn();
       ws.addEventListener('open', function (event) {
         succeeded = true;
         timeout = minRetryTime;
@@ -277,7 +267,7 @@ define([
       }, true);
       ws.addEventListener('close', function (event) {
         if (succeeded) {
-          console.error('Lost WebSocket connection', wsURL, '- reason given:', event.reason);
+          console.error('Lost WebSocket connection; reason given:', event.reason);
           connectionStateCallback('disconnected');
         } else {
           timeout = Math.min(maxRetryTime, timeout * backoff);
@@ -347,7 +337,11 @@ define([
     
     const rootCell = new ReadCell(null, null, blockT, identity);
     
-    retryingConnection(() => rootURL, connectionStateCallback, ws => {
+    retryingConnection(() => new WebSocket(rootURL), connectionStateCallback, ws => {
+      ws.addEventListener('open', event => {
+        ws.send('');  // dummy required due to server limitation
+      }, true);
+
       ws.binaryType = 'arraybuffer';
 
       // indexed by object ids chosen by server

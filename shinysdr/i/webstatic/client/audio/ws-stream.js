@@ -183,12 +183,17 @@ define([
       });
       
       retryingConnection(
-        () => url + '?rate=' + encodeURIComponent(JSON.stringify(info.requested_sample_rate.get())),
+        () => new WebSocket(
+          url + '?rate=' + encodeURIComponent(JSON.stringify(info.requested_sample_rate.get()))),
         null,
         ws => handleWebSocket(ws, buffererMessagePort));
     });
     
     function handleWebSocket(ws, buffererMessagePort) {
+      ws.addEventListener('open', event => {
+        ws.send(''); // dummy required due to server limitation
+      }, true);
+
       ws.binaryType = 'arraybuffer';
       function lose(reason) {
         // TODO: Arrange to trigger exponential backoff if we get this kind of error promptly (maybe retryingConnection should just have a time threshold)
