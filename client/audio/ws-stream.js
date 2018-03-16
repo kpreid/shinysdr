@@ -62,7 +62,7 @@ define([
   // In connectAudio, we assume that the maximum audio bandwidth is lower than that suiting this sample rate, so that if the native sample rate is much higher than this we can send a lower one over the network without losing anything of interest.
   const ASSUMED_USEFUL_SAMPLE_RATE = 40000;
   
-  function connectAudio(scheduler, url, storage) {
+  function connectAudio(scheduler, url, storage, webSocketCtor = WebSocket) {
     const audio = new AudioContext();
     const nativeSampleRate = audio.sampleRate;
     const useScriptProcessor = !('audioWorklet' in audio);
@@ -181,14 +181,18 @@ define([
           }
         }
       });
-      
       retryingConnection(
-        () => url + '?rate=' + encodeURIComponent(JSON.stringify(info.requested_sample_rate.get())),
+        () => new webSocketCtor(
+          url + '?rate=' + encodeURIComponent(JSON.stringify(info.requested_sample_rate.get()))),
         null,
         ws => handleWebSocket(ws, buffererMessagePort));
     });
     
     function handleWebSocket(ws, buffererMessagePort) {
+      ws.addEventListener('open', event => {
+        ws.send(''); // dummy required due to server limitation
+      }, true);
+
       ws.binaryType = 'arraybuffer';
       function lose(reason) {
         // TODO: Arrange to trigger exponential backoff if we get this kind of error promptly (maybe retryingConnection should just have a time threshold)
