@@ -18,9 +18,11 @@
 'use strict';
 
 define([
+  'require',
   'map/map-core',
   'widgets',
 ], (
+  require,
   import_map_core,
   widgets
 ) => {
@@ -54,7 +56,7 @@ define([
         }
 
         var f = renderTrackFeature(dirty, station.track, callsign);
-        f.iconURL = '/client/plugins/shinysdr.plugins.wspr/w.svg';
+        f.iconURL = require.toUrl('./w.svg');
         return f;
       }
     });

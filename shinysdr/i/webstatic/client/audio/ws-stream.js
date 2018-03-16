@@ -18,6 +18,7 @@
 'use strict';
 
 define([
+  'require',
   '../audio/analyser',
   '../audio/bufferer',
   '../audio/util',
@@ -25,6 +26,7 @@ define([
   '../types',
   '../values',
 ], (
+  require,
   import_audio_analyser,
   import_audio_bufferer,
   import_audio_util,
@@ -149,7 +151,7 @@ define([
       };
       ascr.connect(nodeAfterSampleSource);
     } else {
-      buffererMessagePortPromise = audio.audioWorklet.addModule('/client/audio/bufferer.js').then(() => {
+      buffererMessagePortPromise = audio.audioWorklet.addModule(require.toUrl('audio/bufferer.js')).then(() => {
         const workletNode = new AudioWorkletNode(audio, 'WorkletBufferer', {
           numberOfInputs: 0,
           numberOfOutputs: 1,

@@ -18,10 +18,12 @@
 'use strict';
 
 define([
+  'require',
   'map/map-core',
   'widgets',
   'widgets/basic',
 ], (
+  require,
   import_map_core,
   widgets,
   import_widgets_basic
@@ -65,7 +67,7 @@ define([
         }
         var f = renderTrackFeature(dirty, trackCell,
           labelParts.join(' • '));
-        f.iconURL = '/client/plugins/shinysdr.plugins.mode_s/aircraft.svg';
+        f.iconURL = require.toUrl('./aircraft.svg');
         return f;
       }
     });

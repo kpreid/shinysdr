@@ -18,6 +18,7 @@
 'use strict';
 
 define([
+  'require',
   '../domtools',
   '../events',
   '../gltools',
@@ -32,6 +33,7 @@ define([
   'text!./points-f.glsl',
   'text!./curves-f.glsl',
 ], (
+  require,
   import_domtools,
   import_events,
   import_gltools,
@@ -515,7 +517,7 @@ define([
         gl.UNSIGNED_BYTE, // type
         new Uint8Array([baseGray, baseGray, baseGray, 255]));
       // TODO: Make this enableable/configurable.
-      if (false) loadImage('/client/NE1_50M_SR_W_rescaled.jpg', function(img) {
+      if (false) loadImage(require.toUrl('./NE1_50M_SR_W_rescaled.jpg'), function(img) {
         gl.bindTexture(gl.TEXTURE_2D, sphereTexture);
         gl.texImage2D(
           gl.TEXTURE_2D,
@@ -1009,7 +1011,7 @@ define([
           var labelsByIndex = layerState.labelsByIndex;
           var rendered = checkRendered(renderer(feature, dirty));
           if (rendered.position) {
-            var iconURL = rendered.iconURL || '/client/map/icons/default.svg';
+            var iconURL = rendered.iconURL || require.toUrl('./icons/default.svg');
             var anchor = rendered.labelSide || 'top';
             var textLabel = labelTextureManager.refTextLabel(
               anchor === 'left' ? -1 : anchor === 'right' ? 1 : 0,
