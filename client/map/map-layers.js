@@ -18,12 +18,14 @@
 'use strict';
 
 define([
+  'require',
   './map-core',
   '../math',
   '../network',
   '../types',
   '../values',
 ], (
+  require,
   import_map_core,
   import_math,
   import_network,
@@ -126,7 +128,7 @@ define([
     var addLayer = mapPluginConfig.addLayer;
     var scheduler = mapPluginConfig.scheduler;
     // TODO: .gz suffix really shouldn't be there. Configure web server appropriately.
-    addLayer('Basemap', makeStaticLayer('/client/map/basemap.geojson.gz', scheduler));
+    addLayer('Basemap', makeStaticLayer(require.toUrl('./basemap.geojson.gz'), scheduler));
   });
   
   function deviceTrack(device, dirty) {
@@ -217,7 +219,7 @@ define([
         
         // TODO: style for isReceiving
         return {
-          iconURL: '/client/map/icons/station-generic.svg',
+          iconURL: require.toUrl('./icons/station-generic.svg'),
           position: location,
           label: record.label,
           opacity: inSourceBand ? 1.0 : 0.25,
@@ -455,7 +457,7 @@ define([
       featureRenderer: function (devicePositioning, dirty) {
         // TODO: Because devicePositioning is a device component, we don't have the device itself in order to display the device's name. However, the Index is in a position to provide "containing object" information and arguably should.
         const f = renderTrackFeature(dirty, devicePositioning.track, '');
-        f.iconURL = '/client/map/icons/station-user.svg';
+        f.iconURL = require.toUrl('./icons/station-user.svg');
         return f;
       }
     });

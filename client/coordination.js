@@ -18,9 +18,11 @@
 'use strict';
   
 define([
+  'require',
   './types',
   './values',
 ], (
+  require,
   import_types,
   import_values
 ) => {
@@ -152,10 +154,10 @@ define([
     
     const themeType = new EnumT({
       // TODO get list of themes
-      '/client/themes/black.css': 'Dark',
-      '/client/themes/gray.css': 'Gray',
+      [require.toUrl('themes/black.css')]: 'Dark',
+      [require.toUrl('/client/themes/gray.css')]: 'Gray',
     });
-    const defaultTheme = '/client/themes/gray.css';
+    const defaultTheme = require.toUrl('/client/themes/gray.css');
     
     function cc(key, type, value) {
       return new StorageCell(clientStateStorage, type, value, key);

@@ -20,12 +20,14 @@
 'use strict';
 
 define([
+  'require',
   './domtools',
   './events',
   './types',
   './values',
   './widget',
 ], (
+  require,
   import_domtools,
   import_events,
   import_types,
@@ -264,7 +266,7 @@ define([
           const showButton = document.createElement('button');
           showButton.classList.add('pane-menu-button');
           const showButtonIcon = showButton.appendChild(document.createElement('img'));
-          showButtonIcon.src = '/client/menu.svg';
+          showButtonIcon.src = require.toUrl('./menu.svg');
           showButtonIcon.alt = '\u2261';
           this._listShowButton = showButton;
           setupPaneToggleButton(showButton, listPaneImpl);
