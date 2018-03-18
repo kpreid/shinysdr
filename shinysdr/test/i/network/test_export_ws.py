@@ -173,9 +173,11 @@ class TestStateStream(StateStreamTestCase):
     
     def test_stream_cell(self):
         self.setUpForObject(StreamCellSpecimen())
+        description = self.object.state()['s'].description()
+        self.assertEqual(description['current'], [((), [1, 2, 17])])  # numbers come from the specimen's get()
         self.assertEqual(self.getUpdates(), transform_for_json([
             [u'register_block', 1, u'urlroot', []],
-            [u'register_cell', 2, u'urlroot/s', self.object.state()['s'].description()],
+            [u'register_cell', 2, u'urlroot/s', description],
             [u'value', 1, {u's': 2}],
             [u'value', 0, 1],
         ]))
@@ -247,7 +249,7 @@ class StreamCellSpecimen(ExportedState):
     
     def get(self):
         # acting as distributor
-        return u'gotten'
+        return b'\x01\x02\x11'
 
 
 class TestSerialization(StateStreamTestCase):

@@ -156,37 +156,11 @@ define([
   RemoteCommandCell.prototype = Object.create(CommandCell.prototype, {constructor: {value: RemoteCommandCell}});
   //exports.CommandCell = CommandCell;  // not yet needed, params in flux, so not exported yet
   
-  function BulkDataCell(setter, initialValueJson, metadata) {
+  function BulkDataCell(setter, initialElementsJson, metadata) {
     let type = metadata.value_type;
     
-    let lastValue;
-    {
-      // Kludge because the server doesn't actually know how to deliver this properly in JSON, only binary.
-      const [info, packed_data] = initialValueJson;
-      if (Array.isArray(info) /* as opposed to object */) {
-        switch (type.dataFormat) {
-          case 'spectrum-byte': {
-            const offset = info[2];
-            const unpacked_data = new Float32Array(packed_data.length);
-            for (let i = packed_data.length - 1; i >= 0; i--) {
-              unpacked_data[i] = packed_data[i] - offset;
-            }
-            lastValue = [{freq: info[0], rate: info[1]}, unpacked_data];
-            break;
-          }
-          case 'scope-float': {
-            const rate = info[0];
-            const data = new Float32Array(packed_data);
-            lastValue = [{rate:rate}, data];
-            break;
-          }
-          default:
-            throw new Error('Unknown bulk data format');
-        }
-      } else {
-        lastValue = initialValueJson;
-      }
-    }
+    let currentElements = Array.prototype.map.call(initialElementsJson,
+        el => convertBulkDataElementJson(type, el));
 
     // kludge to ensure that widgets get all of the frames
     // TODO: put this on a more general and sound framework
@@ -194,54 +168,82 @@ define([
     
     // infoAndFFT is of the format [{freq:<number>, rate:<number>}, <Float32Array>]
     function transform(buffer) {
-      let newValue;
-      const view = new DataView(buffer);
-      // starts at 4 due to cell-ID field
-      switch (type.dataFormat) {
-        case 'spectrum-byte': {
-          const freq = view.getFloat64(4, true);
-          const rate = view.getFloat32(4+8, true);
-          const offset = view.getFloat32(4+8+4, true);
-          const packed_data = new Int8Array(buffer, 4+8+4+4);
-          const unpacked_data = new Float32Array(packed_data.length);
-          for (let i = packed_data.length - 1; i >= 0; i--) {
-            unpacked_data[i] = packed_data[i] - offset;
-          }
-          //console.log(id, freq, rate, data.length);
-          newValue = [{freq:freq, rate:rate}, unpacked_data];
-          break;
-        }
-        case 'scope-float': {
-          const rate = view.getFloat64(4+8, true);
-          const data = new Float32Array(buffer, 4+8);
-          newValue = [{rate:rate}, data];
-          break;
-        }
-        default:
-          throw new Error('Unknown bulk data format');
-      }
+      const newElement = convertBulkDataElementBinary(type, buffer);
+      currentElements = [newElement];
 
       // Deliver value
-      lastValue = newValue;
       // TODO replace this with something async
       for (let i = 0; i < subscriptions.length; i++) {
         const callbackWithoutThis = subscriptions[i];
-        callbackWithoutThis(newValue);
+        callbackWithoutThis(newElement);
       }
       
-      return newValue;
+      return currentElements;
     }
     
-    ReadCell.call(this, setter, lastValue, metadata, transform);
+    ReadCell.call(this, setter, currentElements, metadata, transform);
     
     this.subscribe = function(callback) {
       // TODO need to provide for unsubscribing
       subscriptions.push(callback);
-      callback(lastValue);
+      for (let element of currentElements) {
+        callback(element);
+      }
     };
   }
   BulkDataCell.prototype = Object.create(ReadCell.prototype, {constructor: {value: BulkDataCell}});
   exports.BulkDataCell = BulkDataCell;
+  
+  function convertBulkDataElementJson(type, valueJson) {
+    // Kludge because the server doesn't actually know how to deliver this properly in JSON, only binary, so we get a plain array of numbers.
+    const [info, packed_data] = valueJson;
+    if (!Array.isArray(info)) {
+      throw new Error('convertBulkDataElementJson oops ' + info);
+    }
+    switch (type.dataFormat) {
+      case 'spectrum-byte': {
+        const offset = info[2];
+        const unpacked_data = new Float32Array(packed_data.length);
+        for (let i = packed_data.length - 1; i >= 0; i--) {
+          unpacked_data[i] = packed_data[i] - offset;
+        }
+        return [{freq: info[0], rate: info[1]}, unpacked_data];
+      }
+      case 'scope-float': {
+        const rate = info[0];
+        const data = new Float32Array(packed_data);
+        return [{rate:rate}, data];
+      }
+      default:
+        throw new Error('convertBulkDataElementJson: Unknown bulk data format');
+    }
+  }
+  
+  function convertBulkDataElementBinary(type, buffer) {
+    const view = new DataView(buffer);
+    // starts at 4 due to cell-ID field
+    switch (type.dataFormat) {
+      case 'spectrum-byte': {
+        const freq = view.getFloat64(4, true);
+        const rate = view.getFloat32(4+8, true);
+        const offset = view.getFloat32(4+8+4, true);
+        const packed_data = new Int8Array(buffer, 4+8+4+4);
+        const unpacked_data = new Float32Array(packed_data.length);
+        for (let i = packed_data.length - 1; i >= 0; i--) {
+          unpacked_data[i] = packed_data[i] - offset;
+        }
+        //console.log(id, freq, rate, data.length);
+        return [{freq:freq, rate:rate}, unpacked_data];
+      }
+      case 'scope-float': {
+        const rate = view.getFloat64(4+8, true);
+        const data = new Float32Array(buffer, 4+8);
+        return [{rate:rate}, data];
+      }
+      default:
+        throw new Error('convertBulkDataElementBinary: Unknown bulk data format');
+    }
+  }
   
   function setNonEnum(o, p, v) {
     Object.defineProperty(o, p, {

@@ -416,12 +416,12 @@ class StreamCell(ValueCell, TargetingMixin):
         return _MessageSplitter(queue, self.__igetter, close, self.type())
     
     def get(self):
-        """Return the most recent item in the stream."""
+        """Return the most recent item(s) in the stream."""
         # TODO: Duplicated code with _MessageSplitter.get.
         item_string = self.__dgetter().get()
         unpacker = array.array(self.type().get_array_format())
         unpacker.fromstring(item_string)
-        return (self.__igetter(), unpacker.tolist())
+        return [(self.__igetter(), unpacker.tolist())]
     
     def set(self, value):
         raise Exception('StreamCell is not writable.')
