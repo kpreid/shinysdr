@@ -469,7 +469,7 @@ class BulkDataElement(namedtuple('BulkDataElement', [
     'data',
 ])):
     def to_json(self):
-        unpacker = array.array('b')
+        unpacker = array.array(b'b')
         unpacker.fromstring(self.data)
         return [self.info, unpacker.tolist()]
 
