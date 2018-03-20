@@ -27,7 +27,7 @@ import urllib
 from twisted.internet import reactor as the_reactor  # TODO fix
 from twisted.internet.protocol import Protocol
 from twisted.python import log
-from zope.interface import providedBy
+from zope.interface import implementer, providedBy
 
 from gnuradio import gr
 
@@ -35,7 +35,10 @@ from shinysdr.i.json import serialize
 from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT
 from shinysdr.signals import SignalType
 from shinysdr.types import BulkDataT, ReferenceT
-from shinysdr.values import BaseCell, ExportedState, PollingCell
+from shinysdr.values import BaseCell, ExportedState, IDeltaSubscriber, PollingCell
+
+
+_NOT_A_VALUE = object()
 
 
 class _StateStreamObjectRegistration(object):
@@ -46,11 +49,12 @@ class _StateStreamObjectRegistration(object):
         self.serial = serial
         self.url = url
         self.__previous_references = []
-        self.__previous_value_message = None
+        self.__previous_value_message = _NOT_A_VALUE
         self.__dead = False
         if isinstance(obj, BaseCell):
             self.__obj_is_cell = True
-            initial_value, self.__subscription = obj.subscribe2(self.__listen_cell, subscription_context)
+            subscriber = _StateStreamSubscriber(self.__listen_cell, self.__listen_cell_patch)
+            initial_value, self.__subscription = obj.subscribe2(subscriber, subscription_context)
         elif isinstance(obj, ExportedState):
             self.__obj_is_cell = False
             if obj.state_is_dynamic():  # TODO: can we not bother checking? this may be a relic from polling
@@ -90,7 +94,7 @@ class _StateStreamObjectRegistration(object):
     def force_send_current_value(self):
         """Ensure that the latest value has been put on the stream."""
         if self.__obj_is_cell:
-            # TODO: not fully correct wrt streaming, but right now that won't happen
+            # TODO: not fully correct wrt streaming, but right now that won't happen because there are no writable and streaming cells
             self.__listen_cell(self.obj.get())
     
     def get_object_which_is_cell(self):
@@ -111,8 +115,21 @@ class _StateStreamObjectRegistration(object):
                 self.__ssi._send1(True, struct.pack('I', self.serial) + value_type.pack(bulk))
         else:
             assert not self.__previous_references  # shouldn't happen, could be handled but unimplemented
-            # TODO fix private ref to _send1
             self.__send_value_message(value)
+    
+    def __listen_cell_patch(self, patch):
+        if self.__dead:
+            return
+        value_type = self.obj.type()
+        if value_type.is_reference():
+            raise NotImplementedError()  # shouldn't happen
+        elif isinstance(value_type, BulkDataT):
+            for bulk in patch:
+                # TODO fix private ref to _send1
+                self.__ssi._send1(True, struct.pack('I', self.serial) + value_type.pack(bulk))
+        else:
+            self.__ssi._send1(False, (u'value_append', self.serial, patch))
+            self.__previous_value_message = _NOT_A_VALUE
     
     def __listen_state(self, state):
         if self.__dead:
@@ -182,6 +199,22 @@ class _StateStreamObjectRegistration(object):
             # decrement recursively
             for obj in refs:
                 self.__ssi._registered_objs[obj].dec_refcount_and_maybe_notify()
+
+
+@implementer(IDeltaSubscriber)
+class _StateStreamSubscriber(object):
+    def __init__(self, handle_value, handle_append):
+        self.__handle_value = handle_value
+        self.__handle_append = handle_append
+    
+    def __call__(self, value):
+        self.__handle_value(value)
+    
+    def append(self, patch):
+        self.__handle_append(patch)
+    
+    def prepend(patch):
+        pass  # unimplemented, unused
 
 
 # TODO: Better name for this category of object

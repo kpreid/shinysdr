@@ -22,6 +22,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+import codecs
 from collections import namedtuple
 import weakref
 
@@ -312,7 +313,7 @@ class PollingCell(TargetingMixin, ValueCell):
         value = self.__getter()
         if self.type().is_reference():
             # informative-failure debugging aid
-            assert isinstance(value, ExportedState), (self._target, self._key)
+            assert isinstance(value, ExportedState), ('Reference value was not an ExportedState', self._target, self._key)
         return value
     
     def set(self, value):
@@ -348,14 +349,18 @@ class PollingCell(TargetingMixin, ValueCell):
 
 
 class GRMsgQueueCell(ValueCell):
-    # TODO: Some of this should be extractable to a general stream cell class, but none of it obviously is yet.
-    """A cell which consumes a gr.msg_queue, with items in the format blocks.message_sink generates, and provides its contents as the streaming cell value."""
+    """A cell which consumes a gr.msg_queue, with items in the format blocks.message_sink generates, and provides its contents as the streaming cell value.
     
-    # TODO: Less magic number. This was defined as enough data to give the client-side averaging filter its full window.
-    __history_length = 32
+    Abstract; use ElementQueueCell or StringQueueCell directly.
+    """
     
-    def __init__(self, queue, info_getter, type, **kwargs):
-        assert isinstance(type, BulkDataT)
+    def __init__(self,
+            queue,
+            type,
+            info_getter=lambda: None,
+            **kwargs):
+        if not (type == unicode or isinstance(type, BulkDataT)):
+            raise ValueError('Unsupported type for GRMsgQueueCell {}'.format(type))
         ValueCell.__init__(self,
             type=type,
             writable=False,
@@ -365,13 +370,10 @@ class GRMsgQueueCell(ValueCell):
         # parameters
         self.__queue = queue
         self.__info_getter = info_getter
-        
-        # internal buffer -- caution, mutable
-        self.__latest = []
     
     def get(self):
-        """implement abstract"""
-        return self.__latest[:]
+        # still abstract
+        raise NotImplementedError(self)
     
     def set(self, value):
         """implement abstract"""
@@ -382,10 +384,14 @@ class GRMsgQueueCell(ValueCell):
         """implement abstract"""
         return self.get(), context.poller.subscribe(self, subscriber, fast=True, delegate_polling_to_me=True)
     
+    def _deliver_message(self, grmessage, info, fire):
+        """Implement this method to handle the gr.message objects from the queue."""
+        raise NotImplementedError(self)
+    
     def _poll_from_poller(self, fire):
         """Extract all items currently in the queue and deliver them."""
         got_info = False
-        latest_info = None        
+        latest_info = None
         while True:
             message = safe_delete_head_nowait(self.__queue)
             if not message:
@@ -393,23 +399,72 @@ class GRMsgQueueCell(ValueCell):
             if not got_info:
                 got_info = True
                 latest_info = self.__info_getter()
-            string = message.to_string()
-            itemsize = int(message.arg1())
-            count = int(message.arg2())
-            if not count: return
-            
-            parsed_items = []
-            for index in xrange(count):
-                # extract value
-                item_string = string[itemsize * index:itemsize * (index + 1)]
-                parsed_items.append(BulkDataElement(
-                    data=item_string,
-                    info=latest_info))
-            
-            self.__latest.extend(parsed_items)
-            self.__latest[:-self.__history_length] = []
-            
-            fire.append(parsed_items)
+            self._deliver_message(message, latest_info, fire)
+
+
+class ElementQueueCell(GRMsgQueueCell):
+    def __init__(self,
+            queue,
+            type,
+            history_length=32,
+            **kwargs):
+        assert isinstance(type, BulkDataT)
+        GRMsgQueueCell.__init__(self,
+            queue=queue,
+            type=type,
+            **kwargs)
+        
+        self.__history_length = history_length
+        self.__latest = []  # caution, mutable
+    
+    def get(self):
+        """implement abstract"""
+        return self.__latest[:]
+    
+    def _deliver_message(self, grmessage, info, fire):
+        string = grmessage.to_string()
+        itemsize = int(grmessage.arg1())
+        count = int(grmessage.arg2())
+        if not count: return
+        
+        parsed_items = []
+        for index in xrange(count):
+            # extract value
+            item_string = string[itemsize * index:itemsize * (index + 1)]
+            parsed_items.append(BulkDataElement(
+                data=item_string,
+                info=info))
+        
+        self.__latest.extend(parsed_items)
+        self.__latest[:-self.__history_length] = []
+        
+        fire.append(parsed_items)
+
+
+class StringQueueCell(GRMsgQueueCell):
+    def __init__(self,
+            queue,
+            encoding,
+            history_length=1000,
+            **kwargs):
+        GRMsgQueueCell.__init__(self,
+            queue=queue,
+            type=unicode,
+            **kwargs)
+        
+        self.__history_length = history_length
+        self.__decoder = codecs.getincrementaldecoder(encoding)(errors='replace')
+        self.__latest = ''
+    
+    def get(self):
+        """implement abstract"""
+        return self.__latest
+    
+    def _deliver_message(self, grmessage, info, fire):
+        message_string = self.__decoder.decode(grmessage.to_string())
+        if message_string:
+            self.__latest = (self.__latest + message_string)[-self.__history_length:]
+            fire.append(message_string)
 
 
 class LooseCell(ValueCell):

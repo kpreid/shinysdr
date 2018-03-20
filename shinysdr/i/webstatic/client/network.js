@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
+// Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 // 
 // This file is part of ShinySDR.
 // 
@@ -135,10 +135,15 @@ define([
   function ReadCell(setter, /* initial */ value, metadata, transform) {
     Cell.call(this, metadata);
     
-    this._update = function(data) {
+    this._update = data => {
       value = transform(data);
       this.n.notify();
-    }.bind(this);
+    };
+    this._update.append = patchData => {
+      // TODO: very definitely does not work in general
+      value = value + transform(patchData);
+      this.n.notify();
+    };
     
     this.get = function() {
       return value;
@@ -402,6 +407,19 @@ define([
             }
             break;
           }
+          case 'value_append': {
+            const [,, patch] = message;
+            if (!(id in idMap)) {
+              console.error('Undefined id in state stream message', message);
+              return;
+            }
+            if (!isCellMap[id]) {
+              console.error('invalid value_append', message);
+              return;
+            }
+            updaterMap[id].append(patch);
+            break;
+          }
           case 'delete': {
             // TODO: explicitly invalidate the objects so we catch hanging on to them too long
             delete idMap[id];
@@ -424,6 +442,7 @@ define([
         var view = new DataView(buffer);
         var id = view.getUint32(0, true);
         var cell_updater = updaterMap[id];
+        // TODO: should go through the 'append' path but that is not properly generalized yet
         cell_updater(buffer);
       }
       

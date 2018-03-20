@@ -1,4 +1,4 @@
-# Copyright 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
+# Copyright 2014, 2015, 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -35,10 +35,9 @@ except ImportError as e:
 
 from shinysdr.math import dB, rotator_inc
 from shinysdr.filters import MultistageChannelFilter
-from shinysdr.gr_ext import safe_delete_head_nowait
 from shinysdr.interfaces import ModeDef, IDemodulator, BandShape
 from shinysdr.signals import SignalType
-from shinysdr.values import ExportedState, exported_value
+from shinysdr.values import ExportedState, StringQueueCell, exported_value
 
 
 @implementer(IDemodulator)
@@ -63,7 +62,6 @@ class PSK31Demodulator(gr.hier_block2, ExportedState):
         
         channel_filter = self.__make_channel_filter()
 
-        self.__text = u''
         self.__char_queue = gr.msg_queue(limit=100)
         self.__char_sink = blocks.message_sink(gr.sizeof_char, self.__char_queue, True)
 
@@ -109,28 +107,25 @@ class PSK31Demodulator(gr.hier_block2, ExportedState):
             cutoff_freq=250 - 25,
             transition_width=25)
 
+    def state_def(self):
+        for d in super(PSK31Demodulator, self).state_def():
+            yield d
+        # TODO make this possible to be decorator style
+        yield 'text', StringQueueCell(
+            queue=self.__char_queue,
+            encoding='us-ascii')
+
     @exported_value(type=BandShape, changes='never')
     def get_band_shape(self):
         """implement IDemodulator"""
         return BandShape.bandpass_transition(
             low=-self.__cutoff,
             high=self.__cutoff,
-            transition=self.__transition_width,
-        )
+            transition=self.__transition_width)
     
     def get_output_type(self):
         """implement IDemodulator"""
         return SignalType(kind='MONO', sample_rate=self.__demod_rate)
-
-    @exported_value(type=unicode, changes='continuous')
-    def get_text(self):
-        message = safe_delete_head_nowait(self.__char_queue)
-        if message:
-            textstring = self.__text
-            textstring += message.to_string().decode('us-ascii')
-            # TODO: Make the buffer longer and arrange so partial updates rather than the entire buffer can be sent to clients.
-            self.__text = textstring[-100:]
-        return self.__text
 
 
 pluginMode = ModeDef(mode='PSK31',

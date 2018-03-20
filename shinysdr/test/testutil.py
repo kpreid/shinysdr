@@ -161,6 +161,15 @@ class _DeltaSubscriber(object):
         self.__subscription_tester._log_subscriber_call('prepend', patch)
 
 
+class Cells(ExportedState):
+    """Helper to create an ExportedState of arbitrary non-dynamic shape."""
+    def __init__(self, cells):
+        self.__cells = cells
+    
+    def state_def(self):
+        for kv in self.__cells.iteritems():
+            yield kv
+
 # --- Radio test utilities ---
 
 

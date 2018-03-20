@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
@@ -23,7 +24,7 @@ from gnuradio import gr
 
 from shinysdr.test.testutil import CellSubscriptionTester, LoopbackInterestTracker
 from shinysdr.types import BulkDataElement, BulkDataT, EnumRow, RangeT, ReferenceT, to_value_type
-from shinysdr.values import CellDict, CollectionState, ExportedState, LooseCell, GRMsgQueueCell, PollingCell, ViewCell, command, exported_value, nullExportedState, setter, unserialize_exported_state
+from shinysdr.values import CellDict, CollectionState, ElementQueueCell, ExportedState, LooseCell, PollingCell, StringQueueCell, ViewCell, command, exported_value, nullExportedState, setter, unserialize_exported_state
 
 
 class TestExportedState(unittest.TestCase):
@@ -262,6 +263,8 @@ class BlockCellSpecimen(ExportedState):
 
 
 class TestGRMsgQueueCell(unittest.TestCase):
+    cell = None  # for lint
+    
     def setUp(self):
         self.info_value = 1000
         
@@ -269,15 +272,25 @@ class TestGRMsgQueueCell(unittest.TestCase):
             self.info_value += 1
             return (self.info_value,)
         
+        self.info_getter = info_getter
         self.queue = gr.msg_queue()
-        self.cell = GRMsgQueueCell(
+    
+    def setUpForBulkData(self):
+        self.cell = ElementQueueCell(
             queue=self.queue,
-            info_getter=info_getter,
+            info_getter=self.info_getter,
             type=BulkDataT(array_format='f', info_format='d'),
             interest_tracker=LoopbackInterestTracker())
     
-    def test_get_before_and_after_poll(self):
-        self.queue.insert_tail(gr.message().make_from_string(b'ab', 0, 1, len('ab')))
+    def setUpForUnicodeString(self):
+        self.cell = StringQueueCell(
+            queue=self.queue,
+            encoding='utf-8',
+            interest_tracker=LoopbackInterestTracker())
+    
+    def test_element_get_before_and_after_poll(self):
+        self.setUpForBulkData()
+        self.queue.insert_tail(make_bytes_msg(b'ab'))
         gotten = self.cell.get()
         self.assertEqual(gotten, [])
         st = CellSubscriptionTester(self.cell, delta=True)
@@ -288,27 +301,77 @@ class TestGRMsgQueueCell(unittest.TestCase):
         ])
         self.assertEqual(gotten, [])  # not mutating list
     
-    def test_with_delta_subscriber(self):
+    def test_element_delta_subscriber(self):
+        self.setUpForBulkData()
         st = CellSubscriptionTester(self.cell, delta=True)
-        self.queue.insert_tail(gr.message().make_from_string(b'ab', 0, 1, len('ab')))
+        self.queue.insert_tail(make_bytes_msg(b'ab'))
         st.expect_now([
             BulkDataElement(data=b'a', info=(1001,)),
             BulkDataElement(data=b'b', info=(1001,))
         ], kind='append')
         st.unsubscribe()
-        self.queue.insert_tail(gr.message().make_from_string(b'ignored', 0, 1, len('ignored')))
+        self.queue.insert_tail(make_bytes_msg(b'ignored'))
         st.advance()
     
-    def test_without_delta_subscriber(self):
+    def test_element_plain_subscriber(self):
+        self.setUpForBulkData()
         st = CellSubscriptionTester(self.cell, delta=False)
-        self.queue.insert_tail(gr.message().make_from_string(b'ab', 0, 1, len('ab')))
+        self.queue.insert_tail(make_bytes_msg(b'ab'))
         st.expect_now([
             BulkDataElement(data=b'a', info=(1001,)),
             BulkDataElement(data=b'b', info=(1001,))
         ], kind='value')
         st.unsubscribe()
-        self.queue.insert_tail(gr.message().make_from_string(b'ignored', 0, 1, len('ignored')))
+        self.queue.insert_tail(make_bytes_msg(b'ignored'))
         st.advance()
+    
+    def test_string_get(self):
+        self.setUpForUnicodeString()
+        self.queue.insert_tail(make_bytes_msg('abç'.encode('utf-8')))
+        gotten = self.cell.get()
+        self.assertTrue(isinstance(gotten, unicode))
+        self.assertEqual(gotten, u'')
+        st = CellSubscriptionTester(self.cell, delta=True)
+        st.advance()
+        gotten = self.cell.get()
+        self.assertTrue(isinstance(gotten, unicode))
+        self.assertEqual(gotten, 'abç')
+        
+        # now append some more to test the buffer
+        self.queue.insert_tail(make_bytes_msg('deƒ'.encode('utf-8')))
+        st.advance()
+        self.assertEqual(self.cell.get(), 'abçdeƒ')
+    
+    def test_string_coding_error(self):
+        self.setUpForUnicodeString()
+        self.queue.insert_tail(make_bytes_msg(b'ab\xFF'))
+        st = CellSubscriptionTester(self.cell, delta=True)
+        st.expect_now('ab\uFFFD', kind='append')
+    
+    def test_string_delta_subscriber(self):
+        self.setUpForUnicodeString()
+        st = CellSubscriptionTester(self.cell, delta=True)
+        self.queue.insert_tail(make_bytes_msg('abç'.encode('utf-8')))
+        st.expect_now('abç', kind='append')
+        st.unsubscribe()
+        self.queue.insert_tail(make_bytes_msg(b'ignored'))
+        st.advance()
+    
+    def test_string_plain_subscriber(self):
+        self.setUpForUnicodeString()
+        st = CellSubscriptionTester(self.cell, delta=False)
+        self.queue.insert_tail(make_bytes_msg('abç'.encode('utf-8')))
+        st.expect_now('abç')
+        self.queue.insert_tail(make_bytes_msg('deƒ'.encode('utf-8')))
+        
+        # TODO: This is not the correct result; it should match get().
+        # Poller currently does not deal with attaching simple subscribers correctly
+        st.expect_now('deƒ')
+
+
+def make_bytes_msg(s):
+    assert isinstance(s, str)
+    return gr.message().make_from_string(s, 0, 1, len(s))
 
 
 class TestLooseCell(unittest.TestCase):

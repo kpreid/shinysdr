@@ -36,12 +36,11 @@ try:
 except ImportError as e:
     _unavailability = unicode(e)
 
-from shinysdr.gr_ext import safe_delete_head_nowait
 from shinysdr.math import dB, rotator_inc
 from shinysdr.filters import MultistageChannelFilter
 from shinysdr.interfaces import BandShape, ModeDef, IDemodulator, IModulator
 from shinysdr.signals import SignalType, no_signal
-from shinysdr.values import ExportedState, exported_value
+from shinysdr.values import ExportedState, StringQueueCell, exported_value
 
 
 # note: this string is ordered so that the first bit (on the air) is the least significant bit of the index in the string
@@ -89,7 +88,6 @@ class RTTYDemodulator(gr.hier_block2, ExportedState):
         
         channel_filter = self.__make_channel_filter()
 
-        self.__text = u''
         self.__char_queue = gr.msg_queue(limit=100)
         self.__char_sink = blocks.message_sink(gr.sizeof_char, self.__char_queue, True)
 
@@ -151,6 +149,14 @@ class RTTYDemodulator(gr.hier_block2, ExportedState):
 
         return af_filter
 
+    def state_def(self):
+        for d in super(RTTYDemodulator, self).state_def():
+            yield d
+        # TODO make this possible to be decorator style
+        yield 'text', StringQueueCell(
+            queue=self.__char_queue,
+            encoding='us-ascii')
+
     @exported_value(type=BandShape, changes='never')
     def get_band_shape(self):
         """implement IDemodulator"""
@@ -166,16 +172,6 @@ class RTTYDemodulator(gr.hier_block2, ExportedState):
     def get_output_type(self):
         """implement IDemodulator"""
         return SignalType(kind='MONO', sample_rate=self.__demod_rate)
-
-    @exported_value(type=unicode, changes='continuous')
-    def get_text(self):
-        message = safe_delete_head_nowait(self.__char_queue)
-        if message:
-            textstring = self.__text
-            textstring += message.to_string().decode('us-ascii')
-            # TODO: Make the buffer longer and arrange so partial updates rather than the entire buffer can be sent to clients.
-            self.__text = textstring[-100:]
-        return self.__text
 
 
 # Because we don't currently have an encoder which can operate as a block, the rtty modulator is limited to looping a fixed message. This is good enough for simulation testing.
