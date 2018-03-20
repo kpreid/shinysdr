@@ -75,7 +75,7 @@ class TestStateStream(StateStreamTestCase):
         self.setUpForObject(StateSpecimen())
         self.assertEqual(self.getUpdates(), transform_for_json([
             ['register_block', 1, 'urlroot', ['shinysdr.test.i.network.test_export_ws.IFoo']],
-            ['register_cell', 2, 'urlroot/rw', self.object.state()['rw'].description()],
+            ['register_cell', 2, 'urlroot/rw', self.object.state()['rw'].description(), 1.0],
             ['value', 1, {'rw': 2}],
             ['value', 0, 1],
         ]))
@@ -90,11 +90,11 @@ class TestStateStream(StateStreamTestCase):
         self.setUpForObject(DuplicateReferenceSpecimen())
         self.assertEqual(self.getUpdates(), transform_for_json([
             [u'register_block', 1, u'urlroot', []],
-            [u'register_cell', 2, u'urlroot/foo', self.object.state()['foo'].description()],
+            [u'register_cell', 2, u'urlroot/foo', self.object.state()['foo'].description(), None],
             [u'register_block', 3, u'urlroot/foo', [u'shinysdr.values.INull']],
             [u'value', 3, {}],
             [u'value', 2, 3],
-            [u'register_cell', 4, u'urlroot/bar', self.object.state()['bar'].description()],
+            [u'register_cell', 4, u'urlroot/bar', self.object.state()['bar'].description(), None],
             [u'value', 4, 3],
             [u'value', 1, {u'bar': 4, u'foo': 2}],
             [u'value', 0, 1],
@@ -122,7 +122,7 @@ class TestStateStream(StateStreamTestCase):
         
         self.assertEqual(self.getUpdates(), transform_for_json([
             ['register_block', 1, 'urlroot', []],
-            ['register_cell', 2, 'urlroot/a', self.object.state()['a'].description()],
+            ['register_cell', 2, 'urlroot/a', self.object.state()['a'].description(), None],
             ['register_block', 3, 'urlroot/a', []],
             ['value', 3, {}],
             ['value', 2, 3],
@@ -140,7 +140,7 @@ class TestStateStream(StateStreamTestCase):
     def test_send_set_normal(self):
         self.setUpForObject(StateSpecimen())
         self.assertIn(
-            transform_for_json(['register_cell', 2, 'urlroot/rw', self.object.state()['rw'].description()]),
+            transform_for_json(['register_cell', 2, 'urlroot/rw', self.object.state()['rw'].description(), 1.0]),
             self.getUpdates())
         self.stream.dataReceived(json.dumps(['set', 2, 100.0, 1234]))
         self.assertEqual(self.getUpdates(), [
@@ -186,13 +186,9 @@ class TestStateStream(StateStreamTestCase):
         # subscription.unsubscribe()
         
         description = cell.description()
-        self.assertEqual(description['current'], [
-            # BulkDataElement(data='a', info=(1,)),
-            # BulkDataElement(data='b', info=(1,)),
-        ])
         self.assertEqual(self.getUpdates(), transform_for_json([
             [u'register_block', 1, u'urlroot', []],
-            [u'register_cell', 2, u'urlroot/s', description],
+            [u'register_cell', 2, u'urlroot/s', description, []],
             [u'value', 1, {u's': 2}],
             [u'value', 0, 1],
             ['actually_binary', b'\x02\x00\x00\x00\x01a'],

@@ -247,14 +247,11 @@ class ValueCell(BaseCell):
         BaseCell.__init__(self, type=type, **kwargs)
     
     def description(self):
-        d = {
+        return {
             u'type': u'value_cell',
             u'metadata': self.metadata(),
             u'writable': self.isWritable()
         }
-        if not self.type().is_reference():  # TODO kludge
-            d[u'current'] = self.get()
-        return d
 
 
 # The possible values of the 'changes' parameter to a cell of type PollingCell, which determine when the cell's getter is polled to check for changes.
@@ -568,7 +565,6 @@ class Command(BaseCell):
             u'type': 'command_cell',
             u'metadata': self.metadata(),
             u'writable': self.isWritable(),
-            u'current': self.get(),
         }
     
     def get(self):

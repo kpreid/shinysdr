@@ -307,7 +307,7 @@ define([
   }
   
   // TODO: too many args, figure out an object that is a sensible bundle
-  function makeCell(url, setter, id, desc, idMap) {
+  function makeCell(url, setter, id, desc, initialValue, idMap) {
     const type = typeFromDesc(desc.metadata.value_type);
     const metadata = {
       value_type: type,
@@ -316,19 +316,18 @@ define([
     };
     var cell;
     if (type === blockT) {
-      // TODO eliminate special case by making server block cells less special?
+      // TODO eliminate bogus initial value by adding server support for reference initial values
       // TODO blocks should not need urls (switch http op to websocket)
-      cell = new ReadCell(setter, /* dummy */ makeBlock(url, []), metadata,
-        function (id) { return idMap[id]; });
+      cell = new ReadCell(setter, /* dummy */ makeBlock(url, []), metadata, id => idMap[id]);
     } else if (type instanceof BulkDataT) {
       // TODO can we eliminate this special case
-      cell = new BulkDataCell(setter, desc.current, metadata);
+      cell = new BulkDataCell(setter, initialValue, metadata);
     } else if (desc.type === 'command_cell') {
       cell = new RemoteCommandCell(setter, metadata);
     } else if (desc.writable) {
-      cell = new ReadWriteCell(setter, desc.current, metadata);
+      cell = new ReadWriteCell(setter, initialValue, metadata);
     } else {
-      cell = new ReadCell(setter, desc.current, metadata, identity);
+      cell = new ReadCell(setter, initialValue, metadata, identity);
     }
     return [cell, cell._update];
   }
@@ -359,26 +358,24 @@ define([
       isCellMap[0] = true;
       
       function oneMessage(message) {
-        const op = message[0];
-        const id = message[1];
+        const [op, id] = message;
+        // console.log(...message);
         switch (op) {
           case 'register_block': {
-            const url = message[2];
-            const interfaces = message[3];
+            const [,, url, interfaces] = message;
             updaterMap[id] = idMap[id] = makeBlock(url, interfaces);
             isCellMap[id] = false;
             break;
           }
           case 'register_cell': {
-            const url = message[2];
-            const desc = message[3];
+            const [,, url, desc, initialValue] = message;
             const pair = (function () {
               function setter(value, callback) {
                 var cbid = nextCallbackId++;
                 callbackMap[cbid] = callback;
                 ws.send(JSON.stringify(['set', id, value, cbid]));
               }
-              return makeCell(url, setter, id, desc, idMap);
+              return makeCell(url, setter, id, desc, initialValue, idMap);
             }());
             idMap[id] = pair[0];
             updaterMap[id] = pair[1];
@@ -386,7 +383,7 @@ define([
             break;
           }
           case 'value': {
-            const value = message[2];
+            const [,, value] = message;
             if (!(id in idMap)) {
               console.error('Undefined id in state stream message', message);
               return;

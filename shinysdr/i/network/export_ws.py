@@ -40,20 +40,17 @@ from shinysdr.values import BaseCell, ExportedState, PollingCell
 
 class _StateStreamObjectRegistration(object):
     # TODO messy
-    def __init__(self, ssi, subscription_context, obj, serial, url, refcount):
+    def __init__(self, ssi, subscription_context, obj, serial, url, refcount, send_registration=False):
         self.__ssi = ssi
         self.obj = obj
         self.serial = serial
         self.url = url
-        self.has_previous_value = False
-        self.previous_value = None
-        self.value_is_references = False
+        self.__previous_references = []
+        self.__previous_value_message = None
         self.__dead = False
         if isinstance(obj, BaseCell):
             self.__obj_is_cell = True
             initial_value, self.__subscription = obj.subscribe2(self.__listen_cell, subscription_context)
-            self.send_initial_value = lambda: self.__listen_cell(initial_value)
-            self.send_now_if_needed = lambda: self.__listen_cell(obj.get())
         elif isinstance(obj, ExportedState):
             self.__obj_is_cell = False
             if obj.state_is_dynamic():  # TODO: can we not bother checking? this may be a relic from polling
@@ -61,35 +58,40 @@ class _StateStreamObjectRegistration(object):
             else:
                 initial_value = obj.state()
                 self.__subscription = None
-            self.send_initial_value = lambda: self.__listen_state(initial_value)
-            self.send_now_if_needed = lambda: self.__listen_state(self.obj.state())
         else:
             raise TypeError('not a cell or ExportedState: {!r}'.format(obj))
         self.__refcount = refcount
+        
+        if send_registration:
+            if isinstance(obj, BaseCell):
+                if obj.type().is_reference():
+                    # TODO refactor so we can send a reference as the initial value and do the right things
+                    ssi._send1(False, ('register_cell', serial, url, obj.description(), None))
+                    self.__listen_cell(initial_value)
+                else:
+                    ssi._send1(False, ('register_cell', serial, url, obj.description(), initial_value))
+            elif isinstance(obj, ExportedState):
+                ssi._send1(False, ('register_block', serial, url, _get_interfaces(obj)))
+                self.__listen_state(initial_value)
+            else:
+                # TODO: not implemented on client (but shouldn't happen)
+                ssi._send1(False, ('register', serial, url))
     
     def __str__(self):
         return self.url
     
-    def set_previous(self, value, is_references):
-        if is_references:
-            for obj in value.itervalues():
-                if obj not in self.__ssi._registered_objs:
-                    raise Exception("shouldn't happen: previous value not registered", obj)
-        self.has_previous_value = True
-        self.previous_value = value
-        self.value_is_references = is_references
+    def __set_previous_references(self, references):
+        assert isinstance(references, dict)
+        for obj in references.itervalues():
+            if obj not in self.__ssi._registered_objs:
+                raise Exception("shouldn't happen: previous value not registered", obj)
+        self.__previous_references = references.values()
     
-    def send_initial_value(self):
-        """Send the initial value obtained when subscribing on the stream."""
-        # pylint: disable=method-hidden
-        # should be overridden in instance
-        raise Exception('This placeholder should never get called')
-    
-    def send_now_if_needed(self):
+    def force_send_current_value(self):
         """Ensure that the latest value has been put on the stream."""
-        # pylint: disable=method-hidden
-        # should be overridden in instance
-        raise Exception('This placeholder should never get called')
+        if self.__obj_is_cell:
+            # TODO: not fully correct wrt streaming, but right now that won't happen
+            self.__listen_cell(self.obj.get())
     
     def get_object_which_is_cell(self):
         if not self.__obj_is_cell:
@@ -99,52 +101,59 @@ class _StateStreamObjectRegistration(object):
     def __listen_cell(self, value):
         if self.__dead:
             return
-        obj = self.obj
-        if obj.type().is_reference():
+        value_type = self.obj.type()
+        if value_type.is_reference():
             self.__ssi._lookup_or_register(value, self.url)
-            self.__maybesend_reference({u'value': value}, True)
+            self.__send_references_and_update_refcount({u'value': value}, True)
+        elif isinstance(value_type, BulkDataT):
+            for bulk in value:
+                # TODO fix private ref to _send1
+                self.__ssi._send1(True, struct.pack('I', self.serial) + value_type.pack(bulk))
         else:
-            self.__maybesend(value, value)
+            assert not self.__previous_references  # shouldn't happen, could be handled but unimplemented
+            # TODO fix private ref to _send1
+            self.__send_value_message(value)
     
     def __listen_state(self, state):
         if self.__dead:
             return
-        self.__maybesend_reference(state, False)
+        self.__send_references_and_update_refcount(state, False)
     
-    # TODO fix private refs to ssi here
-    def __maybesend(self, compare_value, update_value):
-        if not self.has_previous_value or compare_value != self.previous_value[u'value']:
-            self.set_previous({u'value': compare_value}, False)
-            
-            # TODO this is the wrong place to put it, really
-            value_type = self.obj.type()
-            if isinstance(value_type, BulkDataT):
-                for bulk in update_value:
-                    self.__ssi._send1(True, struct.pack('I', self.serial) + value_type.pack(bulk))
-            else:
-                self.__ssi._send1(False, ('value', self.serial, update_value))
-    
-    def __maybesend_reference(self, objs, is_single):
+    def __send_references_and_update_refcount(self, objs, is_single):
+        assert isinstance(objs, dict)
         registrations = {
             k: self.__ssi._lookup_or_register(v, self.url + '/' + urllib.unquote(k))
             for k, v in objs.iteritems()
         }
         serials = {k: v.serial for k, v in registrations.iteritems()}
-        if not self.has_previous_value or objs != self.previous_value:
-            for reg in registrations.itervalues():
-                reg.inc_refcount()
-            if is_single:
-                self.__ssi._send1(False, ('value', self.serial, serials[u'value']))
-            else:
-                self.__ssi._send1(False, ('value', self.serial, serials))
-            if self.has_previous_value:
-                refs = self.previous_value.values()
-                refs.sort()  # ensure determinism
-                for obj in refs:
-                    if obj not in self.__ssi._registered_objs:
-                        raise Exception("Shouldn't happen: previous value not registered", obj)
-                    self.__ssi._registered_objs[obj].dec_refcount_and_maybe_notify()
-            self.set_previous(objs, True)
+        
+        # Increment refcounts of new (or existing) references.
+        for reg in registrations.itervalues():
+            reg.inc_refcount()
+        
+        # Send message.
+        if is_single:
+            self.__send_value_message(serials[u'value'])
+        else:
+            self.__send_value_message(serials)
+        
+        # Decrement refcounts of old (or existing) references.
+        refs = self.__previous_references
+        refs.sort()  # ensure determinism
+        for obj in refs:
+            if obj not in self.__ssi._registered_objs:
+                raise Exception("Shouldn't happen: previous value not registered", obj)
+            self.__ssi._registered_objs[obj].dec_refcount_and_maybe_notify()
+        
+        # Record new references to be decremented later.
+        self.__set_previous_references(objs)
+    
+    def __send_value_message(self, payload):
+        if self.__previous_value_message == payload:
+            return
+        self.__previous_value_message = payload
+        self.__ssi._send1(False, ('value', self.serial, payload))
+            
     
     def drop(self):
         # TODO this should go away in refcount world
@@ -165,18 +174,13 @@ class _StateStreamObjectRegistration(object):
             self.__ssi.do_delete(self)
             
             # capture refs to decrement
-            if self.value_is_references:
-                refs = self.previous_value.values()
-                refs.sort()  # ensure determinism
-            else:
-                refs = []
+            refs = self.__previous_references
+            refs.sort()  # ensure determinism
             
             # drop previous value
-            self.previous_value = None
-            self.has_previous_value = False
-            self.value_is_references = False
+            self.__set_previous_references({})
             
-            # decrement refs
+            # decrement recursively
             for obj in refs:
                 self.__ssi._registered_objs[obj].dec_refcount_and_maybe_notify()
 
@@ -195,7 +199,7 @@ class StateStreamInner(object):
         self._send_batch = []
         self.__batch_delay = None
         self.__root_url = root_url
-        root_registration.send_initial_value()
+        root_registration.force_send_current_value()
     
     def connectionLost(self, reason):
         # pylint: disable=consider-iterating-dictionary
@@ -213,7 +217,7 @@ class StateStreamInner(object):
             cell = registration.get_object_which_is_cell()
             t0 = time.time()
             cell.set(value)
-            registration.send_now_if_needed()
+            registration.force_send_current_value()
             self._send1(False, ['done', message_id])
             t1 = time.time()
             # TODO: Define self.__str__ or similar such that we can easily log which client is sending the command
@@ -241,20 +245,9 @@ class StateStreamInner(object):
         else:
             self._lastSerial += 1
             serial = self._lastSerial
-            registration = _StateStreamObjectRegistration(ssi=self, subscription_context=self.__subscription_context, obj=obj, serial=serial, url=url, refcount=0)
+            registration = _StateStreamObjectRegistration(ssi=self, subscription_context=self.__subscription_context, obj=obj, serial=serial, url=url, refcount=0, send_registration=True)
             self._registered_objs[obj] = registration
             self.__registered_serials[serial] = registration
-            if isinstance(obj, BaseCell):
-                description = obj.description()
-                self._send1(False, ('register_cell', serial, url, description))
-                if not obj.type().is_reference():  # TODO condition is a kludge due to block cell values being gook
-                    registration.set_previous({'value': description['current']}, False)
-            elif isinstance(obj, ExportedState):
-                self._send1(False, ('register_block', serial, url, _get_interfaces(obj)))
-            else:
-                # TODO: not implemented on client (but shouldn't happen)
-                self._send1(False, ('register', serial, url))
-            registration.send_initial_value()
             return registration
     
     def _flush(self):  # exposed for testing
