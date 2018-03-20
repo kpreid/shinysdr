@@ -106,11 +106,6 @@ class _StateStreamObjectRegistration(object):
         else:
             self.__maybesend(value, value)
     
-    def __listen_binary_stream(self, value):
-        if self.__dead:
-            return
-        self.__ssi._send1(True, struct.pack('I', self.serial) + value)
-    
     def __listen_state(self, state):
         if self.__dead:
             return
