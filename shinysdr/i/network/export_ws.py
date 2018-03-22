@@ -153,7 +153,6 @@ class _StateStreamObjectRegistration(object):
             return
         self.__previous_value_message = payload
         self.__ssi._send1(False, ('value', self.serial, payload))
-            
     
     def drop(self):
         # TODO this should go away in refcount world
