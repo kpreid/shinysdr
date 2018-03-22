@@ -1,4 +1,4 @@
-# Copyright 2017 Kevin Reid <kpreid@switchb.org>
+# Copyright 2017, 2018 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -21,6 +21,7 @@ from twisted.trial import unittest
 
 from gnuradio import blocks
 from gnuradio import gr
+from gnuradio.fft import window as windows
 
 from shinysdr.i.blocks import Context, MonitorSink, RecursiveLockBlockMixin
 from shinysdr.signals import SignalType
@@ -30,22 +31,31 @@ class TestMonitorSink(unittest.TestCase):
     def setUp(self):
         self.tb = RLTB()
         self.context = Context(self.tb)
-
-    def test_smoke_complex(self):
+    
+    def make(self, kind='IQ'):
+        signal_type = SignalType(kind=kind, sample_rate=1000)
         m = MonitorSink(
             context=self.context,
-            signal_type=SignalType(kind='IQ', sample_rate=1000))
-        self.tb.connect(blocks.null_source(gr.sizeof_gr_complex), m)
+            signal_type=signal_type)
+        self.tb.connect(blocks.null_source(signal_type.get_itemsize()), m)
+        return m
+
+    def test_smoke_complex(self):
+        self.make('IQ')
         self.tb.start()
         self.tb.stop()
         self.tb.wait()
 
     def test_smoke_real(self):
-        m = MonitorSink(
-            context=self.context,
-            signal_type=SignalType(kind='MONO', sample_rate=1000))
-        self.tb.connect(blocks.null_source(gr.sizeof_float), m)
+        self.make('MONO')
         self.tb.start()
+        self.tb.stop()
+        self.tb.wait()
+    
+    def test_smoke_change_window(self):
+        m = self.make()
+        self.tb.start()
+        m.set_window_type(windows.WIN_FLATTOP)
         self.tb.stop()
         self.tb.wait()
 

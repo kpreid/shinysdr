@@ -586,6 +586,7 @@ define([
       ignore('signal_type');
       ignore('fft');
       ignore('scope');
+      ignore('window_type');
       addWidget('frame_rate', LogSlider, 'Rate');
       if (block.freq_resolution && block.freq_resolution.set) {  // for audio monitor
         addWidget('freq_resolution', LogSlider, 'Resolution');

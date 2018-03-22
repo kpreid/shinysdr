@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
@@ -36,7 +37,7 @@ from gnuradio.fft import fft_vfc, fft_vcc, window as windows
 from shinysdr.filters import make_resampler
 from shinysdr.math import to_dB
 from shinysdr.signals import SignalType
-from shinysdr.types import BulkDataT, RangeT
+from shinysdr.types import BulkDataT, EnumT, RangeT
 from shinysdr import units
 from shinysdr.values import ExportedState, InterestTracker, LooseCell, ElementQueueCell, exported_value, setter
 
@@ -144,6 +145,19 @@ class IMonitor(Interface):
     """
 
 
+# would be nice to scrape this from gnuradio modules but the pretty names are not available
+_window_type_enum = EnumT({
+    windows.WIN_HAMMING: 'Hamming',
+    windows.WIN_HANN: 'Hann',
+    windows.WIN_BLACKMAN: 'Blackman',
+    windows.WIN_RECTANGULAR: 'Rectangular',
+    # windows.WIN_KAISER: 'Kaiser',  # Omitting for now because it has a parameter
+    windows.WIN_BLACKMAN_HARRIS: 'Blackman–Harris',
+    windows.WIN_BARTLETT: 'Bartlett',
+    windows.WIN_FLATTOP: 'Flat top',
+}, base_type=int)
+
+
 @implementer(IMonitor)
 class MonitorSink(gr.hier_block2, ExportedState):
     """Convenience wrapper around all the bits and pieces to display the signal spectrum to the client.
@@ -155,6 +169,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
             enable_scope=False,
             freq_resolution=4096,
             time_length=2048,
+            window_type=windows.WIN_BLACKMAN_HARRIS,
             frame_rate=30.0,
             input_center_freq=0.0,
             paused=False,
@@ -179,6 +194,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__signal_type = signal_type
         self.__freq_resolution = int(freq_resolution)
         self.__time_length = int(time_length)
+        self.__window_type = _window_type_enum(window_type)
         self.__frame_rate = float(frame_rate)
         self.__input_center_freq = float(input_center_freq)
         self.__paused = bool(paused)
@@ -251,7 +267,7 @@ class MonitorSink(gr.hier_block2, ExportedState):
             n=max(1, int(round(self.__frame_rate_to_decimation_conversion / self.__frame_rate))))
         
         # the actual FFT logic, which is similar to GR's logpwrfft_c
-        window = windows.blackmanharris(input_length)
+        window = windows.build(self.__window_type, input_length, 6.76)
         window_power = sum(x * x for x in window)
         # TODO: use fft_vfc when applicable
         fft_block = (fft_vcc if itemsize == gr.sizeof_gr_complex else fft_vfc)(
@@ -353,6 +369,20 @@ class MonitorSink(gr.hier_block2, ExportedState):
     @setter
     def set_time_length(self, value):
         self.__time_length = value
+        self.__do_connect()
+    
+    @exported_value(
+        type=_window_type_enum,
+        changes='this_setter',
+        label='Window',
+        description='Window function applied before the FFT')
+    def get_window_type(self):
+        return self.__window_type
+    
+    @setter
+    def set_window_type(self, value):
+        self.__window_type = value
+        # Updating window requires a reconnect because the nlog10 block does not allow changing its parameters. This could be fixed by using a separate regular add block.
         self.__do_connect()
 
     @exported_value(
