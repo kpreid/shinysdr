@@ -1,8 +1,8 @@
 Mode,Frequency,Name,Comment,Latitude,Longitude
 ,0.060,WWVB,,40.677722,-105.038819
-AM,0.530,Traveler's Information
-AM,0.530-1.705,AM broadcast
-AM,1.610,Traveler's Information
+AM,0.530,Traveler's Information,,,
+AM,0.530-1.705,AM broadcast,,,
+AM,1.610,Traveler's Information,,,
 AM,2.5,WWV 2.5,,40.682,-105.041944
 AM,5.0,WWV 5,,40.678361,-105.04025
 AM,10.0,WWV 10,,40.679944,-105.040306
@@ -12,9 +12,9 @@ AM,2.5,WWVH 2.5,,21.989139,-159.764556
 AM,5.0,WWVH 5,,21.986333,-159.762444
 AM,10.0,WWVH 10,,21.988389,-159.76425
 AM,15.0,WWVH 15,,21.987583,-159.763889
-ATSC,54-72,ATSC TV channels 2-4
-ATSC,76-88,ATSC TV channels 5-6
-ATSC,174-216,ATSC TV channels 7-13
-ATSC,470-608,ATSC TV channels 14-36
-ATSC,614-692,ATSC TV channels 38-50
-WFM,88-108,FM broadcast
+ATSC,54-72,ATSC TV channels 2-4,,,
+ATSC,76-88,ATSC TV channels 5-6,,,
+ATSC,174-216,ATSC TV channels 7-13,,,
+ATSC,470-608,ATSC TV channels 14-36,,,
+ATSC,614-692,ATSC TV channels 38-50,,,
+WFM,88-108,FM broadcast,,,
