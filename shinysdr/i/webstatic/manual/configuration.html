@@ -418,7 +418,7 @@ d.addCallback(lambda rig: config.devices.add('rig',
         'USB Audio CODEC ', sample_rate=8000, channel_mapping=1)))
 config.wait_for(d)</pre>
 
-  <p>This configuration example also demonstrates merging in an audio device, so that ShinySDR can match the input audio signal with the the VFO frequency, allowing display of an appropriate frequency scale and use of the frequency database.</p>
+  <p>This configuration example also demonstrates merging in an audio device, so that ShinySDR can match the input audio signal with the the VFO frequency, allowing display of an appropriate frequency scale and use of the frequency database. SSB, baseband, or IF outputs can be used in this way (a <code>FrequencyShift</code> may be needed).</p>
 
   <p>[TODO: Make this nicer by adding Deferred support to config.devices.add, perhaps.]</p>
 </dd>

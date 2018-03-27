@@ -18,14 +18,7 @@
 """
 Plugin for Hamlib hardware interfaces.
 
-To use this plugin, add something like this to your config file:
-
-import shinysdr.plugins.hamlib
-config.devices.add('my-other-radio',
-    shinysdr.plugins.hamlib.connect_to_rig(config.reactor,
-        options=['-m', '<model ID>', '-r', '<device file name>']))
-
-TODO explain how to link up with soundcard devices
+See /manual/configuration#special for usage information.
 """
 
 from __future__ import absolute_import, division, unicode_literals
