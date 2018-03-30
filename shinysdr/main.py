@@ -30,7 +30,7 @@ from twisted.application.service import IService, MultiService
 from twisted.internet import defer
 from twisted.internet import reactor as singleton_reactor
 from twisted.internet.task import react
-from twisted.python import log
+from twisted.logger import Logger, STDLibLogObserver, globalLogBeginner
 
 # Note that gnuradio-dependent modules are loaded later, to avoid the startup time if all we're going to do is give a usage message
 from shinysdr.config import Config, write_default_config, execute_config
@@ -39,6 +39,9 @@ from shinysdr.i.persistence import PersistenceFileGlue
 from shinysdr.i.poller import the_subscription_context
 
 __all__ = []  # appended later
+
+
+_log = Logger()
 
 
 def main(argv=None, _abort_for_test=False):
@@ -86,40 +89,40 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
     # Write config file and exit if asked ...
     if args.createConfig:
         write_default_config(args.config_path)
-        log.msg('Created default configuration at: ' + args.config_path)
+        _log.info('Created default configuration at: {config_path}', config_path=args.config_path)
         sys.exit(0)  # TODO: Consider using a return value or something instead
     
     # ... else read config file
-    config_obj = Config(reactor)
+    config_obj = Config(reactor=reactor, log=_log)
     execute_config(config_obj, args.config_path)
     yield config_obj._wait_and_validate()
     
-    log.msg('Constructing...')
+    _log.info('Constructing...')
     app = config_obj._create_app()
     
     reactor.addSystemEventTrigger('during', 'shutdown', app.close_all_devices)
     
-    log.msg('Restoring state...')
+    _log.info('Restoring state...')
     pfg = PersistenceFileGlue(
         reactor=reactor,
         root_object=app,
         filename=config_obj._state_filename,
         get_defaults=_app_defaults)
     
-    log.msg('Starting web server...')
+    _log.info('Starting web server...')
     services = MultiService()
     for maker in config_obj._service_makers:
         IService(maker(app)).setServiceParent(services)
     services.startService()
     
-    log.msg('ShinySDR is ready.')
+    _log.info('ShinySDR is ready.')
     
     for service in services:
         # TODO: should have an interface (currently no proper module to put it in)
         service.announce(args.openBrowser)
     
     if args.force_run:
-        log.msg('force_run')
+        _log.debug('force_run')
         # TODO kludge, make this less digging into guts
         app.get_receive_flowgraph().get_monitor().state()['fft'].subscribe2(lambda v: None, the_subscription_context)
     
@@ -165,10 +168,8 @@ def _check_versions():
 
 
 def configure_logging():
-    # TODO: Consult best practices for Python and Twisted logging.
-    # TODO: Logs which are observably relevant should be sent to the client (e.g. the warning of refusing to have more receivers active)
     logging.basicConfig(level=logging.INFO)
-    log.startLoggingWithObserver(log.PythonLoggingObserver(loggerName='shinysdr').emit, False)
+    globalLogBeginner.beginLoggingTo([STDLibLogObserver(name='shinysdr')])
 
 
 if __name__ == '__main__':

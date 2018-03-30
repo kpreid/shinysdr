@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2016, 2018 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -18,15 +18,12 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from twisted.test.proto_helpers import StringTransport
 from twisted.trial import unittest
 from twisted.internet import defer
-from twisted.internet.interfaces import IStreamClientEndpoint
 from twisted.internet import reactor as the_reactor
-from zope.interface import implementer
 
 from shinysdr.plugins.controller import Controller, Command, Selector
-from shinysdr.test.testutil import state_smoke_test
+from shinysdr.test.testutil import StringTransportEndpoint, state_smoke_test
 from shinysdr.types import EnumT
 
 
@@ -37,7 +34,8 @@ class TestController(unittest.TestCase):
     timeout = 5
     
     def setUp(self):
-        self.endpoint = _StringEndpoint()
+        self.endpoint = StringTransportEndpoint()
+        self.t = self.endpoint.string_transport
         self.device = Controller(
             reactor=the_reactor,
             endpoint=self.endpoint,
@@ -59,29 +57,18 @@ class TestController(unittest.TestCase):
     
     def test_send_command(self):
         self.proxy.state()['cmd_name'].set(True)  # TODO command-cell kludge
-        self.assertEqual('cmd_text', self.endpoint.t.value())
+        self.assertEqual('cmd_text', self.t.value())
     
     def test_send_enum(self):
         self.proxy.state()['enum_name'].set('enum_text1')
-        self.endpoint.t.clear()
+        self.t.clear()
         self.proxy.state()['enum_name'].set('enum_text2')
-        self.assertEqual('enum_text2', self.endpoint.t.value())
+        self.assertEqual('enum_text2', self.t.value())
     
     def test_encode_command(self):
         self.proxy.state()['unicode_cmd'].set(True)  # TODO command-cell kludge
-        self.assertEqual(u'façade'.encode('UTF-8'), self.endpoint.t.value())
+        self.assertEqual(u'façade'.encode('UTF-8'), self.t.value())
     
     def test_encode_enum(self):
         self.proxy.state()['enum_name'].set(u'façade')
-        self.assertEqual(u'façade'.encode('UTF-8'), self.endpoint.t.value())
-
-
-@implementer(IStreamClientEndpoint)
-class _StringEndpoint(object):
-    def __init__(self):
-        self.t = StringTransport()
-    
-    def connect(self, protocol_factory):
-        protocol = protocol_factory.buildProtocol(None)
-        protocol.makeConnection(self.t)
-        return defer.succeed(protocol)
+        self.assertEqual(u'façade'.encode('UTF-8'), self.t.value())

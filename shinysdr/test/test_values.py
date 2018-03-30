@@ -18,11 +18,11 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import unittest
+from twisted.trial import unittest
 
 from gnuradio import gr
 
-from shinysdr.test.testutil import CellSubscriptionTester, LoopbackInterestTracker
+from shinysdr.test.testutil import CellSubscriptionTester, LoopbackInterestTracker, LogTester
 from shinysdr.types import BulkDataElement, BulkDataT, EnumRow, RangeT, ReferenceT, to_value_type
 from shinysdr.values import CellDict, CollectionState, ElementQueueCell, ExportedState, LooseCell, PollingCell, StringQueueCell, ViewCell, command, exported_value, nullExportedState, setter, unserialize_exported_state
 
@@ -52,7 +52,38 @@ class TestExportedState(unittest.TestCase):
             },
         })
     
-    # TODO: test persistence error cases like unknown or wrong-typed properties
+    def test_persistence_unknown_key(self):
+        class Nada(ExportedState):
+            def __repr__(self):
+                return '<Nada>'  # no address
+        
+        log_tester = LogTester()
+        o = Nada()
+        o.state_from_json({
+            u'irrelevant': 1,
+        }, log=log_tester.log)
+        log_tester.check(dict(text='Discarding nonexistent state <Nada>.irrelevant = 1'))
+        self.assertEqual(o.state_to_json(), {})
+    
+    def test_persistence_bad_value(self):
+        class Splodey(ExportedState):
+            def __repr__(self):
+                return '<Splodey>'  # no address
+            
+            @exported_value(changes='this_setter')
+            def get_foo(self):
+                return 'fixed'
+            
+            @setter
+            def set_foo(self, value):
+                raise ValueError('boom')
+        
+        log_tester = LogTester()
+        o = Splodey()
+        o.state_from_json({
+            u'foo': 1,
+        }, log=log_tester.log)
+        log_tester.check(dict(text='Discarding erroneous state <Splodey>.foo = 1'))
     
     def test_persistence_args(self):
         o = unserialize_exported_state(
@@ -498,15 +529,17 @@ class TestStateInsert(unittest.TestCase):
     def test_failure(self):
         self.object = InsertFailSpecimen()
         self.object.state_from_json({'foo': {'fail': True}})
-        # throws but exception is caught
+        # throws but exception is caught -- TODO: Test logging
         self.assertEqual([], self.object.state().keys())
+        self.flushLoggedErrors(ValueError)
     
     def test_undefined(self):
         """no state_insert method defined"""
         self.object = CollectionState(CellDict(dynamic=True))
         self.object.state_from_json({'foo': {'fail': True}})
-        # throws but exception is caught
+        # throws but exception is caught -- TODO: Test logging
         self.assertEqual([], self.object.state().keys())
+        self.flushLoggedErrors(ValueError)
 
 
 class InsertFailSpecimen(CollectionState):

@@ -1,4 +1,4 @@
-# Copyright 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
+# Copyright 2014, 2015, 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -39,7 +39,7 @@ import re
 import threading
 import time
 
-from twisted.python import log
+from twisted.logger import Logger
 from twisted.web import static
 from zope.interface import Interface, implementer  # available via Twisted
 
@@ -270,21 +270,27 @@ Velocity = namedtuple('Velocity', [
 ])
 
 
-def parse_tnc2(line, receive_time):
+def parse_tnc2(line, receive_time, log=None):
     """Parse "TNC2 text format" APRS messages."""
     if not isinstance(line, unicode):
         # TODO: Is there a more-often-than-not used encoding beyond ASCII, that we should use here?
         line = unicode(line, 'ascii', 'replace')
+    
     facts = []
     errors = []
     match = re.match(r'^([^:>,]+?)>([^:>,]+)((?:,[^:>]+)*):(.*?)$', line)
     if not match:
         errors.append('Could not parse TNC2')
-        return APRSMessage(receive_time, '', '', '', line, facts, errors, line)
+        parsed = APRSMessage(receive_time, '', '', '', line, facts, errors, line)
     else:
         source, destination, via, payload = match.groups()
         comment = _parse_payload(facts, errors, source, destination, payload, receive_time)
-        return APRSMessage(receive_time, source, destination, via, payload, facts, errors, comment)
+        parsed = APRSMessage(receive_time, source, destination, via, payload, facts, errors, comment)
+    
+    if log:
+        # %r here provides robustness against control characters.
+        log.info('APRS: {line!r}\n   -> {aprs_message}', line=line, aprs_message=parsed)
+    return parsed
 
 
 # TODO: This is something we want to support, but is not really appropriate as-is.
@@ -306,6 +312,7 @@ def APRSISRXDevice(reactor, client, name=None, aprs_filter=None):
 @implementer(IComponent)
 class _APRSISComponent(TelemetryStore):
     __alive = True
+    __log = Logger()
     
     def __init__(self, reactor, client, name, aprs_filter):
         super(_APRSISComponent, self).__init__(time_source=reactor)
@@ -314,9 +321,7 @@ class _APRSISComponent(TelemetryStore):
         
         def main_callback(line):
             # TODO: This print-both-formats code is duplicated from multimon.py; it should be a utility in this module instead. Also, we should maybe have a try block.
-            log.msg(u'APRS: %r' % (line,))
-            message = parse_tnc2(line, time.time())
-            log.msg(u'   -> %s' % (message,))
+            message = parse_tnc2(line, time.time(), log=self.__log)
             self.receive(message)
     
         # client blocks in a loop, so set up a thread

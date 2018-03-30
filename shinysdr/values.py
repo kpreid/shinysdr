@@ -26,11 +26,15 @@ import codecs
 from collections import namedtuple
 import weakref
 
-from twisted.python import log
+from twisted.logger import Logger
+from twisted.python.failure import Failure
 from zope.interface import Interface, implementer  # available via Twisted
 
 from shinysdr.gr_ext import safe_delete_head_nowait
 from shinysdr.types import BulkDataElement, BulkDataT, EnumRow, ReferenceT, to_value_type
+
+
+_log = Logger()
 
 
 class CellMetadata(namedtuple('CellMetadata', [
@@ -759,33 +763,38 @@ class ExportedState(object):
                 state[key] = cell.get_state(subscriber=subscriber)
         return state
     
-    def state_from_json(self, state):
+    def state_from_json(self, state, log=_log):
         cells = self.state()
         dynamic = self.state_is_dynamic()
         defer = []
         for key in state:
             # pylint: disable=cell-var-from-loop, undefined-loop-variable
-            def err(adjective, suffix):
+            def err(adjective, failure=None):
                 # TODO ship to client
-                log.msg('Warning: Discarding ' + adjective + ' state', str(self) + '.' + key, '=', state[key], suffix)
+                log.warn('Discarding {problem} state {target}.{key} = {value}',
+                    problem=adjective,
+                    target=self,
+                    key=key,
+                    value=state[key],
+                    **({'log_failure': failure} if failure else {}))
             
             def doTry(f):
                 try:
                     f()
-                except (LookupError, TypeError, ValueError) as e:
+                except (LookupError, TypeError, ValueError):
                     # a plausible set of exceptions, so we don't catch implausible ones
-                    err('erroneous', '(' + type(e).__name__ + ': ' + str(e) + ')')
+                    err('erroneous', Failure())
             
             cell = cells.get(key, None)
             if cell is None:
                 if dynamic:
                     doTry(lambda: self.state_insert(key, state[key]))
                 else:
-                    err('nonexistent', '')
+                    err('nonexistent')
             elif cell.type().is_reference():
                 defer.append(key)
             elif not cell.isWritable():
-                err('non-writable', '')
+                err('non-writable')
             else:
                 doTry(lambda: cells[key].set_state(state[key]))
         # blocks are deferred because the specific blocks may depend on other keys

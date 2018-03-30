@@ -1,4 +1,4 @@
-# Copyright 2014 Kevin Reid <kpreid@switchb.org>
+# Copyright 2014, 2018 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -17,13 +17,13 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-# from twisted.trial import unittest
-# 
-# from shinysdr.test.testutil import demodulator_smoke_test
-
-# TODO: This test fails with an unclean reactor, <twisted.internet.process.ProcessReader object>. Fix the cleanup and enable this test
+from shinysdr.plugins.multimon import FMAPRSDemodulator
+from shinysdr.test.testutil import DemodulatorTestCase
 
 
-# class DemodulatorSmokeTest(unittest.TestCase):
-#     def test_1(self):
-#         demodulator_smoke_test('APRS')
+class TestFMAPRSDemodulator(DemodulatorTestCase):
+    def setUp(self):
+        self.setUpFor(mode='APRS', skip_if_unavailable=True, demod_class=FMAPRSDemodulator)
+    
+    def tearDown(self):
+        self.demodulator._close()  # TODO temporary kludge!!! Clean up in a way that actually works in non-tests!

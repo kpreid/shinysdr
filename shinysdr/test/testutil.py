@@ -28,9 +28,12 @@ from gnuradio import blocks
 from gnuradio import gr
 
 from twisted.internet import reactor as the_reactor
-from twisted.internet.defer import Deferred
+from twisted.internet import defer
+from twisted.internet.interfaces import IStreamClientEndpoint
 from twisted.internet.protocol import Protocol
 from twisted.internet.task import Clock
+from twisted.logger import Logger, formatEvent
+from twisted.test.proto_helpers import StringTransport
 from twisted.trial import unittest
 from twisted.web import client
 from twisted.web import http
@@ -432,7 +435,7 @@ def http_request(reactor, url, method, body=None, accept=None, more_headers=None
 
 def _handle_agent_response(d):
     def callback(response):
-        finished = Deferred()
+        finished = defer.Deferred()
         if response.code == http.NO_CONTENT:
             # TODO: properly get whether there is a body from the response
             # this is a special case because with no content deliverBody never signals connectionLost
@@ -525,3 +528,52 @@ class Files(object):
                 self.__create(os.path.join(path, k), d)
         else:
             raise TypeError('don\'t know what to do with {!r} at {!r}'.format(desc, path))
+
+
+class LogTester(object):
+    """Helper for making assertions about what was logged to a twisted.logging.Logger."""
+    def __init__(self):
+        self.log = Logger(observer=self.__add_event)
+        self.logged = []
+        
+    def __add_event(self, event):
+        self.logged.append(_LogEventTester(event))
+    
+    def check(self, *expected_messages):
+        if len(self.logged) != len(expected_messages):
+            raise AssertionError('Expected {} log messages but saw {} {!r}'.format(
+                len(expected_messages), len(self.logged), self.logged))
+        for actual, expected in zip(self.logged, expected_messages):
+            actual.check(**expected)
+
+
+class _LogEventTester(object):
+    def __init__(self, event):
+        self.event = event
+    
+    def check(self, **features):
+        for key, expected_value in features.iteritems():
+            if key == 'text':
+                text = formatEvent(self.event)
+                if text != expected_value:
+                    raise AssertionError('Expected log event to look like\n{!r}\nbut was\n{!r}\n{!r}'.format(
+                        expected_value, text, self.event))
+            else:
+                if self.event[key] != expected_value:
+                    raise AssertionError('Expected log event to have {!r}: {!r} but was \n{!r}'.format(
+                        key, expected_value, self.event))
+    
+    def __repr__(self):
+        return '<LogEventTester {!r}>'.format(self.event)
+
+
+@implementer(IStreamClientEndpoint)
+class StringTransportEndpoint(object):
+    """Endpoint for a fresh StringTransport. Intended for tests."""
+    def __init__(self):
+        self.string_transport = StringTransport()
+    
+    def connect(self, protocol_factory):
+        protocol = protocol_factory.buildProtocol(None)
+        protocol.makeConnection(self.string_transport)
+        return defer.succeed(protocol)

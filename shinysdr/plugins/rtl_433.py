@@ -1,4 +1,4 @@
-# Copyright 2016, 2017 Kevin Reid <kpreid@switchb.org>
+# Copyright 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -23,7 +23,7 @@ import time
 from twisted.internet import reactor as the_reactor  # TODO eliminate
 from twisted.internet.protocol import ProcessProtocol
 from twisted.protocols.basic import LineReceiver
-from twisted.python import log
+from twisted.logger import Logger
 from zope.interface import implementer
 
 from gnuradio import analog
@@ -46,6 +46,8 @@ upper_preferred_demod_rate = 400000
 
 @implementer(IDemodulator)
 class RTL433Demodulator(gr.hier_block2, ExportedState):
+    __log = Logger()  # TODO: log to context/client
+    
     def __init__(self, mode='433', input_rate=0, context=None):
         assert input_rate > 0
         assert context is not None
@@ -84,8 +86,8 @@ class RTL433Demodulator(gr.hier_block2, ExportedState):
         # Subprocess
         # using /usr/bin/env because twisted spawnProcess doesn't support path search
         # pylint: disable=no-member
-        process = the_reactor.spawnProcess(
-            RTL433ProcessProtocol(context.output_message),
+        self.__process = the_reactor.spawnProcess(
+            RTL433ProcessProtocol(context.output_message, self.__log),
             '/usr/bin/env',
             env=None,  # inherit environment
             args=[
@@ -94,13 +96,14 @@ class RTL433Demodulator(gr.hier_block2, ExportedState):
                 b'-r', b'-',  # read from stdin
                 b'-m', b'3',  # complex float input
                 b'-s', str(demod_rate),
+                b'-q'  # quiet mode, suppress "Registering protocol..." stderr flood
             ],
             childFDs={
                 0: 'w',
                 1: 'r',
                 2: 2
             })
-        sink = make_sink_to_process_stdin(process, itemsize=gr.sizeof_gr_complex)
+        sink = make_sink_to_process_stdin(self.__process, itemsize=gr.sizeof_gr_complex)
         
         agc = analog.agc2_cc(reference=dB(-4))
         agc.set_attack_rate(200 / demod_rate)
@@ -117,6 +120,10 @@ class RTL433Demodulator(gr.hier_block2, ExportedState):
                 agc)
         self.connect(agc, sink)
     
+    def _close(self):
+        # TODO: This never gets called except in tests. Do this better, like by having an explicit life cycle for demodulators.
+        self.__process.loseConnection()
+    
     @exported_value(type=BandShape, changes='never')
     def get_band_shape(self):
         """implements IDemodulator"""
@@ -132,8 +139,9 @@ class RTL433Demodulator(gr.hier_block2, ExportedState):
 
 
 class RTL433ProcessProtocol(ProcessProtocol):
-    def __init__(self, target):
+    def __init__(self, target, log):
         self.__target = target
+        self.__log = log
         self.__line_receiver = LineReceiver()
         self.__line_receiver.delimiter = '\n'
         self.__line_receiver.lineReceived = self.__lineReceived
@@ -153,9 +161,9 @@ class RTL433ProcessProtocol(ProcessProtocol):
         try:
             message = json.loads(line)
         except ValueError:
-            log.msg('bad JSON from rtl_433: %s' % line)
+            self.__log.warn('bad JSON from rtl_433: {rtl_433_line!r}', rtl_433_line=line)
             return
-        log.msg('rtl_433 message: %r' % (message,))
+        self.__log.info('rtl_433 message: {rtl_433_json!r}', rtl_433_json=message)
         # rtl_433 provides a time field, but when in file-input mode it assumes the input is not real-time and generates start-of-file-relative timestamps, so we can't use them.
         wrapper = RTL433MessageWrapper(message, time.time())
         self.__target(wrapper)

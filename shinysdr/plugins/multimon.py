@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -26,7 +26,7 @@ import warnings
 from twisted.internet import reactor
 from twisted.internet.protocol import ProcessProtocol
 from twisted.protocols.basic import LineReceiver
-from twisted.python import log
+from twisted.logger import Logger
 from zope.interface import implementer
 
 from gnuradio import analog
@@ -61,7 +61,7 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
         
         # Subprocess
         # using /usr/bin/env because twisted spawnProcess doesn't support path search
-        process = reactor.spawnProcess(
+        self.__process = reactor.spawnProcess(
             protocol,
             '/usr/bin/env',
             env=None,  # inherit environment
@@ -71,7 +71,7 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
                 1: 'r',
                 2: 2
             })
-        sink = make_sink_to_process_stdin(process, itemsize=gr.sizeof_short)
+        sink = make_sink_to_process_stdin(self.__process, itemsize=gr.sizeof_short)
         
         # Output
         to_short = blocks.float_to_short(vlen=1, scale=int_scale)
@@ -85,6 +85,10 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
         self.connect(to_short, unconverter)
         self.connect(unconverter, self)
         
+    def _close(self):
+        # TODO: This never gets called except in tests. Do this better, like by having an explicit life cycle for demodulators.
+        self.__process.loseConnection()
+    
     def get_input_type(self):
         return SignalType(kind='MONO', sample_rate=pipe_rate)
     
@@ -100,8 +104,11 @@ _aprs_squelch_type = EnumT({
 
 class APRSDemodulator(gr.hier_block2, ExportedState):
     """
-    Demod and parse APRS.
+    Demod and parse APRS from FSK signal.
     """
+    
+    __log = Logger()
+    
     def __init__(self, context):
         gr.hier_block2.__init__(
             self, type(self).__name__,
@@ -110,10 +117,7 @@ class APRSDemodulator(gr.hier_block2, ExportedState):
         )
         
         def receive(line):
-            # %r here provides robustness against arbitrary bytes.
-            log.msg(u'APRS: %r' % (line,))
-            message = parse_tnc2(line, time.time())
-            log.msg(u'   -> %s' % (message,))
+            message = parse_tnc2(line, time.time(), log=self.__log)
             context.output_message(message)
         
         self.__mm_demod = MultimonNGDemodulator(
@@ -140,6 +144,10 @@ class APRSDemodulator(gr.hier_block2, ExportedState):
             self.__router,
             self)
         self.connect(self.__mm_demod, (self.__router, 1))
+    
+    def _close(self):
+        # TODO: This never gets called except in tests. Do this better, like by having an explicit life cycle for demodulators.
+        self.__mm_demod._close()
     
     def get_input_type(self):
         return self.__mm_demod.get_input_type()
@@ -177,7 +185,7 @@ class FMAPRSDemodulator(gr.hier_block2, ExportedState):
         assert input_rate > 0
         assert context is not None
         gr.hier_block2.__init__(
-            self, str(mode) + ' (FM + Multimon-NG) demodulator',
+            self, str(mode) + b' (FM + Multimon-NG) demodulator',
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
             gr.io_signature(1, 1, gr.sizeof_float * 1),
         )
@@ -205,6 +213,10 @@ class FMAPRSDemodulator(gr.hier_block2, ExportedState):
             make_resampler(fm_audio_rate, mm_audio_rate),
             self.mm_demod,
             self)
+    
+    def _close(self):
+        # TODO: This never gets called except in tests. Do this better, like by having an explicit life cycle for demodulators.
+        self.mm_demod._close()
     
     @exported_value(type=BandShape, changes='never')
     def get_band_shape(self):

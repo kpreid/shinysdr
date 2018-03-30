@@ -26,7 +26,7 @@ import urllib
 
 from twisted.internet import reactor as the_reactor  # TODO fix
 from twisted.internet.protocol import Protocol
-from twisted.python import log
+from twisted.logger import Logger
 from zope.interface import implementer, providedBy
 
 from gnuradio import gr
@@ -219,6 +219,8 @@ class _StateStreamSubscriber(object):
 
 # TODO: Better name for this category of object
 class StateStreamInner(object):
+    __log = Logger()  # TODO maybe plumb this in instead
+    
     def __init__(self, send, root_object, root_url, subscription_context):
         self.__subscription_context = subscription_context
         self._send = send
@@ -253,9 +255,9 @@ class StateStreamInner(object):
             self._send1(False, ['done', message_id])
             t1 = time.time()
             # TODO: Define self.__str__ or similar such that we can easily log which client is sending the command
-            log.msg('set %s to %r (%1.2fs)' % (registration, value, t1 - t0))
+            self.__log.debug('set {registration} to {value!r} ({time_s:1.2f}s)', registration=registration, value=value, time_s=t1 - t0)
         else:
-            log.msg('Unrecognized state stream op received: %r' % (command,))
+            self.__log.error('Unrecognized state stream op received: {command}', command=command)
     
     def get__root_object(self):
         """Accessor for implementing self._cell."""
@@ -367,6 +369,7 @@ class OurStreamProtocol(Protocol):
     This protocol's transport should be a txWS WebSocket transport.
     """
     def __init__(self, caps, subscription_context):
+        self.__log = Logger()
         self.__subscription_context = subscription_context
         self._caps = caps
         self._seenValues = {}
@@ -383,12 +386,12 @@ class OurStreamProtocol(Protocol):
                 self.__dispatch_url()
             else:
                 self.inner.dataReceived(data)
-        except Exception as e:
-            log.err(e)
+        except Exception:
+            self.__log.failure('Error processing incoming WebSocket message')
     
     def __dispatch_url(self):
         loc = self.transport.location
-        log.msg('Stream connection to ', loc)
+        self.__log.info('Stream connection to {url}', url=loc)
         path = [urllib.unquote(x) for x in loc.split('/')]
         assert path[0] == ''
         path[0:1] = []
@@ -424,10 +427,12 @@ class OurStreamProtocol(Protocol):
             # TODO: condition is horrible implementation-diving kludge
             # Don't accumulate indefinite buffer if we aren't successfully getting it onto the network.
             
+            # TODO: There are no tests of this mechanism
+            
             if safe_to_drop:
-                log.err('Dropping data going to stream ' + self.transport.location)
+                self.__log.warn('Dropping data going to stream {url}', url=self.transport.location)
             else:
-                log.err('Dropping connection due to too much data on stream ' + self.transport.location)
+                self.__log.error('Dropping connection due to too much data on stream {url}', url=self.transport.location)
                 self.transport.close(reason='Too much data buffered')
         else:
             self.transport.write(message)

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2017 Phil Frost <indigo@bitglue.com>
+# Copyright 2017, 2018 Phil Frost <indigo@bitglue.com>
 # 
 # This file is part of ShinySDR.
 # 
@@ -30,7 +30,7 @@ from gnuradio import gr
 
 from twisted.internet import defer, reactor, threads
 from twisted.internet.protocol import ProcessProtocol
-from twisted.python import log
+from twisted.logger import Logger
 from zope.interface import implementer
 
 from shinysdr.values import ExportedState, SubscriptionContext, exported_value
@@ -268,6 +268,7 @@ class WsprdProtocol(ProcessProtocol):
     __tail = ''
     _WSPRSpot = WSPRSpot
     _deferToThread = staticmethod(threads.deferToThread)
+    __log = Logger()
 
     def __init__(self,
             context,
@@ -294,7 +295,7 @@ class WsprdProtocol(ProcessProtocol):
             self.lineReceived(self.__tail)
             del self.__tail
 
-        self._deferToThread(os.unlink, self.wav_filename).addErrback(log.err)
+        self._deferToThread(os.unlink, self.wav_filename).addErrback(lambda f: self.__log.failure(failure=f))
         self.wav_filename = None
         self.__status_deferred.callback(None)
 
@@ -308,7 +309,7 @@ class WsprdProtocol(ProcessProtocol):
 
         fields = line.split()
         if len(fields) != 8:
-            log.msg('malformed wsprd line: %r' % (line,))
+            self.__log.error('malformed wsprd line: {line!r}', line=line)
             return
 
         # Don't know what dt is.
@@ -331,7 +332,7 @@ class WsprdProtocol(ProcessProtocol):
             call = call[1:-1]
 
         spot = self._WSPRSpot(self.decode_time, snr, dt, freq, drift, call, grid, txpower)
-        log.msg('WSPR spotted: %r' % (spot,))
+        self.__log.info('WSPR spotted: {wspr_spot!r}', wspr_spot=spot)
         self.context.output_message(spot)
 
 

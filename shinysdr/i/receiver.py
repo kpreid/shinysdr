@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -20,7 +20,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 import time
 
-from twisted.python import log
+from twisted.logger import Logger
 from zope.interface import Interface, implementer  # available via Twisted
 
 from gnuradio import analog
@@ -54,6 +54,8 @@ class IReceiver(Interface):
 
 @implementer(IReceiver)
 class Receiver(gr.hier_block2, ExportedState):
+    __log = Logger()  # TODO: plumb this in from top so we can start giving error messages to the client e.g. in the "unknown mode" case.
+    
     def __init__(self, mode,
             freq_absolute=100.0,
             freq_relative=None,
@@ -74,7 +76,7 @@ class Receiver(gr.hier_block2, ExportedState):
         
         if lookup_mode(mode) is None:
             # TODO: communicate back to client if applicable
-            log.msg('Unknown mode %r in Receiver(); using AM' % (mode,))
+            self.__log.error('Unknown mode {mode!r} in Receiver(); using AM', mode=mode)
             mode = 'AM'
         
         # Provided by caller
@@ -129,7 +131,7 @@ class Receiver(gr.hier_block2, ExportedState):
             self.__output_type = no_signal
     
     def __do_connect(self, reason):
-        # log.msg(u'receiver do_connect: %s' % (reason,))
+        self.__log.debug('receiver do_connect: {reason}', reason=reason)
         self.context.lock()
         try:
             self.disconnect_all()
@@ -406,7 +408,7 @@ class Receiver(gr.hier_block2, ExportedState):
         
         # until _enabled, ignore any callbacks resulting from unserialization calling setters
         facet._enabled = True
-        log.msg('Constructed %s demodulator: %i ms.' % (mode, (time.time() - t0) * 1000))
+        self.__log.debug('Constructed {mode} demodulator: {time_ms} ms.', mode=mode, time_ms=(time.time() - t0) * 1000)
         return demodulator
 
     def __update_audio_gain(self):

@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -21,7 +21,7 @@ import math
 import time
 
 from twisted.internet import reactor
-from twisted.python import log
+from twisted.logger import Logger
 from zope.interface import implementer  # available via Twisted
 
 from gnuradio import blocks
@@ -63,6 +63,7 @@ _STUB_FEATURES = {'stereo': True}
 
 
 class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
+    __log = Logger()
 
     def __init__(self, devices={}, audio_config=None, features=_STUB_FEATURES):
         # pylint: disable=dangerous-default-value
@@ -220,7 +221,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         
         t0 = time.time()
         if self.source is not self._sources[self.source_name]:
-            log.msg('Flow graph: Switching RF device to %s' % (self.source_name))
+            self.__log.info('Flow graph: Switching RF device to {device_name}', device_name=self.source_name)
             self.__needs_reconnect.append(u'switched device')
 
             this_source = self._sources[self.source_name]
@@ -234,7 +235,8 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
             self.__clip_probe.set_window_and_reconnect(0.5 * monitor_signal_type.get_sample_rate())
         
         if self.__needs_reconnect:
-            log.msg(u'Flow graph: Rebuilding connections because: %s' % (', '.join(self.__needs_reconnect),))
+            self.__log.info(u'Flow graph: Rebuilding connections because: {reasons}',
+                reasons=', '.join(self.__needs_reconnect))
             self.__needs_reconnect = []
             
             self._recursive_lock()
@@ -256,13 +258,13 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
                 if not self._receiver_valid[key]:
                     continue
                 if not self.__audio_manager.validate_destination(receiver.get_audio_destination()):
-                    log.err('Flow graph: receiver audio destination %r is not available' % (receiver.get_audio_destination(),))
+                    self.__log.info('Flow graph: receiver audio destination {audio_destination} is not available', audio_destination=receiver.get_audio_destination())
                     continue
                 n_valid_receivers += 1
                 if n_valid_receivers > 6:
                     # Sanity-check to avoid burning arbitrary resources
                     # TODO: less arbitrary constant; communicate this restriction to client
-                    log.err('Flow graph: Refusing to connect more than 6 receivers')
+                    self.__log.info('Flow graph: Refusing to connect more than 6 receivers')
                     break
                 self.connect(self._sources[receiver.get_device_name()].get_rx_driver(), receiver)
                 receiver_output_type = receiver.get_output_type()
@@ -280,7 +282,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
             
             self._recursive_unlock()
             # (this is in an if block but it can't not execute if anything else did)
-            log.msg('Flow graph: ...done reconnecting (%i ms).' % ((time.time() - t0) * 1000,))
+            self.__log.info('Flow graph: ...done reconnecting ({time_ms} ms).', time_ms=(time.time() - t0) * 1000)
             
             self.__start_or_stop_later()
         

@@ -1,4 +1,4 @@
-# Copyright 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
+# Copyright 2014, 2015, 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -35,7 +35,7 @@ from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.protocol import ClientFactory, Protocol
 from twisted.internet.task import LoopingCall, deferLater
 from twisted.protocols.basic import LineReceiver
-from twisted.python import log
+from twisted.logger import Logger
 from twisted.python.util import sibpath
 from twisted.web import static
 
@@ -76,6 +76,9 @@ class IRotator(IProxy):
 __all__.append('IRotator')
 
 
+_default_log = Logger()
+
+
 # Hamlib RPRT error codes
 RIG_OK = 0
 RIG_EINVAL = -1
@@ -98,11 +101,7 @@ RIG_EDOM = -16
 
 
 _modes = EnumT({x: x for x in ['USB', 'LSB', 'CW', 'CWR', 'RTTY', 'RTTYR', 'AM', 'FM', 'WFM', 'AMS', 'PKTLSB', 'PKTUSB', 'PKTFM', 'ECSSUSB', 'ECSSLSB', 'FAX', 'SAM', 'SAL', 'SAH', 'DSB']}, strict=False)
-
-
 _vfos = EnumT({'VFOA': 'VFO A', 'VFOB': 'VFO B', 'VFOC': 'VFO C', 'currVFO': 'currVFO', 'VFO': 'VFO', 'MEM': 'MEM', 'Main': 'Main', 'Sub': 'Sub', 'TX': 'TX', 'RX': 'RX'}, strict=False)
-
-
 _passbands = RangeT([(0, 0)])
 
 
@@ -165,7 +164,7 @@ def _connect_to_daemon(reactor, host, port, server_name, proxy_ctor):
     connected = defer.Deferred()
     reactor.connectTCP(host, port, _HamlibClientFactory(server_name, connected))
     protocol = yield connected
-    proxy = proxy_ctor(protocol)
+    proxy = proxy_ctor(protocol, _default_log)
     yield proxy._ready_deferred  # wait for dump_caps round trip
     defer.returnValue(proxy)
 
@@ -288,7 +287,7 @@ class _HamlibProxy(ExportedState):
     Abstract class for objects which export state proxied to a hamlib daemon.
     """
     
-    def __init__(self, protocol):
+    def __init__(self, protocol, log):
         # info from hamlib
         self.__cache = {}
         self.__caps = {}
@@ -306,6 +305,7 @@ class _HamlibProxy(ExportedState):
         self.__communication_error = False
         self.__last_error = (-1e9, '', 0)
         
+        self.__log = log
         self.__protocol = protocol
         self.__disconnect_deferred = defer.Deferred()
         protocol._set_proxy(self)
@@ -352,7 +352,7 @@ class _HamlibProxy(ExportedState):
                         if match:
                             self.__levels.append(match.group(1))
                         else:
-                            log.err('Unrecognized level description from %s: %r' % (self._server_name, info))
+                            self.__log.error('Unrecognized level description from %s: %r' % (self._server_name, info))  # TODO use logger formatting
             
             # remove irregularity
             keymatch = re.match(r'(Can [gs]et )([\w\s,/-]+)', key)
@@ -404,7 +404,7 @@ class _HamlibProxy(ExportedState):
         for name in self._info:
             can_get = self.__caps.get('Can get ' + name)
             if can_get is None:
-                log.msg('No can-get information for ' + name)
+                self.__log.warn('No can-get information for ' + name)  # TODO use logger formatting
             if can_get != 'Y':
                 # TODO: Handle 'E' condition
                 continue
@@ -604,9 +604,10 @@ class _HamlibClientFactory(ClientFactory):
     def __init__(self, server_name, connected_deferred):
         self.__server_name = server_name
         self.__connected_deferred = connected_deferred
+        self.__log = Logger()
     
     def buildProtocol(self, addr):
-        p = _HamlibClientProtocol(self.__server_name, self.__connected_deferred)
+        p = _HamlibClientProtocol(self.__server_name, self.__connected_deferred, self.__log)
         return p
 
     def clientConnectionFailed(self, connector, reason):
@@ -614,10 +615,12 @@ class _HamlibClientFactory(ClientFactory):
 
 
 class _HamlibClientProtocol(Protocol):
-    def __init__(self, server_name, connected_deferred):
-        self.__proxy_obj = None
+    def __init__(self, server_name, connected_deferred, log):
         self.__server_name = server_name
         self.__connected_deferred = connected_deferred
+        self.__log = log
+        
+        self.__proxy_obj = None
         self.__line_receiver = LineReceiver()
         self.__line_receiver.delimiter = b'\n'
         self.__line_receiver.lineReceived = self.__lineReceived
@@ -645,7 +648,7 @@ class _HamlibClientProtocol(Protocol):
                 self.__receive_cmd = match.group(1)
                 self.__receive_arg = match.group(2)
                 return
-            log.err('%s client: Unrecognized line (no command active): %r' % (self.__server_name, line))
+            self.__log.error('%s client: Unrecognized line (no command active): %r' % (self.__server_name, line))  # TODO use logger formatting
         else:
             match = re.match(r'^RPRT (-?\d+)$', line)
             if match is not None:
@@ -656,7 +659,7 @@ class _HamlibClientProtocol(Protocol):
                 i = 0
                 for i, (wait_cmd, wait_deferred) in enumerate(waiting):
                     if self.__receive_cmd != wait_cmd:
-                        log.err("%s client: Didn't get a response for command %r before receiving one for command %r" % (self.__server_name, wait_cmd, self.__receive_cmd))
+                        self.__log.error("%s client: Didn't get a response for command %r before receiving one for command %r" % (self.__server_name, wait_cmd, self.__receive_cmd))  # TODO use logger formatting
                     else:
                         # TODO: Consider 'parsing' return code more here.
                         if return_code != 0:
@@ -691,7 +694,7 @@ class _HamlibClientProtocol(Protocol):
             match = re.match(r'^$', line)
             if match is not None:
                 return
-            log.err('%s client: Unrecognized line during %s: %r' % (self.__server_name, self.__receive_cmd, line))
+            self.__log.error('%s client: Unrecognized line during %s: %r' % (self.__server_name, self.__receive_cmd, line))  # TODO use logger formatting
     
     def _set_proxy(self, proxy):
         self.__proxy_obj = proxy

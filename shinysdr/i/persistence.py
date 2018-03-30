@@ -1,4 +1,4 @@
-# Copyright 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2016, 2018 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -24,7 +24,7 @@ import os.path
 import shutil
 
 from twisted.internet import defer
-from twisted.python import log
+from twisted.logger import Logger
 
 from shinysdr.values import ExportedState, SubscriptionContext
 
@@ -39,7 +39,9 @@ def _no_defaults(_root):
 # TODO: Think about a better name. The better name must not include "Manager".
 # This is a class because I expect that it will have methods to control it in more detail in the future.
 class PersistenceFileGlue(object):
-    def __init__(self, reactor, root_object, filename, get_defaults=_no_defaults, _suppress_error_for_test=False):
+    __log = Logger()
+    
+    def __init__(self, reactor, root_object, filename, get_defaults=_no_defaults):
         """
         root_object: Object to persist.
         filename: path to state file to read/write, or None to not actually do persistence.
@@ -59,7 +61,7 @@ class PersistenceFileGlue(object):
             self.__pcd = None
             return
         
-        state_json = self.__attempt_to_read_file(filename, _suppress_error_for_test=_suppress_error_for_test)
+        state_json = self.__attempt_to_read_file(filename)
         if state_json is not None:
             root_object.state_from_json(state_json)
             # make a backup in case this code version misreads the state and loses things on save (but only if the load succeeded, in case the file but not its backup is bad)
@@ -90,25 +92,24 @@ class PersistenceFileGlue(object):
     def __active(self):
         return self.__delayed_write_call and self.__delayed_write_call.active()
     
-    def __attempt_to_read_file(self, filename, _suppress_error_for_test):
+    def __attempt_to_read_file(self, filename):
         try:
             if os.path.isfile(filename):
                 with open(filename, 'r') as f:
                     return json.load(f)
-        except (OSError, ValueError) as e:
-            if not _suppress_error_for_test:  # Twisted considers this fatal in a test
-                log.err(e, 'Loading state file {!r}'.format(filename))
+        except (OSError, ValueError):
+            self.__log.failure('Loading state file {filename!r}', filename=filename)
         return None
     
     def __write_later(self):
         # TODO: Surely there is some utility in Twisted to do this better.
         if not self.__active():
             # TODO: factor out the logging?
-            log.msg('Scheduling state write.')
+            self.__log.debug('Scheduling state write.')
             self.__delayed_write_call = self.__reactor.callLater(_PERSISTENCE_DELAY, self.__write_immediately)
     
     def __write_immediately(self):
-        log.msg('Performing state write...')
+        self.__log.debug('Performing state write...')
         try:
             current_state = self.__pcd.get()  # note: may raise if getters are broken
             temp_filename = self.__filename + '.new'
@@ -117,7 +118,7 @@ class PersistenceFileGlue(object):
                 f.flush()
                 os.fsync(f.fileno())
             os.rename(temp_filename, self.__filename)  # TODO: use os.replace() if we ever get to Python 3
-            log.msg('...done')
+            self.__log.debug('...done')
         finally:
             if self.__delayed_write_call and self.__delayed_write_call.active():
                 self.__delayed_write_call.cancel()

@@ -1,4 +1,4 @@
-# Copyright 2017 Phil Frost <indigo@bitglue.com>
+# Copyright 2017, 2018 Phil Frost <indigo@bitglue.com>
 # 
 # This file is part of ShinySDR.
 # 
@@ -23,7 +23,7 @@ import time
 from math import pi
 
 from twisted.internet import reactor, threads
-from twisted.python import log
+from twisted.logger import Logger
 
 from gnuradio import gr, blocks, analog
 from gnuradio.blocks import wavfile_sink
@@ -43,6 +43,7 @@ class WAVIntervalSink(gr.hier_block2):
     closed, until the next round multiple of `interval`.
     """
 
+    __log = Logger()
     _next_delayed_call = None
 
     def __init__(self,
@@ -100,7 +101,7 @@ class WAVIntervalSink(gr.hier_block2):
             self._open_wav, filename
         ).addCallback(
             self.listener.fileOpened
-        ).addErrback(log.err)
+        ).addErrback(lambda f: self.__log.failure(failure=f))
 
         self._next_delayed_call = self._callLater(
             self.duration,
@@ -111,7 +112,7 @@ class WAVIntervalSink(gr.hier_block2):
             self._close_wav, filename
         ).addCallback(
             self.listener.fileClosed
-        ).addErrback(log.err)
+        ).addErrback(lambda f: self.__log.failure(failure=f))
 
         self._schedule_next_start()
 

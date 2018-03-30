@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2016, 2017 Kevin Reid <kpreid@switchb.org>
+# Copyright 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -32,7 +32,7 @@ import struct
 from twisted.internet import defer
 from twisted.internet.protocol import Protocol
 from twisted.protocols.basic import LineReceiver
-from twisted.python import log
+from twisted.logger import Logger
 from twisted.python.util import sibpath
 from twisted.web import static
 from zope.interface import Interface, implementer
@@ -60,7 +60,7 @@ def connect_to_rig(reactor, port, baudrate=38400):
     baudrate: Serial data rate; must match that set on the radio.
     """
     endpoint = SerialPortEndpoint(port, reactor, baudrate=baudrate)
-    factory = FactoryWithArgs.forProtocol(_ElecraftClientProtocol, reactor)
+    factory = FactoryWithArgs.forProtocol(_ElecraftClientProtocol, reactor=reactor)
     protocol = yield endpoint.connect(factory)
     proxy = protocol._proxy()
     
@@ -210,6 +210,8 @@ def _format_command(cmd, argstr, is_sub=False):
 
 
 class _ElecraftClientProtocol(Protocol):
+    __log = Logger()
+    
     def __init__(self, reactor):
         self.__reactor = reactor
         self.__line_receiver = LineReceiver()
@@ -309,7 +311,7 @@ class _ElecraftClientProtocol(Protocol):
     
     def __lineReceived(self, line):
         line = line.lstrip('\x00')  # nulls are sometimes sent on power-on
-        # log.msg('Elecraft client: received %r' % (line,))
+        self.__log.debug('Elecraft client: received {line!r}', line=line)
         if '\x00' in line:
             # Bad data that may be received during radio power-on
             return
@@ -327,15 +329,15 @@ class _ElecraftClientProtocol(Protocol):
                 if handler is not None:
                     handler(data, sub, self._update)
                 else:
-                    log.msg('Elecraft client: unrecognized message %r in %r' % (cmd, line))
+                    self.__log.warn('Elecraft client: unrecognized message {cmd!r} in {line!r}', cmd=cmd, line=line)
                 
                 if cmd_sub in self.__explicit_waits:
                     waits = self.__explicit_waits[cmd_sub]
                     del self.__explicit_waits[cmd_sub]
                     for d in waits:
                         self.__reactor.callLater(0, d.callback, data)
-            except ValueError as e:  # bad digits or whatever
-                log.err(e, 'Elecraft client: error while parsing message %r' % (line,))
+            except ValueError:  # bad digits or whatever
+                self.__log.failure('Elecraft client: error while parsing message {line!r}', line=line)
                 self.__communication_error = 'bad_data'
                 return  # don't consider as OK, but don't reinit either
         
@@ -359,7 +361,7 @@ class _ElecraftClientProtocol(Protocol):
             cell.set_internal(value)
         else:
             # just don't crash
-            log.msg('Elecraft client: missing cell for state %r' % (key,))
+            self.__log.warn('Elecraft client: missing cell for state {key!r}', key=key)
         
         if key == 'band' and value != old_value:
             # Band change! Check the things we don't get prompt or any notifications for.

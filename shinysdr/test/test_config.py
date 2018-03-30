@@ -1,4 +1,4 @@
-# Copyright 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2014, 2015, 2016, 2018 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -25,24 +25,24 @@ import os.path
 
 from twisted.internet import reactor as the_reactor
 from twisted.internet import defer
+from twisted.logger import Logger
 from twisted.trial import unittest
 from zope.interface import implementer
 
 from shinysdr import devices
 from shinysdr.config import Config, ConfigException, ConfigTooLateException, execute_config, write_default_config
 from shinysdr.i.roots import IEntryPoint
-from shinysdr.test.testutil import Files
+from shinysdr.test.testutil import Files, LogTester
 from shinysdr.values import ExportedState
 
 
-def StubDevice():
-    """Return a valid trivial device."""
-    return devices.Device(components={})
+NO_NETWORK = dict(log_format='No network service defined!')
 
 
 class TestConfigObject(unittest.TestCase):
     def setUp(self):
-        self.config = Config(the_reactor)
+        self.log_tester = LogTester()
+        self.config = ConfigFactory(log=self.log_tester.log)
     
     # TODO: In type error tests, also check message once we've cleaned them up.
     
@@ -60,7 +60,10 @@ class TestConfigObject(unittest.TestCase):
         self.assertIsInstance(d, defer.Deferred)  # don't succeed trivially
         yield d
     
-    # TODO: Test "No network service defined"; is a warning not an error
+    @defer.inlineCallbacks
+    def test_no_network_service(self):
+        yield self.config._wait_and_validate()
+        self.log_tester.check(NO_NETWORK)
 
     # --- Persistence ---
     
@@ -201,16 +204,15 @@ class TestConfigObject(unittest.TestCase):
         self.assertTrue(self.config.features._get('_test_enabled_feature'))
     
     # --- Databases ---
-    
-    # TODO test config.databases.add_directory
-    # TODO test config.databases.add_writable_database
+    # Tests of database configuration may be found in TestConfigFiles.
 
 
 class TestConfigFiles(unittest.TestCase):
     def setUp(self):
         self.__files = Files({})
         self.__config_name = os.path.join(self.__files.dir, 'config')
-        self.__config = Config(the_reactor)
+        self.log_tester = LogTester()
+        self.__config = ConfigFactory(log=self.log_tester.log)
     
     def tearDown(self):
         self.__files.close()
@@ -271,10 +273,41 @@ class TestConfigFiles(unittest.TestCase):
         
         self.assertTrue(os.path.isdir(self.__dirpath('dbs-read-only')))
         return self.__config._wait_and_validate()
+    
+    # --- Databases ---
+    # These are really tests of the config object, but database processing uses files.
+    
+    # TODO more tests of config.databases.add_directory
+    # TODO more tests of config.databases.add_writable_database
+    
+    @defer.inlineCallbacks
+    def test_db_content_warning(self):
+        self.__files.create({
+            self.__config_name: {
+                'config.py': '',
+                'dbs-read-only': {
+                    'foo.csv': 'Name\na',
+                },
+            },
+        })
+        execute_config(self.__config, self.__config_name)
+        yield self.__config._wait_and_validate()
+        self.log_tester.check(
+            dict(log_format='{path}: {db_diagnostic}', path='foo.csv'),
+            NO_NETWORK)
+
+
+def StubDevice():
+    """Return a valid trivial device."""
+    return devices.Device(components={})
+
+
+def ConfigFactory(log=Logger()):
+    return Config(the_reactor, log)
 
 
 def get_default_dbs():
-    config_obj = Config(the_reactor)
+    config_obj = ConfigFactory()
     return config_obj.databases._get_read_only_databases()
 
 

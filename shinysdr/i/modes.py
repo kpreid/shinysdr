@@ -20,13 +20,15 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from twisted.plugin import getPlugins
-from twisted.python import log
+from twisted.logger import Logger
 from zope.interface import Interface
 
 from shinysdr import plugins
 
 
 __all__ = []  # appended later
+
+_log = Logger()
 
 
 class IModeDef(Interface):
@@ -47,17 +49,17 @@ class _ModeTable(object):
     def __init__(self, plugin_package):
         self.__all_modes = {}
         self.__available_modes = {}
-        log.msg('Loading mode plugins...')
+        _log.info('Loading mode plugins...')
         for mode_def in getPlugins(IModeDef, plugin_package):
             if mode_def.mode in self.__all_modes:
                 raise Exception('Mode name conflict for mode {!r}'.format(mode_def.mode))
             self.__all_modes[mode_def.mode] = mode_def
             if mode_def.available:
-                # log.msg('  Mode: {0.mode}'.format(mode_def))
+                _log.debug('  Mode: {0.mode}'.format(mode_def))
                 self.__available_modes[mode_def.mode] = mode_def
             else:
-                log.msg('Mode {0.mode} unavailable\n{0.unavailability}'.format(mode_def))
-        log.msg('...done mode plugins.')
+                _log.info('Mode {0.mode} unavailable\n{0.unavailability}'.format(mode_def))
+        _log.info('...done mode plugins.')
     
     def get_modes(self, include_unavailable):
         if include_unavailable:

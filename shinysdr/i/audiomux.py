@@ -1,4 +1,4 @@
-# Copyright 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2015, 2016, 2018 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -21,7 +21,7 @@ GR blocks and such supporting receiver audio delivery.
 
 from __future__ import absolute_import, division, unicode_literals
 
-from twisted.python import log
+from twisted.logger import Logger
 
 from gnuradio import audio
 from gnuradio import blocks
@@ -44,6 +44,8 @@ class AudioManager(object):
     (This cannot be a hierarchical block, because hierarchical blocks cannot currently have variable numbers of ports.)
     """
     # TODO: This class needs a better name.
+    
+    __logger = Logger()
     
     def __init__(self, graph, audio_config, stereo=True):
         # for key, audio_device in audio_devices.iteritems():
@@ -97,7 +99,7 @@ class AudioManager(object):
         return destination in self.__audio_buses
     
     def reconnecting(self):
-        return ReconnectSession(self.__audio_buses, self.__audio_devices, self.__audio_queue_sinks)
+        return ReconnectSession(self.__audio_buses, self.__audio_devices, self.__audio_queue_sinks, self.__logger)
 
     # @exported_value()
     def get_audio_bus_rate(self):
@@ -109,16 +111,17 @@ __all__.append('AudioManager')
 
 
 class ReconnectSession(object):
-    def __init__(self, buses, devices, queue_sinks):
+    def __init__(self, buses, devices, queue_sinks, log):
         self.__buses = buses
         self.__devices = devices
         self.__queue_sinks = queue_sinks
+        self.__log = log
         self.__bus_inputs = {bus: [] for bus in buses}
         self.__fallback_bus = buses.keys()[0]
     
     def input(self, block, rate, destination):
         if destination not in self.__bus_inputs:
-            log.msg('AudioManager: Invalid audio destination %r' % (destination,))
+            self.__log.error('Invalid audio destination {audio_destination!r}', audio_destination=destination)
             destination = self.__fallback_bus
         self.__bus_inputs[destination].append((rate, block))
     

@@ -37,7 +37,8 @@ class Poller(object):
     Polls cells for new values.
     """
     
-    def __init__(self):
+    def __init__(self, log=_log):
+        self.__log = log
         # first level key is polling speed (True=fast)
         # sorting provides determinism for testing etc.
         self.__targets = {
@@ -52,9 +53,9 @@ class Poller(object):
             raise TypeError('Poller given a non-cell %r' % (cell,))
         try:
             if delegate_polling_to_me:
-                target = _PollerDelegateTarget(cell)
+                target = _PollerDelegateTarget(cell, self.__log)
             else:
-                target = _PollerValueTarget(cell)
+                target = _PollerValueTarget(cell, self.__log)
             return _PollerSubscription(self, target, subscriber, fast)
         except _FailureToSubscribe:
             return never_subscription
@@ -172,8 +173,9 @@ class _PollerSubscription(object):
 
 
 class _PollerCellTarget(object):
-    def __init__(self, cell):
+    def __init__(self, cell, log):
         self._obj = cell  # TODO: rename to _cell for clarity
+        self._log = log
         self._subscriptions = []
         self.__interest_token = object()
         cell.interest_tracker.set(self.__interest_token, True)
@@ -193,12 +195,12 @@ class _PollerCellTarget(object):
 
 
 class _PollerValueTarget(_PollerCellTarget):
-    def __init__(self, cell):
-        _PollerCellTarget.__init__(self, cell)
+    def __init__(self, cell, log):
+        _PollerCellTarget.__init__(self, cell, log)
         try:
             self.__previous_value = self.__get()
         except Exception:
-            _log.failure("Exception in {cell}.get()", cell=cell)
+            self._log.failure('Exception in {cell}.get()', cell=cell)
             self.unsubscribe()  # cancel effects of super __init__
             raise _FailureToSubscribe()
         self.__broken = False
@@ -211,7 +213,7 @@ class _PollerValueTarget(_PollerCellTarget):
             value = self.__get()
         except Exception:  # pylint: disable=broad-except
             if not self.__broken:
-                _log.failure("Exception in {cell}.get()", cell=self._obj)
+                self._log.failure("Exception in {cell}.get()", cell=self._obj)
             self.__broken = True
             # TODO: Also feed this info out so callers can decide to give up / report failure to user
             return
@@ -221,8 +223,8 @@ class _PollerValueTarget(_PollerCellTarget):
 
 
 class _PollerDelegateTarget(_PollerCellTarget):
-    def __init__(self, cell):
-        _PollerCellTarget.__init__(self, cell)
+    def __init__(self, cell, log):
+        _PollerCellTarget.__init__(self, cell, log)
 
     def poll(self, fire):
         self._obj._poll_from_poller(fire)

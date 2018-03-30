@@ -1,4 +1,4 @@
-# Copyright 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2014, 2015, 2016, 2018 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -98,8 +98,9 @@ class TestPersistenceFileGlue(unittest.TestCase):
     
     def test_unparseable_file_recovery(self):
         self.__files.create({self.__state_name: ''})  # empty file is bad JSON
-        self.__start(_suppress_error_for_test=True)
+        self.__start()
         self.assertEqual(self.__root.get_value(), 'default')
+        self.flushLoggedErrors(ValueError)
     
     # TODO: Add a test that multiple changes don't trigger multiple writes -- needs a reasonable design for a hook to observe the write.
 

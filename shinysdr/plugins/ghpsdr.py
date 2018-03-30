@@ -38,7 +38,7 @@ from twisted.internet import defer
 from twisted.internet import endpoints
 from twisted.internet import protocol
 from twisted.internet import task
-from twisted.python import log
+from twisted.logger import Logger
 
 from gnuradio import gr
 
@@ -194,4 +194,5 @@ class DspserverService(Service):
 
     def announce(self, open_client):
         """interface used by shinysdr.main"""
-        log.msg('GHPSDR-compatible server at port %s' % self.__port_obj.getHost().port)
+        # TODO: pass message back instead, this is all sorts of wrong
+        Logger().info('GHPSDR-compatible server at port %s' % self.__port_obj.getHost().port)

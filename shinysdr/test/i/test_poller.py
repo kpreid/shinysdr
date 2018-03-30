@@ -20,12 +20,14 @@ from __future__ import absolute_import, division, unicode_literals
 from twisted.trial import unittest
 
 from shinysdr.i.poller import Poller
+from shinysdr.test.testutil import LogTester
 from shinysdr.values import ExportedState, LooseCell, exported_value, setter
 
 
 class TestPoller(unittest.TestCase):
     def setUp(self):
-        self.poller = Poller()
+        self.log_tester = LogTester()
+        self.poller = Poller(log=self.log_tester.log)
     
     def tearDown(self):
         self.flushLoggedErrors(DummyBrokenGetterException)
@@ -61,6 +63,7 @@ class TestPoller(unittest.TestCase):
         
         broken_cell = BrokenGetterSpecimen(True).state()['foo']
         self.poller.subscribe(broken_cell, callback, fast=True)
+        self.log_tester.check(dict(log_format='Exception in {cell}.get()', cell=broken_cell))
         
         self.assertEqual(called, [])
         self.poller.poll(True)
@@ -76,14 +79,16 @@ class TestPoller(unittest.TestCase):
         
         bgs = BrokenGetterSpecimen(False)
         not_broken_1 = PollerCellsSpecimen().state()['foo']
-        broken = bgs.state()['foo']
+        broken_cell = bgs.state()['foo']
         not_broken_2 = PollerCellsSpecimen().state()['foo']
         self.poller.subscribe(not_broken_1, make_callback('1'), fast=True)
-        self.poller.subscribe(broken, make_callback('b'), fast=True)
+        self.poller.subscribe(broken_cell, make_callback('b'), fast=True)
         self.poller.subscribe(not_broken_2, make_callback('2'), fast=True)
         self.assertEqual(called, [])
         bgs.broken = True
+        self.log_tester.check()
         self.poller.poll(True)
+        self.log_tester.check(dict(log_format='Exception in {cell}.get()', cell=broken_cell))
         self.assertEqual(called, [])
     
     # TODO: test multiple subscription behavior wrt throwing

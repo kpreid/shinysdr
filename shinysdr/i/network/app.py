@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -26,7 +26,7 @@ from twisted.application.service import Service
 from twisted.internet import defer
 from twisted.internet import endpoints
 from twisted.plugin import getPlugins
-from twisted.python import log
+from twisted.logger import Logger
 from twisted.web import static
 from twisted.web.resource import Resource
 from twisted.web.util import Redirect
@@ -94,7 +94,8 @@ class WebAppManifestResource(Resource):
 
 
 class WebService(Service):
-    # TODO: Too many parameters
+    __log = Logger()
+    
     def __init__(self, reactor, cap_table, http_endpoint, ws_endpoint, root_cap, title):
         # Constants
         self.__http_endpoint_string = str(http_endpoint)
@@ -161,11 +162,11 @@ class WebService(Service):
         """interface used by shinysdr.main"""
         url = self.get_url()
         if open_client:
-            log.msg('Opening ' + url)
+            self.__log.info('Opening {url}', url=url)
             import webbrowser  # lazy load
             webbrowser.open(url, new=1, autoraise=True)
         else:
-            log.msg('Visit ' + url)
+            self.__log.info('Visit {url}', url=url)
 
 
 def _put_root_static(wcommon, container_resource):

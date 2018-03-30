@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -27,11 +27,9 @@ from __future__ import absolute_import, division, unicode_literals
 
 import os
 import os.path
-import warnings
 import __builtin__
 
 from twisted.internet import defer
-from twisted.python import log
 from twisted.python.util import sibpath
 
 # Note that gnuradio-dependent modules are loaded lazily, to avoid the startup time if all we're going to do is give a usage message
@@ -44,12 +42,14 @@ __all__ = []  # appended later
 
 
 class Config(object):
-    def __init__(self, reactor):
+    def __init__(self, reactor, log):
+        self.__log = log
+        
         # public config elements
         self.features = _ConfigFeatures(self)
         self.devices = _ConfigDevices(self)
         self.sources = self.devices  # temporary legacy compat -- TODO emit deprecation warnings or something, then remove
-        self.databases = _ConfigDbs(self, reactor)
+        self.databases = _ConfigDbs(self, reactor, self.__log)
 
         # provided for the convenience of the config file
         self.reactor = reactor
@@ -76,7 +76,7 @@ class Config(object):
         
         self.__finished = True
         if len(self._service_makers) == 0:
-            warnings.warn('No network service defined!')
+            self.__log.warn('No network service defined!')
     
     def _create_app(self):
         from shinysdr.i.session import AppRoot
@@ -196,9 +196,10 @@ class _ConfigDbs(object):
     __read_only_databases = None
     __writable_db = None
     
-    def __init__(self, config, reactor):
+    def __init__(self, config, reactor, log):
         self._config = config
         self.__reactor = reactor
+        self.__log = log
         
         self.__read_only_databases, diagnostics = databases_from_directory(
             self.__reactor,
@@ -211,18 +212,20 @@ class _ConfigDbs(object):
         path = str(path)
         dbs, path_diagnostics = databases_from_directory(self.__reactor, path)
         self.__read_only_databases.update(dbs)
-        for d in path_diagnostics:
-            log.msg('%s: %s' % d)
-
+        self.__report(path_diagnostics)
+    
     def add_writable_database(self, path):
         self._config._not_finished()
         path = str(path)
         if self.__writable_db is not None:
             raise ConfigException('Multiple writable databases are not yet supported.')
         self.__writable_db, diagnostics = database_from_csv(self.__reactor, path, writable=True)
-        for d in diagnostics:
-            log.msg('%s: %s' % (path, d))
+        self.__report((path, d) for d in diagnostics)
     
+    def __report(self, path_diagnostics):
+        for path, db_diagnostic in path_diagnostics:
+            self.__log.warn('{path}: {db_diagnostic}', path=path, db_diagnostic=db_diagnostic)
+
     def _get_writable_database(self):
         if self.__writable_db is None:
             # TODO temporary stub till the client takes more configurability -- we should omit the writable db rather than having an unbacked one

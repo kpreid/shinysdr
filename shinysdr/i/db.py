@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2013, 2014, 2015, 2016, 2018 Kevin Reid <kpreid@switchb.org>
 #
 # This file is part of ShinySDR.
 # 
@@ -24,7 +24,7 @@ import os
 import os.path
 import urllib
 
-from twisted.python import log
+from twisted.logger import Logger
 from twisted.web import http
 from twisted.web import resource
 from twisted.web import template
@@ -48,7 +48,9 @@ _LOWEST_RKEY = 1
 
 
 class DatabaseModel(object):
+    # TODO: This class is untested
     __dirty = False
+    __log = Logger()
     
     def __init__(self, reactor, records, pathname=None, writable=False):
         assert isinstance(records, dict)
@@ -68,9 +70,9 @@ class DatabaseModel(object):
     
     def __write(self):
         if self.__can_write() and self.__dirty:
-            log.msg('Writing database %s' % (self.__pathname,))
+            self.__log.info('Writing database {database_path}', database_path=self.__pathname)
             self.__dirty = False
-            with _atomic_open_for_write(self.__pathname, 'wb') as csvfile:
+            with _atomic_open_for_write(self.__pathname, 'wb', self.__log) as csvfile:
                 _write_csv_file(csvfile, self.records)
     
     def __can_write(self):
@@ -81,7 +83,7 @@ class DatabaseModel(object):
 # * uses the ~ file if the current file is not available
 # * fails out early if there is unexpectedly a .new file
 @contextlib.contextmanager
-def _atomic_open_for_write(name, mode):
+def _atomic_open_for_write(name, mode, log):
     oldname = name + '~'
     newname = name + '.new'
     if os.path.exists(newname):
@@ -100,7 +102,7 @@ def _atomic_open_for_write(name, mode):
         if ok:
             os.rename(newname, name)
         else:
-            log.msg('Not installing new-version due to error: %s' % newname)
+            log.failure('Not installing new-version {!r} due to error', pathname=newname)
 
 
 def database_from_csv(reactor, pathname, writable):
