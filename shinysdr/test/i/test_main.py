@@ -24,8 +24,6 @@ from __future__ import absolute_import, division, unicode_literals
 
 import os
 import os.path
-import shutil
-import tempfile
 import textwrap
 
 from twisted.internet import defer
@@ -35,13 +33,15 @@ from twisted.trial import unittest
 
 from shinysdr import main
 from shinysdr.i.persistence import _PERSISTENCE_DELAY
+from shinysdr.test.testutil import Files
 
 
 class TestMain(unittest.TestCase):
     def setUp(self):
-        self.__temp_dir = tempfile.mkdtemp(prefix='shinysdr_test_main_tmp')
-        state_name = os.path.join(self.__temp_dir, 'state')
-        self.__config_name = os.path.join(self.__temp_dir, 'config')
+        self.__files = Files({})
+        # TODO: use config dir instead of deprecated config file
+        state_name = os.path.join(self.__files.dir, 'state')
+        self.__config_name = os.path.join(self.__files.dir, 'config')
         with open(self.__config_name, 'w') as config:
             config.write(textwrap.dedent('''\
                 import shinysdr.plugins.simulate
@@ -55,7 +55,7 @@ class TestMain(unittest.TestCase):
             ''') % (state_name,))
     
     def tearDown(self):
-        shutil.rmtree(self.__temp_dir)
+        self.__files.close()
     
     def __run_main(self):
         return main.main(

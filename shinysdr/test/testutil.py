@@ -18,7 +18,11 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import json
+import os
+import os.path
+import shutil
 import StringIO
+import tempfile
 
 from gnuradio import blocks
 from gnuradio import gr
@@ -488,3 +492,36 @@ def assert_http_resource_properties(test_case, url):
             raise Exception('Don\'t know what content type checking to do', data[0], content_type)
     
     return http_get(the_reactor, url).addCallback(callback)
+
+
+# --- Miscellaneous ---
+
+
+class Files(object):
+    """Creates files described from a data structure in a managed temporary directory.
+    
+    The data structure consists of dicts for directories and strings for files.
+    """
+    def __init__(self, desc):
+        self.dir = tempfile.mkdtemp(prefix='shinysdr_test_config_tmp')
+        self.create(desc)
+    
+    def create(self, desc):
+        self.__create(self.dir + '/.', desc)
+    
+    def close(self):
+        shutil.rmtree(self.dir)
+    
+    def __create(self, path, desc):
+        assert path.startswith(self.dir + '/')
+        assert not os.path.exists(path) or os.path.isdir(path)
+        if isinstance(desc, basestring):
+            with open(path, 'w') as f:
+                f.write(desc)
+        elif isinstance(desc, dict):
+            if not os.path.exists(path):
+                os.mkdir(path)
+            for k, d in desc.iteritems():
+                self.__create(os.path.join(path, k), d)
+        else:
+            raise TypeError('don\'t know what to do with {!r} at {!r}'.format(desc, path))

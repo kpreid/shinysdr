@@ -18,27 +18,25 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import os.path
-import shutil
-import tempfile
 
 from twisted.internet.task import Clock
 from twisted.trial import unittest
 
 from shinysdr.i.persistence import PersistenceFileGlue, PersistenceChangeDetector
-from shinysdr.test.testutil import SubscriptionTester
+from shinysdr.test.testutil import Files, SubscriptionTester
 from shinysdr.values import ExportedState, ReferenceT, exported_value, nullExportedState, setter
 
 
 class TestPersistenceFileGlue(unittest.TestCase):
     def setUp(self):
         self.__clock = Clock()
-        self.__temp_dir = tempfile.mkdtemp(prefix='shinysdr_test_persistence_tmp')
-        self.__state_name = os.path.join(self.__temp_dir, 'state')
+        self.__files = Files({})
+        self.__state_name = os.path.join(self.__files.dir, 'state')
         self.__reset()
     
     def tearDown(self):
         self.assertFalse(self.__clock.getDelayedCalls())
-        shutil.rmtree(self.__temp_dir)
+        self.__files.close()
     
     def __reset(self):
         """Recreate the object for write-then-read tests."""
@@ -99,8 +97,7 @@ class TestPersistenceFileGlue(unittest.TestCase):
         self.assertEqual(self.__root.get_value(), 'default')
     
     def test_unparseable_file_recovery(self):
-        with open(self.__state_name, 'w'):
-            pass  # write empty file
+        self.__files.create({self.__state_name: ''})  # empty file is bad JSON
         self.__start(_suppress_error_for_test=True)
         self.assertEqual(self.__root.get_value(), 'default')
     

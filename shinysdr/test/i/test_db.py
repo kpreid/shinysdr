@@ -18,11 +18,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import json
-import os
-import os.path
-import shutil
 import StringIO
-import tempfile
 import textwrap
 
 from twisted.trial import unittest
@@ -32,6 +28,7 @@ from twisted.web import http
 from shinysdr.i import db
 from shinysdr.i.network.base import SiteWithDefaultHeaders
 from shinysdr.test import testutil
+from shinysdr.test.testutil import Files
 
 
 class TestRecords(unittest.TestCase):
@@ -193,26 +190,26 @@ class TestCSV(unittest.TestCase):
 
 class TestDirectory(unittest.TestCase):
     def setUp(self):
-        self.__temp_dir = tempfile.mkdtemp(prefix='shinysdr_test_db_tmp')
+        self.__files = Files({})
     
     def tearDown(self):
-        shutil.rmtree(self.__temp_dir)
+        self.__files.close()
     
     # TODO: more testing
     def test_1(self):
-        with open(os.path.join(self.__temp_dir, 'a.csv'), 'w') as f:
-            f.write(textwrap.dedent('''\
-                Name,Frequency
-                a,1
-            '''))
-        with open(os.path.join(self.__temp_dir, 'not-a-csv'), 'w') as f:
-            pass
-        dbs, diagnostics = db.databases_from_directory(reactor, self.__temp_dir)
+        self.__files.create({
+            'a.csv': textwrap.dedent('''\
+                 Name,Frequency
+                 a,1
+            '''),
+            'not-a-csv': '',
+        })
+        dbs, diagnostics = db.databases_from_directory(reactor, self.__files.dir)
         self.assertEqual([], diagnostics)
         self.assertEqual(['a.csv'], dbs.keys())
 
     def test_no_directory(self):
-        path = self.__temp_dir + '_does_not_exist'
+        path = self.__files.dir + '_does_not_exist'
         dbs, diagnostics = db.databases_from_directory(reactor, path)
         self.assertEqual([], dbs.keys())
         self.assertEqual(1, len(diagnostics))

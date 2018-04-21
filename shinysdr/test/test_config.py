@@ -22,8 +22,6 @@ See also test_main.py.
 from __future__ import absolute_import, division, unicode_literals
 
 import os.path
-import shutil
-import tempfile
 
 from twisted.internet import reactor as the_reactor
 from twisted.internet import defer
@@ -33,6 +31,7 @@ from zope.interface import implementer
 from shinysdr import devices
 from shinysdr.config import Config, ConfigException, ConfigTooLateException, execute_config, write_default_config
 from shinysdr.i.roots import IEntryPoint
+from shinysdr.test.testutil import Files
 from shinysdr.values import ExportedState
 
 
@@ -209,23 +208,24 @@ class TestConfigObject(unittest.TestCase):
 
 class TestConfigFiles(unittest.TestCase):
     def setUp(self):
-        self.__temp_dir = tempfile.mkdtemp(prefix='shinysdr_test_config_tmp')
-        self.__config_name = os.path.join(self.__temp_dir, 'config')
+        self.__files = Files({})
+        self.__config_name = os.path.join(self.__files.dir, 'config')
         self.__config = Config(the_reactor)
     
     def tearDown(self):
-        shutil.rmtree(self.__temp_dir)
+        self.__files.close()
     
     def __dirpath(self, *paths):
         return os.path.join(self.__config_name, *paths)
     
     def test_config_file(self):
-        with open(self.__config_name, 'w') as f:
-            f.write('config.features.enable("_test_disabled_feature")')
-        # DB CSV file we expect NOT to be loaded
-        os.mkdir(os.path.join(self.__temp_dir, 'dbs'))
-        with open(os.path.join(self.__temp_dir, 'dbs', 'foo.csv'), 'w') as f:
-            f.write('Frequency,Name')
+        self.__files.create({
+            self.__config_name: 'config.features.enable("_test_disabled_feature")',
+            'dbs': {
+                # DB CSV file we expect NOT to be loaded
+                'foo.csv': 'Frequency,Name',
+            },
+        })
 
         execute_config(self.__config, self.__config_name)
         
@@ -237,12 +237,14 @@ class TestConfigFiles(unittest.TestCase):
         self.assertEquals(get_default_dbs().viewkeys(), self.__config.databases._get_read_only_databases().viewkeys())
     
     def test_config_directory(self):
-        os.mkdir(self.__config_name)
-        with open(self.__dirpath('config.py'), 'w') as f:
-            f.write('config.features.enable("_test_disabled_feature")')
-        os.mkdir(self.__dirpath('dbs-read-only'))
-        with open(self.__dirpath('dbs-read-only', 'foo.csv'), 'w') as f:
-            f.write('Frequency,Name')
+        self.__files.create({
+            self.__config_name: {
+                'config.py': 'config.features.enable("_test_disabled_feature")',
+                'dbs-read-only': {
+                    'foo.csv': 'Frequency,Name',
+                },
+            },
+        })
         execute_config(self.__config, self.__config_name)
         
         # Config python was executed

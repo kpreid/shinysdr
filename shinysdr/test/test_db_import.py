@@ -21,14 +21,13 @@ from __future__ import absolute_import, division, unicode_literals
 import StringIO
 import os
 import os.path
-import shutil
-import tempfile
 
 from twisted.trial import unittest
 from zope.interface import implementer  # available via Twisted
 
 from shinysdr.db_import import GeoFilter, IImporter, ImporterFilter
 from shinysdr.db_import.tool import import_main
+from shinysdr.test.testutil import Files
 
 
 class TestImporterFilter(unittest.TestCase):
@@ -83,15 +82,14 @@ class ImporterFilterSpecimen(ImporterFilter):
 
 class TestImportTool(unittest.TestCase):
     def setUp(self):
-        self.__temp_dir = tempfile.mkdtemp(prefix='shinysdr_test_import_tmp')
-        self.__in_file = os.path.join(self.__temp_dir, 'in')
+        self.__files = Files({})
+        self.__in_file = os.path.join(self.__files.dir, 'in')
     
     def tearDown(self):
-        shutil.rmtree(self.__temp_dir)
+        self.__files.close()
     
     def test_smoke(self):
-        with open(self.__in_file, 'w'):
-            pass
+        self.__files.create({'in': ''})
         out_file_obj = StringIO.StringIO()
         import_main(argv=['shinysdr-import', 'uls', self.__in_file], out=out_file_obj)
         self.assertEquals('Location,Mode,Frequency,Name,Latitude,Longitude,Comment\r\n', out_file_obj.getvalue())
