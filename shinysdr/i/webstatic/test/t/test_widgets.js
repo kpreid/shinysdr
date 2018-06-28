@@ -54,6 +54,7 @@ define([
   } = import_types;
   const {
     ConstantCell,
+    FakeBulkDataCell,
     LocalCell,
     makeBlock,
   } = import_values;
@@ -173,8 +174,7 @@ define([
       it('should be successfully created', function () {
         // stub test to exercise the code because it's currently not in the default ui. Should have more tests.
       
-        const cell = new LocalCell(anyT, [{freq:0, rate:1}, []]);
-        cell.subscribe = function() {}; // TODO implement
+        const cell = new FakeBulkDataCell(anyT, [{freq:0, rate:1}, []]);
         const root = new ConstantCell(makeBlock({
           scope: cell,
           parameters: new ConstantCell(

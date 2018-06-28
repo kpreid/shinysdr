@@ -41,8 +41,8 @@ define([
     numberT,
   } = import_types;
   const {
-    Cell,
     ConstantCell,
+    FakeBulkDataCell,
     LocalCell,
   } = import_values;
 
@@ -74,11 +74,14 @@ define([
     
     // State
     const fftBuffer = new Float32Array(length);
-    let lastValue = [info, fftBuffer];
-    const subscriptions = [];
     let isScheduled = false;
     const pausedCell = this.paused = new LocalCell(booleanT, true);
     let lockout = false;
+    
+    const outputCell = this.fft = new FakeBulkDataCell(
+      new BulkDataT('dff', 'b'),  // TODO BulkDataT really isn't properly involved here -- there is no binary format -- so the architecture is wrong
+      [info, fftBuffer],
+      maybeScheduleUpdate);
     
     function update() {
       isScheduled = false;
@@ -104,20 +107,12 @@ define([
         fftBuffer[i] = fftBuffer[i] + absolute_adj + freq_adj * Math.pow(i, 0.5);
       }
       
-      const newValue = [info, fftBuffer];  // fresh array, same contents, good enough.
-    
-      // Deliver value
-      lastValue = newValue;
       maybeScheduleUpdate();
-      // TODO replace this with something async
-      for (let i = 0; i < subscriptions.length; i++) {
-        const callbackWithoutThis = subscriptions[i];
-        callbackWithoutThis(newValue);
-      }
+      outputCell._update([info, fftBuffer]);  // fresh array, same contents, good enough.
     }
     
     function maybeScheduleUpdate() {
-      if (!isScheduled && subscriptions.length && !lockout) {
+      if (!isScheduled && outputCell._hasSubscribers() && !lockout) {
         if (pausedCell.get()) {
           pausedCell.n.listen(maybeScheduleUpdate);
         } else {
@@ -142,17 +137,6 @@ define([
     Object.defineProperty(this, 'disconnectFrom', {value: function (inputNode) {
       inputNode.disconnect(analyserNode);
     }});
-    
-    // Output cell
-    this.fft = new Cell(new BulkDataT('dff', 'b'));  // TODO BulkDataT really isn't properly involved here
-    this.fft.get = function () {
-      return lastValue;
-    };
-    // TODO: put this on a more general and sound framework (same as BulkDataCell)
-    this.fft.subscribe = function (callback) {
-      subscriptions.push(callback);
-      maybeScheduleUpdate();
-    };
     
     // Other elements expected by Monitor widget
     Object.defineProperty(this, '_implements_shinysdr.i.blocks.IMonitor', {enumerable: false});
@@ -207,10 +191,11 @@ define([
     };
     captureProcessor.connect(audioContext.destination);
     
-    // Cell handling and other state
-    const info = {};  // dummy
-    var lastValue = [info, new Float32Array(bufferSize)];
-    var subscriptions = [];
+    // Output cell
+    const info = Object.freeze({});  // dummy
+    const outputCell = this.scope = new FakeBulkDataCell(
+      new BulkDataT('d', 'f'),  // TODO BulkDataT really isn't properly involved here -- there is no binary format -- so the architecture is wrong
+      [info, new Float32Array(bufferSize)]);
     
     function sendBuffer(copyBufferSet) {
       // Do this processing now rather than in callback to minimize work done in audio callback.
@@ -222,15 +207,7 @@ define([
         outputBuffer[i * 2 + 1] = copyR[i];
       }
       
-      const newValue = [info, outputBuffer];
-    
-      // Deliver value
-      lastValue = newValue;
-      // TODO replace this with something async
-      for (let i = 0; i < subscriptions.length; i++) {
-        const callbackWithoutThis = subscriptions[i];
-        callbackWithoutThis(newValue);
-      }
+      outputCell._update([info, outputBuffer]);
     }
     
     // TODO: Also disconnect processor when nobody's subscribed.
@@ -241,16 +218,6 @@ define([
     Object.defineProperty(this, 'disconnectFrom', {value: function (inputNode) {
       inputNode.disconnect(captureProcessor);
     }});
-    
-    // Output cell
-    this.scope = new Cell(new BulkDataT('d', 'f'));  // TODO BulkDataT really isn't properly involved here
-    this.scope.get = function () {
-      return lastValue;
-    };
-    // TODO: put this on a more general and sound framework (same as BulkDataCell)
-    this.scope.subscribe = function (callback) {
-      subscriptions.push(callback);
-    };
     
     // Other elements expected by Monitor widget
     Object.defineProperty(this, '_implements_shinysdr.i.blocks.IMonitor', {enumerable: false});

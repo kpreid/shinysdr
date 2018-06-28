@@ -284,6 +284,30 @@ define([
   };
   exports.StorageCell = StorageCell;
   
+  // Identical to network.BulkDataCell but takes local updates rather than doing any binary message processing.
+  // Kludge until BulkDataCell stops having a special extra protocol.
+  function FakeBulkDataCell(metadata, initialValue, didSubscribe = Function.prototype) {
+    Cell.call(this, metadata);
+    
+    let lastValue = initialValue;
+    const subscriptions = [];
+    
+    this.get = () => lastValue;
+    this.subscribe = callback => {
+      subscriptions.push(callback);
+      didSubscribe();
+    };
+    this._update = value => {
+      lastValue = value;
+      const p = Promise.resolve(value);
+      for (const callback of subscriptions) {
+        p.then(callback);
+      }
+    };
+    this._hasSubscribers = () => !!subscriptions.length;
+  }
+  exports.FakeBulkDataCell = FakeBulkDataCell;
+  
   // Adapt Promises to the cell.depend() style protocol.
   const dependOnPromiseTable = new WeakMap();
   function dependOnPromise(callback, placeholderValue, promise) {

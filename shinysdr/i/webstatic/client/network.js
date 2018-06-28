@@ -188,6 +188,8 @@ define([
     
     ReadCell.call(this, setter, currentElements, metadata, transform);
     
+    // Special protocol to allow not dropping updates. TODO: Replace with a general analogue of server's IDeltaSubscriber
+    // Client side implementation of this protocol available as values.FakeBulkDataCell
     this.subscribe = function(callback) {
       // TODO need to provide for unsubscribing
       subscriptions.push(callback);
