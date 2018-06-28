@@ -3,9 +3,9 @@ ShinySDR
 
 ShinySDR is the software component of a software-defined radio receiver. When combined with suitable hardware devices such as the RTL-SDR, HackRF, or USRP, it can be used to listen to or display data from a variety of radio transmissions.
 
-* **[More about ShinySDR](https://kpreid.github.io/shinysdr/)**
+* **[More about ShinySDR](https://shinysdr.switchb.org/)**
 
-* **[Installing ShinySDR](https://kpreid.github.io/shinysdr/manual/installation)**
+* **[Installing ShinySDR](https://shinysdr.switchb.org/manual/installation)**
 
 Copyright and License
 ---------------------
