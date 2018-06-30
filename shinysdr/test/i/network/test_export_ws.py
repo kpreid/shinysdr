@@ -26,7 +26,7 @@ from twisted.test.proto_helpers import StringTransport
 from twisted.trial import unittest
 from zope.interface import Interface, implementer
 
-from gnuradio import gr
+import numpy
 
 from shinysdr.i.json import transform_for_json
 # TODO: StateStreamInner is an implementation detail; arrange a better interface to test
@@ -35,7 +35,7 @@ from shinysdr.i.roots import CapTable, IEntryPoint
 from shinysdr.signals import SignalType
 from shinysdr.test.testutil import Cells, SubscriptionTester
 from shinysdr.types import BulkDataT, ReferenceT
-from shinysdr.values import CellDict, CollectionState, ExportedState, ElementQueueCell, NullExportedState, StringQueueCell, SubscriptionContext, exported_value, nullExportedState, setter
+from shinysdr.values import CellDict, CollectionState, ExportedState, ElementSinkCell, NullExportedState, StringSinkCell, SubscriptionContext, exported_value, nullExportedState, setter
 
 
 class StateStreamTestCase(unittest.TestCase):
@@ -173,55 +173,52 @@ class TestStateStream(StateStreamTestCase):
             self.stream.dataReceived(json.dumps(['set', 99999, 100.0, 1234])))
         self.assertEqual(self.getUpdates(), [])
     
+    @defer.inlineCallbacks
     def test_bulk_data(self):
         self.setUpForObject(BulkDataSpecimen())
         cell = self.object.state()['s']
-        self.object.queue.insert_tail(make_bytes_msg(b'ab'))
-        
-        # TODO: do this once initial values are processed correctly rather than having extra get()s
-        # poll cell to force queue contents to show up in initial state to test json representation
-        # st = SubscriptionTester()
-        # _, subscription = cell.subscribe2(lambda v: None, st.context)
-        # st.advance()
-        # subscription.unsubscribe()
+        yield _append_to_sink_cell(cell, b'ab')
         
         description = cell.description()
         self.assertEqual(self.getUpdates(), transform_for_json([
-            [u'register_block', 1, u'urlroot', []],
-            [u'register_cell', 2, u'urlroot/s', description, []],
-            [u'value', 1, {u's': 2}],
-            [u'value', 0, 1],
+            ['register_block', 1, 'urlroot', []],
+            ['register_cell', 2, 'urlroot/s', description, []],
+            ['value', 1, {'s': 2}],
+            ['value', 0, 1],
             ['actually_binary', b'\x02\x00\x00\x00\x01a'],
             ['actually_binary', b'\x02\x00\x00\x00\x01b'],
         ]))
-        self.object.queue.insert_tail(make_bytes_msg(b'cd'))
+        yield _append_to_sink_cell(cell, b'cd')
         self.assertEqual(self.getUpdates(), transform_for_json([
             ['actually_binary', b'\x02\x00\x00\x00\x02c'],
             ['actually_binary', b'\x02\x00\x00\x00\x02d'],
         ]))
     
+    @defer.inlineCallbacks
     def test_value_patch(self):
-        queue = gr.msg_queue()
-        queue.insert_tail(make_bytes_msg(b'ab'))
-        cell = StringQueueCell(
-            queue=queue,
-            encoding='us-ascii')
+        cell = StringSinkCell(encoding='us-ascii')
+        yield _append_to_sink_cell(cell, b'ab')
         self.setUpForObject(Cells({
             's': cell
         }))
         self.st.advance()
         self.assertEqual(self.getUpdates(), transform_for_json([
             ['register_block', 1, 'urlroot', []],
-            ['register_cell', 2, 'urlroot/s', cell.description(), ''],  # TODO should have initial value
+            ['register_cell', 2, 'urlroot/s', cell.description(), 'ab'],
             ['value', 1, {'s': 2}],
             ['value', 0, 1],
-            ['value_append', 2, 'ab'],
         ]))
-        queue.insert_tail(make_bytes_msg(b'cd'))
+        yield _append_to_sink_cell(cell, b'cd')
         self.st.advance()
         self.assertEqual(self.getUpdates(), transform_for_json([
             ['value_append', 2, 'cd'],
         ]))
+
+
+def _append_to_sink_cell(cell, bytestr):
+    # TODO: this is too much poking internals for this high level test; make a temp flowgraph instead
+    cell.create_sink_internal(numpy.uint8).work([numpy.frombuffer(bytestr, dtype=numpy.uint8)], [])
+    return deferLater(the_reactor, 0.0, lambda: None)
 
 
 class IFoo(Interface):
@@ -263,22 +260,15 @@ class BulkDataSpecimen(ExportedState):
     """Helper for TestStateStream"""
     
     def __init__(self):
-        self.queue = gr.msg_queue()
         self.info_value = 0
     
     def state_def(self):
         def info_getter():
             self.info_value += 1
             return (self.info_value,)
-        yield 's', ElementQueueCell(
-            queue=self.queue,
+        yield 's', ElementSinkCell(
             info_getter=info_getter,
             type=BulkDataT('b', 'b'))
-
-
-def make_bytes_msg(s):
-    assert isinstance(s, str)
-    return gr.message().make_from_string(s, 0, 1, len(s))
 
 
 class TestSerialization(StateStreamTestCase):

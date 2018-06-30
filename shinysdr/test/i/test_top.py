@@ -23,8 +23,6 @@ from twisted.internet.task import deferLater
 from twisted.trial import unittest
 from zope.interface import implementer  # available via Twisted
 
-from gnuradio import gr
-
 from shinysdr.devices import Device, IComponent, merge_devices
 from shinysdr.i.poller import the_subscription_context
 from shinysdr.i.top import Top
@@ -109,17 +107,19 @@ class TestTop(unittest.TestCase):
         self.assertEqual(receiver.get_mode(), 'AM')
     
     def test_audio_callback_smoke(self):
+        def callback(data):
+            pass
         top = Top(devices={'s1': SimulatedDeviceForTest(freq=0)})
-        callback = lambda data: None
         (_key, _receiver) = top.add_receiver('AM', key='a')
         top.add_audio_callback(callback, 48000)
         top.remove_audio_callback(callback)
     
     def test_mono(self):
+        def callback(data):
+            pass
         top = Top(
             devices={'s1': SimulatedDeviceForTest(freq=0)},
             features={'stereo': False})
-        callback = lambda data: None
         (_key, _receiver) = top.add_receiver('AM', key='a')
         top.add_audio_callback(callback, 48000)
         top.remove_audio_callback(callback)

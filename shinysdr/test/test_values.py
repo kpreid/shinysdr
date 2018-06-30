@@ -18,13 +18,16 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from twisted.internet import defer
+from twisted.internet import reactor as the_reactor
+from twisted.internet.task import deferLater
 from twisted.trial import unittest
 
-from gnuradio import gr
+import numpy
 
 from shinysdr.test.testutil import CellSubscriptionTester, LoopbackInterestTracker, LogTester
 from shinysdr.types import BulkDataElement, BulkDataT, EnumRow, RangeT, ReferenceT, to_value_type
-from shinysdr.values import CellDict, CollectionState, ElementQueueCell, ExportedState, LooseCell, PollingCell, StringQueueCell, ViewCell, command, exported_value, nullExportedState, setter, unserialize_exported_state
+from shinysdr.values import CellDict, CollectionState, ElementSinkCell, ExportedState, LooseCell, PollingCell, StringSinkCell, ViewCell, command, exported_value, nullExportedState, setter, unserialize_exported_state
 
 
 class TestExportedState(unittest.TestCase):
@@ -293,8 +296,11 @@ class BlockCellSpecimen(ExportedState):
         self.state_changed('block')
 
 
-class TestGRMsgQueueCell(unittest.TestCase):
-    cell = None  # for lint
+class TestGRSinkCell(unittest.TestCase):
+    # for lint
+    cell = None
+    sink = None
+    dtype = None
     
     def setUp(self):
         self.info_value = 1000
@@ -304,105 +310,109 @@ class TestGRMsgQueueCell(unittest.TestCase):
             return (self.info_value,)
         
         self.info_getter = info_getter
-        self.queue = gr.msg_queue()
     
     def setUpForBulkData(self):
-        self.cell = ElementQueueCell(
-            queue=self.queue,
+        self.cell = ElementSinkCell(
             info_getter=self.info_getter,
             type=BulkDataT(array_format='f', info_format='d'),
             interest_tracker=LoopbackInterestTracker())
+        self.dtype = numpy.uint8
+        self.sink = self.cell.create_sink_internal(self.dtype)
     
     def setUpForUnicodeString(self):
-        self.cell = StringQueueCell(
-            queue=self.queue,
+        self.cell = StringSinkCell(
             encoding='utf-8',
             interest_tracker=LoopbackInterestTracker())
+        self.dtype = numpy.uint8
+        self.sink = self.cell.create_sink_internal(self.dtype)
     
-    def test_element_get_before_and_after_poll(self):
+    def inject_bytes(self, bytestr):
+        # calling implementation of sink block to not have to set up a flowgraph
+        self.sink.work([numpy.frombuffer(bytestr, dtype=self.dtype)], [])
+        
+        # We wait because StringSinkCell uses reactor.callFromThread. We've skipped setting up the GNU Radio block thread, but it doesn't know that (and Clock does not support callFromThread).
+        return deferLater(the_reactor, 0.0, lambda: None)
+    
+    @defer.inlineCallbacks
+    def test_element_get_not_mutated(self):
         self.setUpForBulkData()
-        self.queue.insert_tail(make_bytes_msg(b'ab'))
         gotten = self.cell.get()
         self.assertEqual(gotten, [])
-        st = CellSubscriptionTester(self.cell, delta=True)
-        st.advance()
+        yield self.inject_bytes(b'ab')
         self.assertEqual(self.cell.get(), [
             BulkDataElement(data=b'a', info=(1001,)),
             BulkDataElement(data=b'b', info=(1001,))
         ])
         self.assertEqual(gotten, [])  # not mutating list
     
+    @defer.inlineCallbacks
     def test_element_delta_subscriber(self):
         self.setUpForBulkData()
         st = CellSubscriptionTester(self.cell, delta=True)
-        self.queue.insert_tail(make_bytes_msg(b'ab'))
+        yield self.inject_bytes(b'ab')
         st.expect_now([
             BulkDataElement(data=b'a', info=(1001,)),
             BulkDataElement(data=b'b', info=(1001,))
         ], kind='append')
         st.unsubscribe()
-        self.queue.insert_tail(make_bytes_msg(b'ignored'))
+        yield self.inject_bytes(b'ignored')
         st.advance()
     
+    @defer.inlineCallbacks
     def test_element_plain_subscriber(self):
         self.setUpForBulkData()
         st = CellSubscriptionTester(self.cell, delta=False)
-        self.queue.insert_tail(make_bytes_msg(b'ab'))
+        yield self.inject_bytes(b'ab')
         st.expect_now([
             BulkDataElement(data=b'a', info=(1001,)),
             BulkDataElement(data=b'b', info=(1001,))
         ], kind='value')
         st.unsubscribe()
-        self.queue.insert_tail(make_bytes_msg(b'ignored'))
+        yield self.inject_bytes(b'ignored')
         st.advance()
     
+    @defer.inlineCallbacks
     def test_string_get(self):
         self.setUpForUnicodeString()
-        self.queue.insert_tail(make_bytes_msg('abç'.encode('utf-8')))
         gotten = self.cell.get()
         self.assertTrue(isinstance(gotten, unicode))
         self.assertEqual(gotten, u'')
-        st = CellSubscriptionTester(self.cell, delta=True)
-        st.advance()
+        yield self.inject_bytes('abç'.encode('utf-8'))
         gotten = self.cell.get()
         self.assertTrue(isinstance(gotten, unicode))
         self.assertEqual(gotten, 'abç')
         
         # now append some more to test the buffer
-        self.queue.insert_tail(make_bytes_msg('deƒ'.encode('utf-8')))
-        st.advance()
+        yield self.inject_bytes('deƒ'.encode('utf-8'))
         self.assertEqual(self.cell.get(), 'abçdeƒ')
     
+    @defer.inlineCallbacks
     def test_string_coding_error(self):
         self.setUpForUnicodeString()
-        self.queue.insert_tail(make_bytes_msg(b'ab\xFF'))
-        st = CellSubscriptionTester(self.cell, delta=True)
-        st.expect_now('ab\uFFFD', kind='append')
+        yield self.inject_bytes(b'ab\xFF')
+        self.assertEqual(self.cell.get(), 'ab\uFFFD')
     
+    @defer.inlineCallbacks
     def test_string_delta_subscriber(self):
         self.setUpForUnicodeString()
         st = CellSubscriptionTester(self.cell, delta=True)
-        self.queue.insert_tail(make_bytes_msg('abç'.encode('utf-8')))
+        yield self.inject_bytes('abç'.encode('utf-8'))
         st.expect_now('abç', kind='append')
         st.unsubscribe()
-        self.queue.insert_tail(make_bytes_msg(b'ignored'))
+        yield self.inject_bytes(b'ignored')
         st.advance()
     
+    @defer.inlineCallbacks
     def test_string_plain_subscriber(self):
         self.setUpForUnicodeString()
         st = CellSubscriptionTester(self.cell, delta=False)
-        self.queue.insert_tail(make_bytes_msg('abç'.encode('utf-8')))
+        yield self.inject_bytes('abç'.encode('utf-8'))
         st.expect_now('abç')
-        self.queue.insert_tail(make_bytes_msg('deƒ'.encode('utf-8')))
+        yield self.inject_bytes('deƒ'.encode('utf-8'))
         
         # TODO: This is not the correct result; it should match get().
         # Poller currently does not deal with attaching simple subscribers correctly
         st.expect_now('deƒ')
-
-
-def make_bytes_msg(s):
-    assert isinstance(s, str)
-    return gr.message().make_from_string(s, 0, 1, len(s))
 
 
 class TestLooseCell(unittest.TestCase):
