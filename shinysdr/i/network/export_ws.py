@@ -29,8 +29,6 @@ from twisted.internet.protocol import Protocol
 from twisted.logger import Logger
 from zope.interface import implementer, providedBy
 
-from gnuradio import gr
-
 from shinysdr.i.json import serialize
 from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT
 from shinysdr.signals import SignalType
@@ -305,16 +303,15 @@ class StateStreamInner(object):
 
 
 class AudioStreamInner(object):
-    def __init__(self, reactor, send, block, audio_rate):
+    def __init__(self, reactor, send, audio_source, audio_rate):
         self._send = send
-        self._queue = gr.msg_queue(limit=100)
-        self.__running = [True]
-        self._block = block
-        self._block.add_audio_queue(self._queue, audio_rate)
+        self.__audio_source = audio_source
+        self.__callback = self.__deliver  # identical object just to avoid any confusion
+        self.__audio_source.add_audio_callback(self.__callback, audio_rate)
         
         # We don't actually benefit specifically from using a SignalType in this context but it avoids reinventing vocabulary.
         signal_type = SignalType(
-            kind='STEREO' if self._block.get_audio_queue_channels() == 2 else 'MONO',
+            kind='STEREO' if self.__audio_source.get_audio_callback_channels() == 2 else 'MONO',
             sample_rate=audio_rate)
         
         send(serialize({
@@ -322,34 +319,16 @@ class AudioStreamInner(object):
             u'type': u'audio_stream_metadata',
             u'signal_type': signal_type,
         }))
-        
-        reactor.callInThread(_AudioStream_read_loop, reactor, self._queue, self.__deliver, self.__running)
     
     def dataReceived(self, data):
         pass
     
     def connectionLost(self, reason):
         # pylint: disable=no-member
-        self._block.remove_audio_queue(self._queue)
-        self.__running[0] = False
-        # Insert a dummy message to ensure the loop thread unblocks; otherwise it will sit around forever, including preventing process shutdown.
-        self._queue.insert_tail(gr.message())
+        self.__audio_source.remove_audio_callback(self.__callback)
     
-    def __deliver(self, data_string):
-        self._send(data_string, safe_to_drop=True)
-
-
-def _AudioStream_read_loop(reactor, queue, deliver, running):
-    # RUNS IN A SEPARATE THREAD.
-    while running[0]:
-        buf = b''
-        message = queue.delete_head()  # blocking call
-        buf += message.to_string()
-        # Collect more queue contents to batch data
-        while not queue.empty_p():
-            message = queue.delete_head()
-            buf += message.to_string()
-        reactor.callFromThread(deliver, buf)
+    def __deliver(self, data_numpy_array):
+        self._send(data_numpy_array, safe_to_drop=True)
 
 
 def _lookup_block(block, path):

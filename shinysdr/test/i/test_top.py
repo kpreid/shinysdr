@@ -108,21 +108,21 @@ class TestTop(unittest.TestCase):
         (_key, receiver) = top.add_receiver('NONSENSE', key='a')
         self.assertEqual(receiver.get_mode(), 'AM')
     
-    def test_audio_queue_smoke(self):
+    def test_audio_callback_smoke(self):
         top = Top(devices={'s1': SimulatedDeviceForTest(freq=0)})
-        queue = gr.msg_queue()
+        callback = lambda data: None
         (_key, _receiver) = top.add_receiver('AM', key='a')
-        top.add_audio_queue(queue, 48000)
-        top.remove_audio_queue(queue)
+        top.add_audio_callback(callback, 48000)
+        top.remove_audio_callback(callback)
     
     def test_mono(self):
         top = Top(
             devices={'s1': SimulatedDeviceForTest(freq=0)},
             features={'stereo': False})
-        queue = gr.msg_queue()
+        callback = lambda data: None
         (_key, _receiver) = top.add_receiver('AM', key='a')
-        top.add_audio_queue(queue, 48000)
-        top.remove_audio_queue(queue)
+        top.add_audio_callback(callback, 48000)
+        top.remove_audio_callback(callback)
     
     def test_close(self):
         log = []

@@ -107,11 +107,11 @@ class Session(ExportedState):
         # TODO: Quick refactoring; make this interface more sensible/faceted. Used by SessionResource
         return self.__receive_flowgraph
     
-    def add_audio_queue(self, queue, queue_rate):
-        return self.__receive_flowgraph.add_audio_queue(queue, queue_rate)
+    def add_audio_callback(self, callback, sample_rate):
+        return self.__receive_flowgraph.add_audio_callback(callback, sample_rate)
     
-    def remove_audio_queue(self, queue):
-        return self.__receive_flowgraph.remove_audio_queue(queue)
+    def remove_audio_callback(self, callback):
+        return self.__receive_flowgraph.remove_audio_callback(callback)
     
-    def get_audio_queue_channels(self):
-        return self.__receive_flowgraph.get_audio_queue_channels()
+    def get_audio_callback_channels(self):
+        return self.__receive_flowgraph.get_audio_callback_channels()

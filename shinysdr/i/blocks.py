@@ -33,6 +33,7 @@ from zope.interface import Interface, implementer
 from gnuradio import gr
 from gnuradio import blocks
 from gnuradio.fft import fft_vfc, fft_vcc, window as windows
+import numpy
 
 from shinysdr.filters import make_resampler
 from shinysdr.math import to_dB
@@ -78,6 +79,14 @@ class Context(object):
         self.__top._recursive_unlock()
 
 
+class _NoContext(object):
+    def lock(self):
+        pass
+    
+    def unlock(self):
+        pass
+
+
 # TODO: This function is used by plugins. Put it in an appropriate module.
 def make_sink_to_process_stdin(process, itemsize=gr.sizeof_char):
     """Given a twisted Process, connect a sink to its stdin."""
@@ -87,12 +96,20 @@ def make_sink_to_process_stdin(process, itemsize=gr.sizeof_char):
     return blocks.file_descriptor_sink(itemsize, fd_owned_by_sink)
 
 
-class _NoContext(object):
-    def lock(self):
-        pass
-    
-    def unlock(self):
-        pass
+class ReactorSink(gr.sync_block):
+    """Transfers items from a flow graph to the Twisted reactor world, as a numpy array."""
+    def __init__(self, numpy_type, callback, reactor):
+        gr.sync_block.__init__(self,
+            name=type(self).__name__,
+            in_sig=[numpy_type],
+            out_sig=[])
+        self.__reactor = reactor
+        self.__callback = callback
+
+    def work(self, input_items, output_items):
+        items_numpy_array = input_items[0].copy()
+        self.__reactor.callFromThread(self.__callback, items_numpy_array)
+        return len(items_numpy_array)
 
 
 _maximum_fft_rate = 500

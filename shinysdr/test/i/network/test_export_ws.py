@@ -323,6 +323,10 @@ class TestOurStreamProtocol(unittest.TestCase):
             subscription_context=SubscriptionContext(reactor=self.clock, poller=None))
         self.protocol.transport = self.transport
     
+    def tearDown(self):
+        # It used to be if we don't do this cleanup we get a deadlock, probably because of the blocking audio queue thread that doesn't exist any more. But it's good practice to exercise cleanup in tests anyway.
+        self.protocol.connectionLost(None)
+    
     def begin(self, url):
         self.transport.location = bytes(url)
         self.protocol.dataReceived(b'{}')
@@ -341,13 +345,8 @@ class TestOurStreamProtocol(unittest.TestCase):
     @defer.inlineCallbacks
     def test_audio(self):
         self.begin('/foo/audio?rate=1')
-        try:
-            self.clock.advance(1)
-            # the audio queue is checked by a thread so we must have an actual delay :(
-            yield deferLater(the_reactor, 0.2, lambda: None)
-        finally:
-            # If we don't do this cleanup we get a deadlock, probably because of the blocking audio queue thread?
-            self.protocol.connectionLost(None)
+        self.clock.advance(1)
+        yield deferLater(the_reactor, 0.0, lambda: None)
         self.assertEqual(self.transport.messages(), [
             {
                 u'signal_type': {
@@ -384,12 +383,11 @@ class EntryPointStub(ExportedState):
     def entry_point_is_deleted(self):
         return False
     
-    def add_audio_queue(self, queue, queue_rate):
-        deferLater(the_reactor, 0.1, lambda:
-            queue.insert_tail(gr.message().make_from_string(_FAKE_SAMPLES, 0, 1, len(_FAKE_SAMPLES))))
+    def add_audio_callback(self, callback, sample_rate):
+        deferLater(the_reactor, 0.0, lambda: callback(_FAKE_SAMPLES))
     
-    def remove_audio_queue(self, queue):
+    def remove_audio_callback(self, callback):
         pass
         
-    def get_audio_queue_channels(self):
+    def get_audio_callback_channels(self):
         return 1

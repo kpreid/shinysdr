@@ -21,13 +21,15 @@ GR blocks and such supporting receiver audio delivery.
 
 from __future__ import absolute_import, division, unicode_literals
 
+from twisted.internet import reactor as the_reactor
 from twisted.logger import Logger
 
 from gnuradio import audio
 from gnuradio import blocks
 from gnuradio import gr
+import numpy
 
-from shinysdr.i.blocks import VectorResampler
+from shinysdr.i.blocks import ReactorSink, VectorResampler
 from shinysdr.types import EnumT
 
 
@@ -39,7 +41,7 @@ CLIENT_AUDIO_DEVICE = 'client'
 
 class AudioManager(object):
     """
-    Manage connecting audio sources (i.e. demodulators) to audio destinations (local devices and network clients represented as message queues).
+    Manage connecting audio sources (i.e. demodulators) to audio destinations (local devices and network clients represented as functions that accept binary buffers of samples).
     
     (This cannot be a hierarchical block, because hierarchical blocks cannot currently have variable numbers of ports.)
     """
@@ -68,7 +70,7 @@ class AudioManager(object):
         audio_destination_dict[CLIENT_AUDIO_DEVICE] = 'Client'  # TODO reconsider name
         self.__audio_destination_type = EnumT(audio_destination_dict)
         self.__audio_channels = 2 if stereo else 1
-        self.__audio_queue_sinks = {}
+        self.__audio_sinks = {}
         self.__audio_buses = {key: BusPlumber(graph, self.__audio_channels) for key in audio_destination_dict}
     
     def get_destination_type(self):
@@ -80,17 +82,22 @@ class AudioManager(object):
     def get_default_destination(self):
         return CLIENT_AUDIO_DEVICE
 
-    def add_audio_queue(self, queue, queue_rate):
+    def add_audio_callback(self, callback, sample_rate):
         """Caller must reconnect flow graph."""
         
         # TODO: place limit on maximum requested sample rate
-        self.__audio_queue_sinks[queue] = (queue_rate,
-            AudioQueueSink(channels=self.__audio_channels, queue=queue))
+        self.__audio_sinks[callback] = (
+            sample_rate,
+            ReactorSink(
+                numpy_type=numpy.dtype((numpy.float32, self.__audio_channels)),
+                callback=lambda array: callback(array.tobytes()),
+                reactor=the_reactor)
+        )
     
-    def remove_audio_queue(self, queue):
+    def remove_audio_callback(self, callback):
         """Caller must reconnect flow graph."""
         
-        del self.__audio_queue_sinks[queue]
+        del self.__audio_sinks[callback]
     
     def get_channels(self):
         return self.__audio_channels
@@ -99,7 +106,7 @@ class AudioManager(object):
         return destination in self.__audio_buses
     
     def reconnecting(self):
-        return ReconnectSession(self.__audio_buses, self.__audio_devices, self.__audio_queue_sinks, self.__logger)
+        return ReconnectSession(self.__audio_buses, self.__audio_devices, self.__audio_sinks, self.__logger)
 
     # @exported_value()
     def get_audio_bus_rate(self):
@@ -111,10 +118,10 @@ __all__.append('AudioManager')
 
 
 class ReconnectSession(object):
-    def __init__(self, buses, devices, queue_sinks, log):
+    def __init__(self, buses, devices, audio_sinks, log):
         self.__buses = buses
         self.__devices = devices
-        self.__queue_sinks = queue_sinks
+        self.__audio_sinks = audio_sinks
         self.__log = log
         self.__bus_inputs = {bus: [] for bus in buses}
         self.__fallback_bus = buses.keys()[0]
@@ -130,8 +137,8 @@ class ReconnectSession(object):
         for key, bus in self.__buses.iteritems():
             inputs = self.__bus_inputs[key]
             if key == CLIENT_AUDIO_DEVICE:
-                outputs = self.__queue_sinks.itervalues()
-                noutputs = len(self.__queue_sinks)
+                outputs = self.__audio_sinks.itervalues()
+                noutputs = len(self.__audio_sinks)
             else:
                 outputs = [self.__devices[key]]
                 noutputs = 1
@@ -216,19 +223,6 @@ class BusPlumber(object):
                 self.__graph.connect(in_endpoint, resampler, out_endpoint)
                 if resampler_table is not None:
                     resampler_table[out_rate] = resampler
-
-
-class AudioQueueSink(gr.hier_block2):
-    def __init__(self, channels, queue):
-        gr.hier_block2.__init__(
-            self, type(self).__name__,
-            gr.io_signature(1, 1, gr.sizeof_float * channels),
-            gr.io_signature(0, 0, 0))
-        sink = blocks.message_sink(
-            gr.sizeof_float * channels,
-            queue,
-            True)
-        self.connect(self, sink)
 
 
 class VectorAudioSink(gr.hier_block2):
