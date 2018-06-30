@@ -1,4 +1,5 @@
-# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
+# -*- coding: utf-8 -*-
+# Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -19,11 +20,11 @@ from __future__ import absolute_import, division, unicode_literals
 
 from twisted.trial import unittest
 
-from shinysdr.types import BulkDataElement, ConstantT, EnumT, EnumRow, RangeT
+from shinysdr.types import BulkDataElement, BulkDataT, ConstantT, EnumT, EnumRow, RangeT, to_value_type
 from shinysdr import units
 
 
-def _testType(self, type_obj, good, bad):
+def _test_coerce_cases(self, type_obj, good, bad):
     for case in good:
         if isinstance(case, tuple):
             input_value, output_value = case
@@ -36,6 +37,34 @@ def _testType(self, type_obj, good, bad):
         self.assertRaises(ValueError, lambda: type_obj(value))
 
 
+class TestPythonT(unittest.TestCase):
+    def test_coerce_unicode(self):
+        """Coercion behavior is inherited from the Python type's __call__."""
+        _test_coerce_cases(self,
+            to_value_type(unicode),
+            good=[
+                '', 
+                'hello world',
+                '↑',
+                (None, 'None'),
+                (b'x', 'x'),
+                (1, '1'),
+                ([], '[]'),
+            ],
+            bad=[
+                b'\xFF',  # encoding failure
+            ])
+    
+    def test_string_buffer_append_and_truncate(self):
+        # TODO: add more tests
+        buf = to_value_type(unicode).create_buffer(history_length=5)
+        buf.append('aa')
+        buf.append('bb')
+        self.assertEqual(buf.get(), 'aabb')
+        buf.append('cc')
+        self.assertEqual(buf.get(), 'abbcc')
+
+
 class TestConstantT(unittest.TestCase):
     longMessage = True
     
@@ -43,7 +72,7 @@ class TestConstantT(unittest.TestCase):
         self.assertEqual({u'type': u'ConstantT', u'value': 1}, ConstantT(1).to_json())
     
     def test_run(self):
-        _testType(self,
+        _test_coerce_cases(self,
             ConstantT(1),
             [1, 1.0, (None, 1), ('foo', 1)],
             [])
@@ -53,19 +82,19 @@ class TestEnumT(unittest.TestCase):
     longMessage = True
     
     def test_strict(self):
-        _testType(self,
+        _test_coerce_cases(self,
             EnumT({u'a': u'a', u'b': u'b'}, strict=True),
             [(u'a', u'a'), ('a', u'a')],
             [u'c', 999])
 
     def test_strict_by_default(self):
-        _testType(self,
+        _test_coerce_cases(self,
             EnumT({u'a': u'a', u'b': u'b'}),
             [(u'a', u'a'), ('a', u'a')],
             [u'c', 999])
 
     def test_lenient(self):
-        _testType(self,
+        _test_coerce_cases(self,
             EnumT({u'a': u'a', u'b': u'b'}, strict=False),
             [(u'a', u'a'), ('a', u'a'), u'c', (999, u'999')],
             [])
@@ -129,25 +158,25 @@ class TestRangeT(unittest.TestCase):
         self.assertRaises(ValueError, lambda: RangeT([(1, 2), (2, 3)]))
     
     def test_discrete(self):
-        _testType(self,
+        _test_coerce_cases(self,
             RangeT([(1, 1), (2, 3), (5, 5)], strict=True, integer=False),
             [(0, 1), 1, (1.49, 1), (1.50, 1), (1.51, 2), 2, 2.5, 3, (4, 3), (4.1, 5), 5, (6, 5)],
             [])
 
     def test_log_integer(self):
-        _testType(self,
+        _test_coerce_cases(self,
             RangeT([(1, 32)], strict=True, logarithmic=True, integer=True),
             [(0, 1), 1, 2, 4, 32, (2.0, 2), (2.5, 2), (3.5, 4), (33, 32)],
             [])
 
     def test_shifted_float(self):
-        _testType(self,
+        _test_coerce_cases(self,
             RangeT([(3, 4)], strict=True, logarithmic=False, integer=False).shifted_by(-3),
             [(-0.5, 0), 0, 0.25, 1, (1.5, 1)],
             [])
 
     def test_shifted_integer(self):
-        _testType(self,
+        _test_coerce_cases(self,
             RangeT([(3, 4)], strict=True, logarithmic=False, integer=True).shifted_by(-3),
             [(-0.5, 0), 0, (0.25, 0), 1, (1.5, 1)],
             [])
@@ -208,3 +237,16 @@ class TestBulkData(unittest.TestCase):
         self.assertEqual(
             BulkDataElement(info=(123,), data=b'\xFF').to_json(),
             [(123,), [-1]])
+    
+    def test_buffer_append_and_truncate(self):
+        # TODO: add more tests
+        buf = BulkDataT('', '').create_buffer(history_length=2)
+        buf.append([BulkDataElement(info=(), data=b'\x01')])
+        buf.append([BulkDataElement(info=(), data=b'\x02')])
+        self.assertEqual(buf.get(), [
+            BulkDataElement(info=(), data=b'\x01'),
+            BulkDataElement(info=(), data=b'\x02')])
+        buf.append([BulkDataElement(info=(), data=b'\x03')])
+        self.assertEqual(buf.get(), [
+            BulkDataElement(info=(), data=b'\x02'),
+            BulkDataElement(info=(), data=b'\x03')])

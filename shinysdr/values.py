@@ -361,6 +361,7 @@ class GRMsgQueueCell(ValueCell):
     def __init__(self,
             queue,
             type,
+            history_length,
             info_getter=lambda: None,
             **kwargs):
         if not (type == unicode or isinstance(type, BulkDataT)):
@@ -371,13 +372,12 @@ class GRMsgQueueCell(ValueCell):
             persists=False,
             **kwargs)
         
-        # parameters
         self.__queue = queue
         self.__info_getter = info_getter
+        self.__buffer = type.create_buffer(history_length)
     
     def get(self):
-        # still abstract
-        raise NotImplementedError(self)
+        return self.__buffer.get()
     
     def set(self, value):
         """implement abstract"""
@@ -394,6 +394,11 @@ class GRMsgQueueCell(ValueCell):
     
     def _poll_from_poller(self, fire):
         """Extract all items currently in the queue and deliver them."""
+        
+        def append_patch(patch):
+            self.__buffer.append(patch)
+            fire.append(patch)
+        
         got_info = False
         latest_info = None
         while True:
@@ -403,7 +408,7 @@ class GRMsgQueueCell(ValueCell):
             if not got_info:
                 got_info = True
                 latest_info = self.__info_getter()
-            self._deliver_message(message, latest_info, fire)
+            self._deliver_message(message, latest_info, append_patch)
 
 
 class ElementQueueCell(GRMsgQueueCell):
@@ -416,16 +421,10 @@ class ElementQueueCell(GRMsgQueueCell):
         GRMsgQueueCell.__init__(self,
             queue=queue,
             type=type,
+            history_length=history_length,
             **kwargs)
-        
-        self.__history_length = history_length
-        self.__latest = []  # caution, mutable
     
-    def get(self):
-        """implement abstract"""
-        return self.__latest[:]
-    
-    def _deliver_message(self, grmessage, info, fire):
+    def _deliver_message(self, grmessage, info, append_patch):
         string = grmessage.to_string()
         itemsize = int(grmessage.arg1())
         count = int(grmessage.arg2())
@@ -439,10 +438,7 @@ class ElementQueueCell(GRMsgQueueCell):
                 data=item_string,
                 info=info))
         
-        self.__latest.extend(parsed_items)
-        self.__latest[:-self.__history_length] = []
-        
-        fire.append(parsed_items)
+        append_patch(parsed_items)
 
 
 class StringQueueCell(GRMsgQueueCell):
@@ -454,21 +450,15 @@ class StringQueueCell(GRMsgQueueCell):
         GRMsgQueueCell.__init__(self,
             queue=queue,
             type=unicode,
+            history_length=history_length,
             **kwargs)
         
-        self.__history_length = history_length
         self.__decoder = codecs.getincrementaldecoder(encoding)(errors='replace')
-        self.__latest = ''
     
-    def get(self):
-        """implement abstract"""
-        return self.__latest
-    
-    def _deliver_message(self, grmessage, info, fire):
+    def _deliver_message(self, grmessage, info, append_patch):
         message_string = self.__decoder.decode(grmessage.to_string())
         if message_string:
-            self.__latest = (self.__latest + message_string)[-self.__history_length:]
-            fire.append(message_string)
+            append_patch(message_string)
 
 
 class LooseCell(ValueCell):

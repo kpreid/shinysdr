@@ -29,7 +29,7 @@ from collections import namedtuple
 import math
 import struct
 
-from zope.interface import implementer
+from zope.interface import Interface, implementer
 
 from shinysdr.i.json import IJsonSerializable  # reexport
 from shinysdr import units
@@ -70,8 +70,7 @@ class ValueType(object):
         raise NotImplementedError()
     
     def __call__(self, specimen):
-        """
-        Coerce the specimen to this type.
+        """Coerce the specimen to this type.
         
         If the specimen is not of a suitable type, raise TypeError.
         
@@ -81,9 +80,33 @@ class ValueType(object):
     
     def is_reference(self):
         return False
+    
+    def create_buffer(self, history_length):
+        """Create and return an IDeltaBuffer suitable for values of this type.
+        
+        Returns None if the type does not support appending.
+        
+        history_length is an integer; the units depend on the type.
+        """
+        return None
 
 
 __all__.append('ValueType')
+
+
+# TODO: this is like IDeltaSubscriber but can't declare it; move code to shinysdr.interfaces so it can
+class IDeltaBuffer(Interface):
+    def get():
+        """Return the current value."""
+
+    def __call__(value):
+        """Replace the current value."""
+    
+    def append(patch):
+        """Append to the current value."""
+    
+    def prepend(patch):
+        """Prepend to the current value."""
 
 
 class PythonT(ValueType):
@@ -110,6 +133,12 @@ class PythonT(ValueType):
     
     def __call__(self, specimen):
         return self.__python_type(specimen)
+    
+    def create_buffer(self, history_length):
+        if issubclass(self.__python_type, basestring):
+            return _StringDeltaBuffer(self.__python_type(), history_length=history_length)
+        else:
+            return None
 
 
 # TODO: Replace this raw object with a proper API
@@ -123,6 +152,33 @@ python_type_registry = {
 
 
 __all__.append('python_type_registry')
+
+
+@implementer(IDeltaBuffer)
+class _StringDeltaBuffer(object):
+    def __init__(self, value, history_length):
+        self.__history_length = history_length
+        self.__value = value
+        self.__is_truncated = False
+    
+    def get(self):
+        return self.__value
+
+    def __call__(self, value):
+        self.__is_truncated = False
+        self.__truncate_and_update(value)
+    
+    def append(self, patch):
+        self.__truncate_and_update(self.__value + patch)
+    
+    def prepend(self, patch):
+        if self.__is_truncated:
+            return
+        self.__truncate_and_update(patch + self.__value)
+    
+    def __truncate_and_update(self, untruncated):
+        self.__value = untruncated[-self.__history_length:]
+        self.__is_truncated = self.__is_truncated or len(untruncated) > self.__history_length
 
 
 class ConstantT(ValueType):
@@ -505,6 +561,40 @@ class BulkDataT(ValueType):
         raise Exception('Coerce not implemented for BulkDataT')
     
     # TODO implement coerce behavior, generally make this more well-defined
+    
+    def create_buffer(self, history_length):
+        return _BulkDataDeltaBuffer(history_length=history_length)
 
 
 __all__.append('BulkDataT')
+
+
+@implementer(IDeltaBuffer)
+class _BulkDataDeltaBuffer(object):
+    def __init__(self, history_length):
+        self.__history_length = history_length
+        self.__items = []
+        self.__is_truncated = False
+    
+    def get(self):
+        return self.__items[:]  # make copy of list that is mutated
+
+    def __call__(self, value):
+        self.__is_truncated = False
+        self.__items = value[:]
+    
+    def append(self, patch):
+        self.__items.extend(patch)
+        self.__truncate_and_update()
+    
+    def prepend(self, patch):
+        if self.__is_truncated:
+            return
+        self.__items[:0] = patch
+        self.__truncate_and_update()
+    
+    def __truncate_and_update(self):
+        if len(self.__items) > self.__history_length:
+            self.__items[:-self.__history_length] = []
+            self.__is_truncated = True
+
