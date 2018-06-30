@@ -106,7 +106,7 @@ class _ElecraftRadio(ExportedState):
         mode_cell = self.__rx_main.state()['MD']
         sidetone_cell = self.state()['CW']
         submode_cell = self.state()['DT']
-        iq_offset_cell = LooseCell(value=0.0, type=float)
+        iq_offset_cell = LooseCell(value=0.0, type=float, writable=True)
         
         self.__iq_center_cell = ViewCell(
                 base=base_freq_cell,

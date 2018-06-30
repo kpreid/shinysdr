@@ -173,7 +173,7 @@ class TestIntervalListener(unittest.TestCase):
         """
         self.listener.fileOpened('some file')
         self.assertEqual(self.listener.get_status(), _STATUS_RECEIVING)
-        self.context.get_absolute_frequency_cell().set(654321)
+        self.context.get_absolute_frequency_cell().set_internal(654321)
         self.clockAndSpawn.advance(1)  # Allow cell subscription to fire.
         self.assertEqual(self.listener.get_status(), _STATUS_IDLE)
         self.listener.fileClosed('some file')

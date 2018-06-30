@@ -96,6 +96,7 @@ __all__.append('ValueType')
 
 # TODO: this is like IDeltaSubscriber but can't declare it; move code to shinysdr.interfaces so it can
 class IDeltaBuffer(Interface):
+    # pylint: disable=arguments-differ, signature-differs
     def get():
         """Return the current value."""
 
@@ -597,4 +598,3 @@ class _BulkDataDeltaBuffer(object):
         if len(self.__items) > self.__history_length:
             self.__items[:-self.__history_length] = []
             self.__is_truncated = True
-

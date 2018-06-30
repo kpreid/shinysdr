@@ -170,6 +170,10 @@ class TargetingMixin(object):
         return self._key
 
 
+class NotWritableError(Exception):
+    pass
+
+
 class BaseCell(object):
     def __init__(self,
             type,
@@ -203,8 +207,14 @@ class BaseCell(object):
         raise NotImplementedError(self)
     
     def set(self, value):
-        """Set the value held by this cell."""
-        raise NotImplementedError(self)
+        """Set the value held by this cell, or raise NotWritableError.
+        
+        Subclasses must implement this if they are ever writable.
+        """
+        if self._writable:
+            raise NotImplementedError(self)
+        else:
+            raise NotWritableError(self)
     
     def get_state(self, subscriber=lambda _: None):
         """Return the value, or state of the object, held by this cell.
@@ -322,7 +332,7 @@ class PollingCell(TargetingMixin, ValueCell):
     
     def set(self, value):
         if not self.isWritable():
-            raise Exception('Not writable.')
+            raise NotWritableError(self)
         return self.__setter(self.metadata().value_type(value))
     
     def subscribe2(self, subscriber, context):
@@ -374,21 +384,16 @@ class GRMsgQueueCell(ValueCell):
         
         self.__queue = queue
         self.__info_getter = info_getter
-        self.__buffer = type.create_buffer(history_length)
+        self.__buffer = self.type().create_buffer(history_length)
     
     def get(self):
         return self.__buffer.get()
-    
-    def set(self, value):
-        """implement abstract"""
-        # TODO: There should be a standard exception to raise, or base class should do it for us
-        raise Exception('Not writable')
     
     def subscribe2(self, subscriber, context):
         """implement abstract"""
         return self.get(), context.poller.subscribe(self, subscriber, fast=True, delegate_polling_to_me=True)
     
-    def _deliver_message(self, grmessage, info, fire):
+    def _deliver_message(self, grmessage, info, append_patch):
         """Implement this method to handle the gr.message objects from the queue."""
         raise NotImplementedError(self)
     
@@ -484,6 +489,8 @@ class LooseCell(ValueCell):
         return self.__value
     
     def set(self, value):
+        if not self.isWritable():
+            raise NotWritableError(self)
         value = self.metadata().value_type(value)
         if self.__value == value:
             return
@@ -576,6 +583,9 @@ def ViewCell(base, get_transform, set_transform, **kwargs):
         value=get_transform(base.get()),
         post_hook=forward,
         **kwargs)
+    
+    if self.isWritable() and not base.isWritable():
+        raise ValueError('Cannot construct a writable ViewCell on {!r}'.format(base))
     
     sub = base._subscribe_immediate(reverse)
     weakref.ref(self, lambda: sub.unsubscribe())

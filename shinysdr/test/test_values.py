@@ -407,7 +407,11 @@ def make_bytes_msg(s):
 
 class TestLooseCell(unittest.TestCase):
     def setUp(self):
-        self.lc = LooseCell(value=0, type=int, interest_tracker=LoopbackInterestTracker())
+        self.lc = LooseCell(
+            value=0,
+            type=int,
+            writable=True,
+            interest_tracker=LoopbackInterestTracker())
     
     def test_get_set(self):
         self.assertEqual(0, self.lc.get())
@@ -426,17 +430,27 @@ class TestLooseCell(unittest.TestCase):
     
     def test_repr(self):
         self.assertEqual(repr(self.lc), '<LooseCell PythonT(<type \'int\'>) 0>')
+    
+    def test_default_writability(self):
+        self.assertFalse(LooseCell(value=0, type=int).isWritable())
+    
+    def test_not_writable(self):
+        self.lc = LooseCell(value=0, type=int, writable=False)
+        self.assertRaises(Exception, lambda:
+            self.lc.set(1))
+        self.assertEqual(self.lc.get(), 0)
 
 
 class TestViewCell(unittest.TestCase):
     def setUp(self):
-        self.lc = LooseCell(value=0, type=RangeT([(-100, 100)]))
+        self.lc = LooseCell(value=0, type=RangeT([(-100, 100)]), writable=True)
         self.delta = 1
         self.vc = ViewCell(
             base=self.lc,
             get_transform=lambda x: x + self.delta,
             set_transform=lambda x: x - self.delta,
             type=int,
+            writable=True,
             interest_tracker=LoopbackInterestTracker())
     
     # TODO: Add tests for behavior when the transform is not perfectly one-to-one (such as due to floating-point error).
@@ -475,6 +489,9 @@ class TestViewCell(unittest.TestCase):
     def test_coerced_base_value(self):
         self.vc.set(999)  # out of base cell's range, gets clamped
         self.assertEqual(100 + self.delta, self.vc.get())
+    
+    # TODO: Test what happens when the base cell is not writable
+    # ...or if it raises an unexpected error on set()
 
 
 class TestCommandCell(unittest.TestCase):

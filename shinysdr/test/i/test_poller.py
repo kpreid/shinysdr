@@ -100,7 +100,7 @@ class PollerCellsSpecimen(ExportedState):
     foo = None
     
     def __init__(self):
-        self.subscribable = LooseCell(value='', type=str)
+        self.subscribable = LooseCell(value='', type=str, writable=True)
     
     def state_def(self):
         for d in super(PollerCellsSpecimen, self).state_def():
