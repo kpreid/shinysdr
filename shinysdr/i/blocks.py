@@ -33,13 +33,14 @@ from zope.interface import Interface, implementer
 from gnuradio import gr
 from gnuradio import blocks
 from gnuradio.fft import fft_vfc, fft_vcc, window as windows
+import numpy
 
 from shinysdr.filters import make_resampler
 from shinysdr.math import to_dB
 from shinysdr.signals import SignalType
 from shinysdr.types import BulkDataT, EnumT, RangeT
 from shinysdr import units
-from shinysdr.values import ExportedState, InterestTracker, LooseCell, ElementQueueCell, exported_value, setter
+from shinysdr.values import ExportedState, InterestTracker, LooseCell, ElementSinkCell, exported_value, setter
 
 
 class RecursiveLockBlockMixin(object):
@@ -78,6 +79,14 @@ class Context(object):
         self.__top._recursive_unlock()
 
 
+class _NoContext(object):
+    def lock(self):
+        pass
+    
+    def unlock(self):
+        pass
+
+
 # TODO: This function is used by plugins. Put it in an appropriate module.
 def make_sink_to_process_stdin(process, itemsize=gr.sizeof_char):
     """Given a twisted Process, connect a sink to its stdin."""
@@ -87,12 +96,20 @@ def make_sink_to_process_stdin(process, itemsize=gr.sizeof_char):
     return blocks.file_descriptor_sink(itemsize, fd_owned_by_sink)
 
 
-class _NoContext(object):
-    def lock(self):
-        pass
-    
-    def unlock(self):
-        pass
+class ReactorSink(gr.sync_block):
+    """Transfers items from a flow graph to the Twisted reactor world, as a numpy array."""
+    def __init__(self, numpy_type, callback, reactor):
+        gr.sync_block.__init__(self,
+            name=type(self).__name__,
+            in_sig=[numpy_type],
+            out_sig=[])
+        self.__reactor = reactor
+        self.__callback = callback
+
+    def work(self, input_items, output_items):
+        items_numpy_array = input_items[0].copy()
+        self.__reactor.callFromThread(self.__callback, items_numpy_array)
+        return len(items_numpy_array)
 
 
 _maximum_fft_rate = 500
@@ -205,13 +222,19 @@ class MonitorSink(gr.hier_block2, ExportedState):
         self.__has_subscriptions = False
         self.__interest = InterestTracker(self.__cell_interest_callback)
 
-        self.__fft_queue = gr.msg_queue()
-        self.__scope_queue = gr.msg_queue()
+        self.__fft_cell = ElementSinkCell(
+            info_getter=self._get_fft_info,
+            type=BulkDataT(array_format='b', info_format='dff'),
+            interest_tracker=self.__interest,
+            label='Spectrum')
+        self.__scope_cell = ElementSinkCell(
+            info_getter=self._get_scope_info,
+            type=BulkDataT(array_format='f', info_format='d'),
+            interest_tracker=self.__interest,
+            label='Scope')
         
         # stuff created by __do_connect
         self.__gate = None
-        self.__fft_sink = None
-        self.__scope_sink = None
         self.__frame_dec = None
         self.__frame_rate_to_decimation_conversion = 0.0
         
@@ -221,18 +244,8 @@ class MonitorSink(gr.hier_block2, ExportedState):
         for d in super(MonitorSink, self).state_def():
             yield d
         # TODO make this possible to be decorator style
-        yield 'fft', ElementQueueCell(
-            queue=self.__fft_queue,
-            info_getter=self._get_fft_info,
-            type=BulkDataT(array_format='b', info_format='dff'),
-            interest_tracker=self.__interest,
-            label='Spectrum')
-        yield 'scope', ElementQueueCell(
-            queue=self.__scope_queue,
-            info_getter=self._get_scope_info,
-            type=BulkDataT(array_format='f', info_format='d'),
-            interest_tracker=self.__interest,
-            label='Scope')
+        yield 'fft', self.__fft_cell
+        yield 'scope', self.__scope_cell
 
     def __do_connect(self):
         itemsize = self.__itemsize
@@ -287,8 +300,8 @@ class MonitorSink(gr.hier_block2, ExportedState):
         # It would make slightly more sense to use unsigned chars, but blocks.float_to_uchar does not support vlen.
         self.__fft_converter = blocks.float_to_char(vlen=self.__freq_resolution, scale=1.0)
         
-        self.__fft_sink = blocks.message_sink(output_length * gr.sizeof_char, self.__fft_queue, True)
-        self.__scope_sink = blocks.message_sink(self.__time_length * gr.sizeof_gr_complex, self.__scope_queue, True)
+        fft_sink = self.__fft_cell.create_sink_internal(numpy.dtype((numpy.int8, output_length)))
+        scope_sink = self.__scope_cell.create_sink_internal(numpy.dtype(('c8', self.__time_length)))
         scope_chunker = blocks.stream_to_vector_decimator(
             item_size=gr.sizeof_gr_complex,
             sample_rate=sample_rate,
@@ -309,15 +322,15 @@ class MonitorSink(gr.hier_block2, ExportedState):
                 logarithmizer)
             if self.__after_fft is not None:
                 self.connect(logarithmizer, self.__after_fft)
-                self.connect(self.__after_fft, self.__fft_converter, self.__fft_sink)
+                self.connect(self.__after_fft, self.__fft_converter, fft_sink)
                 self.connect((self.__after_fft, 1), blocks.null_sink(gr.sizeof_float * self.__freq_resolution))
             else:
-                self.connect(logarithmizer, self.__fft_converter, self.__fft_sink)
+                self.connect(logarithmizer, self.__fft_converter, fft_sink)
             if self.__enable_scope:
                 self.connect(
                     self.__gate,
                     scope_chunker,
-                    self.__scope_sink)
+                    scope_sink)
         finally:
             self.__context.unlock()
     

@@ -47,6 +47,7 @@ class Poller(object):
         }
         self.__functions = []
     
+    # TODO: delegate_polling_to_me is not currently used
     def subscribe(self, cell, subscriber, fast, delegate_polling_to_me=False):
         if not isinstance(cell, BaseCell):
             # we're not actually against duck typing here; this is a sanity check

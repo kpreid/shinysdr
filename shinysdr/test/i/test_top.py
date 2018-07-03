@@ -23,8 +23,6 @@ from twisted.internet.task import deferLater
 from twisted.trial import unittest
 from zope.interface import implementer  # available via Twisted
 
-from gnuradio import gr
-
 from shinysdr.devices import Device, IComponent, merge_devices
 from shinysdr.i.poller import the_subscription_context
 from shinysdr.i.top import Top
@@ -108,21 +106,23 @@ class TestTop(unittest.TestCase):
         (_key, receiver) = top.add_receiver('NONSENSE', key='a')
         self.assertEqual(receiver.get_mode(), 'AM')
     
-    def test_audio_queue_smoke(self):
+    def test_audio_callback_smoke(self):
+        def callback(data):
+            pass
         top = Top(devices={'s1': SimulatedDeviceForTest(freq=0)})
-        queue = gr.msg_queue()
         (_key, _receiver) = top.add_receiver('AM', key='a')
-        top.add_audio_queue(queue, 48000)
-        top.remove_audio_queue(queue)
+        top.add_audio_callback(callback, 48000)
+        top.remove_audio_callback(callback)
     
     def test_mono(self):
+        def callback(data):
+            pass
         top = Top(
             devices={'s1': SimulatedDeviceForTest(freq=0)},
             features={'stereo': False})
-        queue = gr.msg_queue()
         (_key, _receiver) = top.add_receiver('AM', key='a')
-        top.add_audio_queue(queue, 48000)
-        top.remove_audio_queue(queue)
+        top.add_audio_callback(callback, 48000)
+        top.remove_audio_callback(callback)
     
     def test_close(self):
         log = []

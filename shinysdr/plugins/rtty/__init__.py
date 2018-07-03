@@ -40,7 +40,7 @@ from shinysdr.math import dB, rotator_inc
 from shinysdr.filters import MultistageChannelFilter
 from shinysdr.interfaces import BandShape, ModeDef, IDemodulator, IModulator
 from shinysdr.signals import SignalType, no_signal
-from shinysdr.values import ExportedState, StringQueueCell, exported_value
+from shinysdr.values import ExportedState, StringSinkCell, exported_value
 
 
 # note: this string is ordered so that the first bit (on the air) is the least significant bit of the index in the string
@@ -88,14 +88,14 @@ class RTTYDemodulator(gr.hier_block2, ExportedState):
         
         channel_filter = self.__make_channel_filter()
 
-        self.__char_queue = gr.msg_queue(limit=100)
-        self.__char_sink = blocks.message_sink(gr.sizeof_char, self.__char_queue, True)
+        self.__text_cell = StringSinkCell(encoding='us-ascii')
+        self.__text_sink = self.__text_cell.create_sink_internal()
 
         self.connect(
             self,
             channel_filter,
             self.__make_demodulator(),
-            self.__char_sink)
+            self.__text_sink)
         
         self.connect(
             channel_filter,
@@ -153,9 +153,7 @@ class RTTYDemodulator(gr.hier_block2, ExportedState):
         for d in super(RTTYDemodulator, self).state_def():
             yield d
         # TODO make this possible to be decorator style
-        yield 'text', StringQueueCell(
-            queue=self.__char_queue,
-            encoding='us-ascii')
+        yield 'text', self.__text_cell
 
     @exported_value(type=BandShape, changes='never')
     def get_band_shape(self):

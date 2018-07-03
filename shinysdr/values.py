@@ -26,11 +26,14 @@ import codecs
 from collections import namedtuple
 import weakref
 
+from twisted.internet import reactor as the_reactor
 from twisted.logger import Logger
 from twisted.python.failure import Failure
 from zope.interface import Interface, implementer  # available via Twisted
 
-from shinysdr.gr_ext import safe_delete_head_nowait
+from gnuradio import gr
+import numpy
+
 from shinysdr.types import BulkDataElement, BulkDataT, EnumRow, ReferenceT, to_value_type
 
 
@@ -362,108 +365,121 @@ class PollingCell(TargetingMixin, ValueCell):
             self.poll_for_change(specific_cell=True)
 
 
-class GRMsgQueueCell(ValueCell):
-    """A cell which consumes a gr.msg_queue, with items in the format blocks.message_sink generates, and provides its contents as the streaming cell value.
+class GRSinkCell(ValueCell):
+    """A cell whose streaming value is the items collected by a gnuradio sink.
     
-    Abstract; use ElementQueueCell or StringQueueCell directly.
+    Note that the info getter is called from a GNU Radio thread.
+    
+    Abstract; use ElementSinkCell or StringSinkCell directly.
     """
     
     def __init__(self,
-            queue,
             type,
             history_length,
+            reactor=the_reactor,  # default because most uses will be from GR
             info_getter=lambda: None,
             **kwargs):
-        if not (type == unicode or isinstance(type, BulkDataT)):
-            raise ValueError('Unsupported type for GRMsgQueueCell {}'.format(type))
+        type = to_value_type(type)
+        if not (type == to_value_type(unicode) or isinstance(type, BulkDataT)):
+            raise ValueError('Unsupported type for GRSinkCell {}'.format(type))
         ValueCell.__init__(self,
             type=type,
             writable=False,
             persists=False,
             **kwargs)
         
-        self.__queue = queue
+        self.__buffer = type.create_buffer(history_length)
+        if not self.__buffer:
+            raise ValueError('Type {} does not support patch buffers'.format(type))
+        
+        self.__subscriptions = set()
         self.__info_getter = info_getter
-        self.__buffer = self.type().create_buffer(history_length)
+        self.__reactor = reactor
+    
+    def create_sink_internal(self, numpy_type):
+        """Create a sink which feeds into this cell.
+        
+        For use by the "owner" of this cell only.
+        
+        This is a method so that the input itemsize can be changed over the life of the cell.
+        """
+        return _StreamBackingSink(
+            numpy_type=numpy_type,
+            cell=self)
     
     def get(self):
         return self.__buffer.get()
     
     def subscribe2(self, subscriber, context):
         """implement abstract"""
-        return self.get(), context.poller.subscribe(self, subscriber, fast=True, delegate_polling_to_me=True)
+        return self.get(), _SimpleSubscription(subscriber, context, self.__subscriptions, self.interest_tracker)
     
-    def _deliver_message(self, grmessage, info, append_patch):
-        """Implement this method to handle the gr.message objects from the queue."""
+    def _transform_in_thread(self, info, array):
+        """Implement this method to convert the numpy array to a patch suitable for the value type."""
         raise NotImplementedError(self)
     
-    def _poll_from_poller(self, fire):
-        """Extract all items currently in the queue and deliver them."""
-        
-        def append_patch(patch):
-            self.__buffer.append(patch)
-            fire.append(patch)
-        
-        got_info = False
-        latest_info = None
-        while True:
-            message = safe_delete_head_nowait(self.__queue)
-            if not message:
-                break
-            if not got_info:
-                got_info = True
-                latest_info = self.__info_getter()
-            self._deliver_message(message, latest_info, append_patch)
+    def _process_from_work_thread(self, array):
+        info = self.__info_getter()
+        patch = self._transform_in_thread(info, array)
+        self.__reactor.callFromThread(self.__deliver, patch)
+    
+    def __deliver(self, patch):
+        self.__buffer.append(patch)
+        for subscription in self.__subscriptions:
+            subscription._fire_append(patch)
 
 
-class ElementQueueCell(GRMsgQueueCell):
+class _StreamBackingSink(gr.sync_block):
+    def __init__(self, numpy_type, cell):
+        gr.sync_block.__init__(self,
+            name=type(self).__name__,
+            in_sig=[numpy_type],
+            out_sig=[])
+        self.__cell = cell
+
+    def work(self, input_items, output_items):
+        items_numpy_array = input_items[0].copy()
+        self.__cell._process_from_work_thread(items_numpy_array)
+        return len(items_numpy_array)
+
+
+class ElementSinkCell(GRSinkCell):
     def __init__(self,
-            queue,
             type,
             history_length=32,
             **kwargs):
         assert isinstance(type, BulkDataT)
-        GRMsgQueueCell.__init__(self,
-            queue=queue,
+        GRSinkCell.__init__(self,
             type=type,
             history_length=history_length,
             **kwargs)
     
-    def _deliver_message(self, grmessage, info, append_patch):
-        string = grmessage.to_string()
-        itemsize = int(grmessage.arg1())
-        count = int(grmessage.arg2())
-        if not count: return
-        
+    def _transform_in_thread(self, info, array):
+        # Extract single items (vectors) and attach info.
         parsed_items = []
-        for index in xrange(count):
-            # extract value
-            item_string = string[itemsize * index:itemsize * (index + 1)]
-            parsed_items.append(BulkDataElement(
-                data=item_string,
-                info=info))
+        for item in array:
+            parsed_items.append(BulkDataElement(data=item.tobytes(), info=info))
         
-        append_patch(parsed_items)
+        return parsed_items
 
 
-class StringQueueCell(GRMsgQueueCell):
+class StringSinkCell(GRSinkCell):
     def __init__(self,
-            queue,
             encoding,
             history_length=1000,
             **kwargs):
-        GRMsgQueueCell.__init__(self,
-            queue=queue,
+        GRSinkCell.__init__(self,
             type=unicode,
             history_length=history_length,
             **kwargs)
         
         self.__decoder = codecs.getincrementaldecoder(encoding)(errors='replace')
     
-    def _deliver_message(self, grmessage, info, append_patch):
-        message_string = self.__decoder.decode(grmessage.to_string())
-        if message_string:
-            append_patch(message_string)
+    def create_sink_internal(self, numpy_type=numpy.uint8):
+        return super(StringSinkCell, self).create_sink_internal(numpy_type=numpy_type)
+    
+    def _transform_in_thread(self, info, array):
+        return self.__decoder.decode(array.tobytes())
 
 
 class LooseCell(ValueCell):
@@ -538,6 +554,13 @@ class _SimpleSubscription(object):
     def _fire(self, value):
         # TODO: This is calling with a maybe-stale-when-it-arrives value. Do we want to tighten up and prohibit that in the specification of subscribe2?
         self.__reactor.callLater(0, self.__subscriber, value)
+    
+    def _fire_append(self, patch):
+        if IDeltaSubscriber.providedBy(self.__subscriber):
+            self.__reactor.callLater(0, self.__subscriber.append, patch)
+        else:
+            # TODO: Using patch as value is not specified to work in general. Arrange to consistently use IDeltaBuffer
+            self.__reactor.callLater(0, self.__subscriber, patch)
     
     def unsubscribe(self):
         self.__subscription_set.remove(self)

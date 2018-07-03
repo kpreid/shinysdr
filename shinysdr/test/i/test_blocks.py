@@ -17,14 +17,53 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from twisted.internet import defer
+from twisted.internet import reactor as the_reactor
+from twisted.internet.task import deferLater
 from twisted.trial import unittest
 
 from gnuradio import blocks
 from gnuradio import gr
 from gnuradio.fft import window as windows
+import numpy
 
-from shinysdr.i.blocks import Context, MonitorSink, RecursiveLockBlockMixin
+from shinysdr.i.blocks import Context, MonitorSink, ReactorSink, RecursiveLockBlockMixin
 from shinysdr.signals import SignalType
+
+
+class TestReactorSink(unittest.TestCase):
+    def setUp(self):
+        self.tb = gr.top_block(b'TestReactorSink')
+        self.out = []
+    
+    def callback(self, array):
+        self.out.append(array.tolist())
+    
+    @defer.inlineCallbacks
+    def test_bytes(self):
+        test_data_bytes = [1, 2, 3, 255]
+        self.tb.connect(
+            blocks.vector_source_b(test_data_bytes),
+            ReactorSink(numpy_type=numpy.uint8, callback=self.callback, reactor=the_reactor))
+        self.tb.start()
+        self.tb.wait()
+        self.tb.stop()
+        yield deferLater(the_reactor, 0.0, lambda: None)
+        self.assertEqual(self.out, [test_data_bytes])
+    
+    @defer.inlineCallbacks
+    def test_pair_floats(self):
+        # This test isn't about complexes, but this is the easiest way to set up the vector source
+        test_data_floats = [[1, 2], [3, 4]]
+        test_data_complexes = [complex(1, 2), complex(3, 4)]
+        self.tb.connect(
+            blocks.vector_source_c(test_data_complexes),
+            ReactorSink(numpy_type=numpy.dtype((numpy.float32, 2)), callback=self.callback, reactor=the_reactor))
+        self.tb.start()
+        self.tb.wait()
+        self.tb.stop()
+        yield deferLater(the_reactor, 0.0, lambda: None)
+        self.assertEqual(self.out, [test_data_floats])
 
 
 class TestMonitorSink(unittest.TestCase):

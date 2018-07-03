@@ -40,8 +40,6 @@ from twisted.internet import protocol
 from twisted.internet import task
 from twisted.logger import Logger
 
-from gnuradio import gr
-
 from shinysdr.twisted_ext import FactoryWithArgs
 
 
@@ -87,9 +85,8 @@ class _DspserverProtocol(protocol.Protocol):
         self.__msgbuf = b''
         self._poller = task.LoopingCall(self.__poll)
         self.__splitter = top.monitor.state()['fft'].subscribe_to_stream()
-        self.__audio_queue = gr.msg_queue(limit=100)
         self.__audio_buffer = b''
-        self._top.add_audio_queue(self.__audio_queue, 8000)
+        self._top.add_audio_callback(self.__audio_callback, 8000)
 
     def dataReceived(self, data):
         """twisted Protocol implementation"""
@@ -126,9 +123,12 @@ class _DspserverProtocol(protocol.Protocol):
     
     def connectionLost(self, reason):
         # pylint: disable=signature-differs
-        self._top.remove_audio_queue(self.__audio_queue)
+        self._top.remove_audio_callback(self.__audio_callback)
         self._poller.stop()
         self.__splitter.close()
+    
+    def __audio_callback(self, numpy_array):
+        self.__audio_buffer += numpy_array.tobytes()
     
     def __poll(self):
         receiver = self._get_receiver()
@@ -153,11 +153,6 @@ class _DspserverProtocol(protocol.Protocol):
             self.transport.write(msg)
 
         # audio
-        aqueue = self.__audio_queue
-        while not aqueue.empty_p():
-            # pylint: disable=no-member
-            grmessage = aqueue.delete_head()
-            self.__audio_buffer += grmessage.to_string()
         size_in_bytes = 2000 * 4
         if len(self.__audio_buffer) > size_in_bytes:
             abuf = self.__audio_buffer[:size_in_bytes]

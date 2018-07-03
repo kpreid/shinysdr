@@ -194,21 +194,21 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         self._do_connect()
 
     # TODO move these methods to a facet of AudioManager
-    def add_audio_queue(self, queue, queue_rate):
-        self.__audio_manager.add_audio_queue(queue, queue_rate)
-        self.__needs_reconnect.append(u'added audio queue')
+    def add_audio_callback(self, callback, sample_rate):
+        self.__audio_manager.add_audio_callback(callback, sample_rate)
+        self.__needs_reconnect.append(u'added audio callback')
         self._do_connect()
         self.__start_or_stop()
     
-    def remove_audio_queue(self, queue):
-        self.__audio_manager.remove_audio_queue(queue)
+    def remove_audio_callback(self, callback):
+        self.__audio_manager.remove_audio_callback(callback)
         self.__start_or_stop()
-        self.__needs_reconnect.append(u'removed audio queue')
+        self.__needs_reconnect.append(u'removed audio callback')
         self._do_connect()
     
-    def get_audio_queue_channels(self):
+    def get_audio_callback_channels(self):
         """
-        Return the number of channels (which will be 1 or 2) in audio queue outputs.
+        Return the number of channels (which will be 1 or 2) in audio callback outputs.
         """
         return self.__audio_manager.get_channels()
 
