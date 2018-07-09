@@ -38,7 +38,7 @@ try:
     import air_modes
     _unavailability = None
 except ImportError as e:
-    _unavailability = unicode(e)
+    _unavailability = six.text_type(e)
 
 from shinysdr.filters import MultistageChannelFilter
 from shinysdr.interfaces import BandShape, ClientResourceDef, IDemodulator, ModeDef
@@ -268,7 +268,7 @@ class Aircraft(ExportedState):
     def get_last_heard_time(self):
         return self.__last_heard_time
     
-    @exported_value(type=unicode, changes='explicit', sort_key='020', label='Call')  # TODO naming may be wrong
+    @exported_value(type=six.text_type, changes='explicit', sort_key='020', label='Call')  # TODO naming may be wrong
     def get_call(self):
         return self.__call
     
@@ -276,7 +276,7 @@ class Aircraft(ExportedState):
     def get_ident(self):
         return self.__ident
     
-    @exported_value(type=unicode, changes='explicit', sort_key='020', label='Aircraft type')
+    @exported_value(type=six.text_type, changes='explicit', sort_key='020', label='Aircraft type')
     def get_aircraft_type(self):
         return self.__aircraft_type
     

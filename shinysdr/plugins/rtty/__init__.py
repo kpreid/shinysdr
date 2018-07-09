@@ -36,7 +36,7 @@ try:
     from radioteletype.demodulators import rtty_demod_cb
     _unavailability = None
 except ImportError as e:
-    _unavailability = unicode(e)
+    _unavailability = six.text_type(e)
 
 from shinysdr.math import dB, rotator_inc
 from shinysdr.filters import MultistageChannelFilter

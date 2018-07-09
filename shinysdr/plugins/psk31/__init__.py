@@ -19,6 +19,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from zope.interface import implementer
 
+import six
+
 from gnuradio import analog
 from gnuradio import blocks
 from gnuradio import gr
@@ -31,7 +33,7 @@ try:
         psk31_constellation_decoder_cb)
     _unavailability = None
 except ImportError as e:
-    _unavailability = unicode(e)
+    _unavailability = six.text_type(e)
 
 from shinysdr.math import dB, rotator_inc
 from shinysdr.filters import MultistageChannelFilter

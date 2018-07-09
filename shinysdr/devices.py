@@ -391,11 +391,11 @@ def AudioDevice(
     channel_mapping = _coerce_channel_mapping(channel_mapping)
     
     if name is None:
-        full_name = u'Audio ' + unicode(rx_device)
+        full_name = u'Audio ' + six.text_type(rx_device)
         if tx_device is not None:
-            full_name += '/' + unicode(tx_device)
+            full_name += '/' + six.text_type(tx_device)
     else:
-        full_name = unicode(name)
+        full_name = six.text_type(name)
 
     rx_driver = _AudioRXDriver(
         device_name=rx_device,

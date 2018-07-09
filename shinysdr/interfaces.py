@@ -29,6 +29,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from collections import namedtuple
 
+import six
+
 from twisted.plugin import IPlugin
 from zope.interface import Attribute, Interface, implementer
 
@@ -259,11 +261,11 @@ class ModeDef(object):
         if isinstance(unavailability, bool):
             raise Exception('unavailability should be a string or None')
         
-        self.mode = unicode(mode)
+        self.mode = six.text_type(mode)
         self.info = EnumRow(info)
         self.demod_class = demod_class
         self.mod_class = mod_class
-        self.unavailability = None if unavailability is None else unicode(unavailability)
+        self.unavailability = None if unavailability is None else six.text_type(unavailability)
         
     @property
     def available(self):

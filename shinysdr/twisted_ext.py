@@ -26,6 +26,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import re
 import subprocess
 
+import six
+
 from twisted.internet import defer
 from twisted.internet.interfaces import ILoggingContext, IStreamClientEndpoint
 from twisted.internet.protocol import Factory

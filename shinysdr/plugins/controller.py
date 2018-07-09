@@ -26,6 +26,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import functools
 
+import six
+
 from twisted.internet.protocol import Factory, Protocol
 from twisted.protocols.basic import LineReceiver
 from zope.interface import implementer, Interface
@@ -46,7 +48,7 @@ def Controller(reactor, key='controller', endpoint=None, elements=None, encoding
     elements: List of elements (objects which define commands to send).
     encoding: Character encoding to use when Unicode text is given.
     """
-    return Device(components={unicode(key): _ControllerProxy(
+    return Device(components={six.text_type(key): _ControllerProxy(
         reactor=reactor,
         endpoint=endpoint,
         elements=elements or [],
@@ -68,13 +70,13 @@ class Command(object):
         """label: Name the user sees.
         text: What is sent when the command is triggered.
         """
-        if not isinstance(text, basestring):
+        if not isinstance(text, six.string_types):
             raise TypeError('Command text must be string, not %s: %r' % (type(text), text))
         self.__label = label
         self.__text = text
     
     def _cells(self, send, encoding):
-        if isinstance(self.__text, unicode):
+        if isinstance(self.__text, six.text_type):
             text = self.__text.encode(encoding)
         else:
             text = self.__text
@@ -105,7 +107,7 @@ class Selector(object):
             value=u'',
             writable=True,
             persists=True,
-            post_hook=lambda value: send(unicode(value).encode(encoding)),
+            post_hook=lambda value: send(six.text_type(value).encode(encoding)),
             label=self.__name)
 
 

@@ -18,6 +18,8 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import six
+
 from twisted.trial import unittest
 
 from shinysdr.types import BulkDataElement, BulkDataT, ConstantT, EnumT, EnumRow, RangeT, to_value_type
@@ -41,7 +43,7 @@ class TestPythonT(unittest.TestCase):
     def test_coerce_unicode(self):
         """Coercion behavior is inherited from the Python type's __call__."""
         _test_coerce_cases(self,
-            to_value_type(unicode),
+            to_value_type(six.text_type),
             good=[
                 '', 
                 'hello world',
@@ -57,7 +59,7 @@ class TestPythonT(unittest.TestCase):
     
     def test_string_buffer_append_and_truncate(self):
         # TODO: add more tests
-        buf = to_value_type(unicode).create_buffer(history_length=5)
+        buf = to_value_type(six.text_type).create_buffer(history_length=5)
         buf.append('aa')
         buf.append('bb')
         self.assertEqual(buf.get(), 'aabb')

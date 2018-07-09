@@ -264,7 +264,7 @@ class RTL433MessageWrapper(object):
         
         id_keys = [k for k in message if _message_field_is_id.get(k, False)]
         id_keys.sort()
-        self.object_id = u'-'.join(unicode(message[k]) for k in id_keys)
+        self.object_id = u'-'.join(six.text_type(message[k]) for k in id_keys)
     
     def get_object_id(self):
         return self.object_id

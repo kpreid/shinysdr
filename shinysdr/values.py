@@ -380,7 +380,7 @@ class GRSinkCell(ValueCell):
             info_getter=lambda: None,
             **kwargs):
         type = to_value_type(type)
-        if not (type == to_value_type(unicode) or isinstance(type, BulkDataT)):
+        if not (type == to_value_type(six.text_type) or isinstance(type, BulkDataT)):
             raise ValueError('Unsupported type for GRSinkCell {}'.format(type))
         ValueCell.__init__(self,
             type=type,
@@ -469,7 +469,7 @@ class StringSinkCell(GRSinkCell):
             history_length=1000,
             **kwargs):
         GRSinkCell.__init__(self,
-            type=unicode,
+            type=six.text_type,
             history_length=history_length,
             **kwargs)
         

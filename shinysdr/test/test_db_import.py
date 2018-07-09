@@ -122,7 +122,7 @@ def mkrecords(iterable):
         if isinstance(item, dict):
             record = dict(item)
         else:
-            record = {u'label': unicode(item)}
+            record = {u'label': six.text_type(item)}
         if u'lowerFreq' not in record or u'upperFreq' not in record:
             record[u'lowerFreq'] = record[u'upperFreq'] = i
         yield record

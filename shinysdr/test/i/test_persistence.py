@@ -163,7 +163,7 @@ class ValueAndBlockSpecimen(ExportedState):
     def get_block(self):
         return self.__block
     
-    @exported_value(type=unicode, parameter='value', changes='this_setter')
+    @exported_value(type=six.text_type, parameter='value', changes='this_setter')
     def get_value(self):
         return self.__value
     

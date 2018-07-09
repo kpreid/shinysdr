@@ -519,7 +519,7 @@ class Files(object):
     def __create(self, path, desc):
         assert path.startswith(self.dir + '/')
         assert not os.path.exists(path) or os.path.isdir(path)
-        if isinstance(desc, basestring):
+        if isinstance(desc, six.string_types):
             with open(path, 'w') as f:
                 f.write(desc)
         elif isinstance(desc, dict):

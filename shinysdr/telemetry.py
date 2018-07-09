@@ -183,7 +183,7 @@ class TelemetryStore(CollectionState):
     def receive(self, message):
         """Store the supplied telemetry message object."""
         message = ITelemetryMessage(message)
-        object_id = unicode(message.get_object_id())
+        object_id = six.text_type(message.get_object_id())
 
         if object_id in self.__objects:
             obj = self.__objects[object_id]

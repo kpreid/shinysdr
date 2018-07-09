@@ -111,7 +111,7 @@ class Config(object):
         # TODO: See if we're reinventing bits of Twisted service stuff here
         
         if root_cap is not None:
-            root_cap = unicode(root_cap)
+            root_cap = six.text_type(root_cap)
             if len(root_cap) <= 0:
                 raise ConfigException('config.serve_web: root_cap must be None or a nonempty string')
         
@@ -178,10 +178,10 @@ class _ConfigDict(object):
 
     def add(self, key, value):
         self._config._not_finished()
-        if not isinstance(key, basestring):
+        if not isinstance(key, six.string_types):
             # Used to just coerce, but I saw a user error where they did "config.devices.add(device)", so I figured an error is better
             raise ConfigException('Key must be a string, not a %s: %r' % (type(key), key))
-        key = unicode(key)
+        key = six.text_type(key)
         if key in self._values:
             raise ConfigException('Key %r already present' % (key,))
         self._values[key] = value
@@ -261,7 +261,7 @@ class _ConfigFeatures(object):
         self._state[self.__validate(name)] = False
     
     def __validate(self, name):
-        name = unicode(name)
+        name = six.text_type(name)
         if name not in self._state:
             raise ConfigException(u'Unknown feature name: %s' % name)
         return name

@@ -19,6 +19,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import json
 
+import six
+
 from twisted.internet import defer
 from twisted.internet import reactor as the_reactor
 from twisted.internet.task import Clock, deferLater
@@ -48,7 +50,7 @@ class StateStreamTestCase(unittest.TestCase):
         self.st = SubscriptionTester()
         
         def send(value):
-            if isinstance(value, unicode):
+            if isinstance(value, six.text_type):
                 self.updates.extend(json.loads(value))
             elif isinstance(value, bytes):
                 self.updates.append(['actually_binary', value])
@@ -362,7 +364,7 @@ class FakeWebSocketTransport(object):
         self.__messages.append(data)
     
     def messages(self):
-        return [json.loads(m) if isinstance(m, unicode) else m for m in self.__messages]
+        return [json.loads(m) if isinstance(m, six.text_type) else m for m in self.__messages]
 
 
 @implementer(IEntryPoint)

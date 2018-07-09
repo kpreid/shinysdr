@@ -99,7 +99,7 @@ class WebServiceCommon(object):
     
     def __init__(self, reactor, title, ws_endpoint_string):
         self.reactor = reactor
-        self.title = unicode(title)
+        self.title = six.text_type(title)
         self.__ws_endpoint_string = ws_endpoint_string
     
     def make_websocket_url(self, request, path):

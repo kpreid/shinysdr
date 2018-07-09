@@ -266,7 +266,7 @@ class TestDatabaseResource(unittest.TestCase):
         }),
     }
     response_json = {
-        u'records': {unicode(k): v for k, v in test_records.items()},
+        u'records': {six.text_type(k): v for k, v in test_records.items()},
         u'writable': True,
     }
     

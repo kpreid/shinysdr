@@ -217,7 +217,7 @@ def OsmoSDRDevice(
     See documentation in shinysdr/i/webstatic/manual/configuration.html.
     """
     # The existence of the correction_ppm parameter is a workaround for the current inability to dynamically change an exported field's type (the frequency range), allowing them to be initialized early enough, in the configuration, to take effect. (Well, it's also nice to hardcode them in the config if you want to.)
-    osmo_device = str(osmo_device)  # ensure not unicode type as we talk to byte-oriented C++
+    osmo_device = str(osmo_device)  # ensure not unicode type as we talk to byte-oriented C++ (TODO: how does py3 gnuradio play this?)
     if name is None:
         name = 'OsmoSDR %s' % osmo_device
     if profile is None:
@@ -296,7 +296,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         self.__profile = profile
         self.__name = name
         self.__tuning = tuning
-        self.__antenna_type = EnumT({unicode(name): unicode(name) for name in self.__source.get_antennas()}, strict=True)
+        self.__antenna_type = EnumT({six.text_type(name): six.text_type(name) for name in self.__source.get_antennas()}, strict=True)  # TODO: is this correct in py3
         
         self.connect(self.__source, self)
         
@@ -383,7 +383,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
         label='Antenna')
     def get_antenna(self):
         if self.__source is None: return ''
-        return unicode(self.__source.get_antenna(ch))
+        return six.text_type(self.__source.get_antenna(ch), 'ascii')
     
     @setter
     def set_antenna(self, value):

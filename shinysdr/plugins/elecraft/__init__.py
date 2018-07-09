@@ -181,7 +181,7 @@ class _ElecraftRadio(ExportedState):
         elif error == u'bad_data':
             return u'Bad data from radio.'
         else:
-            return unicode(error)
+            return six.text_type(error)
     
     @exported_value(type=ReferenceT(), changes='never')
     def get_rx_main(self):
@@ -256,8 +256,9 @@ class _ElecraftClientProtocol(Protocol):
         
         If wait=True, return a Deferred.
         """
-        if isinstance(cmd_text, unicode):
+        if isinstance(cmd_text, six.text_type):
             cmd_text = cmd_text.encode('us-ascii')  # TODO: correct choice of encoding
+        assert isinstance(cmd_text, bytes)
         assert cmd_text == b'' or cmd_text.endswith(b';')
         self.transport.write(cmd_text)
     
@@ -462,7 +463,7 @@ class EnumSyntax(Syntax):
         self.__type = EnumT(*args, **kwargs)
     
     def parse(self, text):
-        return unicode(text)
+        return six.text_type(text, 'ascii')
     
     def format(self, value):
         return str(self.__type(value))

@@ -117,14 +117,14 @@ class _CapTableCollection(object):
         self.__get_entry = cap_table._get_entry
     
     def __contains__(self, key):
-        # sanity check: if we get a str instead, something is broken
-        if not isinstance(key, unicode):
+        # sanity check: if we get bytes instead, something is broken
+        if not isinstance(key, six.text_type):
             raise TypeError('caps must be unicode')
         return self.__get_entry(key) is not None
     
     def __getitem__(self, key):
-        # sanity check: if we get a str instead, something is broken
-        if not isinstance(key, unicode):
+        # sanity check: if we get bytes instead, something is broken
+        if not isinstance(key, six.text_type):
             raise TypeError('caps must be unicode')
         target = self.__get_entry(key)
         if target is None:

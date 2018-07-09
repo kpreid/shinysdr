@@ -24,8 +24,6 @@ import os
 import os.path
 import urllib
 
-import six
-
 from twisted.logger import Logger
 from twisted.web import http
 from twisted.web import resource
@@ -40,9 +38,9 @@ _json_columns = {
     u'type': (EnumT({'channel': 'channel', 'band': 'band'}), 'channel'),
     u'lowerFreq': (to_value_type(float), _NO_DEFAULT),
     u'upperFreq': (to_value_type(float), _NO_DEFAULT),
-    u'mode': (to_value_type(unicode), u''),
-    u'label': (to_value_type(unicode), u''),
-    u'notes': (to_value_type(unicode), u''),
+    u'mode': (to_value_type(six.text_type), u''),
+    u'label': (to_value_type(six.text_type), u''),
+    u'notes': (to_value_type(six.text_type), u''),
     u'location': (lambda x: x, None),  # TODO missing constraint
 }
 
@@ -263,7 +261,7 @@ def _parse_csv_file(csvfile):
             if v is None:
                 # too few columns, consider harmless and OK
                 continue
-            csvrec[unicode(k, 'utf-8')] = unicode(v, 'utf-8')
+            csvrec[six.text_type(k, 'utf-8')] = six.text_type(v, 'utf-8')
         if 'Frequency' not in csvrec:
             diagnostics.append(Warning(reader.line_num, 'Record contains no value for Frequency column; line discarded.'))
             continue
@@ -318,7 +316,7 @@ def _parse_freq(freq_str):
 
 
 def _format_freq(freq):
-    return unicode(freq / 1e6)
+    return six.text_type(freq / 1e6)
 
 
 def normalize_record(record):
@@ -395,5 +393,5 @@ def _write_csv_file(csvfile, records):
         else:
             csvrecord[u'Frequency'] = _format_freq(lf) + '-' + _format_freq(uf)
         for key in csvrecord:
-            csvrecord[key] = unicode(csvrecord[key]).encode('utf-8')
+            csvrecord[key] = six.text_type(csvrecord[key]).encode('utf-8')
         writer.writerow(csvrecord)

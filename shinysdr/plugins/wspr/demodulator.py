@@ -26,6 +26,8 @@ import tempfile
 import shutil
 import errno
 
+import six
+
 from gnuradio import gr
 
 from twisted.internet import defer, reactor, threads
@@ -250,7 +252,7 @@ class WAVIntervalListener(ExportedState):
         filename = b'%s_%s' % (self.context.get_absolute_frequency_cell().get(), time_str)
         return os.path.join(self.directory, filename)
     
-    @exported_value(type=unicode, label='Status', changes='explicit')
+    @exported_value(type=six.text_type, label='Status', changes='explicit')
     def get_status(self):
         recording = (self.__frequency_subscription and
             not self.__invalidated_by_frequency_change)

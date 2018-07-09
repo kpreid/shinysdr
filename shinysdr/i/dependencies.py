@@ -105,7 +105,7 @@ class DependencyTester(object):
 
 def import_error_matches(import_error, module_name):
     if six.PY2:
-        msg = unicode(import_error)
+        msg = six.text_type(import_error)
         # indirect because the message includes only the last name component
         prefix = 'No module named '
         return msg.startswith(prefix) and module_name.endswith(msg[len(prefix):])

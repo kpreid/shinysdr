@@ -28,6 +28,8 @@ from collections import namedtuple
 import os.path
 import re
 
+import six
+
 from zope.interface import implementer  # available via Twisted
 
 from shinysdr.db_import import IImporter, ImporterDef
@@ -95,7 +97,7 @@ if 1 == 1:  # dummy block for pylint
         _Col(u'freq',         1,    5,  _Freq),
         _Col(u'time_start',   7,   10, _UTC),
         _Col(u'time_stop',    12,  15, _UTC),
-        _Col(u'area',         17,  46, unicode),
+        _Col(u'area',         17,  46, six.text_type),
         _Col(u'location',     48,  50, _detabulate('site')),
         _Col(u'power',        52,  55, float),
         _Col(u'azimuth',      57,  63, float),
@@ -111,47 +113,47 @@ if 1 == 1:  # dummy block for pylint
         _Col(u'broadcaster', 118, 120, _detabulate('broadcas')),
         _Col(u'fmorg',       122, 124, _detabulate('fmorg')),
         _Col(u'ident',       126, 130, int),
-        _Col(u'old',         132, 132, unicode),
+        _Col(u'old',         132, 132, six.text_type),
         _Col(u'alt1',        134, 138, _Freq),
         _Col(u'alt2',        140, 144, _Freq),
         _Col(u'alt3',        146, 150, _Freq),
-        _Col(u'notes',       152, 158, unicode),
+        _Col(u'notes',       152, 158, six.text_type),
     ]
 
 
 _table_defs = {
     # Each table definition here MUST have a 'key' column and 'name' column
     'admin': [
-        _Col(u'key', 1, 3, unicode),
-        _Col(u'name', 4, 54, unicode),
-        _Col(u'name_fr', 56, 105, unicode),
-        _Col(u'name_es', 107, 156, unicode),
+        _Col(u'key', 1, 3, six.text_type),
+        _Col(u'name', 4, 54, six.text_type),
+        _Col(u'name_fr', 56, 105, six.text_type),
+        _Col(u'name_es', 107, 156, six.text_type),
     ],
     'antenna': [
-        _Col(u'key', 1, 3, unicode),
-        _Col(u'name', 4, 53, unicode),
-        _Col(u'remarks', 55, 75, unicode),
+        _Col(u'key', 1, 3, six.text_type),
+        _Col(u'name', 4, 53, six.text_type),
+        _Col(u'remarks', 55, 75, six.text_type),
     ],
     'broadcas': [
-        _Col(u'key', 1, 3, unicode),
-        _Col(u'name', 4, 9999, unicode),
+        _Col(u'key', 1, 3, six.text_type),
+        _Col(u'name', 4, 9999, six.text_type),
     ],
     'fmorg': [
-        _Col(u'key', 1, 3, unicode),
-        _Col(u'name', 4, 54, unicode),
-        _Col(u'contact', 56, 76, unicode),
-        _Col(u'telephone', 77, 90, unicode),
-        _Col(u'fax', 91, 105, unicode),
-        _Col(u'email', 105, 146, unicode),
-        _Col(u'notes', 146, 158, unicode),
+        _Col(u'key', 1, 3, six.text_type),
+        _Col(u'name', 4, 54, six.text_type),
+        _Col(u'contact', 56, 76, six.text_type),
+        _Col(u'telephone', 77, 90, six.text_type),
+        _Col(u'fax', 91, 105, six.text_type),
+        _Col(u'email', 105, 146, six.text_type),
+        _Col(u'notes', 146, 158, six.text_type),
     ],
     'language': [
-        _Col(u'key', 1, 3, unicode),
-        _Col(u'name', 4, 104, unicode),
+        _Col(u'key', 1, 3, six.text_type),
+        _Col(u'name', 4, 104, six.text_type),
     ],
     'site': [
-        _Col(u'key', 1, 3, unicode),
-        _Col(u'name', 4, 34, unicode),
+        _Col(u'key', 1, 3, six.text_type),
+        _Col(u'name', 4, 34, six.text_type),
         _Col(u'admin', 36, 38, _detabulate('admin')),
         _Col(u'lat', 40, 44, _Coordinate),
         _Col(u'lon', 46, 51, _Coordinate),

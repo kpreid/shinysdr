@@ -23,6 +23,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os.path
 
+import six
+
 from twisted.internet import reactor as the_reactor
 from twisted.internet import defer
 from twisted.logger import Logger
@@ -99,13 +101,13 @@ class TestConfigObject(unittest.TestCase):
         dev = StubDevice()
         self.config.devices.add(u'foo', dev)
         self.assertEqual({u'foo': dev}, self.config.devices._values)
-        self.assertEqual(unicode, type(self.config.devices._values.keys()[0]))
+        self.assertEqual(six.text_type, type(self.config.devices._values.keys()[0]))
     
     def test_device_key_string_ok(self):
         dev = StubDevice()
         self.config.devices.add('foo', dev)
         self.assertEqual({u'foo': dev}, self.config.devices._values)
-        self.assertEqual(unicode, type(self.config.devices._values.keys()[0]))
+        self.assertEqual(six.text_type, type(self.config.devices._values.keys()[0]))
     
     def test_device_key_type(self):
         self.assertRaises(ConfigException, lambda:

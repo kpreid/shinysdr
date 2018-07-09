@@ -39,6 +39,8 @@ import re
 import threading
 import time
 
+import six
+
 from twisted.logger import Logger
 from twisted.web import static
 from zope.interface import Interface, implementer  # available via Twisted
@@ -145,7 +147,7 @@ class APRSStation(ExportedState):
     def get_last_heard_time(self):
         return self.__last_heard_time
     
-    @exported_value(type=unicode, changes='explicit', label='Address/object ID')
+    @exported_value(type=six.text_type, changes='explicit', label='Address/object ID')
     def get_address(self):
         return self.__address
 
@@ -153,17 +155,17 @@ class APRSStation(ExportedState):
     def get_track(self):
         return self.__track
 
-    @exported_value(type=unicode, changes='explicit', sort_key='020', label='Symbol')
+    @exported_value(type=six.text_type, changes='explicit', sort_key='020', label='Symbol')
     def get_symbol(self):
         """APRS symbol table identifier and symbol."""
         return self.__symbol
 
-    @exported_value(type=unicode, changes='explicit', sort_key='080', label='Status')
+    @exported_value(type=six.text_type, changes='explicit', sort_key='080', label='Status')
     def get_status(self):
         """String status text."""
         return self.__status
 
-    @exported_value(type=unicode, changes='explicit', sort_key='090', label='Last message comment')
+    @exported_value(type=six.text_type, changes='explicit', sort_key='090', label='Last message comment')
     def get_last_comment(self):
         return self.__last_comment
 
@@ -272,9 +274,9 @@ Velocity = namedtuple('Velocity', [
 
 def parse_tnc2(line, receive_time, log=None):
     """Parse "TNC2 text format" APRS messages."""
-    if not isinstance(line, unicode):
+    if not isinstance(line, six.text_type):
         # TODO: Is there a more-often-than-not used encoding beyond ASCII, that we should use here?
-        line = unicode(line, 'ascii', 'replace')
+        line = six.text_type(line, 'ascii', 'replace')
     
     facts = []
     errors = []

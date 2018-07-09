@@ -21,6 +21,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from collections import namedtuple
 
+import six
+
 from zope.interface import implementer, Interface
 
 from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, Track, empty_track
@@ -94,11 +96,11 @@ class WSPRStation(ExportedState):
     def get_frequency(self):
         return self.__frequency or 0
 
-    @exported_value(type=unicode, changes='explicit', label='Call')
+    @exported_value(type=six.text_type, changes='explicit', label='Call')
     def get_call(self):
         return self.__call or ''
 
-    @exported_value(type=unicode, changes='explicit', label='Grid')
+    @exported_value(type=six.text_type, changes='explicit', label='Grid')
     def get_grid(self):
         return self.__grid or ''
 

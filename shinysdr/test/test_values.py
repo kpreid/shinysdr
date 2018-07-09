@@ -18,6 +18,8 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import six
+
 from twisted.internet import defer
 from twisted.internet import reactor as the_reactor
 from twisted.internet.task import deferLater
@@ -375,11 +377,11 @@ class TestGRSinkCell(unittest.TestCase):
     def test_string_get(self):
         self.setUpForUnicodeString()
         gotten = self.cell.get()
-        self.assertTrue(isinstance(gotten, unicode))
+        self.assertTrue(isinstance(gotten, six.text_type))
         self.assertEqual(gotten, u'')
         yield self.inject_bytes('abç'.encode('utf-8'))
         gotten = self.cell.get()
-        self.assertTrue(isinstance(gotten, unicode))
+        self.assertTrue(isinstance(gotten, six.text_type))
         self.assertEqual(gotten, 'abç')
         
         # now append some more to test the buffer

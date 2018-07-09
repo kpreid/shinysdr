@@ -20,6 +20,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import time
 
+import six
+
 from twisted.logger import Logger
 from zope.interface import Interface, implementer  # available via Twisted
 
@@ -229,7 +231,7 @@ class Receiver(gr.hier_block2, ExportedState):
     
     @setter
     def set_mode(self, mode):
-        mode = unicode(mode)
+        mode = six.text_type(mode)
         if mode == self.mode: return
         if self.__demodulator and \
                 IDemodulatorModeChange.providedBy(self.__demodulator) and \

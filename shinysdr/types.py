@@ -135,7 +135,8 @@ class PythonT(ValueType):
         return self.__python_type(specimen)
     
     def create_buffer(self, history_length):
-        if issubclass(self.__python_type, basestring):
+        # TODO: not sure if this works as intended in py3
+        if issubclass(self.__python_type, (bytes, six.text_type)):
             return _StringDeltaBuffer(self.__python_type(), history_length=history_length)
         else:
             return None
@@ -145,10 +146,10 @@ class PythonT(ValueType):
 python_type_registry = {
     bool: u'boolean',
     float: u'float64',
-    int: u'integer',
-    long: u'integer',
-    unicode: u'string',
+    six.text_type: u'string',
 }
+for t in six.integer_types:
+    python_type_registry[t] = u'integer'
 
 
 __all__.append('python_type_registry')
@@ -224,7 +225,7 @@ class EnumT(ValueType):
     The values are normally Unicode strings but may be another type.
     The values may have metadata such as description text different from the value itself.
     """
-    def __init__(self, values, strict=True, base_type=unicode):
+    def __init__(self, values, strict=True, base_type=six.text_type):
         """values: dict of {value: metadata}.
         
         The metadata may be an EnumRow object, or a unicode string which will be used as the short description.
@@ -280,17 +281,17 @@ class EnumRow(object):
                 sort_key = enum_row_or_string.__sort_key
         else:
             if label is None:
-                label = unicode(enum_row_or_string) if enum_row_or_string else None
+                label = six.text_type(enum_row_or_string) if enum_row_or_string else None
         
         self.__label = (
-            unicode(label) if label is not None else
-            unicode(enum_row_or_string) if enum_row_or_string is not None else
+            six.text_type(label) if label is not None else
+            six.text_type(enum_row_or_string) if enum_row_or_string is not None else
             associated_key)
         self.__description = (
-            unicode(description) if description is not None else None)
+            six.text_type(description) if description is not None else None)
         self.__sort_key = (
-            unicode(sort_key) if sort_key is not None else
-            unicode(associated_key) if associated_key is not None
+            six.text_type(sort_key) if sort_key is not None else
+            six.text_type(associated_key) if associated_key is not None
             else associated_key)
     
     def __eq__(self, other):
@@ -492,7 +493,7 @@ class NoticeT(ValueType):
         }
     
     def __call__(self, specimen):
-        return unicode(specimen)
+        return six.text_type(specimen)
 
 
 __all__.append('NoticeT')

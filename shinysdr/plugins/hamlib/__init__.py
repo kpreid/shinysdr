@@ -479,7 +479,7 @@ def _install_cell(self, name, is_level, writable, caps):
             else:
                 value = vtype(strval)
         except ValueError:
-            value = unicode(strval)
+            value = six.text_type(strval)
         cell.set_internal(value)
     
     def actually_write_value(value):
@@ -642,7 +642,7 @@ class _HamlibClientProtocol(Protocol):
         self.__line_receiver.dataReceived(data)
     
     def __lineReceived(self, line):
-        line = unicode(line, 'us-ascii')  # TODO verify best choice of encoding
+        line = six.text_type(line, 'us-ascii')  # TODO verify best choice of encoding
         if self.__receive_cmd is None:
             match = re.match(r'^(\w+):\s*(.*)$', line)
             if match is not None:
