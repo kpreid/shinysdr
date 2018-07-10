@@ -56,8 +56,9 @@ class TestWSPRStation(unittest.TestCase):
 
 
 class TestGridToLatLon(unittest.TestCase):
-    def assertLatLongAlmostEqual(self, grid, (lat_b, lon_b)):
+    def assertLatLongAlmostEqual(self, grid, b):
         lat_a, lon_a = grid_to_lat_long(grid)
+        lat_b, lon_b = b
         self.assertAlmostEqual(lat_a, lat_b)
         self.assertAlmostEqual(lon_a, lon_b)
 
