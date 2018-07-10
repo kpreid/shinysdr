@@ -17,7 +17,7 @@
 
 """Facility for non-redundantly polling for cell value changes, for those types of cells which require it."""
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import bisect
 
@@ -111,7 +111,6 @@ class AutomaticPoller(Poller):
         # Hook to start call
         super(AutomaticPoller, self)._add_subscription(target, subscription)
         if not self.__running:
-            print 'Poller starting'
             self.__running = True
             # using callLater because start() will do the first call _immediately_ :(
             self.__loop_fast.clock.callLater(0, self.__loop_fast.start, 1.0 / 61)
@@ -121,7 +120,6 @@ class AutomaticPoller(Poller):
         # Hook to stop call
         super(AutomaticPoller, self)._remove_subscription(target, subscription)
         if self.__running and self.count_subscriptions() == 0:
-            print 'Poller stopping'
             self.__running = False
             self.__loop_fast.stop()
             self.__loop_slow.stop()

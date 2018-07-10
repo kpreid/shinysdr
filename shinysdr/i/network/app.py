@@ -17,7 +17,7 @@
 
 """Code defining the API that is actually exposed over HTTP."""
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
 import urllib

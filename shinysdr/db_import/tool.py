@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import argparse
 import sys
@@ -28,12 +28,12 @@ from shinysdr import plugins
 
 
 def _general_warning_callback(msg):
-    print >>sys.stderr, msg
+    print(msg, file=sys.stderr)
 
 
 def _add_file_wrapper(importer, filename, open_file):
     def warning_callback(msg):
-        print >>sys.stderr, u'%s:%s' % (filename, msg)
+        print(u'%s:%s' % (filename, msg), file=sys.stderr)
     
     importer.add_file(filename, open_file, warning_callback)
 
@@ -73,7 +73,7 @@ def import_main(argv=None, out=None):
     filenames = options.filenames
     
     if importer_name not in _IMPORTER_DEFS:
-        print >>sys.stderr, 'Unknown importer: %r.\n%s' % (importer_name, _importer_list_msg())
+        print('Unknown importer: %r.\n%s' % (importer_name, _importer_list_msg()), file=sys.stderr)
         sys.exit(1)
     importer = IImporter(_IMPORTER_DEFS[importer_name].importer_class())
     

@@ -17,7 +17,7 @@
 
 # TODO: Now that this module has AppRoot in it, it is misnamed.
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import importlib
 

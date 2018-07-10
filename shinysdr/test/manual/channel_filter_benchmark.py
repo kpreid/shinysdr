@@ -21,7 +21,7 @@
 Benchmark for MultistageChannelFilter.
 """
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import time
 
@@ -32,7 +32,7 @@ from shinysdr.filters import MultistageChannelFilter
 
 
 def test_one_filter(**kwargs):
-    print '------ %s -------' % (kwargs,)
+    print('------ %s -------' % (kwargs,))
     f = MultistageChannelFilter(**kwargs)
     
     size = 10000000
@@ -43,7 +43,7 @@ def test_one_filter(**kwargs):
         f,
         blocks.null_sink(gr.sizeof_gr_complex))
         
-    print f.explain()
+    print(f.explain())
     
     t0 = time.clock()
     top.start()
@@ -51,7 +51,7 @@ def test_one_filter(**kwargs):
     top.stop()
     t1 = time.clock()
 
-    print size, 'samples processed in', t1 - t0, 'CPU-seconds'
+    print(size, 'samples processed in', t1 - t0, 'CPU-seconds')
 
 
 if __name__ == '__main__':

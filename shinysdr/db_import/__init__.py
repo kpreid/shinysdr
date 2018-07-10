@@ -17,7 +17,7 @@
 
 # TODO write module documentation
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from twisted.plugin import IPlugin
 from zope.interface import Interface, implementer  # available via Twisted

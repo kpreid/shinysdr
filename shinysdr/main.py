@@ -20,7 +20,7 @@
 # pylint: disable=no-member
 # (no-member: Twisted reactor)
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import argparse
 import logging
@@ -83,7 +83,7 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
     # Note that this must be done before we actually load core modules, because we might get an import error then.
     version_report = yield _check_versions()
     if version_report:
-        print >>sys.stderr, version_report
+        print(version_report, file=sys.stderr)
         sys.exit(1)
 
     # Write config file and exit if asked ...

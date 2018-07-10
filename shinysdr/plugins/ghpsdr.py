@@ -28,7 +28,7 @@ misparsed. No success yet in figuring out where the discrepancy is.
 Patches welcome.
 """
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import array
 import struct
@@ -109,7 +109,7 @@ class _DspserverProtocol(protocol.Protocol):
         null = data.find(b'\0')
         if null > -1:
             data = data[:null]
-        print b'Message received: ' + data
+        print(b'Message received: ' + data)
         sep = data.find(b' ')
         if sep > -1:
             cmd = data[0:sep]
@@ -139,7 +139,7 @@ class _DspserverProtocol(protocol.Protocol):
             ((freq, sample_rate), fft) = frame
             if self._req_width is None:
                 break
-            print 'Sending frame', self._req_width, sample_rate  # TODO: Remove debugging
+            print('Sending frame', self._req_width, sample_rate)  # TODO: Remove debugging
             msg = struct.pack('BBBHHHIh' + str(self._req_width) + 's',
                 0,
                 2,
@@ -157,7 +157,7 @@ class _DspserverProtocol(protocol.Protocol):
         if len(self.__audio_buffer) > size_in_bytes:
             abuf = self.__audio_buffer[:size_in_bytes]
             self.__audio_buffer = self.__audio_buffer[size_in_bytes:]
-            print 'Sending audio', len(abuf)  # TODO: Remove debugging
+            print('Sending audio', len(abuf))  # TODO: Remove debugging
             # b'' is for Python 2.7.6 compatibility (array.array module requires a str rather than unicode string)
             unpacker = array.array(b'f')
             unpacker.fromstring(abuf)

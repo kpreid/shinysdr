@@ -24,7 +24,7 @@ Reference material:
 '''
 
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from collections import defaultdict
 
@@ -84,7 +84,7 @@ class ULSImporter(object):
                 address_full = loc_record[11:15]
             
             for freq_record in rtypes['FR']:
-                # print >>sys.stderr, freq_record
+                # print(freq_record, file=sys.stderr)
                 call_sign, freq_action_performed, location_number, antenna_number, class_station_code, op_altitude_code, freq_assigned, freq_upper_band, freq_carrier = freq_record[4:13]
                 freq_assigned = float(freq_assigned)
                 callback({

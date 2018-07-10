@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from zope.interface import implementer  # available via Twisted
 
@@ -260,7 +260,7 @@ def OsmoSDRDevice(
         # If the hardware/driver isn't providing a reasonable default (RTLs don't), do it ourselves; go to the middle of the FM broadcast band (rounded up or down to what the hardware reports it supports).
         vfo_cell.set(100e6)
     else:
-        print hw_initial_freq
+        print(hw_initial_freq)
         vfo_cell.set(tuning.from_hardware_freq(hw_initial_freq))
     
     return Device(

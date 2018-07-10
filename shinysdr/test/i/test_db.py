@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import json
 import StringIO
@@ -317,7 +317,7 @@ class TestDatabaseResource(unittest.TestCase):
 
         def proceed((response, data)):
             if response.code >= 300:
-                print data
+                print(data)
             self.assertEqual(response.code, http.NO_CONTENT)
             
             def check((read_response, read_data)):
@@ -341,7 +341,7 @@ class TestDatabaseResource(unittest.TestCase):
 
         def proceed((response, data)):
             if response.code >= 300:
-                print data
+                print(data)
             self.assertEqual(response.code, http.CREATED)
             url = 'ONLYONE'.join(response.headers.getRawHeaders('Location'))
             self.assertEqual(url, self.__url('/3'))  # URL of new entry

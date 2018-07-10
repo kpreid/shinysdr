@@ -17,7 +17,7 @@
 
 """Adapters to use ShinySDR components in GNU Radio Companion."""
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from zope.interface import implementer
 
@@ -119,7 +119,7 @@ class _DemodulatorAdapterContext(object):
         self.__adapter.unlock()
     
     def output_message(self, message):
-        print message
+        print(message)
     
     def get_absolute_frequency_cell(self):
         return self.__freq_cell

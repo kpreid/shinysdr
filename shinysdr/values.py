@@ -20,7 +20,7 @@
 # pylint: disable=redefined-builtin
 # (we have keyword args named 'type')
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import codecs
 from collections import namedtuple
@@ -118,19 +118,19 @@ class InterestTracker(object):
         self.__tokens = set()
     
     def set(self, token, interested):
-        # print 'set', token, interested
+        # print('set', token, interested)
         if interested:
             was_empty = not self.__tokens
             self.__tokens.add(token)
             if was_empty:
-                # print '-> firing true'
+                # print('-> firing true')
                 # TODO: Need non-immediate callbacks
                 self.__listener(True)
         else:
             was_nonempty = bool(self.__tokens)
             self.__tokens.remove(token)
             if was_nonempty and not self.__tokens:
-                # print '-> firing false'
+                # print('-> firing false')
                 self.__listener(False)
 
 

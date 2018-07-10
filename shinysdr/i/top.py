@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import math
 import time
@@ -461,13 +461,13 @@ class ContextForReceiver(Context):
             if validate_by_range(needed_freq, paged_freq):
                 freq = paged_freq
                 if _DEBUG_RETUNE:
-                    print '--- page', device.get_freq(), direction * page_size, freq
+                    print('--- page', device.get_freq(), direction * page_size, freq)
             else:
                 # One page will not do; jump exactly to center frequency, or as close as avoids DC if needed.
                 freq = needed_freq - _find_in_usable_bandwidth(
                     usable_bandwidth_range, receiver)
                 if _DEBUG_RETUNE:
-                    print '--- jump', receiver.get_mode(), device.get_freq(), 'to', freq, 'for', needed_freq
+                    print('--- jump', receiver.get_mode(), device.get_freq(), 'to', freq, 'for', needed_freq)
 
             # TODO write justification here that this won't be dangerously reentrant
             device.set_freq(freq)
@@ -496,13 +496,13 @@ def _find_in_usable_bandwidth(usable_bandwidth_range, receiver):
     if least_positive == greatest_negative == 0:
         # No DC avoidance. We can just pick the center.
         if _DEBUG_RETUNE:
-            print '--- no offset'
+            print('--- no offset')
         return 0.0
     
     offset_positive = least_positive - shape.stop_low
     offset_negative = greatest_negative - shape.stop_high
     if _DEBUG_RETUNE:
-        print '--- offsets', receiver.get_mode(), offset_negative, greatest_negative, least_positive, offset_positive
+        print('--- offsets', receiver.get_mode(), offset_negative, greatest_negative, least_positive, offset_positive)
 
     if offset_positive < 0 or offset_negative > 0:
         # Receiver has a larger filter than the DC offset, so line up neatly.

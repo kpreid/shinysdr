@@ -19,7 +19,7 @@
 # (maybe-no-member: GR swig)
 # (no-member: Twisted reactor)
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os.path
 import time
@@ -105,7 +105,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
             try:
                 reactor.callFromThread(parser, msg.to_string())
             except Exception:
-                print traceback.format_exc()
+                print(traceback.format_exc())
         
         self.__msgq_runner = gru.msgq_runner(hex_msg_queue, msq_runner_callback)
         

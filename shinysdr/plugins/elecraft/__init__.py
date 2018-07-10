@@ -24,7 +24,7 @@ As of this writing, has only been tested with a KX3 and is known to be missing f
 Designed to be combined with a device supplying I/Q signals from the KX3's “RX I/Q” port.
 """
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from collections import defaultdict
 import struct

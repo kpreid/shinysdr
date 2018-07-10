@@ -19,7 +19,7 @@
 GNU Radio blocks which automatically compute appropriate filter designs.
 """
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from fractions import gcd
 from math import pi, sin, cos
@@ -245,7 +245,7 @@ def _make_filter_plan_1(input_rate, output_rate):
         output_rate = int(output_rate)
         if input_rate > output_rate:
             total_decimation = input_rate // small_factor_at_least(input_rate, output_rate)
-        # print input_rate / total_decimation, total_decimation, input_rate, output_rate, input_rate // gcd(input_rate, output_rate)
+        # print(input_rate / total_decimation, total_decimation, input_rate, output_rate, input_rate // gcd(input_rate, output_rate))
         # TODO: Don't re-factorize unnecessarily
     
     stage_decimations = factorize(total_decimation)

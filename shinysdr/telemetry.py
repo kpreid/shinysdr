@@ -20,7 +20,7 @@ TODO: This doesn't actually deserve its own module; it's just not clear where to
 
 """
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from collections import namedtuple
 

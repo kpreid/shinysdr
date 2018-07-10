@@ -30,7 +30,7 @@ APRS support plugin. This does not provide a complete APRS receiver, but only an
 # <http://www.aprs.org/aprs12.html>
 
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from collections import namedtuple
 from datetime import datetime

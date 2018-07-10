@@ -22,7 +22,7 @@ It connects to something (such as a serial port) and sends arbitrary strings def
 """
 # TODO: Write user documentation for this device. Maybe think about making it easier to configure first.
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import functools
 
@@ -164,7 +164,7 @@ class _ControllerProtocol(Protocol):
         self.__line_receiver.dataReceived(data)
     
     def __lineReceived(self, line):
-        print line
+        print(line)
     
     def send(self, cmd):
         self.transport.write(cmd)

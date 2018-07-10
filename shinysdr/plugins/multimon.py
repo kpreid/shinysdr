@@ -18,7 +18,7 @@
 # pylint: disable=no-member
 # (no-member: Twisted reactor)
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import time
 import warnings
@@ -261,7 +261,7 @@ class APRSProcessProtocol(ProcessProtocol):
             self.__target(line)
         else:
             # TODO: Log these properly
-            print 'Not APRS line: %r' % line
+            print('Not APRS line: %r' % line)
 
 
 _multimon_unavailability = test_subprocess('multimon-ng -h; exit 0', 'vailable demodulators:', shell=True)

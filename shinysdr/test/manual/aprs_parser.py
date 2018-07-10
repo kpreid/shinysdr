@@ -21,7 +21,7 @@
 Test for APRS parser. Accepts lines and prints the parsed form.
 """
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import string
 import sys
@@ -32,10 +32,10 @@ from shinysdr.plugins import aprs
 
 if __name__ == '__main__':
     for line in sys.stdin:
-        print string.rstrip(line, '\n')
+        print(string.rstrip(line, '\n'))
         parsed = aprs.parse_tnc2(line, time.time())
         for error in parsed.errors:
-            print '--!--', error
+            print('--!--', error)
         for fact in parsed.facts:
-            print '     ', fact
-        print
+            print('     ', fact)
+        print()
