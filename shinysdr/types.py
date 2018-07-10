@@ -115,11 +115,8 @@ class PythonT(ValueType):
     def __init__(self, python_type):
         self.__python_type = python_type
     
-    def __cmp__(self, other):
-        if not isinstance(other, PythonT):
-            return cmp(id(self), id(other))  # dummy
-        else:
-            return cmp(self.__python_type, other.__python_type)
+    def __eq__(self, other):
+        return isinstance(other, PythonT) and self.__python_type == other.__python_type
     
     def __hash__(self):
         return hash(self.__python_type) ^ hash(self.__python_type)
@@ -294,11 +291,8 @@ class EnumRow(object):
             unicode(associated_key) if associated_key is not None
             else associated_key)
     
-    def __cmp__(self, other):
-        if not isinstance(other, EnumRow):
-            return cmp(id(self), id(other))  # dummy
-        else:
-            return cmp(self.to_json(), other.to_json())
+    def __eq__(self, other):
+        return isinstance(other, EnumRow) and self.to_json() == other.to_json()
     
     def __hash__(self):
         return hash(self.to_json())

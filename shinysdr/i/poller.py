@@ -20,6 +20,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import bisect
+from functools import total_ordering
 
 from twisted.internet import task, reactor as the_reactor
 from twisted.logger import Logger
@@ -171,6 +172,7 @@ class _PollerSubscription(object):
         self._poller._remove_subscription(self._target, self)
 
 
+@total_ordering
 class _PollerCellTarget(object):
     def __init__(self, cell, log):
         self._obj = cell  # TODO: rename to _cell for clarity
@@ -179,8 +181,16 @@ class _PollerCellTarget(object):
         self.__interest_token = object()
         cell.interest_tracker.set(self.__interest_token, True)
     
-    def __cmp__(self, other):
-        return cmp(type(self), type(other)) or cmp(self._obj, other._obj)
+    def __lt__(self, other):
+        """An arbitrary deterministic ordering for all subclasses."""
+        if not isinstance(other, _PollerCellTarget):
+            return NotImplemented
+        # Python 3 compatibility: cannot compare arbitrary objects.
+        return id(self._obj) < id(other._obj)
+    
+    def __eq__(self, other):
+        # pylint: disable=unidiomatic-typecheck
+        return type(self) == type(other) and self._obj == other._obj
     
     def __hash__(self):
         return hash(self._obj)

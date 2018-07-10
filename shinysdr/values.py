@@ -149,18 +149,16 @@ class TargetingMixin(object):
         self._target = target
         self._key = key
     
-    def __cmp__(self, other):
-        if not isinstance(other, TargetingMixin):
-            return cmp(id(self), id(other))  # dummy
-        elif self._target == other._target and self._key == other._key:
-            # pylint: disable=unidiomatic-typecheck
-            if type(self) != type(other):
-                # No two cells should have the same target and key but different details.
-                # This is not a perfect test
-                raise Exception("Shouldn't happen")
-            return 0
-        else:
-            return cmp(self._key, other._key) or cmp(self._target, other._target)
+    def __eq__(self, other):
+        if not (isinstance(other, TargetingMixin) and
+                self._target == other._target and self._key == other._key):
+            return False
+        # pylint: disable=unidiomatic-typecheck
+        if type(self) != type(other):
+            # No two cells should have the same target and key but different details.
+            # This is not a perfect test
+            raise Exception("Shouldn't happen")
+        return True
     
     def __hash__(self):
         return hash(self._target) ^ hash(self._key)
