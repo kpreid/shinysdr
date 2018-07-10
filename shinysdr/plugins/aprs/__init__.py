@@ -655,7 +655,7 @@ def _parse_dhm_hms_timestamp(facts, errors, data, receive_time):
             absolute_time = datetime.utcfromtimestamp(receive_time).replace(day=n1, hour=n2, minute=n3, second=0, microsecond=0)
         else:  # kind == '/'
             absolute_time = datetime.fromtimestamp(receive_time).replace(day=n1, hour=n2, minute=n3, second=0, microsecond=0)
-    except ValueError, e:
+    except ValueError as e:
         errors.append('DHM/HMS timestamp invalid: %s' % (e.message,))
         return
     
