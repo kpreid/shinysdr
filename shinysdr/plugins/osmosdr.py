@@ -17,6 +17,8 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import six
+
 from zope.interface import implementer  # available via Twisted
 
 from gnuradio import gr
@@ -100,7 +102,7 @@ class OsmoSDRProfile(object):
     __hash__ = None
     
     def __repr__(self):
-        return 'OsmoSDRProfile(%s)' % (', '.join('%s=%s' % kv for kv in self.__dict__.iteritems()))
+        return 'OsmoSDRProfile(%s)' % (', '.join('%s=%s' % kv for kv in self.__dict__.items()))
 
 
 __all__.append('OsmoSDRProfile')
@@ -571,7 +573,7 @@ def _install_gain_cell(self, source_ref, rxd_ref, name):
 def convert_osmosdr_range(meta_range, add_zero=False, transform=lambda f: f, **kwargs):
     # TODO: Recognize step values from osmosdr
     subranges = []
-    for i in xrange(0, meta_range.size()):
+    for i in six.moves.range(0, meta_range.size()):
         single_range = meta_range[i]
         subranges.append((transform(single_range.start()), transform(single_range.stop())))
     if add_zero or not subranges:  # don't generate an invalid empty RangeT

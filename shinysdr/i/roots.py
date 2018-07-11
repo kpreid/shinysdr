@@ -20,6 +20,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import base64
 import os
 
+import six
+
 from zope.interface import Interface
 
 from shinysdr.values import CellDict, CollectionState
@@ -51,14 +53,14 @@ class CapTable(object):
     def items(self):
         # TODO rethink this interface
         # note that this exposes a "during iteration, cannot delete" condition
-        for cap, target in self.__forward.iteritems():
+        for cap, target in six.iteritems(self.__forward):
             if not target.entry_point_is_deleted():
                 yield cap, target
     
     def garbage_collect(self):
         # TODO rethink this
         delete = []
-        for cap, target in self.__forward.iteritems():
+        for cap, target in six.iteritems(self.__forward):
             if target.entry_point_is_deleted():
                 delete.append(cap)
         for cap in delete:

@@ -206,7 +206,7 @@ class HFCCImporter(object):
     def create_database(self, callback, warning_callback):
         """Implements IImporter."""
         for partial_record in self.__records:
-            record = {k: self.__finish_cell(v) for k, v in partial_record.iteritems()}
+            record = {k: self.__finish_cell(v) for k, v in partial_record.items()}
             if record['freq'] is None:
                 continue
             notes = '\n'.join('%s: %s' % (k, record[k]) for k in sorted(record))

@@ -20,6 +20,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from collections import Counter
 
+import six
+
 from zope.interface import Interface, implementer  # available via Twisted
 
 from gnuradio import blocks
@@ -171,7 +173,7 @@ class Device(ExportedState):
         self.rx_driver = IRXDriver(rx_driver) if rx_driver is not nullExportedState else nullExportedState
         self.tx_driver = ITXDriver(tx_driver) if tx_driver is not nullExportedState else nullExportedState
         coerced_components = {}
-        for key, component in components.iteritems():
+        for key, component in six.iteritems(components):
             coerced_components[key] = IComponent(component)
         self.__components = CellDict(initial_state=coerced_components)
         self.__components_state = CollectionState(self.__components)
@@ -255,7 +257,7 @@ class Device(ExportedState):
         if self.tx_driver is not nullExportedState:
             self.tx_driver.close()
             self.tx_driver = nullExportedState
-        for key, component in self.__components.iteritems():
+        for key, component in six.iteritems(self.__components):
             component.close()
             self.__components[key] = nullExportedState
     
@@ -297,7 +299,7 @@ def merge_devices(devices):
                 prefix = u'%i-' % i
             else:
                 prefix = ''
-            for k, component in d.get_components_dict().iteritems():
+            for k, component in six.iteritems(d.get_components_dict()):
                 merged_components[prefix + k] = component
         return Device(
             name=None if len(names) == 0 else '+'.join(names),
@@ -430,7 +432,7 @@ def _coerce_channel_mapping(channel_mapping):
     elif isinstance(channel_mapping, int):
         if channel_mapping <= 0:
             raise TypeError('AudioDevice: channel_mapping channel number must be greater than 0, but was %r' % (channel_mapping,))
-        return [[int(i == channel_mapping - 1) for i in xrange(0, channel_mapping)]]
+        return [[int(i == channel_mapping - 1) for i in six.moves.range(0, channel_mapping)]]
     elif channel_mapping == 'IQ':
         return [[1, 0], [0, 1]]
     elif channel_mapping == 'QI':
@@ -517,10 +519,10 @@ class _AudioRXDriver(ExportedState, gr.hier_block2):
             channel_matrix = blocks.multiply_matrix_ff(channel_mapping)
             combine = blocks.float_to_complex(1)
             # TODO: min() is to support mono sources with default channel mapping. Handle this better, and give a warning if an explicit mapping is too big.
-            for i in xrange(0, min(len(channel_mapping[0]),
+            for i in six.moves.range(0, min(len(channel_mapping[0]),
                                    self.__source.output_signature().max_streams())):
                 self.connect((self.__source, i), (channel_matrix, i))
-            for i in xrange(0, len(channel_mapping)):
+            for i in six.moves.range(0, len(channel_mapping)):
                 self.connect((channel_matrix, i), (combine, i))
             self.connect(combine, self)
         

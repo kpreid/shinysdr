@@ -23,6 +23,8 @@ import json
 import urllib
 import weakref
 
+import six
+
 from twisted.internet.protocol import ProcessProtocol
 from twisted.web.resource import IResource, Resource
 from twisted.web.server import NOT_DONE_YET
@@ -64,7 +66,7 @@ class BlockResource(Resource):
         self._blockResourceCache = weakref.WeakKeyDictionary()
         if not self._dynamic:  # currently dynamic blocks can only have block children
             self._blockCells = {}
-            for key, cell in block.state().iteritems():
+            for key, cell in six.iteritems(block.state()):
                 if cell.type().is_reference():
                     self._blockCells[key] = cell
                 else:
@@ -134,7 +136,7 @@ class BlockResource(Resource):
             'kind': 'block',
             'children': childDescs
         }
-        for key, cell in block.state().iteritems():
+        for key, cell in six.iteritems(block.state()):
             # TODO: include URLs explicitly in desc format
             childDescs[key] = cell.description()
         return description

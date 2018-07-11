@@ -761,7 +761,7 @@ class ExportedState(object):
         """
         state = self.state()
         if key is None:
-            for cell in state.itervalues():
+            for cell in six.itervalues(state):
                 cell.poll_for_change(specific_cell=False)
         else:
             state[key].poll_for_change(specific_cell=True)
@@ -781,7 +781,7 @@ class ExportedState(object):
     def state_to_json(self, subscriber=lambda _: None):
         subscriber(self.state_subscribe)
         state = {}
-        for key, cell in self.state().iteritems():
+        for key, cell in six.iteritems(self.state()):
             if cell.metadata().persists:
                 state[key] = cell.get_state(subscriber=subscriber)
         return state

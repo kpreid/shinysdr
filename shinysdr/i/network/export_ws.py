@@ -24,6 +24,8 @@ import struct
 import time
 import urllib
 
+import six
+
 from twisted.internet import reactor as the_reactor  # TODO fix
 from twisted.internet.protocol import Protocol
 from twisted.logger import Logger
@@ -84,7 +86,7 @@ class _StateStreamObjectRegistration(object):
     
     def __set_previous_references(self, references):
         assert isinstance(references, dict)
-        for obj in references.itervalues():
+        for obj in six.itervalues(references):
             if obj not in self.__ssi._registered_objs:
                 raise Exception("shouldn't happen: previous value not registered", obj)
         self.__previous_references = references.values()
@@ -138,12 +140,12 @@ class _StateStreamObjectRegistration(object):
         assert isinstance(objs, dict)
         registrations = {
             k: self.__ssi._lookup_or_register(v, self.url + '/' + urllib.unquote(k))
-            for k, v in objs.iteritems()
+            for k, v in six.iteritems(objs)
         }
-        serials = {k: v.serial for k, v in registrations.iteritems()}
+        serials = {k: v.serial for k, v in six.iteritems(registrations)}
         
         # Increment refcounts of new (or existing) references.
-        for reg in registrations.itervalues():
+        for reg in six.itervalues(registrations):
             reg.inc_refcount()
         
         # Send message.

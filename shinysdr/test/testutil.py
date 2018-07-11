@@ -21,8 +21,9 @@ import json
 import os
 import os.path
 import shutil
-import StringIO
 import tempfile
+
+import six
 
 from gnuradio import blocks
 from gnuradio import gr
@@ -57,7 +58,7 @@ from shinysdr.values import ExportedState, InterestTracker, IDeltaSubscriber, IS
 def state_smoke_test(value):
     """Retrieve every value in the given ExportedState instance and its children."""
     assert isinstance(value, ExportedState)
-    for cell in value.state().itervalues():
+    for cell in six.itervalues(value.state()):
         value = cell.get()
         if cell.type().is_reference():
             state_smoke_test(value)
@@ -174,7 +175,7 @@ class Cells(ExportedState):
         self.__cells = cells
     
     def state_def(self):
-        for kv in self.__cells.iteritems():
+        for kv in six.iteritems(self.__cells):
             yield kv
 
 # --- Radio test utilities ---
@@ -423,13 +424,13 @@ def http_request(reactor, url, method, body=None, accept=None, more_headers=None
     if accept is not None:
         headers.addRawHeader('Accept', str(accept))
     if more_headers:
-        for k, v in more_headers.iteritems():
+        for k, v in six.iteritems(more_headers):
             headers.addRawHeader(str(k), str(v))
     d = agent.request(
         method=str(method),
         uri=str(url),
         headers=headers,
-        bodyProducer=client.FileBodyProducer(StringIO.StringIO(str(body))) if body else None)
+        bodyProducer=client.FileBodyProducer(six.StringIO(str(body))) if body else None)
     return _handle_agent_response(d)
 
 
@@ -524,7 +525,7 @@ class Files(object):
         elif isinstance(desc, dict):
             if not os.path.exists(path):
                 os.mkdir(path)
-            for k, d in desc.iteritems():
+            for k, d in six.iteritems(desc):
                 self.__create(os.path.join(path, k), d)
         else:
             raise TypeError('don\'t know what to do with {!r} at {!r}'.format(desc, path))
@@ -552,7 +553,7 @@ class _LogEventTester(object):
         self.event = event
     
     def check(self, **features):
-        for key, expected_value in features.iteritems():
+        for key, expected_value in six.iteritems(features):
             if key == 'text':
                 text = formatEvent(self.event)
                 if text != expected_value:

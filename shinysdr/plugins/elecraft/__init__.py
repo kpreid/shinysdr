@@ -29,6 +29,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from collections import defaultdict
 import struct
 
+import six
+
 from twisted.internet import defer
 from twisted.internet.protocol import Protocol
 from twisted.protocols.basic import LineReceiver
@@ -641,7 +643,7 @@ class _ElecraftStateTable(object):
         self.__rows = rows
         command_lookup = {}
         for row in rows:
-            for cmd, parser in row.commands().iteritems():
+            for cmd, parser in six.iteritems(row.commands()):
                 if cmd in command_lookup:
                     raise ValueError('duplicate ' + cmd)
                 command_lookup[cmd] = parser

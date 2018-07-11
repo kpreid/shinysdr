@@ -19,6 +19,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os.path
 
+import six
+
 from twisted.internet.task import Clock
 from twisted.trial import unittest
 
@@ -178,7 +180,7 @@ def advance_until(clock, d, limit=10, timestep=0.001):
     ret = []
     err = []
     d.addCallbacks(ret.append, err.append)
-    for _ in xrange(limit):
+    for _ in six.moves.range(limit):
         if ret:
             return ret[0]
         elif err:

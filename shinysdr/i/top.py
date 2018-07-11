@@ -20,6 +20,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import math
 import time
 
+import six
+
 from twisted.internet import reactor
 from twisted.logger import Logger
 from zope.interface import implementer  # available via Twisted
@@ -76,13 +78,13 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
 
         # Configuration
         # TODO: device refactoring: Remove vestigial 'accessories'
-        self._sources = CellDict({k: d for k, d in devices.iteritems() if d.can_receive()})
-        self._accessories = accessories = {k: d for k, d in devices.iteritems() if not d.can_receive()}
+        self._sources = CellDict({k: d for k, d in six.iteritems(devices) if d.can_receive()})
+        self._accessories = accessories = {k: d for k, d in six.iteritems(devices) if not d.can_receive()}
         for key in self._sources:
             # arbitrary valid initial value
             self.source_name = key
             break
-        self.__rx_device_type = EnumT({k: v.get_name() or k for (k, v) in self._sources.iteritems()})
+        self.__rx_device_type = EnumT({k: v.get_name() or k for (k, v) in six.iteritems(self._sources)})
         
         # Audio early setup
         self.__audio_manager = AudioManager(  # must be before contexts
@@ -123,7 +125,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         def hookup_vfo_callback(k, d):  # function so as to not close over loop variable
             d.get_vfo_cell().subscribe2(lambda value: self.__device_vfo_callback(k), the_subscription_context)
         
-        for k, d in devices.iteritems():
+        for k, d in six.iteritems(devices):
             hookup_vfo_callback(k, d)
         
         self._do_connect()
@@ -148,7 +150,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
                     break
         
         if len(self._receivers) > 0:
-            arbitrary = self._receivers.itervalues().next()
+            arbitrary = six.itervalues(self._receivers).next()
             defaults = arbitrary.state_to_json()
         else:
             defaults = self.receiver_default_state
@@ -253,7 +255,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
             audio_rs = self.__audio_manager.reconnecting()
             n_valid_receivers = 0
             has_non_audio_receiver = False
-            for key, receiver in self._receivers.iteritems():
+            for key, receiver in six.iteritems(self._receivers):
                 self._receiver_valid[key] = receiver.get_is_valid()
                 if not self._receiver_valid[key]:
                     continue
@@ -299,7 +301,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         freq = device.get_freq()
         if self.source is device:
             self.monitor.set_input_center_freq(freq)
-        for rec_key, receiver in self._receivers.iteritems():
+        for rec_key, receiver in six.iteritems(self._receivers):
             if receiver.get_device_name() == device_key:
                 receiver.changed_device_freq()
                 self._update_receiver_validity(rec_key)
@@ -375,9 +377,9 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         """Close all devices in preparation for a clean shutdown.
         
         Makes this top block unusable"""
-        for device in self._sources.itervalues():
+        for device in six.itervalues(self._sources):
             device.close()
-        for device in self._accessories.itervalues():
+        for device in six.itervalues(self._accessories):
             device.close()
         self.stop()
         self.wait()

@@ -17,6 +17,8 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import six
+
 from twisted.internet import defer
 from twisted.internet import reactor as the_reactor
 from twisted.internet.task import deferLater
@@ -164,7 +166,7 @@ class TestRetuning(unittest.TestCase):
         (_key, self.receiver) = top.add_receiver('AM', key='a')
 
         # initial state sanity check
-        for d in self.devs.itervalues():
+        for d in six.itervalues(self.devs):
             self.assertEqual(d.get_freq(), f1)
     
     @defer.inlineCallbacks

@@ -24,6 +24,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from collections import namedtuple
 
+import six
+
 from twisted.internet import reactor as the_reactor
 from twisted.internet.interfaces import IReactorTime
 from zope.interface import Interface, implementer
@@ -56,7 +58,7 @@ class Track(_TrackNT):
             # convert dict argument, possibly pure JSON (instead of TelemetryItems), to kwargs
             args_in = dict(args[0])
             args_out = {}
-            for k, v in args_in.iteritems():
+            for k, v in six.iteritems(args_in):
                 if isinstance(v, TelemetryItem):
                     args_out[k] = args_in[k]
                 else:
@@ -201,7 +203,7 @@ class TelemetryStore(CollectionState):
     def __flush_expired(self):
         current_time = self.__time_source.seconds()
         deletes = []
-        for object_id, expiry in self.__expiry_times.iteritems():
+        for object_id, expiry in six.iteritems(self.__expiry_times):
             if expiry <= current_time:
                 deletes.append(object_id)
         for object_id in deletes:
@@ -220,7 +222,7 @@ class TelemetryStore(CollectionState):
 
         if self.__expiry_times:
             now = self.__time_source.seconds()
-            next_expiry = min(self.__expiry_times.itervalues())
+            next_expiry = min(six.itervalues(self.__expiry_times))
             sec_until_expiry = max(0, next_expiry - now)
             self.__flush_call = self.__time_source.callLater(
                 sec_until_expiry,

@@ -22,6 +22,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import bisect
 from functools import total_ordering
 
+import six
+
 from twisted.internet import task, reactor as the_reactor
 from twisted.logger import Logger
 from zope.interface import implementer
@@ -93,7 +95,7 @@ class Poller(object):
         self.__functions.append(thunk)
     
     def count_subscriptions(self):
-        return sum(multimap.count_values() for multimap in self.__targets.itervalues())
+        return sum(multimap.count_values() for multimap in six.itervalues(self.__targets))
 
 
 __all__.append('Poller')

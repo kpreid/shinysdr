@@ -19,6 +19,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import math
 
+import six
+
 from zope.interface import implementer
 
 from gnuradio import analog
@@ -211,7 +213,7 @@ def _to_bits(code):
     ITA2 code number to _HALF_BITS_PER_CODE-element array
     """
     bit_list = [0, 0]
-    for i in xrange(_DATA_BITS):
+    for i in six.moves.range(_DATA_BITS):
         j = _DATA_BITS - 1 - i
         bit_list.append((code >> j) & 1)
         bit_list.append((code >> j) & 1)

@@ -28,7 +28,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import importlib
 import os
 import os.path
-import __builtin__
+
+from six.moves import builtins
 
 import six
 
@@ -279,7 +280,7 @@ def execute_config(config_obj, config_file_or_directory):
     
     Note: does not _wait_and_validate()
     """
-    env = dict(__builtin__.__dict__)
+    env = dict(builtins.__dict__)
     env.update({'config': config_obj})
     if os.path.isdir(config_file_or_directory):
         six.exec_(open(os.path.join(config_file_or_directory, 'config.py')).read(), env)

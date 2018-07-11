@@ -18,9 +18,10 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import StringIO
 import os
 import os.path
+
+import six
 
 from twisted.trial import unittest
 from zope.interface import implementer  # available via Twisted
@@ -90,13 +91,13 @@ class TestImportTool(unittest.TestCase):
     
     def test_smoke(self):
         self.__files.create({'in': ''})
-        out_file_obj = StringIO.StringIO()
+        out_file_obj = six.StringIO()
         import_main(argv=['shinysdr-import', 'uls', self.__in_file], out=out_file_obj)
         self.assertEquals('Location,Mode,Frequency,Name,Latitude,Longitude,Comment\r\n', out_file_obj.getvalue())
 
 
 def run_importer(importer, input_text):
-    f = StringIO.StringIO(input_text)
+    f = six.StringIO(input_text)
     importer.add_file('-', f, warning_callback=lambda w: None)
     records = []
     importer.create_database(records.append, warning_callback=lambda w: None)

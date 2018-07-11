@@ -19,6 +19,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from math import pi
 
+import six
+
 from zope.interface import implementer
 
 from gnuradio import gr
@@ -351,7 +353,7 @@ class UnselectiveAMDemodulator(gr.hier_block2, ExportedState):
         channel_joiner = blocks.streams_to_vector(gr.sizeof_float, channels)
         self.connect(channel_joiner, self)
         
-        for channel in xrange(0, channels):
+        for channel in six.moves.range(0, channels):
             self.connect(
                 agc_block,
                 grfilter.fir_filter_ccc(1, design_sawtooth_filter(decreasing=channel == 0)),

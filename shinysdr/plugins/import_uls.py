@@ -28,6 +28,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from collections import defaultdict
 
+import six
+
 from zope.interface import implementer  # available via Twisted
 
 from shinysdr.db_import import IImporter, ImporterDef
@@ -68,7 +70,7 @@ class ULSImporter(object):
         # 1. HD F2 LO EM CO
         # 2. AC AN L3 F3 F4
         # 3. 'AD', 'EN', 'A2', 'RE', 'MW', 'CG', 'FA', 'SH', 'SR', 'SE', 'SV', 'LM', 'MI', 'BC', 'FC', 'HS', 'TA', 'BD', 'AS', 'CF', 'IA', 'SC', 'SF', 'BO', 'CP', 'SI', 'UA', 'AC', 'AM', 'VC', 'MK', 'TL', 'MP', 'MC', 'MF', 'LS', 'L2', 'LF', 'OP', 'BL', 'AN', 'RC', 'RZ', 'FT', 'IR', 'CS', 'FS', 'FF', 'BF', 'RA', 'PC', 'PA', 'SG', 'AT', 'AH', 'LH', 'BE', 'MH', 'ME', 'LA', 'CD', 'RI', 'LD', 'LL', 'LC', 'L3', 'L4', 'O2', 'L5', 'L6', 'A3', 'F3', 'F4', 'F5', 'F6', 'P2', 'TP'
-        for system_id, rtypes in self.__records.iteritems():
+        for system_id, rtypes in six.iteritems(self.__records):
             latitude = None
             longitude = None
             address_1 = ''

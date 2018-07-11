@@ -26,6 +26,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from math import acos, cos, pi, sin
 
+import six
+
 __all__ = []  # appended later
 
 
@@ -44,7 +46,7 @@ def factorize(n):
         raise ValueError()
     primes = []
     while n > 1:
-        for i in xrange(2, n // 2 + 1):
+        for i in six.moves.range(2, n // 2 + 1):
             if n % i == 0:
                 primes.append(i)
                 n //= i
@@ -82,7 +84,7 @@ def small_factor_at_least(n, limit, _force_approx=False):
             else:
                 return n + 1  # "don't pick me"
         
-        return min(map(product_selected, xrange(0, 1 << len(factors))))
+        return min(map(product_selected, six.moves.range(0, 1 << len(factors))))
     else:
         # many factors, use cheap approximation. TODO: Maybe optimize very last step
         factors.reverse()

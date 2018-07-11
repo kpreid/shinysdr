@@ -25,6 +25,8 @@ import os.path
 import time
 import traceback
 
+import six
+
 from twisted.internet import reactor  # TODO eliminate
 from twisted.web import static
 from zope.interface import Interface, implementer
@@ -114,7 +116,7 @@ class ModeSDemodulator(gr.hier_block2, ExportedState):
             self.__messages_seen += 1
             context.output_message(ModeSMessageWrapper(msg, cpr_decoder, timestamp))
         
-        for i in xrange(0, 2 ** 5):
+        for i in six.moves.range(0, 2 ** 5):
             parser_output.subscribe('type%i_dl' % i, parsed_callback)
 
     def __del__(self):

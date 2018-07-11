@@ -24,6 +24,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from fractions import gcd
 from math import pi, sin, cos
 
+import six
+
 from gnuradio import gr
 from gnuradio.fft import window
 from gnuradio import filter as grfilter  # don't shadow builtin
@@ -499,7 +501,7 @@ def design_sawtooth_filter(
     
     # Formula provided by Olli Niemitalo in <http://dsp.stackexchange.com/a/28035/4655>.
     taps = []
-    for i in xrange(0, ntaps):
+    for i in six.moves.range(0, ntaps):
         k = i - ntaps // 2  # k = 0 at middle
         if k == 0:
             # substitute limit for division by zero
@@ -511,7 +513,7 @@ def design_sawtooth_filter(
         
     # Compute gain at frequency 0, and divide by it so as to set the wanted gain.
     gain_factor = 1.0 / abs(sum(taps))
-    for i in xrange(0, ntaps):
+    for i in six.moves.range(0, ntaps):
         taps[i] *= gain_factor
     
     # Reverse if appropriate.

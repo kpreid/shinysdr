@@ -20,6 +20,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import argparse
 import sys
 
+import six
+
 from twisted.plugin import getPlugins
 
 from shinysdr.i.db import normalize_record, write_csv_file
@@ -43,7 +45,7 @@ _IMPORTER_DEFS = {p.name: p for p in getPlugins(_IImporterDef, plugins) if p.ava
 
 def _importer_list_msg():
     out = 'Known importers:\n'
-    for name, idef in _IMPORTER_DEFS.iteritems():
+    for name, idef in six.iteritems(_IMPORTER_DEFS):
         out += '  %s: %s\n' % (name, idef.description)
     return out
 

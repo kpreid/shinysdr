@@ -18,7 +18,8 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import json
-import urlparse
+
+from six.moves.urllib.parse import urljoin
 
 from twisted.trial import unittest
 from twisted.internet import defer
@@ -61,13 +62,13 @@ class TestWebSite(unittest.TestCase):
         return testutil.assert_http_resource_properties(self, self.url)
     
     def test_common_client_example(self):
-        return testutil.assert_http_resource_properties(self, urlparse.urljoin(self.url, '/client/main.js'))
+        return testutil.assert_http_resource_properties(self, urljoin(self.url, '/client/main.js'))
     
     def test_common_object(self):
-        return testutil.assert_http_resource_properties(self, urlparse.urljoin(self.url, CAP_OBJECT_PATH_ELEMENT))
+        return testutil.assert_http_resource_properties(self, urljoin(self.url, CAP_OBJECT_PATH_ELEMENT))
     
     def test_common_ephemeris(self):
-        return testutil.assert_http_resource_properties(self, urlparse.urljoin(self.url, 'ephemeris'))
+        return testutil.assert_http_resource_properties(self, urljoin(self.url, 'ephemeris'))
     
     @defer.inlineCallbacks
     def test_app_redirect(self):
@@ -79,7 +80,7 @@ class TestWebSite(unittest.TestCase):
         response, _data = yield testutil.http_get(the_reactor, url_without_slash)
         self.assertEqual(response.code, http.MOVED_PERMANENTLY)
         self.assertEqual(self.url,
-            urlparse.urljoin(url_without_slash,
+            urljoin(url_without_slash,
                 'ONLYONE'.join(response.headers.getRawHeaders('Location'))))
     
     @defer.inlineCallbacks
@@ -120,7 +121,7 @@ class TestWebSite(unittest.TestCase):
     
     @defer.inlineCallbacks
     def test_manifest(self):
-        response, data = yield testutil.http_get(the_reactor, urlparse.urljoin(self.url, b'/client/web-app-manifest.json'))
+        response, data = yield testutil.http_get(the_reactor, urljoin(self.url, b'/client/web-app-manifest.json'))
         self.assertEqual(response.code, http.OK)
         self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/manifest+json'])
         manifest = json.loads(data)
@@ -128,7 +129,7 @@ class TestWebSite(unittest.TestCase):
     
     @defer.inlineCallbacks
     def test_plugin_index(self):
-        response, data = yield testutil.http_get(the_reactor, urlparse.urljoin(self.url, b'/client/plugin-index.json'))
+        response, data = yield testutil.http_get(the_reactor, urljoin(self.url, b'/client/plugin-index.json'))
         self.assertEqual(response.code, http.OK)
         self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
         index = json.loads(data)

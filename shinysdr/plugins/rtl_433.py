@@ -20,6 +20,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import json
 import time
 
+import six
+
 from twisted.internet import reactor as the_reactor  # TODO eliminate
 from twisted.internet.protocol import ProcessProtocol
 from twisted.protocols.basic import LineReceiver
@@ -287,7 +289,7 @@ class RTL433MsgGroup(ExportedState):
         """Overrides ExportedState."""
         for d in super(RTL433MsgGroup, self).state_def():
             yield d
-        for d in self.__cells.iteritems():
+        for d in six.iteritems(self.__cells):
             yield d
     
     # not exported
@@ -295,7 +297,7 @@ class RTL433MsgGroup(ExportedState):
         """Implements ITelemetryObject."""
         self.__last_heard_time = message_wrapper.receive_time
         shape_changed = False
-        for k, v in message_wrapper.message.iteritems():
+        for k, v in six.iteritems(message_wrapper.message):
             if _message_field_is_id.get(k, False) or k == u'time':
                 continue
             if k not in self.__cells:

@@ -21,6 +21,8 @@ GR blocks and such supporting receiver audio delivery.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import six
+
 from twisted.internet import reactor as the_reactor
 from twisted.logger import Logger
 
@@ -56,7 +58,7 @@ class AudioManager(object):
     __logger = Logger()
     
     def __init__(self, graph, audio_config, stereo=True):
-        # for key, audio_device in audio_devices.iteritems():
+        # for key, audio_device in six.iteritems(audio_devices):
         #     if key == CLIENT_AUDIO_DEVICE:
         #         raise ValueError('The name %r for an audio device is reserved' % (key,))
         #     if not audio_device.can_transmit():
@@ -72,7 +74,7 @@ class AudioManager(object):
             audio_devices = {}
         
         self.__audio_devices = audio_devices
-        audio_destination_dict = {key: 'Server' or key for key, device in audio_devices.iteritems()}  # temp name till we have proper device objects
+        audio_destination_dict = {key: 'Server' or key for key, device in six.iteritems(audio_devices)}  # temp name till we have proper device objects
         audio_destination_dict[CLIENT_AUDIO_DEVICE] = 'Client'  # TODO reconsider name
         self.__audio_destination_type = EnumT(audio_destination_dict)
         self.__audio_channels = 2 if stereo else 1
@@ -117,7 +119,7 @@ class AudioManager(object):
     # @exported_value()
     def get_audio_bus_rate(self):
         # TODO: A debugging aid that used to be exported. Make this exported again (not necessarily from this object once we have a proper "system status" view
-        return [b.get_current_rate() for b in self.__audio_buses.itervalues()]
+        return [b.get_current_rate() for b in six.itervalues(self.__audio_buses)]
     
 
 __all__.append('AudioManager')
@@ -140,10 +142,10 @@ class ReconnectSession(object):
     
     def finish_bus_connections(self):
         has_useful = False
-        for key, bus in self.__buses.iteritems():
+        for key, bus in six.iteritems(self.__buses):
             inputs = self.__bus_inputs[key]
             if key == CLIENT_AUDIO_DEVICE:
-                outputs = self.__audio_sinks.itervalues()
+                outputs = six.itervalues(self.__audio_sinks)
                 noutputs = len(self.__audio_sinks)
             else:
                 outputs = [self.__devices[key]]
@@ -167,7 +169,7 @@ class BusPlumber(object):
     def __init__(self, graph, nchannels):
         self.__graph = graph
         self.__nchannels = nchannels
-        self.__channels = xrange(nchannels)
+        self.__channels = six.moves.range(nchannels)
         self.__bus_rate = 0.0
     
     def get_current_rate(self):
@@ -243,7 +245,7 @@ class VectorAudioSink(gr.hier_block2):
         if channels > 1:
             splitter = blocks.vector_to_streams(gr.sizeof_float, channels)
             self.connect(self, splitter)
-            for ch in xrange(channels):
+            for ch in six.moves.range(channels):
                 self.connect((splitter, ch), (sink, ch))
         else:
             self.connect(self, sink)

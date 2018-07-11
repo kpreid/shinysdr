@@ -18,8 +18,9 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import json
-import StringIO
 import textwrap
+
+import six
 
 from twisted.trial import unittest
 from twisted.internet import defer
@@ -95,12 +96,12 @@ class TestCSV(unittest.TestCase):
         self.assertEqual(len(diagnostics), len(expect_diagnostics), 'extra diagnostics')
     
     def __parse(self, s, expect_records, expect_diagnostics):
-        read_records, diagnostics = db._parse_csv_file(StringIO.StringIO(s))
+        read_records, diagnostics = db._parse_csv_file(six.StringIO(s))
         self.__assertDiag(diagnostics, expect_diagnostics)
         self.assertEqual(expect_records, read_records)
     
     def __roundtrip(self, records, expect_diagnostics):
-        file_obj = StringIO.StringIO()
+        file_obj = six.StringIO()
         db._write_csv_file(file_obj, records)
         file_obj.seek(0)
         read_records, diagnostics = db._parse_csv_file(file_obj)
@@ -265,7 +266,7 @@ class TestDatabaseResource(unittest.TestCase):
         }),
     }
     response_json = {
-        u'records': {unicode(k): v for k, v in test_records.iteritems()},
+        u'records': {unicode(k): v for k, v in test_records.items()},
         u'writable': True,
     }
     

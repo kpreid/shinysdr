@@ -21,6 +21,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import json
 
+import six
+
 from zope.interface import Interface
 
 
@@ -64,9 +66,9 @@ def transform_for_json(obj):
         return transform_for_json(obj.to_json())
     elif isinstance(obj, tuple) and hasattr(obj, '_asdict'):  # namedtuple
         # TODO: Consider replreplacing all uses of this generic namedtuple handling with IJsonSerializable now that we have that.
-        return {k: transform_for_json(v) for k, v in obj._asdict().iteritems()}
+        return {k: transform_for_json(v) for k, v in six.iteritems(obj._asdict())}
     elif isinstance(obj, dict):
-        return {k: transform_for_json(v) for k, v in obj.iteritems()}
+        return {k: transform_for_json(v) for k, v in six.iteritems(obj)}
     elif isinstance(obj, (list, tuple)):
         return map(transform_for_json, obj)
     else:

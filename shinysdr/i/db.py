@@ -24,6 +24,8 @@ import os
 import os.path
 import urllib
 
+import six
+
 from twisted.logger import Logger
 from twisted.web import http
 from twisted.web import resource
@@ -140,7 +142,7 @@ class DatabasesResource(resource.Resource):
         resource.Resource.__init__(self)
         self.putChild('', ElementRenderingResource(_DbsIndexListElement(self)))
         self.names = []
-        for (name, database) in databases.iteritems():
+        for (name, database) in six.iteritems(databases):
             self.putChild(name, DatabaseResource(database))
             self.names.append(name)
         self.names.sort()  # TODO reconsider case/locale
@@ -254,7 +256,7 @@ def _parse_csv_file(csvfile):
     for strcsvrec in reader:
         # csv does not deal in unicode itself
         csvrec = {}
-        for k, v in strcsvrec.iteritems():
+        for k, v in six.iteritems(strcsvrec):
             if k is None:
                 diagnostics.append(Warning(reader.line_num, 'Record contains extra columns; data discarded.'))
                 continue
@@ -333,7 +335,7 @@ def normalize_record(record):
     for k in record:
         if k not in _json_columns:
             raise ValueError('record contains unknown key %r' % (k,))
-    for k, (column_type, default) in _json_columns.iteritems():
+    for k, (column_type, default) in six.iteritems(_json_columns):
         value = record.get(k, default)
         if value is _NO_DEFAULT:
             raise ValueError('record is missing key %r' % (k,))
@@ -363,10 +365,10 @@ def _write_csv_file(csvfile, records):
         u'Comment',
     ])
     writer.writeheader()
-    for rkey, record in records.iteritems():
+    for rkey, record in six.iteritems(records):
         csvrecord = {u'Location': str(rkey)}
         lf = uf = None
-        for key, value in record.iteritems():
+        for key, value in six.iteritems(record):
             if key == u'type':
                 pass
             elif key == u'mode':

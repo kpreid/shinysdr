@@ -28,6 +28,8 @@ import re
 import subprocess
 import time
 
+import six
+
 from zope.interface import implementer, Interface
 
 from twisted.internet import defer
@@ -228,7 +230,7 @@ def _connect_to_device(reactor, options, port, daemon, connect_func):
         except ConnectionRefusedError:
             pass
     
-    for _ in xrange(4 if port is None else 1):  # loop to try available port numbers in case of collision (hamlib will not bind to 0 and report)
+    for _ in six.moves.range(4 if port is None else 1):  # loop to try available port numbers in case of collision (hamlib will not bind to 0 and report)
         
         if port is None:
             actual_port = random.randint(49152, 65535)
@@ -245,7 +247,7 @@ def _connect_to_device(reactor, options, port, daemon, connect_func):
         # Retry connecting with exponential backoff, because the daemon process won't tell us when it's started listening.
         proxy_device = None
         refused = Exception('this shouldn\'t be raised')
-        for i in xrange(0, 4):
+        for i in six.moves.range(0, 4):
             try:
                 proxy_device = yield connect_func(
                     reactor=reactor,
@@ -276,7 +278,7 @@ def _connect_to_device(reactor, options, port, daemon, connect_func):
 
 
 def _install_closed_hook(proxy_device, process):
-    for proxy in proxy_device.get_components_dict().itervalues():  # only expect one, but CellDict is minimal for now
+    for proxy in six.itervalues(proxy_device.get_components_dict()):  # only expect one, but CellDict is minimal for now
         proxy.when_closed().addCallback(lambda _: process.kill())
 
 
@@ -296,7 +298,7 @@ class _HamlibProxy(ExportedState):
         # invert command table
         # TODO: we only need to do this once per class, really
         self._how_to_command = {key: command
-            for command, keys in self._commands.iteritems()
+            for command, keys in self._commands.items()
             for key in keys}
         
         # keys are same as __cache, values are functions to call with new values from rig

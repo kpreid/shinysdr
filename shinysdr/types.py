@@ -29,6 +29,8 @@ from collections import namedtuple
 import math
 import struct
 
+import six
+
 from zope.interface import Interface, implementer
 
 from shinysdr.i.json import IJsonSerializable  # reexport
@@ -233,7 +235,7 @@ class EnumT(ValueType):
         self.__base_type = base_type = to_value_type(base_type)
         self.__table = {
             base_type(key): EnumRow(info, associated_key=key)
-            for key, info in values.iteritems()}
+            for key, info in six.iteritems(values)}
     
     def get_table(self):
         return self.__table
@@ -445,7 +447,7 @@ class RangeT(ValueType):
         mins = self.__mins
         maxes = self.__maxes
         return RangeT(
-            [(mins[i] + offset, maxes[i] + offset) for i in xrange(len(mins))],
+            [(mins[i] + offset, maxes[i] + offset) for i in six.moves.range(len(mins))],
             unit=self.__unit,
             strict=self.__strict,
             logarithmic=self.__logarithmic,

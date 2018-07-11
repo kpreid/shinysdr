@@ -28,6 +28,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import math
 import os
 
+import six
+
 from zope.interface import Interface, implementer
 
 from gnuradio import gr
@@ -147,7 +149,7 @@ class _OverlappedStreamToVector(gr.hier_block2):
             interleave = blocks.interleave(itemsize * size)
             self.connect(interleave, self)
         
-            for i in xrange(0, factor):
+            for i in six.moves.range(0, factor):
                 self.connect(
                     self,
                     blocks.delay(itemsize, (factor - 1 - i) * offset),
@@ -451,7 +453,7 @@ class VectorResampler(gr.hier_block2):
             splitter = blocks.vector_to_streams(vitemsize, vlen)
             joiner = blocks.streams_to_vector(vitemsize, vlen)
             self.connect(self, splitter)
-            for ch in xrange(vlen):
+            for ch in six.moves.range(vlen):
                 self.connect(
                     (splitter, ch),
                     make_resampler(in_rate, out_rate, complex=complex),
