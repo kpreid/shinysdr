@@ -26,6 +26,8 @@ import codecs
 from collections import namedtuple
 import weakref
 
+import six
+
 from twisted.internet import reactor as the_reactor
 from twisted.logger import Logger
 from twisted.python.failure import Failure
@@ -901,17 +903,29 @@ class CellDict(object):
     
     def __iter__(self):
         return self.iterkeys()
-    
-    def iterkeys(self):
-        return self.__cells.iterkeys()
-    
-    def itervalues(self):
-        for key in self:
-            yield self[key]
-    
-    def iteritems(self):
-        for key in self:
-            yield key, self[key]
+
+    if six.PY2:
+        def iterkeys(self):
+            return six.iterkeys(self.__cells)
+        
+        def itervalues(self):
+            for key in self:
+                yield self[key]
+        
+        def iteritems(self):
+            for key in self:
+                yield key, self[key]
+    else:
+        def keys(self):
+            return six.iterkeys(self.__cells)
+        
+        def values(self):
+            for key in self:
+                yield self[key]
+        
+        def items(self):
+            for key in self:
+                yield key, self[key]
     
     def get_cell(self, key):
         return self.__cells[key]

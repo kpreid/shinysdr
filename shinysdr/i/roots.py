@@ -48,7 +48,7 @@ class CapTable(object):
         self.__forward[cap] = target
         return cap
     
-    def iteritems(self):
+    def items(self):
         # TODO rethink this interface
         # note that this exposes a "during iteration, cannot delete" condition
         for cap, target in self.__forward.iteritems():
