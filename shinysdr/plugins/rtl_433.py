@@ -326,7 +326,7 @@ class RTL433MsgGroup(ExportedState):
 
 _rtl_433_unavailability = test_subprocess(
     ['rtl_433', '-r', '/dev/null'],
-    'Reading samples from file',
+    b'Reading samples from file',
     shell=False)
 
 

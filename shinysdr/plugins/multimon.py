@@ -264,7 +264,7 @@ class APRSProcessProtocol(ProcessProtocol):
             print('Not APRS line: %r' % line)
 
 
-_multimon_unavailability = test_subprocess('multimon-ng -h; exit 0', 'vailable demodulators:', shell=True)
+_multimon_unavailability = test_subprocess('multimon-ng -h; exit 0', b'vailable demodulators:', shell=True)
 
 
 pluginDef_APRS = ModeDef(mode='APRS',  # TODO: Rename mode to be more accurate

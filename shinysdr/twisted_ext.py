@@ -23,6 +23,7 @@ had to write ourselves.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import re
 import subprocess
 
 from twisted.internet import defer
@@ -60,7 +61,7 @@ __all__.append('fork_deferred')
 
 
 def test_subprocess(args, substring, shell=False):
-    """Check the stdout or stderr of the specified command for a specified string.
+    """Check the stdout or stderr of the specified command for a specified byte string.
     
     Returns None on success or a user-friendly string describing the failure to match.
     """
@@ -69,7 +70,7 @@ def test_subprocess(args, substring, shell=False):
     def failure(msg, **kwargs):
         return msg.format(
             cmd=args if isinstance(args, basestring) else ' '.join(args),
-            substring=substring,
+            substring=re.sub("^b'", "'", repr(substring)),
             **kwargs)
     
     try:
@@ -81,8 +82,8 @@ def test_subprocess(args, substring, shell=False):
             return None
         else:
             return failure(
-                'Expected `{cmd}` to give output containing "{substring}", but the actual output was:\n{output}',
-                output=output)
+                'Expected `{cmd}` to give output containing {substring}, but the actual output was:\n{output}',
+                output=output.decode(encoding='utf-8', errors='backslashreplace'))
     except OSError:
         return failure('Expected `{cmd}` to succeed but it could not be started.')
     except subprocess.CalledProcessError as e:
