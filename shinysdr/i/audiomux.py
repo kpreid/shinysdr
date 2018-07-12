@@ -132,7 +132,7 @@ class ReconnectSession(object):
         self.__audio_sinks = audio_sinks
         self.__log = log
         self.__bus_inputs = {bus: [] for bus in buses}
-        self.__fallback_bus = buses.keys()[0]
+        self.__fallback_bus = list(buses.keys())[0]
     
     def input(self, block, rate, destination):
         if destination not in self.__bus_inputs:

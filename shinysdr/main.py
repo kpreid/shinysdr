@@ -147,7 +147,7 @@ def _app_defaults(app):
     if 'osmo' in restricted:
         state['source_name'] = 'osmo'
     elif len(restricted.keys()) > 0:
-        state['source_name'] = restricted.keys()[0]
+        state['source_name'] = list(restricted.keys())[0]
     # else out of ideas, let top block pick
     
     return state

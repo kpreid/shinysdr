@@ -63,9 +63,9 @@ class _ModeTable(object):
     
     def get_modes(self, include_unavailable):
         if include_unavailable:
-            return self.__all_modes.values()
+            return list(self.__all_modes.values())
         else:
-            return self.__available_modes.values()
+            return list(self.__available_modes.values())
     
     def lookup_mode(self, mode, include_unavailable):
         if include_unavailable:

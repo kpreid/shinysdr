@@ -208,12 +208,12 @@ class TestDirectory(unittest.TestCase):
         })
         dbs, diagnostics = db.databases_from_directory(reactor, self.__files.dir)
         self.assertEqual([], diagnostics)
-        self.assertEqual(['a.csv'], dbs.keys())
+        self.assertEqual(['a.csv'], list(dbs.keys()))
 
     def test_no_directory(self):
         path = self.__files.dir + '_does_not_exist'
         dbs, diagnostics = db.databases_from_directory(reactor, path)
-        self.assertEqual([], dbs.keys())
+        self.assertEqual([], list(dbs.keys()))
         self.assertEqual(1, len(diagnostics))
         self.assertEqual(path, diagnostics[0][0])
         self.assertIn('Error opening database directory', str(diagnostics[0][1]))

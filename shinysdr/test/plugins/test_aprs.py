@@ -318,11 +318,11 @@ class TestAPRSTelemetryStore(unittest.TestCase):
         expand_aprs_message(msg, self.store)
     
     def test_new_station(self):
-        self.assertEqual([], self.store.state().keys())
+        self.assertEqual(set(), set(self.store.state().keys()))
         self.__receive(parse_tnc2(
             'N6WKZ-3>APU25N,WB6TMS-3*,N6ZX-3*,WIDE2*:=3746.42N112226.00W# {UIV32N}',
             _dummy_receive_time))
-        self.assertEqual(['N6WKZ-3'], self.store.state().keys())
+        self.assertEqual({'N6WKZ-3'}, set(self.store.state().keys()))
 
     # TODO: this test makes less sense now that expand_aprs_message is separate
     def test_object_item_report(self):
@@ -345,13 +345,13 @@ class TestAPRSTelemetryStore(unittest.TestCase):
 
     def test_drop_old(self):
         self.__receive(parse_tnc2('FOO>RX:>', _dummy_receive_time))
-        self.assertEqual(['FOO'], self.store.state().keys())
+        self.assertEqual({'FOO'}, set(self.store.state().keys()))
         self.clock.advance(1799.5)
         self.__receive(parse_tnc2('BAR>RX:>', _dummy_receive_time + 1799.5))
         self.assertEqual({'BAR', 'FOO'}, set(self.store.state().keys()))
         self.clock.advance(0.5)
         self.__receive(parse_tnc2('BAR>RX:>', _dummy_receive_time + 1800))
-        self.assertEqual(['BAR'], self.store.state().keys())
+        self.assertEqual({'BAR'}, set(self.store.state().keys()))
 
 
 class TestAPRSStation(unittest.TestCase):

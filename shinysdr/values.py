@@ -833,7 +833,7 @@ def unserialize_exported_state(ctor, kwargs=None, state=None):
     not_yet_set_state = {}
     if state is not None:
         not_yet_set_state.update(state)
-    for key, value in not_yet_set_state.items():
+    for key, value in list(six.iteritems(not_yet_set_state)):
         getter_name = 'get_' + key  # TODO centralize or eliminate naming scheme
         if not hasattr(ctor, getter_name): continue
         getter = getattr(ctor, getter_name)

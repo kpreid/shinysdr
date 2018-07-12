@@ -114,4 +114,4 @@ class TestMain(unittest.TestCase):
             '''))
         
         app = yield self.__run_main()
-        self.assertEqual(app.get_receive_flowgraph().state()['sources'].get().state().keys(), ['a_source'])
+        self.assertEqual(set(app.get_receive_flowgraph().state()['sources'].get().state().keys()), {'a_source'})

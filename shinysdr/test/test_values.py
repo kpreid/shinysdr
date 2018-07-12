@@ -140,8 +140,7 @@ class TestDecoratorInheritance(unittest.TestCase):
         self.object = DecoratorInheritanceSpecimen()
     
     def test_state_with_inheritance(self):
-        keys = self.object.state().keys()
-        keys.sort()
+        keys = sorted(self.object.state().keys())
         self.assertEqual(['inherited', 'rw'], keys)
         rw_cell = self.object.state()['rw']
         self.assertEqual(rw_cell.get(), 0.0)
@@ -556,13 +555,13 @@ class TestStateInsert(unittest.TestCase):
     def test_success(self):
         self.object = InsertFailSpecimen()
         self.object.state_from_json({'foo': {'fail': False}})
-        self.assertEqual(['foo'], self.object.state().keys())
+        self.assertEqual(['foo'], list(self.object.state().keys()))
     
     def test_failure(self):
         self.object = InsertFailSpecimen()
         self.object.state_from_json({'foo': {'fail': True}})
         # throws but exception is caught -- TODO: Test logging
-        self.assertEqual([], self.object.state().keys())
+        self.assertEqual([], list(self.object.state().keys()))
         self.flushLoggedErrors(ValueError)
     
     def test_undefined(self):
@@ -570,7 +569,7 @@ class TestStateInsert(unittest.TestCase):
         self.object = CollectionState(CellDict(dynamic=True))
         self.object.state_from_json({'foo': {'fail': True}})
         # throws but exception is caught -- TODO: Test logging
-        self.assertEqual([], self.object.state().keys())
+        self.assertEqual([], list(self.object.state().keys()))
         self.flushLoggedErrors(ValueError)
 
 

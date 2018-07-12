@@ -43,9 +43,9 @@ class TestTelemetryStore(unittest.TestCase):
         self.store = TelemetryStore(time_source=self.clock)
     
     def test_new_object(self):
-        self.assertEqual([], self.store.state().keys())
+        self.assertEqual(set(), set(self.store.state().keys()))
         self.store.receive(Msg('foo', 1000))
-        self.assertEqual(['foo'], self.store.state().keys())
+        self.assertEqual({'foo'}, set(self.store.state().keys()))
         obj = self.store.state()['foo'].get()
         self.assertIsInstance(obj, Obj)
     
@@ -58,7 +58,7 @@ class TestTelemetryStore(unittest.TestCase):
     
     def test_drop_old(self):
         self.store.receive(Msg('foo', 1000))
-        self.assertEqual(['foo'], self.store.state().keys())
+        self.assertEqual({'foo'}, set(self.store.state().keys()))
 
         self.clock.advance(1799.5)
         self.store.receive(Msg('bar', 2799.5))
@@ -68,16 +68,16 @@ class TestTelemetryStore(unittest.TestCase):
         self.assertEqual({'bar'}, set(self.store.state().keys()))
 
         self.clock.advance(10000)
-        self.assertEqual([], self.store.state().keys())
+        self.assertEqual(set(), set(self.store.state().keys()))
 
         # Expect complete cleanup -- that is, even if a TelemetryStore is created, filled, and thrown away, it will eventually be garbage collected when the objects expire.
-        self.assertEqual([], self.clock.getDelayedCalls())
+        self.assertEqual(set(), set(self.clock.getDelayedCalls()))
     
     def test_become_interesting(self):
         self.store.receive(Msg('foo', 1000, 'boring'))
-        self.assertEqual([], self.store.state().keys())
+        self.assertEqual(set(), set(self.store.state().keys()))
         self.store.receive(Msg('foo', 1001, 'interesting'))
-        self.assertEqual(['foo'], self.store.state().keys())
+        self.assertEqual({'foo'}, set(self.store.state().keys()))
         # 'become boring' is not implemented, so also not tested yet
     
     def test_drop_old_boring(self):
@@ -85,10 +85,10 @@ class TestTelemetryStore(unittest.TestCase):
         Make sure that dropping a boring object doesn't fail.
         """
         self.store.receive(Msg('foo', 1000, 'boring'))
-        self.assertEqual([], self.store.state().keys())
+        self.assertEqual(set(), set(self.store.state().keys()))
         self.clock.advance(1800)
         self.store.receive(Msg('bar', 2800, 'boring'))
-        self.assertEqual([], self.store.state().keys())
+        self.assertEqual(set(), set(self.store.state().keys()))
 
     def test_expire_in_the_past(self):
         """

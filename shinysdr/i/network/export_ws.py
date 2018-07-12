@@ -90,7 +90,7 @@ class _StateStreamObjectRegistration(object):
         for obj in six.itervalues(references):
             if obj not in self.__ssi._registered_objs:
                 raise Exception("shouldn't happen: previous value not registered", obj)
-        self.__previous_references = references.values()
+        self.__previous_references = list(references.values())
     
     def force_send_current_value(self):
         """Ensure that the latest value has been put on the stream."""
@@ -239,7 +239,7 @@ class StateStreamInner(object):
     def connectionLost(self, reason):
         # pylint: disable=consider-iterating-dictionary
         # dict is mutated during iteration
-        for obj in self._registered_objs.keys():
+        for obj in list(self._registered_objs.keys()):
             self.__drop(obj)
     
     def dataReceived(self, data):

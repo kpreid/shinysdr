@@ -263,8 +263,7 @@ class RTL433MessageWrapper(object):
         self.message = message  # a parsed rtl_433 JSON-format message
         self.receive_time = float(receive_time)
         
-        id_keys = [k for k in message if _message_field_is_id.get(k, False)]
-        id_keys.sort()
+        id_keys = sorted(k for k in message if _message_field_is_id.get(k, False))
         self.object_id = u'-'.join(six.text_type(message[k]) for k in id_keys)
     
     def get_object_id(self):

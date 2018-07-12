@@ -101,13 +101,13 @@ class TestConfigObject(unittest.TestCase):
         dev = StubDevice()
         self.config.devices.add(u'foo', dev)
         self.assertEqual({u'foo': dev}, self.config.devices._values)
-        self.assertEqual(six.text_type, type(self.config.devices._values.keys()[0]))
+        self.assertEqual(six.text_type, type(first(self.config.devices._values)))
     
     def test_device_key_string_ok(self):
         dev = StubDevice()
         self.config.devices.add('foo', dev)
         self.assertEqual({u'foo': dev}, self.config.devices._values)
-        self.assertEqual(six.text_type, type(self.config.devices._values.keys()[0]))
+        self.assertEqual(six.text_type, type(first(self.config.devices._values)))
     
     def test_device_key_type(self):
         self.assertRaises(ConfigException, lambda:
@@ -238,7 +238,7 @@ class TestConfigFiles(unittest.TestCase):
         
         # Config-directory-related defaults were not set
         self.assertEquals(None, self.__config._state_filename)
-        self.assertEquals(get_default_dbs().viewkeys(), self.__config.databases._get_read_only_databases().viewkeys())
+        self.assertEquals(six.viewkeys(get_default_dbs()), six.viewkeys(self.__config.databases._get_read_only_databases()))
     
     def test_config_directory(self):
         self.__files.create({
@@ -325,3 +325,8 @@ class DummyAppRoot(ExportedState):
 class StubEntryPoint(object):
     def entry_point_is_deleted(self):
         return False
+
+
+def first(iterable):
+    for x in iterable:
+        return x
