@@ -22,6 +22,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from importlib import import_module
 import os.path
 
+import six
+
 from twisted.python.util import sibpath
 
 
@@ -58,16 +60,11 @@ class DependencyTester(object):
         try:
             return import_module(module_name)
         except ImportError as e:
-            # pylint: disable=no-member
-            msg = e.message
-            if msg.startswith('No module named '):
-                # confirm using message contents
-                if module_name.endswith(msg[len('No module named '):]):
-                    self.__missing.add((dep_name, '%s not present.' % module_name))
-                else:
-                    # actually a loading error
-                    self.__broken.add((dep_name, '%s failed to import (%s).' % (module_name, e)))
-            return None
+            if import_error_matches(e, module_name):
+                self.__missing.add((dep_name, '%s not present.' % module_name))
+            else:
+                # actually a loading error
+                self.__broken.add((dep_name, '%s failed to import (%s).' % (module_name, e)))
         except Exception as e:
             self.__broken.add((dep_name, '%s failed to import (%s).' % (module_name, e)))
             return None
@@ -104,6 +101,16 @@ class DependencyTester(object):
             item, check = entry
             out += '\t%s  (Check: %s)\n' % (item, check)
         return out
+
+
+def import_error_matches(import_error, module_name):
+    if six.PY2:
+        msg = unicode(import_error)
+        # indirect because the message includes only the last name component
+        prefix = 'No module named '
+        return msg.startswith(prefix) and module_name.endswith(msg[len(prefix):])
+    else:
+        return module_name == import_error.name
 
 
 def hasattr_path(specimen, path):

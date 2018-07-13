@@ -656,7 +656,7 @@ def _parse_dhm_hms_timestamp(facts, errors, data, receive_time):
         else:  # kind == '/'
             absolute_time = datetime.fromtimestamp(receive_time).replace(day=n1, hour=n2, minute=n3, second=0, microsecond=0)
     except ValueError as e:
-        errors.append('DHM/HMS timestamp invalid: %s' % (e.message,))
+        errors.append('DHM/HMS timestamp invalid: {}'.format(e))
         return
     
     facts.append(Timestamp(absolute_time))

@@ -20,6 +20,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os.path
 
+import six
+
 from twisted.trial import unittest
 
 from shinysdr.i.dependencies import DependencyTester
@@ -40,8 +42,12 @@ class TestDependencyTester(unittest.TestCase):
     
     def test_module_broken_import(self):
         self.t.check_module('shinysdr.test.i.broken_deps.imports', '<dep name>')
-        self.assertEqual(self.t.report(),
-            'The following libraries/programs are not installed correctly:\n\t<dep name>  (Check: shinysdr.test.i.broken_deps.imports failed to import (No module named nonexistent_module_in_dep).)\nPlease (re)install current versions.')
+        if six.PY2:
+            self.assertEqual(self.t.report(),
+                'The following libraries/programs are not installed correctly:\n\t<dep name>  (Check: shinysdr.test.i.broken_deps.imports failed to import (No module named nonexistent_module_in_dep).)\nPlease (re)install current versions.')
+        else:
+            self.assertEqual(self.t.report(),
+                'The following libraries/programs are not installed correctly:\n\t<dep name>  (Check: shinysdr.test.i.broken_deps.imports failed to import (No module named \'shinysdr.test.nonexistent_module_in_dep\').)\nPlease (re)install current versions.')
     
     def test_module_broken_other(self):
         self.t.check_module('shinysdr.test.i.broken_deps.misc', '<dep name>')
