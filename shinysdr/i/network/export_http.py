@@ -20,10 +20,10 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import json
-import urllib
 import weakref
 
 import six
+from six.moves import urllib
 
 from twisted.internet.protocol import ProcessProtocol
 from twisted.web.resource import IResource, Resource
@@ -32,6 +32,7 @@ from twisted.web import template
 
 from shinysdr.i.json import serialize
 from shinysdr.i.network.base import prepath_escaped, template_filepath
+from shinysdr.i.pycompat import defaultstr
 from shinysdr.values import IWritableCollection
 
 
@@ -117,7 +118,7 @@ class BlockResource(Resource):
         assert request.getHeader(b'Content-Type') == b'application/json'
         reqjson = json.load(request.content)
         key = block.create_child(reqjson)  # note may fail
-        url = request.prePathURL() + b'/receivers/' + urllib.quote(key, safe='')
+        url = request.prePathURL() + defaultstr('/receivers/') + urllib.parse.quote(key, safe='')
         request.setResponseCode(201)  # Created
         request.setHeader(b'Location', url)
         # TODO consider a more useful response

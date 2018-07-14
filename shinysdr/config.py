@@ -29,9 +29,8 @@ import importlib
 import os
 import os.path
 
-from six.moves import builtins
-
 import six
+from six.moves import builtins
 
 from twisted.internet import defer
 from twisted.python.util import sibpath
@@ -360,7 +359,7 @@ config.serve_web(
     }
     
     os.mkdir(new_config_path)
-    with open(os.path.join(new_config_path, 'config.py'), 'w') as f:
+    with open(os.path.join(new_config_path, 'config.py'), 'wb') as f:
         f.write(config_text.encode('utf-8'))
     os.mkdir(os.path.join(new_config_path, 'dbs-read-only'))
 

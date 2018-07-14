@@ -35,6 +35,7 @@ from gnuradio.filter import rational_resampler
 
 from shinysdr.interfaces import BandShape
 from shinysdr.i.math import factorize, small_factor_at_least
+from shinysdr.i.pycompat import defaultstr
 
 
 __all__ = []  # appended later
@@ -328,7 +329,7 @@ class MultistageChannelFilter(gr.hier_block2):
     The multistage aspect improves CPU efficiency and also enables high decimations/sharp filters that would otherwise run into buffer length limits. Or at least, those were the problems I was seeing which I wrote this to fix.
     """
     def __init__(self,
-            name=b'MultistageChannelFilter',
+            name='MultistageChannelFilter',
             input_rate=0,
             output_rate=0,
             cutoff_freq=0,
@@ -351,7 +352,7 @@ class MultistageChannelFilter(gr.hier_block2):
         self.__plan = plan
         
         gr.hier_block2.__init__(
-            self, str(name),
+            self, defaultstr(name),
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
         )

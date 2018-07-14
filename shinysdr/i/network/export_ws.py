@@ -22,9 +22,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import json
 import struct
 import time
-import urllib
 
 import six
+from six.moves import urllib
 
 from twisted.internet import reactor as the_reactor  # TODO fix
 from twisted.internet.protocol import Protocol
@@ -33,6 +33,7 @@ from zope.interface import implementer, providedBy
 
 from shinysdr.i.json import serialize
 from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT
+from shinysdr.i.pycompat import defaultstr
 from shinysdr.signals import SignalType
 from shinysdr.types import BulkDataT, ReferenceT
 from shinysdr.values import BaseCell, ExportedState, IDeltaSubscriber, PollingCell
@@ -139,7 +140,7 @@ class _StateStreamObjectRegistration(object):
     def __send_references_and_update_refcount(self, objs, is_single):
         assert isinstance(objs, dict)
         registrations = {
-            k: self.__ssi._lookup_or_register(v, self.url + '/' + urllib.unquote(k))
+            k: self.__ssi._lookup_or_register(v, self.url + '/' + urllib.parse.unquote(k))
             for k, v in six.iteritems(objs)
         }
         serials = {k: v.serial for k, v in six.iteritems(registrations)}
@@ -370,19 +371,20 @@ class OurStreamProtocol(Protocol):
             self.__log.failure('Error processing incoming WebSocket message')
     
     def __dispatch_url(self):
-        loc = self.transport.location
+        loc = self.transport.location.decode('utf-8')  # TODO centralize url decoding
         self.__log.info('Stream connection to {url}', url=loc)
-        path = [urllib.unquote(x) for x in loc.split('/')]
+        path = [urllib.parse.unquote(x) for x in loc.split('/')]
         assert path[0] == ''
         path[0:1] = []
-        cap_string = path[0].decode('utf-8')  # TODO centralize url decoding
+        cap_string = path[0]
         if cap_string in self._caps:
             root_object = self._caps[cap_string]
             path[0:1] = []
         else:
             raise Exception('Unknown cap')  # TODO better error reporting
-        if len(path) == 1 and path[0].startswith(b'audio?rate='):
-            rate = int(json.loads(urllib.unquote(path[0][len(b'audio?rate='):])))
+        audio_prefix = defaultstr('audio?rate=')
+        if len(path) == 1 and path[0].startswith(audio_prefix):
+            rate = int(json.loads(urllib.parse.unquote(path[0][len(audio_prefix):])))
             self.inner = AudioStreamInner(the_reactor, self.__send, root_object, rate)
         elif len(path) >= 1 and path[0] == CAP_OBJECT_PATH_ELEMENT:
             # note _lookup_block may throw. TODO: Better error reporting

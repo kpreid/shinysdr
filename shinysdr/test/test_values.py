@@ -441,7 +441,10 @@ class TestLooseCell(unittest.TestCase):
         st.advance()  # check for unwanted callbacks
     
     def test_repr(self):
-        self.assertEqual(repr(self.lc), '<LooseCell PythonT(<type \'int\'>) 0>')
+        if six.PY2:
+            self.assertEqual(repr(self.lc), '<LooseCell PythonT(<type \'int\'>) 0>')
+        else:
+            self.assertEqual(repr(self.lc), '<LooseCell PythonT(<class \'int\'>) 0>')
     
     def test_default_writability(self):
         self.assertFalse(LooseCell(value=0, type=int).isWritable())

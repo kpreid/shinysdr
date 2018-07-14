@@ -32,6 +32,7 @@ from gnuradio import analog
 from gnuradio import gr
 
 from shinysdr.i.blocks import make_sink_to_process_stdin
+from shinysdr.i.pycompat import repr_no_string_tag
 from shinysdr.filters import MultistageChannelFilter
 from shinysdr.math import dB
 from shinysdr.interfaces import BandShape, ModeDef, IDemodulator
@@ -145,7 +146,7 @@ class RTL433ProcessProtocol(ProcessProtocol):
         self.__target = target
         self.__log = log
         self.__line_receiver = LineReceiver()
-        self.__line_receiver.delimiter = '\n'
+        self.__line_receiver.delimiter = b'\n'
         self.__line_receiver.lineReceived = self.__lineReceived
     
     def outReceived(self, data):
@@ -163,7 +164,7 @@ class RTL433ProcessProtocol(ProcessProtocol):
         try:
             message = json.loads(line)
         except ValueError:
-            self.__log.warn('bad JSON from rtl_433: {rtl_433_line!r}', rtl_433_line=line)
+            self.__log.warn('bad JSON from rtl_433: {rtl_433_line}', rtl_433_line=repr_no_string_tag(line))
             return
         self.__log.info('rtl_433 message: {rtl_433_json!r}', rtl_433_json=message)
         # rtl_433 provides a time field, but when in file-input mode it assumes the input is not real-time and generates start-of-file-relative timestamps, so we can't use them.

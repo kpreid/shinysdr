@@ -17,6 +17,8 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import six
+
 from twisted.trial import unittest
 
 from shinysdr.plugins.rtl_433 import RTL433Demodulator, RTL433ProcessProtocol
@@ -42,10 +44,13 @@ class TestRTL433Protocol(unittest.TestCase):
     
     def test_success(self):
         self.protocol.outReceived(b'{"foo":"bar"}\n')
-        self.log_tester.check(dict(text="rtl_433 message: {u'foo': u'bar'}"))
+        if six.PY2:
+            self.log_tester.check(dict(text="rtl_433 message: {u'foo': u'bar'}"))
+        else:
+            self.log_tester.check(dict(text="rtl_433 message: {'foo': 'bar'}"))
         self.assertEqual(len(self.received), 1)
     
     def test_not_json(self):
         self.protocol.outReceived(b'foo\n')
-        self.log_tester.check(dict(text="bad JSON from rtl_433: u'foo'"))
+        self.log_tester.check(dict(text="bad JSON from rtl_433: 'foo'"))
         self.assertEqual(self.received, [])

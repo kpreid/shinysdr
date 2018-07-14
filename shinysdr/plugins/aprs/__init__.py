@@ -48,6 +48,7 @@ from zope.interface import Interface, implementer  # available via Twisted
 import shinysdr
 from shinysdr.devices import Device, IComponent
 from shinysdr.interfaces import ClientResourceDef
+from shinysdr.i.pycompat import repr_no_string_tag
 from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, TelemetryStore, Track, empty_track
 from shinysdr.types import NoticeT, TimestampT
 from shinysdr.values import ExportedState, exported_value
@@ -123,14 +124,13 @@ class APRSStation(ExportedState):
                     track_angle=TelemetryItem(fact.course_degrees, message.receive_time),
                 )
             elif isinstance(fact, Status):
-                # TODO: Empirically, not always ASCII. Move this implicit decoding off into parse stages.
-                self.__status = unicode(fact.text)
+                self.__status = six.text_type(fact.text)
             elif isinstance(fact, Symbol):
-                self.__symbol = unicode(fact.id)
+                self.__symbol = six.text_type(fact.id)
             else:
                 # TODO: Warn somewhere in this case (recognized by parser but not here)
                 pass
-        self.__last_comment = unicode(message.comment)
+        self.__last_comment = six.text_type(message.comment)
         if len(message.errors) > 0:
             self.__last_parse_error = '; '.join(message.errors)
         self.state_changed()
@@ -290,8 +290,8 @@ def parse_tnc2(line, receive_time, log=None):
         parsed = APRSMessage(receive_time, source, destination, via, payload, facts, errors, comment)
     
     if log:
-        # %r here provides robustness against control characters.
-        log.info('APRS: {line!r}\n   -> {aprs_message}', line=line, aprs_message=parsed)
+        # repr here provides robustness against control characters.
+        log.info('APRS: {line}\n   -> {aprs_message}', line=repr_no_string_tag(line), aprs_message=parsed)
     return parsed
 
 
@@ -339,7 +339,7 @@ class _APRSISComponent(TelemetryStore):
                 pass
     
         thread = threading.Thread(
-            name='APRSISRXClient(%r) reader thread' % (name,),
+            name='APRSISRXClient({}) reader thread'.format(repr_no_string_tag(name)),
             target=thread_body)
         thread.daemon = True  # Allow clean process shutdown without waiting for us
         thread.start()
@@ -422,7 +422,7 @@ def _parse_payload(facts, errors, source, destination, payload, receive_time):
             if latitude is not None:
                 facts.append(Position(latitude, longitude))
             else:
-                errors.append('Mic-E latitude does not parse: %r' % latitude_string)
+                errors.append('Mic-E latitude does not parse: {}'.format(repr_no_string_tag(latitude_string)))
             
             # decode course and speed, as specified in http://www.aprs.org/doc/APRS101.PDF page 52
             dc = ord(dc28) - 28
@@ -440,7 +440,7 @@ def _parse_payload(facts, errors, source, destination, payload, receive_time):
             # TODO: parse and process manufacturer codes
             type_match = re.match(r"^([] >`'])(?:(...)\})?(.*)$", type_and_more)
             if type_match is None:
-                errors.append('Mic-E contained non-type-code text: %r' % type_and_more)
+                errors.append('Mic-E contained non-type-code text: {}'.format(repr_no_string_tag(type_and_more)))
                 return type_and_more
             else:
                 type_code, opt_altitude, more_text = type_match.groups()
@@ -472,7 +472,7 @@ def _parse_payload(facts, errors, source, destination, payload, receive_time):
         # more lenient than spec because a real packet I saw had decimal points and variable field lengths
         match = re.match(r'^T#([^,]*|MIC),?([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),([01]{8})(.*)$', payload)
         if not match:
-            errors.append('Telemetry did not parse: %r' % payload)
+            errors.append('Telemetry did not parse: {}'.format(repr_no_string_tag(payload)))
             return ''
         else:
             seq, a1, a2, a3, a4, a5, digital, comment = match.groups()
@@ -485,7 +485,7 @@ def _parse_payload(facts, errors, source, destination, payload, receive_time):
             return comment
         
     else:
-        errors.append('unrecognized data type: %r' % data_type)
+        errors.append('unrecognized data type: {}'.format(repr_no_string_tag(data_type)))
         return payload
 
 
@@ -552,7 +552,7 @@ def _parse_position_and_symbol(facts, errors, data):
         if plat is not None and plon is not None:
             facts.append(Position(plat, plon))
         else:
-            errors.append('lat/lon does not parse: %r' % ((lat, lon),))
+            errors.append('lat/lon does not parse: {}'.format((lat, lon)))
         symbol = symbol1 + symbol2
         _parse_symbol(facts, errors, symbol)
         return _parse_comment_altitude(facts, errors,
@@ -701,7 +701,7 @@ def _parse_telemetry_value(facts, errors, value_str, channel):
     try:
         value = float(value_str)
     except ValueError:
-        errors.append('Telemetry channel %i did not parse: %r' % (channel, value_str))
+        errors.append('Telemetry channel {} did not parse: {}'.format(channel, repr_no_string_tag(value_str)))
         return
     facts.append(Telemetry(channel=channel, value=value))
 

@@ -33,7 +33,7 @@ from shinysdr.signals import SignalType
 
 class TestReactorSink(unittest.TestCase):
     def setUp(self):
-        self.tb = gr.top_block(b'TestReactorSink')
+        self.tb = gr.top_block(str('TestReactorSink'))  # py2/3 compatibility -- must be the 'normal' string type in either case
         self.out = []
     
     def callback(self, array):

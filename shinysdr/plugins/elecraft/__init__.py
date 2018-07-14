@@ -313,18 +313,18 @@ class _ElecraftClientProtocol(Protocol):
         self.__schedule_timeout()
     
     def __lineReceived(self, line):
-        line = line.lstrip('\x00')  # nulls are sometimes sent on power-on
+        line = line.lstrip(b'\x00')  # nulls are sometimes sent on power-on
         self.__log.debug('Elecraft client: received {line!r}', line=line)
-        if '\x00' in line:
+        if b'\x00' in line:
             # Bad data that may be received during radio power-on
             return
-        elif line == '?':
+        elif line == b'?':
             # busy indication; nothing to do about it as yet
             pass
         else:
             try:
-                cmd = line[:2]
-                sub = len(line) > 2 and line[2] == '$'
+                cmd = six.text_type(line[:2], 'ascii')
+                sub = len(line) > 2 and line[2] == b'$'
                 cmd_sub = cmd + ('$' if sub else '')
                 data = line[(3 if sub else 2):]
                 
@@ -748,5 +748,5 @@ _st = _ElecraftStateTable([
 
 _plugin_client = ClientResourceDef(
     key=__name__,
-    resource=static.File(sibpath(__file__, b'client')),
-    load_js_path=b'elecraft.js')
+    resource=static.File(sibpath(__file__, 'client')),
+    load_js_path='elecraft.js')

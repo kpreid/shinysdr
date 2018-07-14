@@ -29,6 +29,7 @@ from gnuradio import gr, blocks, analog
 from gnuradio.blocks import wavfile_sink
 
 from shinysdr.filters import MultistageChannelFilter
+from shinysdr.i.pycompat import defaultstr
 from shinysdr.math import dB
 
 
@@ -73,7 +74,7 @@ class WAVIntervalSink(gr.hier_block2):
         self._sink = wavfile_sink(
             # There doesn't seem to be a way to create a sink without
             # immediately opening a file :(
-            filename=b'/dev/null',
+            filename=defaultstr('/dev/null'),
             n_channels=1,
             sample_rate=sample_rate,
             bits_per_sample=16)

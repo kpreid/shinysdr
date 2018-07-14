@@ -57,13 +57,13 @@ class TestController(unittest.TestCase):
     
     def test_send_command(self):
         self.proxy.state()['cmd_name'].set(True)  # TODO command-cell kludge
-        self.assertEqual('cmd_text', self.t.value())
+        self.assertEqual(b'cmd_text', self.t.value())
     
     def test_send_enum(self):
         self.proxy.state()['enum_name'].set('enum_text1')
         self.t.clear()
         self.proxy.state()['enum_name'].set('enum_text2')
-        self.assertEqual('enum_text2', self.t.value())
+        self.assertEqual(b'enum_text2', self.t.value())
     
     def test_encode_command(self):
         self.proxy.state()['unicode_cmd'].set(True)  # TODO command-cell kludge

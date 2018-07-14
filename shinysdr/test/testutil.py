@@ -46,6 +46,7 @@ from shinysdr.devices import Device, IComponent, IRXDriver, ITXDriver
 from shinysdr.grc import DemodulatorAdapter
 from shinysdr.i.modes import lookup_mode
 from shinysdr.i.poller import Poller
+from shinysdr.i.pycompat import bytes_or_ascii
 from shinysdr.interfaces import IDemodulator
 from shinysdr.signals import SignalType
 from shinysdr.types import RangeT
@@ -422,15 +423,15 @@ def http_request(reactor, url, method, body=None, accept=None, more_headers=None
     agent = client.Agent(reactor)
     headers = Headers()
     if accept is not None:
-        headers.addRawHeader('Accept', str(accept))
+        headers.addRawHeader('Accept', bytes_or_ascii(accept))
     if more_headers:
         for k, v in six.iteritems(more_headers):
-            headers.addRawHeader(str(k), str(v))
+            headers.addRawHeader(bytes_or_ascii(k), bytes_or_ascii(v))
     d = agent.request(
-        method=str(method),
-        uri=str(url),
+        method=bytes_or_ascii(method),
+        uri=bytes_or_ascii(url),
         headers=headers,
-        bodyProducer=client.FileBodyProducer(six.StringIO(str(body))) if body else None)
+        bodyProducer=client.FileBodyProducer(six.BytesIO(bytes_or_ascii(body))) if body else None)
     return _handle_agent_response(d)
 
 

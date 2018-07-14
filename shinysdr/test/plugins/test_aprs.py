@@ -60,7 +60,7 @@ class TestAPRSParser(unittest.TestCase):
         # TODO: Obtain an actual sample non-ASCII APRS message for testing. This one is just made up because previous code crashed without logging the problematic message.
         self.__check_parsed(
             b'FOO>BAR:>a\xB0b',
-            facts=[Status(u'a\uFFFDb')],
+            facts=[Status('a\uFFFDb')],
             errors=[],
             comment='')
     
@@ -132,7 +132,7 @@ class TestAPRSParser(unittest.TestCase):
                 Messaging(False),
                 Timestamp(_dummy_receive_datetime.replace(day=16, hour=2, minute=57, second=0, microsecond=0)),
                 Position((37 + 26.79 / 60), -(122 + 20.18 / 60)),
-                Symbol(u'\\v'),
+                Symbol('\\v'),
                 Velocity(speed_knots=0, course_degrees=77),
                 Altitude(1955, True),
             ],
@@ -146,7 +146,7 @@ class TestAPRSParser(unittest.TestCase):
             facts=[
                 Messaging(True),
                 Position((34 + 29.95 / 60), -(119 + 49.07 / 60)),
-                Symbol(u'/_'),
+                Symbol('/_'),
                 Velocity(speed_knots=4, course_degrees=87),
             ],
             errors=['DHM/HMS timestamp invalid: day is out of range for month'],
@@ -160,7 +160,7 @@ class TestAPRSParser(unittest.TestCase):
             facts=[
                 Messaging(supported=True),
                 Position((34 + 10 / 60), -(118 + 20 / 60)),
-                Symbol(id=u'/$'),
+                Symbol(id='/$'),
                 Altitude(853, True),
             ],
             errors=[],
@@ -175,7 +175,7 @@ class TestAPRSParser(unittest.TestCase):
             facts=[
                 Messaging(supported=False),
                 Position((49 + 30 / 60), -72.75000393777269),
-                Symbol(id=u'/>'),
+                Symbol(id='/>'),
                 Velocity(speed_knots=36.23201216883807, course_degrees=88)
             ],
             errors=[],
@@ -189,7 +189,7 @@ class TestAPRSParser(unittest.TestCase):
             facts=[
                 Messaging(supported=False),
                 Position(90, -180),
-                Symbol(id=u'/>'),
+                Symbol(id='/>'),
                 Altitude(value=10004.52005070133, feet_not_meters=True)
             ],
             errors=[],
@@ -201,7 +201,7 @@ class TestAPRSParser(unittest.TestCase):
             facts=[
                 Messaging(supported=False),
                 Position(37.316371158702744, -121.96361498033738),
-                Symbol(id=u'/k'),
+                Symbol(id='/k'),
                 Velocity(speed_knots=53.70604083543306, course_degrees=88)
             ],
             errors=[],
@@ -213,7 +213,7 @@ class TestAPRSParser(unittest.TestCase):
             facts=[
                 Messaging(supported=True),
                 Position(latitude=37.34936706866951, longitude=-121.90397084998136),
-                Symbol(id=u'/o'),
+                Symbol(id='/o'),
                 RadioRange(27.3666404237768),
             ],
             errors=[],
@@ -290,7 +290,7 @@ class TestAPRSParser(unittest.TestCase):
         self.__check_parsed(
             'FOO>BAR:T#001,002',
             facts=[],
-            errors=["Telemetry did not parse: u'T#001,002'"],
+            errors=["Telemetry did not parse: 'T#001,002'"],
             comment='')
     
     def test_telemetry_value_format_error(self):
@@ -300,7 +300,7 @@ class TestAPRSParser(unittest.TestCase):
             Telemetry(channel=2, value=2),
             Telemetry(channel=4, value=4),
             Telemetry(channel=5, value=5)],
-            errors=["Telemetry channel 3 did not parse: u'bang'"],
+            errors=["Telemetry channel 3 did not parse: 'bang'"],
             comment='')
 
 

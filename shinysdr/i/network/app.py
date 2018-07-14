@@ -20,7 +20,9 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
-import urllib
+
+import six
+from six.moves import urllib
 
 from twisted.application.service import Service
 from twisted.internet import defer
@@ -40,6 +42,7 @@ from shinysdr.i.network.base import IWebEntryPoint, SiteWithDefaultHeaders, Slas
 from shinysdr.i.network.export_http import CapAccessResource
 from shinysdr.i.network.export_ws import OurStreamProtocol
 from shinysdr.i.poller import the_poller
+from shinysdr.i.pycompat import defaultstr
 from shinysdr.interfaces import _IClientResourceDef
 from shinysdr.twisted_ext import FactoryWithArgs
 from shinysdr.values import SubscriptionContext
@@ -208,7 +211,7 @@ def _put_plugin_resources(client_resource):
     for resource_def in getPlugins(_IClientResourceDef, shinysdr.plugins):
         # Add the plugin's resource to static serving
         plugin_resources.putChild(resource_def.key, resource_def.resource)
-        plugin_resource_url = '/client/plugins/' + urllib.quote(resource_def.key, safe='') + '/'
+        plugin_resource_url = '/client/plugins/' + urllib.parse.quote(resource_def.key, safe='') + '/'
         # Tell the client to load the plugins
         # TODO constrain path values to be relative (not on a different origin, to not leak urls)
         if resource_def.load_css_path is not None:
@@ -230,5 +233,5 @@ def _put_plugin_resources(client_resource):
 
 
 def _make_cap_url(cap):
-    assert isinstance(cap, unicode)
-    return b'/' + urllib.quote(cap.encode('utf-8'), safe='') + b'/'
+    assert isinstance(cap, six.text_type)
+    return defaultstr('/' + urllib.parse.quote(cap.encode('utf-8'), safe='') + '/')

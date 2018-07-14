@@ -36,6 +36,7 @@ from twisted.logger import Logger
 from zope.interface import implementer
 
 from shinysdr.values import ExportedState, SubscriptionContext, exported_value
+from shinysdr.i.pycompat import defaultstr
 from shinysdr.interfaces import IDemodulator, BandShape
 from shinysdr.signals import SignalType
 
@@ -248,8 +249,8 @@ class WAVIntervalListener(ExportedState):
         # TODO: We should be using the same frequency as __start_frequency but
         # there is no guarantee in the interface about the timing of calls to
         # this method vs. fileOpened.
-        time_str = time.strftime(b'%y%m%d_%H%M.wav', time.gmtime(start_time))
-        filename = b'%s_%s' % (self.context.get_absolute_frequency_cell().get(), time_str)
+        time_str = time.strftime(defaultstr('%y%m%d_%H%M.wav'), time.gmtime(start_time))
+        filename = defaultstr('%s_%s' % (self.context.get_absolute_frequency_cell().get(), time_str))
         return os.path.join(self.directory, filename)
     
     @exported_value(type=six.text_type, label='Status', changes='explicit')

@@ -22,7 +22,9 @@ import csv
 import json
 import os
 import os.path
-import urllib
+
+import six
+from six.moves import urllib
 
 from twisted.logger import Logger
 from twisted.web import http
@@ -158,7 +160,7 @@ class _DbsIndexListElement(template.Element):
         for db_name in self.__dbs_resource.names:
             yield tag.clone().fillSlots(
                 db_name=db_name,
-                db_url='{}/'.format(urllib.quote(db_name, '')))
+                db_url='{}/'.format(urllib.parse.quote(db_name, '')))
 
 
 class DatabaseResource(resource.Resource):

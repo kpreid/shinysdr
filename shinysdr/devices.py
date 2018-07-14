@@ -27,6 +27,7 @@ from zope.interface import Interface, implementer  # available via Twisted
 from gnuradio import blocks
 from gnuradio import gr
 
+from shinysdr.i.pycompat import defaultstr
 from shinysdr.signals import SignalType
 from shinysdr.telemetry import TelemetryItem, Track, empty_track
 from shinysdr.types import RangeT, ReferenceT
@@ -371,7 +372,7 @@ __all__.append('FrequencyShift')
 
 
 def AudioDevice(
-        rx_device=b'',  # may be used positionally, not recommented
+        rx_device='',  # may be used positionally, not recommented
         tx_device=None,
         name=None,
         sample_rate=44100,
@@ -385,9 +386,9 @@ def AudioDevice(
     if _module == 'UNAVAILABLE':
         raise ImportError('gr-audio not loaded, cannot create audio device')
     
-    rx_device = str(rx_device)
+    rx_device = defaultstr(rx_device)
     if tx_device is not None:
-        tx_device = str(tx_device)
+        tx_device = defaultstr(tx_device)
     channel_mapping = _coerce_channel_mapping(channel_mapping)
     
     if name is None:
@@ -460,8 +461,8 @@ def find_audio_rx_names(_module=gr_audio):
     if _module == 'UNAVAILABLE':
         return []
     try:
-        AudioDevice(rx_device=b'', _module=_module)
-        return [b'']
+        AudioDevice(rx_device='', _module=_module)
+        return [defaultstr('')]
     except RuntimeError:  # thrown by gnuradio
         return []
 

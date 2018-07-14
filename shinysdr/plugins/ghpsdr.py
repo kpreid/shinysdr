@@ -40,6 +40,7 @@ from twisted.internet import protocol
 from twisted.internet import task
 from twisted.logger import Logger
 
+from shinysdr.i.pycompat import defaultstr
 from shinysdr.twisted_ext import FactoryWithArgs
 
 
@@ -158,8 +159,8 @@ class _DspserverProtocol(protocol.Protocol):
             abuf = self.__audio_buffer[:size_in_bytes]
             self.__audio_buffer = self.__audio_buffer[size_in_bytes:]
             print('Sending audio', len(abuf))  # TODO: Remove debugging
-            # b'' is for Python 2.7.6 compatibility (array.array module requires a str rather than unicode string)
-            unpacker = array.array(b'f')
+            # str() for Python 2.7.6 & 3 compatibility under unicode_literals
+            unpacker = array.array(defaultstr('f'))
             unpacker.fromstring(abuf)
             nsamples = len(unpacker)
             msg = struct.pack('BBBH' + str(nsamples) + 'B',

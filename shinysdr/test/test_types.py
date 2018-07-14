@@ -42,20 +42,35 @@ def _test_coerce_cases(self, type_obj, good, bad):
 class TestPythonT(unittest.TestCase):
     def test_coerce_unicode(self):
         """Coercion behavior is inherited from the Python type's __call__."""
-        _test_coerce_cases(self,
-            to_value_type(six.text_type),
-            good=[
-                '', 
-                'hello world',
-                '↑',
-                (None, 'None'),
-                (b'x', 'x'),
-                (1, '1'),
-                ([], '[]'),
-            ],
-            bad=[
-                b'\xFF',  # encoding failure
-            ])
+        if six.PY2:
+            _test_coerce_cases(self,
+                to_value_type(six.text_type),
+                good=[
+                    '', 
+                    'hello world',
+                    '↑',
+                    (None, 'None'),
+                    (b'x', 'x'),
+                    (1, '1'),
+                    ([], '[]'),
+                ],
+                bad=[
+                    b'\xFF',  # encoding failure
+                ])
+        else:
+            _test_coerce_cases(self,
+                to_value_type(six.text_type),
+                good=[
+                    '', 
+                    'hello world',
+                    '↑',
+                    (None, 'None'),
+                    (b'x', "b'x'"),
+                    (b'\xFF', "b'\\xff'"),
+                    (1, '1'),
+                    ([], '[]'),
+                ],
+                bad=[])
     
     def test_string_buffer_append_and_truncate(self):
         # TODO: add more tests

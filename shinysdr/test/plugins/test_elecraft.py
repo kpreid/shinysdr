@@ -42,22 +42,22 @@ class TestElecraftProtocol(unittest.TestCase):
         state_smoke_test(self.proxy)
     
     def test_initial_send(self):
-        self.assertIn('AI2;', self.tr.value())
-        self.assertIn('K31;', self.tr.value())
-        self.assertIn('IF;', self.tr.value())
+        self.assertIn(b'AI2;', self.tr.value())
+        self.assertIn(b'K31;', self.tr.value())
+        self.assertIn(b'IF;', self.tr.value())
     
     def test_simple_receive(self):
-        self.protocol.dataReceived('FA00000000012;')
+        self.protocol.dataReceived(b'FA00000000012;')
         self.assertEqual(12.0, self.proxy.get_rx_main().state()['freq'].get())
     
     def test_continues_after_bad_data(self):
-        self.protocol.dataReceived('\x00\x00;;FA00000000012;')
+        self.protocol.dataReceived(b'\x00\x00;;FA00000000012;')
         self.assertEqual(12.0, self.proxy.get_rx_main().state()['freq'].get())
     
     def test_not_too_much_polling(self):
         self.tr.clear()
-        self.assertEqual('', self.tr.value())
+        self.assertEqual(b'', self.tr.value())
         self.clock.pump([0.01] * 150)
-        self.assertEqual('FA;', self.tr.value())
+        self.assertEqual(b'FA;', self.tr.value())
         self.clock.pump([0.01] * 500)
-        self.assertEqual('FA;FA;FA;FA;FA;FA;', self.tr.value())
+        self.assertEqual(b'FA;FA;FA;FA;FA;FA;', self.tr.value())

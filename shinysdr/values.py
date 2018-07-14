@@ -167,7 +167,7 @@ class TargetingMixin(object):
     
     def __repr__(self):
         # bogus warning <https://github.com/PyCQA/pylint/issues/1676> pylint disable=redundant-keyword-arg
-        return b'<{type} {self._target!r}.{self._key}>'.format(type=type(self).__name__, self=self)
+        return '<{type} {self._target!r}.{self._key}>'.format(type=type(self).__name__, self=self)
     
     def key(self):  # TODO remove this
         return self._key

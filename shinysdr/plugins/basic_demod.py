@@ -33,6 +33,7 @@ from gnuradio.filter import firdes
 from shinysdr.interfaces import BandShape, ModeDef, IDemodulator, IModulator, ITunableDemodulator
 from shinysdr.math import dB, to_dB
 from shinysdr.filters import MultistageChannelFilter, make_resampler, design_sawtooth_filter
+from shinysdr.i.pycompat import defaultstr
 from shinysdr.signals import SignalType
 from shinysdr.types import EnumT, EnumRow, RangeT
 from shinysdr import units
@@ -58,7 +59,7 @@ class Demodulator(gr.hier_block2, ExportedState):
         
         self.__channels = channels = 2 if self.get_output_type().get_kind() == 'STEREO' else 1
         gr.hier_block2.__init__(
-            self, (u'%s(mode=%r)' % (type(self).__name__, mode)).encode('utf-8'),
+            self, defaultstr(u'%s(mode=%r)' % (type(self).__name__, mode)),
             gr.io_signature(1, 1, gr.sizeof_gr_complex),
             gr.io_signature(1, 1, gr.sizeof_float * channels))
 

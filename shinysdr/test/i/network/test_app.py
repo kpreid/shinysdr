@@ -33,6 +33,7 @@ from shinysdr.i.db import DatabaseModel
 from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, IWebEntryPoint, UNIQUE_PUBLIC_CAP
 from shinysdr.i.network.app import _make_cap_url, WebService
 from shinysdr.i.network.session_http import SessionResource
+from shinysdr.i.pycompat import defaultstr
 from shinysdr.values import ExportedState
 from shinysdr.test import testutil
 
@@ -50,7 +51,7 @@ class TestWebSite(unittest.TestCase):
             cap_table={u'ROOT': SiteStateStub()},
             title='test title')
         self._service.startService()
-        self.url = str(self._service.get_url())
+        self.url = defaultstr(self._service.get_url())
     
     def tearDown(self):
         return self._service.stopService()
@@ -114,14 +115,14 @@ class TestWebSite(unittest.TestCase):
     
     @defer.inlineCallbacks
     def test_flowgraph_page(self):
-        response, _data = yield testutil.http_get(the_reactor, self.url + b'flow-graph')
+        response, _data = yield testutil.http_get(the_reactor, self.url + defaultstr('flow-graph'))
         self.assertEqual(response.code, http.OK)
         self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['image/png'])
         # TODO ...
     
     @defer.inlineCallbacks
     def test_manifest(self):
-        response, data = yield testutil.http_get(the_reactor, urljoin(self.url, b'/client/web-app-manifest.json'))
+        response, data = yield testutil.http_get(the_reactor, urljoin(self.url, defaultstr('/client/web-app-manifest.json')))
         self.assertEqual(response.code, http.OK)
         self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/manifest+json'])
         manifest = json.loads(data)
@@ -129,7 +130,7 @@ class TestWebSite(unittest.TestCase):
     
     @defer.inlineCallbacks
     def test_plugin_index(self):
-        response, data = yield testutil.http_get(the_reactor, urljoin(self.url, b'/client/plugin-index.json'))
+        response, data = yield testutil.http_get(the_reactor, urljoin(self.url, defaultstr('/client/plugin-index.json')))
         self.assertEqual(response.code, http.OK)
         self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
         index = json.loads(data)

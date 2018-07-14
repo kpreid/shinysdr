@@ -34,6 +34,7 @@ import six
 from zope.interface import Interface, implementer
 
 from shinysdr.i.json import IJsonSerializable  # reexport
+from shinysdr.i.pycompat import defaultstr
 from shinysdr import units
 
 
@@ -376,7 +377,7 @@ class RangeT(ValueType):
     def to_json(self):
         return {
             'type': 'RangeT',
-            'subranges': zip(self.__mins, self.__maxes),
+            'subranges': list(zip(self.__mins, self.__maxes)),
             'unit': self.__unit,
             'logarithmic': self.__logarithmic,
             'integer': self.__integer
@@ -523,7 +524,7 @@ class BulkDataElement(namedtuple('BulkDataElement', [
     'data',
 ])):
     def to_json(self):
-        unpacker = array.array(b'b')
+        unpacker = array.array(defaultstr('b'))
         unpacker.fromstring(self.data)
         return [self.info, unpacker.tolist()]
 
@@ -536,8 +537,7 @@ class BulkDataT(ValueType):
     def __init__(self, info_format, array_format):
         # TODO: Document the format parameters
         self.__info_format = info_format
-        # str() is for Python 2.7.6 compatibility (array.array requires a str rather than unicode string)
-        self.__array_format = str(array_format)
+        self.__array_format = defaultstr(array_format)
     
     def to_json(self):
         return {

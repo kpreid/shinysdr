@@ -23,7 +23,6 @@ had to write ourselves.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import re
 import subprocess
 
 import six
@@ -33,6 +32,9 @@ from twisted.internet.interfaces import ILoggingContext, IStreamClientEndpoint
 from twisted.internet.protocol import Factory
 from twisted.internet.serialport import SerialPort
 from zope.interface import implementer
+
+from shinysdr.i.pycompat import repr_no_string_tag
+
 
 __all__ = []  # appended later
 
@@ -71,8 +73,8 @@ def test_subprocess(args, substring, shell=False):
     # TODO: Use Twisted subprocess facilities instead to avoid possible conflicts
     def failure(msg, **kwargs):
         return msg.format(
-            cmd=args if isinstance(args, basestring) else ' '.join(args),
-            substring=re.sub("^b'", "'", repr(substring)),
+            cmd=args if isinstance(args, six.string_types) else ' '.join(args),
+            substring=repr_no_string_tag(substring),
             **kwargs)
     
     try:

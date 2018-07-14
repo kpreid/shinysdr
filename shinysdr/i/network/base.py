@@ -19,7 +19,8 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import urllib
+import six
+from six.moves import urllib
 
 from twisted.web import http
 from twisted.web.resource import Resource
@@ -30,11 +31,12 @@ from twisted.web import template
 from twisted.web.server import Site
 
 from shinysdr.i.json import serialize
+from shinysdr.i.pycompat import defaultstr
 from shinysdr.i.roots import IEntryPoint
 
 # TODO: Change this constant to something more generic, but save that for when we're changing the URL layout for other reasons anyway.
-CAP_OBJECT_PATH_ELEMENT = b'radio'
-UNIQUE_PUBLIC_CAP = u'public'
+CAP_OBJECT_PATH_ELEMENT = defaultstr('radio')
+UNIQUE_PUBLIC_CAP = 'public'
 
 
 static_resource_path = sibpath(__file__, '../webstatic')
@@ -150,4 +152,4 @@ def endpoint_string_to_url(desc, scheme='http', hostname='localhost', path='/', 
 
 def prepath_escaped(request):
     """Like request.prePathURL() but without the scheme and hostname."""
-    return '/' + '/'.join([urllib.quote(x, safe='') for x in request.prepath])
+    return '/' + '/'.join([urllib.parse.quote(x, safe='') for x in request.prepath])

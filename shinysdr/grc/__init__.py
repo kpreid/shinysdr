@@ -27,6 +27,7 @@ from gnuradio import gr
 from shinysdr.filters import make_resampler
 from shinysdr.interfaces import IDemodulator, IDemodulatorContext, IModulator
 from shinysdr.i.modes import lookup_mode, get_modes
+from shinysdr.i.pycompat import defaultstr
 from shinysdr.values import LooseCell
 
 
@@ -81,8 +82,8 @@ class DemodulatorAdapter(gr.hier_block2):
                     self.connect(demod, (self, 1))
             else:
                 if not quiet:
-                    gr.log.info(b'{}: Native {} demodulated rate is {}; resampling to {}'.format(
-                        type(self).__name__, mode, demod_output_rate, output_rate))
+                    gr.log.info(defaultstr('{}: Native {} demodulated rate is {}; resampling to {}'.format(
+                        type(self).__name__, mode, demod_output_rate, output_rate)))
                 if stereo:
                     self.connect((splitter, 0), make_resampler(demod_output_rate, output_rate), (self, 0))
                     self.connect((splitter, 1), make_resampler(demod_output_rate, output_rate), (self, 1))
@@ -165,8 +166,8 @@ class ModulatorAdapter(gr.hier_block2):
         if from_rate == to_rate:
             self.connect(from_endpoint, to_endpoint)
         else:
-            gr.log.info(b'{}: Resampling {} to {}'.format(
-                type(self).__name__, from_rate, to_rate))
+            gr.log.info(defaultstr('{}: Resampling {} to {}'.format(
+                type(self).__name__, from_rate, to_rate)))
             resampler = make_resampler(from_rate, to_rate, complex=complex)
             self.connect(from_endpoint, resampler, to_endpoint)
 

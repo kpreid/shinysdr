@@ -279,7 +279,11 @@ class TestDatabaseResource(unittest.TestCase):
         return self.port.stopListening()
     
     def __url(self, path):
-        return 'http://127.0.0.1:%i%s' % (self.port.getHost().port, path)
+        url = 'http://127.0.0.1:%i%s' % (self.port.getHost().port, path)
+        if six.PY2:
+            return url.encode('ascii')
+        else:
+            return url
     
     def test_index_common(self):
         return testutil.assert_http_resource_properties(self, self.__url('/'))

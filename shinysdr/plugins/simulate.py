@@ -27,12 +27,13 @@ from gnuradio import channels
 from gnuradio import gr
 from gnuradio.filter import rational_resampler
 
+from shinysdr.devices import Device, IRXDriver
 from shinysdr.filters import make_resampler
 from shinysdr.interfaces import IModulator
 from shinysdr.math import dB, rotator_inc, to_dB
 from shinysdr.i.modes import lookup_mode
+from shinysdr.i.pycompat import defaultstr
 from shinysdr.signals import SignalType, no_signal
-from shinysdr.devices import Device, IRXDriver
 from shinysdr.types import RangeT, ReferenceT
 from shinysdr import units
 from shinysdr.values import CellDict, CollectionState, ExportedState, LooseCell, exported_value, setter
@@ -87,7 +88,7 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
 
     def __init__(self, name, add_transmitters):
         gr.hier_block2.__init__(
-            self, type(self).__name__ + b' ' + str(name),
+            self, defaultstr(type(self).__name__ + ' ' + name),
             gr.io_signature(0, 0, 0),
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
         )

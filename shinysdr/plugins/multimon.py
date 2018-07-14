@@ -35,6 +35,7 @@ from gnuradio import blocks
 
 from shinysdr.filters import make_resampler
 from shinysdr.i.blocks import make_sink_to_process_stdin
+from shinysdr.i.pycompat import defaultstr
 from shinysdr.interfaces import BandShape, ModeDef, IDemodulator
 from shinysdr.plugins.basic_demod import NFMDemodulator
 from shinysdr.plugins.aprs import parse_tnc2
@@ -54,7 +55,7 @@ class MultimonNGDemodulator(gr.hier_block2, ExportedState):
     
     def __init__(self, protocol, context, multimon_demod_args):
         gr.hier_block2.__init__(
-            self, b'%s(%r, %r)' % (type(self).__name__, multimon_demod_args, protocol),
+            self, defaultstr('{}({!r}, {!r})'.format(type(self).__name__, multimon_demod_args, protocol)),
             gr.io_signature(1, 1, gr.sizeof_float * 1),
             gr.io_signature(1, 1, gr.sizeof_float * 1),
         )
@@ -185,7 +186,7 @@ class FMAPRSDemodulator(gr.hier_block2, ExportedState):
         assert input_rate > 0
         assert context is not None
         gr.hier_block2.__init__(
-            self, str(mode) + b' (FM + Multimon-NG) demodulator',
+            self, defaultstr(mode + ' (FM + Multimon-NG) demodulator'),
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
             gr.io_signature(1, 1, gr.sizeof_float * 1),
         )
@@ -234,7 +235,7 @@ class APRSProcessProtocol(ProcessProtocol):
     def __init__(self, target):
         self.__target = target
         self.__line_receiver = LineReceiver()
-        self.__line_receiver.delimiter = '\n'
+        self.__line_receiver.delimiter = b'\n'
         self.__line_receiver.lineReceived = self.__lineReceived
         self.__last_line = None
     

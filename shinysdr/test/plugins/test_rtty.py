@@ -48,7 +48,7 @@ class TestRTTYEncoder(unittest.TestCase):
     
     def __run_encoder(self, input_chars):
         return rtty._encode_rtty_alloc(
-            numpy.array(map(ord, input_chars), dtype=numpy.uint8))
+            numpy.array([ord(x) for x in input_chars], dtype=numpy.uint8))
     
     def test_basic(self):
         # pylint: disable=no-member

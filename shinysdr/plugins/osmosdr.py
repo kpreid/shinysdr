@@ -27,6 +27,7 @@ from gnuradio import blocks
 import osmosdr
 
 from shinysdr.devices import Device, IRXDriver, ITXDriver
+from shinysdr.i.pycompat import defaultstr
 from shinysdr.signals import SignalType
 from shinysdr.types import ConstantT, EnumT, QuantityT, RangeT, ReferenceT
 from shinysdr import units
@@ -286,7 +287,7 @@ class _OsmoSDRRXDriver(ExportedState, gr.hier_block2):
             name,
             tuning):
         gr.hier_block2.__init__(
-            self, b'RX ' + str(name),
+            self, defaultstr('RX ' + name),
             gr.io_signature(0, 0, 0),
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
         )
@@ -471,7 +472,7 @@ class _OsmoSDRTXDriver(ExportedState, gr.hier_block2):
             tuning,
             sample_rate):
         gr.hier_block2.__init__(
-            self, b'TX ' + str(name),
+            self, defaultstr('TX ' + name),
             gr.io_signature(1, 1, gr.sizeof_gr_complex),
             gr.io_signature(0, 0, 0))
         

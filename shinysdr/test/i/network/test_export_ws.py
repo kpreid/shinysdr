@@ -320,7 +320,7 @@ class TestOurStreamProtocol(unittest.TestCase):
         self.protocol.connectionLost(None)
     
     def begin(self, url):
-        self.transport.location = bytes(url)
+        self.transport.location = url.encode('ascii')
         self.protocol.dataReceived(b'{}')
     
     def test_dispatch(self):
