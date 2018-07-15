@@ -19,15 +19,25 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from twisted.trial import unittest
 
-from osmosdr import range_t, meta_range_t
-
-from shinysdr.plugins.osmosdr import OsmoSDRDevice, OsmoSDRProfile, convert_osmosdr_range, profile_from_device_string
 from shinysdr.test.testutil import DeviceTestCase
 from shinysdr.types import RangeT
+
+# If gr-osmosdr itself is not available, skip the tests, don't fail in loading.
+try:
+    from osmosdr import range_t, meta_range_t
+    _unavailability = None
+except ImportError as e:
+    _unavailability = e
+
+if not _unavailability:
+    # pylint: disable=ungrouped-imports
+    from shinysdr.plugins.osmosdr import OsmoSDRDevice, OsmoSDRProfile, convert_osmosdr_range, profile_from_device_string
 
 
 class TestOsmoSDRDeviceCore(DeviceTestCase):
     def setUp(self):
+        if _unavailability:
+            raise unittest.SkipTest(_unavailability)
         super(TestOsmoSDRDeviceCore, self).setUpFor(
             device=OsmoSDRDevice('file=/dev/null,rate=100000,freq=0'))
 
@@ -39,6 +49,10 @@ class TestOsmoSDRDeviceCore(DeviceTestCase):
 
 class TestOsmoSDRDeviceMisc(unittest.TestCase):
     # pylint: disable=no-member
+    
+    def setUp(self):
+        if _unavailability:
+            raise unittest.SkipTest(_unavailability)
     
     def test_initial_zero_freq(self):
         # 100 MHz is a default we use
@@ -70,6 +84,10 @@ class TestOsmoSDRDeviceMisc(unittest.TestCase):
 
 
 class TestOsmoSDRProfile(unittest.TestCase):
+    def setUp(self):
+        if _unavailability:
+            raise unittest.SkipTest(_unavailability)
+    
     def test_inference(self):
         # TODO: This test shouldn't be repeating the tune_delay values from the code.
         self.assertEqual(
@@ -92,6 +110,10 @@ class TestOsmoSDRProfile(unittest.TestCase):
 
 
 class TestOsmoSDRRange(unittest.TestCase):
+    def setUp(self):
+        if _unavailability:
+            raise unittest.SkipTest(_unavailability)
+    
     def test_convert_simple(self):
         self.do_convert_test([(1, 2, 0)])
 

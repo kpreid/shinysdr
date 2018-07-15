@@ -25,6 +25,7 @@ The "public" operations on these objects are used by configuration files to spec
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import importlib
 import os
 import os.path
 import __builtin__
@@ -304,6 +305,11 @@ def write_default_config(new_config_path):
     else:
         has_audio = False
         audio_rx_name = ''
+    try:
+        importlib.import_module('shinysdr.plugins.osmosdr')
+        has_osmosdr = True
+    except ImportError:
+        has_osmosdr = False
     
     config_text = '''\
 # -*- coding: utf-8 -*-
@@ -313,12 +319,12 @@ def write_default_config(new_config_path):
 # ShinySDR server at: http://localhost:8100/manual/configuration
 
 from shinysdr.devices import AudioDevice
-from shinysdr.plugins.osmosdr import OsmoSDRDevice
+%(osmosdr_comment)sfrom shinysdr.plugins.osmosdr import OsmoSDRDevice
 from shinysdr.plugins.simulate import SimulatedDevice
 
 # OsmoSDR generic driver; handles USRP, RTL-SDR, FunCube Dongle, HackRF, etc.
 # To select a specific device, replace '' with 'rtl=0' etc.
-config.devices.add(u'osmo', OsmoSDRDevice(''))
+%(osmosdr_comment)sconfig.devices.add(u'osmo', OsmoSDRDevice(''))
 
 # For hardware which uses a sound-card as its ADC or appears as an
 # audio device.
@@ -347,6 +353,7 @@ config.serve_web(
         'root_cap': generate_cap(),
         'audio_comment': '' if has_audio else '# ',
         'audio_rx_name': audio_rx_name,
+        'osmosdr_comment': '' if has_osmosdr else '# ',
     }
     
     os.mkdir(new_config_path)
