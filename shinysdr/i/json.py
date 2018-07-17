@@ -51,7 +51,8 @@ _json_encoder_for_serial = json.JSONEncoder(
 def serialize(obj):
     """JSON-encode values for clients, both HTTP and state stream WebSocket."""
     structure = transform_for_json(obj)
-    return _json_encoder_for_serial.encode(structure)
+    # Python 2's JSONEncoder is not 100% consistent about which type of string it returns when ensure_ascii is false
+    return unicode(_json_encoder_for_serial.encode(structure))
 
 
 def transform_for_json(obj):

@@ -285,8 +285,7 @@ class StateStreamInner(object):
     def _flush(self):  # exposed for testing
         self.__batch_delay = None
         if len(self._send_batch) > 0:
-            # unicode() because JSONEncoder does not reliably return a unicode rather than str object
-            self._send(unicode(serialize(self._send_batch)))
+            self._send(serialize(self._send_batch))
             self._send_batch = []
     
     def _send1(self, binary, value):
