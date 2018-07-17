@@ -30,6 +30,8 @@ import os
 import os.path
 import __builtin__
 
+import six
+
 from twisted.internet import defer
 from twisted.python.util import sibpath
 
@@ -280,7 +282,7 @@ def execute_config(config_obj, config_file_or_directory):
     env = dict(__builtin__.__dict__)
     env.update({'config': config_obj})
     if os.path.isdir(config_file_or_directory):
-        execfile(os.path.join(config_file_or_directory, 'config.py'), env)
+        six.exec_(open(os.path.join(config_file_or_directory, 'config.py')).read(), env)
         
         if not config_obj._state_filename:
             config_obj.persist_to_file(os.path.join(config_file_or_directory, 'state.json'))
@@ -288,7 +290,7 @@ def execute_config(config_obj, config_file_or_directory):
         if os.path.isdir(dbs_dir):
             config_obj.databases.add_directory(dbs_dir)
     else:
-        execfile(config_file_or_directory, env)
+        six.exec_(open(config_file_or_directory).read(), env)
 
 
 __all__.append('execute_config')
