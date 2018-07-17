@@ -74,7 +74,7 @@ class DatabaseModel(object):
         if self.__can_write() and self.__dirty:
             self.__log.info('Writing database {database_path}', database_path=self.__pathname)
             self.__dirty = False
-            with _atomic_open_for_write(self.__pathname, 'wb', self.__log) as csvfile:
+            with _atomic_open_for_write(self.__pathname, 'w', self.__log) as csvfile:
                 _write_csv_file(csvfile, self.records)
     
     def __can_write(self):
@@ -109,7 +109,7 @@ def _atomic_open_for_write(name, mode, log):
 
 def database_from_csv(reactor, pathname, writable):
     if os.path.exists(pathname):
-        with open(pathname, 'rb') as csvfile:
+        with open(pathname, 'r') as csvfile:
             records, diagnostics = _parse_csv_file(csvfile)
     else:
         if not writable:
@@ -247,6 +247,13 @@ class _RecordResource(resource.Resource):
             return b'Old values did not match: %r vs %r' % (old, self.__record)
 
 
+def _postdecode(s):
+    if six.PY2:
+        return six.text_type(s, 'utf-8')
+    else:
+        return s
+
+
 def _parse_csv_file(csvfile):
     records_assigned = {}
     records_unassigned = []
@@ -254,7 +261,7 @@ def _parse_csv_file(csvfile):
     diagnostics = []
     reader = csv.DictReader(csvfile)
     for strcsvrec in reader:
-        # csv does not deal in unicode itself
+        # python 2 csv does not deal in unicode itself
         csvrec = {}
         for k, v in six.iteritems(strcsvrec):
             if k is None:
@@ -263,7 +270,7 @@ def _parse_csv_file(csvfile):
             if v is None:
                 # too few columns, consider harmless and OK
                 continue
-            csvrec[six.text_type(k, 'utf-8')] = six.text_type(v, 'utf-8')
+            csvrec[_postdecode(k)] = _postdecode(v)
         if 'Frequency' not in csvrec:
             diagnostics.append(Warning(reader.line_num, 'Record contains no value for Frequency column; line discarded.'))
             continue
@@ -394,6 +401,7 @@ def _write_csv_file(csvfile, records):
             csvrecord[u'Frequency'] = _format_freq(lf)
         else:
             csvrecord[u'Frequency'] = _format_freq(lf) + '-' + _format_freq(uf)
-        for key in csvrecord:
-            csvrecord[key] = six.text_type(csvrecord[key]).encode('utf-8')
+        if six.PY2:
+            for key in csvrecord:
+                csvrecord[key] = six.text_type(csvrecord[key]).encode('utf-8')
         writer.writerow(csvrecord)
