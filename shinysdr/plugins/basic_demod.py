@@ -444,7 +444,7 @@ class FMDemodulator(SimpleAudioDemodulator):
         self.__no_audio_filter = no_audio_filter
         
         self.__qdemod = analog.quadrature_demod_cf(demod_rate / (TWO_PI * deviation))
-        if tau > 0.0:
+        if tau is not None and tau > 0.0:
             self.__deemph = fm_emph.fm_deemph(demod_rate, tau)
         else:
             self.__deemph = None

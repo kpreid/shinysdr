@@ -104,7 +104,7 @@ class DSDDemodulator(gr.hier_block2, ExportedState):
     def get_fm_demod(self):
         return self.__fm_demod
     
-    if _available_version >= 2:
+    if _available_version and _available_version >= 2:
         @exported_value(type=_uvquality_range,
             changes='this_setter',
             label='Unvoiced speech quality',
