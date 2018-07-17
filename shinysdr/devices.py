@@ -22,7 +22,6 @@ from collections import Counter
 
 from zope.interface import Interface, implementer  # available via Twisted
 
-from gnuradio import audio as gr_audio
 from gnuradio import blocks
 from gnuradio import gr
 
@@ -30,6 +29,14 @@ from shinysdr.signals import SignalType
 from shinysdr.telemetry import TelemetryItem, Track, empty_track
 from shinysdr.types import RangeT, ReferenceT
 from shinysdr.values import CellDict, CollectionState, ExportedState, LooseCell, ViewCell, exported_value, nullExportedState
+
+try:
+    # pylint: disable=ungrouped-imports
+    from gnuradio import audio as gr_audio
+except ImportError:
+    # It is possible to have a GNU Radio compiled without gr-audio, so we want to be able to proceed without it.
+    # TODO: This suggests it would make sense to move the audio devices outside of this basic-definitions module, but this should be done without breaking or complicating users' configs.
+    gr_audio = 'UNAVAILABLE'
 
 
 __all__ = []
@@ -373,6 +380,9 @@ def AudioDevice(
     
     See documentation in shinysdr/i/webstatic/manual/configuration.html.
     """
+    if _module == 'UNAVAILABLE':
+        raise ImportError('gr-audio not loaded, cannot create audio device')
+    
     rx_device = str(rx_device)
     if tx_device is not None:
         tx_device = str(tx_device)
@@ -445,6 +455,8 @@ def _coerce_channel_mapping(channel_mapping):
 
 def find_audio_rx_names(_module=gr_audio):
     # TODO: request that gnuradio support device enumeration
+    if _module == 'UNAVAILABLE':
+        return []
     try:
         AudioDevice(rx_device=b'', _module=_module)
         return [b'']

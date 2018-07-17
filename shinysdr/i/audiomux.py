@@ -24,13 +24,19 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from twisted.internet import reactor as the_reactor
 from twisted.logger import Logger
 
-from gnuradio import audio
 from gnuradio import blocks
 from gnuradio import gr
 import numpy
 
 from shinysdr.i.blocks import ReactorSink, VectorResampler
 from shinysdr.types import EnumT
+
+try:
+    # pylint: disable=ungrouped-imports
+    from gnuradio import audio as gr_audio
+except ImportError:
+    # It is possible to have a GNU Radio compiled without gr-audio, so we want to be able to proceed without it. Server audio mode will break inelegantly.
+    audio = 'UNAVAILABLE'
 
 
 __all__ = []  # appended later
@@ -233,7 +239,7 @@ class VectorAudioSink(gr.hier_block2):
             self, type(self).__name__,
             gr.io_signature(1, 1, gr.sizeof_float * channels),
             gr.io_signature(0, 0, 0))
-        sink = audio.sink(sample_rate, device_name, ok_to_block=ok_to_block)
+        sink = gr_audio.sink(sample_rate, device_name, ok_to_block=ok_to_block)
         if channels > 1:
             splitter = blocks.vector_to_streams(gr.sizeof_float, channels)
             self.connect(self, splitter)
