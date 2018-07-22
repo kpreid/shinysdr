@@ -183,7 +183,7 @@ class RTTYModulator(gr.hier_block2, ExportedState):
             gr.io_signature(0, 0, 0),
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1))
         
-        encoded_message = map(float, _encode_rtty_alloc(map(ord, message)))  # TODO char encoding issues
+        encoded_message = list(map(float, _encode_rtty_alloc(map(ord, message))))  # TODO char encoding issues
         
         half_bit_rate = rtty_baud * 2
         wanted_bandwidth = rtty_shift * 1.5

@@ -70,6 +70,6 @@ def transform_for_json(obj):
     elif isinstance(obj, dict):
         return {k: transform_for_json(v) for k, v in six.iteritems(obj)}
     elif isinstance(obj, (list, tuple)):
-        return map(transform_for_json, obj)
+        return [transform_for_json(v) for v in obj]
     else:
         return obj
