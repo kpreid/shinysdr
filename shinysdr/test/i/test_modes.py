@@ -21,17 +21,27 @@ from twisted.trial import unittest
 
 from shinysdr.test.i import test_modes_cases as package
 from shinysdr.i.modes import _ModeTable
+from shinysdr.types import EnumRow
 
 
 class TestModeTable(unittest.TestCase):
     table = _ModeTable(package)
     
-    def test_list_all(self):
+    def test_get_modes_all(self):
         self.assertEqual(
             {d.mode for d in self.table.get_modes(include_unavailable=True)},
             {'available', 'unavailable'})
     
-    def test_list_available(self):
+    def test_get_modes_available(self):
         self.assertEqual(
             {d.mode for d in self.table.get_modes(include_unavailable=False)},
             {'available'})
+
+    def test_lookup_and_list_contents(self):
+        modes = self.table.get_modes(include_unavailable=False)
+        mode_def = self.table.lookup_mode('available', include_unavailable=False)
+        self.assertEqual(modes[0], mode_def)
+        self.assertEqual(mode_def.mode, 'available')
+        self.assertEqual(mode_def.info, EnumRow(label='expected available'))
+        self.assertEqual(mode_def.mod_class, None)
+        self.assertEqual(mode_def.unavailability, None)
