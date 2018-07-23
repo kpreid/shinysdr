@@ -22,6 +22,7 @@ import StringIO
 import textwrap
 
 from twisted.trial import unittest
+from twisted.internet import defer
 from twisted.internet import reactor
 from twisted.web import http
 
@@ -232,14 +233,14 @@ class TestDatabasesResource(unittest.TestCase):
     def test_index_common(self):
         return testutil.assert_http_resource_properties(self, self.__url('/'))
     
+    @defer.inlineCallbacks
     def test_index_response(self):
-        def callback((response, data)):
-            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['text/html;charset=utf-8'])
-            # TODO: Actually parse/check-that-parses the document
-            self.assertSubstring(textwrap.dedent('''\
-                <li><a href="foo%26bar/">foo&amp;bar</a></li>
-            '''), data)
-        return testutil.http_get(reactor, self.__url('/')).addCallback(callback)
+        response, data = yield testutil.http_get(reactor, self.__url('/'))
+        self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['text/html;charset=utf-8'])
+        # TODO: Actually parse/check-that-parses the document
+        self.assertSubstring(textwrap.dedent('''\
+            <li><a href="foo%26bar/">foo&amp;bar</a></li>
+        '''), data)
 
 
 class TestDatabaseResource(unittest.TestCase):
@@ -282,23 +283,24 @@ class TestDatabaseResource(unittest.TestCase):
     def test_index_common(self):
         return testutil.assert_http_resource_properties(self, self.__url('/'))
     
+    @defer.inlineCallbacks
     def test_index_response(self):
-        def callback((response, data)):
-            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
-            j = json.loads(data)
-            self.assertEqual(j, self.response_json)
-        return testutil.http_get(reactor, self.__url('/')).addCallback(callback)
+        response, data = yield testutil.http_get(reactor, self.__url('/'))
+        self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
+        j = json.loads(data)
+        self.assertEqual(j, self.response_json)
 
     def test_record_common(self):
         return testutil.assert_http_resource_properties(self, self.__url('/1'))
     
+    @defer.inlineCallbacks
     def test_record_response(self):
-        def callback((response, data)):
-            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
-            j = json.loads(data)
-            self.assertEqual(j, self.test_records[1])
-        return testutil.http_get(reactor, self.__url('/1')).addCallback(callback)
+        response, data = yield testutil.http_get(reactor, self.__url('/1'))
+        self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
+        j = json.loads(data)
+        self.assertEqual(j, self.test_records[1])
 
+    @defer.inlineCallbacks
     def test_update_good(self):
         new_data = {
             u'type': u'channel',
@@ -310,24 +312,19 @@ class TestDatabaseResource(unittest.TestCase):
         modified = dict(self.response_json[u'records'])
         modified[index] = db.normalize_record(new_data)
 
-        d = testutil.http_post_json(reactor, self.__url('/' + str(index)), {
+        response, data = yield testutil.http_post_json(reactor, self.__url('/' + str(index)), {
             'old': self.response_json[u'records'][index],
             'new': new_data
         })
+        if response.code >= 300:
+            print(data)
+        self.assertEqual(response.code, http.NO_CONTENT)
+        
+        _read_response, read_data = yield testutil.http_get(reactor, self.__url('/'))
+        j = json.loads(read_data)
+        self.assertEqual(j[u'records'], modified)
 
-        def proceed((response, data)):
-            if response.code >= 300:
-                print(data)
-            self.assertEqual(response.code, http.NO_CONTENT)
-            
-            def check((read_response, read_data)):
-                j = json.loads(read_data)
-                self.assertEqual(j[u'records'], modified)
-            
-            return testutil.http_get(reactor, self.__url('/')).addCallback(check)
-        d.addCallback(proceed)
-        return d
-
+    @defer.inlineCallbacks
     def test_create(self):
         new_record = {
             u'type': u'channel',
@@ -335,21 +332,15 @@ class TestDatabaseResource(unittest.TestCase):
             u'upperFreq': 20e6,
         }
 
-        d = testutil.http_post_json(reactor, self.__url('/'), {
+        response, data = yield testutil.http_post_json(reactor, self.__url('/'), {
             'new': new_record
         })
-
-        def proceed((response, data)):
-            if response.code >= 300:
-                print(data)
-            self.assertEqual(response.code, http.CREATED)
-            url = 'ONLYONE'.join(response.headers.getRawHeaders('Location'))
-            self.assertEqual(url, self.__url('/3'))  # URL of new entry
-            
-            def check((read_response, read_data)):
-                j = json.loads(read_data)
-                self.assertEqual(j[u'records'][u'3'], db.normalize_record(new_record))
-            
-            return testutil.http_get(reactor, self.__url('/')).addCallback(check)
-        d.addCallback(proceed)
-        return d
+        if response.code >= 300:
+            print(data)
+        self.assertEqual(response.code, http.CREATED)
+        url = 'ONLYONE'.join(response.headers.getRawHeaders('Location'))
+        self.assertEqual(url, self.__url('/3'))  # URL of new entry
+        
+        _read_response, read_data = yield testutil.http_get(reactor, self.__url('/'))
+        j = json.loads(read_data)
+        self.assertEqual(j[u'records'][u'3'], db.normalize_record(new_record))

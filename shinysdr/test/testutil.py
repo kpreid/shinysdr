@@ -462,39 +462,39 @@ class _Accumulator(Protocol):
         self.finished.callback(self.data)
 
 
+@defer.inlineCallbacks
 def assert_http_resource_properties(test_case, url):
     """Common properties all HTTP resources should have."""
-    def callback((response, data)):
-        # If this fails, we probably made a mistake
-        test_case.assertNotEqual(response.code, http.NOT_FOUND)
-        
-        csp = response.headers.getRawHeaders(b'Content-Security-Policy')
-        test_case.assertEqual(1, len(csp))
-        test_case.assertEqual(
-            [
-                b"default-src 'self' 'unsafe-inline'",
-                b"connect-src 'self' ws://*:* wss://*:*",
-                b"img-src 'self' data: blob:",
-                b"media-src http: https: file: blob:",
-                b"object-src 'none'",
-                b"base-uri 'self'",
-            ],
-            csp[0].split(b';'))
-        test_case.assertEqual([b'no-referrer'], response.headers.getRawHeaders(b'Referrer-Policy'))
-        test_case.assertEqual([b'nosniff'], response.headers.getRawHeaders(b'X-Content-Type-Options'))
-        
-        content_type = response.headers.getRawHeaders(b'Content-Type')[0]
-        if content_type == 'application/json':
-            json.loads(data)  # raises error if it doesn't parse
-        elif content_type.startswith('text/html'):
-            test_case.assertRegex(content_type, r'(?i)text/html;\s*charset=utf-8')
-            test_case.assertRegex(data, br'(?i)<!doctype html>')
-        elif content_type in ('application/javascript', 'text/javascript'):
-            pass
-        else:
-            raise Exception('Don\'t know what content type checking to do', data[0], content_type)
     
-    return http_get(the_reactor, url).addCallback(callback)
+    response, data = yield http_get(the_reactor, url)
+    # If this fails, we probably made a mistake
+    test_case.assertNotEqual(response.code, http.NOT_FOUND)
+    
+    csp = response.headers.getRawHeaders(b'Content-Security-Policy')
+    test_case.assertEqual(1, len(csp))
+    test_case.assertEqual(
+        [
+            b"default-src 'self' 'unsafe-inline'",
+            b"connect-src 'self' ws://*:* wss://*:*",
+            b"img-src 'self' data: blob:",
+            b"media-src http: https: file: blob:",
+            b"object-src 'none'",
+            b"base-uri 'self'",
+        ],
+        csp[0].split(b';'))
+    test_case.assertEqual([b'no-referrer'], response.headers.getRawHeaders(b'Referrer-Policy'))
+    test_case.assertEqual([b'nosniff'], response.headers.getRawHeaders(b'X-Content-Type-Options'))
+    
+    content_type = response.headers.getRawHeaders(b'Content-Type')[0]
+    if content_type == 'application/json':
+        json.loads(data)  # raises error if it doesn't parse
+    elif content_type.startswith('text/html'):
+        test_case.assertRegex(content_type, r'(?i)text/html;\s*charset=utf-8')
+        test_case.assertRegex(data, br'(?i)<!doctype html>')
+    elif content_type in ('application/javascript', 'text/javascript'):
+        pass
+    else:
+        raise Exception('Don\'t know what content type checking to do', data[0], content_type)
 
 
 # --- Miscellaneous ---

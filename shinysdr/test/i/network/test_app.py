@@ -21,6 +21,7 @@ import json
 import urlparse
 
 from twisted.trial import unittest
+from twisted.internet import defer
 from twisted.internet import reactor as the_reactor
 from twisted.web import http
 from zope.interface import implementer
@@ -68,74 +69,72 @@ class TestWebSite(unittest.TestCase):
     def test_common_ephemeris(self):
         return testutil.assert_http_resource_properties(self, urlparse.urljoin(self.url, 'ephemeris'))
     
+    @defer.inlineCallbacks
     def test_app_redirect(self):
         if 'ROOT' not in self.url:
-            return None  # test does not apply
+            return  # test does not apply
             
         url_without_slash = self.url[:-1]
         
-        def callback((response, data)):
-            self.assertEqual(response.code, http.MOVED_PERMANENTLY)
-            self.assertEqual(self.url,
-                urlparse.urljoin(url_without_slash,
-                    'ONLYONE'.join(response.headers.getRawHeaders('Location'))))
-        
-        return testutil.http_get(the_reactor, url_without_slash).addCallback(callback)
+        response, _data = yield testutil.http_get(the_reactor, url_without_slash)
+        self.assertEqual(response.code, http.MOVED_PERMANENTLY)
+        self.assertEqual(self.url,
+            urlparse.urljoin(url_without_slash,
+                'ONLYONE'.join(response.headers.getRawHeaders('Location'))))
     
+    @defer.inlineCallbacks
     def test_index_page(self):
-        def callback((response, data)):
-            self.assertEqual(response.code, http.OK)
-            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['text/html;charset=utf-8'])
-            self.assertIn(b'</html>', data)  # complete
-            self.assertIn(b'<title>test title</title>', data)
-            # TODO: Probably not here, add an end-to-end test for page title _default_.
-        
-        return testutil.http_get(the_reactor, self.url).addCallback(callback)
+        response, data = yield testutil.http_get(the_reactor, self.url)
+        self.assertEqual(response.code, http.OK)
+        self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['text/html;charset=utf-8'])
+        self.assertIn(b'</html>', data)  # complete
+        self.assertIn(b'<title>test title</title>', data)
+        # TODO: Probably not here, add an end-to-end test for page title _default_.
     
+    @defer.inlineCallbacks
     def test_resource_page_html(self):
         # TODO: This ought to be a separate test of block-resources
-        def callback((response, data)):
-            self.assertEqual(response.code, http.OK)
-            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['text/html;charset=utf-8'])
-            self.assertIn(b'</html>', data)
-        return testutil.http_get(the_reactor, self.url + CAP_OBJECT_PATH_ELEMENT, accept='text/html').addCallback(callback)
+        response, data = yield testutil.http_get(the_reactor, self.url + CAP_OBJECT_PATH_ELEMENT, accept='text/html')
+        self.assertEqual(response.code, http.OK)
+        self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['text/html;charset=utf-8'])
+        self.assertIn(b'</html>', data)
     
+    @defer.inlineCallbacks
     def test_resource_page_json(self):
         # TODO: This ought to be a separate test of block-resources
-        def callback((response, data)):
-            self.assertEqual(response.code, http.OK)
-            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
-            description_json = json.loads(data)
-            self.assertEqual(description_json, {
-                u'kind': u'block',
-                u'children': {},
-            })
-        return testutil.http_get(the_reactor, self.url + CAP_OBJECT_PATH_ELEMENT, accept='application/json').addCallback(callback)
+        response, data = yield testutil.http_get(the_reactor, self.url + CAP_OBJECT_PATH_ELEMENT, accept='application/json')
+        self.assertEqual(response.code, http.OK)
+        self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
+        description_json = json.loads(data)
+        self.assertEqual(description_json, {
+            u'kind': u'block',
+            u'children': {},
+        })
     
+    @defer.inlineCallbacks
     def test_flowgraph_page(self):
-        def callback((response, data)):
-            self.assertEqual(response.code, http.OK)
-            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['image/png'])
-            # TODO ...
-        return testutil.http_get(the_reactor, self.url + b'flow-graph').addCallback(callback)
+        response, _data = yield testutil.http_get(the_reactor, self.url + b'flow-graph')
+        self.assertEqual(response.code, http.OK)
+        self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['image/png'])
+        # TODO ...
     
+    @defer.inlineCallbacks
     def test_manifest(self):
-        def callback((response, data)):
-            self.assertEqual(response.code, http.OK)
-            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/manifest+json'])
-            manifest = json.loads(data)
-            self.assertEqual(manifest['name'], 'test title')
-        return testutil.http_get(the_reactor, urlparse.urljoin(self.url, b'/client/web-app-manifest.json')).addCallback(callback)
+        response, data = yield testutil.http_get(the_reactor, urlparse.urljoin(self.url, b'/client/web-app-manifest.json'))
+        self.assertEqual(response.code, http.OK)
+        self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/manifest+json'])
+        manifest = json.loads(data)
+        self.assertEqual(manifest['name'], 'test title')
     
+    @defer.inlineCallbacks
     def test_plugin_index(self):
-        def callback((response, data)):
-            self.assertEqual(response.code, http.OK)
-            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
-            index = json.loads(data)
-            self.assertIn('css', index)
-            self.assertIn('js', index)
-            self.assertIn('modes', index)
-        return testutil.http_get(the_reactor, urlparse.urljoin(self.url, b'/client/plugin-index.json')).addCallback(callback)
+        response, data = yield testutil.http_get(the_reactor, urlparse.urljoin(self.url, b'/client/plugin-index.json'))
+        self.assertEqual(response.code, http.OK)
+        self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
+        index = json.loads(data)
+        self.assertIn('css', index)
+        self.assertIn('js', index)
+        self.assertIn('modes', index)
 
 
 class TestSiteWithoutRootCap(TestWebSite):

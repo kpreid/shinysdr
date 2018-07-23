@@ -20,6 +20,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import json
 
+from twisted.internet import defer
 from twisted.internet import reactor as the_reactor
 from twisted.trial import unittest
 
@@ -47,24 +48,21 @@ class TestBlockTreeResources(unittest.TestCase):
     def test_leaf_cell_common(self):
         return assert_http_resource_properties(self, self.__url('/leaf_cell'))
     
+    @defer.inlineCallbacks
     def test_leaf_cell_get(self):
-        def callback((response, data)):
-            self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
-            self.assertEqual([1, 2, 3], json.loads(data))
-        
-        return http_get(the_reactor, self.__url('/leaf_cell')).addCallback(callback)
+        response, data = yield http_get(the_reactor, self.__url('/leaf_cell'))
+        self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
+        self.assertEqual([1, 2, 3], json.loads(data))
     
+    @defer.inlineCallbacks
     def test_leaf_cell_put(self):
-        def put_callback(_):
-            def get_callback((response, data)):
-                self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
-                self.assertEqual([3, 4, 5], json.loads(data))
-            
-            return http_get(the_reactor, self.__url('/leaf_cell')).addCallback(get_callback)
-        
-        return http_request(the_reactor, self.__url('/leaf_cell'),
+        yield http_request(the_reactor, self.__url('/leaf_cell'),
             method='PUT',
-            body='[3, 4, 5]').addCallback(put_callback)
+            body='[3, 4, 5]')
+        
+        response, data = yield http_get(the_reactor, self.__url('/leaf_cell'))
+        self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
+        self.assertEqual([3, 4, 5], json.loads(data))
     
     # TODO: test BlockResource behavior rather than just the leaf
 
