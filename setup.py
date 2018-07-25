@@ -48,6 +48,7 @@ setup(
         'twisted',
         'txws',
         'ephem',
+        'six',
         'pyserial',  # undeclared dependency of twisted.internet.serialport
     ],
     dependency_links=[],
