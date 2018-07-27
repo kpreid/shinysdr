@@ -346,7 +346,7 @@ config.devices.add(u'sim', SimulatedDevice())</pre>
   
   <p>The first parameter is a <a href="http://sdr.osmocom.org/trac/wiki/GrOsmoSDR#Devicespecification">gr-osmosdr device string</a>; see that page for complete information. Common uses:</p>
   <ul>
-    <li><p>The empty string picks the first available device.</p></li>
+    <li><p>The empty string picks the first available device. (Note that this gives ShinySDR less information about the capabilities of the device than specifying the device type.)</p></li>
     <li><p>RTL-SDR devices are <code>'rtl=x'</code> where x is either an index (0, 1, 2...) or the &ldquo;serial number&ldquo; of the device (which can be read and modified by the <code>rtl_eeprom</code> tool).</p></li>
   </ul>
   
