@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-// Implementation of streaming audio buffering. This file is structured to be compatible with AudioWorklet but not yet used in thay way.
+// Implementation of streaming audio buffering. Can be used with AudioWorklet or ScriptProcessor.
 
 /* globals AudioWorkletProcessor, registerProcessor, sampleRate */
 
