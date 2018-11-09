@@ -330,8 +330,8 @@ class AudioStreamInner(object):
         # pylint: disable=no-member
         self.__audio_source.remove_audio_callback(self.__callback)
     
-    def __deliver(self, data_numpy_array):
-        self._send(data_numpy_array, safe_to_drop=True)
+    def __deliver(self, data_bytes):
+        self._send(data_bytes, safe_to_drop=True)
 
 
 def _lookup_block(block, path):

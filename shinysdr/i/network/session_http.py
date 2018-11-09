@@ -1,4 +1,4 @@
-# Copyright 2014, 2015, 2016, 2017 Kevin Reid <kpreid@switchb.org>
+# Copyright 2014, 2015, 2016, 2017, 2018 Kevin Reid <kpreid@switchb.org>
 # 
 # This file is part of ShinySDR.
 # 
@@ -29,6 +29,7 @@ from shinysdr.i.ephemeris import EphemerisResource
 from shinysdr.i.json import serialize
 from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, ElementRenderingResource, EntryPointIndexElement, SlashedResource, prepath_escaped, template_filepath
 from shinysdr.i.network.export_http import BlockResource, FlowgraphVizResource
+from shinysdr.i.network.audio_http import AudioStreamResource
 
 
 class SessionResource(SlashedResource):
@@ -51,6 +52,9 @@ class SessionResource(SlashedResource):
         
         # Ephemeris
         self.putChild('ephemeris', EphemerisResource())
+        
+        # Standard audio-file-over-HTTP audio stream (the ShinySDR web client uses WebSockets instead)
+        self.putChild('audio-stream', AudioStreamResource(session))
 
 
 class _RadioIndexHtmlElement(EntryPointIndexElement):
