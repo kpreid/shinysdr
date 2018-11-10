@@ -31,6 +31,7 @@ from zope.interface import Interface, implementer
 import numpy
 
 from shinysdr.i.json import transform_for_json
+from shinysdr.i.network.base import AUDIO_STREAM_PATH_ELEMENT
 # TODO: StateStreamInner is an implementation detail; arrange a better interface to test
 from shinysdr.i.network.export_ws import StateStreamInner, OurStreamProtocol
 from shinysdr.i.roots import CapTable, IEntryPoint
@@ -336,7 +337,7 @@ class TestOurStreamProtocol(unittest.TestCase):
     
     @defer.inlineCallbacks
     def test_audio(self):
-        self.begin('/foo/audio?rate=1')
+        self.begin('/foo/' + AUDIO_STREAM_PATH_ELEMENT + '?rate=1')
         self.clock.advance(1)
         yield deferLater(the_reactor, 0.0, lambda: None)
         self.assertEqual(self.transport.messages(), [

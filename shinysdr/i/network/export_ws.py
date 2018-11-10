@@ -33,7 +33,7 @@ from twisted.web.http import urlparse, parse_qs
 from zope.interface import implementer, providedBy
 
 from shinysdr.i.json import serialize
-from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, parse_audio_stream_options
+from shinysdr.i.network.base import AUDIO_STREAM_PATH_ELEMENT, CAP_OBJECT_PATH_ELEMENT, parse_audio_stream_options
 from shinysdr.i.pycompat import bytes_or_ascii
 from shinysdr.signals import SignalType
 from shinysdr.types import BulkDataT, ReferenceT
@@ -384,7 +384,7 @@ class OurStreamProtocol(Protocol):
             path[0:1] = []
         else:
             raise Exception('Unknown cap')  # TODO better error reporting
-        if path == ['audio']:
+        if path == [AUDIO_STREAM_PATH_ELEMENT]:
             options = parse_audio_stream_options(parse_qs(query_bytes, 1))
             self.inner = AudioStreamInner(the_reactor, self.__send, root_object, options.sample_rate)
         elif len(path) >= 1 and path[0] == CAP_OBJECT_PATH_ELEMENT:

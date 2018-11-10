@@ -37,6 +37,7 @@ from shinysdr.i.roots import IEntryPoint
 
 # TODO: Change this constant to something more generic, but save that for when we're changing the URL layout for other reasons anyway.
 CAP_OBJECT_PATH_ELEMENT = defaultstr('radio')
+AUDIO_STREAM_PATH_ELEMENT = 'audio-stream'
 UNIQUE_PUBLIC_CAP = 'public'
 
 

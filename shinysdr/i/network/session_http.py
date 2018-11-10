@@ -27,7 +27,7 @@ from twisted.web import template
 import shinysdr.i.db
 from shinysdr.i.ephemeris import EphemerisResource
 from shinysdr.i.json import serialize
-from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, ElementRenderingResource, EntryPointIndexElement, SlashedResource, prepath_escaped, template_filepath
+from shinysdr.i.network.base import AUDIO_STREAM_PATH_ELEMENT, CAP_OBJECT_PATH_ELEMENT, ElementRenderingResource, EntryPointIndexElement, SlashedResource, prepath_escaped, template_filepath
 from shinysdr.i.network.export_http import BlockResource, FlowgraphVizResource
 from shinysdr.i.network.audio_http import AudioStreamResource
 
@@ -53,8 +53,8 @@ class SessionResource(SlashedResource):
         # Ephemeris
         self.putChild('ephemeris', EphemerisResource())
         
-        # Standard audio-file-over-HTTP audio stream (the ShinySDR web client uses WebSockets instead)
-        self.putChild('audio-stream', AudioStreamResource(session))
+        # Standard audio-file-over-HTTP audio stream (the ShinySDR web client uses WebSockets instead, but both have the same path modulo protocol)
+        self.putChild(AUDIO_STREAM_PATH_ELEMENT, AudioStreamResource(session))
 
 
 class _RadioIndexHtmlElement(EntryPointIndexElement):
@@ -66,7 +66,8 @@ class _RadioIndexHtmlElement(EntryPointIndexElement):
 
     @template.renderer
     def quoted_audio_url(self, request, tag):
-        return tag(serialize(self.entry_point_wcommon.make_websocket_url(request, prepath_escaped(request) + 'audio')))
+        return tag(serialize(self.entry_point_wcommon.make_websocket_url(request,
+             prepath_escaped(request) + AUDIO_STREAM_PATH_ELEMENT)))
 
 
 def _not_deletable():
