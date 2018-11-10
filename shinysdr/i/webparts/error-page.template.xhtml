@@ -1,0 +1,31 @@
+<!--
+  Copyright 2018 Kevin Reid <kpreid@switchb.org>
+  
+  This file is part of ShinySDR.
+  
+  ShinySDR is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+  
+  ShinySDR is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public License
+  along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<html
+    xmlns="http://www.w3.org/1999/xhtml"
+    xmlns:t="http://twistedmatrix.com/ns/twisted.web.template/0.1"
+    lang="en"><head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>Error: <t:transparent t:render='details_text'/></title>
+  <link rel="manifest" href="/client/web-app-manifest.json" />
+  <link rel="stylesheet" href="/client/ui.css" />
+  <meta name="viewport" content="width=device-width" />
+</head><body>
+ <h1>Error</h1>
+ <p t:render='details_text' />
+</body></html>

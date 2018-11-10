@@ -90,6 +90,23 @@ class ElementRenderingResource(Resource):
         return template.renderElement(request, self.__element)
 
 
+class ErrorPageElement(template.Element):
+    loader = template.XMLFile(template_filepath.child('error-page.template.xhtml'))
+    
+    def __init__(self, details_text):
+        super(ErrorPageElement, self).__init__()
+        self.__details_text = details_text
+    
+    @template.renderer
+    def details_text(self, request, tag):
+        return tag(self.__details_text)
+
+
+def render_error_page(request, details_text, code=http.BAD_REQUEST):
+    request.setResponseCode(code)
+    return template.renderElement(request, ErrorPageElement(details_text))
+
+
 class WebServiceCommon(object):
     """Ugly collection of stuff web resources need which is not noteworthy authority."""
     
