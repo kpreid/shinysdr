@@ -93,7 +93,9 @@ class AudioManager(object):
     def add_audio_callback(self, callback, sample_rate):
         """Caller must reconnect flow graph."""
         
-        # TODO: place limit on maximum requested sample rate
+        if not 1 <= sample_rate <= 192000:
+            # TODO: This sanity check is also enforced in the UI entry point; arrange for a common definition of the limits
+            raise ValueError('Sample rate out of range')
         self.__audio_sinks[callback] = (
             sample_rate,
             ReactorSink(

@@ -29,11 +29,12 @@ from six.moves import urllib
 from twisted.internet import reactor as the_reactor  # TODO fix
 from twisted.internet.protocol import Protocol
 from twisted.logger import Logger
+from twisted.web.http import urlparse, parse_qs
 from zope.interface import implementer, providedBy
 
 from shinysdr.i.json import serialize
-from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT
-from shinysdr.i.pycompat import defaultstr
+from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, parse_audio_stream_options
+from shinysdr.i.pycompat import bytes_or_ascii
 from shinysdr.signals import SignalType
 from shinysdr.types import BulkDataT, ReferenceT
 from shinysdr.values import BaseCell, ExportedState, IDeltaSubscriber, PollingCell
@@ -371,9 +372,10 @@ class OurStreamProtocol(Protocol):
             self.__log.failure('Error processing incoming WebSocket message')
     
     def __dispatch_url(self):
-        loc = self.transport.location.decode('utf-8')  # TODO centralize url decoding
-        self.__log.info('Stream connection to {url}', url=loc)
-        path = [urllib.parse.unquote(x) for x in loc.split('/')]
+        self.__log.info('Stream connection to {url}', url=self.transport.location)
+        _scheme, _netloc, path_bytes, _params, query_bytes, _fragment = urlparse(bytes_or_ascii(self.transport.location))
+        # py2/3: unquote returns str in either version but we want Unicode
+        path = [six.text_type(urllib.parse.unquote(x)) for x in path_bytes.split(b'/')]
         assert path[0] == ''
         path[0:1] = []
         cap_string = path[0]
@@ -382,14 +384,13 @@ class OurStreamProtocol(Protocol):
             path[0:1] = []
         else:
             raise Exception('Unknown cap')  # TODO better error reporting
-        audio_prefix = defaultstr('audio?rate=')
-        if len(path) == 1 and path[0].startswith(audio_prefix):
-            rate = int(json.loads(urllib.parse.unquote(path[0][len(audio_prefix):])))
-            self.inner = AudioStreamInner(the_reactor, self.__send, root_object, rate)
+        if path == ['audio']:
+            options = parse_audio_stream_options(parse_qs(query_bytes, 1))
+            self.inner = AudioStreamInner(the_reactor, self.__send, root_object, options.sample_rate)
         elif len(path) >= 1 and path[0] == CAP_OBJECT_PATH_ELEMENT:
             # note _lookup_block may throw. TODO: Better error reporting
             root_object = _lookup_block(root_object, path[1:])
-            self.inner = StateStreamInner(self.__send, root_object, loc, self.__subscription_context)  # note reuse of loc as HTTP path; probably will regret this
+            self.inner = StateStreamInner(self.__send, root_object, path_bytes.decode('utf-8'), self.__subscription_context)  # note reuse of WS path as HTTP path; probably will regret this
         else:
             raise Exception('Unknown path: %r' % (path,))
     

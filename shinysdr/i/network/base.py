@@ -19,6 +19,7 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+from collections import namedtuple
 import six
 from six.moves import urllib
 
@@ -153,3 +154,27 @@ def endpoint_string_to_url(desc, scheme='http', hostname='localhost', path='/', 
 def prepath_escaped(request):
     """Like request.prePathURL() but without the scheme and hostname."""
     return '/' + '/'.join([urllib.parse.quote(x, safe='') for x in request.prepath])
+
+
+def parse_audio_stream_options(args):
+    """
+    args: query parameters, dict of list of not-url-encoded strings format
+    
+    Raises ValueError with user-facing message if args has missing or misformatted elements.
+    """
+    # TODO: Can we find a library to do this parameter validation? Preferably already in Twisted?
+    try:
+        rate_bytes, = args[b'rate']
+        rate_number = float(rate_bytes.decode('us-ascii', 'replace'))
+    except (KeyError, ValueError):
+        raise ValueError('?rate= not a number')
+    if not 1 <= rate_number <= 192000:
+        raise ValueError('?rate= must be between 1 and 192000')
+    return ParsedAudioStreamOptions(
+        sample_rate=rate_number,
+    )
+
+
+ParsedAudioStreamOptions = namedtuple('ParsedAudioStreamOptions', [
+    'sample_rate',
+])
