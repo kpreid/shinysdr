@@ -407,8 +407,12 @@ class StubTXDriver(gr.hier_block2, ExportedState):
 
 
 def http_get(reactor, url, accept=None):
-    # This is nearly an alias for http_request but reads better
     return http_request(reactor, url, method='GET', accept=accept)
+
+
+def http_head(reactor, url, accept=None):
+    return (http_request(reactor, url, method='HEAD', accept=accept)
+        .addCallback(lambda (response, data): response))
 
 
 def http_post_json(reactor, url, value):
@@ -465,10 +469,18 @@ class _Accumulator(Protocol):
 
 
 @defer.inlineCallbacks
-def assert_http_resource_properties(test_case, url):
+def assert_http_resource_properties(test_case, url, dont_read_entire_body=False):
     """Common properties all HTTP resources should have."""
+    if not dont_read_entire_body:
+        # TODO: Instead of not doing GET at all, avoid reading unbounded length of the body (code is in test_audio_http.py)
+        get_response, data = yield http_get(the_reactor, url)
+        _assert_http_response_properties(test_case, get_response, data)
     
-    response, data = yield http_get(the_reactor, url)
+    head_response = yield http_head(the_reactor, url)
+    _assert_http_response_properties(test_case, head_response, None)
+
+
+def _assert_http_response_properties(test_case, response, data):
     # If this fails, we probably made a mistake
     test_case.assertNotEqual(response.code, http.NOT_FOUND)
     
@@ -487,16 +499,17 @@ def assert_http_resource_properties(test_case, url):
     test_case.assertEqual([b'no-referrer'], response.headers.getRawHeaders(b'Referrer-Policy'))
     test_case.assertEqual([b'nosniff'], response.headers.getRawHeaders(b'X-Content-Type-Options'))
     
-    content_type = response.headers.getRawHeaders(b'Content-Type')[0]
-    if content_type == 'application/json':
-        json.loads(data)  # raises error if it doesn't parse
-    elif content_type.startswith('text/html'):
-        test_case.assertRegex(content_type, r'(?i)text/html;\s*charset=utf-8')
-        test_case.assertRegex(data, br'(?i)<!doctype html>')
-    elif content_type in ('application/javascript', 'text/javascript'):
-        pass
-    else:
-        raise Exception('Don\'t know what content type checking to do', data[0], content_type)
+    if data is not None:  # not a HEAD request
+        content_type = response.headers.getRawHeaders(b'Content-Type')[0]
+        if content_type == 'application/json':
+            json.loads(data)  # raises error if it doesn't parse
+        elif content_type.startswith('text/html'):
+            test_case.assertRegex(content_type, r'(?i)text/html;\s*charset=utf-8')
+            test_case.assertRegex(data, br'(?i)<!doctype html>')
+        elif content_type in ('application/javascript', 'text/javascript', 'audio/wav'):
+            pass
+        else:
+            raise Exception('Don\'t know what content type checking to do', data[0], content_type)
 
 
 # --- Miscellaneous ---
