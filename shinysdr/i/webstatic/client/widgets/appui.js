@@ -447,6 +447,15 @@ define([
       addWidget('target', PickWidget, 'Target latency');  // TODO: label should not need to be repeated here
       addWidget('error');
       ignore('monitor');
+
+      // TODO: Get URL/template from server.
+      const altStreamLinkPanel = getAppend().appendChild(document.createElement('div'));
+      altStreamLinkPanel.classList.add('panel');
+      const altStreamLinkAnchor = altStreamLinkPanel.appendChild(document.createElement('a'));
+      altStreamLinkAnchor.textContent = 'Direct link to audio stream (experimental, latency will be high)';
+      config.scheduler.startNow(function setStreamLink() {
+        altStreamLinkAnchor.href = 'audio-stream?rate=' + block.requested_sample_rate.depend(setStreamLink);
+      });
     });
   }
   exports['interface:shinysdr.client.audio.AudioStreamStatus'] = AudioStreamStatusWidget;
