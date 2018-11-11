@@ -263,6 +263,9 @@ define([
       });
     }
     
+    nodeBeforeDestination.connect(audio.destination);
+    analyserAdapter.connectFrom(nodeBeforeDestination);
+    
     function startStop() {
       startStopTickle = false;
       if (queueNotEmpty) {
@@ -271,16 +274,12 @@ define([
           buffererMessagePortPromise.then(port => { port.postMessage(['resetFill']); });
           
           started = true;
-          nodeBeforeDestination.connect(audio.destination);
-          analyserAdapter.connectFrom(nodeBeforeDestination);
-          analyserAdapter.setLockout(false);
+          audio.resume();
         }
       } else {
         if (started) {
           started = false;
-          nodeBeforeDestination.disconnect(audio.destination);
-          analyserAdapter.disconnectFrom(nodeBeforeDestination);
-          analyserAdapter.setLockout(true);
+          audio.suspend();
         }
       }
     }

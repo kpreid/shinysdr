@@ -76,7 +76,6 @@ define([
     const fftBuffer = new Float32Array(length);
     let isScheduled = false;
     const pausedCell = this.paused = new LocalCell(booleanT, true);
-    let lockout = false;
     
     const outputCell = this.fft = new FakeBulkDataCell(
       new BulkDataT('dff', 'b'),  // TODO BulkDataT really isn't properly involved here -- there is no binary format -- so the architecture is wrong
@@ -112,7 +111,7 @@ define([
     }
     
     function maybeScheduleUpdate() {
-      if (!isScheduled && outputCell._hasSubscribers() && !lockout) {
+      if (!isScheduled && outputCell._hasSubscribers()) {
         if (pausedCell.get()) {
           pausedCell.n.listen(maybeScheduleUpdate);
         } else {
@@ -124,12 +123,6 @@ define([
     }
     scheduler.claim(maybeScheduleUpdate);
     
-    Object.defineProperty(this, 'setLockout', {value: function (value) {
-      lockout = !!value;
-      if (!lockout) {
-        maybeScheduleUpdate();
-      }
-    }});
     // This interface allows us to in the future have per-channel analysers without requiring the caller to deal with that.
     Object.defineProperty(this, 'connectFrom', {value: function (inputNode) {
       inputNode.connect(analyserNode);
