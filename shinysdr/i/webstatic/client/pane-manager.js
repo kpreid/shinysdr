@@ -140,9 +140,9 @@ define([
       paneManager._add(this);
       
       const interacted = this.interacted.bind(this);
-      this.frameElement.addEventListener('mouseup', interacted, true);
-      this.frameElement.addEventListener('touchstart', interacted, true);
-      this.frameElement.addEventListener('keyup', interacted, true);
+      this.frameElement.addEventListener('mouseup', interacted, {capture: true, passive: true});
+      this.frameElement.addEventListener('touchstart', interacted, {capture: true, passive: true});
+      this.frameElement.addEventListener('keyup', interacted, {capture: true, passive: true});
     }
     
     attachWidget(config, frameElement) {
