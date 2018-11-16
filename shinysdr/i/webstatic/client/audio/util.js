@@ -34,5 +34,52 @@ define([], () => {
   }
   exports.delayToBufferSize = delayToBufferSize;
   
+  function showPlayPrompt() {
+    console.log('showPlayPrompt');
+    
+    const dialog = document.createElement('dialog');
+    dialog.classList.add('unspecific-modal-dialog');
+    // TODO class for styling
+    
+    dialog.textContent = 'This page provides a visualization of audio from your microphone, other available audio input device, or a file. It does not play any sound and does not record or transmit the audio or any derived information. (Or so this text claims.)';
+    
+    const ackButton = dialog.appendChild(document.createElement('p'))
+        .appendChild(document.createElement('button'));
+    ackButton.textContent = 'Continue';
+  
+    return new Promise((resolve, reject) => {
+      ackButton.addEventListener('click', event => {
+        dialog.close();
+        resolve();
+      }, true);
+      dialog.addEventListener('close', event => {
+        if (dialog.parentNode) {
+          dialog.parentNode.removeChild(dialog);
+        }
+        reject(new Error('User canceled'));
+      }, true);
+      
+      document.body.appendChild(dialog);
+      requestAnimationFrame(() => {
+        // Do this async so that if the browser doesn't support <dialog> features, they will still get a functional OK button.
+        dialog.showModal();
+      });
+    });
+  }
+  
+  // Cooperate with the Chrome autoplay policy, which says that audio contexts cannot be in 'running' state until a user interaction with the page (or prior interaction with the site).
+  // https://developers.google.com/web/updates/2017/09/autoplay-policy-changes
+  // The default UI prompt is intended for the standalone "audio toolbox" pages.
+  function audioContextAutoplayHelper(audioContext, showUI=showPlayPrompt) {
+    if (audioContext.state === 'suspended') {
+      return showUI().then(() => {
+        audioContext.resume();
+      });
+    } else {
+      return Promise.resolve();
+    }
+  }
+  exports.audioContextAutoplayHelper = audioContextAutoplayHelper;
+  
   return Object.freeze(exports);
 });

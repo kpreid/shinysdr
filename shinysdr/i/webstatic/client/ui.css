@@ -25,22 +25,25 @@ html.pane-structured-page, .pane-structured-page body {
   height: 100%;
 }
 
-/* loading screen */
-#loading-information-dialog {
-  display: none;
-}
-.main-not-yet-run #loading-information-dialog {
+/* loading screen and other dialogs */
+#loading-information-dialog, .unspecific-modal-dialog {
   display: block; /* cancel out previous display: none */
   
+  /* better layout for browsers not supporting <dialog> basics */
   top: 0; right: 0; bottom: 0; left: 0;
   
   width: 30em;
-  height: 10em;
   box-sizing: border-box;
   max-width: 100%;
   max-height: 100%;
-  
+}
+#loading-information-dialog {
+  display: none;
+  height: 10em;
   overflow: auto;
+}
+.main-not-yet-run #loading-information-dialog {
+  display: block; /* cancel out previous display: none */
 }
 #loading-information-dialog progress {
   margin: 0;

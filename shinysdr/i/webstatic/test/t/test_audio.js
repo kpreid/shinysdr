@@ -38,6 +38,7 @@ define([
     beforeEach,
     describe,
     expect,
+    fail,
     it,
   }} = import_jasmine;
   const {
@@ -53,6 +54,7 @@ define([
   } = import_audio_client_source;
   const {
     AudioContext,
+    audioContextAutoplayHelper,
   } = import_audio_util;
   const {
     minimizeSampleRate_ForTesting: minimizeSampleRate,
@@ -73,7 +75,7 @@ define([
   describe('audio', () => {
     // TODO: test connectAudio (requires server side websocket stub)
 
-    // Only a limited number of AudioContexts can be created, and we can't stub them, so all tests share one. This doesn't do too much harm since there isn't any global state that we need to worry about in them.
+    // Only a limited number of AudioContexts can be created, and we can't stub them, so all tests share one. This doesn't do too much harm since there is very little global state that we need to worry about in them.
     const audioContext = new AudioContext();
 
     let scheduler;
@@ -142,6 +144,68 @@ define([
       // TODO: test gathering actual plausible data
     });
 
+    describe('audioContextAutoplayHelper', () => {
+      class FakeAudioContext {
+        constructor() {
+          this.state = 'bogus';
+          this._interacted = false;
+          this._pendingResumePromises = [];
+        }
+        
+        suspend() {
+          this.state = 'suspended';
+          return Promise.resolve();
+        }
+        
+        resume() {
+          if (this._interacted) {
+            this.state = 'running';
+            return Promise.resolve();
+          } else {
+            return new Promise(resolve => this._pendingResumePromises.push(resolve));
+          }
+        }
+        
+        _fakeInteraction() {
+          this._interacted = true;
+          this._tryResume();
+        }
+        
+        _tryResume() {
+          if (this._pendingResumePromises.length > 0) {
+            this._state = 'running';
+            this._pendingResumePromises.forEach(resolve => resolve(undefined));
+            this._pendingResumePromises.length = 0;
+          }
+        }
+      }
+      
+      let fakeContext;
+      beforeEach(() => {
+        fakeContext = new FakeAudioContext();
+      });
+      
+      it('should do nothing if on a running context', done => {
+        fakeContext.state = 'running';
+        audioContextAutoplayHelper(fakeContext, () => { fail('should not be called'); })
+            .then(() => {
+              expect(fakeContext.state).toBe('running');
+              done();
+            });
+      });
+      
+      it('should resume a suspended context after user interaction', done => {
+        fakeContext.state = 'suspended';
+        audioContextAutoplayHelper(fakeContext, () => {
+          fakeContext._fakeInteraction();
+          return Promise.resolve();
+        }).then(() => {
+          expect(fakeContext.state).toBe('running');
+          done();
+        });
+      });
+    });
+    
     describe('AudioScopeAdapter', () => {
       it('should be instantiable', () => {
         new AudioScopeAdapter(scheduler, audioContext);
