@@ -689,7 +689,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
             band_filter_width = 120
             band_mid = 0
             agc_reference = dB(-10)
-            agc_rate = 1e-1
+            self.__agc_rate = 1e-1
         else:
             self.__offset = 0
             half_bandwidth = self.half_bandwidth = 2800 / 2  # standard SSB bandwidth
@@ -699,7 +699,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
             else:
                 band_mid = 200 + half_bandwidth
             agc_reference = dB(-8)
-            agc_rate = 8e-1
+            self.__agc_rate = 8e-1
         
         band_filter_low = band_mid - half_bandwidth
         band_filter_high = band_mid + half_bandwidth
@@ -717,8 +717,8 @@ class SSBDemodulator(SimpleAudioDemodulator):
             markers={})
         
         self.agc_block = analog.agc2_cc(reference=agc_reference)
-        self.agc_block.set_attack_rate(agc_rate)
-        self.agc_block.set_decay_rate(agc_rate)
+        self.agc_block.set_attack_rate(self.__agc_rate)
+        self.agc_block.set_decay_rate(self.__agc_rate)
         self.agc_block.set_max_gain(dB(_ssb_max_agc))
         
         ssb_demod_block = blocks.complex_to_real(1)
@@ -749,6 +749,17 @@ class SSBDemodulator(SimpleAudioDemodulator):
         label='AGC')
     def get_agc_gain(self):
         return to_dB(self.agc_block.gain())
+
+    @exported_value(
+        type=bool, changes='this_setter', label='AGC Enabled')
+    def get_agc_enabled(self):
+        return self.agc_block.decay_rate() > 0
+
+    @setter
+    def set_agc_enabled(self, value):
+        agc_rate = self.__agc_rate if value else 0.
+        self.agc_block.set_decay_rate(agc_rate)
+        self.agc_block.set_attack_rate(agc_rate)
 
 
 @implementer(IModulator)
