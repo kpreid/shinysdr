@@ -752,6 +752,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
     
     @exported_value(
         type=bool,
+        # If this is persisted then the AGC will be frozen at the unrelated default gain of 1.0 in any newly created demodulator. We would need to persist the gain value too, but persisting changes='continuous' isn't supported so we'd need to implement notifications.
         persists=False,
         changes='this_setter',
         label='AGC Enabled')
