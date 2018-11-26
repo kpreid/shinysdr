@@ -749,12 +749,15 @@ class SSBDemodulator(SimpleAudioDemodulator):
         label='AGC')
     def get_agc_gain(self):
         return to_dB(self.agc_block.gain())
-
+    
     @exported_value(
-        type=bool, changes='this_setter', label='AGC Enabled')
+        type=bool,
+        persists=False,
+        changes='this_setter',
+        label='AGC Enabled')
     def get_agc_enabled(self):
         return self.agc_block.decay_rate() > 0
-
+    
     @setter
     def set_agc_enabled(self, value):
         agc_rate = self.__agc_rate if value else 0.
