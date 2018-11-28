@@ -24,7 +24,11 @@ from zope.interface import implementer  # available via Twisted
 from gnuradio import gr
 from gnuradio import blocks
 
-import osmosdr
+try:
+    import osmosdr
+    _available = True
+except ImportError:
+    _available = False
 
 from shinysdr.devices import Device, IRXDriver, ITXDriver
 from shinysdr.i.pycompat import defaultstr
@@ -218,6 +222,10 @@ def OsmoSDRDevice(
     See documentation in shinysdr/i/webstatic/manual/configuration.html.
     """
     # The existence of the correction_ppm parameter is a workaround for the current inability to dynamically change an exported field's type (the frequency range), allowing them to be initialized early enough, in the configuration, to take effect. (Well, it's also nice to hardcode them in the config if you want to.)
+    
+    if not _available:
+        raise Exception('OsmoSDRDevice: gr-osmosdr Python bindings not found; cannot create device')
+    
     osmo_device = defaultstr(osmo_device)
     if name is None:
         name = 'OsmoSDR %s' % osmo_device
