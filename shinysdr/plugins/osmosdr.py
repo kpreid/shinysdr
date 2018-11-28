@@ -218,7 +218,7 @@ def OsmoSDRDevice(
     See documentation in shinysdr/i/webstatic/manual/configuration.html.
     """
     # The existence of the correction_ppm parameter is a workaround for the current inability to dynamically change an exported field's type (the frequency range), allowing them to be initialized early enough, in the configuration, to take effect. (Well, it's also nice to hardcode them in the config if you want to.)
-    osmo_device = str(osmo_device)  # ensure not unicode type as we talk to byte-oriented C++ (TODO: how does py3 gnuradio play this?)
+    osmo_device = defaultstr(osmo_device)
     if name is None:
         name = 'OsmoSDR %s' % osmo_device
     if profile is None:
