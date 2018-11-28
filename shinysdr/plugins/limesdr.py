@@ -22,7 +22,11 @@ from zope.interface import implementer  # available via Twisted
 from gnuradio import gr
 from gnuradio import blocks
 
-import limesdr
+try:
+    import limesdr
+    _available = True
+except ImportError:
+    _available = False
 
 from shinysdr.devices import Device, IRXDriver
 from shinysdr.signals import SignalType
@@ -139,6 +143,10 @@ def LimeSDRDevice(
     
     See documentation in shinysdr/i/webstatic/manual/configuration.html.
     """
+    
+    if not _available:
+        raise Exception('LimeSDRDevice: gr-limesdr Python bindings not found; cannot create device')
+    
     serial = str(serial)  # ensure not unicode type as we talk to byte-oriented C++
     if name is None:
         name = 'LimeSDR %s' % serial
