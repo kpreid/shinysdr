@@ -51,15 +51,22 @@ define([
     DerivedCell,
     LocalReadCell,
     StorageCell,
+    findImplementers,
     makeBlock,
   } = import_values;
 
   const {
     cos,
+    sin,
+    asin,
+    atan2
   } = Math;
   
   const RADIANS_PER_DEGREE = Math.PI / 180;
   function dcos(x) { return cos(RADIANS_PER_DEGREE * x); }
+  function dsin(x) { return sin(RADIANS_PER_DEGREE * x); }
+  function dasin(x) { return asin(x)/RADIANS_PER_DEGREE; }
+  function datan2(x, y) { return atan2(x, y)/RADIANS_PER_DEGREE; }
   
   // TODO: Instead of using a blank icon, provide a way to skip the geometry entirely
   const blank = 'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22/%3E';
@@ -209,6 +216,7 @@ define([
         if (isReceiving && info.track) {
           //var receiver = info.receiving.get(record);
           // TODO: Should be matching against receiver's device rather than selected device
+          // TODO: Does not draw a great circle
           lines = [[
             {position: location},
             {position: [+info.track.latitude.value, +info.track.longitude.value]},
@@ -451,15 +459,75 @@ define([
     });
   });
   
-  registerMapPlugin(({addLayer, index}) => {
+  registerMapPlugin(({addLayer, scheduler, index}) => {
+    const smoothStep = 1;
     addLayer('Station Position', {
-      featuresCell: index.implementing('shinysdr.devices.IPositionedDevice'),
-      featureRenderer: function (devicePositioning, dirty) {
-        // TODO: Because devicePositioning is a device component, we don't have the device itself in order to display the device's name. However, the Index is in a position to provide "containing object" information and arguably should.
-        const f = renderTrackFeature(dirty, devicePositioning.track, '');
-        f.iconURL = require.toUrl('./icons/station-user.svg');
-        return f;
-      }
+      featuresCell: new DerivedCell(anyT, scheduler, function(dirty) {
+        let features = [];
+        // TODO: Show only the mapPluginConfig.radio.source device, and not all devices?
+        const devices = index.implementing('shinysdr.devices.IDevice').depend(dirty);
+        devices.forEach(device => {
+          const name = '';  // TODO: Device name doesn't appear to be available?
+          let position;
+          // TODO: There's gotta be a better way to find child components that implement a given interface.
+          const components = device.components.depend(dirty);
+          for (let key in components) {
+            let component = components[key].get();
+            if (isImplementing(component, 'shinysdr.devices.IPositionedDevice')) {
+              const track = component.track.depend(dirty);
+              const lat = track.latitude.value;
+              const lon = track.longitude.value;
+              if (typeof lat === 'number' && typeof lon === 'number' && isFinite(lat) && isFinite(lon)) {
+                position = [lat, lon];
+              }
+              features.push({'type': 'track', 'trackCell': component.track, 'name': name});
+            }
+          }
+          for (let key in components) {
+            let component = components[key].get();
+            if (isImplementing(component, 'shinysdr.plugins.hamlib.IRotator')) {
+              if (position) {
+                const azimuth = component.Azimuth.depend(dirty);
+                if (typeof azimuth === 'number' && isFinite(azimuth)) {
+                  features.push({'type': 'azimuth', 'azimuth': azimuth, 'position': position});
+                }
+              }
+            }
+          }
+        });
+        return Object.freeze(features);
+      }),
+      featureRenderer: function (spec, dirty) {
+        switch (spec.type) {
+          case 'track': {
+            const f = renderTrackFeature(dirty, spec.trackCell, spec.name);
+            f.iconURL = require.toUrl('./icons/station-user.svg');
+            return f;
+          }
+          case 'rotator': {
+            // TODO: Draw azimuth line in a different color.
+            // TODO: Calculating great circle lines might be a useful utility function.
+            const line = [];
+            const lat = spec.position[0], lon = spec.position[1];
+            const sinlat = dsin(lat), coslat = dcos(lat);
+            const sinazimuth = dsin(spec.azimuth), cosazimuth = dcos(spec.azimuth);
+            for (let angle = 0; angle < 180 + smoothStep/2; angle += smoothStep) {
+              // Algorithm adapted from https://github.com/chrisveness/geodesy/blob/v1.1.2/latlon-spherical.js#L212
+              const targetLat = dasin(
+                sinlat*dcos(angle) +
+                coslat*dsin(angle)*cosazimuth);
+              const targetLon = lon + datan2(
+                sinazimuth*dsin(angle)*coslat,
+                dcos(angle)-sinlat*dsin(targetLat));
+              line.push(Object.freeze({position: Object.freeze([targetLat, targetLon])}));
+            }
+            return Object.freeze({
+              lineWeight: 2,
+              polylines: Object.freeze([Object.freeze(line)])
+            });
+          }
+        }
+      },
     });
   });
 

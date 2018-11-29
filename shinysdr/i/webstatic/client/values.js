@@ -346,7 +346,7 @@ define([
   function isImplementing(object, interfaceName) {
     return !!object['_implements_' + interfaceName];
   }
-  exports.getInterfaces = getInterfaces;
+  exports.isImplementing = isImplementing;
   
   // Creates a cell whose value is cell.get()[prop].get() if that expression is valid and undefined otherwise.
   // TODO: Write tests of this because it is hairy.
