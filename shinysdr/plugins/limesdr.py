@@ -29,6 +29,7 @@ except ImportError:
     _available = False
 
 from shinysdr.devices import Device, IRXDriver
+from shinysdr.i.pycompat import defaultstr
 from shinysdr.signals import SignalType
 from shinysdr.types import EnumT, RangeT
 from shinysdr import units
@@ -79,8 +80,9 @@ class _LimeSDRTuning(object):
     def get_vfo_cell(self):
         return self.__vfo_cell
 
-    def calc_usable_bandwidth(self, sample_rate):
-        passband = sample_rate * (3 / 8)  # 3/4 of + and - halves
+    def calc_usable_bandwidth(self, total_bandwidth):
+        # Assume right up against the edges of the filter are unusable.
+        passband = total_bandwidth * (3 / 8)  # 3/4 of + and - halves
         return RangeT([(-passband, passband)])
     
     def set_block(self, value):
@@ -99,7 +101,7 @@ def create_source(serial, device_type, lna_path, sample_rate, freq, if_bandwidth
         chip_mode=SISO,  # SISO(1),MIMO(2)
         channel=ch,  # A(0),B(1)
         file_switch=0,  # Don't load settings from a file
-        filename=str(''),
+        filename=defaultstr(''),
         rf_freq=freq,  # Center frequency in Hz
         samp_rate=sample_rate,
         oversample=0,  # 0(default),1,2,4,8,16,32
@@ -147,11 +149,12 @@ def LimeSDRDevice(
     if not _available:
         raise Exception('LimeSDRDevice: gr-limesdr Python bindings not found; cannot create device')
     
-    serial = str(serial)  # ensure not unicode type as we talk to byte-oriented C++
+    serial = defaultstr(serial)
     if name is None:
         name = 'LimeSDR %s' % serial
 
-    # TODO: Load these initial values from the saved state?
+    # TODO: High gain might be unsafe, but low gain might result in failed calibration.
+    # Ideally we'd load these initial values from the saved state?
     freq = 1e9
     gain = 50
     if_bandwidth = 3e6
@@ -193,7 +196,7 @@ class _LimeSDRRXDriver(ExportedState, gr.hier_block2):
                  tuning,
                  sample_rate):
         gr.hier_block2.__init__(
-            self, b'RX ' + str(name),
+            self, defaultstr('RX ' + name),
             gr.io_signature(0, 0, 0),
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
         )
