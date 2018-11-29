@@ -130,8 +130,8 @@ def create_source(serial, device_type, lna_path, sample_rate, freq, if_bandwidth
 def LimeSDRDevice(
         serial,
         device_type,
-        lna_path,
-        sample_rate,
+        lna_path=LNAW,
+        sample_rate=2.4e6,
         name=None,
         calibration=True):
     """

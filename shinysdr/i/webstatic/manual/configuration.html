@@ -363,6 +363,25 @@ config.devices.add(u'sim', SimulatedDevice())</pre>
 config.devices.add(u'rtl', OsmoSDRDevice('rtl=0', correction_ppm=-52))</pre>
 </dd>
 
+<dt><code>shinysdr.plugins.limesdr.LimeSDRDevice(serial='...', device_type=..., lna_path=..., name=u'...', sample_rate=..., calibration=True)</code></dt>
+<dd>
+  <p>Any LMS7002M device supported by the <a href="https://github.com/myriadrf/gr-limesdr">gr-limesdr</a>.</p>
+  
+  <p><code>serial</code> is required, and must be the serial number of the device as a string; <code>LimeUtil --find</code> can be used to list the serial numbers of attached radios.</p>
+  
+  <p><code>device_type</code> is required, and must be the <code>LimeSDRUSB</code> or <code>LimeSDRMini</code> constants from the module.</p>
+  
+  <p><code>lna_path</code> is optional, to specify the default RX port on the device. It takes the values <code>LNANONE</code>, <code>LNAL</code>, <code>LNAH</code>, or <code>LNAW</code> exported from the <code>shinysdr.plugins.limesdr</code> module. The RX port can also be changed at runtime.</p>
+  
+  <p><code>sample_rate</code> is optional, and defaults to 2.4 Msps.</p>
+
+  <p><code>calibration</code> is optional, and can be used to disable hardware calibration (rare).</p>
+  
+  <p>Example:</p>
+  <pre>from shinysdr.plugins.limesdr import LimeSDRDevice, LimeSDRUSB, LNAL
+config.devices.add(u'limesdr', LimeSDRDevice(serial='0009060B00123456', device_type=LimeSDRUSB, lna_path=LNAL))</pre>
+</dd>
+
 </dl>
 
 <h2 id="special">Available special-purpose devices</h2>
