@@ -276,7 +276,7 @@ class _LimeSDRRXDriver(ExportedState, gr.hier_block2):
 
     # zero means no filter
     @exported_value(
-        type_fn=lambda self: RangeT([(0, 0), (1e3, min(130e6, self.__signal_type.get_sample_rate()))], unit=units.Hz),
+        type_fn=lambda self: RangeT([(1e3, min(130e6, self.__signal_type.get_sample_rate()))], unit=units.Hz),
         changes='this_setter',
         label='Hardware filter',
         description='Bandwidth of the analog and digital filters.')
@@ -287,7 +287,7 @@ class _LimeSDRRXDriver(ExportedState, gr.hier_block2):
     @setter
     def set_bandwidth(self, value):
         self.__track_bandwidth = float(value)
-        if value == 0:
+        if value == self.__signal_type.get_sample_rate():
             self.__source.set_analog_filter(False, 0, ch)
             self.__source.set_digital_filter(False, 0, ch)
             return
