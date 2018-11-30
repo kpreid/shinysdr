@@ -20,7 +20,6 @@ from __future__ import absolute_import, division, unicode_literals
 from zope.interface import implementer  # available via Twisted
 
 from gnuradio import gr
-from gnuradio import blocks
 
 try:
     import limesdr
