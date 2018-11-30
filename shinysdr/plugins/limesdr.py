@@ -58,10 +58,6 @@ UPCONVERT = 0
 DOWNCONVERT = 1
 
 
-# default tune_delay value
-DEFAULT_DELAY = 0.07
-
-
 class _LimeSDRTuning(object):
     def __init__(self, lime_block):
         self.__lime_block = lime_block
@@ -227,10 +223,6 @@ class _LimeSDRRXDriver(ExportedState, gr.hier_block2):
             })
         self.__track_lna_path = lna_path
         
-        # Blocks
-        self.__state_while_inactive = {}
-        self.__placeholder = blocks.vector_source_c([])
-        
         self.__signal_type = SignalType(
             kind='IQ',
             sample_rate=sample_rate)
@@ -242,7 +234,8 @@ class _LimeSDRRXDriver(ExportedState, gr.hier_block2):
     
     # implement IRXDriver
     def get_tune_delay(self):
-        return DEFAULT_DELAY
+        # TODO: Measure this.
+        return 0.07
 
     # implement IRXDriver
     def get_usable_bandwidth(self):
@@ -252,7 +245,8 @@ class _LimeSDRRXDriver(ExportedState, gr.hier_block2):
     
     # implement IRXDriver
     def close(self):
-        self._stop_rx()
+        self.disconnect_all()
+        self.__source = None
         self.__tuning = None
 
     @exported_value(
@@ -287,7 +281,6 @@ class _LimeSDRRXDriver(ExportedState, gr.hier_block2):
         label='Hardware filter',
         description='Bandwidth of the analog and digital filters.')
     def get_bandwidth(self):
-        # Analog filter goes down to 1.5e6, digital filter goes arbitrarily low.
         if self.__source is None: return 0.0
         return self.__track_bandwidth
     
@@ -298,20 +291,13 @@ class _LimeSDRRXDriver(ExportedState, gr.hier_block2):
             self.__source.set_analog_filter(False, 0, ch)
             self.__source.set_digital_filter(False, 0, ch)
             return
+        # Analog filter goes down to 1.5e6, digital filter goes arbitrarily low.
         analog = max(value, 1.5e6)
         self.__source.set_analog_filter(True, float(analog), ch)
         self.__source.set_digital_filter(True, float(value), ch)
     
     def notify_reconnecting_or_restarting(self):
         pass
-
-    # link to tx driver
-    def _stop_rx(self):
-        self.disconnect_all()
-        self.__state_while_inactive = self.state_to_json()
-        self.__tuning.set_block(None)
-        self.__source = None
-        self.connect(self.__placeholder, self)
 
 
 # TODO: Implement TX driver.
