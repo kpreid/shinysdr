@@ -35,6 +35,7 @@ define([
   const {
     register: registerMapPlugin,
     renderTrackFeature,
+    greatCircleLineAlong,
   } = import_map_core;
   const {
     mod
@@ -460,39 +461,23 @@ define([
   });
   
   registerMapPlugin(({addLayer, scheduler, index}) => {
-    const smoothStep = 1;
     addLayer('Station Position', {
-      featuresCell: new DerivedCell(anyT, scheduler, function(dirty) {
-        let features = [];
+      featuresCell: new DerivedCell(anyT, scheduler, (dirty) => {
+        const features = [];
         // TODO: Show only the mapPluginConfig.radio.source device, and not all devices?
         const devices = index.implementing('shinysdr.devices.IDevice').depend(dirty);
         devices.forEach(device => {
           const name = '';  // TODO: Device name doesn't appear to be available?
-          let position;
-          // TODO: There's gotta be a better way to find child components that implement a given interface.
           const components = device.components.depend(dirty);
-          for (let key in components) {
-            let component = components[key].get();
-            if (isImplementing(component, 'shinysdr.devices.IPositionedDevice')) {
-              const track = component.track.depend(dirty);
-              const lat = track.latitude.value;
-              const lon = track.longitude.value;
-              if (typeof lat === 'number' && typeof lon === 'number' && isFinite(lat) && isFinite(lon)) {
-                position = [lat, lon];
-              }
-              features.push({'type': 'track', 'trackCell': component.track, 'name': name});
-            }
-          }
-          for (let key in components) {
-            let component = components[key].get();
-            if (isImplementing(component, 'shinysdr.plugins.hamlib.IRotator')) {
-              if (position) {
-                const azimuth = component.Azimuth.depend(dirty);
-                if (typeof azimuth === 'number' && isFinite(azimuth)) {
-                  features.push({'type': 'azimuth', 'azimuth': azimuth, 'position': position});
-                }
-              }
-            }
+          const positionedDevices = findImplementers(components, 'shinysdr.devices.IPositionedDevice');
+          positionedDevices.forEach(component => {
+            features.push({'type': 'track', 'trackCell': component.track, 'name': name});
+          });
+          if (positionedDevices.length) {
+            const rotators = findImplementers(components, 'shinysdr.plugins.hamlib.IRotator');
+            rotators.forEach(component => {
+              features.push({'type': 'rotator', 'trackCell': positionedDevices[0].track, 'azimuthCell': component.Azimuth});
+            });
           }
         });
         return Object.freeze(features);
@@ -507,24 +492,19 @@ define([
           case 'rotator': {
             // TODO: Draw azimuth line in a different color.
             // TODO: Calculating great circle lines might be a useful utility function.
-            const line = [];
-            const lat = spec.position[0], lon = spec.position[1];
-            const sinlat = dsin(lat), coslat = dcos(lat);
-            const sinazimuth = dsin(spec.azimuth), cosazimuth = dcos(spec.azimuth);
-            for (let angle = 0; angle < 180 + smoothStep/2; angle += smoothStep) {
-              // Algorithm adapted from https://github.com/chrisveness/geodesy/blob/v1.1.2/latlon-spherical.js#L212
-              const targetLat = dasin(
-                sinlat*dcos(angle) +
-                coslat*dsin(angle)*cosazimuth);
-              const targetLon = lon + datan2(
-                sinazimuth*dsin(angle)*coslat,
-                dcos(angle)-sinlat*dsin(targetLat));
-              line.push(Object.freeze({position: Object.freeze([targetLat, targetLon])}));
+	    const track = spec.trackCell.depend(dirty);
+            const [lat, lon] = [track.latitude.value, track.longitude.value];
+            // TODO: Why are these isFinite guards necessary?
+            if (typeof lat === 'number' && typeof lon === 'number' && isFinite(lat) && isFinite(lon)) {
+              const azimuth = spec.azimuthCell.depend(dirty);
+              if (typeof azimuth === 'number' && isFinite(azimuth)) {
+                return Object.freeze({
+                  lineWeight: 2,
+                  polylines: Object.freeze([greatCircleLineAlong(lat, lon, azimuth)]),
+                });
+              }
             }
-            return Object.freeze({
-              lineWeight: 2,
-              polylines: Object.freeze([Object.freeze(line)])
-            });
+            return Object.freeze({});
           }
         }
       },

@@ -347,6 +347,19 @@ define([
     return !!object['_implements_' + interfaceName];
   }
   exports.isImplementing = isImplementing;
+
+  function findImplementers(array, interfaceName) {
+    const out = [];
+    for (const key in array) {
+      // TODO: By using .get() here, we assume that elements will not suddenly start or stop implementing an interface.
+      const value = array[key].get();
+      if (isImplementing(value, interfaceName)) {
+	out.push(value);
+      }
+    }
+    return out;
+  }
+  exports.findImplementers = findImplementers;
   
   // Creates a cell whose value is cell.get()[prop].get() if that expression is valid and undefined otherwise.
   // TODO: Write tests of this because it is hairy.

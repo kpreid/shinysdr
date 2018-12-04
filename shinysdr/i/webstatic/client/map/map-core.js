@@ -1684,6 +1684,25 @@ define([
     return renderedFeature;
   }
   exports.renderTrackFeature = renderTrackFeature;
-  
+
+  function greatCircleLineAlong(lat, lon, bearing) {
+    const smoothStep = 1;
+    const line = [];
+    const sinlat = dsin(lat), coslat = dcos(lat);
+    const sinazimuth = dsin(bearing), cosazimuth = dcos(bearing);
+    for (let angle = 0; angle < 180 + smoothStep/2; angle += smoothStep) {
+      // Algorithm adapted from https://github.com/chrisveness/geodesy/blob/v1.1.2/latlon-spherical.js#L212
+      const targetLat = dasin(
+        sinlat*dcos(angle) +
+          coslat*dsin(angle)*cosazimuth);
+      const targetLon = lon + datan2(
+        sinazimuth*dsin(angle)*coslat,
+        dcos(angle)-sinlat*dsin(targetLat));
+      line.push(Object.freeze({position: Object.freeze([targetLat, targetLon])}));
+    }
+    return Object.freeze(line);
+  }
+  exports.greatCircleLineAlong = greatCircleLineAlong;
+
   return Object.freeze(exports);
 });
