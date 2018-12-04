@@ -54,6 +54,7 @@ define([
   const {
     ConstantCell,
     DerivedCell,
+    findImplementers,
     Index,
     LocalCell,
     StorageCell,
@@ -229,7 +230,27 @@ define([
         l.expectNotCalled(done);
       });
     });
-  
+
+    describe('findImplementers', () => {
+      let structure;
+      beforeEach(function () {
+        structure = new LocalCell(blockT, makeBlock({
+          foo: new LocalCell(blockT, makeBlock({})),
+          bar: new LocalCell(blockT, makeBlock({}))
+        }));
+        Object.defineProperty(structure.get().foo.get(), '_implements_Foo', {value:true});
+      });
+
+      it('should find foo', () => {
+	const results = findImplementers(structure.get(), 'Foo');
+	expect(results).toContain(structure.get().foo.get());
+	expect(results.length).toBe(1);
+
+	const noresults = findImplementers(structure.get(), 'Bar');
+	expect(noresults.length).toBe(0);
+      });
+    });
+
     describe('Index', function () {
       let structure;
       beforeEach(function () {
