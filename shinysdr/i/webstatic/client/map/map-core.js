@@ -91,6 +91,8 @@ define([
   const {
     cos,
     sin,
+    asin,
+    atan2
   } = Math;
   
   const exports = {};
@@ -101,6 +103,8 @@ define([
   var RADIANS_PER_DEGREE = Math.PI / 180;
   function dcos(x) { return cos(RADIANS_PER_DEGREE * x); }
   function dsin(x) { return sin(RADIANS_PER_DEGREE * x); }
+  function dasin(x) { return asin(x)/RADIANS_PER_DEGREE; }
+  function datan2(x, y) { return atan2(x, y)/RADIANS_PER_DEGREE; }
   
   function mean(array) {
     return array.reduce(function (a, b) { return a + b; }, 0) / array.length;
@@ -1685,8 +1689,8 @@ define([
   }
   exports.renderTrackFeature = renderTrackFeature;
 
+  const smoothStep = 1;
   function greatCircleLineAlong(lat, lon, bearing) {
-    const smoothStep = 1;
     const line = [];
     const sinlat = dsin(lat), coslat = dcos(lat);
     const sinazimuth = dsin(bearing), cosazimuth = dcos(bearing);
@@ -1704,5 +1708,31 @@ define([
   }
   exports.greatCircleLineAlong = greatCircleLineAlong;
 
+  function greatCircleLineTo(lat1, lon1, lat2, lon2) {
+    const line = [];
+    const deltaLat = lat2-lat1;
+    const deltaLon = lon2-lon1;
+    const a = Math.pow(dsin(deltaLat/2), 2)
+          + dcos(lat1)*dcos(lat2)*Math.pow(dsin(deltaLon/2), 2);
+    const angularDistance = 2*datan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    for (let angle = 0; angle < angularDistance; angle += smoothStep) {
+      const A = dsin(angularDistance-angle)/dsin(angularDistance);
+      const B = dsin(angle)/dsin(angularDistance);
+      
+      const x = A * dcos(lat1) * dcos(lon1) + B * dcos(lat2) * dcos(lon2);
+      const y = A * dcos(lat1) * dsin(lon1) + B * dcos(lat2) * dsin(lon2);
+      const z = A * dsin(lat1) + B * dsin(lat2);
+      
+      line.push(Object.freeze({position: Object.freeze([
+        datan2(z, Math.sqrt(x*x + y*y)),
+        datan2(y, x)
+      ])}));
+    }
+    line.push(Object.freeze({position: Object.freeze([lat2, lon2])}));
+    return Object.freeze(line);
+  }
+  exports.greatCircleLineTo = greatCircleLineTo;
+  
   return Object.freeze(exports);
 });

@@ -36,6 +36,7 @@ define([
     register: registerMapPlugin,
     renderTrackFeature,
     greatCircleLineAlong,
+    greatCircleLineTo,
   } = import_map_core;
   const {
     mod
@@ -59,15 +60,10 @@ define([
   const {
     cos,
     sin,
-    asin,
-    atan2
   } = Math;
   
   const RADIANS_PER_DEGREE = Math.PI / 180;
   function dcos(x) { return cos(RADIANS_PER_DEGREE * x); }
-  function dsin(x) { return sin(RADIANS_PER_DEGREE * x); }
-  function dasin(x) { return asin(x)/RADIANS_PER_DEGREE; }
-  function datan2(x, y) { return atan2(x, y)/RADIANS_PER_DEGREE; }
   
   // TODO: Instead of using a blank icon, provide a way to skip the geometry entirely
   const blank = 'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22/%3E';
@@ -139,14 +135,11 @@ define([
     addLayer('Basemap', makeStaticLayer(require.toUrl('./basemap.geojson.gz'), scheduler));
   });
   
-  function deviceTrack(device, dirty) {
-    // TODO full of kludges
-    var components = device.components.depend(dirty);
-    // components._reshapeNotice.listen(dirty);  // can't happen
-    if (!components.position) return null;
-    var positionObj = components.position.depend(dirty);
-    if (!positionObj['_implements_shinysdr.devices.IPositionedDevice']) return null;
-    return positionObj.track.depend(dirty);
+  function deviceTracks(device, dirty) {
+    return findImplementers(
+      device.components.depend(dirty),
+      'shinysdr.devices.IPositionedDevice'
+    ).map(component => component.track.depend(dirty));
   }
   
   registerMapPlugin(function databaseLayerPlugin(mapPluginConfig) {
@@ -163,7 +156,7 @@ define([
       const radio = radioCell.depend(dirty);
       const device = radio.source.depend(dirty);
       const center = device.freq.depend(dirty);
-      const track = deviceTrack(device, dirty);
+      const tracks = deviceTracks(device, dirty);
       // TODO: Ask the "bandwidth" question directly rather than hardcoding logic here
       const width = device.rx_driver.depend(dirty).output_type.depend(dirty).sample_rate;
       const lower = center - width / 2;
@@ -181,7 +174,7 @@ define([
         lower: lower,
         upper: upper,
         receiving: receiving,
-        track: track
+        tracks: tracks
       };
     });
   
@@ -213,17 +206,15 @@ define([
         var inSourceBand = info.lower < record.freq && record.freq < info.upper;
         var isReceiving = info.receiving.has(record.freq);
         
-        var lines;
-        if (isReceiving && info.track) {
+        const lines = [];
+        if (isReceiving) {
           //var receiver = info.receiving.get(record);
           // TODO: Should be matching against receiver's device rather than selected device
-          // TODO: Does not draw a great circle
-          lines = [[
-            {position: location},
-            {position: [+info.track.latitude.value, +info.track.longitude.value]},
-          ]];
-        } else {
-          lines = [[]];
+          info.tracks.forEach(track => {
+            lines.push(greatCircleLineTo(
+              location[0], location[1],
+              track.latitude.value, track.longitude.value));
+          });
         }
         
         // TODO: style for isReceiving
