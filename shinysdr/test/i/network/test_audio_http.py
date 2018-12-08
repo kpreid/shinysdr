@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018 Kevin Reid <kpreid@switchb.org>
+# Copyright 2018 Kevin Reid and the ShinySDR contributors
 # 
 # This file is part of ShinySDR.
 # 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2017 Phil Frost <indigo@bitglue.com>
+# Copyright 2017 Kevin Reid and the ShinySDR contributors
 # 
 # This file is part of ShinySDR.
 # 

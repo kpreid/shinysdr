@@ -1,4 +1,4 @@
-# Copyright 2016 Kevin Reid <kpreid@switchb.org>
+# Copyright 2016 Kevin Reid and the ShinySDR contributors
 #
 # This file is part of ShinySDR.
 #
