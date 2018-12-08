@@ -59,7 +59,6 @@ define([
 
   const {
     cos,
-    sin,
   } = Math;
   
   const RADIANS_PER_DEGREE = Math.PI / 180;
