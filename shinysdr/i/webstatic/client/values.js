@@ -353,11 +353,9 @@ define([
     // TODO: DerivedCell doesn't actually use its scheduler argument; why does it need to be here?
     return new DerivedCell(anyT, scheduler, function (dirty) {
       const block = blockCell.depend(dirty);
-      // TODO: Why doesn't depending on the block also listen on _reshapeNotice?
       block._reshapeNotice.listen(dirty);
       const out = [];
       for (const key in block) {
-        // TODO: Do we need to listen on block[key]'s _reshapeNotice too?
         const value = block[key].depend(dirty);
         if (isImplementing(value, interfaceName)) {
           out.push(value);
