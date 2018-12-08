@@ -348,18 +348,25 @@ define([
   }
   exports.isImplementing = isImplementing;
 
-  function findImplementers(array, interfaceName) {
-    const out = [];
-    for (const key in array) {
-      // TODO: By using .get() here, we assume that elements will not suddenly start or stop implementing an interface.
-      const value = array[key].get();
-      if (isImplementing(value, interfaceName)) {
-	out.push(value);
+  // Creates a cell whose value is the array of cells in blockCell's attributes that implement interfaceName.
+  function findImplementersInBlockCell(scheduler, blockCell, interfaceName) {
+    // TODO: DerivedCell doesn't actually use its scheduler argument; why does it need to be here?
+    return new DerivedCell(anyT, scheduler, function (dirty) {
+      const block = blockCell.depend(dirty);
+      // TODO: Why doesn't depending on the block also listen on _reshapeNotice?
+      block._reshapeNotice.listen(dirty);
+      const out = [];
+      for (const key in block) {
+        // TODO: Do we need to listen on block[key]'s _reshapeNotice too?
+        const value = block[key].depend(dirty);
+        if (isImplementing(value, interfaceName)) {
+	  out.push(value);
+        }
       }
-    }
-    return out;
+      return out;
+    });
   }
-  exports.findImplementers = findImplementers;
+  exports.findImplementersInBlockCell = findImplementersInBlockCell;
   
   // Creates a cell whose value is cell.get()[prop].get() if that expression is valid and undefined otherwise.
   // TODO: Write tests of this because it is hairy.

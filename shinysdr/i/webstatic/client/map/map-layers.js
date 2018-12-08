@@ -53,7 +53,7 @@ define([
     DerivedCell,
     LocalReadCell,
     StorageCell,
-    findImplementers,
+    findImplementersInBlockCell,
     makeBlock,
   } = import_values;
 
@@ -135,11 +135,12 @@ define([
     addLayer('Basemap', makeStaticLayer(require.toUrl('./basemap.geojson.gz'), scheduler));
   });
   
-  function deviceTracks(device, dirty) {
-    return findImplementers(
-      device.components.depend(dirty),
+  function deviceTracks(scheduler, device, dirty) {
+    return findImplementersInBlockCell(
+      scheduler,
+      device.components,
       'shinysdr.devices.IPositionedDevice'
-    ).map(component => component.track.depend(dirty));
+    ).depend(dirty).map(component => component.track.depend(dirty));
   }
   
   registerMapPlugin(function databaseLayerPlugin(mapPluginConfig) {
@@ -156,7 +157,7 @@ define([
       const radio = radioCell.depend(dirty);
       const device = radio.source.depend(dirty);
       const center = device.freq.depend(dirty);
-      const tracks = deviceTracks(device, dirty);
+      const tracks = deviceTracks(scheduler, device, dirty);
       // TODO: Ask the "bandwidth" question directly rather than hardcoding logic here
       const width = device.rx_driver.depend(dirty).output_type.depend(dirty).sample_rate;
       const lower = center - width / 2;
@@ -459,13 +460,12 @@ define([
         const devices = index.implementing('shinysdr.devices.IDevice').depend(dirty);
         devices.forEach(device => {
           const name = '';  // TODO: Device name doesn't appear to be available?
-          const components = device.components.depend(dirty);
-          const positionedDevices = findImplementers(components, 'shinysdr.devices.IPositionedDevice');
+          const positionedDevices = findImplementersInBlockCell(scheduler, device.components, 'shinysdr.devices.IPositionedDevice').depend(dirty);
           positionedDevices.forEach(component => {
             features.push({'type': 'track', 'trackCell': component.track, 'name': name});
           });
           if (positionedDevices.length) {
-            const rotators = findImplementers(components, 'shinysdr.plugins.hamlib.IRotator');
+            const rotators = findImplementersInBlockCell(scheduler, device.components, 'shinysdr.plugins.hamlib.IRotator').depend(dirty);
             rotators.forEach(component => {
               features.push({'type': 'rotator', 'trackCell': positionedDevices[0].track, 'azimuthCell': component.Azimuth});
             });

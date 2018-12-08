@@ -54,7 +54,7 @@ define([
   const {
     ConstantCell,
     DerivedCell,
-    findImplementers,
+    findImplementersInBlockCell,
     Index,
     LocalCell,
     StorageCell,
@@ -231,7 +231,7 @@ define([
       });
     });
 
-    describe('findImplementers', () => {
+    describe('findImplementersInBlockCell', () => {
       let structure;
       beforeEach(function () {
         structure = new LocalCell(blockT, makeBlock({
@@ -242,12 +242,21 @@ define([
       });
 
       it('should find foo', () => {
-	const results = findImplementers(structure.get(), 'Foo');
+	const results = findImplementersInBlockCell(s, structure, 'Foo').get();
 	expect(results).toContain(structure.get().foo.get());
 	expect(results.length).toBe(1);
 
-	const noresults = findImplementers(structure.get(), 'Bar');
+	const noresults = findImplementersInBlockCell(s, structure, 'Bar').get();
 	expect(noresults.length).toBe(0);
+      });
+
+      it('should notice when a block starts implementing an interface', () => {
+	const block = findImplementersInBlockCell(s, structure, 'Foo');
+	expect(block.get().length).toBe(1);
+	const newBar = makeBlock({});
+        Object.defineProperty(newBar, '_implements_Foo', {value:true});
+	structure.get().bar.set(newBar);
+	expect(block.get().length).toBe(2);
       });
     });
 
