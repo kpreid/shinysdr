@@ -242,21 +242,21 @@ define([
       });
 
       it('should find foo', () => {
-	const results = findImplementersInBlockCell(s, structure, 'Foo').get();
-	expect(results).toContain(structure.get().foo.get());
-	expect(results.length).toBe(1);
+        const results = findImplementersInBlockCell(s, structure, 'Foo').get();
+        expect(results).toContain(structure.get().foo.get());
+        expect(results.length).toBe(1);
 
-	const noresults = findImplementersInBlockCell(s, structure, 'Bar').get();
-	expect(noresults.length).toBe(0);
+        const noresults = findImplementersInBlockCell(s, structure, 'Bar').get();
+        expect(noresults.length).toBe(0);
       });
 
       it('should notice when a block starts implementing an interface', () => {
-	const block = findImplementersInBlockCell(s, structure, 'Foo');
-	expect(block.get().length).toBe(1);
-	const newBar = makeBlock({});
+        const block = findImplementersInBlockCell(s, structure, 'Foo');
+        expect(block.get().length).toBe(1);
+        const newBar = makeBlock({});
         Object.defineProperty(newBar, '_implements_Foo', {value:true});
-	structure.get().bar.set(newBar);
-	expect(block.get().length).toBe(2);
+        structure.get().bar.set(newBar);
+        expect(block.get().length).toBe(2);
       });
     });
 

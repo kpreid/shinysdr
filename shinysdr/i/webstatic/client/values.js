@@ -360,7 +360,7 @@ define([
         // TODO: Do we need to listen on block[key]'s _reshapeNotice too?
         const value = block[key].depend(dirty);
         if (isImplementing(value, interfaceName)) {
-	  out.push(value);
+          out.push(value);
         }
       }
       return out;

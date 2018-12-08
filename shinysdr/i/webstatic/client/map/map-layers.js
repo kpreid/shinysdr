@@ -483,7 +483,7 @@ define([
           case 'rotator': {
             // TODO: Draw azimuth line in a different color.
             // TODO: Calculating great circle lines might be a useful utility function.
-	    const track = spec.trackCell.depend(dirty);
+            const track = spec.trackCell.depend(dirty);
             const [lat, lon] = [track.latitude.value, track.longitude.value];
             // TODO: Why are these isFinite guards necessary?
             if (typeof lat === 'number' && typeof lon === 'number' && isFinite(lat) && isFinite(lon)) {
