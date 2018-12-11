@@ -29,6 +29,7 @@ from zope.interface import implementer  # available via Twisted
 from gnuradio import blocks
 from gnuradio import gr
 
+from shinysdr.devices import DeviceContext
 from shinysdr.i.audiomux import AudioManager
 from shinysdr.i.blocks import MonitorSink, RecursiveLockBlockMixin, Context
 from shinysdr.i.poller import the_subscription_context
@@ -127,6 +128,10 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
         
         for k, d in six.iteritems(devices):
             hookup_vfo_callback(k, d)
+        
+        device_context = DeviceContext(self.__telemetry_store.receive)
+        for device in six.itervalues(devices):
+            device.attach_context(device_context)
         
         self._do_connect()
 

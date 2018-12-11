@@ -344,6 +344,9 @@ class StubComponent(ExportedState):
     """Minimal implementation of IComponent."""
     def close():
         pass
+    
+    def attach_context(self, device_context):
+        """implements IComponent"""
 
 
 @implementer(IRXDriver)

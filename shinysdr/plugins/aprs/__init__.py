@@ -346,6 +346,9 @@ class _APRSISComponent(TelemetryStore):
     def close(self):
         # Note that this does not promptly stop the thread, because we cannot: the aprs.APRS.receive call is blocked on a socket read. The thread will only stop once a message has been received.
         self.__alive = False
+    
+    def attach_context(self, device_context):
+        """implements IComponent"""
 
 
 def _parse_payload(facts, errors, source, destination, payload, receive_time):

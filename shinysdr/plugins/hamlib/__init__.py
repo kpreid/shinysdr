@@ -331,6 +331,9 @@ class _HamlibProxy(ExportedState):
         self.__protocol.transport.loseConnection()
         return self.when_closed()  # used for tests, not part of IComponent
     
+    def attach_context(self, device_context):
+        """implements IComponent"""
+    
     def when_closed(self):
         return fork_deferred(self.__disconnect_deferred)
     

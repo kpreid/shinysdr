@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2014, 2015, 2016, 2017 Kevin Reid and the ShinySDR contributors
+# Copyright 2014, 2015, 2016, 2017, 2018 Kevin Reid and the ShinySDR contributors
 # 
 # This file is part of ShinySDR.
 # 
@@ -29,7 +29,7 @@ from gnuradio import gr
 
 from shinysdr.i.pycompat import defaultstr
 from shinysdr.signals import SignalType
-from shinysdr.telemetry import TelemetryItem, Track, empty_track
+from shinysdr.telemetry import ITelemetryMessage, TelemetryItem, Track, empty_track
 from shinysdr.types import RangeT, ReferenceT
 from shinysdr.values import CellDict, CollectionState, ExportedState, LooseCell, ViewCell, exported_value, nullExportedState
 
@@ -133,9 +133,25 @@ class IComponent(Interface):
         
         This may or may not leave the component in an unusable state.
         """
+    
+    def attach_context(device_context):
+        """Provides an IDeviceContext for the component to use.
+        
+        Components should not assume that this method is called before they are otherwise used.
+        """
 
 
 __all__.append('IComponent')
+
+
+class DeviceContext(object):
+    # TODO: Whipped up to solve a problem, not particularly thought through.
+    
+    def __init__(self, message_sink):
+        self.__message_sink = message_sink
+    
+    def output_message(self, message):
+        self.__message_sink(ITelemetryMessage(message))
 
 
 @implementer(IDevice)
@@ -216,6 +232,10 @@ class Device(ExportedState):
     def get_components_dict(self):
         """Do not mutate the dictionary returned."""
         return self.__components
+    
+    def attach_context(self, device_context):
+        for component in six.itervalues(self.__components):
+            component.attach_context(device_context)
     
     def get_freq(self):
         """
@@ -628,6 +648,9 @@ class _PositionedDeviceComponent(ExportedState):
             longitude=TelemetryItem(float(longitude), None))
 
     def close(self):
+        """implements IComponent"""
+
+    def attach_context(self, device_context):
         """implements IComponent"""
 
     @exported_value(type=Track, changes='never', label='Antenna location')

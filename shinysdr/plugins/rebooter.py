@@ -1,4 +1,4 @@
-# Copyright 2016, 2017 Kevin Reid and the ShinySDR contributors
+# Copyright 2016, 2017, 2018 Kevin Reid and the ShinySDR contributors
 # 
 # This file is part of ShinySDR.
 # 
@@ -39,6 +39,9 @@ class _RebooterComponent(ExportedState):
         self.__reactor = reactor
     
     def close(self):
+        """implements IComponent"""
+    
+    def attach_context(self, device_context):
         """implements IComponent"""
     
     @command(label='Restart server')

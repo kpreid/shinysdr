@@ -163,6 +163,9 @@ class _ElecraftRadio(ExportedState):
         """implements IComponent"""
         self.__protocol.transport.loseConnection()
     
+    def attach_context(self, device_context):
+        """implements IComponent"""
+    
     def iq_center_cell(self):
         """Made available for Device creation; not a well-thought-out interface."""
         return self.__iq_center_cell

@@ -269,3 +269,6 @@ class _DeviceShutdownDetector(ExportedState):
         
     def close(self):
         self.__log.append('close')
+    
+    def attach_context(self, device_context):
+        """implements IComponent"""
