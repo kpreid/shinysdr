@@ -49,7 +49,7 @@ import shinysdr
 from shinysdr.devices import Device, IComponent
 from shinysdr.interfaces import ClientResourceDef
 from shinysdr.i.pycompat import repr_no_string_tag
-from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, TelemetryStore, Track, empty_track
+from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryItem, Track, empty_track
 from shinysdr.types import NoticeT, TimestampT
 from shinysdr.values import ExportedState, exported_value
 
@@ -307,21 +307,21 @@ def APRSISRXDevice(reactor, client, name=None, aprs_filter=None):
     return Device(name=name, components={'aprs-is': component})
 
 
-# TODO being a TelemetryStore is a temporary kludge. We should instead be sending messages to the main telemetry store.
 @implementer(IComponent)
-class _APRSISComponent(TelemetryStore):
+class _APRSISComponent(ExportedState):
     __alive = True
     __log = Logger()
     
     def __init__(self, reactor, client, name, aprs_filter):
-        super(_APRSISComponent, self).__init__(time_source=reactor)
+        # not specifically expecting more than one but this neatly handles zero-or-one
+        self.__device_contexts = []
         
         client.connect(aprs_filter=aprs_filter)  # TODO either expect the user to do this or forward args
         
         def main_callback(line):
-            # TODO: This print-both-formats code is duplicated from multimon.py; it should be a utility in this module instead. Also, we should maybe have a try block.
             message = parse_tnc2(line, time.time(), log=self.__log)
-            self.receive(message)
+            for c in self.__device_contexts:
+                c.output_message(message)
     
         # client blocks in a loop, so set up a thread
         def threaded_callback(line):
@@ -344,11 +344,13 @@ class _APRSISComponent(TelemetryStore):
         # TODO: Allow the filter to be changed at runtime
     
     def close(self):
+        """implements IComponent"""
         # Note that this does not promptly stop the thread, because we cannot: the aprs.APRS.receive call is blocked on a socket read. The thread will only stop once a message has been received.
         self.__alive = False
     
     def attach_context(self, device_context):
         """implements IComponent"""
+        self.__device_contexts.append(device_context)
 
 
 def _parse_payload(facts, errors, source, destination, payload, receive_time):
