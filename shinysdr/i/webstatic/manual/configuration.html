@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  Copyright 2015, 2016, 2017 Kevin Reid and the ShinySDR contributors
+  Copyright 2015, 2016, 2017, 2018 Kevin Reid and the ShinySDR contributors
   
   This file is part of ShinySDR.
   
@@ -373,6 +373,8 @@ config.devices.add(u'rtl', OsmoSDRDevice('rtl=0', correction_ppm=-52))</pre>
   
   <p><code>lna_path</code> is optional, to specify the default RX port on the device. It takes the values <code>LNANONE</code>, <code>LNAL</code>, <code>LNAH</code>, or <code>LNAW</code> exported from the <code>shinysdr.plugins.limesdr</code> module. The RX port can also be changed at runtime.</p>
   
+  <p><code>name</code> is optional, setting a name for the device which will be shown in the UI.</p>
+
   <p><code>sample_rate</code> is optional, and defaults to 2.4 Msps.</p>
 
   <p><code>calibration</code> is optional, and can be used to disable hardware calibration (rare).</p>
@@ -416,6 +418,23 @@ from shinysdr.devices import PositionedDevice
 config.devices.add(u'rtl',
     OsmoSDRDevice('rtl=0'),
     PositionedDevice(27.988056, 86.925278))</pre>
+</dd>
+
+<dt><code>shinysdr.plugins.aprs.APRSISRXDevice(reactor, client, name=u'...', aprs_filter='...')</code></dt>
+<dd>
+  <p>Receives APRS messages from the APRS-IS internet service. Such messages will be displayed in the telemetry view just like APRS messages decoded from RF.</p>
+  
+  <p><code>client</code> must be an <code>aprs.APRS</code> object from <a href="https://pypi.python.org/pypi/aprs">the Python <code>aprs</code> library</a>.
+  
+  <p><code>name</code> is optional, setting a name for the device which will be shown in the UI.</p>
+
+  <p><code>aprs_filter</code> is optional, specifying a filter restricting the messages requested from the server (such as by geographic location). <a href="http://www.aprs-is.net/javAPRSFilter.aspx">Documentation on the filter syntax</a>.</p>
+  
+  <p>Example:</p>
+  <pre>config.devices.add('aprsis', APRSISRXDevice(
+    reactor=config.reactor,
+    client=aprs.APRS('<var>your callsign here</var>'),
+    aprs_filter='<var><a href="http://www.aprs-is.net/javAPRSFilter.aspx">message filter specification here</a></var>'))</pre>
 </dd>
 
 <dt><code>shinysdr.plugins.hamlib.connect_to_rig(config.reactor, options=[<var>...</var>], port=4532)</code></dt>
