@@ -295,9 +295,6 @@ def parse_tnc2(line, receive_time, log=None):
     return parsed
 
 
-# TODO: This is something we want to support, but is not really appropriate as-is.
-# The data should go into the 'shared object', but right now only receivers can retrieve those. (I currently think shared objects ought to become more explicitly about telemetry-type data.) The current situation means that all of the data records get stuffed into an unfortunate part of the UI.
-# We need more support for non-RF devices, so that e.g. this can have a close callback, and perhaps so the rest of the system is aware of what this is actually doing.
 def APRSISRXDevice(reactor, client, name=None, aprs_filter=None):
     """
     client: an aprs.APRS object (see <https://pypi.python.org/pypi/aprs>)
