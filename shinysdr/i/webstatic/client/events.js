@@ -122,12 +122,13 @@ define(() => {
     
     // Kludge for when we need the consequences of user interaction to happen promptly (before the event handler returns). Requirement: use this only to wrap 'top level' callbacks called with nothing significant on the stack.
     syncEventCallback(eventCallback) {
-      return function wrappedForSync() {
+      const wrappedForSync = () => {
         // note no error catching -- don't think it needs it
         var value = eventCallback();
         this._callback();
         return value;
-      }.bind(this);
+      };
+      return wrappedForSync;
     }
     
     _RAFCallback() {

@@ -106,12 +106,12 @@ define([
     Cell.call(this, type_or_metadata);
     this._value = initialValue;
     // TODO use facets instead
-    this._update = function(v) {
+    this._update = v => {
       if (this._value !== v) {
         this._value = v;
         this.n.notify();
       }
-    }.bind(this);
+    };
   }
   LocalReadCell.prototype = Object.create(Cell.prototype, {constructor: {value: LocalReadCell}});
   LocalReadCell.prototype.get = function() {
@@ -151,17 +151,17 @@ define([
   function DerivedCell(type_or_metadata, scheduler, compute) {
     Cell.call(this, type_or_metadata);
     
-    const dirtyCallback = function derivedCellDirtyCallback() {
-      this.n.notify();
-    }.bind(this);
-    var cell = this;
-    dirtyCallback.scheduler = {
+    const cell = this;
+    function derivedCellDirtyCallback() {
+      cell.n.notify();
+    }
+    derivedCellDirtyCallback.scheduler = {
       // This scheduler-like object is a kludge so that we can get a prompt dirty flag.
       // I suspect that there are other use cases for this, in which case it should be extracted into a full scheduler implementation (or a part of the base Scheduler) but I'm waiting to see what the other cases look like first.
-      toString: function () { return '[DerivedCell gimmick scheduler]'; },
-      enqueue: function (f) {
-        if (f !== dirtyCallback) {
-          throw new Error('f !== dirtyCallback');
+      toString() { return '[DerivedCell gimmick scheduler]'; },
+      enqueue(f) {
+        if (f !== derivedCellDirtyCallback) {
+          throw new Error('f !== derivedCellDirtyCallback');
         }
         if (!cell._needsCompute) {
           cell._needsCompute = true;
@@ -170,7 +170,7 @@ define([
       }
     };
     
-    this._compute = Function.prototype.bind.call(compute, undefined, dirtyCallback);
+    this._compute = Function.prototype.bind.call(compute, undefined, derivedCellDirtyCallback);
     this._needsCompute = true;
     
     // Register initial notifications by computing once.

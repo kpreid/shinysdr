@@ -178,7 +178,7 @@ define([
     };
     this.n = {
       notify: notifier.notify.bind(notifier),
-      listen: function (l) {
+      listen: l => {
         if (!this._chainedListening) {
           //console.group(this + ' registering forwarder');
           this._chainedListening = true;
@@ -191,7 +191,7 @@ define([
           //console.log(this + ' locally registering listener');
         }
         notifier.listen(l);
-      }.bind(this)
+      }
     };
   }
   Union.prototype = Object.create(Source.prototype, {constructor: {value: Union}});
@@ -233,9 +233,9 @@ define([
     return this._viewGeneration;
   };
   Union.prototype._isUpToDate = function () {
-    return !this._shrinking && this._unionSources.every(function (source, i) {
+    return !this._shrinking && this._unionSources.every((source, i) => {
       return source.getGeneration() === this._sourceGenerations[i] && source._isUpToDate();
-    }.bind(this));
+    });
   };
   exports.Union = Union;
   
@@ -250,15 +250,15 @@ define([
     this.writable = !!writable;
     if (initializer) {
       initializer({
-        add: function (suppliedRecord, url) {
+        add: (suppliedRecord, url) => {
           this._entries.push(new Record(suppliedRecord, url, this.writable ? this._triggerFacet : null));
-        }.bind(this),
-        makeWritable: function () {
+        },
+        makeWritable: () => {
           if (this._entries.length > 0) {
             throw new Error('too late to makeWritable');
           }
           this.writable = true;
-        }.bind(this)
+        }
       });
     }
   }

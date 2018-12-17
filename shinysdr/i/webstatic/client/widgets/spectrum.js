@@ -201,10 +201,10 @@ define([
     scheduler.claim(prepare);
     prepare();
     
-    window.addEventListener('resize', function (event) {
+    window.addEventListener('resize', event => {
       // immediate to ensure smooth animation and to allow scroll adjustment
       scheduler.callNow(prepare);
-    }.bind(this));
+    });
     
     container.addEventListener('scroll', scheduler.syncEventCallback(function (event) {
       storage.setItem('scroll', String(container.scrollLeft + fractionalScroll));

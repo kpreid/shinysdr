@@ -125,10 +125,10 @@ define([
         acceptFromNetwork();
       }
     };
-    const acceptFromNetwork = function acceptFromNetwork() {
+    const acceptFromNetwork = () => {
       value = remoteValue;
       this.n.notify();
-    }.bind(this);
+    };
   }
   ReadWriteCell.prototype = Object.create(Cell.prototype, {constructor: {value: ReadWriteCell}});
   
