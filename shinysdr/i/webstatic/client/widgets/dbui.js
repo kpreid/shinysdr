@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid and the ShinySDR contributors
+// Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -22,6 +22,7 @@ define([
   '../domtools',
   '../math',
   '../plugins',
+  '../types',
   '../values',
   '../widget',
 ], (
@@ -29,6 +30,7 @@ define([
   import_domtools,
   import_math,
   import_plugins,
+  import_types,
   import_values,
   import_widget
 ) => {
@@ -45,6 +47,9 @@ define([
   const {
     getModeTable,
   } = import_plugins;
+  const {
+    anyT,
+  } = import_types;
   const {
     Cell,
   } = import_values;
@@ -256,33 +261,36 @@ define([
     };
   }
   
-  var NO_RECORD = {};
-  function RecordCellPropCell(recordCell, prop) {
-    this.get = function () {
-      var record = recordCell.get();
-      return record ? record[prop] : NO_RECORD;
-    };
-    this.set = function (value) {
-      recordCell.get()[prop] = value;
-    };
-    this.isWritable = function () {
-      return recordCell.get().writable;
-    };
-    this.n = {
-      listen: function (l) {
-        var now = recordCell.get();
-        if (now) now.n.listen(l);
-        recordCell.n.listen(l);
-      }
-    };
+  const NO_RECORD = {};
+  class RecordCellPropCell extends Cell {
+    constructor(recordCell, prop) {
+      super(anyT);  // TODO: more specific type/metadata
+      this.get = function () {
+        const record = recordCell.get();
+        return record ? record[prop] : NO_RECORD;
+      };
+      this.set = function (value) {
+        recordCell.get()[prop] = value;
+      };
+      this.isWritable = function () {  // TODO: this is wrong, isWritable does not otherwise exist on the JS side (but something like it should)
+        return recordCell.get().writable;
+      };
+      this.n = {
+        listen: function (l) {
+          const now = recordCell.get();
+          if (now) now.n.listen(l);
+          recordCell.n.listen(l);
+        }
+      };
+    }
   }
-  RecordCellPropCell.prototype = Object.create(Cell.prototype, {constructor: {value: RecordCellPropCell}});
   
-  var dbModeTable = Object.create(null);
+  const dbModeTable = Object.create(null);
   dbModeTable[''] = '—';
   for (const key in modeTable) {
     dbModeTable[key] = modeTable[key].info_enum_row.label;
   }
+  Object.freeze(dbModeTable);
   
   function RecordDetails(config) {
     var recordCell = config.target;

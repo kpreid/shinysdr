@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid and the ShinySDR contributors
+// Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -39,38 +39,41 @@ define([
   
   const exports = {};
 
-  function Cell(type_or_metadata) {
-    let type;
-    let metadata;
-    if (type_or_metadata === undefined) {
-      throw new Error('Cell constructed without metadata: ' + this.constructor.name);
-    } else if (type_or_metadata.value_type && type_or_metadata.naming) {
-      type = type_or_metadata.value_type;
-      metadata = type_or_metadata;
-    } else {
-      type = type_or_metadata;
-      metadata = {
-        value_type: type_or_metadata,
-        naming: {
-            'type': 'EnumRow',
-            'label': null,
-            'description': null,
-            'sort_key': null
-        }
-      };
+  class Cell {
+    constructor(type_or_metadata) {
+      let type;
+      let metadata;
+      if (type_or_metadata === undefined) {
+        throw new Error('Cell constructed without metadata: ' + this.constructor.name);
+      } else if (type_or_metadata.value_type && type_or_metadata.naming) {
+        type = type_or_metadata.value_type;
+        metadata = type_or_metadata;
+      } else {
+        type = type_or_metadata;
+        metadata = {
+          value_type: type_or_metadata,
+          naming: {
+              'type': 'EnumRow',
+              'label': null,
+              'description': null,
+              'sort_key': null
+          }
+        };
+      }
+      if (!(type instanceof ValueType)) {
+        throw new TypeError('cell type not a ValueType: ' + type);
+      }
+      // TODO: .metadata was added after .type, and .type is now redundant. Look at whether we want to remove it -- probably not but perhaps make it an accessor
+      this.type = type;
+      this.metadata = metadata;
+      this.n = new Notifier();
     }
-    if (!(type instanceof ValueType)) {
-      throw new TypeError('cell type not a ValueType: ' + type);
+    
+    depend(listener) {
+      this.n.listen(listener);
+      return this.get();
     }
-    // TODO: .metadata was added after .type, and .type is now redundant. Look at whether we want to remove it -- probably not.
-    this.type = type;
-    this.metadata = metadata;
-    this.n = new Notifier();
   }
-  Cell.prototype.depend = function(listener) {
-    this.n.listen(listener);
-    return this.get();
-  };
   exports.Cell = Cell;
   
   function identical(a, b) {
@@ -85,226 +88,246 @@ define([
   }
   
   // Cell whose state is not persistent
-  function LocalCell(type_or_metadata, initialValue) {
-    Cell.call(this, type_or_metadata);
-    this._value = initialValue;
-  }
-  LocalCell.prototype = Object.create(Cell.prototype, {constructor: {value: LocalCell}});
-  LocalCell.prototype.get = function() {
-    return this._value;
-  };
-  LocalCell.prototype.set = function(v) {
-    if (!identical(this._value, v)) {
-      this._value = v;
-      this.n.notify();
+  class LocalCell extends Cell {
+    constructor(type_or_metadata, initialValue) {
+      super(type_or_metadata);
+      this._value = initialValue;
     }
-  };
-  exports.LocalCell = LocalCell;
-  
-  // Cell whose state is not settable
-  function LocalReadCell(type_or_metadata, initialValue) {
-    Cell.call(this, type_or_metadata);
-    this._value = initialValue;
-    // TODO use facets instead
-    this._update = v => {
-      if (this._value !== v) {
+    
+    get() {
+      return this._value;
+    }
+    
+    set(v) {
+      // TODO: add type check
+      if (!identical(this._value, v)) {
         this._value = v;
         this.n.notify();
       }
-    };
+    }
   }
-  LocalReadCell.prototype = Object.create(Cell.prototype, {constructor: {value: LocalReadCell}});
-  LocalReadCell.prototype.get = function() {
-    return this._value;
-  };
+  exports.LocalCell = LocalCell;
+  
+  // Cell whose state is not settable but might be changed by an internal process
+  class LocalReadCell extends Cell {
+    constructor(type_or_metadata, initialValue) {
+      super(type_or_metadata);
+      this._value = initialValue;
+      // TODO use facets instead
+      this._update = v => {
+        if (this._value !== v) {
+          this._value = v;
+          this.n.notify();
+        }
+      };
+    }
+    
+    get() {
+      return this._value;
+    }
+  }
   exports.LocalReadCell = LocalReadCell;
   
   // Cell which cannot be set
   const IMPLICIT_TYPE_PUMPKIN = {};
-  function ConstantCell(value, type_or_metadata=IMPLICIT_TYPE_PUMPKIN) {
-    if (type_or_metadata == IMPLICIT_TYPE_PUMPKIN) {
-      switch (typeof value) {
-        case 'boolean': type_or_metadata = booleanT; break;
-        case 'number': type_or_metadata = numberT; break;
-        case 'string': type_or_metadata = stringT; break;
-        case 'object':
-          if (value !== null && value._reshapeNotice) {
-            type_or_metadata = blockT;
-            break;
-          }
-          throw new Error('ConstantCell: type inference for object ' + JSON.stringify(value) + ' not supported');
-        default:
-          throw new Error('ConstantCell: type inference for value of type ' + (typeof value) + ' not supported');
+  class ConstantCell extends Cell {
+    constructor(value, type_or_metadata=IMPLICIT_TYPE_PUMPKIN) {
+      if (type_or_metadata == IMPLICIT_TYPE_PUMPKIN) {
+        switch (typeof value) {
+          case 'boolean': type_or_metadata = booleanT; break;
+          case 'number': type_or_metadata = numberT; break;
+          case 'string': type_or_metadata = stringT; break;
+          case 'object':
+            if (value !== null && value._reshapeNotice) {
+              type_or_metadata = blockT;
+              break;
+            }
+            throw new Error('ConstantCell: type inference for object ' + JSON.stringify(value) + ' not supported');
+          default:
+            throw new Error('ConstantCell: type inference for value of type ' + (typeof value) + ' not supported');
+        }
       }
+     
+      super(type_or_metadata);
+      this._value = value;
+      this.n = new Neverfier();  // TODO throwing away super's value, unclean
     }
     
-    Cell.call(this, type_or_metadata);
-    this._value = value;
-    this.n = new Neverfier();  // TODO throwing away super's value, unclean
+    get() {
+      return this._value;
+    }
   }
-  ConstantCell.prototype = Object.create(Cell.prototype, {constructor: {value: ConstantCell}});
-  ConstantCell.prototype.get = function () {
-    return this._value;
-  };
   exports.ConstantCell = ConstantCell;
   
-  function DerivedCell(type_or_metadata, scheduler, compute) {
-    Cell.call(this, type_or_metadata);
+  class DerivedCell extends Cell {
+    constructor(type_or_metadata, scheduler, compute) {
+      super(type_or_metadata);
     
-    const cell = this;
-    function derivedCellDirtyCallback() {
-      cell.n.notify();
-    }
-    derivedCellDirtyCallback.scheduler = {
-      // This scheduler-like object is a kludge so that we can get a prompt dirty flag.
-      // I suspect that there are other use cases for this, in which case it should be extracted into a full scheduler implementation (or a part of the base Scheduler) but I'm waiting to see what the other cases look like first.
-      toString() { return '[DerivedCell gimmick scheduler]'; },
-      enqueue(f) {
-        if (f !== derivedCellDirtyCallback) {
-          throw new Error('f !== derivedCellDirtyCallback');
-        }
-        if (!cell._needsCompute) {
-          cell._needsCompute = true;
-          cell.n.notify();
-        }
+      const cell = this;
+      function derivedCellDirtyCallback() {
+        cell.n.notify();
       }
-    };
+      derivedCellDirtyCallback.scheduler = {
+        // This scheduler-like object is a kludge so that we can get a prompt dirty flag.
+        // I suspect that there are other use cases for this, in which case it should be extracted into a full scheduler implementation (or a part of the base Scheduler) but I'm waiting to see what the other cases look like first.
+        toString() { return '[DerivedCell gimmick scheduler]'; },
+        enqueue(f) {
+          if (f !== derivedCellDirtyCallback) {
+            throw new Error('f !== derivedCellDirtyCallback');
+          }
+          if (!cell._needsCompute) {
+            cell._needsCompute = true;
+            cell.n.notify();
+          }
+        }
+      };
     
-    this._compute = Function.prototype.bind.call(compute, undefined, derivedCellDirtyCallback);
-    this._needsCompute = true;
+      this._compute = Function.prototype.bind.call(compute, undefined, derivedCellDirtyCallback);
+      this._needsCompute = true;
     
-    // Register initial notifications by computing once.
-    // Note: this would not be necessary if .depend() were the only interface instead of .n.listen(), so it is perhaps worth considering that.
-    this.get();
-  }
-  DerivedCell.prototype = Object.create(Cell.prototype, {constructor: {value: DerivedCell}});
-  DerivedCell.prototype.get = function () {
-    if (this._needsCompute) {
-      // Note that this._compute could throw. The behavior we have chosen here is to throw on every get call. Other possible behaviors would be to catch and log (or throw-async) the exception and return either a stale value or a pumpkin value.
-      this._value = this._compute();
-      this._needsCompute = false;
+      // Register initial notifications by computing once.
+      // Note: this would not be necessary if .depend() were the only interface instead of .n.listen(), so it is perhaps worth considering that.
+      this.get();
     }
-    return this._value;
-  };
+    
+    get() {
+      if (this._needsCompute) {
+        // Note that this._compute could throw. The behavior we have chosen here is to throw on every get call. Other possible behaviors would be to catch and log (or throw-async) the exception and return either a stale value or a pumpkin value.
+        this._value = this._compute();
+        this._needsCompute = false;
+      }
+      return this._value;
+    }
+  }
   exports.DerivedCell = DerivedCell;
   
-  // Cell which does not really hold a value, but 
-  function CommandCell(fn, type_or_metadata) {
-    // TODO: type is kind of useless, make it useful or make it explicitly stubbed out
-    Cell.call(this, type_or_metadata);
-    this.n = new Neverfier();  // TODO throwing away super's value, unclean
-    this.invoke = function commandProxy(callback) {
-      if (!callback) {
-        callback = Function.prototype;
-      } else if (typeof callback !== 'function') {
-        // sanity check
-        throw new Error('passed a non-function to CommandCell.invoke');
-      }
-      fn(callback);
-    };
+  // A Cell which does not primarily produce a value, but is a side-effecting operation that can be invoked.
+  // This is a Cell for reasons of convenience in the existing architecture, and because it has several similarities.
+  class CommandCell extends Cell {
+    constructor(fn, type_or_metadata) {
+      // TODO: type is kind of useless, make it useful or make it explicitly stubbed out
+      super(type_or_metadata);
+      this.n = new Neverfier();  // TODO throwing away super's value, unclean
+      this.invoke = function commandProxy(callback) {
+        if (!callback) {
+          callback = Function.prototype;
+        } else if (typeof callback !== 'function') {
+          // sanity check
+          throw new Error('passed a non-function to CommandCell.invoke');
+        }
+        fn(callback);
+      };
+    }
+    
+    get() {
+      return null;
+    }
   }
-  CommandCell.prototype = Object.create(Cell.prototype, {constructor: {value: CommandCell}});
-  CommandCell.prototype.get = function () {
-    return null;
-  };
   exports.CommandCell = CommandCell;
   
   // Adds a prefix to Storage (localStorage) keys
-  function StorageNamespace(base, prefix) {
-    this._base = base;
-    this._prefix = prefix;
+  class StorageNamespace {
+    constructor(base, prefix) {
+      this._base = base;
+      this._prefix = prefix;
+    }
+    getItem(key) {
+      return this._base.getItem(this._prefix + key);
+    }
+    setItem(key, value) {
+      return this._base.setItem(this._prefix + key, value);
+    }
+    removeItem(key) {
+      return this._base.removeItem(this._prefix + key);
+    }
   }
-  StorageNamespace.prototype.getItem = function (key) {
-    return this._base.getItem(this._prefix + key);
-  };
-  StorageNamespace.prototype.setItem = function (key, value) {
-    return this._base.setItem(this._prefix + key, value);
-  };
-  StorageNamespace.prototype.removeItem = function (key) {
-    return this._base.removeItem(this._prefix + key);
-  };
   exports.StorageNamespace = StorageNamespace;
   
-  var allStorageCells = [];
+  const allStorageCells = [];
   // Note that browsers do not fire this event unless the storage was changed from SOME OTHER window; so this code is not usually applicable.
   // TODO: Use the properties of the storage event to not need to iterate over all cells. This will require StorageNamespace to provide remapped events.
-  window.addEventListener('storage', function (event) {
-    allStorageCells.forEach(function (cell) { cell.get(); });
+  window.addEventListener('storage', event => {
+    allStorageCells.forEach(cell => { cell.get(); });
   });
   
   // Presents a Storage (localStorage) entry as a cell; the value must be representable as JSON.
   // Warning: Only one cell should exist per unique key, or notifications may not occur; also, creating cells repeatedly will leak.
-  // TODO: Fix that by interning cells.
-  function StorageCell(storage, type_or_metadata, initialValue, key) {
-    key = String(key);
+  // TODO: Fix that by interning cells (which is no more of a memory leak than the storage itself).
+  class StorageCell extends Cell {
+    constructor(storage, type_or_metadata, initialValue, key) {
+      key = String(key);
 
-    Cell.call(this, type_or_metadata);
+      super(type_or_metadata);
 
-    this._storage = storage;
-    this._key = key;
-    this._initialValue = JSON.parse(JSON.stringify(initialValue));
+      this._storage = storage;
+      this._key = key;
+      this._initialValue = JSON.parse(JSON.stringify(initialValue));
     
-    this._lastSeenString = {};  // guaranteed unequal
-    this._lastSeenValue = undefined;
-    this.get();  // initialize last-seen
+      this._lastSeenString = {};  // guaranteed unequal
+      this._lastSeenValue = undefined;
+      this.get();  // initialize last-seen
     
-    allStorageCells.push(this);
-  }
-  StorageCell.prototype = Object.create(Cell.prototype, {constructor: {value: StorageCell}});
-  StorageCell.prototype.get = function() {
-    var storedString = this._storage.getItem(this._key);
-    
-    if (storedString !== this._lastSeenString) {
-      // (Possibly unexpected) change.
-      this._lastSeenString = storedString;
-      this.n.notify();
-    } else {
-      // Shortcut: don't parse.
-      return this._lastSeenValue;
+      allStorageCells.push(this);
     }
     
-    let value = this._initialValue;
-    if (storedString) {
-      try {
-        value = JSON.parse(storedString);
-      } catch (e) {
-        if (e instanceof SyntaxError) {
-          console.warn('Malformed JSON found in Storage (ignored): ' + JSON.stringify(storedString));
-        } else {
-          throw e;
+    get() {
+      const storedString = this._storage.getItem(this._key);
+    
+      if (storedString !== this._lastSeenString) {
+        // (Possibly unexpected) change.
+        this._lastSeenString = storedString;
+        this.n.notify();
+      } else {
+        // Shortcut: don't parse.
+        return this._lastSeenValue;
+      }
+    
+      let value = this._initialValue;
+      if (storedString) {
+        try {
+          value = JSON.parse(storedString);
+        } catch (e) {
+          if (e instanceof SyntaxError) {
+            console.warn('Malformed JSON found in Storage (ignored): ' + JSON.stringify(storedString));
+          } else {
+            throw e;
+          }
         }
       }
+      this._lastSeenValue = value;
+      return value;
     }
-    this._lastSeenValue = value;
-    return value;
-  };
-  StorageCell.prototype.set = function(value) {
-    this._storage.setItem(this._key, JSON.stringify(value));
-    this.get();  // trigger notification and read-back
-  };
+    
+    set(value) {
+      this._storage.setItem(this._key, JSON.stringify(value));
+      this.get();  // trigger notification and read-back
+    }
+  }
   exports.StorageCell = StorageCell;
   
   // Identical to network.BulkDataCell but takes local updates rather than doing any binary message processing.
   // Kludge until BulkDataCell stops having a special extra protocol.
-  function FakeBulkDataCell(metadata, initialValue, didSubscribe = Function.prototype) {
-    Cell.call(this, metadata);
+  class FakeBulkDataCell extends Cell {
+    constructor(metadata, initialValue, didSubscribe = Function.prototype) {
+      super(metadata);
     
-    let lastValue = initialValue;
-    const subscriptions = [];
+      let lastValue = initialValue;
+      const subscriptions = [];
     
-    this.get = () => lastValue;
-    this.subscribe = callback => {
-      subscriptions.push(callback);
-      didSubscribe();
-    };
-    this._update = value => {
-      lastValue = value;
-      const p = Promise.resolve(value);
-      for (const callback of subscriptions) {
-        p.then(callback);
-      }
-    };
-    this._hasSubscribers = () => !!subscriptions.length;
+      this.get = () => lastValue;
+      this.subscribe = callback => {
+        subscriptions.push(callback);
+        didSubscribe();
+      };
+      this._update = value => {
+        lastValue = value;
+        const p = Promise.resolve(value);
+        for (const callback of subscriptions) {
+          p.then(callback);
+        }
+      };
+      this._hasSubscribers = () => !!subscriptions.length;
+    }
   }
   exports.FakeBulkDataCell = FakeBulkDataCell;
   

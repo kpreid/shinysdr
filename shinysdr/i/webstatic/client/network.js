@@ -100,105 +100,108 @@ define([
   }
   exports.externalGet = externalGet;
   
-  function ReadWriteCell(setter, assumed, metadata) {
-    Cell.call(this, metadata);
-    let value = assumed;
-    let remoteValue = assumed;
-    let inhibitCount = 0;
-    this.get = function () { return value; };
-    this.set = function (newValue) {
-      value = newValue;
-      this.n.notify();
-      setter(newValue, decAndAccept);
-      inhibitCount++;
-    };
-    this._update = function _update(newValue) {
-      remoteValue = newValue;
-      if (inhibitCount === 0) {
-        acceptFromNetwork();
-      }
-    };
-    const decAndAccept = function decAndAccept() {
-      inhibitCount--;
-      if (inhibitCount === 0) {
-        // If there are now no outstanding set requests, then the last value we got is the correct value.
-        acceptFromNetwork();
-      }
-    };
-    const acceptFromNetwork = () => {
-      value = remoteValue;
-      this.n.notify();
-    };
-  }
-  ReadWriteCell.prototype = Object.create(Cell.prototype, {constructor: {value: ReadWriteCell}});
-  
-  function ReadCell(setter, /* initial */ value, metadata, transform) {
-    Cell.call(this, metadata);
-    
-    this._update = data => {
-      value = transform(data);
-      this.n.notify();
-    };
-    this._update.append = patchData => {
-      // TODO: very definitely does not work in general
-      value = value + transform(patchData);
-      this.n.notify();
-    };
-    
-    this.get = function() {
-      return value;
-    };
-  }
-  ReadCell.prototype = Object.create(Cell.prototype, {constructor: {value: ReadCell}});
-  
-  function RemoteCommandCell(setter, metadata) {
-    // TODO: type is kind of useless, make it useful or make it explicitly stubbed out
-    function setterAdapter(callback) {
-      setter(null, callback);
+  class ReadWriteCell extends Cell {
+    constructor(setter, assumed, metadata) {
+      super(metadata);
+      let value = assumed;
+      let remoteValue = assumed;
+      let inhibitCount = 0;
+      this.get = function () { return value; };
+      this.set = function (newValue) {
+        value = newValue;
+        this.n.notify();
+        setter(newValue, decAndAccept);
+        inhibitCount++;
+      };
+      this._update = function _update(newValue) {
+        remoteValue = newValue;
+        if (inhibitCount === 0) {
+          acceptFromNetwork();
+        }
+      };
+      const decAndAccept = function decAndAccept() {
+        inhibitCount--;
+        if (inhibitCount === 0) {
+          // If there are now no outstanding set requests, then the last value we got is the correct value.
+          acceptFromNetwork();
+        }
+      };
+      const acceptFromNetwork = () => {
+        value = remoteValue;
+        this.n.notify();
+      };
     }
-    CommandCell.call(this, setterAdapter, metadata);
   }
-  RemoteCommandCell.prototype = Object.create(CommandCell.prototype, {constructor: {value: RemoteCommandCell}});
-  //exports.CommandCell = CommandCell;  // not yet needed, params in flux, so not exported yet
   
-  function BulkDataCell(setter, initialElementsJson, metadata) {
-    let type = metadata.value_type;
+  class ReadCell extends Cell {
+    constructor(setter, /* initial */ value, metadata, transform) {
+      super(metadata);
     
-    let currentElements = Array.prototype.map.call(initialElementsJson,
-        el => convertBulkDataElementJson(type, el));
-
-    // kludge to ensure that widgets get all of the frames
-    // TODO: put this on a more general and sound framework
-    var subscriptions = [];
+      this._update = data => {
+        value = transform(data);
+        this.n.notify();
+      };
+      this._update.append = patchData => {
+        // TODO: very definitely does not work in general
+        value = value + transform(patchData);
+        this.n.notify();
+      };
     
-    // infoAndFFT is of the format [{freq:<number>, rate:<number>}, <Float32Array>]
-    function transform(buffer) {
-      const newElement = convertBulkDataElementBinary(type, buffer);
-      currentElements = [newElement];
-
-      // Deliver value
-      // TODO replace this with something async
-      for (let i = 0; i < subscriptions.length; i++) {
-        const callbackWithoutThis = subscriptions[i];
-        callbackWithoutThis(newElement);
+      this.get = function() {
+        return value;
+      };
+    }
+  }
+  
+  class RemoteCommandCell extends CommandCell {
+    constructor(setter, metadata) {
+      // TODO: type is kind of useless, make it useful or make it explicitly stubbed out
+      function setterAdapter(callback) {
+        setter(null, callback);
       }
+      super(setterAdapter, metadata);
+    }
+  }
+  
+  class BulkDataCell extends ReadCell {
+    constructor(setter, initialElementsJson, metadata) {
+      let type = metadata.value_type;
+    
+      let currentElements = Array.prototype.map.call(initialElementsJson,
+          el => convertBulkDataElementJson(type, el));
+
+      // kludge to ensure that widgets get all of the frames
+      // TODO: put this on a more general and sound framework
+      const subscriptions = [];
+    
+      // infoAndFFT is of the format [{freq:<number>, rate:<number>}, <Float32Array>]
+      function transform(buffer) {
+        const newElement = convertBulkDataElementBinary(type, buffer);
+        currentElements = [newElement];
+
+        // Deliver value
+        // TODO replace this with something async
+        for (let i = 0; i < subscriptions.length; i++) {
+          const callbackWithoutThis = subscriptions[i];
+          callbackWithoutThis(newElement);
+        }
       
-      return currentElements;
-    }
-    
-    ReadCell.call(this, setter, currentElements, metadata, transform);
-    
-    // Special protocol to allow not dropping updates. TODO: Replace with a general analogue of server's IDeltaSubscriber
-    // Client side implementation of this protocol available as values.FakeBulkDataCell
-    this.subscribe = function(callback) {
-      // TODO need to provide for unsubscribing
-      subscriptions.push(callback);
-      for (let element of currentElements) {
-        callback(element);
+        return currentElements;
       }
-    };
+    
+      super(setter, currentElements, metadata, transform);
+    
+      // Special protocol to allow not dropping updates. TODO: Replace with a general analogue of server's IDeltaSubscriber
+      // Client side implementation of this protocol available as values.FakeBulkDataCell
+      this.subscribe = function(callback) {
+        // TODO need to provide for unsubscribing
+        subscriptions.push(callback);
+        for (let element of currentElements) {
+          callback(element);
+        }
+      };
+    }
   }
-  BulkDataCell.prototype = Object.create(ReadCell.prototype, {constructor: {value: BulkDataCell}});
   exports.BulkDataCell = BulkDataCell;
   
   function convertBulkDataElementJson(type, valueJson) {
