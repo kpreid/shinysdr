@@ -1,4 +1,4 @@
-// Copyright 2013, 2015, 2016 Kevin Reid and the ShinySDR contributors
+// Copyright 2013, 2015, 2016, 2018 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -21,29 +21,34 @@ define(() => {
   const exports = {};
   
   // little abstraction to make the scheduler simpler
-  function Queue() {
-    this.in = [];
-    this.out = [];
-  }
-  Queue.prototype.enqueue = function (value) {
-    this.in.push(value);
-  };
-  Queue.prototype.nonempty = function () {
-    return this.in.length > 0 || this.out.length > 0;
-  };
-  Queue.prototype.dequeue = function () {
-    var inArray = this.in, outArray = this.out;
-    if (outArray.length > 0) {
-      return outArray.pop();
-    } else if (inArray.length > 0) {
-      inArray.reverse();
-      this.out = inArray;
-      this.in = outArray;
-      return inArray.pop();
-    } else {
-      throw new Error('empty queue');
+  class Queue {
+    constructor() {
+      this.in = [];
+      this.out = [];
     }
-  };
+    
+    enqueue(value) {
+      this.in.push(value);
+    }
+    
+    nonempty() {
+      return this.in.length > 0 || this.out.length > 0;
+    }
+    
+    dequeue() {
+      const inArray = this.in, outArray = this.out;
+      if (outArray.length > 0) {
+        return outArray.pop();
+      } else if (inArray.length > 0) {
+        inArray.reverse();
+        this.out = inArray;
+        this.in = outArray;
+        return inArray.pop();
+      } else {
+        throw new Error('empty queue');
+      }
+    }
+  }
   
   class AbstractScheduler {
     // All methods of schedulers that can be defined in terms of others.

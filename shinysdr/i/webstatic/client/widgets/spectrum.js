@@ -1726,159 +1726,169 @@ define([
   
   // A collection/algorithm which allocates integer indexes to provided intervals such that no overlapping intervals have the same index.
   // Intervals are treated as open, unless the endpoints are equal in which case they are treated as closed (TODO: slightly inconsistently but it doesn't matter for the application).
-  function IntervalStacker() {
-    this._elements = [];
-  }
-  IntervalStacker.prototype.clear = function () {
-    this._elements.length = 0;
-  };
-  // Find index of value in the array, or index to insert at
-  IntervalStacker.prototype._search1 = function (position) {
-    // if it turns out to matter, replace this with a binary search
-    const array = this._elements;
-    let i;
-    for (i = 0; i < array.length; i++) {
-      if (array[i].key >= position) return i;
+  class IntervalStacker {
+    constructor() {
+      this._elements = [];
     }
-    return i;
-  };
-  IntervalStacker.prototype._ensure1 = function (position, which) {
-    var index = this._search1(position);
-    var el = this._elements[index];
-    if (!(el && el.key === position)) {
-      // insert
-      var newEl = {key: position, below: Object.create(null), above: Object.create(null)};
-      // insert neighbors' info
-      var lowerNeighbor = this._elements[index - 1];
-      if (lowerNeighbor) {
-        Object.keys(lowerNeighbor.above).forEach(function (value) {
-          newEl.below[value] = newEl.above[value] = true;
-        });
+    
+    clear() {
+      this._elements.length = 0;
+    }
+    
+    // Find index of value in the array, or index to insert at
+    _search1(position) {
+      // if it turns out to matter, replace this with a binary search
+      const array = this._elements;
+      let i;
+      for (i = 0; i < array.length; i++) {
+        if (array[i].key >= position) return i;
       }
-      var upperNeighbor = this._elements[index + 1];
-      if (upperNeighbor) {
-        Object.keys(upperNeighbor.below).forEach(function (value) {
-          newEl.below[value] = newEl.above[value] = true;
-        });
-      }
+      return i;
+    }
+    
+    _ensure1(position, which) {
+      const index = this._search1(position);
+      const el = this._elements[index];
+      if (!(el && el.key === position)) {
+        // insert
+        const newEl = {key: position, below: Object.create(null), above: Object.create(null)};
+        // insert neighbors' info
+        const lowerNeighbor = this._elements[index - 1];
+        if (lowerNeighbor) {
+          Object.keys(lowerNeighbor.above).forEach(function (value) {
+            newEl.below[value] = newEl.above[value] = true;
+          });
+        }
+        const upperNeighbor = this._elements[index + 1];
+        if (upperNeighbor) {
+          Object.keys(upperNeighbor.below).forEach(function (value) {
+            newEl.below[value] = newEl.above[value] = true;
+          });
+        }
       
-      // TODO: if it turns out to be worthwhile, use a more efficient insertion
-      this._elements.push(newEl);
-      this._elements.sort(function (a, b) { return a.key - b.key; });
-      var index2 = this._search1(position);
-      if (index2 !== index) throw new Error('assumption violated');
-      if (this._elements[index].key !== position) { throw new Error('assumption2 violated'); }
+        // TODO: if it turns out to be worthwhile, use a more efficient insertion
+        this._elements.push(newEl);
+        this._elements.sort(function (a, b) { return a.key - b.key; });
+        const index2 = this._search1(position);
+        if (index2 !== index) throw new Error('assumption violated');
+        if (this._elements[index].key !== position) { throw new Error('assumption2 violated'); }
+      }
+      return index;
     }
-    return index;
-  };
-  // Given an interval, which may be zero-length, claim and return the lowest index (>= 0) which has not previously been used for an overlapping interval.
-  IntervalStacker.prototype.claim = function (low, high) {
-    // TODO: Optimize by not _storing_ zero-length intervals
-    // note must be done in this order to not change the low index
-    const lowIndex = this._ensure1(low);
-    const highIndex = this._ensure1(high);
-    //console.log(this._elements.map(function(x){return x.key;}), lowIndex, highIndex);
     
-    for (let value = 0; value < 1000; value++) {
-      let free = true;
-      for (let i = lowIndex; i <= highIndex; i++) {
-        const element = this._elements[i];
-        if (i > lowIndex || lowIndex === highIndex) {
-          free = free && !element.below[value];
+    // Given an interval, which may be zero-length, claim and return the lowest index (>= 0) which has not previously been used for an overlapping interval.
+    claim(low, high) {
+      // TODO: Optimize by not _storing_ zero-length intervals
+      // note must be done in this order to not change the low index
+      const lowIndex = this._ensure1(low);
+      const highIndex = this._ensure1(high);
+      //console.log(this._elements.map(function(x){return x.key;}), lowIndex, highIndex);
+    
+      for (let value = 0; value < 1000; value++) {
+        let free = true;
+        for (let i = lowIndex; i <= highIndex; i++) {
+          const element = this._elements[i];
+          if (i > lowIndex || lowIndex === highIndex) {
+            free = free && !element.below[value];
+          }
+          if (i < highIndex || lowIndex === highIndex) {
+            free = free && !element.above[value];
+          }
         }
-        if (i < highIndex || lowIndex === highIndex) {
-          free = free && !element.above[value];
+        if (!free) continue;
+        for (let i = lowIndex; i <= highIndex; i++) {
+          const element = this._elements[i];
+          if (i > lowIndex) {
+            element.below[value] = true;
+          }
+          if (i < highIndex) {
+            element.above[value] = true;
+          }
         }
+        return value;
       }
-      if (!free) continue;
-      for (let i = lowIndex; i <= highIndex; i++) {
-        const element = this._elements[i];
-        if (i > lowIndex) {
-          element.below[value] = true;
-        }
-        if (i < highIndex) {
-          element.above[value] = true;
-        }
-      }
-      return value;
+      return null;
     }
-    return null;
-  };
-    
-  // Keep track of elements corresponding to keys and insert/remove as needed
-  // maker() returns an element or falsy
-  function VisibleItemCache(parent, maker) {
-    // TODO: Look into rebuilding this on top of AddKeepDrop.
-    var cache = new Map();
-    var count = 0;
-    
-    this.add = function(key) {
-      count++;
-      var element = cache.get(key);
-      if (!element) {
-        element = maker(key);
-        if (!element) {
-          return;
-        }
-        parent.appendChild(element);
-        element.my_cacheKey = key;
-        cache.set(key, element);
-      }
-      if (!element.parentNode) throw new Error('oops');
-      element.my_inUse = true;
-      return element;
-    };
-    this.flush = function() {
-      const active = parent.childNodes;
-      for (let i = active.length - 1; i >= 0; i--) {
-        const element = active[i];
-        if (element.my_inUse) {
-          element.my_inUse = false;
-        } else {
-          parent.removeChild(element);
-          if (!('my_cacheKey' in element)) throw new Error('oops2');
-          cache.delete(element.my_cacheKey);
-        }
-      }
-      if (active.length !== count || active.length !== cache.size) throw new Error('oops3');
-      count = 0;
-    };
   }
   
-  function VerticalSplitHandle(config) {
-    var target = config.target;
+  // Keep track of elements corresponding to keys and insert/remove as needed
+  // maker() returns an element or falsy
+  class VisibleItemCache {
+    constructor(parent, maker) {
+      // TODO: Look into rebuilding this on top of AddKeepDrop.
+      const cache = new Map();
+      let count = 0;
     
-    var positioner = this.element = document.createElement('div');
-    positioner.classList.add('widget-VerticalSplitHandle-positioner');
-    var handle = positioner.appendChild(document.createElement('div'));
-    handle.classList.add('widget-VerticalSplitHandle-handle');
-    
-    config.scheduler.startNow(function draw() {
-      positioner.style.bottom = (100 * target.depend(draw)) + '%';
-    });
-    
-    // TODO refactor into something generic that handles x or y and touch-event drags too
-    // this code is similar to the ScopePlot drag code
-    var dragScreenOrigin = 0;
-    var dragValueOrigin = 0;
-    var dragScale = 0;
-    function drag(event) {
-      var draggedTo = dragValueOrigin + (event.clientY - dragScreenOrigin) * dragScale;
-      target.set(Math.max(0, Math.min(1, draggedTo)));
-      event.stopPropagation();
-      event.preventDefault();  // no drag selection
+      this.add = function(key) {
+        count++;
+        var element = cache.get(key);
+        if (!element) {
+          element = maker(key);
+          if (!element) {
+            return;
+          }
+          parent.appendChild(element);
+          element.my_cacheKey = key;
+          cache.set(key, element);
+        }
+        if (!element.parentNode) throw new Error('oops');
+        element.my_inUse = true;
+        return element;
+      };
+      this.flush = function() {
+        const active = parent.childNodes;
+        for (let i = active.length - 1; i >= 0; i--) {
+          const element = active[i];
+          if (element.my_inUse) {
+            element.my_inUse = false;
+          } else {
+            parent.removeChild(element);
+            if (!('my_cacheKey' in element)) throw new Error('oops2');
+            cache.delete(element.my_cacheKey);
+          }
+        }
+        if (active.length !== count || active.length !== cache.size) throw new Error('oops3');
+        count = 0;
+      };
     }
-    handle.addEventListener('mousedown', function(event) {
-      if (event.button !== 0) return;  // don't react to right-clicks etc.
-      dragScreenOrigin = event.clientY;
-      dragValueOrigin = target.get();
-      dragScale = -1 / positioner.parentElement.offsetHeight;  // kludge
-      event.preventDefault();
-      document.addEventListener('mousemove', drag, true);
-      document.addEventListener('mouseup', function(event) {
-        document.removeEventListener('mousemove', drag, true);
-      }, true);
-    }, false);
+  }
+  
+  class VerticalSplitHandle {
+    constructor(config) {
+      const target = config.target;
+    
+      const positioner = this.element = document.createElement('div');
+      positioner.classList.add('widget-VerticalSplitHandle-positioner');
+      const handle = positioner.appendChild(document.createElement('div'));
+      handle.classList.add('widget-VerticalSplitHandle-handle');
+    
+      config.scheduler.startNow(function draw() {
+        positioner.style.bottom = (100 * target.depend(draw)) + '%';
+      });
+    
+      // TODO refactor into something generic that handles x or y and touch-event drags too
+      // this code is similar to the ScopePlot drag code
+      var dragScreenOrigin = 0;
+      var dragValueOrigin = 0;
+      var dragScale = 0;
+      function drag(event) {
+        const draggedTo = dragValueOrigin + (event.clientY - dragScreenOrigin) * dragScale;
+        target.set(Math.max(0, Math.min(1, draggedTo)));
+        event.stopPropagation();
+        event.preventDefault();  // no drag selection
+      }
+      handle.addEventListener('mousedown', function(event) {
+        if (event.button !== 0) return;  // don't react to right-clicks etc.
+        dragScreenOrigin = event.clientY;
+        dragValueOrigin = target.get();
+        dragScale = -1 / positioner.parentElement.offsetHeight;  // kludge
+        event.preventDefault();
+        document.addEventListener('mousemove', drag, true);
+        document.addEventListener('mouseup', function(event) {
+          document.removeEventListener('mousemove', drag, true);
+        }, true);
+      }, false);
+    }
   }
   
   return Object.freeze(exports);

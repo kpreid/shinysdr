@@ -68,54 +68,58 @@ define([
   exports.alwaysCreateReceiverFromEvent = alwaysCreateReceiverFromEvent;
   
   // TODO figure out what this does and give it a better name
-  function Context(config) {
-    this.widgets = config.widgets || Object.freeze({});
-    this.clientState = config.clientState || null;  // TODO: make mandatory or stub
-    this.scheduler = config.scheduler || (() => {
-      throw new Error('Context: Missing scheduler argument');
-    })();
-    this.radioCell = config.radioCell || null;
-    this.index = config.index || null;  // TODO: create stub empty index
-    this.freqDB = config.freqDB || null;
-    this.writableDB = config.writableDB || null;
-    this.layoutContext = config.layoutContext || null;
-    this.coordinator = config.coordinator || new Coordinator(this.scheduler, this.freqDB, this.radioCell);
-    this.actionCompleted = config.actionCompleted || Object.freeze(function actionCompletedNoop() {});
-    Object.freeze(this);
-  }
-  Context.prototype.withLayoutContext = function (layoutContext) {
-    if (typeof layoutContext !== 'object') {
-      throw new TypeError('bad layoutContext');
+  class Context {
+    constructor(config) {
+      this.widgets = config.widgets || Object.freeze({});
+      this.clientState = config.clientState || null;  // TODO: make mandatory or stub
+      this.scheduler = config.scheduler || (() => {
+        throw new Error('Context: Missing scheduler argument');
+      })();
+      this.radioCell = config.radioCell || null;
+      this.index = config.index || null;  // TODO: create stub empty index
+      this.freqDB = config.freqDB || null;
+      this.writableDB = config.writableDB || null;
+      this.layoutContext = config.layoutContext || null;
+      this.coordinator = config.coordinator || new Coordinator(this.scheduler, this.freqDB, this.radioCell);
+      this.actionCompleted = config.actionCompleted || Object.freeze(function actionCompletedNoop() {});
+      Object.freeze(this);
     }
-    return new Context({
-      widgets: this.widgets,
-      radioCell: this.radioCell,
-      index: this.index,
-      clientState: this.clientState,
-      freqDB: this.freqDB,
-      writableDB: this.writableDB,
-      scheduler: this.scheduler,
-      layoutContext: layoutContext,
-      coordinator: this.coordinator,
-      actionCompleted: this.actionCompleted
-    });
-  };
-  Context.prototype.forMenu = function (closeCallback) {
-    return new Context({
-      widgets: this.widgets,
-      radioCell: this.radioCell,
-      index: this.index,
-      clientState: this.clientState,
-      freqDB: this.freqDB,
-      writableDB: this.writableDB,
-      scheduler: this.scheduler,
-      layoutContext: null,  // menu is also a new default layout context
-      coordinator: this.coordinator,
-      actionCompleted: function actionCompletedWrapper() {  // wrapper to suppress this
-        closeCallback();
+    
+    withLayoutContext(layoutContext) {
+      if (typeof layoutContext !== 'object') {
+        throw new TypeError('bad layoutContext');
       }
-    });
-  };
+      return new Context({
+        widgets: this.widgets,
+        radioCell: this.radioCell,
+        index: this.index,
+        clientState: this.clientState,
+        freqDB: this.freqDB,
+        writableDB: this.writableDB,
+        scheduler: this.scheduler,
+        layoutContext: layoutContext,
+        coordinator: this.coordinator,
+        actionCompleted: this.actionCompleted
+      });
+    }
+    
+    forMenu(closeCallback) {
+      return new Context({
+        widgets: this.widgets,
+        radioCell: this.radioCell,
+        index: this.index,
+        clientState: this.clientState,
+        freqDB: this.freqDB,
+        writableDB: this.writableDB,
+        scheduler: this.scheduler,
+        layoutContext: null,  // menu is also a new default layout context
+        coordinator: this.coordinator,
+        actionCompleted: function actionCompletedWrapper() {  // wrapper to suppress this
+          closeCallback();
+        }
+      });
+    }
+  }
   exports.Context = Context;
   
   function createWidgetsInNode(rootTargetCell, context, node) {
