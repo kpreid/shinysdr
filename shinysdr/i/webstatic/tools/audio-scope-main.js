@@ -23,6 +23,7 @@ requirejs.config({
 define([
   'audio/analyser',
   'audio/client-source',
+  'audio/util',
   'coordination',
   'events',
   'values',
@@ -32,6 +33,7 @@ define([
 ], (
   import_audio_analyser,
   import_audio_client_source,
+  import_audio_util,
   import_coordination,
   import_events,
   import_values,
@@ -45,6 +47,9 @@ define([
   const {
     AudioSourceSelector,
   } = import_audio_client_source;
+  const {
+    audioContextAutoplayHelper,
+  } = import_audio_util;
   const {
     ClientStateObject,
   } = import_coordination;
@@ -89,4 +94,6 @@ define([
   });
   
   createWidgets(root, context, document);
+  
+  audioContextAutoplayHelper(audioContext);
 });
