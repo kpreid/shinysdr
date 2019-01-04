@@ -187,8 +187,7 @@ class TestRepeatingAsyncTask(unittest.TestCase):
     
     def test_failure_ok(self):
         # pylint: disable=unreachable
-        # TODO: This test causes unhandled errors that cause random later tests to fail and is therefore disabled. Figure out how to make it polite.
-        raise unittest.SkipTest()
+        raise unittest.SkipTest('TODO: This test causes unhandled errors that cause random later tests to fail')
         
         calls = []
         
