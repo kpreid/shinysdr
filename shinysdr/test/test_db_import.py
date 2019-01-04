@@ -93,7 +93,7 @@ class TestImportTool(unittest.TestCase):
         self.__files.create({'in': ''})
         out_file_obj = six.StringIO()
         import_main(argv=['shinysdr-import', 'uls', self.__in_file], out=out_file_obj)
-        self.assertEquals('Location,Mode,Frequency,Name,Latitude,Longitude,Comment\r\n', out_file_obj.getvalue())
+        self.assertEqual('Location,Mode,Frequency,Name,Latitude,Longitude,Comment\r\n', out_file_obj.getvalue())
 
 
 def run_importer(importer, input_text):

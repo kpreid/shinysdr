@@ -31,15 +31,15 @@ class TestSignalType(unittest.TestCase):
         self.assertRaises(ValueError, lambda: SignalType(kind='IQ', sample_rate=0.0))
     
     def test_constants(self):
-        self.assertEquals(
+        self.assertEqual(
             no_signal,
             SignalType(kind='NONE', sample_rate=0))
     
     def test_eq(self):
-        self.assertEquals(
+        self.assertEqual(
             no_signal,
             no_signal)
-        self.assertEquals(
+        self.assertEqual(
             SignalType(kind='IQ', sample_rate=1),
             SignalType(kind='IQ', sample_rate=1))
         self.assertNotEquals(
@@ -55,8 +55,8 @@ class TestSignalType(unittest.TestCase):
     def test_sample_rate(self):
         self.assertIsInstance(SignalType(kind='IQ', sample_rate=1).get_sample_rate(), float)
         self.assertIsInstance(no_signal.get_sample_rate(), float)
-        self.assertEquals(123, SignalType(kind='IQ', sample_rate=123).get_sample_rate())
-        self.assertEquals(0, no_signal.get_sample_rate())
+        self.assertEqual(123, SignalType(kind='IQ', sample_rate=123).get_sample_rate())
+        self.assertEqual(0, no_signal.get_sample_rate())
     
     def test_compatibility(self):
         def c(a, b):

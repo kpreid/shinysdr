@@ -237,8 +237,8 @@ class TestConfigFiles(unittest.TestCase):
         self.assertTrue(self.__config.features._get('_test_disabled_feature'))
         
         # Config-directory-related defaults were not set
-        self.assertEquals(None, self.__config._state_filename)
-        self.assertEquals(six.viewkeys(get_default_dbs()), six.viewkeys(self.__config.databases._get_read_only_databases()))
+        self.assertEqual(None, self.__config._state_filename)
+        self.assertEqual(six.viewkeys(get_default_dbs()), six.viewkeys(self.__config.databases._get_read_only_databases()))
     
     def test_config_directory(self):
         self.__files.create({
@@ -255,7 +255,7 @@ class TestConfigFiles(unittest.TestCase):
         self.assertTrue(self.__config.features._get('_test_disabled_feature'))
         
         # Config-directory-related defaults were set
-        self.assertEquals(self.__dirpath('state.json'), self.__config._state_filename)
+        self.assertEqual(self.__dirpath('state.json'), self.__config._state_filename)
         self.assertIn('foo.csv', self.__config.databases._get_read_only_databases())
     
     def test_default_config(self):

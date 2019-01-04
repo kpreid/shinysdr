@@ -35,9 +35,9 @@ class TestForkDeferred(unittest.TestCase):
         d2 = fork_deferred(d)
         d.addCallback(lambda x: outcomes.append('dc ' + x))
         d2.addCallback(lambda x: outcomes.append('d2c ' + x))
-        self.assertEquals(outcomes, [])
+        self.assertEqual(outcomes, [])
         d.callback('value')
-        self.assertEquals(outcomes, ['d2c value', 'dc value'])
+        self.assertEqual(outcomes, ['d2c value', 'dc value'])
     
     # TODO test of errback, stricter tests(?)
 
@@ -47,7 +47,7 @@ class TestTestSubprocess(unittest.TestCase):
         self.assertFalse(test_subprocess(['echo', 'x'], b'x', shell=False))
     
     def test_stdout_failure(self):
-        self.assertEquals(test_subprocess(['echo', 'y•'], b'x', shell=False),
+        self.assertEqual(test_subprocess(['echo', 'y•'], b'x', shell=False),
             textwrap.dedent("""\
                 Expected `echo y•` to give output containing 'x', but the actual output was:
                 y•

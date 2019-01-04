@@ -26,7 +26,7 @@ from shinysdr.telemetry import ITelemetryMessage, ITelemetryObject, TelemetryIte
 
 class TestTrack(unittest.TestCase):
     def test_init_from_partial_json(self):
-        self.assertEquals(
+        self.assertEqual(
             empty_track._replace(
                 latitude=TelemetryItem(1, 1000),
                 longitude=TelemetryItem(2, 1000)),
@@ -52,9 +52,9 @@ class TestTelemetryStore(unittest.TestCase):
     def test_receive_called(self):
         self.store.receive(Msg('foo', 1000, 1))
         obj = self.store.state()['foo'].get()
-        self.assertEquals(obj.last_msg, 1)
+        self.assertEqual(obj.last_msg, 1)
         self.store.receive(Msg('foo', 1000, 2))
-        self.assertEquals(obj.last_msg, 2)
+        self.assertEqual(obj.last_msg, 2)
     
     def test_drop_old(self):
         self.store.receive(Msg('foo', 1000))

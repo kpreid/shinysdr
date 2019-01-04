@@ -118,12 +118,12 @@ class TestEnumT(unittest.TestCase):
     
     def test_values(self):
         enum = EnumT({u'a': u'adesc'})
-        self.assertEquals(
+        self.assertEqual(
             enum.get_table(),
             {u'a': EnumRow(u'adesc', associated_key=u'a')})
     
     def test_metadata_simple(self):
-        self.assertEquals(
+        self.assertEqual(
             self.__row(u'desc').to_json(),
             {
                 u'type': u'EnumRow',
@@ -133,7 +133,7 @@ class TestEnumT(unittest.TestCase):
             })
     
     def test_metadata_partial(self):
-        self.assertEquals(
+        self.assertEqual(
             self.__row(EnumRow(label='a')).to_json(),
             {
                 u'type': u'EnumRow',
@@ -143,7 +143,7 @@ class TestEnumT(unittest.TestCase):
             })
     
     def test_metadata_explicit(self):
-        self.assertEquals(
+        self.assertEqual(
             self.__row(EnumRow(label='a', description='b', sort_key='c')).to_json(),
             {
                 u'type': u'EnumRow',
@@ -153,7 +153,7 @@ class TestEnumT(unittest.TestCase):
             })
     
     def test_metadata_empty_label(self):
-        self.assertEquals(
+        self.assertEqual(
             self.__row(EnumRow(label='')).to_json(),
             {
                 u'type': u'EnumRow',

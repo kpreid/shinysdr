@@ -216,7 +216,7 @@ class DeviceTestCase(unittest.TestCase):
         t = rx_driver.get_output_type()
         self.assertIsInstance(t, SignalType)
         self.assertTrue(t.get_sample_rate() > 0)
-        self.assertEquals(t.get_itemsize(), gr.sizeof_gr_complex)  # float not supported yet
+        self.assertEqual(t.get_itemsize(), gr.sizeof_gr_complex)  # float not supported yet
     
     def test_rx_tune_delay(self):
         if self.__noop: return
@@ -250,7 +250,7 @@ class DeviceTestCase(unittest.TestCase):
         t = tx_driver.get_input_type()
         self.assertIsInstance(t, SignalType)
         self.assertTrue(t.get_sample_rate() > 0)
-        self.assertEquals(t.get_itemsize(), gr.sizeof_gr_complex)  # float not supported yet
+        self.assertEqual(t.get_itemsize(), gr.sizeof_gr_complex)  # float not supported yet
     
     def test_tx_notify(self):
         if self.__noop: return

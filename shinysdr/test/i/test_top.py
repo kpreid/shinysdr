@@ -97,8 +97,8 @@ class TestTop(unittest.TestCase):
         top.set_source_name('s2')
         receiver1.set_device_name('s1')
         (_key, receiver2) = top.add_receiver('AM', key='b')
-        self.assertEquals(receiver2.get_device_name(), 's2')
-        self.assertEquals(receiver1.get_device_name(), 's1')
+        self.assertEqual(receiver2.get_device_name(), 's2')
+        self.assertEqual(receiver1.get_device_name(), 's1')
 
     def test_add_unknown_mode(self):
         """
