@@ -42,13 +42,13 @@ class TestSignalType(unittest.TestCase):
         self.assertEqual(
             SignalType(kind='IQ', sample_rate=1),
             SignalType(kind='IQ', sample_rate=1))
-        self.assertNotEquals(
+        self.assertNotEqual(
             no_signal,
             SignalType(kind='IQ', sample_rate=1))
-        self.assertNotEquals(
+        self.assertNotEqual(
             SignalType(kind='IQ', sample_rate=1),
             SignalType(kind='IQ', sample_rate=2))
-        self.assertNotEquals(
+        self.assertNotEqual(
             SignalType(kind='USB', sample_rate=1),
             SignalType(kind='LSB', sample_rate=1))
     
