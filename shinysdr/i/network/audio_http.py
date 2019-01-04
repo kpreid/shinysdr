@@ -20,6 +20,7 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import math
 import struct
 
 from twisted.web.resource import Resource
@@ -115,6 +116,7 @@ def _generate_wav_header(sample_rate, channels):
     #   http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html
     
     fake_max_size = 2 ** 32 - 1
+    integral_sample_rate = int(math.ceil(sample_rate))  # round up to prefer skipping over over-buffering (though a non-integer here isn't really expected)
     
     riff_header_chunk = struct.pack('<4sI4s', 
         b'RIFF',
@@ -126,8 +128,8 @@ def _generate_wav_header(sample_rate, channels):
         16,  # this chunk size
         3,  # float format
         channels,  # number of channels interleaved in a block
-        sample_rate,  # sample rate per channel / block rate
-        channels * sample_rate * _BYTES_PER_NUMBER,  # byte rate
+        integral_sample_rate,  # sample rate per channel / block rate
+        channels * integral_sample_rate * _BYTES_PER_NUMBER,  # byte rate
         channels * _BYTES_PER_NUMBER,  # bytes per block
         _BYTES_PER_NUMBER * 8)  # bits per sample
     
