@@ -33,7 +33,7 @@ import numpy
 from shinysdr.i.json import transform_for_json
 from shinysdr.i.network.base import AUDIO_STREAM_PATH_ELEMENT
 # TODO: StateStreamInner is an implementation detail; arrange a better interface to test
-from shinysdr.i.network.export_ws import StateStreamInner, OurStreamProtocol
+from shinysdr.i.network.export_ws import StateStreamInner, WebSocketDispatcherProtocol
 from shinysdr.i.roots import CapTable, IEntryPoint
 from shinysdr.signals import SignalType
 from shinysdr.test.testutil import Cells, SubscriptionTester
@@ -305,13 +305,13 @@ class SerializationSpecimen(ExportedState):
 _FAKE_SAMPLES = b'\x00\x01\xFE\xFF'
 
 
-class TestOurStreamProtocol(unittest.TestCase):
+class TestWebSocketDispatcherProtocol(unittest.TestCase):
     def setUp(self):
         cap_table = CapTable(unserializer=None)
         cap_table.add(EntryPointStub(), cap=u'foo')
         self.clock = Clock()
         self.transport = FakeWebSocketTransport()
-        self.protocol = OurStreamProtocol(
+        self.protocol = WebSocketDispatcherProtocol(
             caps=cap_table.as_unenumerable_collection(),
             subscription_context=SubscriptionContext(reactor=self.clock, poller=None))
         self.protocol.transport = self.transport

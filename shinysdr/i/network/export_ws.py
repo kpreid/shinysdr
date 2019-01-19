@@ -345,7 +345,7 @@ def _lookup_block(block, path):
     return block
 
 
-class OurStreamProtocol(Protocol):
+class WebSocketDispatcherProtocol(Protocol):
     """Protocol implementing ShinySDR's WebSocket service.
     
     This protocol's transport should be a txWS WebSocket transport.

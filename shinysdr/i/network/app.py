@@ -40,7 +40,7 @@ from shinysdr.i.json import serialize
 from shinysdr.i.modes import get_modes
 from shinysdr.i.network.base import IWebEntryPoint, SiteWithDefaultHeaders, SlashedResource, UNIQUE_PUBLIC_CAP, WebServiceCommon, deps_path, static_resource_path, endpoint_string_to_url
 from shinysdr.i.network.export_http import CapAccessResource
-from shinysdr.i.network.export_ws import OurStreamProtocol
+from shinysdr.i.network.export_ws import WebSocketDispatcherProtocol
 from shinysdr.i.poller import the_poller
 from shinysdr.i.pycompat import defaultstr
 from shinysdr.interfaces import _IClientResourceDef
@@ -125,7 +125,7 @@ class WebService(Service):
             server_root.putChild('', Redirect(_make_cap_url(UNIQUE_PUBLIC_CAP)))
             
         self.__ws_protocol = txws.WebSocketFactory(
-            FactoryWithArgs.forProtocol(OurStreamProtocol, cap_table, subscription_context))
+            FactoryWithArgs.forProtocol(WebSocketDispatcherProtocol, cap_table, subscription_context))
         self.__site = SiteWithDefaultHeaders(server_root)
         
         self.__ws_port_obj = None
