@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from setuptools import setup, find_packages
+from setuptools import setup
 
 
 # Mostly written on the advice of <http://www.scotttorborg.com/python-packaging/>.
@@ -40,7 +40,7 @@ setup(
         'Topic :: Communications :: Ham Radio',  # non-exclusively ham
     ],
     license='GPLv3+',
-    packages=find_packages(exclude=['shinysdr.test']),
+    packages=['shinysdr'],
     include_package_data=True,
     install_requires=[
         # 'gnuradio',  # Not PyPI
