@@ -64,10 +64,15 @@ define([
   // In connectAudio, we assume that the maximum audio bandwidth is lower than that suiting this sample rate, so that if the native sample rate is much higher than this we can send a lower one over the network without losing anything of interest.
   const ASSUMED_USEFUL_SAMPLE_RATE = 40000;
   
+  function logAutoplayBehavior() {
+    console.info.apply(console, ['audio playback debug:'].concat(Array.from(arguments)));
+  }
+  
   function connectAudio(scheduler, url, storage, webSocketCtor = WebSocket) {
     const audio = new AudioContext();
     const nativeSampleRate = audio.sampleRate;
     const useScriptProcessor = !('audioWorklet' in audio);
+    logAutoplayBehavior('initial state is', audio.state);
     
     // Stream parameters
     let numAudioChannels = null;
@@ -274,12 +279,20 @@ define([
           buffererMessagePortPromise.then(port => { port.postMessage(['resetFill']); });
           
           started = true;
-          audio.resume();
+          logAutoplayBehavior('attempting resume, immediate state is ' + audio.state);
+          audio.resume().then(() => {
+            logAutoplayBehavior('resume resolved');
+          });
+          logAutoplayBehavior('attempted resume, immediate state is ' + audio.state);
         }
       } else {
         if (started) {
           started = false;
-          audio.suspend();
+          logAutoplayBehavior('attempting suspend, immediate state is ' + audio.state);
+          audio.suspend().then(() => {
+            logAutoplayBehavior('suspend resolved');
+          });
+          logAutoplayBehavior('attempted suspend, immediate state is ' + audio.state);
         }
       }
     }
