@@ -124,7 +124,36 @@ class SquelchMixin(ExportedState):
 
 
 @implementer(ITunableDemodulator)
-class SimpleAudioDemodulator(Demodulator, SquelchMixin):
+class ChannelFilterMixin(object):
+    """Provides a MultistageChannelFilter block and matching implementations of get_band_shape and ITunableDemodulator.
+    
+    Does not make any connection automatically.
+    """
+    
+    def __init__(self, input_rate=0, demod_rate=0, cutoff_freq=0, transition_width=0):
+        # mandatory keyword arguments
+        assert input_rate > 0
+        assert demod_rate > 0
+        assert cutoff_freq > 0
+        assert transition_width > 0
+        
+        self.channel_filter_block = MultistageChannelFilter(
+            input_rate=input_rate,
+            output_rate=demod_rate,
+            cutoff_freq=cutoff_freq,
+            transition_width=transition_width)
+    
+    @exported_value(type=BandShape, changes='never')
+    def get_band_shape(self):
+        """Implements IDemodulator."""
+        return self.channel_filter_block.get_shape()
+
+    def set_rec_freq(self, freq):
+        """Implements ITunableDemodulator."""
+        self.channel_filter_block.set_center_freq(freq)
+
+
+class SimpleAudioDemodulator(SquelchMixin, ChannelFilterMixin, Demodulator):
     def __init__(self, demod_rate=0, audio_rate=0, band_filter=None, band_filter_transition=None, stereo=False, **kwargs):
         assert audio_rate > 0
         
@@ -134,30 +163,20 @@ class SimpleAudioDemodulator(Demodulator, SquelchMixin):
         
         Demodulator.__init__(self, **kwargs)
         SquelchMixin.__init__(self, demod_rate)
+        ChannelFilterMixin.__init__(self,
+            input_rate=self.input_rate,
+            demod_rate=demod_rate,
+            cutoff_freq=band_filter,
+            transition_width=band_filter_transition)
         
         self.demod_rate = demod_rate
         self.audio_rate = audio_rate
 
         input_rate = self.input_rate
-        
-        self.band_filter_block = MultistageChannelFilter(
-            input_rate=input_rate,
-            output_rate=demod_rate,
-            cutoff_freq=band_filter,
-            transition_width=band_filter_transition)
-    
-    @exported_value(type=BandShape, changes='never')  # TODO not sure if this is the right change policy
-    def get_band_shape(self):
-        """Implements IDemodulator."""
-        return self.band_filter_block.get_shape()
     
     def get_output_type(self):
         """Implements IDemodulator."""
         return self.__signal_type
-
-    def set_rec_freq(self, freq):
-        """Implements ITunableDemodulator."""
-        self.band_filter_block.set_center_freq(freq)
 
 
 def design_lofi_audio_filter(rate, lowpass):
@@ -202,7 +221,7 @@ class IQDemodulator(SimpleAudioDemodulator):
         
         self.connect(
             self,
-            self.band_filter_block,
+            self.channel_filter_block,
             self.squelch_block,
             self)
 
@@ -273,7 +292,7 @@ class AMDemodulator(SimpleAudioDemodulator):
         self.disconnect_all()
         self.connect(
             self,
-            self.band_filter_block,  # from SimpleAudioDemodulator
+            self.channel_filter_block,  # from ChannelFilterMixin
             self.squelch_block,  # from SquelchMixin
             agc_block)
         before_demod = agc_block
@@ -474,7 +493,7 @@ class FMDemodulator(SimpleAudioDemodulator):
         self.disconnect_all()
         self.connect(
             self,
-            self.band_filter_block,
+            self.channel_filter_block,
             self.squelch_block,
             self.__qdemod)
         if self.__deemph is not None:
@@ -740,7 +759,7 @@ class SSBDemodulator(SimpleAudioDemodulator):
         
         self.connect(
             self,
-            self.band_filter_block,
+            self.channel_filter_block,
             sharp_filter_block,
             # TODO: We would like to have a squelch which does not interfere with the AGC, but this is impossible without combining the squelch and AGC
             self.squelch_block,
