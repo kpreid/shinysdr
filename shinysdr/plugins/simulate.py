@@ -146,8 +146,6 @@ class _SimulatedRXDriver(ExportedState, gr.hier_block2):
             add_modulator(0.0, 'usb', 'USB')
             add_modulator(10e3, 'am', 'AM')
             add_modulator(30e3, 'fm', 'NFM')
-            add_modulator(-30e3, 'vor1', 'VOR', angle=0)
-            add_modulator(-60e3, 'vor2', 'VOR', angle=math.pi / 2)
             add_modulator(50e3, 'rtty', 'RTTY', message='The quick brown fox jumped over the lazy dog.\n')
             add_modulator(80e3, 'chirp', ChirpModulator)
         
