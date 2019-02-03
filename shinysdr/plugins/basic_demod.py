@@ -45,41 +45,6 @@ TWO_PI = pi * 2
 BASIC_MODE_SORT_PREFIX = ' '
 
 
-@implementer(IDemodulator)
-class Demodulator(gr.hier_block2, ExportedState):
-    def __init__(self, mode,
-            input_rate=0,
-            context=None):
-        assert input_rate > 0
-        
-        # early init because we're going to invoke get_output_type()
-        self.mode = mode
-        self.input_rate = input_rate
-        self.context = context
-        
-        self.__channels = channels = 2 if self.get_output_type().get_kind() == 'STEREO' else 1
-        gr.hier_block2.__init__(
-            self, defaultstr(u'%s(mode=%r)' % (type(self).__name__, mode)),
-            gr.io_signature(1, 1, gr.sizeof_gr_complex),
-            gr.io_signature(1, 1, gr.sizeof_float * channels))
-
-    def get_band_shape(self):
-        raise NotImplementedError('Demodulator.get_band_shape')
-
-    def get_output_type(self):
-        raise NotImplementedError('Demodulator.get_output_type')
-
-    def connect_audio_output(self, l_endpoint, r_endpoint=None):
-        stereo = r_endpoint is not None
-        assert stereo == (self.__channels == 2)
-        if stereo:
-            joiner = blocks.streams_to_vector(gr.sizeof_float, 2)
-            self.connect(l_endpoint, (joiner, 0), self)
-            self.connect(r_endpoint, (joiner, 1))
-        else:
-            self.connect(l_endpoint, self)
-
-
 class SquelchMixin(ExportedState):
     """Provides simple RF-power squelch and a level meter.
     
@@ -153,30 +118,53 @@ class ChannelFilterMixin(object):
         self.channel_filter_block.set_center_freq(freq)
 
 
-class SimpleAudioDemodulator(SquelchMixin, ChannelFilterMixin, Demodulator):
-    def __init__(self, demod_rate=0, audio_rate=0, band_filter=None, band_filter_transition=None, stereo=False, **kwargs):
-        assert audio_rate > 0
+@implementer(IDemodulator)
+class SimpleAudioDemodulator(SquelchMixin, ChannelFilterMixin, gr.hier_block2, ExportedState):
+    def __init__(self, 
+            input_rate,
+            # parameters provided by subclasses
+            demod_rate, audio_rate, band_filter, band_filter_transition, stereo=False,
+            # standard demodulator parameters which we want to allow usage without
+            mode=None, context=None):
+        """All arguments should be passed as keywords."""
         
+        self.__channels = channels = 2 if stereo else 1
         self.__signal_type = SignalType(
             kind='STEREO' if stereo else 'MONO',
             sample_rate=audio_rate)
         
-        Demodulator.__init__(self, **kwargs)
+        # TODO: Review which of these attributes are actually used
+        self.mode = mode
+        self.context = context
+        self.input_rate = input_rate
+        self.demod_rate = demod_rate
+        self.audio_rate = audio_rate
+        
+        gr.hier_block2.__init__(
+            self, defaultstr(u'%s(mode=%r)' % (type(self).__name__, mode)),
+            gr.io_signature(1, 1, gr.sizeof_gr_complex),
+            gr.io_signature(1, 1, gr.sizeof_float * channels))
         SquelchMixin.__init__(self, demod_rate)
         ChannelFilterMixin.__init__(self,
             input_rate=self.input_rate,
             demod_rate=demod_rate,
             cutoff_freq=band_filter,
             transition_width=band_filter_transition)
-        
-        self.demod_rate = demod_rate
-        self.audio_rate = audio_rate
-
-        input_rate = self.input_rate
     
     def get_output_type(self):
         """Implements IDemodulator."""
         return self.__signal_type
+
+    def connect_audio_output(self, l_endpoint, r_endpoint=None):
+        # TODO: Convert this into a separate helper function?
+        stereo = r_endpoint is not None
+        assert stereo == (self.__channels == 2)
+        if stereo:
+            joiner = blocks.streams_to_vector(gr.sizeof_float, 2)
+            self.connect(l_endpoint, (joiner, 0), self)
+            self.connect(r_endpoint, (joiner, 1))
+        else:
+            self.connect(l_endpoint, self)
 
 
 def design_lofi_audio_filter(rate, lowpass):
