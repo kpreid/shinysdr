@@ -30,7 +30,7 @@ linter js jshint shinysdr/i/{webstatic,webparts} shinysdr/plugins
 
 # Python lint
 # pylint is last because it is the slowest linter.
-linter py flake8 --exclude=deps shinysdr/ *.py
+linter py flake8 --ignore=W191,W291,W293,W503,W504,E126,E128,E241,E501,E701 --exclude=deps shinysdr/ *.py
 linter py pylint --rcfile pylintrc shinysdr
 
 # --- Print summary and return status code
