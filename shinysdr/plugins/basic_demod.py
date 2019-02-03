@@ -81,28 +81,46 @@ class Demodulator(gr.hier_block2, ExportedState):
 
 
 class SquelchMixin(ExportedState):
+    """Provides simple RF-power squelch and a level meter.
+    
+    To use, connect self.squelch_block in the pre-demodulation signal path.
+    """
+    
     def __init__(self, squelch_rate, squelch_threshold=-100):
         alpha = 80.0 / squelch_rate
-        self.rf_squelch_block = analog.simple_squelch_cc(squelch_threshold, alpha)
-        self.rf_probe_block = analog.probe_avg_mag_sqrd_c(0, alpha=alpha)
-
+        
+        self.__squelch = analog.simple_squelch_cc(squelch_threshold, alpha)
+        self.__probe = analog.probe_avg_mag_sqrd_c(0, alpha=alpha)
+        
+        self.squelch_block = gr.hier_block2(
+            defaultstr('SquelchMixin bundle'),
+            gr.io_signature(1, 1, gr.sizeof_gr_complex),
+            gr.io_signature(1, 1, gr.sizeof_gr_complex))
+        self.squelch_block.connect(
+            self.squelch_block,
+            self.__squelch,
+            self.squelch_block)
+        self.squelch_block.connect(
+            self.squelch_block,
+            self.__probe)
+    
     @exported_value(
         type=RangeT([(-100, 0)], unit=units.dBFS, strict=False),
         changes='continuous',
         label='Channel power')
     def get_rf_power(self):
-        return to_dB(max(1e-10, self.rf_probe_block.level()))
+        return to_dB(max(1e-10, self.__probe.level()))
 
     @exported_value(
         type=RangeT([(-100, 0)], unit=units.dBFS, strict=False, logarithmic=False),
         changes='this_setter',
         label='Squelch')
     def get_squelch_threshold(self):
-        return self.rf_squelch_block.threshold()
+        return self.__squelch.threshold()
 
     @setter
     def set_squelch_threshold(self, level):
-        self.rf_squelch_block.set_threshold(level)
+        self.__squelch.set_threshold(level)
 
 
 @implementer(ITunableDemodulator)
@@ -185,9 +203,8 @@ class IQDemodulator(SimpleAudioDemodulator):
         self.connect(
             self,
             self.band_filter_block,
-            self.rf_squelch_block,
+            self.squelch_block,
             self)
-        self.connect(self.band_filter_block, self.rf_probe_block)
 
 
 pluginDef_iq = ModeDef(mode='IQ',
@@ -257,9 +274,8 @@ class AMDemodulator(SimpleAudioDemodulator):
         self.connect(
             self,
             self.band_filter_block,  # from SimpleAudioDemodulator
-            self.rf_squelch_block,  # from SquelchMixin
+            self.squelch_block,  # from SquelchMixin
             agc_block)
-        self.connect(self.band_filter_block, self.rf_probe_block)
         before_demod = agc_block
         
         if self.__demod_method == u'async':
@@ -456,11 +472,10 @@ class FMDemodulator(SimpleAudioDemodulator):
     
     def do_connect(self):
         self.disconnect_all()
-        self.connect(self.band_filter_block, self.rf_probe_block)
         self.connect(
             self,
             self.band_filter_block,
-            self.rf_squelch_block,
+            self.squelch_block,
             self.__qdemod)
         if self.__deemph is not None:
             self.connect(self.__qdemod, self.__deemph)
@@ -728,10 +743,9 @@ class SSBDemodulator(SimpleAudioDemodulator):
             self.band_filter_block,
             sharp_filter_block,
             # TODO: We would like to have a squelch which does not interfere with the AGC, but this is impossible without combining the squelch and AGC
-            self.rf_squelch_block,
+            self.squelch_block,
             self.agc_block,
             ssb_demod_block)
-        self.connect(sharp_filter_block, self.rf_probe_block)
         self.connect_audio_output(ssb_demod_block)
     
     # override
