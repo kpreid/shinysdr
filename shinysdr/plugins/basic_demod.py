@@ -119,7 +119,7 @@ class ChannelFilterMixin(object):
 
 
 @implementer(IDemodulator)
-class SimpleAudioDemodulator(SquelchMixin, ChannelFilterMixin, gr.hier_block2, ExportedState):
+class SimpleAudioDemodulator(ChannelFilterMixin, gr.hier_block2, ExportedState):
     def __init__(self, 
             input_rate,
             # parameters provided by subclasses
@@ -144,7 +144,6 @@ class SimpleAudioDemodulator(SquelchMixin, ChannelFilterMixin, gr.hier_block2, E
             self, defaultstr(u'%s(mode=%r)' % (type(self).__name__, mode)),
             gr.io_signature(1, 1, gr.sizeof_gr_complex),
             gr.io_signature(1, 1, gr.sizeof_float * channels))
-        SquelchMixin.__init__(self, demod_rate)
         ChannelFilterMixin.__init__(self,
             input_rate=self.input_rate,
             demod_rate=demod_rate,
@@ -192,7 +191,7 @@ def design_lofi_audio_filter(rate, lowpass):
             firdes.WIN_HAMMING)
 
 
-class IQDemodulator(SimpleAudioDemodulator):
+class IQDemodulator(SquelchMixin, SimpleAudioDemodulator):
     # TODO: Allow a choice of bandwidth/sample rate
     def __init__(self, mode='IQ', **kwargs):
         audio_rate = 96000
@@ -204,6 +203,7 @@ class IQDemodulator(SimpleAudioDemodulator):
             band_filter=audio_rate * 0.5,
             band_filter_transition=audio_rate * 0.2,
             **kwargs)
+        SquelchMixin.__init__(self, audio_rate)
         
         self.split_block = blocks.complex_to_float(1)
         
@@ -229,10 +229,10 @@ _am_demod_method_type = EnumT({
 })
 
 
-class AMDemodulator(SimpleAudioDemodulator):
+class AMDemodulator(SquelchMixin, SimpleAudioDemodulator):
     """Amplitude modulation (AM) demodulator."""
     
-    __demod_rate = 16000    
+    __demod_rate = 16000
     
     def __init__(self, context, demod_method=u'async', **kwargs):
         SimpleAudioDemodulator.__init__(self,
@@ -243,6 +243,7 @@ class AMDemodulator(SimpleAudioDemodulator):
             band_filter=_am_audio_bandwidth,
             band_filter_transition=1000,
             **kwargs)
+        SquelchMixin.__init__(self, self.__demod_rate)
         
         self.__context = context
         
@@ -450,7 +451,7 @@ pluginDef_am_entire = ModeDef(mode='AM-unsel',
     demod_class=UnselectiveAMDemodulator)
 
 
-class FMDemodulator(SimpleAudioDemodulator):
+class FMDemodulator(SquelchMixin, SimpleAudioDemodulator):
     def __init__(self,
             mode,
             deviation=75000,
@@ -466,6 +467,7 @@ class FMDemodulator(SimpleAudioDemodulator):
             band_filter=band_filter,
             band_filter_transition=band_filter_transition,
             **kwargs)
+        SquelchMixin.__init__(self, self.demod_rate)
         
         self.__no_audio_filter = no_audio_filter
         
@@ -749,8 +751,6 @@ class SSBDemodulator(SimpleAudioDemodulator):
             self,
             self.channel_filter_block,
             sharp_filter_block,
-            # TODO: We would like to have a squelch which does not interfere with the AGC, but this is impossible without combining the squelch and AGC
-            self.squelch_block,
             self.agc_block,
             ssb_demod_block)
         self.connect_audio_output(ssb_demod_block)
