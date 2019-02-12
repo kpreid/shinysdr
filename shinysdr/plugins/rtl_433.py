@@ -44,7 +44,7 @@ from shinysdr.values import ExportedState, LooseCell, exported_value
 
 
 drop_unheard_timeout_seconds = 120
-upper_preferred_demod_rate = 400000
+upper_preferred_demod_rate = 250000  # Taken from rtl_433's default
 
 
 @implementer(IDemodulator)
@@ -93,13 +93,11 @@ class RTL433Demodulator(gr.hier_block2, ExportedState):
             RTL433ProcessProtocol(context.output_message, self.__log),
             '/usr/bin/env',
             env=None,  # inherit environment
+            # These arguments were last reviewed for rtl_433 18.12-142-g6c3ca9b
             args=[
                 b'env', b'rtl_433',
-                b'-F', b'json',
-                b'-r', b'-',  # read from stdin
-                b'-m', b'3',  # complex float input
-                b'-s', str(demod_rate),
-                b'-q'  # quiet mode, suppress "Registering protocol..." stderr flood
+                b'-F', b'json',  # output format
+                b'-r', str(demod_rate) + b'sps:iq:cf32:-',  # specify input format and to use stdin
             ],
             childFDs={
                 0: 'w',
