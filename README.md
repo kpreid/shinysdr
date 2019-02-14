@@ -10,7 +10,7 @@ ShinySDR is the software component of a software-defined radio receiver. When co
 Copyright and License
 ---------------------
 
-Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid &lt;kpreid@switchb.org&gt;
+Copyright 2013, 2014, 2015, 2016, 2017, 2018, 2019 Kevin Reid &lt;kpreid@switchb.org&gt;
 
 ShinySDR is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
