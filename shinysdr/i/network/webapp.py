@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid and the ShinySDR contributors
+# Copyright 2013, 2014, 2015, 2016, 2017, 2018, 2019 Kevin Reid and the ShinySDR contributors
 # 
 # This file is part of ShinySDR.
 # 
@@ -56,44 +56,6 @@ def _make_static_resource(pathname):
     r.contentTypes[b'.csv'] = b'text/csv'
     r.indexNames = [b'index.html']
     return r
-
-
-class WebAppManifestResource(Resource):
-    """
-    Per https://www.w3.org/TR/appmanifest/
-    """
-    
-    isLeaf = True
-    
-    def __init__(self, wcommon):
-        Resource.__init__(self)
-        self.__title = wcommon.title
-
-    def render_GET(self, request):
-        request.setHeader(b'Content-Type', b'application/manifest+json')
-        manifest = {
-            'lang': 'en-US',
-            'name': self.__title,
-            'short_name': self.__title if len(self.__title) <= 12 else 'ShinySDR',
-            'scope': '/',
-            'icons': [
-                {
-                    'src': '/client/icon/icon-32.png',
-                    'type': 'image/png',
-                    'sizes': '32x32',
-                },
-                {
-                    'src': '/client/icon/icon.svg',
-                    'type': 'image/svg',
-                    'sizes': 'any',
-                },
-            ],
-            'display': 'minimal-ui',
-            'orientation': 'any',
-            'theme_color': '#B9B9B9',  # same as gray.css --shinysdr-theme-column-bgcolor
-            'background_color': '#2F2F2F',  # note this is our loading screen color
-        }
-        return serialize(manifest).encode('utf-8')
 
 
 class WebService(Service):
@@ -198,11 +160,11 @@ def _put_root_static(wcommon, container_resource):
         _make_static_resource(os.path.join(static_resource_path, 'client/icon/icon-32.png')))
     client.putChild('web-app-manifest.json',
         WebAppManifestResource(wcommon))
-    _put_plugin_resources(client)
+    _put_plugin_resources(wcommon, client)
 
 
-def _put_plugin_resources(client_resource):
-    # Plugin resources and plugin info
+def _put_plugin_resources(wcommon, client_resource):
+    """Plugin-defined resources and client-configuration."""
     load_list_css = []
     load_list_js = []
     mode_table = {}
@@ -224,12 +186,68 @@ def _put_plugin_resources(client_resource):
             u'info_enum_row': mode_def.info.to_json(),
             u'can_transmit': mode_def.mod_class is not None
         }
-    # Client gets info about plugins through this resource
-    client_resource.putChild('plugin-index.json', static.Data(serialize({
-        u'css': load_list_css,
-        u'js': load_list_js,
-        u'modes': mode_table,
-    }).encode('utf-8'), b'application/json'))
+    
+    plugin_index = {
+        'css': load_list_css,
+        'js': load_list_js,
+        'modes': mode_table,
+    }
+    client_resource.putChild('client-configuration', ClientConfigurationResource(wcommon, plugin_index))
+
+
+class ClientConfigurationResource(Resource):
+    """Info about plugins and other not-strictly-static data."""
+    isLeaf = True
+    
+    def __init__(self, wcommon, plugin_index):
+        Resource.__init__(self)
+        self.__wcommon = wcommon
+        self.__plugin_index = plugin_index
+
+    def render_GET(self, request):
+        request.setHeader(b'Content-Type', b'application/json')
+        configuration = {
+            'plugins': self.__plugin_index,
+        }
+        return serialize(configuration).encode('utf-8')
+
+
+class WebAppManifestResource(Resource):
+    """
+    Per https://www.w3.org/TR/appmanifest/
+    """
+    
+    isLeaf = True
+    
+    def __init__(self, wcommon):
+        Resource.__init__(self)
+        self.__title = wcommon.title
+
+    def render_GET(self, request):
+        request.setHeader(b'Content-Type', b'application/manifest+json')
+        manifest = {
+            'lang': 'en-US',
+            'name': self.__title,
+            'short_name': self.__title if len(self.__title) <= 12 else 'ShinySDR',
+            'scope': '/',
+            'icons': [
+                {
+                    'src': '/client/icon/icon-32.png',
+                    'type': 'image/png',
+                    'sizes': '32x32',
+                },
+                {
+                    'src': '/client/icon/icon.svg',
+                    'type': 'image/svg',
+                    'sizes': 'any',
+                },
+            ],
+            'display': 'minimal-ui',
+            'orientation': 'any',
+            'theme_color': '#B9B9B9',  # same as gray.css --shinysdr-theme-column-bgcolor
+            'background_color': '#2F2F2F',  # note this is our loading screen color
+        }
+        return serialize(manifest).encode('utf-8')
 
 
 def _make_cap_url(cap):

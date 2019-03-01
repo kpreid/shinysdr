@@ -1,4 +1,4 @@
-// Copyright 2015 Kevin Reid and the ShinySDR contributors
+// Copyright 2015, 2019 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -15,14 +15,15 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-// This module is basically a shim for the server's plugin-index resource to be loaded as a module (and parsed only once).
+// This module is basically a shim for the server's client-configuration resource to be loaded as a module (and parsed only once).
 
 'use strict';
 
-define(['text!plugin-index.json'], (text) => {
+define(['text!client-configuration'], (text) => {
   const exports = {};
   
-  const pluginIndex = JSON.parse(text);
+  const clientConfiguration = JSON.parse(text);
+  const pluginIndex = clientConfiguration.plugins;
   const moduleIds = Object.freeze(Array.prototype.slice.call(pluginIndex.js));
   
   const modeTable = Object.create(null);

@@ -26,7 +26,7 @@ define([
   './map/map-layers',
   './network',
   './pane-manager',
-  './plugins',
+  './client-configuration-module',
   './types',
   './values',
   './widget',
@@ -40,7 +40,7 @@ define([
   unused_map_layers,  // side effecting
   import_network,
   import_pane_manager,
-  import_plugins,
+  import_client_configuration,
   import_types,
   import_values,
   import_widget,
@@ -74,7 +74,7 @@ define([
   const {
     loadCSS,
     getJSModuleIds,
-  } = import_plugins;
+  } = import_client_configuration;
   const {
     anyT,
   } = import_types;

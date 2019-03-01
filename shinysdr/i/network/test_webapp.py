@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid and the ShinySDR contributors
+# Copyright 2013, 2014, 2015, 2016, 2017, 2019 Kevin Reid and the ShinySDR contributors
 # 
 # This file is part of ShinySDR.
 # 
@@ -129,14 +129,15 @@ class TestWebSite(unittest.TestCase):
         self.assertEqual(manifest['name'], 'test title')
     
     @defer.inlineCallbacks
-    def test_plugin_index(self):
-        response, data = yield http_get(the_reactor, urljoin(self.url, defaultstr('/client/plugin-index.json')))
+    def test_client_configuration(self):
+        response, data = yield http_get(the_reactor, urljoin(self.url, defaultstr('/client/client-configuration')))
         self.assertEqual(response.code, http.OK)
         self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
-        index = json.loads(data)
-        self.assertIn('css', index)
-        self.assertIn('js', index)
-        self.assertIn('modes', index)
+        configuration = json.loads(data)
+        plugin_index = configuration['plugins']
+        self.assertIn('css', plugin_index)
+        self.assertIn('js', plugin_index)
+        self.assertIn('modes', plugin_index)
 
 
 class TestSiteWithoutRootCap(TestWebSite):

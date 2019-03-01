@@ -21,7 +21,7 @@ define([
   './basic',
   '../domtools',
   '../math',
-  '../plugins',
+  '../client-configuration-module',
   '../types',
   '../values',
   '../widget',
@@ -29,7 +29,7 @@ define([
   import_widgets_basic,
   import_domtools,
   import_math,
-  import_plugins,
+  import_client_configuration,
   import_types,
   import_values,
   import_widget
@@ -46,7 +46,7 @@ define([
   } = import_math;
   const {
     getModeTable,
-  } = import_plugins;
+  } = import_client_configuration;
   const {
     anyT,
   } = import_types;
