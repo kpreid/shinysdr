@@ -31,7 +31,7 @@ from gnuradio import gr
 
 from shinysdr.i.db import DatabaseModel
 from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, IWebEntryPoint, UNIQUE_PUBLIC_CAP
-from shinysdr.i.network.app import _make_cap_url, WebService
+from shinysdr.i.network.webapp import _make_cap_url, WebService
 from shinysdr.i.network.session_http import SessionResource
 from shinysdr.i.pycompat import defaultstr
 from shinysdr.values import ExportedState

@@ -125,7 +125,7 @@ class Config(object):
                 cap_table.add(session, cap=root_cap)
                 root_cap_subst = root_cap
             
-            from shinysdr.i.network.app import WebService
+            from shinysdr.i.network.webapp import WebService
             return WebService(
                 reactor=self.reactor,
                 cap_table=cap_table.as_unenumerable_collection(),
