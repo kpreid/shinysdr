@@ -98,6 +98,7 @@ class RTL433Demodulator(gr.hier_block2, ExportedState):
                 b'env', b'rtl_433',
                 b'-F', b'json',  # output format
                 b'-r', str(demod_rate) + b'sps:iq:cf32:-',  # specify input format and to use stdin
+                b'-M', 'newmodel',
             ],
             childFDs={
                 0: 'w',
@@ -165,93 +166,30 @@ class RTL433ProcessProtocol(ProcessProtocol):
             self.__log.warn('bad JSON from rtl_433: {rtl_433_line}', rtl_433_line=repr_no_string_tag(line))
             return
         self.__log.info('rtl_433 message: {rtl_433_json!r}', rtl_433_json=message)
-        # rtl_433 provides a time field, but when in file-input mode it assumes the input is not real-time and generates start-of-file-relative timestamps, so we can't use them.
+        # rtl_433 provides a time field, but when in file-input mode it assumes the input is not real-time and generates start-of-file-relative timestamps, so we can't use them directly.
         wrapper = RTL433MessageWrapper(message, time.time())
         self.__target(wrapper)
 
 
-_message_field_is_id = {
-    # common
-    u'model': True,
-    u'time': False,
+# This includes both rtl_433's notion of device ID and also device type identification that makes a more informative to the user, and distinct, key. Distinctness from unrelated things is important because the telemetry object namespace is shared with other systems.
+_id_component_fields = {
+    'model',
+    'type',
+    'subtype',
+    'id',
+    'channel',
     
-    # id fields
-    u'device': True,  # common
-    u'channel': True,  # some
-    u'id': True,  # some, frequenrly labeled 'house code'
-    u'dev_id': True,  # one
-    u'node': True,  # one
-    u'address': True,  # one
-    u'ws_id': True,  # one
-    u'sid': True,  # one
-    u'rid': True,  # one
-    u'unit': True,  # one
-    
-    # data fields - device
-    u'battery': False,
-    u'rc': False,
-    
-    # data fields - weather
-    u'temperature_F': False,
-    u'temperature_C': False,
-    u'temperature': False,
-    u'humidity': False,
-    u'wind_speed': False,
-    u'wind_speed_ms': False,
-    u'wind_gust': False,
-    u'wind_gust_ms': False,
-    u'wind_direction': False,
-    u'direction': False,
-    u'direction_str': False,
-    u'direction_deg': False,
-    u'speed': False,
-    u'gust': False,
-    u'rain': False,
-    u'rain_total': False,
-    u'rain_rate': False,
-    u'rainfall_mm': False,
-    u'total_rain': False,
-    
-    # data fields - other
-    u'cmd': False,
-    u'cmd_id': False,
-    u'command': False,
-    u'tristate': False,
-    u'power0': False,
-    u'power1': False,
-    u'power2': False,
-    u'ct1': False,
-    u'ct2': False,
-    u'ct3': False,
-    u'ct4': False,
-    u'Vrms/batt': False,
-    u'pulse': False,
-    u'temp1_C': False,
-    u'temp2_C': False,
-    u'temp3_C': False,
-    u'temp4_C': False,
-    u'temp5_C': False,
-    u'temp6_C': False,
-    u'msg_type': False,
-    u'hours': False,
-    u'minutes': False,
-    u'seconds': False,
-    u'year': False,
-    u'month': False,
-    u'day': False,
-    u'button': False,
-    u'button1': False,
-    u'button2': False,
-    u'button3': False,
-    u'button4': False,
-    u'group_call': False,
-    u'dim': False,
-    u'dim_value': False,
-    u'maybetemp': False,
-    u'flags': False,
-    u'binding_countdown': False,
-    u'depth': False,
-    u'state': False,
+    # legacy non-consistent fields -- these are likely to go away in a future rtl_433 version
+    'device',
+    'dev_id',
+    'rc',
+    'rid',
+    'sid',
+}
+# Fields that aren't interesting enough.
+_ignored_fields = {
+    'mic',
+    'time',
 }
 
 
@@ -261,7 +199,7 @@ class RTL433MessageWrapper(object):
         self.message = message  # a parsed rtl_433 JSON-format message
         self.receive_time = float(receive_time)
         
-        id_keys = sorted(k for k in message if _message_field_is_id.get(k, False))
+        id_keys = sorted(k for k in message if k in _id_component_fields)
         self.object_id = u'-'.join(six.text_type(message[k]) for k in id_keys)
     
     def get_object_id(self):
@@ -296,7 +234,7 @@ class RTL433MsgGroup(ExportedState):
         self.__last_heard_time = message_wrapper.receive_time
         shape_changed = False
         for k, v in six.iteritems(message_wrapper.message):
-            if _message_field_is_id.get(k, False) or k == u'time':
+            if k in _id_component_fields or k in _ignored_fields:
                 continue
             if k not in self.__cells:
                 shape_changed = True
@@ -305,7 +243,8 @@ class RTL433MsgGroup(ExportedState):
                     type=object,
                     writable=False,
                     persists=False,
-                    label=k)
+                    label=k,
+                    sort_key='1' + k)
             self.__cells[k].set_internal(v)
         self.state_changed()
         if shape_changed:
@@ -319,7 +258,7 @@ class RTL433MsgGroup(ExportedState):
         """implement ITelemetryObject"""
         return self.__last_heard_time + drop_unheard_timeout_seconds
     
-    @exported_value(type=TimestampT(), changes='explicit', label='Last heard')
+    @exported_value(type=TimestampT(), changes='explicit', label='Last heard', sort_key='9heard')
     def get_last_heard_time(self):
         return self.__last_heard_time
 
