@@ -21,7 +21,7 @@ import six
 
 from twisted.trial import unittest
 
-from shinysdr.plugins.rtl_433 import RTL433Demodulator, RTL433ProcessProtocol
+from shinysdr.plugins.rtl_433 import RTL433Demodulator, RTL433MessageWrapper, RTL433MsgGroup, RTL433ProcessProtocol
 from shinysdr.testutil import DemodulatorTestCase, LogTester
 
 
@@ -54,3 +54,20 @@ class TestRTL433Protocol(unittest.TestCase):
         self.protocol.outReceived(b'foo\n')
         self.log_tester.check(dict(text="bad JSON from rtl_433: 'foo'"))
         self.assertEqual(self.received, [])
+
+
+class TestMessageWrapperAndGroup(unittest.TestCase):
+    def test_id_calculation_example(self):
+        m = RTL433MessageWrapper(
+            {'temperature_C': 30.4, 'model': 'LaCrosse-TX', 'id': 2, 'time': '@616.798279s'},
+            1000)
+        self.assertEqual(m.get_object_id(), '2-LaCrosse-TX')
+    
+    def test_ids_and_metadata_are_hidden(self):
+        m = RTL433MessageWrapper(
+            {'temperature_C': 30.4, 'model': 'LaCrosse-TX', 'id': 2, 'time': '@616.798279s'},
+            1000)
+        g = RTL433MsgGroup(m.get_object_id())
+        g.receive(m)
+        # 'model', 'id', and 'time' do not become cells
+        self.assertEqual(set(g.state().keys()), {'temperature_C', 'last_heard_time'})
