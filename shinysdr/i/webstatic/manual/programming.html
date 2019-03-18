@@ -52,17 +52,28 @@
 
 <h2>Plugins</h2>
 
-<p>ShinySDR plugins are defined based on <a href="https://twistedmatrix.com/documents/12.0.0/core/howto/plugin.html">the Twisted plugin system</a>. A plugin is a Python module or package which exports objects implementing a defined plugin interface. To be loaded, a plugin must be placed somewhere on your Python module search path (<code>PYTHONPATH</code>) in the <code>shinysdr.plugins</code> package.</p>
-
-<p>Plugins can currently:</p>
+<p>ShinySDR plugins are defined based on <a href="https://twistedmatrix.com/documents/12.0.0/core/howto/plugin.html">the Twisted plugin system</a>. A plugin is a Python module or package which exports objects implementing one of the defined plugin interfaces such as:</p>
 
 <ul>
-  <li>Add new RF source types. (This does not have a specific interface since the server's sources are specified explicitly in the configuration file.)
-  <li>Add new demodulators (<code>ModeDef</code>).
-  <li>Add JS code or other web resources to be loaded by the client (<code>ClientResourceDef</code>). This can be used to define new user interface elements.
+  <li><code>shinysdr.interfaces.ModeDef</code> to add new modes/demodulators.
+  <li><code>shinysdr.interfaces.ClientResourceDef</code> to add JS code or other web resources to be loaded by the client (<code>ClientResourceDef</code>). This can be used to define new user interface elements; it should generally support other plugin elements (such as UI for a demodulator) rather than having effects on its own.
+  <li>Adding new RF device types does not have a specific interface since the server's devices are <a href="./configuration">specified explicitly in the configuration file.</a>
 </ul>
 
-<p>The included VOR demodulator plugin (<code>shinysdr/plugins/vor/</code>) may be a useful example.</p>
+<p>To be loaded, a plugin must be placed somewhere on your Python module search path (<code>PYTHONPATH</code>) in the <code>shinysdr.plugins</code> package. (In the future, there may be a method to add plugins from the configuration file.)</p>
+
+<p>To add functionality, an instance of one of the plugin definitions must be declared at the top level of the module; for example, in basic_demod.py we can see code like</p>
+
+<blockquote><pre>@implementer(IModulator)
+class AMModulator(gr.hier_block2, ExportedState):
+    ...
+
+pluginDef_am = ModeDef(mode='AM',
+    info=EnumRow(label='AM', sort_key=BASIC_MODE_SORT_PREFIX + 'AM'),
+    demod_class=AMDemodulator,
+    mod_class=AMModulator)</pre></blockquote>
+
+<p>The important thing is that the module contains the <code>ModeDef</code>; the variable name does not matter.</p>
 
 <p>[TODO: formally document plugin interfaces; embed/hyperlink here]</p>
 
@@ -72,7 +83,7 @@
 
   <li><p>No part of the server requires a “build” operation; this simplifies the development process. It contains no C or C++ code, avoiding the need for a build system aware of OS/distribution/compiler variations.</p></li>
 
-  <li><p>Avoid inheritance in favor of composition. (We're doing a bit poorly at keeping to this around Source and Demodulator types.)</p></li>
+  <li><p>Avoid inheritance in favor of composition, particularly across module boundaries. (We're not doing so well at sticking to this consistently.)</p></li>
 
 </ul>
 
