@@ -25,6 +25,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import subprocess
 
+from serial import SerialException
 import six
 
 from twisted.internet import defer
@@ -134,8 +135,18 @@ class SerialPortEndpoint(object):
   
     def connect(self, protocol_factory):
         protocol = protocol_factory.buildProtocol(None)
-        SerialPort(protocol, self.__port, self.__reactor, **self.__serial_kwargs)
-        return defer.succeed(protocol)
+        try:
+            SerialPort(protocol, self.__port, self.__reactor, **self.__serial_kwargs)
+            return defer.succeed(protocol)
+        except SerialException as e:
+            # The documentation says we should produce a ConnectError, but doing so would be discarding information and doesn't appear to matter. TODO: Do it anyway and copy the info.
+            return defer.fail(e)
+    
+    def __repr__(self):
+        # TODO: also format kwargs
+        return '{0}({1})'.format(
+            type(self).__name__,
+            self.__port)
 
 
 __all__.append('SerialPortEndpoint')
