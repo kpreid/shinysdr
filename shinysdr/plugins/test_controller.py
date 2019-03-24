@@ -72,3 +72,5 @@ class TestController(unittest.TestCase):
     def test_encode_enum(self):
         self.proxy.state()['enum_name'].set(u'façade')
         self.assertEqual(u'façade'.encode('UTF-8'), self.t.value())
+    
+    # TODO: Test reconnection behavior.

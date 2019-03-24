@@ -28,6 +28,8 @@ import functools
 
 import six
 
+from twisted.application.internet import ClientService
+from twisted.internet import defer
 from twisted.internet.protocol import Factory, Protocol
 from twisted.protocols.basic import LineReceiver
 from zope.interface import implementer, Interface
@@ -40,7 +42,7 @@ from shinysdr.values import Command as CommandCell, ExportedState, LooseCell
 __all__ = []  # appended later
 
 
-def Controller(reactor, key='controller', endpoint=None, elements=None, encoding='US-ASCII'):
+def Controller(reactor, key='controller', endpoint=None, elements=None, encoding='US-ASCII', _clock=None):
     """Create a controller device.
   
     key: Component ID. TODO point at device merging documentation once it exists
@@ -52,7 +54,8 @@ def Controller(reactor, key='controller', endpoint=None, elements=None, encoding
         reactor=reactor,
         endpoint=endpoint,
         elements=elements or [],
-        encoding=encoding)})
+        encoding=encoding,
+        clock=_clock)})
 
 
 __all__.append('Controller')
@@ -116,17 +119,16 @@ __all__.append('Selector')
 
 @implementer(IComponent)
 class _ControllerProxy(ExportedState):
-    def __init__(self, reactor, endpoint, elements, encoding):
+    def __init__(self, reactor, endpoint, elements, encoding, clock=None):
         self.__reactor = reactor
         self.__elements = elements
         self.__encoding = encoding
         
-        # ClientService (which does reconnecting) is only since 16.1 and we currently want to support 13.2 due to MacPorts and Debian versions
-        # cs = ClientService(endpoint, Factory.forProtocol(_ControllerProtocol))
-        # cs.startService()
-        factory = Factory.forProtocol(_ControllerProtocol)
-        self.__protocol = None
-        endpoint.connect(factory).addCallback(self.__got_protocol)
+        self.__client_service = ClientService(
+            endpoint=endpoint,
+            factory=Factory.forProtocol(_ControllerProtocol),
+            clock=clock)
+        self.__client_service.startService()
     
     def state_def(self):
         for d in super(_ControllerProxy, self).state_def():
@@ -137,17 +139,17 @@ class _ControllerProxy(ExportedState):
     
     def close(self):
         """implements IComponent"""
-        if self.__protocol:
-            self.__protocol.transport.loseConnection()
+        self.__client_service.stopService()
     
     def attach_context(self, device_context):
         """implements IComponent"""
     
-    def __got_protocol(self, protocol):
-        self.__protocol = protocol
-    
+    @defer.inlineCallbacks
     def __send(self, cmd):
-        self.__protocol.send(cmd)
+        protocol = yield self.__client_service.whenConnected(failAfterFailures=1)
+        
+        # returned deferred is not actually used but in the future it would be good if Commands did in fact have a 'done' signal
+        defer.returnValue(protocol.send(cmd))
 
 
 class _ControllerProtocol(Protocol):

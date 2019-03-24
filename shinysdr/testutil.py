@@ -589,6 +589,7 @@ class _LogEventTester(object):
 class StringTransportEndpoint(object):
     """Endpoint for a fresh StringTransport. Intended for tests."""
     def __init__(self):
+        # TODO: This seems like it should be StringTransportWithDisconnection, but making it that breaks the tests for reasons I don't understand yet.
         self.string_transport = StringTransport()
     
     def connect(self, protocol_factory):
