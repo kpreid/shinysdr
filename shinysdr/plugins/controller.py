@@ -137,7 +137,6 @@ class _ControllerProxy(ExportedState):
     
     def close(self):
         """implements IComponent"""
-        # TODO: This is used for testing and is not actually called by Device.close. Device.close needs to be extended to support notifying components of close.
         if self.__protocol:
             self.__protocol.transport.loseConnection()
     

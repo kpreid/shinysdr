@@ -50,7 +50,7 @@ class TestController(unittest.TestCase):
     @defer.inlineCallbacks
     def tearDown(self):
         yield self.device.close()
-        yield self.proxy.close()  # TODO kludge because device close doesn't actually work for our purposes
+        self.assertTrue(self.t.disconnecting)
     
     def test_state_smoke(self):
         state_smoke_test(self.device)
