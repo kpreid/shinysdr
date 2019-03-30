@@ -40,12 +40,12 @@ define(() => {
   // "exact" as in doesn't drop digits. Used in frequency scale.
   function formatFreqExact(freq) {
     freq = +freq;
-    var a = Math.abs(freq);
-    if (a < 1e3) {
+    const absoluteFreq = Math.abs(freq);
+    if (absoluteFreq < 1e3 || !isFinite(freq)) {
       return String(freq);
-    } else if (a < 1e6) {
+    } else if (absoluteFreq < 1e6) {
       return freq / 1e3 + 'k';
-    } else if (a < 1e9) {
+    } else if (absoluteFreq < 1e9) {
       return freq / 1e6 + 'M';
     } else {
       return freq / 1e9 + 'G';
@@ -56,21 +56,21 @@ define(() => {
   // Format with dropping digits likely not cared about, and units. Used in receiver frequency marks.
   function formatFreqInexactVerbose(freq) {
     freq = +freq;
-    var a = Math.abs(freq);
-    var prefix;
-    if (a < 1e3) {
+    const absoluteFreq = Math.abs(freq);
+    let prefix;
+    if (absoluteFreq < 1e3 || !isFinite(freq)) {
       prefix = '';
-    } else if (a < 1e6) {
+    } else if (absoluteFreq < 1e6) {
       freq /= 1e3;
       prefix = 'k';
-    } else if (a < 1e9) {
+    } else if (absoluteFreq < 1e9) {
       freq /= 1e6;
       prefix = 'M';
     } else {
       freq /= 1e9;
       prefix = 'G';
     }
-    var freqText = freq.toFixed(3);
+    let freqText = freq.toFixed(3);
     // toFixed rounds, but also adds zeros; we want only the rounding.
     freqText = freqText.replace(/([0-9])0+$/, '$1');
     return freqText + ' ' + prefix + 'Hz';

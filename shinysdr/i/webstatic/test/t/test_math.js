@@ -47,7 +47,8 @@ define([
         expect(dB(20)).toBe(100);
       });
       
-      it('should handle exceptional values robustly', () => {
+      it('should handle exceptional values', () => {
+        expect(dB('foo')).toBeNaN();
         expect(dB(NaN)).toBeNaN();
         expect(dB(Infinity)).toBe(Infinity);
         expect(dB(-Infinity)).toBe(0);
@@ -58,42 +59,65 @@ define([
     
     describe('formatFreqExact', () => {
       it('should format', () => {
-        expect(formatFreqExact(  0)).toBe('0');
-        expect(formatFreqExact(123)).toBe('123');
-        expect(formatFreqExact(123.4)).toBe('123.4');
-        expect(formatFreqExact(123.456789)).toBe('123.456789');  // no rounding
-        expect(formatFreqExact(999.99999)).toBe('999.99999');
-        expect(formatFreqExact(  1.0e3)).toBe('1k');
-        expect(formatFreqExact(123.4e3)).toBe('123.4k');
-        expect(formatFreqExact(999.99999e3)).toBe('999.99999k');
-        expect(formatFreqExact(  1.0e6)).toBe('1M');
-        expect(formatFreqExact(123.4e6)).toBe('123.4M');
-        expect(formatFreqExact(999.99999e6)).toBe('999.99999M');
-        expect(formatFreqExact(  1.0e9)).toBe('1G');
-        expect(formatFreqExact(123.4e9)).toBe('123.4G');
-        expect(formatFreqExact(123.4e12)).toBe('123400G');
+        // Tests decimal places, edge cases (one prefix to the next), and negative values.
+        expect(formatFreqExact(   0)).toBe('0');
+        expect(formatFreqExact(  -0)).toBe('0');
+        expect(formatFreqExact( 123)).toBe('123');
+        expect(formatFreqExact( 123.4)).toBe('123.4');
+        expect(formatFreqExact(-123.4)).toBe('-123.4');
+        expect(formatFreqExact( 123.456789)).toBe('123.456789');  // no rounding
+        expect(formatFreqExact( 999.99999)).toBe('999.99999');
+        expect(formatFreqExact(   1.0e3)).toBe('1k');
+        expect(formatFreqExact( 123.4e3)).toBe('123.4k');
+        expect(formatFreqExact(-999.99999e3)).toBe('-999.99999k');
+        expect(formatFreqExact( 999.99999e3)).toBe('999.99999k');
+        expect(formatFreqExact(   1.0e6)).toBe('1M');
+        expect(formatFreqExact(  -1.0e6)).toBe('-1M');
+        expect(formatFreqExact( 123.4e6)).toBe('123.4M');
+        expect(formatFreqExact( 999.99999e6)).toBe('999.99999M');
+        expect(formatFreqExact(   1.0e9)).toBe('1G');
+        expect(formatFreqExact( 123.4e9)).toBe('123.4G');
+        expect(formatFreqExact( 123.4e12)).toBe('123400G');
+      });
+      
+      it('should handle exceptional values', () => {
+        expect(formatFreqExact('foo')).toBe('NaN');
+        expect(formatFreqExact(NaN)).toBe('NaN');
+        expect(formatFreqExact(Infinity)).toBe('Infinity');
+        expect(formatFreqExact(-Infinity)).toBe('-Infinity');
       });
     });
     
     describe('formatFreqInexactVerbose', () => {
       it('should format', () => {
-        expect(formatFreqInexactVerbose(  0)).toBe('0.0 Hz');
-        expect(formatFreqInexactVerbose(123)).toBe('123.0 Hz');
-        expect(formatFreqInexactVerbose(123.4)).toBe('123.4 Hz');
-        expect(formatFreqInexactVerbose(123.456789)).toBe('123.457 Hz');  // 3 decimal places
-        expect(formatFreqInexactVerbose(999.99)).toBe('999.99 Hz');
-        expect(formatFreqInexactVerbose(999.99999)).toBe('1000.0 Hz');  // TODO: bug?
-        expect(formatFreqInexactVerbose(  1.0e3)).toBe('1.0 kHz');
-        expect(formatFreqInexactVerbose(123.4e3)).toBe('123.4 kHz');
-        expect(formatFreqInexactVerbose(999.99e3)).toBe('999.99 kHz');
-        expect(formatFreqInexactVerbose(999.99999e3)).toBe('1000.0 kHz');  // TODO: bug?
-        expect(formatFreqInexactVerbose(  1.0e6)).toBe('1.0 MHz');
-        expect(formatFreqInexactVerbose(123.4e6)).toBe('123.4 MHz');
-        expect(formatFreqInexactVerbose(999.99e6)).toBe('999.99 MHz');
-        expect(formatFreqInexactVerbose(999.99999e6)).toBe('1000.0 MHz');  // TODO: bug?
-        expect(formatFreqInexactVerbose(  1.0e9)).toBe('1.0 GHz');
-        expect(formatFreqInexactVerbose(123.4e9)).toBe('123.4 GHz');
-        expect(formatFreqInexactVerbose(123.4e12)).toBe('123400.0 GHz');
+        // Tests decimal places, edge cases (one prefix to the next), and negative values.
+        expect(formatFreqInexactVerbose(   0)).toBe('0.0 Hz');
+        expect(formatFreqInexactVerbose(  -0)).toBe('0.0 Hz');
+        expect(formatFreqInexactVerbose( 123)).toBe('123.0 Hz');
+        expect(formatFreqInexactVerbose( 123.4)).toBe('123.4 Hz');
+        expect(formatFreqInexactVerbose(-123.4)).toBe('-123.4 Hz');
+        expect(formatFreqInexactVerbose( 123.456789)).toBe('123.457 Hz');  // 3 decimal places
+        expect(formatFreqInexactVerbose( 999.99)).toBe('999.99 Hz');
+        expect(formatFreqInexactVerbose( 999.99999)).toBe('1000.0 Hz');  // TODO: bug?
+        expect(formatFreqInexactVerbose(   1.0e3)).toBe('1.0 kHz');
+        expect(formatFreqInexactVerbose( 123.4e3)).toBe('123.4 kHz');
+        expect(formatFreqInexactVerbose( 999.99e3)).toBe('999.99 kHz');
+        expect(formatFreqInexactVerbose( 999.99999e3)).toBe('1000.0 kHz');  // TODO: bug?
+        expect(formatFreqInexactVerbose(-999.99999e3)).toBe('-1000.0 kHz');  // TODO: bug?
+        expect(formatFreqInexactVerbose(   1.0e6)).toBe('1.0 MHz');
+        expect(formatFreqInexactVerbose( 123.4e6)).toBe('123.4 MHz');
+        expect(formatFreqInexactVerbose( 999.99e6)).toBe('999.99 MHz');
+        expect(formatFreqInexactVerbose( 999.99999e6)).toBe('1000.0 MHz');  // TODO: bug?
+        expect(formatFreqInexactVerbose(   1.0e9)).toBe('1.0 GHz');
+        expect(formatFreqInexactVerbose( 123.4e9)).toBe('123.4 GHz');
+        expect(formatFreqInexactVerbose( 123.4e12)).toBe('123400.0 GHz');
+      });
+      
+      it('should handle exceptional values', () => {
+        expect(formatFreqInexactVerbose('foo')).toBe('NaN Hz');
+        expect(formatFreqInexactVerbose(NaN)).toBe('NaN Hz');
+        expect(formatFreqInexactVerbose(Infinity)).toBe('Infinity Hz');
+        expect(formatFreqInexactVerbose(-Infinity)).toBe('-Infinity Hz');
       });
     });
     
@@ -107,6 +131,13 @@ define([
         expect(formatFreqMHz(123.4e6)).toBe('123.40');
         expect(formatFreqMHz(123.4e9)).toBe('123400.00');
         expect(formatFreqMHz(123.4e12)).toBe('123400000.00');
+      });
+      
+      it('should handle exceptional values', () => {
+        expect(formatFreqMHz('foo')).toBe('NaN');
+        expect(formatFreqMHz(NaN)).toBe('NaN');
+        expect(formatFreqMHz(Infinity)).toBe('Infinity');
+        expect(formatFreqMHz(-Infinity)).toBe('-Infinity');
       });
     });
     
