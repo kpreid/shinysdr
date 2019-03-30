@@ -1,4 +1,4 @@
-// Copyright 2014, 2017 Kevin Reid and the ShinySDR contributors
+// Copyright 2014, 2017, 2019 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -86,7 +86,8 @@ define(() => {
           parent.open = true;
           break;
         case 'dialog':
-          parent.open();
+          // TODO: show/showModal choice -- this might not be a good idea?
+          parent.show();
           break;
       }
       

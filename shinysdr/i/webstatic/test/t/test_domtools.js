@@ -1,4 +1,4 @@
-// Copyright 2017 Kevin Reid and the ShinySDR contributors
+// Copyright 2017, 2019 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -36,6 +36,7 @@ define([
     isVisibleInLayout,
     lifecycleDestroy,
     lifecycleInit,
+    pixelsFromWheelEvent,
     reveal,
   } = import_domtools;
   
@@ -112,6 +113,23 @@ define([
         outer.style.display = 'none';
         expect(isVisibleInLayout(el)).toBeFalsy();
       });
+      
+      it('should handle layout-less nodes', () => {
+        expect(() => isVisibleInLayout(document.createDocumentFragment()))
+            .toThrowError(/isVisibleInLayout: cannot work with/);
+      });
+    });
+    
+    describe('pixelsFromWheelEvent', () => {
+      it('should pass through a pixels event', () => {
+        expect(pixelsFromWheelEvent({deltaMode: 0, deltaX: 11, deltaY: 22})).toEqual([11, 22]);
+      });
+      it('should translate a lines event', () => {
+        expect(pixelsFromWheelEvent({deltaMode: 1, deltaX: 11, deltaY: 22})).toEqual([330, 660]);
+      });
+      it('should translate a pages event', () => {
+        expect(pixelsFromWheelEvent({deltaMode: 2, deltaX: 11, deltaY: 22})).toEqual([330, 660]);
+      });
     });
     
     describe('reveal', () => {
@@ -121,6 +139,18 @@ define([
 
       it('should open a <details> parent', () => {
         const d = container.appendChild(document.createElement('details'));
+        const target = d.appendChild(document.createElement('input'));
+        expect(isVisibleInLayout(target)).toBeFalsy();
+        expect(d.open).toBe(false);
+
+        expect(reveal(target)).toBe(true);
+
+        expect(isVisibleInLayout(target)).toBeTruthy();
+        expect(d.open).toBe(true);
+      });
+      
+      it('should open a <dialog> parent', () => {
+        const d = container.appendChild(document.createElement('dialog'));
         const target = d.appendChild(document.createElement('input'));
         expect(isVisibleInLayout(target)).toBeFalsy();
         expect(d.open).toBe(false);
@@ -149,10 +179,20 @@ define([
         expect(listener2).toHaveBeenCalledWith(...listener1.calls.argsFor(0));
       });
       
+      it('should report failure on a node hidden in an unknown fashion', () => {
+        const d = container.appendChild(document.createElement('div'));
+        d.style.display = 'none';
+        const target = d.appendChild(document.createElement('input'));
+        expect(isVisibleInLayout(target)).toBeFalsy();
+        expect(reveal(target)).toBe(false);
+        expect(isVisibleInLayout(target)).toBeFalsy();
+      });
+      
       it('should report failure on an orphaned node', () => {
         const d = document.createElement('details');
         const target = d.appendChild(document.createElement('input'));
         expect(reveal(target)).toBe(false);
+        expect(isVisibleInLayout(target)).toBeFalsy();
       });
     });
   });
