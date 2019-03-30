@@ -40,17 +40,17 @@ define([
     reveal,
   } = import_domtools;
   
-  let container;
-  beforeEach(() => {
-    container = document.body.appendChild(document.createElement('div'));
-  });
-  afterEach(() => {
-    if (container && container.parentNode) {
-      container.parentNode.removeChild(container);
-    }
-  });
-  
   describe('domtools', () => {
+    let container;
+    beforeEach(() => {
+      container = document.body.appendChild(document.createElement('div'));
+    });
+    afterEach(() => {
+      if (container && container.parentNode) {
+        container.parentNode.removeChild(container);
+      }
+    });
+    
     describe('lifecycle', () => {
       // TODO: test lifecycle functions more
       
