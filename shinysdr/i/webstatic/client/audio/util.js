@@ -35,8 +35,6 @@ define([], () => {
   exports.delayToBufferSize = delayToBufferSize;
   
   function showPlayPrompt() {
-    console.log('showPlayPrompt');
-    
     const dialog = document.createElement('dialog');
     dialog.classList.add('unspecific-modal-dialog');
     // TODO class for styling
@@ -72,10 +70,15 @@ define([], () => {
   // The default UI prompt is intended for the standalone "audio toolbox" pages.
   function audioContextAutoplayHelper(audioContext, showUI=showPlayPrompt) {
     if (audioContext.state === 'suspended') {
+      console.log('audioContextAutoplayHelper: prompting');
       return showUI().then(() => {
-        audioContext.resume();
+        console.log('audioContextAutoplayHelper: resuming after prompt');
+        return audioContext.resume().then(() => {
+          console.log('audioContextAutoplayHelper: successfully resumed');
+        });
       });
     } else {
+      console.log('audioContextAutoplayHelper: state is OK:', audioContext.state);
       return Promise.resolve();
     }
   }
