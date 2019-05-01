@@ -272,7 +272,7 @@ define([
               m => { message = m; },
               'testing1');
         }).toThrow(9);
-        expect(message).toBe('9');
+        expect(message).toBe('Failed to testing1 (unexpected error). 9');
       });
       it('should resort to throwing on undefined', () => {
         let message;

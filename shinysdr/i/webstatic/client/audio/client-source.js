@@ -62,9 +62,9 @@ define([
       }
       showMessage(message);
     } else if (e && e.name) {
-      showMessage(e.name);
+      showMessage('Failed to ' + whatWeWereDoing + ' (unexpected error). ' + e.name + ': ' + e.message);
     } else if (e) {
-      showMessage(String(e));
+      showMessage('Failed to ' + whatWeWereDoing + ' (unexpected error). ' + String(e));
       throw e;
     } else {
       throw e;
