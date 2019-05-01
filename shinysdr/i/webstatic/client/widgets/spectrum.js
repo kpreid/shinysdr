@@ -639,8 +639,9 @@ define([
     });
   }
   exports.MonitorDetailedOptions = MonitorDetailedOptions;
-
+  
   // Abstract
+  // TODO: CanvasSpectrumWidget is now only used once and should go away
   function CanvasSpectrumWidget(config, buildGL, build2D) {
     const fftCell = config.target;
     const view = config.getLayoutContext(SpectrumLayoutContext);
