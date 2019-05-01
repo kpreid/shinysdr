@@ -53,16 +53,34 @@ define([
   const FREQ_ADJ = false;    // Compensate for typical frequency dependence in music so peaks are equal.
   const TIME_ADJ = false;    // Subtract median amplitude; hides strong beats.
   
+  const SUPPORTED_DISPLAY_SIZE = (() => {
+    // Quick fix -- TODO: Plumb this up somehow so that we can adapt interactively instead of having to create a dummy context and proceed up front. This will also avoid depending on graphics stuff from the "lower" layers.
+    const gl = document.createElement('canvas').getContext('webgl');
+    if (!gl) return 4096;  // TODO: better 2D canvas assumptions
+    try {
+      return gl.getParameter(gl.MAX_TEXTURE_SIZE);
+    } finally {
+      const ext = gl.getExtension('WEBGL_lose_context');
+      if (ext) ext.loseContext();
+    }
+  })();
+  
+  const WANTED_FFT_SIZE = Math.min(16384, SUPPORTED_DISPLAY_SIZE * 2);
+  
   // Takes frequency data from an AnalyserNode and provides an interface like a MonitorSink
   function AudioAnalyserAdapter(scheduler, audioContext) {
     // Construct analyser.
     const analyserNode = audioContext.createAnalyser();
     analyserNode.smoothingTimeConstant = 0;
     try {
-      analyserNode.fftSize = 16384;
+      analyserNode.fftSize = WANTED_FFT_SIZE;
     } catch (e) {
       // Safari as of version 10.1 does not support larger sizest than this, despite the specification limit being 32768.
-      analyserNode.fftSize = 2048;
+      analyserNode.fftSize = Math.min(2048, SUPPORTED_DISPLAY_SIZE * 2);
+    }
+    if (false) {
+      console.log('AudioAnalyserAdapter: FFT size', analyserNode.fftSize,
+          'bin count', analyserNode.frequencyBinCount);
     }
     
     // Used to have the option to reduce this to remove empty high-freq bins from the view. Leaving that out for now.
