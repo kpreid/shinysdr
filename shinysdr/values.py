@@ -691,6 +691,8 @@ class ExportedState(object):
         return False
     
     def state(self):
+        # TODO: Catch and log exceptions, so that if something about state fetching blows up we can still present a consistent view. Or, possibly this should be done at the network layer instead.
+        
         # pylint: disable=attribute-defined-outside-init
         if self.state_is_dynamic() or self.__cache is None:
             cells = dict(self.__decorator_cells())

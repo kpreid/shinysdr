@@ -38,11 +38,12 @@ import txws
 import shinysdr.i.db
 from shinysdr.i.json import serialize
 from shinysdr.i.modes import get_modes
-from shinysdr.i.network.base import IWebEntryPoint, SiteWithDefaultHeaders, SlashedResource, UNIQUE_PUBLIC_CAP, WebServiceCommon, deps_path, static_resource_path, endpoint_string_to_url
+from shinysdr.i.network.base import CAP_OBJECT_PATH_ELEMENT, IWebEntryPoint, SiteWithDefaultHeaders, SlashedResource, UNIQUE_PUBLIC_CAP, WebServiceCommon, deps_path, static_resource_path, endpoint_string_to_url
 from shinysdr.i.network.export_http import CapAccessResource
 from shinysdr.i.network.export_ws import WebSocketDispatcherProtocol
 from shinysdr.i.poller import the_poller
 from shinysdr.i.pycompat import defaultstr
+from shinysdr.i.shared_test_objects import SHARED_TEST_OBJECTS_CAP
 from shinysdr.interfaces import _IClientResourceDef
 from shinysdr.twisted_ext import FactoryWithArgs
 from shinysdr.values import SubscriptionContext
@@ -208,6 +209,9 @@ class ClientConfigurationResource(Resource):
         request.setHeader(b'Content-Type', b'application/json')
         configuration = {
             'plugins': self.__plugin_index,
+            # TODO: oughta be a shorter path to this -- normally websocket url is constructed from a http url gotten from the request so we don't have this exact path
+            'shared_test_objects_url': self.__wcommon.make_websocket_url(request, 
+                _make_cap_url(SHARED_TEST_OBJECTS_CAP) + CAP_OBJECT_PATH_ELEMENT),
         }
         return serialize(configuration).encode('utf-8')
 

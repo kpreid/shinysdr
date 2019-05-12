@@ -46,7 +46,7 @@ class TestWebSite(unittest.TestCase):
         self._service = WebService(
             reactor=the_reactor,
             http_endpoint='tcp:0',
-            ws_endpoint='tcp:0',
+            ws_endpoint='tcp:3333',
             root_cap=u'ROOT',
             cap_table={u'ROOT': SiteStateStub()},
             title='test title')
@@ -138,6 +138,9 @@ class TestWebSite(unittest.TestCase):
         self.assertIn('css', plugin_index)
         self.assertIn('js', plugin_index)
         self.assertIn('modes', plugin_index)
+        self.assertEqual(
+            'ws://localhost:3333/shared_test_objects/' + CAP_OBJECT_PATH_ELEMENT,
+            configuration['shared_test_objects_url'])
 
 
 class TestSiteWithoutRootCap(TestWebSite):
@@ -147,7 +150,7 @@ class TestSiteWithoutRootCap(TestWebSite):
         self._service = WebService(
             reactor=the_reactor,
             http_endpoint='tcp:0',
-            ws_endpoint='tcp:0',
+            ws_endpoint='tcp:3333',
             root_cap=UNIQUE_PUBLIC_CAP,
             cap_table={UNIQUE_PUBLIC_CAP: SiteStateStub()},
             title='test title')

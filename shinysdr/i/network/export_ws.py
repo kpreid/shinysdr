@@ -35,6 +35,7 @@ from zope.interface import implementer, providedBy
 from shinysdr.i.json import serialize
 from shinysdr.i.network.base import AUDIO_STREAM_PATH_ELEMENT, CAP_OBJECT_PATH_ELEMENT, parse_audio_stream_options
 from shinysdr.i.pycompat import bytes_or_ascii
+from shinysdr.i.shared_test_objects import SHARED_TEST_OBJECTS_CAP, SharedTestObjects
 from shinysdr.signals import SignalType
 from shinysdr.types import BulkDataT, ReferenceT
 from shinysdr.values import BaseCell, ExportedState, IDeltaSubscriber, PollingCell
@@ -376,14 +377,16 @@ class WebSocketDispatcherProtocol(Protocol):
         _scheme, _netloc, path_bytes, _params, query_bytes, _fragment = urlparse(bytes_or_ascii(self.transport.location))
         # py2/3: unquote returns str in either version but we want Unicode
         path = [six.text_type(urllib.parse.unquote(x)) for x in path_bytes.split(b'/')]
-        assert path[0] == ''
-        path[0:1] = []
-        cap_string = path[0]
-        if cap_string in self._caps:
-            root_object = self._caps[cap_string]
-            path[0:1] = []
-        else:
-            raise Exception('Unknown cap')  # TODO better error reporting
+
+        # parse fixed elements of path
+        # TODO: generally better error reporting, maybe use twisted's Resource dispatch???
+        empty, cap_string = path[0:2]
+        path = path[2:]
+        assert empty == ''
+        
+        root_object = self.__lookup_cap(cap_string)
+        
+        # figure out what is wanted from the root cap
         if path == [AUDIO_STREAM_PATH_ELEMENT]:
             options = parse_audio_stream_options(parse_qs(query_bytes, 1))
             self.inner = AudioStreamInner(the_reactor, self.__send, root_object, options.sample_rate)
@@ -393,6 +396,14 @@ class WebSocketDispatcherProtocol(Protocol):
             self.inner = StateStreamInner(self.__send, root_object, path_bytes.decode('utf-8'), self.__subscription_context)  # note reuse of WS path as HTTP path; probably will regret this
         else:
             raise Exception('Unknown path: %r' % (path,))
+    
+    def __lookup_cap(self, cap_string):
+        if cap_string == SHARED_TEST_OBJECTS_CAP:
+            return SharedTestObjects()
+        elif cap_string in self._caps:
+            return self._caps[cap_string]
+        else:
+            raise Exception('Unknown cap')  # TODO better error reporting
     
     def connectionMade(self):
         """twisted Protocol implementation"""

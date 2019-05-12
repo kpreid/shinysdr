@@ -49,5 +49,7 @@ define(['text!client-configuration'], (text) => {
     return modeTable;
   };
   
+  exports.getSharedTestObjectsURL = () => clientConfiguration.shared_test_objects_url;
+  
   return Object.freeze(exports);
 });
