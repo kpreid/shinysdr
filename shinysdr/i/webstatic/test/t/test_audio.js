@@ -101,10 +101,13 @@ define([
         post(['acceptSamples', samples]);
         
         // We need to wait for the messages to be delivered. There is nothing in the interface to allow us to wait directly for it.
+        // TODO: Why do we need to wait twice (waiting only once used to work)
         waitForOnePostMessage().then(() => {
-          expect(read(4)).toEqual([[1, 3, 5, 7], [2, 4, 6, 8]]);
-          expect(read(4)).toEqual([[9, 9, 9, 9], [10, 10, 10, 10]]);
-          done();
+          waitForOnePostMessage().then(() => {
+            expect(read(4)).toEqual([[1, 3, 5, 7], [2, 4, 6, 8]]);
+            expect(read(4)).toEqual([[9, 9, 9, 9], [10, 10, 10, 10]]);
+            done();
+          });
         });
       });
     });
