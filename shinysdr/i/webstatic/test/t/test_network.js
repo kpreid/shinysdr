@@ -24,24 +24,18 @@ define([
   'events',
   'network',
   'types',
-  'values',
 ], (
   import_jasmine,
-  import_testutil,
   import_client_configuration,
   import_events,
   import_network,
-  import_types,
   import_values
 ) => {
   const {ji: {
     describe,
     expect,
     it,
-    jasmine
   }} = import_jasmine;
-  const {
-  } = import_testutil;
   const {
     getSharedTestObjectsURL,
   } = import_client_configuration;
@@ -51,15 +45,6 @@ define([
   const {
     connect,
   } = import_network;
-  const {
-    anyT,
-  } = import_types;
-  const {
-    ConstantCell,
-    makeBlock
-  } = import_values;
-  
-  const CAP_OBJECT_PATH_ELEMENT = 'radio';  // TODO get from server
   
   describe('network', () => {
     describe('connect', () => {
