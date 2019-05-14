@@ -681,6 +681,8 @@ class ExportedState(object):
         """Yields tuples of (key, cell) which are to be part of the object's exported state.
         
         These cells are in addition to to those defined by decorators, not replacing them.
+        
+        If state_is_dynamic(), then this method will be called multiple times (self.state_shape_changed() must be called to signal a change in the return value); otherwise, it will be called at most once and the result memoized.
         """
         return iter([])
     
@@ -688,6 +690,10 @@ class ExportedState(object):
         raise ValueError('state_insert not defined on %r' % self)
     
     def state_is_dynamic(self):
+        """Whether the result of self.state_def() will change over the lifetime of the object.
+        
+        In addition to returning True from this method, self.state_shape_changed() must be called to signal such changes.
+        """
         return False
     
     def state(self):
