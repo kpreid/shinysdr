@@ -217,6 +217,9 @@ ul.system-menu-list, .system-menu-list ul { /* TODO doesn't fit here, is styling
 .frame-controls {
   margin-bottom: -0.2em; /* collapse margin with following frame */
 }
+summary.frame-controls:not([open]) {
+  margin-bottom: 0;  /* override collapsing when the frame isn't visible */
+}
 .panel.frame {
   margin-top: 0.2em;
   margin-bottom: 0.2em;
