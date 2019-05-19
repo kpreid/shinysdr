@@ -87,7 +87,7 @@ define([
         const cell = new LocalCell(numberT, 0);
         /* const widgetHandle = */ createWidgetExt(context, TestWidget, wEl, cell);
         // implicitly expect not to throw
-        expect(container.firstChild.className).toBe('widget-ErrorWidget');
+        expect(container.firstChild.className).toMatch('widget-ErrorWidget');
       });
 
       it('should call lifecycle callbacks', () => {
@@ -123,6 +123,33 @@ define([
         expect(calledInit).toBe(1);
         expect(calledDestroy).toBe(1);
         // TODO: Test subscheduler being disabled
+      });
+      
+      it('should not replace an existing widget child', () => {
+        const elementsSeen = [];
+        function TestWidget(config) {
+          elementsSeen.push(config.element.tagName.toLowerCase());
+          this.element = config.element;
+        }
+        const cell = new LocalCell(numberT, 0);
+
+        const e1 = container.appendChild(document.createElement('element-1'));
+        const e2 = e1.appendChild(document.createElement('element-2'));
+        const e3 = e2.appendChild(document.createElement('element-3'));
+        
+        const handle = createWidgetExt(context, TestWidget, e3, cell);
+        try {
+          // should fail
+          let secondHandle;
+          expect(() => {
+            secondHandle = createWidgetExt(context, TestWidget, e1, cell);
+          }).toThrowError(/\balready contains\b/);
+          if (secondHandle) secondHandle.destroy();  // cleanup
+        } finally {
+          handle.destroy();
+        }
+        // confirm the constructor was not called
+        expect(elementsSeen).toEqual(['element-3']);
       });
     });
     

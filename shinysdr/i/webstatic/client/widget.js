@@ -60,6 +60,12 @@ define([
       console.error('node already a widget ' + elementHasWidgetRole.get(node), node);
       throw new Error('node already a widget ' + elementHasWidgetRole.get(node) + ': ' + node);
     }
+    let widgetChildren = node.querySelectorAll('.live-widget');
+    if (widgetChildren.length) {
+      // console can allow inspecting the object
+      console.error('node already contains widget(s)', widgetChildren);
+      throw new Error('node already contains widget(s) ' + widgetChildren);
+    }
   }
   
   function alwaysCreateReceiverFromEvent(event) {
@@ -203,49 +209,54 @@ define([
           childTargetCell = tc;
         }  // TODO: kludge for PaneManager; replace with something better
       });
-      let widget;
+      let widget, widgetChosenElement;
       try {
         widget = new widgetCtor(config);
+        widgetChosenElement = widget.element;
         
-        if (!(widget.element instanceof Element)) {
-          throw new TypeError('Widget ' + widget.constructor.name + ' did not provide an element but ' + widget.element);
+        if (!(widgetChosenElement instanceof Element)) {
+          throw new TypeError('Widget ' + widget.constructor.name + ' did not provide an element but ' + widgetChosenElement);
         }
       } catch (error) {
         console.error('Error creating widget: ', error);
         console.log(error.stack);
         // TODO: Arrange so that if widgetCtor is widgets_basic.PickWidget it can give the more-specific name.
         widget = new ErrorWidget(config, widgetCtor, error);
+        widgetChosenElement = widget.element;
       }
       
-      widget.element.classList.add('widget-' + widget.constructor.name);  // TODO use stronger namespacing
+      // 'live-widget' class is used for detecting bad nesting and also may be useful in debugging, but currently is not, and probably should not be used for styling.
+      widgetChosenElement.classList.add('live-widget');
+      // Specific class used for attaching styling to widgets.
+      widgetChosenElement.classList.add('widget-' + widget.constructor.name);  // TODO use stronger namespacing
       
-      const newEl = widget.element;
       const placeMark = newSourceEl.nextSibling;
       if (newSourceEl.hasAttribute('title') && newSourceEl.getAttribute('title') === templateStash.getAttribute('title')) {
         console.warn('Widget ' + widget.constructor.name + ' did not handle title attribute');
       }
       
       if (newSourceEl.parentNode === container) {
-        container.replaceChild(newEl, newSourceEl);
+        container.replaceChild(widgetChosenElement, newSourceEl);
       } else {
-        container.insertBefore(newEl, placeMark);
+        container.insertBefore(widgetChosenElement, placeMark);
       }
-      currentWidgetEl = newEl;
+      currentWidgetEl = widgetChosenElement;
       
       doPersistentDetails(currentWidgetEl);
       
       // allow widgets to embed widgets
-      createWidgetsInNode(childTargetCell, context, widget.element);
+      createWidgetsInNode(childTargetCell, context, widgetChosenElement);
       
-      newEl.addEventListener('shinysdr:lifecycledestroy', event => {
+      widgetChosenElement.addEventListener('shinysdr:lifecycledestroy', event => {
+        widgetChosenElement.classList.remove('live-widget');
         disableScheduler();
       }, false);
       
       // signal now that we've inserted
       // TODO: Make this less DWIM
-      lifecycleInit(newEl);
+      lifecycleInit(widgetChosenElement);
       setTimeout(function() {
-        lifecycleInit(newEl);
+        lifecycleInit(widgetChosenElement);
       }, 0);
     });
     
