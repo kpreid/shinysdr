@@ -27,14 +27,12 @@
   <meta name="viewport" content="width=device-width">
 </head><body class="pane-structured-body">
 
-<shinysdr-pane id="section-controls" visible="true">
-  <div class="sidebar">
-    <div data-widget="PickWidget" data-target="input"></div>
-    <div data-widget="ScopeControls" data-target="parameters"></div>
-  </div>
+<shinysdr-pane id="section-controls" class="pane-type-sidebar" visible="true">
+  <div data-widget="PickWidget" data-target="input"></div>
+  <div data-widget="ScopeControls" data-target="parameters"></div>
 </shinysdr-pane>
 
-<shinysdr-pane id="section-audio-spectrum" class="stretchy">
+<shinysdr-pane id="section-audio-spectrum" class="pane-type-stretchy">
   <div id="scope"
      data-widget="ScopePlot"
      style="display: block; height: 100%; width: 100%;">

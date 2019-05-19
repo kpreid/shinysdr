@@ -38,9 +38,9 @@
   document.getElementById('loading-information-progress').value = 0.01;
 </script>
 
-<shinysdr-pane id="section-system-menu" visible="true">
+<shinysdr-pane id="section-system-menu" class="pane-type-mini" visible="true">
   <h2>ShinySDR</h2>
-  <div class="sidebar frame">
+  <div class="frame">
     <ul class="system-menu-list" id="shinysdr-pane-list">
     </ul>
     <ul class="system-menu-list">
@@ -54,36 +54,34 @@
   </div>
 </shinysdr-pane>
 
-<shinysdr-pane id="section-spectrum" class="stretchy" visible="true">
+<shinysdr-pane id="section-spectrum" class="pane-type-stretchy" visible="true">
   <h2>RF Spectrum <span data-target="root_object.monitor" data-widget="MonitorQuickOptions"></span></h2>
   <div id="rf-spectrum-monitor" data-widget="Monitor" data-target="root_object.monitor" data-is-rf-spectrum=""></div>
 </shinysdr-pane>
 
-<shinysdr-pane id="section-audio-spectrum" class="stretchy" visible="false">
+<shinysdr-pane id="section-audio-spectrum" class="pane-type-stretchy" visible="false">
   <h2>Audio Spectrum <span data-target="audio.monitor" data-widget="MonitorQuickOptions"></span></h2>
   <div id="audio-spectrum-monitor" data-widget="Monitor" data-target="audio.monitor"></div>
 </shinysdr-pane>
 
-<shinysdr-pane id="section-map" class="stretchy" visible="false">
+<shinysdr-pane id="section-map" class="pane-type-stretchy" visible="false">
   <h2>Map</h2>
   <div id="map"></div>
 </shinysdr-pane>
 
-<shinysdr-pane id="section-telemetry" visible="false">
+<shinysdr-pane id="section-telemetry" class="pane-type-sidebar" visible="false">
   <h2>Telemetry</h2>
-  <div class="sidebar frame" data-widget="PickWidget" data-target="root_object.telemetry_store"></div>
+  <div class="frame" data-widget="PickWidget" data-target="root_object.telemetry_store"></div>
 </shinysdr-pane>
 
-<shinysdr-pane id="section-radio" visible="true">
+<shinysdr-pane id="section-radio" class="pane-type-sidebar" visible="true">
   <h2>Radio Config</h2>
-  <div class="sidebar">
-    <div data-widget="Top" data-target="root_object" id="_radio"></div>
-  </div>
+  <div data-widget="Top" data-target="root_object" id="_radio"></div>
 </shinysdr-pane>
 
-<shinysdr-pane id="section-db" visible="true">
+<shinysdr-pane id="section-db" class="pane-type-sidebar" visible="true">
   <h2>Frequency DB</h2>
-  <div class="sidebar frame">
+  <div class="frame pane-content-also-vertical-stretch">
     <div class="panel" data-widget="RecordDetails" data-target="actions.selectedRecord"></div>
     <div class="panel" data-widget="FreqList" id="freqlist"></div>
     <div class="panel">

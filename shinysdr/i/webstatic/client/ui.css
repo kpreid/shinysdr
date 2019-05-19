@@ -50,7 +50,7 @@ html.pane-structured-page, .pane-structured-page body {
   box-sizing: border-box;
   width: 100%;
 }
-.main-not-yet-run.pane-structured-body > shinysdr-pane {
+.main-not-yet-run.pane-structured-body > :not(#loading-information-dialog) {
   /* hide unfinished UI (but still allow it to layout, i.e. avoid display: none) */
   visibility: hidden;
 }
@@ -71,16 +71,6 @@ html.pane-structured-page, .pane-structured-page body {
 shinysdr-pane {
   background: var(--shinysdr-theme-column-bgfill);
   color: var(--shinysdr-theme-foreground);
-}
-.pane-structured-body > shinysdr-pane {
-  display: flex;
-  flex-direction: column;
-  flex: 0 1 auto;
-  height: 100%; /* doesn't change layout height, but enables percentage height to work inside */
-}
-.pane-structured-body > shinysdr-pane.stretchy {
-  flex: 1 2;
-  width: 1px;  /* This width is not actually wanted, but leaving it unset or auto causes sized content such as in the spectrum pane to overrun the intended flexible width. It is 1px because it will act as a minimum width. */
 }
 shinysdr-pane > h2 {
   font-size: 100%;
@@ -141,10 +131,48 @@ shinysdr-pane > h2 {
   padding: 0.2em;
 }
 
-/* left sidebar menu which contains window show-buttons and links */
-#section-system-menu .sidebar {
-  width: 10em;  /* override default sidebar width */
+/* pane-structured-body vertical scrolling management. */
+.pane-structured-body > * {
+  /* Assume it's a container of stacked panes, scroll the stack. */
+  overflow-y: auto;
 }
+.pane-structured-body > shinysdr-pane {
+  /* Override: it's an entire pane, so don't scroll it... */
+  overflow-y: hidden;
+}
+.pane-structured-body > shinysdr-pane > * {
+  /* ...instead scroll its contents. */
+  overflow-y: auto;
+}
+
+/* pane horizontal sizing and layout details */
+shinysdr-pane {
+  display: flex;
+  flex-direction: column;
+
+  flex: 0 1 auto;
+  height: auto;
+}
+.pane-type-mini {
+  flex: 0 1 auto;
+  width: 10em;
+}
+.pane-type-sidebar {
+  flex: 0 1 auto;
+  width: 18em;
+}
+.pane-type-stretchy {
+  flex: 1 2;
+  width: 1px;  /* This width is not actually wanted, but leaving it unset or auto causes sized content such as in the spectrum pane to overrun the intended flexible width. It is 1px because it will act as a minimum width. */
+}
+.pane-structured-body > shinysdr-pane {
+  height: 100%; /* doesn't change layout height, but enables percentage height to work inside */
+}
+.pane-content-also-vertical-stretch {  /* TODO better name for this class */
+  flex: 1 1 auto;
+}
+
+/* left sidebar menu which contains window show-buttons and links */
 ul.system-menu-list, .system-menu-list ul { /* TODO doesn't fit here, is styling for side menu */
   margin: 0;
   padding: 0;
@@ -196,12 +224,6 @@ ul.system-menu-list, .system-menu-list ul { /* TODO doesn't fit here, is styling
 }
 
 /* widgets */
-.sidebar {
-  flex: 1 1 auto;
-  height: auto;
-  width: 18em;
-  overflow-y: auto;
-}
 .frame {
   display: flex;
   flex-direction: column;
