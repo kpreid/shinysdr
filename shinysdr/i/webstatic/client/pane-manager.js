@@ -97,9 +97,9 @@ define([
       // Title bar controls
       const titleBarControls = titleBarElement.insertBefore(document.createElement('span'), titleBarElement.firstChild);
       titleBarControls.classList.add('widget-PaneImpl-controls');
-      if (false) {  // TODO: Not having this until we have a full hide-versus-close story.
+      if (paneImpl.paneManager.hasPaneList) {  // Hide button only if we can show again
         const hideButton = titleBarControls.appendChild(document.createElement('button'));
-        hideButton.textContent = '\u2573';  // TODO use icon so we can have a consistent style
+        hideButton.textContent = '\u229F';  // TODO use icon so we can have a consistent style
         hideButton.classList.add('pane-hide-button');
         hideButton.addEventListener('click', event => {
           paneImpl.setVisible(false);
@@ -230,6 +230,15 @@ define([
   
   class PaneManager {
     constructor(context, container, defaultWidgetTarget) {
+      // This is a function because widget creation will clone and replace the node, so we need to get the current version later but also check up front to set hasPaneList for PaneImpl to read.
+      function findPaneListElement() {
+        return container.querySelector('#' + WINDOW_LIST_ID);
+      }
+      const hasPaneList = this.hasPaneList = !!findPaneListElement();
+      if (!hasPaneList) {
+        console.warn('#' + WINDOW_LIST_ID + ' not present in document.');
+      }
+      
       // TODO: weakmap / impl pattern
       this._context = context;
       this._container = container;
@@ -246,7 +255,7 @@ define([
         this._closeExtraWide();
       });
       
-      const initialListEl = container.querySelector('#' + WINDOW_LIST_ID);
+      const initialListEl = findPaneListElement();
       if (initialListEl) {
         createWidgetExt(context, PaneListWidget, initialListEl, new ConstantCell(this, blockT));
         const widgetizedListEl = container.querySelector('#' + WINDOW_LIST_ID);  // TODO kludge
@@ -273,8 +282,6 @@ define([
         } else {
           console.info('#' + WINDOW_LIST_ID + ' not inside a pane.');
         }
-      } else {
-        console.warn('#' + WINDOW_LIST_ID + ' not present in document.');
       }
       
       this._globalCheckAndResize();

@@ -134,6 +134,12 @@ shinysdr-pane > h2 {
   /* TODO: should probably use flexbox, not float */
   float: right;
 }
+.pane-hide-button {
+  border: none;
+  background: none;
+  margin: -0.2em;
+  padding: 0.2em;
+}
 
 /* left sidebar menu which contains window show-buttons and links */
 #section-system-menu .sidebar {
