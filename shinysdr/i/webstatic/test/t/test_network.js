@@ -19,7 +19,6 @@
 
 define([
   '/test/jasmine-glue.js',
-  '/test/testutil.js',
   'client-configuration-module',
   'events',
   'network',
