@@ -45,9 +45,11 @@ define([
   } = import_events;
   const {
     blockT,
+    booleanT,
     numberT,
   } = import_types;
   const {
+    Cell,
     ConstantCell,
     LocalCell,
   } = import_values;
@@ -127,13 +129,17 @@ define([
       const lastInteractionTimeCell = new LocalCell(numberT, Date.now());
       bindPropertyToCell(this, 'lastInteractionTime', lastInteractionTimeCell);
       
-      createWidgetExt(paneManager._context, PaneWidget, bootstrapFrameElement, new ConstantCell(this, blockT));
+      this.visibleCell = new Cell(booleanT);
+      this.visibleCell.get = this.getVisible.bind(this);
+      this.visibleCell.set = this.setVisible.bind(this);
       
+      // Finished basic property initialization, now doing things that interact with other objects.
+      
+      createWidgetExt(paneManager._context, PaneWidget, bootstrapFrameElement, new ConstantCell(this, blockT));
       if (!this.contentElement) {
         // This property, among others, is assigned by the widget
         throw new Error('didn\'t glue up properly');
       }
-      
       this.handle = new PaneHandle(this);
       
       Object.freeze(this);
@@ -184,6 +190,7 @@ define([
       }
       
       this.paneManager._scheduleGlobalCheckAndResize();
+      this.visibleCell.n.notify();
     }
     
     getVisible() {
@@ -403,14 +410,16 @@ define([
           
           setupPaneToggleButton(listButton, paneImpl);
         
-          function updateTitle() {
+          // TODO: sub-scheduler or break update loop
+          config.scheduler.startNow(function updateTitle() {
             listTitleNode.data = String(paneImpl.titleCell.depend(updateTitle));
-          }
-          updateTitle.scheduler = config.scheduler;  // TODO: sub-scheduler or break update loop
-          updateTitle();
-        
+          });
+          
           listItem.classList.add('pane-show-button');
-          listItem.classList[paneImpl.getVisible() ? 'add' : 'remove']('pane-show-button-shown');
+          config.scheduler.startNow(function updateVisibleIndication() {
+            const visible = paneImpl.visibleCell.depend(updateVisibleIndication);
+            listItem.classList[visible ? 'add' : 'remove']('pane-show-button-shown');
+          });
         
           return listItem;
         },
