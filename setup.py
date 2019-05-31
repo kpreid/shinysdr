@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 # Copyright 2013, 2014, 2015, 2016 Kevin Reid and the ShinySDR contributors
 #
@@ -17,10 +18,68 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-from setuptools import find_packages, setup
+import urllib
+import subprocess
+
+from setuptools import find_packages, setup, Command
+
+ASSETS = {
+    'http://requirejs.org/docs/release/2.1.22/comments/require.js': 'shinysdr/deps/require.js',
+    'https://raw.githubusercontent.com/requirejs/text/646db27aaf2236cea92ac4107f32cbe5ae7a8d3a/text.js': 'shinysdr/deps/text.js'
+}
 
 
-# Mostly written on the advice of <http://www.scotttorborg.com/python-packaging/>.
+class DownloadAssets(Command):
+    """Support setup.py retrieving assets from external sites"""
+
+    description = 'download assets from external sites'
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        for k, v in ASSETS.items():
+            print('downloading {} to {}'.format(k, v))
+            urllib.urlretrieve(k, v)
+
+
+class InitGitSubModules(Command):
+    """Support setup.py Git submodule init"""
+
+    description = 'Call git on each submodule and initilize it'
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        print('Calling git recurisively on on each sub module..')
+        subprocess.call(['git', 'submodule', 'update', '--init'])
+
+
+class FetchDeps(Command):
+    """fetch dependencies command"""
+
+    description = 'gathers external dependencies from various sources'
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        self.run_command('git_init')
+        self.run_command('retrieve_assets')
+
 
 setup(
     name='ShinySDR',
@@ -50,6 +109,10 @@ setup(
         'ephem',
         'six',
         'pyserial',  # undeclared dependency of twisted.internet.serialport
+        # Without the service_identity module, Twisted can perform only rudimentary TLS client hostname verification
+        'service_identity', 
+        'pyasn1>=0.4.1,<0.5.0',  # required to pin pyans1 support for pyasn1-modules
+        'pyasn1-modules',  # required for service_identity
     ],
     dependency_links=[],
     # zip_safe: TODO: Investigate. I suspect unsafe due to serving web resources relative to __file__.
@@ -59,5 +122,10 @@ setup(
             'shinysdr = shinysdr.main:main',
             'shinysdr-import = shinysdr.db_import.tool:import_main'
         }
-    }
+    },
+    cmdclass={
+        'git_init': InitGitSubModules,
+        'retrieve_assets': DownloadAssets,
+        'fetch_deps': FetchDeps,
+    },
 )
