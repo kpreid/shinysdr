@@ -18,8 +18,9 @@
 # You should have received a copy of the GNU General Public License
 # along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-import urllib
+import os.path
 import subprocess
+import urllib
 
 from setuptools import find_packages, setup, Command
 from setuptools.command.build_py import build_py
@@ -31,9 +32,7 @@ ASSETS = {
 
 
 class DownloadAssets(Command):
-    """Support setup.py retrieving assets from external sites"""
-
-    description = 'download assets from external sites'
+    description = 'Download web app assets from external sites.'
     user_options = []
 
     def initialize_options(self):
@@ -43,15 +42,16 @@ class DownloadAssets(Command):
         pass
 
     def run(self):
-        for k, v in ASSETS.items():
-            print('downloading {} to {}'.format(k, v))
-            urllib.urlretrieve(k, v)
+        for source_url, destination_path in ASSETS.items():
+            if os.path.exists(destination_path):
+                print('skipping downloading {}, already exists'.format(destination_path))
+            else:
+                print('downloading {} to {}'.format(source_url, destination_path))
+                urllib.urlretrieve(source_url, destination_path)
 
 
 class InitGitSubModules(Command):
-    """Support setup.py Git submodule init"""
-
-    description = 'Call git on each submodule and initilize it'
+    description = 'Initialize Git submodules for dependencies.'
     user_options = []
 
     def initialize_options(self):
@@ -61,7 +61,7 @@ class InitGitSubModules(Command):
         pass
 
     def run(self):
-        print('Calling git recurisively on on each sub module..')
+        print('Initializing submodules...')
         subprocess.call(['git', 'submodule', 'update', '--init'])
 
 
