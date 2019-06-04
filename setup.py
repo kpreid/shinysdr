@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright 2013, 2014, 2015, 2016 Kevin Reid and the ShinySDR contributors
+# Copyright 2013, 2014, 2015, 2016, 2019 Kevin Reid and the ShinySDR contributors
 #
 # This file is part of ShinySDR.
 # 
@@ -22,6 +22,7 @@ import urllib
 import subprocess
 
 from setuptools import find_packages, setup, Command
+from setuptools.command.build_py import build_py
 
 ASSETS = {
     'http://requirejs.org/docs/release/2.1.22/comments/require.js': 'shinysdr/deps/require.js',
@@ -81,6 +82,14 @@ class FetchDeps(Command):
         self.run_command('retrieve_assets')
 
 
+class BuildPyCommand(build_py):
+    """Customized build command to ensure deps are fetched before build."""
+  
+    def run(self):
+        self.run_command('fetch_deps')
+        build_py.run(self)
+  
+
 setup(
     name='ShinySDR',
     # version='...',  # No versioning is defined yet
@@ -127,5 +136,6 @@ setup(
         'git_init': InitGitSubModules,
         'retrieve_assets': DownloadAssets,
         'fetch_deps': FetchDeps,
+        'build_py': BuildPyCommand,
     },
 )
