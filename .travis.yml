@@ -22,7 +22,6 @@ addons:
 
 before_install:
   - npm install jshint
-  - ./fetch-js-deps.sh
 
 virtualenv:
   # Make gnuradio Python bindings visible to the virtualenv.
@@ -40,6 +39,8 @@ install:
   - pip install txws
 
 script:
+  # Also retrieves external dependencies
+  - python setup.py fetch_deps
   # PATH in order to call jshint, which was installed non-globally above.
   - PATH="node_modules/.bin/:$PATH" ./lint.sh
   

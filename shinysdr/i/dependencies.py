@@ -89,7 +89,7 @@ class DependencyTester(object):
             if report_text != '':
                 report_text += '\n'
             report_text += 'The following files are missing:\n' + self.__format_entries(self.__missing_files)
-            report_text += 'Please (re)run fetch-js-deps.sh and, if applicable, setup.py install.'
+            report_text += 'Please (re)run setup.py fetch_deps and following installation steps.'
         if report_text != '':
             return report_text
         else:

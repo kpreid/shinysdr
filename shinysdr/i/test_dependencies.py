@@ -76,4 +76,4 @@ class TestDependencyTester(unittest.TestCase):
     def test_file_missing(self):
         self.t.check_jsdep_file(__file__, 'test_dependencies_cases/nonexistent_filename', '<dep name>')
         self.assertEqual(self.t.report(),
-            'The following files are missing:\n\t<dep name>  (Check: ' + os.path.dirname(__file__) + '/test_dependencies_cases/nonexistent_filename does not exist.)\nPlease (re)run fetch-js-deps.sh and, if applicable, setup.py install.')
+            'The following files are missing:\n\t<dep name>  (Check: ' + os.path.dirname(__file__) + '/test_dependencies_cases/nonexistent_filename does not exist.)\nPlease (re)run setup.py fetch_deps and following installation steps.')
