@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  Copyright 2017 Kevin Reid and the ShinySDR contributors
+  Copyright 2017, 2019 Kevin Reid and the ShinySDR contributors
   
   This file is part of ShinySDR.
   
@@ -65,15 +65,6 @@
 <blockquote><pre><kbd>git clone <a href="https://github.com/kpreid/shinysdr/">https://github.com/kpreid/shinysdr/</a></kbd></pre></blockquote>
 
 <p>which will create a directory named <code>shinysdr</code>.
-  
-<p>There is some additional third-party code (mostly JavaScript libraries) which is required and must be downloaded using the provided <code>fetch-js-deps.sh</code> script (or if you prefer, just follow the steps in that script rather than running it).
-
-<blockquote><pre><kbd>cd shinysdr
-./fetch-js-deps.sh</kbd></pre></blockquote>
-
-<p>(Rerunning <code>fetch-js-deps.sh</code> may also be necessary after updating ShinySDR.)</p>
-
-<p>[TODO: Integrate fetch-js-deps or equivalent effects into setup.py.]</p>
 
 <h2>3. Decide which way you want to install ShinySDR</h2>
 
@@ -104,26 +95,33 @@ sudo python setup.py install</kbd></pre></blockquote>
 
 For more installation options see <code>python setup.py install --help</code> and general documentation about how to install Python libraries.</p>
 
-<p>[TODO: change this to talk about pip, maybe after eliminating fetch-js-deps.]</p>
+<p>[TODO: change this to talk about pip, not using setup.py directly.]</p>
 
 <h2>4b. Preparation to run from source tree</h2>
 
-<p>If you do not intend to run ShinySDR directly from the source tree, skip this step. Otherwise, install the following Python libraries:</p>
+<p>If you do not intend to run ShinySDR directly from the source tree, skip this step. Otherwise:</p>
+  
+<ol>
+<li><p>Install the following Python libraries:</p>
+  <ul>
+    <li><a href="https`://twistedmatrix.com/">Twisted</a> 12.3.0 or later.</li>
+    <li><a href="https://pypi.org/project/six/">six</a>.</li>
+    <li><a href="https://github.com/MostAwesomeDude/txWS">txWS</a> 0.8 or later.</li>
+    <li><a href="http://rhodesmill.org/pyephem/">PyEphem</a> 3.7.5.1 or later.</li>
+    <li><a href="https://pypi.python.org/pypi/pyserial">pyserial</a> (optional: required only by hamlib plugin).</li>
+  </ul>
+</li>
 
-<ul>
-  <li><a href="https`://twistedmatrix.com/">Twisted</a> 12.3.0 or later.</li>
-  <li><a href="https://pypi.org/project/six/">six</a>.</li>
-  <li><a href="https://github.com/MostAwesomeDude/txWS">txWS</a> 0.8 or later.</li>
-  <li><a href="http://rhodesmill.org/pyephem/">PyEphem</a> 3.7.5.1 or later.</li>
-  <li><a href="https://pypi.python.org/pypi/pyserial">pyserial</a> (optional: required only by hamlib plugin).</li>
-</ul>
+<li><p>Run <kbd>python setup.py fetch_deps</kbd>. This will download JavaScript and other non-Python dependencies of ShinySDR.</p></li>
 
-You may wish to create a script to make it easy to start ShinySDR using this directory; for example, I have one like so:
+<li><p>You may wish to create a script to make it easy to start ShinySDR using this directory; for example, I have one like so:</p>
 
 <blockquote><pre>#!/bin/sh
 export PYTHONPATH="<var>/wherever/you/put/shinysdr/</var>"
 exec python -m shinysdr.main "$@"</pre></blockquote>
+</li>
 
+</ol>
 
 <h2>5. Configure the server</h2>
 
