@@ -20,6 +20,15 @@
   --shinysdr-theme-foreground: #FFF;
   --shinysdr-theme-halo-bgcolor: black;
   
+  --shinysdr-theme-empty-bgcolor: #333;
+  --shinysdr-theme-empty-bgfill: linear-gradient(78deg, 
+    #2F2F2F 26%, 
+    #333 26%,
+    #333 51%,
+    #2F2F2F 51%,
+    #2F2F2F 76%,
+    #333 76%);
+  
   --shinysdr-theme-column-bgcolor: #222;
   --shinysdr-theme-column-bgfill: #222;
   
