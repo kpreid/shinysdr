@@ -28,6 +28,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import importlib
 import os
 import os.path
+import traceback
 
 import six
 from six.moves import builtins
@@ -310,10 +311,8 @@ def execute_config(config_obj, config_file_or_directory):
     
     Note: does not _wait_and_validate()
     """
-    env = dict(builtins.__dict__)
-    env.update({'config': config_obj})
     if os.path.isdir(config_file_or_directory):
-        six.exec_(open(os.path.join(config_file_or_directory, 'config.py')).read(), env)
+        _execute_config_file(config_obj, os.path.join(config_file_or_directory, 'config.py'))
         
         if not config_obj._state_filename:
             config_obj.persist_to_file(os.path.join(config_file_or_directory, 'state.json'))
@@ -321,10 +320,61 @@ def execute_config(config_obj, config_file_or_directory):
         if os.path.isdir(dbs_dir):
             config_obj.databases.add_directory(dbs_dir)
     else:
-        six.exec_(open(config_file_or_directory).read(), env)
+        _execute_config_file(config_obj, config_file_or_directory)
 
 
 __all__.append('execute_config')
+
+
+def _execute_config_file(config_obj, path):
+    # TODO: it was suggested that "runpy" is a better way to implement this; try it
+    env = dict(builtins.__dict__)
+    env.update({'config': config_obj})
+    with open(path) as f:
+        # going through compile() provides position information for tracebacks
+        code = compile(f.read(), path, 'exec')
+        six.exec_(code, env)
+
+
+def print_config_exception(exc_info, destination):
+    """Strip implementation code from an execute_config traceback and print it."""
+    etype, value, tb = exc_info
+    tb_list = traceback.extract_tb(tb)
+
+    filtered_tb_list = []
+    state = 'initial'
+    for entry in tb_list:
+        filename, line, function, _source_text = entry
+        if state == 'initial':
+            if function == '_execute_config_file':
+                state = 'hide_execute'
+        elif state == 'hide_execute':
+            if not function == 'exec_' and not filename == '<string>':
+                state = 'copy'
+                filtered_tb_list.append(entry)
+        elif state == 'copy':
+            if filename == '<string>':  # skip six.exec_ wrapper
+                continue
+            if __file__.rstrip('c').endswith(filename):
+                break
+            else:
+                filtered_tb_list.append(entry)
+        else:
+            raise Exception('broken state machine in print_config_exception')
+    
+    if not filtered_tb_list:
+        print('[unfiltered]')
+        # fall back to unfiltered
+        filtered_tb_list = tb_list
+    
+    print('An error occurred while executing the ShinySDR configuration file:', file=destination)
+    for line in traceback.format_list(filtered_tb_list):
+        destination.write(line)
+    for line in traceback.format_exception_only(etype, value):
+        destination.write(line)
+
+
+__all__.append('print_config_exception')
 
 
 def write_default_config(new_config_path):

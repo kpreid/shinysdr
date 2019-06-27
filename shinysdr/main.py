@@ -33,7 +33,7 @@ from twisted.internet.task import react
 from twisted.logger import Logger, STDLibLogObserver, globalLogBeginner
 
 # Note that gnuradio-dependent modules are loaded later, to avoid the startup time if all we're going to do is give a usage message
-from shinysdr.i.config import Config, write_default_config, execute_config
+from shinysdr.i.config import Config, ConfigException, write_default_config, execute_config, print_config_exception
 from shinysdr.i.dependencies import DependencyTester
 from shinysdr.i.persistence import PersistenceFileGlue
 from shinysdr.i.poller import the_subscription_context
@@ -94,8 +94,13 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
     
     # ... else read config file
     config_obj = Config(reactor=reactor, log=_log)
-    execute_config(config_obj, args.config_path)
-    yield config_obj._wait_and_validate()
+    try:
+        execute_config(config_obj, args.config_path)
+        yield config_obj._wait_and_validate()
+    except ConfigException:
+        print_config_exception(sys.exc_info(), sys.stderr)
+        defer.returnValue(None)
+        return
     
     _log.info('Constructing...')
     app = config_obj._create_app()

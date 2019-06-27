@@ -23,6 +23,7 @@ See also test_main.py.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os.path
+import sys
 import textwrap
 
 import six
@@ -34,7 +35,7 @@ from twisted.trial import unittest
 from zope.interface import implementer
 
 from shinysdr import devices
-from shinysdr.i.config import Config, ConfigException, ConfigTooLateException, execute_config, write_default_config
+from shinysdr.i.config import Config, ConfigException, ConfigTooLateException, execute_config, print_config_exception, write_default_config
 from shinysdr.i.roots import IEntryPoint
 from shinysdr.testutil import Files, LogTester, StubRXDriver
 from shinysdr.values import ExportedState
@@ -304,6 +305,28 @@ class TestConfigFiles(unittest.TestCase):
         
         self.assertTrue(os.path.isdir(self.__dirpath('dbs-read-only')))
         return self.__config._wait_and_validate()
+    
+    def test_traceback_processing(self):
+        self.maxDiff = 1000
+        self.__files.create({
+            self.__config_name: 'config.devices.add("will-fail")'
+        })
+        file_obj = six.StringIO()
+        try:
+            execute_config(self.__config, self.__config_name)
+            self.fail('did not raise')
+        except ConfigException:
+            print_config_exception(sys.exc_info(), file_obj)
+        self.assertEqual(
+            file_obj.getvalue()
+            .replace(self.__files.dir, '<tempdir>')
+            .replace(__file__, '<config.py>'),
+            textwrap.dedent("""\
+                An error occurred while executing the ShinySDR configuration file:
+                  File "<tempdir>/config", line 1, in <module>
+                    config.devices.add("will-fail")
+                ConfigException: config.devices.add: no device(s) specified
+            """))
     
     # --- Databases ---
     # These are really tests of the config object, but database processing uses files.
