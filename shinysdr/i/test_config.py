@@ -36,7 +36,7 @@ from zope.interface import implementer
 from shinysdr import devices
 from shinysdr.i.config import Config, ConfigException, ConfigTooLateException, execute_config, write_default_config
 from shinysdr.i.roots import IEntryPoint
-from shinysdr.testutil import Files, LogTester
+from shinysdr.testutil import Files, LogTester, StubRXDriver
 from shinysdr.values import ExportedState
 
 
@@ -47,6 +47,9 @@ class TestConfigObject(unittest.TestCase):
     def setUp(self):
         self.log_tester = LogTester()
         self.config = ConfigFactory(log=self.log_tester.log)
+    
+    def complete_minimally(self):
+        self.config.devices.add(u'stub_for_completion', StubDevice())
     
     # TODO: In type error tests, also check message once we've cleaned them up.
     
@@ -59,24 +62,30 @@ class TestConfigObject(unittest.TestCase):
     
     @defer.inlineCallbacks
     def test_validate_succeed(self):
-        self.config.devices.add(u'foo', StubDevice())
+        self.complete_minimally()
         d = self.config._wait_and_validate()
         self.assertIsInstance(d, defer.Deferred)  # don't succeed trivially
         yield d
     
     @defer.inlineCallbacks
     def test_no_network_service(self):
+        self.complete_minimally()
         yield self.config._wait_and_validate()
         self.log_tester.check(NO_NETWORK)
+    
+    @defer.inlineCallbacks
+    def test_no_devices(self):
+        yield self.assertFailure(self.config._wait_and_validate(), ConfigException)
 
     # --- Persistence ---
     
     @defer.inlineCallbacks
     def test_persist_too_late(self):
+        self.complete_minimally()
         yield self.config._wait_and_validate()
         self.assertRaises(ConfigTooLateException, lambda:
             self.config.persist_to_file('foo'))
-        self.assertEqual({}, self.config.devices._values)
+        self.assertEqual(None, self.config._state_filename)
     
     def test_persist_none(self):
         self.assertEqual(None, self.config._state_filename)
@@ -94,10 +103,11 @@ class TestConfigObject(unittest.TestCase):
     
     @defer.inlineCallbacks
     def test_device_too_late(self):
+        self.complete_minimally()
         yield self.config._wait_and_validate()
         self.assertRaises(ConfigTooLateException, lambda:
             self.config.devices.add(u'foo', StubDevice()))
-        self.assertEqual({}, self.config.devices._values)
+        self.assertEqual(['stub_for_completion'], list(self.config.devices._values.keys()))
     
     def test_device_key_ok(self):
         dev = StubDevice()
@@ -132,10 +142,11 @@ class TestConfigObject(unittest.TestCase):
     
     @defer.inlineCallbacks
     def test_web_too_late(self):
+        self.complete_minimally()
         yield self.config._wait_and_validate()
         self.assertRaises(ConfigTooLateException, lambda:
             self.config.serve_web(http_endpoint='tcp:8100', ws_endpoint='tcp:8101'))
-        self.assertEqual({}, self.config.devices._values)
+        self.assertEqual([], self.config._service_makers)
     
     def test_web_ok(self):
         self.config.serve_web(http_endpoint='tcp:8100', ws_endpoint='tcp:8101')
@@ -157,10 +168,11 @@ class TestConfigObject(unittest.TestCase):
     
     @defer.inlineCallbacks
     def test_ghpsdr_too_late(self):
+        self.complete_minimally()
         yield self.config._wait_and_validate()
         self.assertRaises(ConfigTooLateException, lambda:
             self.config.serve_ghpsdr())
-        self.assertEqual({}, self.config.devices._values)
+        self.assertEqual([], self.config._service_makers)
     
     def test_ghpsdr_ok(self):
         self.config.serve_ghpsdr()
@@ -170,19 +182,20 @@ class TestConfigObject(unittest.TestCase):
     
     @defer.inlineCallbacks
     def test_server_audio_too_late(self):
+        self.complete_minimally()
         yield self.config._wait_and_validate()
         self.assertRaises(ConfigTooLateException, lambda:
             self.config.set_server_audio_allowed(True))
-        self.assertEqual({}, self.config.devices._values)
     
     # TODO test rest of config.set_server_audio_allowed
 
     @defer.inlineCallbacks
     def test_stereo_too_late(self):
+        self.complete_minimally()
         yield self.config._wait_and_validate()
         self.assertRaises(ConfigTooLateException, lambda:
-            self.config.set_stereo(True))
-        self.assertEqual({}, self.config.devices._values)
+            self.config.set_stereo(False))
+        self.assertTrue(self.config.features._get('stereo'))
     
     # TODO test rest of config.set_stereo
     
@@ -195,6 +208,7 @@ class TestConfigObject(unittest.TestCase):
     
     @defer.inlineCallbacks
     def test_features_enable_too_late(self):
+        self.complete_minimally()
         yield self.config._wait_and_validate()
         self.assertRaises(ConfigTooLateException, lambda:
             self.config.features.enable('_test_disabled_feature'))
@@ -202,6 +216,7 @@ class TestConfigObject(unittest.TestCase):
     
     @defer.inlineCallbacks
     def test_features_disable_too_late(self):
+        self.complete_minimally()
         yield self.config._wait_and_validate()
         self.assertRaises(ConfigTooLateException, lambda:
             self.config.features.enable('_test_enabled_feature'))
@@ -307,6 +322,7 @@ class TestConfigFiles(unittest.TestCase):
             },
         })
         execute_config(self.__config, self.__config_name)
+        self.__config.devices.add(u'stub_for_completion', StubDevice())
         yield self.__config._wait_and_validate()
         self.log_tester.check(
             dict(log_format='{path}: {db_diagnostic}', path='foo.csv'),
@@ -315,7 +331,7 @@ class TestConfigFiles(unittest.TestCase):
 
 def StubDevice():
     """Return a valid trivial device."""
-    return devices.Device(components={})
+    return devices.Device(rx_driver=StubRXDriver(), components={})
 
 
 def ConfigFactory(log=Logger()):

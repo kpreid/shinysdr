@@ -70,6 +70,9 @@ class Config(object):
     
     @defer.inlineCallbacks
     def _wait_and_validate(self):
+        """After all config.wait_for() complete, validate that the configuration is valid."""
+        # TODO: Make this method idempotent. (This requires introducing the state "in the middle of waiting", midway between not-finished and finished.) For now, it is expected to be called only once.
+        
         yield defer.gatherResults(self.__waiting)
         
         # reboot used to be not-a-plugin so we have this hardcoded definition -- but exposing the plugin isn't necessarily a good replacement anyway
@@ -78,6 +81,11 @@ class Config(object):
             self.devices.add('rebooter', Rebooter(self.reactor))
         
         self.__finished = True
+        
+        self.features._validate()
+        self.devices._validate()
+        self.databases._validate()
+        
         if len(self._service_makers) == 0:
             self.__log.warn('No network service defined!')
     
@@ -184,15 +192,31 @@ class _ConfigDict(object):
         if key in self._values:
             raise ConfigException('Key %r already present' % (key,))
         self._values[key] = value
+    
+    def _validate(self):
+        """Check that the configuration is consistent and raise ConfigException if not."""
 
 
 class _ConfigDevices(_ConfigDict):
     def add(self, key, *devices):
         # pylint: disable=arguments-differ
         if len(devices) <= 0:
-            raise ConfigException('config.devices: no device(s) specified')
+            raise ConfigException('config.devices.add: no device(s) specified')
         from shinysdr.devices import merge_devices
         super(_ConfigDevices, self).add(key, merge_devices(devices))
+    
+    def _validate(self):
+        super(_ConfigDevices, self)._validate()
+        
+        # Ensure there is at least one device. (This restriction is due to the current implementation of shinysdr.i.top.Top and should be eliminated when practical.)
+        for device in self._values.values():
+            if device.can_receive():
+                break
+        else:
+            if not self._values:
+                raise ConfigException('No devices have been configured using config.devices.add(...).')
+            else:
+                raise ConfigException('At least one device must be a receiving device. All configured devices are not.')
 
 
 class _ConfigDbs(object):
@@ -239,6 +263,9 @@ class _ConfigDbs(object):
         if self.__read_only_databases is None:
             self.__read_only_databases = {}
         return self.__read_only_databases
+    
+    def _validate(self):
+        """Check that the configuration is consistent and raise ConfigException if not."""
 
 
 class _ConfigFeatures(object):
@@ -270,6 +297,10 @@ class _ConfigFeatures(object):
     
     def _get_all(self):
         return dict(self._state)
+    
+    def _validate(self):
+        """Check that the configuration is consistent and raise ConfigException if not."""
+        pass
 
 
 def execute_config(config_obj, config_file_or_directory):

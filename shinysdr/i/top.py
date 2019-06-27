@@ -71,7 +71,7 @@ class Top(gr.top_block, ExportedState, RecursiveLockBlockMixin):
     def __init__(self, devices={}, audio_config=None, features=_STUB_FEATURES):
         # pylint: disable=dangerous-default-value
         if len(devices) <= 0:
-            raise ValueError('Must have at least one RF device')
+            raise ValueError('Must be configured with at least one RF device! (This should normally be caught by the configuration validator.)')
         
         gr.top_block.__init__(self, type(self).__name__)
         self.__running = False  # duplicate of GR state we can't reach, see __start_or_stop
