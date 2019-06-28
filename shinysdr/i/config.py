@@ -206,7 +206,7 @@ class _ConfigDbs(object):
         
         self.__read_only_databases, diagnostics = databases_from_directory(
             self.__reactor,
-            sibpath(__file__, 'data/dbs/'))
+            sibpath(__file__, '../data/dbs/'))
         if len(diagnostics) > 0:
             raise ConfigException(diagnostics)
     

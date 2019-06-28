@@ -32,7 +32,7 @@ from twisted.trial import unittest
 from zope.interface import implementer
 
 from shinysdr import devices
-from shinysdr.config import Config, ConfigException, ConfigTooLateException, execute_config, write_default_config
+from shinysdr.i.config import Config, ConfigException, ConfigTooLateException, execute_config, write_default_config
 from shinysdr.i.roots import IEntryPoint
 from shinysdr.testutil import Files, LogTester
 from shinysdr.values import ExportedState

@@ -33,7 +33,7 @@ from twisted.internet.task import react
 from twisted.logger import Logger, STDLibLogObserver, globalLogBeginner
 
 # Note that gnuradio-dependent modules are loaded later, to avoid the startup time if all we're going to do is give a usage message
-from shinysdr.config import Config, write_default_config, execute_config
+from shinysdr.i.config import Config, write_default_config, execute_config
 from shinysdr.i.dependencies import DependencyTester
 from shinysdr.i.persistence import PersistenceFileGlue
 from shinysdr.i.poller import the_subscription_context
