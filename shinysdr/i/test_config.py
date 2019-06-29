@@ -1,4 +1,5 @@
-# Copyright 2014, 2015, 2016, 2018 Kevin Reid and the ShinySDR contributors
+# -*- coding: utf-8 -*-
+# Copyright 2014, 2015, 2016, 2018, 2019 Kevin Reid and the ShinySDR contributors
 # 
 # This file is part of ShinySDR.
 # 
@@ -22,6 +23,7 @@ See also test_main.py.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os.path
+import textwrap
 
 import six
 
@@ -239,6 +241,18 @@ class TestConfigFiles(unittest.TestCase):
         # Config-directory-related defaults were not set
         self.assertEqual(None, self.__config._state_filename)
         self.assertEqual(six.viewkeys(get_default_dbs()), six.viewkeys(self.__config.databases._get_read_only_databases()))
+    
+    def test_config_file_is_unicode_clean(self):
+        self.__files.create({
+            self.__config_name: textwrap.dedent("""\
+                # -*- coding: utf-8 -*-
+                from shinysdr.i.test_config import StubDevice
+                config.devices.add(u'•', StubDevice())
+            """),
+        })
+
+        execute_config(self.__config, self.__config_name)
+        self.assertEqual({u'•'}, set(self.__config.devices._values.keys()))
     
     def test_config_directory(self):
         self.__files.create({

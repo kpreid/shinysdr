@@ -17,6 +17,7 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import codecs
 import json
 import os
 import os.path
@@ -523,8 +524,9 @@ class Files(object):
     
     The data structure consists of dicts for directories and strings for files.
     """
-    def __init__(self, desc):
+    def __init__(self, desc, encoding='utf-8'):
         self.dir = tempfile.mkdtemp(prefix='shinysdr_test_config_tmp')
+        self.__encoding = encoding
         self.create(desc)
     
     def create(self, desc):
@@ -536,8 +538,11 @@ class Files(object):
     def __create(self, path, desc):
         assert path.startswith(self.dir + '/')
         assert not os.path.exists(path) or os.path.isdir(path)
-        if isinstance(desc, six.string_types):
-            with open(path, 'w') as f:
+        if isinstance(desc, six.text_type):
+            with codecs.open(path, 'w', encoding=self.__encoding) as f:
+                f.write(desc)
+        elif isinstance(desc, six.binary_type):
+            with open(path, 'wb') as f:
                 f.write(desc)
         elif isinstance(desc, dict):
             if not os.path.exists(path):
