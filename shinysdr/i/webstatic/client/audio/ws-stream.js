@@ -114,32 +114,16 @@ define([
       queueNotEmpty = newQueueNotEmpty;
     }
     
-     // Force sample rate to be a value valid for the current nativeSampleRate, which may not be the same as when the value was written to localStorage.
-     info.requested_sample_rate.set(
-         info.requested_sample_rate.type.round(
-           info.requested_sample_rate.get(), 0));
+    // Force sample rate to be a value valid for the current nativeSampleRate, which may not be the same as when the value was written to localStorage.
+    info.requested_sample_rate.set(
+        info.requested_sample_rate.type.round(
+          info.requested_sample_rate.get(), 0));
     
-    // Antialiasing filters for interpolated signal, cascaded for more attenuation.
-    // Note that the cutoff frequency is set from the network callback, not here.
-    const antialiasFilters = [];
-    for (let i = 0; i < 12; i++) {
-      const filter = audio.createBiquadFilter();
-      // highshelf type, empirically, has a sharper cutoff than lowpass.
-      // TODO: Learn enough about IIR filtering and what the Web Audio filter facilities are actually doing to get this to be actually optimal.
-      filter.type = 'highshelf';
-      filter.gain.value = -40;
-      if (antialiasFilters.length) {
-        antialiasFilters[antialiasFilters.length - 1].connect(filter);
-      }
-      antialiasFilters.push(filter);
-    }
-    
-    const interpolationGainNode = audio.createGain();
+    const antialiasingFilter = new AntialiasingFilter(audio);
     
     // TODO: If interpolation is 1, omit the filter from the chain. (This requires reconnecting dynamically.)
-    let nodeAfterSampleSource = antialiasFilters[0];
-    antialiasFilters[antialiasFilters.length - 1].connect(interpolationGainNode);
-    const nodeBeforeDestination = interpolationGainNode;
+    let nodeAfterSampleSource = antialiasingFilter.firstNode;
+    const nodeBeforeDestination = antialiasingFilter.lastNode;
     
     let buffererMessagePortPromise;
     if (useScriptProcessor) {
@@ -247,12 +231,7 @@ define([
           buffererMessagePort.postMessage(['setFormat', numAudioChannels, streamSampleRate]);
           
           // TODO: We should not update the filter frequency now, but when the AudioBuffererImpl starts reading the new-rate samples. We will need to keep track of the relationship of AudioContext timestamps to samples in order to do this.
-          antialiasFilters.forEach(filter => {
-            // Yes, this cutoff value is above the Nyquist limit, but the actual cascaded filter works out to be about what we want.
-            filter.frequency.value = Math.min(streamSampleRate * 0.8, nativeSampleRate * 0.5);
-          });
-          const interpolation = nativeSampleRate / streamSampleRate;
-          interpolationGainNode.gain.value = interpolation;
+          antialiasingFilter.setInputRate(streamSampleRate);
           
           console.log('Streaming using', useScriptProcessor ? 'ScriptProcessor' : 'AudioWorklet', streamSampleRate, numAudioChannels + 'ch', 'audio and converting to', nativeSampleRate);
           
@@ -300,6 +279,47 @@ define([
     return info;
   }
   exports.connectAudio = connectAudio;
+  
+  // Low-pass filter for removing aliases from an interpolated (zero-stuffed) signal.
+  // Also provides compensating gain.
+  // Multiple stages of primitive BiquadFilters are used for increased sharpness.
+  class AntialiasingFilter {
+    constructor(audioContext) {
+      // Note that the cutoff frequency is set from the network callback, not here.
+      const filterStages = [];
+      for (let i = 0; i < 12; i++) {
+        const filter = audioContext.createBiquadFilter();
+        // highshelf type, empirically, has a sharper cutoff than lowpass.
+        // TODO: Learn enough about IIR filtering and what the Web Audio filter facilities are actually doing to get this to be actually optimal.
+        filter.type = 'highshelf';
+        filter.gain.value = -40;
+        if (filterStages.length) {
+          filterStages[filterStages.length - 1].connect(filter);
+        }
+        filterStages.push(filter);
+      }
+      
+      const interpolationGainNode = audioContext.createGain();
+      filterStages[filterStages.length - 1].connect(interpolationGainNode);
+      
+      this._filterStages = Object.freeze(filterStages);
+      this._interpolationGainNode = interpolationGainNode;
+      this.firstNode = filterStages[0];
+      this.lastNode = interpolationGainNode;
+    }
+    
+    setInputRate(streamSampleRate) {
+      const nativeSampleRate = this._interpolationGainNode.context.sampleRate;
+      const interpolationGain = nativeSampleRate / streamSampleRate;
+      // Yes, this cutoff value is above the Nyquist limit, but the actual cascaded filter works out to be about what we want.
+      const cutoffFrequency = Math.min(streamSampleRate * 0.8, nativeSampleRate * 0.5);
+      
+      this._filterStages.forEach(filter => {
+        filter.frequency.value = cutoffFrequency;
+      });
+      this._interpolationGainNode.gain.value = interpolationGain;
+    }
+  }
   
   function makeRequestedSampleRateCell(nativeSampleRate, storage) {
     const defaultRate = minimizeSampleRate(nativeSampleRate, ASSUMED_USEFUL_SAMPLE_RATE);
