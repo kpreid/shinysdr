@@ -26,6 +26,10 @@ html.pane-structured-page, .pane-structured-page body {
 }
 
 /* loading screen and other dialogs */
+#loading-information-dialog, .unspecific-modal-dialog, .menu-dialog {
+  border: none;
+  box-shadow: 0 0.1em 1em 0.1em rgba(0, 0, 0, 0.25);
+}
 #loading-information-dialog, .unspecific-modal-dialog {
   display: block; /* cancel out previous display: none */
   
@@ -36,6 +40,13 @@ html.pane-structured-page, .pane-structured-page body {
   box-sizing: border-box;
   max-width: 100%;
   max-height: 100%;
+  
+}
+/* pop-up menus (which are <dialog> elements, but don't get "big and centered on screen" styles like .unspecific-modal-dialog) */
+.menu-dialog {
+  margin: 0;
+  padding: 0.25em;
+  left: 0; right: 0;
 }
 #loading-information-dialog {
   display: none;
@@ -210,17 +221,6 @@ ul.system-menu-list, .system-menu-list ul { /* TODO doesn't fit here, is styling
 .system-menu-list .pane-show-button:hover {
   /* TODO: theme might want this to be darkening */
   background: rgba(255, 255, 255, 0.4);
-}
-
-/* pop-up menus (which are <dialog> elements) */
-.menu-dialog {
-  margin: 0;
-  border: none;
-  padding: 0.25em;
-  
-  left: 0; right: 0;
-  
-  box-shadow: 0 0.1em 1em 0.1em rgba(0, 0, 0, 0.25);
 }
 
 /* widgets */
