@@ -76,49 +76,18 @@ define([
     
     let isInitializedFromStream = false;
     
-    let queueNotEmpty = false;
-    
     // Flags for start/stop handling
+    let queueNotEmpty = false;
     let started = false;
     let startStopTickle = false;
     
-    // Analyser for display
-    var analyserAdapter = new AudioAnalyserAdapter(scheduler, audio);
+    // Subsystems
+    const analyserAdapter = new AudioAnalyserAdapter(scheduler, audio);
+    const statusImpl = new AudioStreamStatusImpl(storage, nativeSampleRate, analyserAdapter);
     
-    // User-facing status display
-    // TODO should be faceted read-only when exported
-    var errorTime = 0;
-    function error(s) {
-      info.error._update(String(s));
-      errorTime = Date.now() + 1000;
-    }
-    var info = makeBlock({
-      requested_sample_rate: makeRequestedSampleRateCell(nativeSampleRate, storage),
-      buffered: new LocalReadCell(new RangeT([[0, 2]], false, false), 0),
-      target: new LocalReadCell({
-        value_type: new QuantityT({symbol: 's', si_prefix_ok: false}),
-        naming: { label: 'Target latency' }}, ''),
-      error: new LocalReadCell(new NoticeT(true), ''),
-      //averageSkew: new LocalReadCell(Number, 0),
-      monitor: new ConstantCell(analyserAdapter)
-    });
-    Object.defineProperty(info, '_implements_shinysdr.client.audio.AudioStreamStatus', {});
-    function setStatus({bufferedFraction, targetSeconds, queueNotEmpty: newQueueNotEmpty}) {
-      info.buffered._update(bufferedFraction);
-      info.target._update(+targetSeconds.toFixed(2));  // TODO formatting kludge, should be in type instead
-      if (errorTime < Date.now()) {
-        info.error._update('');
-      }
-      queueNotEmpty = newQueueNotEmpty;
-    }
-    
-    // Force sample rate to be a value valid for the current nativeSampleRate, which may not be the same as when the value was written to localStorage.
-    info.requested_sample_rate.set(
-        info.requested_sample_rate.type.round(
-          info.requested_sample_rate.get(), 0));
+    statusImpl.revalidateSampleRate();
     
     const antialiasingFilter = new AntialiasingFilter(audio);
-    
     // TODO: If interpolation is 1, omit the filter from the chain. (This requires reconnecting dynamically.)
     let nodeAfterSampleSource = antialiasingFilter.firstNode;
     const nodeBeforeDestination = antialiasingFilter.lastNode;
@@ -155,24 +124,27 @@ define([
         
         return workletNode.port;
       }, e => {
-        error('' + e);
+        statusImpl.error('' + e);
       });
     }
     
     buffererMessagePortPromise.then(buffererMessagePort => {
       buffererMessagePort.onmessage = new MessageHandlerAdapter({
-        error: error,
-        setStatus: setStatus,
-        checkStartStop: function checkStartStop() {
+        error(message) { statusImpl.error(message); },
+        setStatus({bufferedFraction, targetSeconds, queueNotEmpty: newQueueNotEmpty}) {
+          statusImpl.setStatus({bufferedFraction, targetSeconds});
+          queueNotEmpty = newQueueNotEmpty;
+        },
+        checkStartStop() {
           if (!startStopTickle) {
             setTimeout(startStop, 1000);
             startStopTickle = true;
           }
-        }
+        },
       });
       retryingConnection(
         () => new webSocketCtor(
-          url + '?rate=' + encodeURIComponent(JSON.stringify(info.requested_sample_rate.get()))),
+          url + '?rate=' + encodeURIComponent(JSON.stringify(statusImpl.requestedSampleRateCell.get()))),
         null,
         ws => handleWebSocket(ws, buffererMessagePort));
     });
@@ -193,7 +165,7 @@ define([
         lose('changing sample rate');
       }
       scheduler.claim(changeSampleRate);
-      info.requested_sample_rate.n.listen(changeSampleRate);
+      statusImpl.requestedSampleRateCell.n.listen(changeSampleRate);
       ws.onmessage = function(event) {
         var wsDataValue = event.data;
         if (wsDataValue instanceof ArrayBuffer) {
@@ -240,7 +212,7 @@ define([
         }
       };
       ws.addEventListener('close', function (event) {
-        error('Disconnected.');
+        statusImpl.error('Disconnected.');
         isInitializedFromStream = false;
         setTimeout(startStop, 0);
       });
@@ -275,9 +247,52 @@ define([
       }
     }
     
-    return info;
+    return statusImpl.status;
   }
   exports.connectAudio = connectAudio;
+  
+  class AudioStreamStatusImpl {
+    constructor(storage, nativeSampleRate, analyserAdapter) {
+      this._errorTime = 0;
+      
+      this.status = makeBlock({
+        requested_sample_rate: makeRequestedSampleRateCell(nativeSampleRate, storage),
+        buffered: new LocalReadCell(new RangeT([[0, 2]], false, false), 0),
+        target: new LocalReadCell({
+          value_type: new QuantityT({symbol: 's', si_prefix_ok: false}),
+          naming: { label: 'Target latency' }}, ''),
+        error: new LocalReadCell(new NoticeT(true), ''),
+        //averageSkew: new LocalReadCell(Number, 0),
+        monitor: new ConstantCell(analyserAdapter)
+      });
+      // TODO better interface for interfaces
+      Object.defineProperty(this.status, '_implements_shinysdr.client.audio.AudioStreamStatus', {});
+      
+      this.requestedSampleRateCell = this.status.requested_sample_rate;
+      
+      Object.freeze(this.status);
+      Object.seal(this);
+    }
+    
+    // Force sample rate to be a value valid for the current nativeSampleRate, which may not be the same as when the value was written to localStorage in a previous session.
+    revalidateSampleRate() {
+      const cell = this.requestedSampleRateCell;
+      cell.set(cell.type.round(cell.get(), 0));
+    }
+    
+    error(s) {
+      this.status.error._update(String(s));
+      this._errorTime = Date.now() + 1000;
+    }
+
+    setStatus({bufferedFraction, targetSeconds}) {
+      this.status.buffered._update(bufferedFraction);
+      this.status.target._update(+targetSeconds.toFixed(2));  // TODO formatting kludge, decimal points should be in type instead
+      if (this._errorTime < Date.now()) {  // TODO need to do this on a timeout to be consistent
+        this.status.error._update('');
+      }
+    }
+  }
   
   // Low-pass filter for removing aliases from an interpolated (zero-stuffed) signal.
   // Also provides compensating gain.
