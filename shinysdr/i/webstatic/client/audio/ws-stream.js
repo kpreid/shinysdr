@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid and the ShinySDR contributors
+// Copyright 2013, 2014, 2015, 2016, 2017, 2018, 2019 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -74,9 +74,7 @@ define([
     const useScriptProcessor = !('audioWorklet' in audio);
     logAutoplayBehavior('initial state is', audio.state);
     
-    // Stream parameters
-    let numAudioChannels = null;
-    let streamSampleRate = null;
+    let isInitializedFromStream = false;
     
     let queueNotEmpty = false;
     
@@ -200,8 +198,8 @@ define([
         var wsDataValue = event.data;
         if (wsDataValue instanceof ArrayBuffer) {
           // Audio data.
-          if (numAudioChannels === null) {
-            lose('Did not receive number-of-channels message before first chunk');
+          if (!isInitializedFromStream) {
+            lose('Did not receive stream metadata message before first chunk');
             return;
           }
           
@@ -226,14 +224,15 @@ define([
             lose('Message was not properly formatted');
             return;
           }
-          numAudioChannels = message.signal_type.kind === 'STEREO' ? 2 : 1;
-          streamSampleRate = message.signal_type.sample_rate;
+          const numAudioChannels = message.signal_type.kind === 'STEREO' ? 2 : 1;
+          const streamSampleRate = message.signal_type.sample_rate;
           buffererMessagePort.postMessage(['setFormat', numAudioChannels, streamSampleRate]);
           
           // TODO: We should not update the filter frequency now, but when the AudioBuffererImpl starts reading the new-rate samples. We will need to keep track of the relationship of AudioContext timestamps to samples in order to do this.
           antialiasingFilter.setInputRate(streamSampleRate);
           
           console.log('Streaming using', useScriptProcessor ? 'ScriptProcessor' : 'AudioWorklet', streamSampleRate, numAudioChannels + 'ch', 'audio and converting to', nativeSampleRate);
+          isInitializedFromStream = true;
           
         } else {
           lose('Unexpected type from WebSocket message event: ' + wsDataValue);
@@ -242,7 +241,7 @@ define([
       };
       ws.addEventListener('close', function (event) {
         error('Disconnected.');
-        numAudioChannels = null;
+        isInitializedFromStream = false;
         setTimeout(startStop, 0);
       });
     }
