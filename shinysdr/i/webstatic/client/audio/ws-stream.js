@@ -74,8 +74,6 @@ define([
     const useScriptProcessor = !('audioWorklet' in audio);
     logAutoplayBehavior('initial state is', audio.state);
     
-    let isInitializedFromStream = false;
-    
     // Flags for start/stop handling
     let queueNotEmpty = false;
     let started = false;
@@ -150,6 +148,8 @@ define([
     });
     
     function handleWebSocket(ws, buffererMessagePort) {
+      let isInitializedFromStream = false;
+    
       ws.addEventListener('open', event => {
         ws.send(''); // dummy required due to server limitation
       }, true);
