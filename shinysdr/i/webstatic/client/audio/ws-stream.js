@@ -76,7 +76,7 @@ define([
     
     // Flags for start/stop handling
     let queueNotEmpty = false;
-    let started = false;
+    let started = audio.state === 'running';
     let startStopTickle = false;
     
     // Subsystems
@@ -246,6 +246,9 @@ define([
         }
       }
     }
+    
+    // Ensure audio context state is consistent with what we want.
+    startStop();
     
     return statusImpl.status;
   }
