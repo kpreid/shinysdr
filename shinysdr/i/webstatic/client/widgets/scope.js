@@ -257,6 +257,7 @@ define([
     const kernelRadius = 10;
 
     const gl = getGL(config, canvas, {
+      powerPreference: 'high-performance',
       alpha: false,
       depth: false,
       stencil: false,

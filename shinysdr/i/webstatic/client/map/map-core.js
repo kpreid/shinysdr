@@ -1374,6 +1374,7 @@ define([
     
     // Abort if we can't do GL.
     var gl = getGL(config, canvas, {
+      powerPreference: 'low-power',
       alpha: false,  // not currently used
       depth: true,
       stencil: false,

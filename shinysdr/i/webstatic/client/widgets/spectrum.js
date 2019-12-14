@@ -655,6 +655,7 @@ define([
     canvas.setAttribute('title', '');  // prohibit auto-set title -- TODO: Stop having auto-set titles in the first place
     
     var glOptions = {
+      powerPreference: 'high-performance',
       alpha: true,
       depth: false,
       stencil: false,
