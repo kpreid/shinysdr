@@ -1,4 +1,4 @@
-// Copyright 2015, 2016 Kevin Reid and the ShinySDR contributors
+// Copyright 2015, 2016, 2019 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -15,11 +15,18 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+// WebGL vertex shader for drawing the map's globe.
+
+// Position in 3-dimensional coordinates.
 attribute mediump vec3 position;
-attribute highp vec2 lonlat;
-uniform highp mat4 projection;
-varying highp vec2 v_lonlat;
 varying highp vec3 v_position;
+
+// Position in 2-dimensional coordinates (longitude, latitude); used to texture the sphere.
+attribute highp vec2 lonlat;
+varying highp vec2 v_lonlat;
+
+// Camera projection.
+uniform highp mat4 projection;
 
 void main(void) {
   gl_Position = vec4(position, 1.0) * projection;

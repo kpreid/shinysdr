@@ -1,4 +1,4 @@
-// Copyright 2015, 2016, 2017 Kevin Reid and the ShinySDR contributors
+// Copyright 2015, 2016, 2017, 2019 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -15,15 +15,27 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+// WebGL fragment shader for drawing the map's features.
+
+// Packed vector: Texture's UV coordinates (2) and overall opacity (1).
 varying lowp vec3 v_texcoordAndOpacity;
+
+// Color to draw for picking purposes; not modified by opacity.
 varying mediump vec4 v_pickingColor;
+
+// Texture to draw; premultiplied alpha.
 uniform sampler2D labels;
+
+// Whether we are drawing in picking mode (draw v_pickingColor instead of the texture).
 uniform bool picking;
 
 void main(void) {
   lowp vec2 texcoord = v_texcoordAndOpacity.xy;
   lowp float opacity = v_texcoordAndOpacity.z;
-  // Texture is premultiplied alpha.
+  
+  // Draw either the picking color or the texture.
   gl_FragColor = picking ? v_pickingColor : opacity * texture2D(labels, texcoord);
-  if ((picking ? v_texcoordAndOpacity.z : gl_FragColor.a) < 0.01) discard;
+  
+  // If not picking, discard nearly invisible areas; if picking, the entire area we're drawing counts unless it's nearly invisible (so that clicking on holes inside text labels counts).
+  if ((picking ? opacity : gl_FragColor.a) < 0.01) discard;
 }
