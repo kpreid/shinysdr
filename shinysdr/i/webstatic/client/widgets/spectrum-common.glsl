@@ -1,4 +1,4 @@
-// Copyright 2013 Kevin Reid and the ShinySDR contributors
+// Copyright 2013, 2019 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -15,16 +15,37 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+// WebGL definitions part of both vertex and fragment shaders for the spectrum graph (panadapter) and waterfall displays.
+
+// One-dimensional (width = 1) texture containing, for each line of the spectrum data texture, the center frequency of that line.
+// If USE_FLOAT_TEXTURE is true, this is a float-valued luminance texture. Otherwise, the value is packed into the 8-bit components in (msb)ABGR(lsb) order.
 uniform sampler2D centerFreqHistory;
+
+// The center frequency currently active; determines the center of the viewport in frequency space.
 uniform highp float currentFreq;
+
+// Horizontal axis scale. TODO: explain in what units.
 uniform mediump float freqScale;
 
-highp float getFreqOffset(highp vec2 c) {
-  c = vec2(0.0, mod(c.t, 1.0));
+// Look up and unpack a value from centerFreqHistory.
+// point's first component is ignored and second component is the position in history.
+// TODO: Cross-reference how history positions are defined.
+highp float getFreqOffset(highp vec2 point) {
+  // Coordinates for sampling centerFreqHistory. Must do our own wrapping because the wrap mode is CLAMP_TO_EDGE — TODO: Why can't we use REPEAT mode?
+  point = vec2(0.0, mod(point.t, 1.0));
+  
 #if USE_FLOAT_TEXTURE
-  return currentFreq - texture2D(centerFreqHistory, c).r;
+  // Direct lookup.
+  highp float historyFreq = texture2D(centerFreqHistory, point).r;
 #else
-  highp vec4 hFreqVec = texture2D(centerFreqHistory, c);
-  return currentFreq - (((hFreqVec.a * 255.0 * 256.0 + hFreqVec.b * 255.0) * 256.0 + hFreqVec.g * 255.0) * 256.0 + hFreqVec.r * 255.0);
+  // Unpack from bytes.
+  highp vec4 historyFreqVec = texture2D(centerFreqHistory, point);
+  highp float historyFreq =
+    (((historyFreqVec.a * 255.0 * 256.0
+     + historyFreqVec.b * 255.0) * 256.0
+     + historyFreqVec.g * 255.0) * 256.0 
+     + historyFreqVec.r * 255.0);
 #endif
+  
+  return currentFreq - historyFreq;
 }
