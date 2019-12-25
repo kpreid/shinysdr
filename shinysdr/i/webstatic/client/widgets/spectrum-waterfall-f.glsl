@@ -15,7 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
+// Luminance texture storing spectrum data. S axis = frequency, T axis = time (as a circular buffer).
 uniform sampler2D data;
+
 uniform sampler2D gradient;
 uniform mediump float gradientZero;
 uniform mediump float gradientScale;

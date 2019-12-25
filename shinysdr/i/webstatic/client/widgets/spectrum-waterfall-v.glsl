@@ -17,7 +17,10 @@
 
 attribute vec4 position;
 varying highp vec2 v_position;
+
+// T coordinate of the most recently written line in 'data'.
 uniform highp float scroll;
+
 uniform highp float xTranslate, xScale;
 uniform highp float yScale;
 
