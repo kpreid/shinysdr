@@ -19,6 +19,7 @@
 attribute vec4 position;
 
 // Zoom parameters. xZero is the texture-space left/lowest-frequency edge and xScale is the span; xZero and xZero + xScale are between 0 and 1.
+// TODO: The values 'xZero' used by the graph shader and 'xTranslate' used by the waterfall shader differ by a half-texel. Reconcile or name them better for clarity.
 uniform mediump float xZero, xScale;
 
 // Position of fragment in texture space (0 = lowest visible frequency, 1 = highest visible frequency) after zoom is applied.

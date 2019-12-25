@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016 Kevin Reid and the ShinySDR contributors
+// Copyright 2013, 2014, 2015, 2016, 2019 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -18,22 +18,32 @@
 // Luminance texture storing spectrum data. S axis = frequency, T axis = time (as a circular buffer).
 uniform sampler2D data;
 
+// RGBA lookup table for gradient colors. S axis unused, T axis = scaled value.
 uniform sampler2D gradient;
+
+// Scale and offset to map data texture values to 'gradient' texture coordinates.
 uniform mediump float gradientZero;
 uniform mediump float gradientScale;
+
+// Position of this fragment in the data texture, before accounting for frequency offsets.
 varying mediump vec2 v_position;
+
+// Posible half-texel adjustment to align GL texture coordinates with where we want FFT bins to fall.
 uniform highp float textureRotation;
 
 void main(void) {
   highp vec2 texLookup = mod(v_position, 1.0);
   highp float freqOffset = getFreqOffset(texLookup) * freqScale;
-  mediump vec2 shift = texLookup + vec2(freqOffset, 0.0);
-  if (shift.x < 0.0 || shift.x > 1.0) {
+  mediump vec2 shiftedDataCoordinates = texLookup + vec2(freqOffset, 0.0);
+  
+  if (shiftedDataCoordinates.x < 0.0 || shiftedDataCoordinates.x > 1.0) {
+    // We're off the edge of the data; draw background instead of any data value.
     gl_FragColor = BACKGROUND_COLOR;
   } else {
-    mediump float data = texture2D(data, shift + vec2(textureRotation, 0.0)).r;
+    // Fetch data value.
+    mediump float data = texture2D(data, shiftedDataCoordinates + vec2(textureRotation, 0.0)).r;
+    
+    // Fetch color from data texture.
     gl_FragColor = texture2D(gradient, vec2(0.5, gradientZero + gradientScale * data));
-//    gl_FragColor = texture2D(gradient, vec2(0.5, v_position.x));
-//    gl_FragColor = vec4(gradientZero + gradientScale * data * 4.0 - 0.5);
   }
 }
