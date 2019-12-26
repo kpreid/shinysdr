@@ -68,6 +68,7 @@ define([
     createWidgets,
   } = import_widget;
   
+  const centerFreq = 100;
   const binCount = 4096;
   const sampleRate = 1e6;
   const minLevel = -130;
@@ -78,11 +79,11 @@ define([
   const clientStateStorage = new StorageNamespace(localStorage, 'shinysdr.client.');
   const clientState = new ClientStateObject(clientStateStorage, null);
   
-  const fftcell = new BulkDataCell('<dummy spectrum>', [{freq: 0, rate: 0}, []], {naming: {}, value_type: new BulkDataT('dff', 'b')});
+  const fftcell = new BulkDataCell('<dummy spectrum>', [], {naming: {}, value_type: new BulkDataT('dff', 'b')});
   const root = new ConstantCell(makeBlock({
     unpaused: new StorageCell(clientStateStorage, booleanT, true, '_test_unpaused'),
     source: new ConstantCell(makeBlock({
-      freq: new ConstantCell(0),
+      freq: new ConstantCell(centerFreq),
     })),
     receivers: new ConstantCell(makeBlock({})),
     client: new ConstantCell(clientState),
