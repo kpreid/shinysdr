@@ -1,7 +1,10 @@
 {
+  // Variable-related concerns
   "undef": true,
   "unused": "vars",
+  "varstmt": true,
 
+  // Language version concerns
   "strict": "global",
   "esversion": 6,
   
@@ -9,6 +12,7 @@
   "sub": true,
   "laxbreak": true,
   
+  // Environment we are running in
   "browser": true,
   "devel": true,
   "predef": [
