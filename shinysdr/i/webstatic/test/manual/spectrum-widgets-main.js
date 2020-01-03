@@ -115,16 +115,24 @@ define([
     frameCount++;
     
     var i = 0;
-    for (; i < binCount/2; i++) {
+    // Variable slopes, for testing line drawing
+    for (; i < binCount/4; i++) {
       bytearray[i] = Math.exp(i / binCount * 28) % ((maxLevel - minLevel) * 0.3) - 128;
     }
+    // Every-other-bin peaks, for testing antialiasing
+    for (; i < binCount/2; i++) {
+      bytearray[i] = -100 + (i % 2) * 40;
+    }
+    // Varying content, for testing averaging and scrolling
     for (; i < binCount; i++) {
       var bit = Math.floor((i - binCount/2) / binCount * 32);
       bytearray[i] = (frameCount >> bit) & 1 ? -30 : -120;
     }
     
+    // Single sharp peak
     bytearray[2] = -70;
 
+    // Slightly less sharp peak
     bytearray[8] = -80;
     bytearray[9] = -70;
     bytearray[10] = -80;
