@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid and the ShinySDR contributors
+// Copyright 2013, 2014, 2015, 2016, 2017, 2019 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -804,8 +804,8 @@ define([
       var fftSize = Math.max(1, config.target.get().length);
       
 
-      var bufferTexture = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
+      const spectrumDataTexture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, spectrumDataTexture);
       // Ideally we would be linear in S (freq) and nearest in T (time), but that's not an option.
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -886,7 +886,7 @@ define([
             for (let i = 0; i < fftSize*historyCount; i++) {
               init[i] = -1000;  // well below minimum display level
             }
-            gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
+            gl.bindTexture(gl.TEXTURE_2D, spectrumDataTexture);
             gl.texImage2D(
               gl.TEXTURE_2D,
               0, // level
@@ -919,7 +919,7 @@ define([
         } else {
           {
             const init = new Uint8Array(fftSize*historyCount*4);
-            gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
+            gl.bindTexture(gl.TEXTURE_2D, spectrumDataTexture);
             gl.texImage2D(
               gl.TEXTURE_2D,
               0, // level
@@ -955,8 +955,8 @@ define([
       // initial state of graph program
       gl.useProgram(graphProgram);
       gl.activeTexture(gl.TEXTURE1);
-      gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
-      gl.uniform1i(gl.getUniformLocation(graphProgram, 'data'), 1);
+      gl.bindTexture(gl.TEXTURE_2D, spectrumDataTexture);
+      gl.uniform1i(gl.getUniformLocation(graphProgram, 'spectrumDataTexture'), 1);
       gl.activeTexture(gl.TEXTURE2);
       gl.bindTexture(gl.TEXTURE_2D, historyFreqTexture);
       gl.uniform1i(gl.getUniformLocation(graphProgram, 'centerFreqHistory'), 2);
@@ -965,8 +965,8 @@ define([
       // initial state of waterfall program
       gl.useProgram(waterfallProgram);
       gl.activeTexture(gl.TEXTURE1);
-      gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
-      gl.uniform1i(gl.getUniformLocation(waterfallProgram, 'data'), 1);
+      gl.bindTexture(gl.TEXTURE_2D, spectrumDataTexture);
+      gl.uniform1i(gl.getUniformLocation(waterfallProgram, 'spectrumDataTexture'), 1);
       gl.activeTexture(gl.TEXTURE2);
       gl.bindTexture(gl.TEXTURE_2D, historyFreqTexture);
       gl.uniform1i(gl.getUniformLocation(waterfallProgram, 'centerFreqHistory'), 2);
@@ -1001,7 +1001,7 @@ define([
           gl.uniform1f(u_textureRotation, view.isRealFFT() ? 0 : -(0.5 - 0.5/fftSize));
 
           if (useFloatTexture) {
-            gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
+            gl.bindTexture(gl.TEXTURE_2D, spectrumDataTexture);
             gl.texSubImage2D(
                 gl.TEXTURE_2D,
                 0, // level
@@ -1026,7 +1026,7 @@ define([
                 gl.FLOAT,
                 freqWriteBuffer);
           } else {
-            gl.bindTexture(gl.TEXTURE_2D, bufferTexture);
+            gl.bindTexture(gl.TEXTURE_2D, spectrumDataTexture);
             // TODO: By doing the level shift at this point, we are locking in the current settings. It would be better to arrange for min/max changes to rescale historical data as well, as it does in float-texture mode (would require keeping the original data as well as the texture contents and recopying it).
             var minLevel = minLevelCell.get();
             var maxLevel = maxLevelCell.get();

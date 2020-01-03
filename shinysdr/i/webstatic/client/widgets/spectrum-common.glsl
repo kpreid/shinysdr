@@ -17,7 +17,10 @@
 
 // WebGL definitions part of both vertex and fragment shaders for the spectrum graph (panadapter) and waterfall displays.
 
-// One-dimensional (width = 1) texture containing, for each line of the spectrum data texture, the center frequency of that line.
+// Luminance texture storing spectrum data. S axis = frequency, T axis = time (as a circular buffer).
+uniform sampler2D spectrumDataTexture;
+
+// One-dimensional (width = 1) texture containing, for each line of the spectrumDataTexture, the center frequency of that line.
 // If USE_FLOAT_TEXTURE is true, this is a float-valued luminance texture. Otherwise, the value is packed into the 8-bit components in (msb)ABGR(lsb) order.
 uniform sampler2D centerFreqHistory;
 

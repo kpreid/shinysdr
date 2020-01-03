@@ -15,16 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-// Luminance texture storing spectrum data. S axis = frequency, T axis = time (as a circular buffer).
-uniform sampler2D data;
-
 // Zoom and data scale parameters. TODO: Split these out and explain more.
 uniform mediump float xScale, xRes, yRes, valueZero, valueScale;
 
-// T coordinate of the most recently written line in 'data'.
+// T coordinate of the most recently written line in 'spectrumDataTexture'.
 uniform highp float scroll;
 
-// Texture-space size of one time step (= 1 / data's size in the T axis).
+// Texture-space size of one time step (= 1 / spectrumDataTexture's size in the T axis).
 uniform highp float historyStep;
 
 // IIR filter coefficient for averaging of the graph line position.
@@ -71,19 +68,19 @@ mediump vec4 line(lowp float plus, lowp float average, lowp float intensity, med
   return cmix(bg, cut(average + plus, 0.5, bg, cut(average, -0.5, fg, bg)), intensity);
 }
 
-// Compute texture coordinates for the 'data' texture, based on the current fragment position (v_position) and how many time steps back from 'now' we want to query (framesBack).
+// Compute texture coordinates for 'spectrumDataTexture', based on the current fragment position (v_position) and how many time steps back from 'now' we want to query (framesBack).
 // Does not account for frequency offsets.
 // The result is not guaranteed to be in (0...1); apply modulo when needed.
 highp vec2 dataCoordsForTimeBack(highp float framesBack) {
   return vec2(v_position.x, scroll - (framesBack + 0.5) * historyStep);
 }
 
-// Fetch a data value given post-zooming screen coordinates (still in 0...1 range but with frequency offset applied).
+// Fetch a spectrumDataTexture value given post-zooming screen coordinates (still in 0...1 range but with frequency offset applied).
 // Applies scaling so that the result is in the intended display range (0...1) (individual values might be out of range).
 highp float shiftedPointValueAt(highp vec2 c) {
   highp float offset = getFreqOffset(c) * freqScale;
-  highp vec2 offsetPoint = c + vec2(offset, 0.0);
-  return valueZero + valueScale * texture2D(data, mod(offsetPoint, 1.0)).r;
+  highp vec2 offsetPoint = c + vec2(offset + stepStep.s, 0.0);
+  return valueZero + valueScale * texture2D(spectrumDataTexture, mod(offsetPoint, 1.0)).r;
 }
 
 // As shiftedPointValueAt, but with the time average (specified by uniforms) applied.
@@ -96,7 +93,7 @@ highp float pointAverageAt(highp vec2 c) {
   return average;
 }
 
-// Fetch a data value for a given time, smoothed in the frequency axis in case of zooming.
+// Fetch a spectrumDataTexture value for a given time, smoothed in the frequency axis in case of zooming.
 //   t: number of time steps back to look (0 = now).
 //   plus: out parameter for the 'plus' value to pass to line()
 //   smoothed: out parameter holding smoothed value

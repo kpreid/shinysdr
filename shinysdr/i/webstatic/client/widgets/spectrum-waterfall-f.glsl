@@ -15,17 +15,14 @@
 // You should have received a copy of the GNU General Public License
 // along with ShinySDR.  If not, see <http://www.gnu.org/licenses/>.
 
-// Luminance texture storing spectrum data. S axis = frequency, T axis = time (as a circular buffer).
-uniform sampler2D data;
-
 // RGBA lookup table for gradient colors. S axis unused, T axis = scaled value.
 uniform sampler2D gradient;
 
-// Scale and offset to map data texture values to 'gradient' texture coordinates.
+// Scale and offset to map spectrumDataTexture values to 'gradient' texture coordinates.
 uniform mediump float gradientZero;
 uniform mediump float gradientScale;
 
-// Position of this fragment in the data texture, before accounting for frequency offsets.
+// Position of this fragment in spectrumDataTexture, before accounting for frequency offsets.
 varying mediump vec2 v_position;
 
 // Posible half-texel adjustment to align GL texture coordinates with where we want FFT bins to fall.
@@ -41,7 +38,7 @@ void main(void) {
     gl_FragColor = BACKGROUND_COLOR;
   } else {
     // Fetch data value.
-    mediump float data = texture2D(data, shiftedDataCoordinates + vec2(textureRotation, 0.0)).r;
+    mediump float data = texture2D(spectrumDataTexture, shiftedDataCoordinates + vec2(textureRotation, 0.0)).r;
     
     // Fetch color from data texture.
     gl_FragColor = texture2D(gradient, vec2(0.5, gradientZero + gradientScale * data));

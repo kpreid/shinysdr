@@ -21,14 +21,14 @@ attribute vec4 position;
 // Position of fragment in texture space (0 = lowest visible frequency / lowest value, 1 = highest visible frequency / highest value) after zoom is applied.
 varying highp vec2 v_position;
 
-// T coordinate of the most recently written line in 'data' (see spectrum-waterfall-f.glsl).
+// T coordinate of the most recently written line in spectrumDataTexture (see spectrum-common.glsl).
 uniform highp float scroll;
 
 // Zoom parameters. xTranslate is the texture-space left/lowest-frequency edge and xScale is the span; xTranslate and xTranslate + xScale are between 0 and 1.
 // TODO: The values 'xZero' used by the graph shader and 'xTranslate' used by the waterfall shader differ by a half-texel. Reconcile or name them better for clarity -- or convert this shader to take a transformation matrix.
 uniform highp float xTranslate, xScale;
 
-// Vertical axis scale expressed as the display height divided by the 'data' texture height.
+// Vertical axis scale expressed as the display height divided by spectrumDataTexture's height.
 uniform highp float yScale;
 
 void main(void) {
@@ -38,7 +38,7 @@ void main(void) {
   // Matrix converting normalized device coordinates to texture coordinates.
   mat3 viewToTexture = mat3(0.5, 0.0, 0.0, 0.0, 0.5, 0.0, 0.5, 0.5, 1.0);
   // Matrices applying frequency-axis zoom and vertical pixel-oriented scale.
-  // Both result in viewing a smaller portion of the 'data' texture.
+  // Both result in viewing a smaller portion of spectrumDataTexture.
   mat3 zoom = mat3(xScale, 0.0, 0.0, 0.0, 1.0, 0.0, xTranslate, 0.0, 1.0);
   mat3 applyYScale = mat3(1.0, 0.0, 0.0, 0.0, yScale, 0.0, 0.0, -yScale, 1.0);
   // Final combined matrix
