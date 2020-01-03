@@ -50,12 +50,12 @@ define([
     mapPluginConfig.addLayer('WSPR', {
       featuresCell: mapPluginConfig.index.implementing('shinysdr.plugins.wspr.telemetry.IWSPRStation'),
       featureRenderer: function renderWSPR(station, dirty) {
-        var callsign = station.call.depend(dirty);
+        let callsign = station.call.depend(dirty);
         if (callsign === null) {
           callsign = '?';
         }
 
-        var f = renderTrackFeature(dirty, station.track, callsign);
+        const f = renderTrackFeature(dirty, station.track, callsign);
         f.iconURL = require.toUrl('./w.svg');
         return f;
       }

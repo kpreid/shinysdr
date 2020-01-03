@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016 Kevin Reid and the ShinySDR contributors
+// Copyright 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -153,13 +153,13 @@ define([
     const clientBlockCell = new ConstantCell(clientState);
     
     log(0.5, 'Connecting to server…');
-    var firstConnection = true;
-    var firstFailure = true;
+    let firstConnection = true;
+    let firstFailure = true;
     scheduler.claim(initialStateReady);
-    var remoteCell = connect(stateUrl, connectionCallback);
+    const remoteCell = connect(stateUrl, connectionCallback);
     remoteCell.n.listen(initialStateReady);
     
-    var coordinator = new Coordinator(scheduler, freqDB, remoteCell);
+    const coordinator = new Coordinator(scheduler, freqDB, remoteCell);
     
     let audioState;
     if (audioUrl) {
@@ -235,7 +235,7 @@ define([
           document.body.classList.remove('main-not-yet-run');
           
           // kludge to trigger js relayout effects. Needed here because main-not-yet-run hides ui.
-          var resize = document.createEvent('Event');
+          const resize = document.createEvent('Event');
           resize.initEvent('resize', false, false);
           window.dispatchEvent(resize);
         }, 100);

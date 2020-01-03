@@ -1,4 +1,4 @@
-// Copyright 2013, 2015, 2016, 2018 Kevin Reid and the ShinySDR contributors
+// Copyright 2013, 2015, 2016, 2018, 2020 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -109,7 +109,7 @@ define(() => {
     enqueue(callback) {
       if (callback.scheduler !== this._scheduler) throw new Error('Wrong scheduler');
       if (this._functionIsScheduled.has(callback)) return;
-      var wasNonempty = this._queue.nonempty();
+      const wasNonempty = this._queue.nonempty();
       this._queue.enqueue(callback);
       this._functionIsScheduled.add(callback);
       if (!wasNonempty && !this._queue_scheduled) { // just became nonempty
@@ -129,7 +129,7 @@ define(() => {
     syncEventCallback(eventCallback) {
       const wrappedForSync = () => {
         // note no error catching -- don't think it needs it
-        var value = eventCallback();
+        const value = eventCallback();
         this._callback();
         return value;
       };
@@ -257,11 +257,11 @@ define(() => {
   //   * has a slightly coarse granularity of updates
   //   * is offset to be close to zero, to be easier on low-precision math
   function Clock(granularitySeconds) {
-    var granularityMs = granularitySeconds * 1000;
-    var clockEpoch_ms = Date.now();
-    var clockEpoch_s = clockEpoch_ms / 1000;
+    const granularityMs = granularitySeconds * 1000;
+    const clockEpoch_ms = Date.now();
+    const clockEpoch_s = clockEpoch_ms / 1000;
     
-    var clockRunningFor = new Set();
+    const clockRunningFor = new Set();
     function enq(f) {
       clockRunningFor.delete(f);
       f.scheduler.enqueue(f);
@@ -271,9 +271,9 @@ define(() => {
     }
     
     this.depend = function clockDepend(dirtyCallback) {
-      var before = clockRunningFor.size;
+      const before = clockRunningFor.size;
       clockRunningFor.add(dirtyCallback);
-      var after = clockRunningFor.size;
+      const after = clockRunningFor.size;
       if (!before && after) {
         setTimeout(fireClock, granularityMs);
       }

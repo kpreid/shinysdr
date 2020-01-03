@@ -84,12 +84,12 @@ define([
   
   // 30 minutes, standard maximum APRS net cycle time
   // TODO: Make this configurable, and share this constant between client and server
-  var APRS_TIMEOUT_SECONDS = 60 * 30;
+  const APRS_TIMEOUT_SECONDS = 60 * 30;
 
-  var OPACITY_STEPS = 20;
+  const OPACITY_STEPS = 20;
   
-  var opacityClock = new Clock(APRS_TIMEOUT_SECONDS / OPACITY_STEPS);
-  var blinkClock = new Clock(1/30);
+  const opacityClock = new Clock(APRS_TIMEOUT_SECONDS / OPACITY_STEPS);
+  const blinkClock = new Clock(1/30);
   
   function addAPRSMapLayer(mapPluginConfig) {
     mapPluginConfig.addLayer('APRS', {
@@ -112,8 +112,8 @@ define([
           }
         }
         
-        var now = opacityClock.convertToTimestampSeconds(opacityClock.depend(dirty));
-        var age = now - station.last_heard_time.depend(dirty);
+        const now = opacityClock.convertToTimestampSeconds(opacityClock.depend(dirty));
+        const age = now - station.last_heard_time.depend(dirty);
         if (age < 1) {
           blinkClock.depend(dirty);  // cause fast updates
           f.opacity = Math.cos(age * 4 * Math.PI) * 0.5 + 0.5;

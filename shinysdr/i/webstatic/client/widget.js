@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid and the ShinySDR contributors
+// Copyright 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -295,9 +295,9 @@ define([
   // e.g. if str is foo.bar then the returned cell's value is
   //   rootCell.get().foo.get().bar
   function evalTargetStr(rootCell, str, scheduler) {
-    var steps = str.split(/\./);
+    const steps = str.split(/\./);
     return new DerivedCell(anyT, scheduler, function (dirty) {
-      var cell = rootCell;
+      let cell = rootCell;
       steps.forEach(function (name) {
         if (cell !== undefined) cell = cell.depend(dirty)[name];
       });
@@ -306,13 +306,13 @@ define([
   }
   
   function createWidgets(rootTargetCell, context, node) {
-    var scheduler = context.scheduler;
+    const scheduler = context.scheduler;
     if (elementHasWidgetRole.get(node)) {
       // Don't walk into existing structure managed by widgets.
       return;
     }
     if (node.hasAttribute && node.hasAttribute('data-widget')) {
-      var targetCellCell, targetStr;
+      let targetCellCell, targetStr;
       if (node.hasAttribute('data-target')) {
         targetStr = node.getAttribute('data-target');
         targetCellCell = evalTargetStr(rootTargetCell, targetStr, scheduler);
@@ -321,13 +321,13 @@ define([
         targetCellCell = new ConstantCell(rootTargetCell, anyT);
       }
       
-      var typename = node.getAttribute('data-widget');
+      let typename = node.getAttribute('data-widget');
       node.removeAttribute('data-widget');  // prevent widgetifying twice
       if (typename === null) {
         console.error('Unspecified widget type:', node);
         return;
       }
-      var widgetCtor = context.widgets[typename];
+      let widgetCtor = context.widgets[typename];
       if (!widgetCtor) {
         console.error('Bad widget type:', node);
         return;
@@ -344,7 +344,7 @@ define([
       
       doPersistentDetails(node);
       
-      var html = document.createDocumentFragment();
+      let html = document.createDocumentFragment();
       while (node.firstChild) {
         assertNotAlreadySomeWidgetRole(node.firstChild);
         elementHasWidgetRole.set(node, 'targeted container child');
@@ -352,7 +352,7 @@ define([
       }
       scheduler.startNow(function go() {
         // TODO defend against JS-significant keys
-        var target = evalTargetStr(rootTargetCell, node.getAttribute('data-target'), scheduler).depend(go);
+        let target = evalTargetStr(rootTargetCell, node.getAttribute('data-target'), scheduler).depend(go);
         if (!target) {
           node.textContent = '[Missing: ' + node.getAttribute('data-target') + ']';
           return;
@@ -373,8 +373,8 @@ define([
   // Bind a <details> element's open state to localStorage, if this is one
   function doPersistentDetails(node) {
     if (node.nodeName === 'DETAILS' && node.hasAttribute('id')) {
-      var ns = new StorageNamespace(localStorage, 'shinysdr.elementState.' + node.id + '.');
-      var stored = ns.getItem('detailsOpen');
+      let ns = new StorageNamespace(localStorage, 'shinysdr.elementState.' + node.id + '.');
+      let stored = ns.getItem('detailsOpen');
       if (stored !== null) node.open = JSON.parse(stored);
       new MutationObserver(function(mutations) {
         ns.setItem('detailsOpen', JSON.stringify(node.open));

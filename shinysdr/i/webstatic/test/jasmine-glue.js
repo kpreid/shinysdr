@@ -15,25 +15,25 @@ define(() => {
   const jasmineInterface = jasmineRequire.interface(jasmine, env);
 
   // --- begin entirely unmodified code ---
-  var queryString = new jasmine.QueryString({
+  const queryString = new jasmine.QueryString({
     getWindowLocation: function() { return window.location; }
   });
 
-  var catchingExceptions = queryString.getParam("catch");
+  const catchingExceptions = queryString.getParam("catch");
   env.catchExceptions(typeof catchingExceptions === "undefined" ? true : catchingExceptions);
 
-  var throwingExpectationFailures = queryString.getParam("throwFailures");
+  const throwingExpectationFailures = queryString.getParam("throwFailures");
   env.throwOnExpectationFailure(throwingExpectationFailures);
 
-  var random = queryString.getParam("random");
+  const random = queryString.getParam("random");
   env.randomizeTests(random);
 
-  var seed = queryString.getParam("seed");
+  const seed = queryString.getParam("seed");
   if (seed) {
     env.seed(seed);
   }
 
-  var htmlReporter = new jasmine.HtmlReporter({
+  const htmlReporter = new jasmine.HtmlReporter({
     env: env,
     onRaiseExceptionsClick: function() { queryString.navigateWithNewParam("catch", !env.catchingExceptions()); },
     onThrowExpectationsClick: function() { queryString.navigateWithNewParam("throwFailures", !env.throwingExpectationFailures()); },
@@ -48,7 +48,7 @@ define(() => {
   env.addReporter(jasmineInterface.jsApiReporter);
   env.addReporter(htmlReporter);
 
-  var specFilter = new jasmine.HtmlSpecFilter({
+  const specFilter = new jasmine.HtmlSpecFilter({
     filterString: function() { return queryString.getParam("spec"); }
   });
 

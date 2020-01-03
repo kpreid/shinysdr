@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid and the ShinySDR contributors
+// Copyright 2013, 2014, 2015, 2016, 2017, 2018, 2020 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -222,8 +222,8 @@
 
   // Given a maximum acceptable delay, calculate the largest power-of-two buffer size for a ScriptProcessorNode which does not result in more than that delay.
   function delayToBufferSize(sampleRate, maxDelayInSeconds) {
-    var maxBufferSize = sampleRate * maxDelayInSeconds;
-    var powerOfTwoBufferSize = 1 << Math.floor(Math.log(maxBufferSize) / Math.LN2);
+    const maxBufferSize = sampleRate * maxDelayInSeconds;
+    let powerOfTwoBufferSize = 1 << Math.floor(Math.log(maxBufferSize) / Math.LN2);
     // Size limits defined by the Web Audio API specification.
     powerOfTwoBufferSize = Math.max(256, Math.min(16384, powerOfTwoBufferSize));
     return powerOfTwoBufferSize;

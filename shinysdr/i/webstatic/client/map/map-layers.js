@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid and the ShinySDR contributors
+// Copyright 2013, 2014, 2015, 2016, 2017, 2018, 2020 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -70,16 +70,16 @@ define([
   // TODO: only needs scheduler for DerivedCell. See if DerivedCell can be made to not need a scheduler.
   function makeStaticLayer(url, scheduler) {
     // TODO: Only fetch the URL when the user makes the map visible, to speed up page loading otherwise.
-    var dataCell = new LocalReadCell(anyT, null);
+    const dataCell = new LocalReadCell(anyT, null);
     // TODO: externalGet into a cell ought to be factored out
     // TODO: UI-visible error report when there are parse errors at any level
     externalGet(url, 'text').then(jsonString => {
-      var geojson = JSON.parse(jsonString);
+      const geojson = JSON.parse(jsonString);
       dataCell._update(geojson);
     });
     return {
       featuresCell: new DerivedCell(anyT, scheduler, function(dirty) {
-        var geojson = dataCell.depend(dirty);
+        const geojson = dataCell.depend(dirty);
         if (!geojson) return [];
         
         // TODO: More correct parsing
@@ -88,7 +88,7 @@ define([
           console.error('GeoJSON not in WGS84; will not be correctly displayed.', geojson.crs);
         }
         
-        var convertedFeatures = [];
+        const convertedFeatures = [];
 
         // TODO: Expand supported objects to include labels, etc. so that this can be used for more than just drawing polygons.
         function traverse(object) {
@@ -128,8 +128,8 @@ define([
   }
   
   registerMapPlugin(function (mapPluginConfig) {
-    var addLayer = mapPluginConfig.addLayer;
-    var scheduler = mapPluginConfig.scheduler;
+    const addLayer = mapPluginConfig.addLayer;
+    const scheduler = mapPluginConfig.scheduler;
     // TODO: .gz suffix really shouldn't be there. Configure web server appropriately.
     addLayer('Basemap', makeStaticLayer(require.toUrl('./basemap.geojson.gz'), scheduler));
   });
@@ -162,8 +162,8 @@ define([
       const lower = center - width / 2;
       const upper = center + width / 2;
     
-      var receiving = new Map();
-      var receivers = radio.receivers.depend(dirty);
+      const receiving = new Map();
+      const receivers = radio.receivers.depend(dirty);
       receivers._reshapeNotice.listen(dirty);
       for (const key in receivers) {
         const receiver = receivers[key].depend(dirty);
@@ -178,7 +178,7 @@ define([
       };
     });
   
-    var searchCell = new StorageCell(storage, stringT, '', 'databaseFilterString');
+    const searchCell = new StorageCell(storage, stringT, '', 'databaseFilterString');
     addLayer('Database', {
       featuresCell: new DerivedCell(anyT, scheduler, function(dirty) {
         db.n.listen(dirty);
@@ -186,10 +186,11 @@ define([
       }), 
       featureRenderer: function dbRenderer(record, dirty) {
         record.n.listen(dirty);
-        var location = record.location;
+        const location = record.location;
         if (!location) return {};  // TODO use a filter on the db instead
         
         // Smarter update than just dirty(), so that we don't rerender on every change whether it affects us or not
+        let info;
         function checkInfo() {
           info = radioStateInfo.get();
           if (
@@ -202,13 +203,13 @@ define([
           }
         }
         scheduler.claim(checkInfo);
-        var info = radioStateInfo.depend(checkInfo);
-        var inSourceBand = info.lower < record.freq && record.freq < info.upper;
-        var isReceiving = info.receiving.has(record.freq);
+        info = radioStateInfo.depend(checkInfo);
+        const inSourceBand = info.lower < record.freq && record.freq < info.upper;
+        const isReceiving = info.receiving.has(record.freq);
         
         const lines = [];
         if (isReceiving) {
-          //var receiver = info.receiving.get(record);
+          //const receiver = info.receiving.get(record);
           // TODO: Should be matching against receiver's device rather than selected device
           info.tracks.forEach(track => {
             lines.push(greatCircleLineTo(
@@ -249,7 +250,7 @@ define([
     const smoothStep = 1;
     
     function dasinClamp(x) {
-      var deg = Math.asin(x) / RADIANS_PER_DEGREE;
+      const deg = Math.asin(x) / RADIANS_PER_DEGREE;
       return isFinite(deg) ? deg : 90;
     }
     function floorTo(x, step) {
@@ -259,15 +260,15 @@ define([
       return x.toFixed(Math.max(0, -logStep));
     }
     function computeLabelPosition(lowBound, highBound, logStep) {
-      var spacingStep = Math.pow(10, logStep);
+      const spacingStep = Math.pow(10, logStep);
       
-      var coord = Math.max(lowBound, Math.min(highBound, 0));
+      let coord = Math.max(lowBound, Math.min(highBound, 0));
       coord = floorTo(coord, spacingStep);
       if (coord <= lowBound) coord += spacingStep;
       return coord;
     }
     function addLinesAndMarks(features, axis, otherCoord, otherAxisPos, lowBound, highBound, logStep) {
-      var spacingStep = Math.pow(10, logStep);
+      const spacingStep = Math.pow(10, logStep);
       for (let x = floorTo(lowBound, spacingStep); x < highBound + spacingStep; x += spacingStep) {
         features.push(axis + 'Line,' + x);
         features.push(axis + 'Label,' + x + ',' + logStep + ',' + otherCoord);
@@ -275,25 +276,25 @@ define([
     }
     
     // Maidenhead encoding tables
-    var symbolSets = [
+    const symbolSets = [
       'ABCDEFGHIJKLMNOPQR',       // field
       '0123456789',               // squre
       'abcdefghijklmnopqrstuvwx', // subsquare
       '0123456789'                // extended square
     ];
-    var granularities = [1];
+    const granularities = [1];
     symbolSets.forEach(function (symbols) {
       granularities.push(granularities[granularities.length - 1] * symbols.length);
     });
     Object.freeze(granularities);
     function encodeMaidenhead(lon, lat, lonDepth, latDepth) {
       // The 'm' variables are scaled so that [0, 1) maps to {first symbol, ..., last symbol} circularly
-      var mlon = (lon + 180) / 360;
-      var mlat = (lat + 90) / 180;
-      var code = '';
+      let mlon = (lon + 180) / 360;
+      let mlat = (lat + 90) / 180;
+      let code = '';
       for (let i = 0; i < lonDepth || i < latDepth; i++) {
-        var table = symbolSets[i];
-        var n = table.length;
+        const table = symbolSets[i];
+        const n = table.length;
         mlon *= n;
         mlat *= n;
         code += (i < lonDepth ? table[Math.floor(mod(mlon, n))] : '_')
@@ -301,7 +302,7 @@ define([
       }
       return code;
     }
-    var MAX_LINES_IN_VIEW = 10;
+    const MAX_LINES_IN_VIEW = 10;
     function maidenheadDepth(x) {
       for (let i = granularities.length - 1; i >= 0; i--) {
         if (granularities[i] * x <= MAX_LINES_IN_VIEW) {
@@ -317,55 +318,55 @@ define([
       }),
       featuresCell: new DerivedCell(anyT, scheduler, function(dirty) {
         // TODO: Don't rerun this calc on every movement — have a thing which takes an 'error' window (eep computing that) and dirties if out of bounds
-        var zoom = mapCamera.zoomCell.depend(dirty);
-        var centerLat = mapCamera.latitudeCell.depend(dirty);
-        var centerLon = mapCamera.longitudeCell.depend(dirty);
+        const zoom = mapCamera.zoomCell.depend(dirty);
+        const centerLat = mapCamera.latitudeCell.depend(dirty);
+        const centerLon = mapCamera.longitudeCell.depend(dirty);
         
         // TODO: Does not account for sphericality (visible with wide aspect ratios)
-        var visibleRadiusLatDeg = dasinClamp(1 / mapCamera.getEffectiveYZoom());
+        const visibleRadiusLatDeg = dasinClamp(1 / mapCamera.getEffectiveYZoom());
         
-        var visLatMin = Math.max(-90, centerLat - visibleRadiusLatDeg);
-        var visLatMax = Math.min(90, centerLat + visibleRadiusLatDeg);
+        const visLatMin = Math.max(-90, centerLat - visibleRadiusLatDeg);
+        const visLatMax = Math.min(90, centerLat + visibleRadiusLatDeg);
         
-        var invXZoom = 1 / mapCamera.getEffectiveXZoom();
-        var contraction = Math.max(0, Math.min(
+        const invXZoom = 1 / mapCamera.getEffectiveXZoom();
+        const contraction = Math.max(0, Math.min(
           dcos(centerLat - visibleRadiusLatDeg),
           dcos(centerLat + visibleRadiusLatDeg)));
-        var expansion = Math.max(0,
+        const expansion = Math.max(0,
           dcos(centerLat - visibleRadiusLatDeg),
           dcos(centerLat + visibleRadiusLatDeg));
         // The visible longitudes at the smallest-scale part of the viewport (what lines must be drawn)
-        var visibleRadiusLonDeg = dasinClamp(invXZoom / contraction);
+        const visibleRadiusLonDeg = dasinClamp(invXZoom / contraction);
         // The visible longitudes at the largest-scale part of the viewport (where to put the labels)
-        var visibleRadiusLonDegInner = dasinClamp(invXZoom / expansion);
+        const visibleRadiusLonDegInner = dasinClamp(invXZoom / expansion);
         
         // this condition both avoids overdrawing and handles looking past the poles
-        var fullSphere = visibleRadiusLonDeg >= 90;
-        var visLonMin = fullSphere ? -180 : Math.max(centerLon - visibleRadiusLonDeg);
-        var visLonMax = fullSphere ? 180 : Math.min(centerLon + visibleRadiusLonDeg);
-        var visLonInnerMin = Math.max(centerLon - visibleRadiusLonDegInner);
-        var visLonInnerMax = Math.min(centerLon + visibleRadiusLonDegInner);
+        const fullSphere = visibleRadiusLonDeg >= 90;
+        const visLonMin = fullSphere ? -180 : Math.max(centerLon - visibleRadiusLonDeg);
+        const visLonMax = fullSphere ? 180 : Math.min(centerLon + visibleRadiusLonDeg);
+        const visLonInnerMin = Math.max(centerLon - visibleRadiusLonDegInner);
+        const visLonInnerMax = Math.min(centerLon + visibleRadiusLonDegInner);
         
-        var features = [];
+        const features = [];
         
-        var graticuleType = graticuleTypeCell.depend(dirty);
+        const graticuleType = graticuleTypeCell.depend(dirty);
         if (graticuleType === 'degrees') {
-          var latLogStep = Math.ceil(Math.log(10 / zoom) / Math.LN10);
+          const latLogStep = Math.ceil(Math.log(10 / zoom) / Math.LN10);
           // don't draw lots of longitude lines when zoomed on a pole
-          var lonStepLimit = Math.ceil(Math.log(visibleRadiusLonDeg / 20) / Math.LN10);
-          var lonLogStep = Math.max(lonStepLimit, latLogStep);
+          const lonStepLimit = Math.ceil(Math.log(visibleRadiusLonDeg / 20) / Math.LN10);
+          const lonLogStep = Math.max(lonStepLimit, latLogStep);
 
-          var latLabelLon = computeLabelPosition(visLonInnerMin, visLonInnerMax, lonLogStep);
-          var lonLabelLat = computeLabelPosition(visLatMin, visLatMax, latLogStep);
+          const latLabelLon = computeLabelPosition(visLonInnerMin, visLonInnerMax, lonLogStep);
+          const lonLabelLat = computeLabelPosition(visLatMin, visLatMax, latLogStep);
           addLinesAndMarks(features, 'lat', latLabelLon, lonLabelLat, visLatMin, visLatMax, latLogStep);
           addLinesAndMarks(features, 'lon', lonLabelLat, latLabelLon, visLonMin, visLonMax, lonLogStep);
         } else if (graticuleType === 'maidenhead') {
-          var lonDepth = maidenheadDepth(visibleRadiusLonDeg / 360);
-          var latDepth = maidenheadDepth(visibleRadiusLatDeg / 180);
+          let lonDepth = maidenheadDepth(visibleRadiusLonDeg / 360);
+          let latDepth = maidenheadDepth(visibleRadiusLatDeg / 180);
           latDepth = lonDepth = Math.min(latDepth, lonDepth);  // TODO do better
-          var lonStep = 360 / granularities[lonDepth];
-          var latStep = 180 / granularities[latDepth];
-          var depthStr = ',' + lonDepth + ',' + latDepth;
+          const lonStep = 360 / granularities[lonDepth];
+          const latStep = 180 / granularities[latDepth];
+          const depthStr = ',' + lonDepth + ',' + latDepth;
           for (let lon = floorTo(visLonMin, lonStep); lon < visLonMax + lonStep*0.5; lon += lonStep) {
             features.push('lonLine,' + lon);
             for (let lat = floorTo(visLatMin + 90, latStep) - 90; lat < visLatMax + latStep*0.5; lat += latStep) {

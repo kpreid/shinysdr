@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016, 2017, 2019 Kevin Reid and the ShinySDR contributors
+// Copyright 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -116,7 +116,7 @@ define([
   
   // Defines the display parameters and coordinate calculations of the spectrum widgets
   // TODO: Revisit whether this should be in widgets.js -- it is closely tied to the spectrum widgets, but also managed by the widget framework.
-  var MAX_ZOOM_BINS = 60; // Maximum zoom shows this many FFT bins
+  const MAX_ZOOM_BINS = 60; // Maximum zoom shows this many FFT bins
   function SpectrumLayoutContext(config) {
     const radioCell = config.isRFSpectrum ? config.radioCell : null;
     const container = config.outerElement;
@@ -367,7 +367,7 @@ define([
       
       // Record the frequency the user has touched
       Array.prototype.forEach.call(event.changedTouches, function (touch) {
-        var x = clientXToViewportLeft(touch.clientX);
+        const x = clientXToViewportLeft(touch.clientX);
         activeTouches[touch.identifier] = {
           grabFreq: clientXToFreq(touch.clientX),
           grabView: x,  // fixed
@@ -398,7 +398,7 @@ define([
       }
       
       // Compute scroll pos, using NEW zoom value
-      var scrolls = [];
+      const scrolls = [];
       for (const idString in activeTouches) {
         const info = activeTouches[idString];
         const grabbedFreq = info.grabFreq;
@@ -407,7 +407,7 @@ define([
         scrolls.push(newScrollLeft);
       }
       
-      var avgScroll = scrolls.reduce(function (a, b) { return a + b; }, 0) / scrolls.length;
+      const avgScroll = scrolls.reduce(function (a, b) { return a + b; }, 0) / scrolls.length;
       
       // Frequency pan
       const clampedScroll = clampScroll(avgScroll);
@@ -544,7 +544,7 @@ define([
       
       // TODO this is clunky. (Note we're not just using rebuildMe because we don't want to lose waterfall history and reinit GL and and and...)
       const freqCell = isRFSpectrum ? (function() {
-        var radioCell = config.radioCell;
+        const radioCell = config.radioCell;
         return new DerivedCell(numberT, config.scheduler, function (dirty) {
           return radioCell.depend(dirty).source.depend(dirty).freq.depend(dirty);
         });
@@ -594,8 +594,8 @@ define([
         ignore('freq_resolution');
       }
       if ('paused' in block) {
-        var pausedLabel = getAppend().appendChild(document.createElement('label'));
-        var pausedEl = pausedLabel.appendChild(document.createElement('input'));
+        const pausedLabel = getAppend().appendChild(document.createElement('label'));
+        const pausedEl = pausedLabel.appendChild(document.createElement('input'));
         pausedEl.type = 'checkbox';
         pausedLabel.appendChild(document.createTextNode('Pause'));
         createWidgetExt(config.context, Toggle, pausedEl, block.paused);
@@ -611,7 +611,7 @@ define([
       this.element.classList.remove('panel');
       this.element.classList.remove('frame');
       
-      var details = getAppend().appendChild(document.createElement('details'));
+      const details = getAppend().appendChild(document.createElement('details'));
       details.appendChild(document.createElement('summary'))
           .appendChild(document.createTextNode('Options'));
       if (config.idPrefix) details.id = config.idPrefix + 'details';
@@ -646,7 +646,7 @@ define([
     const fftCell = config.target;
     const view = config.getLayoutContext(SpectrumLayoutContext);
     
-    var canvas = config.element;
+    let canvas = config.element;
     if (canvas.tagName !== 'CANVAS') {
       canvas = document.createElement('canvas');
     }
@@ -654,7 +654,7 @@ define([
     view.addClickToTune(canvas);
     canvas.setAttribute('title', '');  // prohibit auto-set title -- TODO: Stop having auto-set titles in the first place
     
-    var glOptions = {
+    const glOptions = {
       powerPreference: 'high-performance',
       alpha: true,
       depth: false,
@@ -662,10 +662,10 @@ define([
       antialias: false,
       preserveDrawingBuffer: false
     };
-    var gl = getGL(config, canvas, glOptions);
-    var ctx2d = canvas.getContext('2d');
+    const gl = getGL(config, canvas, glOptions);
+    const ctx2d = canvas.getContext('2d');
     
-    var dataHook = function () {}, drawOuter = function () {};
+    let dataHook = function () {}, drawOuter = function () {};
     
     const draw = config.scheduler.claim(function drawOuterTrampoline() {
       view.n.listen(draw);
@@ -688,7 +688,7 @@ define([
     
     if (gl) (function() {
       function initContext() {
-        var drawImpl = buildGL(gl, draw);
+        const drawImpl = buildGL(gl, draw);
         dataHook = drawImpl.newData.bind(drawImpl);
         
         drawOuter = drawImpl.performDraw.bind(drawImpl);
@@ -697,7 +697,7 @@ define([
       initContext();
       handleContextLoss(canvas, initContext);
     }.call(this)); else if (ctx2d) (function () {
-      var drawImpl = build2D(ctx2d, draw);
+      const drawImpl = build2D(ctx2d, draw);
       dataHook = drawImpl.newData.bind(drawImpl);
       drawOuter = drawImpl.performDraw.bind(drawImpl);
     }.call(this));
@@ -717,48 +717,43 @@ define([
     const view = config.getLayoutContext(SpectrumLayoutContext);
     const avgAlphaCell = view.parameters.spectrum_average;
     
-    var minLevelCell = view.parameters.spectrum_level_min;
-    var maxLevelCell = view.parameters.spectrum_level_max;
+    const minLevelCell = view.parameters.spectrum_level_min;
+    const maxLevelCell = view.parameters.spectrum_level_max;
     
     // I have read recommendations that color gradient scales should not involve more than two colors, as certain transitions between colors read as overly significant. However, in this case (1) we are not intending the waterfall chart to be read quantitatively, and (2) we want to have distinguishable small variations across a large dynamic range.
-    var colors = [
+    const colors = [
       [0, 0, 0],
       [0, 0, 255],
       [0, 200, 255],
       [255, 255, 0],
       [255, 0, 0]
     ];
-    var colorCountForScale = colors.length - 1;
-    var colorCountForIndex = colors.length - 2;
+    const colorCountForScale = colors.length - 1;
+    const colorCountForIndex = colors.length - 2;
     // value from 0 to 1, writes 0..255 into 4 elements of outArray
     function interpolateColor(value, outArray, base) {
       value *= colorCountForScale;
-      var colorIndex = Math.max(0, Math.min(colorCountForIndex, Math.floor(value)));
-      var colorInterp1 = value - colorIndex;
-      var colorInterp0 = 1 - colorInterp1;
-      var color0 = colors[colorIndex];
-      var color1 = colors[colorIndex + 1];
+      const colorIndex = Math.max(0, Math.min(colorCountForIndex, Math.floor(value)));
+      const colorInterp1 = value - colorIndex;
+      const colorInterp0 = 1 - colorInterp1;
+      const color0 = colors[colorIndex];
+      const color1 = colors[colorIndex + 1];
       outArray[base    ] = color0[0] * colorInterp0 + color1[0] * colorInterp1;
       outArray[base + 1] = color0[1] * colorInterp0 + color1[1] * colorInterp1;
       outArray[base + 2] = color0[2] * colorInterp0 + color1[2] * colorInterp1;
       outArray[base + 3] = 255;
     }
     
-    var backgroundColor = [119, 119, 119];
-    var backgroundColorCSS = '#' + backgroundColor.map(function (v) { return ('0' + v.toString(16)).slice(-2); }).join('');
-    var backgroundColorGLSL = 'vec4(' + backgroundColor.map(function (v) { return v / 255; }).join(', ') + ', 1.0)';
+    const backgroundColor = [119, 119, 119];
+    const backgroundColorCSS = '#' + backgroundColor.map(function (v) { return ('0' + v.toString(16)).slice(-2); }).join('');
+    const backgroundColorGLSL = 'vec4(' + backgroundColor.map(function (v) { return v / 255; }).join(', ') + ', 1.0)';
     
     // TODO: Instead of hardcoding this, implement dynamic resizing of the history buffers. Punting for now because reallocating the GL textures would be messy.
-    var historyCount = Math.max(
+    const historyCount = Math.max(
       1024,
       config.element.nodeName === 'CANVAS' ? config.element.height : 0);
     
-    var canvas;
-    var cleared = true;
-    
-    CanvasSpectrumWidget.call(this, config, buildGL, build2D);
-    
-    var lvf, rvf, w, h;
+    let lvf, rvf, w, h;
     function commonBeforeDraw(scheduledDraw) {
       view.n.listen(scheduledDraw);
       lvf = view.leftVisibleFreq();
@@ -767,41 +762,46 @@ define([
       h = canvas.height;
     }
     
+    let canvas;
+    let cleared = true;
+    
+    CanvasSpectrumWidget.call(this, config, buildGL, build2D);
+    
     function buildGL(gl, draw) {
       canvas = self.element;
 
-      var useFloatTexture =
+      const useFloatTexture =
         config.clientState.opengl_float.depend(config.rebuildMe) &&
         !!gl.getExtension('OES_texture_float') &&
         !!gl.getExtension('OES_texture_float_linear');
 
-      var shaderPrefix =
+      const shaderPrefix =
         '#define USE_FLOAT_TEXTURE ' + (useFloatTexture ? '1' : '0') + '\n'
         + '#line 1 0\n' + shader_common
         + '\n#line 1 1\n';
 
-      var graphProgram = buildProgram(gl, 
+      const graphProgram = buildProgram(gl, 
         shaderPrefix + shader_graph_v,
         shaderPrefix + shader_graph_f);
-      var graphQuad = new SingleQuad(gl, -1, 1, -1, 1, gl.getAttribLocation(graphProgram, 'position'));
+      const graphQuad = new SingleQuad(gl, -1, 1, -1, 1, gl.getAttribLocation(graphProgram, 'position'));
 
-      var waterfallProgram = buildProgram(gl,
+      const waterfallProgram = buildProgram(gl,
         shaderPrefix + shader_waterfall_v,
         '#define BACKGROUND_COLOR ' + backgroundColorGLSL + '\n'
             + shaderPrefix + shader_waterfall_f);
-      var waterfallQuad = new SingleQuad(gl, -1, 1, -1, 1, gl.getAttribLocation(waterfallProgram, 'position'));
+      const waterfallQuad = new SingleQuad(gl, -1, 1, -1, 1, gl.getAttribLocation(waterfallProgram, 'position'));
       
-      var u_scroll = gl.getUniformLocation(waterfallProgram, 'scroll');
-      var u_xTranslate = gl.getUniformLocation(waterfallProgram, 'xTranslate');
-      var u_xScale = gl.getUniformLocation(waterfallProgram, 'xScale');
-      var u_yScale = gl.getUniformLocation(waterfallProgram, 'yScale');
-      var wu_currentFreq = gl.getUniformLocation(waterfallProgram, 'currentFreq');
-      var gu_currentFreq = gl.getUniformLocation(graphProgram, 'currentFreq');
-      var wu_freqScale = gl.getUniformLocation(waterfallProgram, 'freqScale');
-      var gu_freqScale = gl.getUniformLocation(graphProgram, 'freqScale');
-      var u_textureRotation = gl.getUniformLocation(waterfallProgram, 'textureRotation');
+      const u_scroll = gl.getUniformLocation(waterfallProgram, 'scroll');
+      const u_xTranslate = gl.getUniformLocation(waterfallProgram, 'xTranslate');
+      const u_xScale = gl.getUniformLocation(waterfallProgram, 'xScale');
+      const u_yScale = gl.getUniformLocation(waterfallProgram, 'yScale');
+      const wu_currentFreq = gl.getUniformLocation(waterfallProgram, 'currentFreq');
+      const gu_currentFreq = gl.getUniformLocation(graphProgram, 'currentFreq');
+      const wu_freqScale = gl.getUniformLocation(waterfallProgram, 'freqScale');
+      const gu_freqScale = gl.getUniformLocation(graphProgram, 'freqScale');
+      const u_textureRotation = gl.getUniformLocation(waterfallProgram, 'textureRotation');
       
-      var fftSize = Math.max(1, config.target.get().length);
+      let fftSize = Math.max(1, config.target.get().length);
       
 
       const spectrumDataTexture = gl.createTexture();
@@ -812,25 +812,25 @@ define([
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-      var historyFreqTexture = gl.createTexture();
+      const historyFreqTexture = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, historyFreqTexture);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-      var gradientTexture = gl.createTexture();
+      const gradientTexture = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, gradientTexture);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       (function() {
-        var components = 4;
+        const components = 4;
         // stretch = number of texels to generate per color. If we generate only the minimum and fully rely on hardware gl.LINEAR interpolation then certain pixels in the display tends to flicker as it scrolls, on some GPUs.
-        var stretch = 10;
-        var limit = (colors.length - 1) * stretch + 1;
-        var gradientInit = new Uint8Array(limit * components);
+        const stretch = 10;
+        const limit = (colors.length - 1) * stretch + 1;
+        const gradientInit = new Uint8Array(limit * components);
         for (let i = 0; i < limit; i++) {
           interpolateColor(i / (limit - 1), gradientInit, i * 4);
         }
@@ -850,13 +850,13 @@ define([
         // gradientZero and gradientScale set the scaling from data texture values to gradient texture coordinates
         // gradientInset is the amount to compensate for half-texel edges
         config.scheduler.startNow(function computeGradientScale() {
-          var gradientInset = 0.5 / (gradientInit.length / components);
-          var insetZero = gradientInset;
-          var insetScale = 1 - gradientInset * 2;
-          var valueZero, valueScale;
+          const gradientInset = 0.5 / (gradientInit.length / components);
+          const insetZero = gradientInset;
+          const insetScale = 1 - gradientInset * 2;
+          let valueZero, valueScale;
           if (useFloatTexture) {
-            var minLevel = minLevelCell.depend(computeGradientScale);
-            var maxLevel = maxLevelCell.depend(computeGradientScale);
+            const minLevel = minLevelCell.depend(computeGradientScale);
+            const maxLevel = maxLevelCell.depend(computeGradientScale);
             valueScale = 1 / (maxLevel - minLevel);
             valueZero = valueScale * -minLevel;
           } else {
@@ -975,15 +975,15 @@ define([
       gl.uniform1i(gl.getUniformLocation(waterfallProgram, 'gradient'), 3);
       gl.activeTexture(gl.TEXTURE0);
 
-      var slicePtr = 0;
+      let slicePtr = 0;
 
-      var freqWriteBuffer = useFloatTexture ? new Float32Array(1) : new Uint8Array(4);
-      var intConversionBuffer, intConversionOut;
+      const freqWriteBuffer = useFloatTexture ? new Float32Array(1) : new Uint8Array(4);
+      let intConversionBuffer, intConversionOut;
       
       return {
         newData: function (fftBundle) {
-          var buffer = fftBundle[1];
-          var bufferCenterFreq = fftBundle[0].freq;
+          const buffer = fftBundle[1];
+          const bufferCenterFreq = fftBundle[0].freq;
           
           if (buffer.length === 0) {
             return;
@@ -1028,9 +1028,9 @@ define([
           } else {
             gl.bindTexture(gl.TEXTURE_2D, spectrumDataTexture);
             // TODO: By doing the level shift at this point, we are locking in the current settings. It would be better to arrange for min/max changes to rescale historical data as well, as it does in float-texture mode (would require keeping the original data as well as the texture contents and recopying it).
-            var minLevel = minLevelCell.get();
-            var maxLevel = maxLevelCell.get();
-            var cscale = 255 / (maxLevel - minLevel);
+            const minLevel = minLevelCell.get();
+            const maxLevel = maxLevelCell.get();
+            const cscale = 255 / (maxLevel - minLevel);
             for (let i = 0; i < fftSize; i++) {
               intConversionBuffer[i] = (buffer[i] - minLevel) * cscale;
             }
@@ -1116,15 +1116,15 @@ define([
       canvas = self.element;
       
       // secondary canvas to use for image scaling
-      var scaler = document.createElement('canvas');
+      const scaler = document.createElement('canvas');
       scaler.height = 1;
-      var scalerCtx = scaler.getContext('2d');
+      const scalerCtx = scaler.getContext('2d');
       if (!scalerCtx) { throw new Error('failed to get headless canvas context'); }
       
       // view parameters recomputed on draw
-      var freqToCanvasPixelFactor;
-      var xTranslateFreq;
-      var pixelWidthOfFFT;
+      let freqToCanvasPixelFactor;
+      let xTranslateFreq;
+      let pixelWidthOfFFT;
       
       function paintSlice(imageData, freqOffset, y) {
         if (scaler.width < imageData.width) {
@@ -1140,19 +1140,19 @@ define([
       }
       
       // circular buffer of ImageData objects, and info to invalidate it
-      var slices = [];
-      var slicePtr = 0;
-      var lastDrawnLeftVisibleFreq = NaN;
-      var lastDrawnRightVisibleFreq = NaN;
+      const slices = [];
+      let slicePtr = 0;
+      let lastDrawnLeftVisibleFreq = NaN;
+      let lastDrawnRightVisibleFreq = NaN;
       
       // for detecting when to invalidate the averaging buffer
-      var lastDrawnCenterFreq = NaN;
+      let lastDrawnCenterFreq = NaN;
       
       // Graph drawing parameters and functions
       // Each variable is updated in draw()
       // This is done so that the functions need not be re-created
       // each frame.
-      var gxZero, xScale, xNegBandwidthCoord, xPosBandwidthCoord, yZero, yScale, firstPoint, lastPoint, fftLen, graphDataBuffer;
+      let gxZero, xScale, xNegBandwidthCoord, xPosBandwidthCoord, yZero, yScale, firstPoint, lastPoint, fftLen, graphDataBuffer;
       function freqToCoord(freq) {
         return (freq - lvf) / (rvf-lvf) * w;
       }
@@ -1170,8 +1170,8 @@ define([
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       
-      var fillStyle = 'white';
-      var strokeStyle = 'white';
+      let fillStyle = 'white';
+      let strokeStyle = 'white';
       canvas.addEventListener('shinysdr:lifecycleinit', event => {
         fillStyle = getComputedStyle(canvas).fill;
         strokeStyle = getComputedStyle(canvas).stroke;
@@ -1187,22 +1187,22 @@ define([
         commonBeforeDraw(draw);
         
         cleared = cleared || clearedIn;
-        var viewLVF = view.leftVisibleFreq();
-        var viewRVF = view.rightVisibleFreq();
-        var viewCenterFreq = view.getCenterFreq();
+        const viewLVF = view.leftVisibleFreq();
+        const viewRVF = view.rightVisibleFreq();
+        const viewCenterFreq = view.getCenterFreq();
         freqToCanvasPixelFactor = w / (viewRVF - viewLVF);
         xTranslateFreq = viewLVF - view.leftFreq();
         pixelWidthOfFFT = view.getTotalPixelWidth();
 
-        var split = Math.round(canvas.height * view.parameters.spectrum_split.depend(changedSplit));
-        var topOfWaterfall = h - split;
-        var heightOfWaterfall = split;
+        const split = Math.round(canvas.height * view.parameters.spectrum_split.depend(changedSplit));
+        const topOfWaterfall = h - split;
+        const heightOfWaterfall = split;
 
         let buffer, bufferCenterFreq, ibuf;
         if (dataToDraw) {
           buffer = dataToDraw[1];
           bufferCenterFreq = dataToDraw[0].freq;
-          var fftLength = buffer.length;
+          const fftLength = buffer.length;
 
           // can't draw with w=0
           if (w === 0 || fftLength === 0) {
@@ -1213,7 +1213,7 @@ define([
           if (slices.length < historyCount) {
             slices.push([ibuf = ctx.createImageData(fftLength, 1), bufferCenterFreq]);
           } else {
-            var record = slices[slicePtr];
+            const record = slices[slicePtr];
             slicePtr = mod(slicePtr + 1, historyCount);
             ibuf = record[0];
             if (ibuf.width !== fftLength) {
@@ -1225,13 +1225,13 @@ define([
           // Generate image slice from latest FFT data.
           // TODO get half-pixel alignment right elsewhere, and supply wraparound on both ends in this data
           // TODO: By converting to color at this point, we are locking in the current min/max settings. It would be better to arrange for min/max changes to rescale historical data as well, as it does in GL-float-texture mode (would require keeping the original data as well as the texture contents and recopying it).
-          var xZero = view.isRealFFT() ? 0 : Math.floor(fftLength / 2);
-          var cScale = 1 / (maxLevelCell.get() - minLevelCell.get());
-          var cZero = 1 - maxLevelCell.get() * cScale;
-          var data = ibuf.data;
+          const xZero = view.isRealFFT() ? 0 : Math.floor(fftLength / 2);
+          const cScale = 1 / (maxLevelCell.get() - minLevelCell.get());
+          const cZero = 1 - maxLevelCell.get() * cScale;
+          const data = ibuf.data;
           for (let x = 0; x < fftLength; x++) {
-            var base = x * 4;
-            var colorVal = buffer[mod(x + xZero, fftLength)] * cScale + cZero;
+            const base = x * 4;
+            const colorVal = buffer[mod(x + xZero, fftLength)] * cScale + cZero;
             interpolateColor(colorVal, data, base);
           }
         }
@@ -1278,14 +1278,14 @@ define([
           if (!graphDataBuffer) return;
           
           fftLen = graphDataBuffer.length;  // TODO name collisionish
-          var halfFFTLen = Math.floor(fftLen / 2);
+          const halfFFTLen = Math.floor(fftLen / 2);
         
           if (halfFFTLen <= 0) {
             // no data yet, don't try to draw
             return;
           }
 
-          var viewCenterFreq = view.getCenterFreq();
+          const viewCenterFreq = view.getCenterFreq();
           gxZero = freqToCoord(viewCenterFreq);
           xNegBandwidthCoord = freqToCoord(view.leftFreq());
           xPosBandwidthCoord = freqToCoord(view.rightFreq());
@@ -1321,14 +1321,14 @@ define([
         cleared = false;
       }
 
-      var dataToDraw = null;  // TODO this is a data flow kludge
+      let dataToDraw = null;  // TODO this is a data flow kludge
       return {
         newData: function (fftBundle) {
-          var buffer = fftBundle[1];
-          var bufferCenterFreq = fftBundle[0].freq;
-          var len = buffer.length;
-          var alpha = avgAlphaCell.get();
-          var invAlpha = 1 - alpha;
+          const buffer = fftBundle[1];
+          const bufferCenterFreq = fftBundle[0].freq;
+          const len = buffer.length;
+          const alpha = avgAlphaCell.get();
+          const invAlpha = 1 - alpha;
 
           // averaging
           // TODO: Get separate averaged and unaveraged FFTs from server so that averaging behavior is not dependent on frame rate over the network
@@ -1367,33 +1367,33 @@ define([
     const radioCell = config.radioCell;
     const others = config.index.implementing('shinysdr.interfaces.IHasFrequency');
     // TODO: That this cell matters here is shared knowledge between this and ReceiverMarks. Should instead be managed by SpectrumLayoutContext (since it already handles freq coordinates), in the form "get Y position of minLevel".
-    var splitCell = view.parameters.spectrum_split;
-    var minLevelCell = view.parameters.spectrum_level_min;
-    var maxLevelCell = view.parameters.spectrum_level_max;
+    const splitCell = view.parameters.spectrum_split;
+    const minLevelCell = view.parameters.spectrum_level_min;
+    const maxLevelCell = view.parameters.spectrum_level_max;
     
-    var canvas = config.element;
+    let canvas = config.element;
     if (canvas.tagName !== 'CANVAS') {
       canvas = document.createElement('canvas');
       canvas.classList.add('widget-Monitor-overlay');  // TODO over-coupling
     }
     this.element = canvas;
     
-    var ctx = canvas.getContext('2d');
-    var textOffsetFromTop =
+    const ctx = canvas.getContext('2d');
+    const textOffsetFromTop =
         //ctx.measureText('j').fontBoundingBoxAscent; -- not yet supported
         10 + 2; // default font size is "10px", ignoring effect of baseline
-    var textSpacing = 10 + 1;
+    const textSpacing = 10 + 1;
     
     // Drawing parameters and functions
     // Each variable is updated in draw()
     // This is done so that the functions need not be re-created
     // each frame.
-    var w, h, lvf, rvf;
+    let w, h, lvf, rvf;
     function freqToCoord(freq) {
       return (freq - lvf) / (rvf-lvf) * w;
     }
     function drawHair(freq) {
-      var x = freqToCoord(freq);
+      let x = freqToCoord(freq);
       x = Math.floor(x) + 0.5;
       ctx.beginPath();
       ctx.moveTo(x, 0);
@@ -1401,14 +1401,14 @@ define([
       ctx.stroke();
     }
     function drawBand(freq1, freq2) {
-      var x1 = freqToCoord(freq1);
-      var x2 = freqToCoord(freq2);
+      const x1 = freqToCoord(freq1);
+      const x2 = freqToCoord(freq2);
       ctx.fillRect(x1, 0, x2 - x1, ctx.canvas.height);
     }
     
     function draw() {
       view.n.listen(draw);
-      var visibleDevice = radioCell.depend(draw).source_name.depend(draw);
+      const visibleDevice = radioCell.depend(draw).source_name.depend(draw);
       lvf = view.leftVisibleFreq();
       rvf = view.rightVisibleFreq();
       
@@ -1425,8 +1425,8 @@ define([
         ctx.clearRect(0, 0, w, h);
       }
       
-      var yScale = -(h * (1 - splitCell.depend(draw))) / (maxLevelCell.depend(draw) - minLevelCell.depend(draw));
-      var yZero = -maxLevelCell.depend(draw) * yScale;
+      const yScale = -(h * (1 - splitCell.depend(draw))) / (maxLevelCell.depend(draw) - minLevelCell.depend(draw));
+      const yZero = -maxLevelCell.depend(draw) * yScale;
       
       ctx.strokeStyle = 'gray';
       drawHair(view.getCenterFreq()); // center frequency
@@ -1436,12 +1436,12 @@ define([
         drawHair(object.freq.depend(draw));
       });
       
-      var receivers = radioCell.depend(draw).receivers.depend(draw);
+      const receivers = radioCell.depend(draw).receivers.depend(draw);
       receivers._reshapeNotice.listen(draw);
       for (const recKey in receivers) {
-        var receiver = receivers[recKey].depend(draw);
-        var device_name_now = receiver.device_name.depend(draw);
-        var rec_freq_now = receiver.rec_freq.depend(draw);
+        const receiver = receivers[recKey].depend(draw);
+        const device_name_now = receiver.device_name.depend(draw);
+        const rec_freq_now = receiver.rec_freq.depend(draw);
         
         if (!(lvf <= rec_freq_now && rec_freq_now <= rvf && device_name_now === visibleDevice)) {
           continue;
@@ -1461,10 +1461,10 @@ define([
         }
 
         // TODO: marks ought to be part of a distinct widget
-        var squelch_threshold_cell = receiver.demodulator.depend(draw).squelch_threshold;
+        const squelch_threshold_cell = receiver.demodulator.depend(draw).squelch_threshold;
         if (squelch_threshold_cell) {
-          var squelchPower = squelch_threshold_cell.depend(draw);
-          var squelchL, squelchR, bandwidth;
+          const squelchPower = squelch_threshold_cell.depend(draw);
+          let squelchL, squelchR, bandwidth;
           if (band_shape_now) {
             squelchL = freqToCoord(rec_freq_now + band_shape_now.stop_low);
             squelchR = freqToCoord(rec_freq_now + band_shape_now.stop_high);
@@ -1475,11 +1475,11 @@ define([
             squelchR = w;
             bandwidth = 10e3;
           }
-          var squelchPSD = squelchPower - to_dB(bandwidth);
-          var squelchY = Math.floor(yZero + squelchPSD * yScale) + 0.5;
-          var minSquelchHairWidth = 30;
+          const squelchPSD = squelchPower - to_dB(bandwidth);
+          const squelchY = Math.floor(yZero + squelchPSD * yScale) + 0.5;
+          const minSquelchHairWidth = 30;
           if (squelchR - squelchL < minSquelchHairWidth) {
-            var squelchMid = (squelchR + squelchL) / 2;
+            const squelchMid = (squelchR + squelchL) / 2;
             squelchL = squelchMid - minSquelchHairWidth/2;
             squelchR = squelchMid + minSquelchHairWidth/2;
           }
@@ -1647,8 +1647,8 @@ define([
       el.className = 'freqscale-band';
       el.textContent = record.label || record.mode;
       el.my_update = function () {
-        var labelLower = Math.max(record.lowerFreq, lower);
-        var labelUpper = Math.min(record.upperFreq, upper);
+        const labelLower = Math.max(record.lowerFreq, lower);
+        const labelUpper = Math.min(record.upperFreq, upper);
         el.style.left = view.freqToCSSLeft(labelLower);
         el.style.width = view.freqToCSSLength(labelUpper - labelLower);
         el.style.bottom = pickY(record.lowerFreq, record.upperFreq) + 'em';
@@ -1656,8 +1656,8 @@ define([
       return el;
     }
 
-    var numberCache = new VisibleItemCache(numbers, function (freq) {
-      var label = document.createElement('span');
+    const numberCache = new VisibleItemCache(numbers, function (freq) {
+      const label = document.createElement('span');
       label.className = 'freqscale-number';
       label.textContent = formatFreqExact(freq);
       label.my_update = function () {
@@ -1665,7 +1665,7 @@ define([
       };
       return label;
     });
-    var labelCache = new VisibleItemCache(labels, function makeLabel(record) {
+    const labelCache = new VisibleItemCache(labels, function makeLabel(record) {
       switch (record.type) {
         case 'group':
         case 'channel':
@@ -1675,9 +1675,9 @@ define([
       }
     });
     
-    var scale_coarse = 10;
-    var scale_fine1 = 4;
-    var scale_fine2 = 2;
+    const scale_coarse = 10;
+    const scale_fine1 = 4;
+    const scale_fine2 = 2;
     
     config.scheduler.startNow(function draw() {
       view.n.listen(draw);
@@ -1689,9 +1689,9 @@ define([
       outer.style.width = view.freqToCSSLength(upper - lower);
       
       // Minimum spacing between labels in Hz
-      var MinHzPerLabel = (upper - lower) * labelWidth / view.getTotalPixelWidth();
+      const MinHzPerLabel = (upper - lower) * labelWidth / view.getTotalPixelWidth();
       
-      var step = 1;
+      let step = 1;
       // Widen label spacing exponentially until they have sufficient separation.
       // We could try to calculate the step using logarithms, but floating-point error would be tiresome.
       while (isFinite(step) && step < MinHzPerLabel) {
@@ -1719,7 +1719,7 @@ define([
       }
       query.n.listen(draw);
       query.forEach(function (record) {
-        var label = labelCache.add(record);
+        const label = labelCache.add(record);
         if (label) label.my_update();
       });
       labelCache.flush();
@@ -1823,7 +1823,7 @@ define([
     
       this.add = function(key) {
         count++;
-        var element = cache.get(key);
+        let element = cache.get(key);
         if (!element) {
           element = maker(key);
           if (!element) {
@@ -1870,9 +1870,9 @@ define([
     
       // TODO refactor into something generic that handles x or y and touch-event drags too
       // this code is similar to the ScopePlot drag code
-      var dragScreenOrigin = 0;
-      var dragValueOrigin = 0;
-      var dragScale = 0;
+      let dragScreenOrigin = 0;
+      let dragValueOrigin = 0;
+      let dragScale = 0;
       function drag(event) {
         const draggedTo = dragValueOrigin + (event.clientY - dragScreenOrigin) * dragScale;
         target.set(Math.max(0, Math.min(1, draggedTo)));

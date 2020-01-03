@@ -1,4 +1,4 @@
-// Copyright 2014, 2015, 2016, 2017 Kevin Reid and the ShinySDR contributors
+// Copyright 2014, 2015, 2016, 2017, 2018, 2019 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -639,7 +639,7 @@ define([
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
       const container = getAppend();
       function makeContainer(title) {
-        var header = container.appendChild(document.createElement('div'));
+        const header = container.appendChild(document.createElement('div'));
         header.className = 'panel frame-controls';
         header.appendChild(document.createTextNode(title));
         const subcontainer = container.appendChild(document.createElement('div'));

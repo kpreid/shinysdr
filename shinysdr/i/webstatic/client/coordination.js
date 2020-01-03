@@ -1,4 +1,4 @@
-// Copyright 2015, 2016 Kevin Reid and the ShinySDR contributors
+// Copyright 2015, 2016, 2017, 2018, 2020 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -47,12 +47,12 @@ define([
     // Helper for tune()
     // Get mode from frequency DB for a freq.
     function bandMode(freq) {
-      var foundWidth = Infinity;
-      var foundMode = null;
+      let foundWidth = Infinity;
+      let foundMode = null;
       freqDB.inBand(freq, freq).forEach(function(record) {
-        var l = record.lowerFreq;
-        var u = record.upperFreq;
-        var bandwidth = Math.abs(u - l);  // should not be negative but not enforced, abs for robustness
+        const l = record.lowerFreq;
+        const u = record.upperFreq;
+        const bandwidth = Math.abs(u - l);  // should not be negative but not enforced, abs for robustness
         if (bandwidth < foundWidth) {
           foundWidth = bandwidth;
           foundMode = record.mode;
@@ -67,24 +67,24 @@ define([
     //   freq: float Hz
     //   mode: optional string
     function tune(options) {
-      var radio = radioCell.get();
-      var alwaysCreate = options.alwaysCreate;
-      var record = options.record;
-      var freq = options.freq !== undefined ? +options.freq : (record && record.freq);
+      const radio = radioCell.get();
+      const alwaysCreate = options.alwaysCreate;
+      const record = options.record;
+      const freq = options.freq !== undefined ? +options.freq : (record && record.freq);
       // Note for mode selection that bandMode is only used if we are creating a receiver (below); this ensures that we don't undesirably change the mode on drag-tuning of an existing receiver. This is a kludge and should probably be replaced by (1) making a distinction between dragging a receiver and clicking elsewhere, (2) changing mode only if the receiver's mode was matched to the old band, or (3) changing mode on long jumps but not short ones.
-      var mode = options.mode || (record && record.mode);
-      var receiver = options.receiver;
+      const mode = options.mode || (record && record.mode);
+      let receiver = options.receiver;
       //console.log('tune', alwaysCreate, freq, mode, receiver);
     
-      var receivers = radio.receivers.get();
-      var fit = Infinity;
+      const receivers = radio.receivers.get();
+      let fit = Infinity;
       if (!receiver && !alwaysCreate) {
         // Search for nearest matching receiver
         for (const recKey in receivers) {
-          var candidate = receivers[recKey].get();
+          const candidate = receivers[recKey].get();
           if (!candidate.rec_freq) continue;  // sanity check
-          var sameMode = candidate.mode.get() === mode;
-          var thisFit = Math.abs(candidate.rec_freq.get() - freq) + (sameMode ? 0 : 1e6);
+          const sameMode = candidate.mode.get() === mode;
+          const thisFit = Math.abs(candidate.rec_freq.get() - freq) + (sameMode ? 0 : 1e6);
           if (thisFit < fit) {
             fit = thisFit;
             receiver = candidate;
@@ -122,7 +122,7 @@ define([
     }
     
     
-    var mapRevealAndPanCallback = null;
+    let mapRevealAndPanCallback = null;
     function navigateMap(trackCell) {
       if (mapRevealAndPanCallback) {
         mapRevealAndPanCallback(trackCell);
@@ -133,7 +133,7 @@ define([
       mapRevealAndPanCallback = callback;
     }
     
-    var selectedRecord = new LocalCell(anyT, undefined);  // TODO should have a type
+    const selectedRecord = new LocalCell(anyT, undefined);  // TODO should have a type
     
     // TODO: Revisit whether this is a well-designed interface
     this.actions = Object.freeze(makeBlock({

@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid and the ShinySDR contributors
+// Copyright 2013, 2014, 2015, 2016, 2017, 2018, 2020 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -354,10 +354,10 @@ define([
   exports.dependOnPromise = dependOnPromise;
   
   function getInterfaces(object) {
-    var result = [];
+    const result = [];
     // TODO kludgy, need better representation of interfaces
     Object.getOwnPropertyNames(object).forEach(function (key) {
-      var match = /^_implements_(.*)$/.exec(key);
+      const match = /^_implements_(.*)$/.exec(key);
       if (match) {
         result.push(match[1]);
       }
@@ -418,8 +418,8 @@ define([
   
   // Maintain an index of objects, by interface name, in a tree
   function Index(scheduler, rootCell) {
-    var cells = [];
-    var objectsByInterface = Object.create(null);
+    const cells = [];
+    const objectsByInterface = Object.create(null);
     
     function gobi(interfaceName) {
       return (objectsByInterface[interfaceName] ||
@@ -428,10 +428,10 @@ define([
     }
     
     function flush(interfaceName) {
-      var objectsCell = gobi(interfaceName);
-      var old = objectsCell.get();
-      var nu = old.filter(function (cell) {
-        var object = cell.get();
+      const objectsCell = gobi(interfaceName);
+      const old = objectsCell.get();
+      const nu = old.filter(function (cell) {
+        const object = cell.get();
         return object !== undefined && isImplementing(object, interfaceName);
       });
       if (nu.length < old.length) {
@@ -449,22 +449,22 @@ define([
       
       cells.push(cell);
       
-      var propCells = Object.create(null);
-      var interfaces = [];
+      const propCells = Object.create(null);
+      let interfaces = [];
       
       scheduler.startNow(function update() {
-        var object = cell.depend(update);
+        const object = cell.depend(update);
         
         interfaces.forEach(flush);
         if (typeof object !== 'object') {  // if e.g. no longer existant
           return;
         }
         
-        var nu = getInterfaces(object);
+        const nu = getInterfaces(object);
         
         nu.forEach(function (interfaceName) {
-          var objectsCell = gobi(interfaceName);
-          var existingObjects = objectsCell.get();
+          const objectsCell = gobi(interfaceName);
+          const existingObjects = objectsCell.get();
           if (existingObjects.indexOf(cell) < 0) {
             // TODO: fix O(n^2) behavior
             objectsCell._update(Object.freeze(existingObjects.concat([cell])));
@@ -476,7 +476,7 @@ define([
         
         // Add all cells found in this object
         for (const key in object) {
-          var childCell = object[key];
+          const childCell = object[key];
           // TODO: centralize this is-a-cell test and any others like it
           if (!(childCell !== null && typeof childCell === 'object' && 'get' in childCell)) {
             if (typeof childCell === 'function') {

@@ -1,4 +1,4 @@
-// Copyright 2017, 2018 Kevin Reid and the ShinySDR contributors
+// Copyright 2017, 2018, 2019, 2020 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -373,8 +373,8 @@ define([
     // returns true if it triggered an update
     _closeExtraWide() {
       if (document.body.scrollWidth > document.body.offsetWidth) {
-        var bestToClose = null;
-        var bestTime = Date.now();
+        let bestToClose = null;
+        let bestTime = Date.now();
         for (const paneImpl of this._paneImpls) {
           if (paneImpl.usefulToCloseForWidth() && paneImpl.lastInteractionTime < bestTime) {
             bestToClose = paneImpl;

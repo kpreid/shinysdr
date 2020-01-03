@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid and the ShinySDR contributors
+// Copyright 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -157,7 +157,7 @@ define([
         }
       });
       // sanity check
-      var count = currentFilter.getAll().length;
+      const count = currentFilter.getAll().length;
       receiveAllButton.disabled = !(count > 0 && count <= 10);
     }
     config.scheduler.startNow(draw);
@@ -176,16 +176,16 @@ define([
       actionCompleted();
     }
     
-    var container = this.element = document.createElement('div');
+    const container = this.element = document.createElement('div');
     container.classList.add('panel');
     
-    var listOuter = container.appendChild(document.createElement('div'));
+    const listOuter = container.appendChild(document.createElement('div'));
     listOuter.className = 'freqlist-box';
-    var list = listOuter.appendChild(document.createElement('table'))
+    const list = listOuter.appendChild(document.createElement('table'))
       .appendChild(document.createElement('tbody'));
     
     records.forEach(function (record) {
-      var r = createRecordTableRows(record, tuneWrapper);
+      const r = createRecordTableRows(record, tuneWrapper);
       // This incomplete implementation of createRecordTableRows' expectations is sufficient because we never see a band here. TODO: Consider refactoring so we don't do this and instead BareFreqList is part of the implementation of FreqList.
       list.appendChild(r.elements[0]);
       r.drawNow();
@@ -194,7 +194,7 @@ define([
   exports.BareFreqList = BareFreqList;
   
   function createRecordTableRows(record, tune) {
-    var drawFns = [];
+    const drawFns = [];
     
     function rowCommon(row, freq) {
       row.classList.add('freqlist-item');
@@ -221,7 +221,7 @@ define([
       
       // row content
       function cell(className, textFn) {
-        var td = row.appendChild(document.createElement('td'));
+        const td = row.appendChild(document.createElement('td'));
         td.className = 'freqlist-cell-' + className;
         drawFns.push(function() {
           td.textContent = textFn();
@@ -244,9 +244,9 @@ define([
       }
     }
     
-    var firstRow = document.createElement('tr');
+    const firstRow = document.createElement('tr');
     rowCommon(firstRow, record.lowerFreq);
-    var secondRow;
+    let secondRow;
     if (record.upperFreq !== record.lowerFreq) {
       secondRow = document.createElement('tr');
       rowCommon(secondRow, record.upperFreq);
@@ -293,16 +293,16 @@ define([
   Object.freeze(dbModeTable);
   
   function RecordDetails(config) {
-    var recordCell = config.target;
-    var container = this.element = config.element;
+    const recordCell = config.target;
+    const container = this.element = config.element;
     
-    var inner = container.appendChild(document.createElement('div'));
+    const inner = container.appendChild(document.createElement('div'));
     inner.className = 'RecordDetails-fields';
     
     function labeled(name, field) {
-      var label = inner.appendChild(document.createElement('label'));
+      const label = inner.appendChild(document.createElement('label'));
       
-      var text = label.appendChild(document.createElement('span'));
+      const text = label.appendChild(document.createElement('span'));
       text.className = 'RecordDetails-labeltext';
       text.textContent = name;
       
@@ -311,7 +311,7 @@ define([
     }
     function formFieldHooks(field, cell) {
       config.scheduler.startNow(function draw() {
-        var now = cell.depend(draw);
+        const now = cell.depend(draw);
         if (now === NO_RECORD) {
           field.disabled = true;
         } else {
@@ -326,14 +326,14 @@ define([
       });
     }
     function input(cell, name) {
-      var field = document.createElement('input');
+      const field = document.createElement('input');
       formFieldHooks(field, cell);
       return labeled(name, field);
     }
     function menu(cell, name, values) {
-      var field = document.createElement('select');
+      const field = document.createElement('select');
       for (const key in values) {
-        var option = field.appendChild(document.createElement('option'));
+        const option = field.appendChild(document.createElement('option'));
         option.value = key;
         option.textContent = values[key];
       }
@@ -341,7 +341,7 @@ define([
       return labeled(name, field);
     }
     function textarea(cell) {
-      var field = container.appendChild(document.createElement('textarea'));
+      const field = container.appendChild(document.createElement('textarea'));
       formFieldHooks(field, cell);
       return field;
     }
@@ -359,9 +359,9 @@ define([
   
   function DatabasePickerWidget(config) {
     Block.call(this, config, function (block, addWidget, ignore, setInsertion, setToDetails, getAppend) {
-      var list = getAppend(); // TODO should be a <ul> with styling
+      const list = getAppend(); // TODO should be a <ul> with styling
       for (const key in block) {
-        var match = /^enabled_(.*)$/.exec(key);
+        const match = /^enabled_(.*)$/.exec(key);
         if (match) {
           const label = list.appendChild(document.createElement('div'))
               .appendChild(document.createElement('label'));

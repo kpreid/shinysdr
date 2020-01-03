@@ -1,4 +1,4 @@
-// Copyright 2015, 2018 Kevin Reid and the ShinySDR contributors
+// Copyright 2015, 2018, 2020 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -21,14 +21,14 @@ define(() => {
   const exports = {};
   
   exports.getGL = function getGL(config, canvas, options) {
-    var useWebGL = config.clientState.opengl.depend(config.rebuildMe);
+    const useWebGL = config.clientState.opengl.depend(config.rebuildMe);
     return !useWebGL ? null : canvas.getContext('webgl', options) || canvas.getContext('experimental-webgl', options);
   };
   
   const buildProgram = exports.buildProgram =
       function buildProgram(gl, vertexShaderSource, fragmentShaderSource) {
     function compileShader(type, source) {
-      var shader = gl.createShader(type);
+      const shader = gl.createShader(type);
       gl.shaderSource(shader, source);
       gl.compileShader(shader);
       if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
@@ -36,9 +36,9 @@ define(() => {
       }
       return shader;
     }
-    var vertexShader = compileShader(gl.VERTEX_SHADER, vertexShaderSource);
-    var fragmentShader = compileShader(gl.FRAGMENT_SHADER, fragmentShaderSource);
-    var program = gl.createProgram();
+    const vertexShader = compileShader(gl.VERTEX_SHADER, vertexShaderSource);
+    const fragmentShader = compileShader(gl.FRAGMENT_SHADER, fragmentShaderSource);
+    const program = gl.createProgram();
     gl.attachShader(program, vertexShader);
     gl.attachShader(program, fragmentShader);
     gl.linkProgram(program);

@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid and the ShinySDR contributors
+// Copyright 2013, 2014, 2015, 2016, 2017, 2018, 2020 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -108,10 +108,10 @@ define([
     }
     
     function addWidget(name, widgetType, optBoxLabel) {
-      var wEl = document.createElement('div');
+      const wEl = document.createElement('div');
       if (optBoxLabel !== undefined) { wEl.classList.add('panel'); }
       
-      var targetCell;
+      let targetCell;
       if (typeof name === 'string') {
         claimed[name] = true;
         targetCell = block[name];
@@ -176,7 +176,7 @@ define([
     (function() {
       for (let node = config.element.firstChild; node; node = node.nextSibling) {
         if (node.nodeType === 8 /* comment */) {
-          var match = /^\s*ignore:\s*(\S*)\s*$/.exec(node.nodeValue);
+          const match = /^\s*ignore:\s*(\S*)\s*$/.exec(node.nodeValue);
           if (match) {
             ignore(match[1]);
           }
@@ -189,7 +189,7 @@ define([
     }
     
     const sortTable = [];
-    for (var key in block) {
+    for (const key in block) {
       if (claimed[key] || claimedEverything) continue;
       
       const member = block[key];
@@ -236,9 +236,9 @@ define([
         // TODO kludgy, need better representation of interfaces. At least pull this into a function itself.
         let ctor;
         Object.getOwnPropertyNames(block).some(function (key) {
-          var match = /^_implements_(.*)$/.exec(key);
+          const match = /^_implements_(.*)$/.exec(key);
           if (match) {
-            var interface_ = match[1];
+            const interface_ = match[1];
             // TODO better scheme for registering widgets for interfaces
             ctor = context.widgets['interface:' + interface_];
             if (ctor) return true;
@@ -297,7 +297,7 @@ define([
     const update = initDataEl(dataElement, target);
     
     config.scheduler.startNow(function draw() {
-      var value = target.depend(draw);
+      const value = target.depend(draw);
       update(value, draw);
     });
   }
@@ -337,7 +337,7 @@ define([
         return function updateBanner(value, draw) {
           value = String(value);
           textNode.textContent = value;
-          var active = value !== '';
+          const active = value !== '';
           if (active) {
             node.classList.add('widget-Banner-active');
           } else {
@@ -372,23 +372,23 @@ define([
   exports.TextTerminal = TextTerminal;
   
   // widget for TimestampT type
-  var timestampUpdateClock = new Clock(1);
+  const timestampUpdateClock = new Clock(1);
   function TimestampWidget(config) {
     SimpleElementWidget.call(this, config, undefined,
       function buildPanel(container) {
         container.appendChild(document.createTextNode(container.getAttribute('title') + ': '));
         container.removeAttribute('title');
-        var holder = container.appendChild(document.createTextNode(''));
+        const holder = container.appendChild(document.createTextNode(''));
         container.appendChild(document.createTextNode(' seconds ago'));
         return holder;
       },
       function init(holder, target) {
-        var element = holder.parentNode;
+        const element = holder.parentNode;
         return function updateTimestamp(value, draw) {
-          var relativeTime = timestampUpdateClock.convertToTimestampSeconds(timestampUpdateClock.depend(draw)) - value;
+          const relativeTime = timestampUpdateClock.convertToTimestampSeconds(timestampUpdateClock.depend(draw)) - value;
           holder.textContent = '' + Math.round(relativeTime);
           
-          var date = new Date(0);
+          const date = new Date(0);
           date.setUTCSeconds(value);
           element.title = '' + date;
         };
@@ -402,13 +402,13 @@ define([
         container.classList.add('widget-TextBox-panel');
         
         if (container.hasAttribute('title')) {
-          var labelEl = container.appendChild(document.createElement('span'));
+          const labelEl = container.appendChild(document.createElement('span'));
           labelEl.classList.add('widget-TextBox-label');
           labelEl.appendChild(document.createTextNode(container.getAttribute('title')));
           container.removeAttribute('title');
         }
         
-        var input = container.appendChild(document.createElement('input'));
+        const input = container.appendChild(document.createElement('input'));
         input.type = 'text';
         
         return input;
@@ -439,7 +439,7 @@ define([
         }
       },
       function init(container, target) {
-        var textNode = container.appendChild(document.createTextNode(''));
+        const textNode = container.appendChild(document.createTextNode(''));
         return function updateGeneric(value) {
           textNode.textContent = (+value).toFixed(2);
         };
@@ -543,8 +543,8 @@ define([
         event.stopPropagation();
       }, true);
       digit.addEventListener('keypress', event => {
-        var ch = String.fromCharCode(event.charCode);
-        var value = target.get();
+        const ch = String.fromCharCode(event.charCode);
+        let value = target.get();
       
         switch (ch) {
           case '-':
@@ -559,7 +559,7 @@ define([
           case 'Z':
             // zero all digits here and to the right
             // | 0 is used to round towards zero
-            var zeroFactor = scale * 10;
+            const zeroFactor = scale * 10;
             target.set(((value / zeroFactor) | 0) * zeroFactor);
             return;
           default:
@@ -567,12 +567,12 @@ define([
         }
         
         // TODO I hear there's a new 'input' event which is better for input-ish keystrokes, use that
-        var input = parseInt(ch, 10);
+        const input = parseInt(ch, 10);
         if (isNaN(input)) return;
 
-        var negative = value < 0 || (value === 0 && 1/value === -Infinity);
+        const negative = value < 0 || (value === 0 && 1/value === -Infinity);
         if (negative) { value = -value; }
-        var currentDigitValue;
+        let currentDigitValue;
         if (scale === 1) {
           // When setting last digit, clear anyT hidden fractional digits as well
           currentDigitValue = (value / scale) % 10;
@@ -599,10 +599,10 @@ define([
       // spin buttons
       digit.style.position = 'relative';
       [-1, 1].forEach(direction => {
-        var up = direction > 0;
-        var layoutShim = digit.appendChild(document.createElement('span'));
+        const up = direction > 0;
+        const layoutShim = digit.appendChild(document.createElement('span'));
         layoutShim.className = 'knob-spin-button-shim knob-spin-' + (up ? 'up' : 'down');
-        var button = layoutShim.appendChild(document.createElement('button'));
+        const button = layoutShim.appendChild(document.createElement('button'));
         button.className = 'knob-spin-button knob-spin-' + (up ? 'up' : 'down');
         button.textContent = up ? '+' : '-';
         function pushListener(event) {
@@ -652,13 +652,13 @@ define([
         container.classList.add('widget-SmallKnob-panel');
         
         if (container.hasAttribute('title')) {
-          var labelEl = container.appendChild(document.createElement('span'));
+          const labelEl = container.appendChild(document.createElement('span'));
           labelEl.classList.add('widget-SmallKnob-label');
           labelEl.appendChild(document.createTextNode(container.getAttribute('title') + '\u00A0'));
           container.removeAttribute('title');
         }
         
-        var input = container.appendChild(document.createElement('input'));
+        const input = container.appendChild(document.createElement('input'));
         input.type = 'number';
         input.step = 'any';
         
@@ -667,7 +667,7 @@ define([
         return input;
       },
       function initSmallKnob(input, target) {
-        var type = target.type;
+        const type = target.type;
         if (type instanceof RangeT) {
           input.min = type.getMin();
           input.max = type.getMax();
@@ -685,7 +685,7 @@ define([
         }, false);
         
         return function updateSmallKnob(value) {
-          var sValue = +value;
+          let sValue = +value;
           if (!isFinite(sValue)) {
             sValue = 0;
           }
@@ -697,23 +697,23 @@ define([
   exports.SmallKnob = SmallKnob;
   
   function Slider(config, getT, setT) {
-    var text;
+    let text;
     SimpleElementWidget.call(this, config, 'INPUT',
       function buildPanelForSlider(container) {
         container.classList.add('widget-Slider-panel');
         
         if (container.hasAttribute('title')) {
-          var labelEl = container.appendChild(document.createElement('span'));
+          const labelEl = container.appendChild(document.createElement('span'));
           labelEl.classList.add('widget-Slider-label');
           labelEl.appendChild(document.createTextNode(container.getAttribute('title')));
           container.removeAttribute('title');
         }
         
-        var slider = container.appendChild(document.createElement('input'));
+        const slider = container.appendChild(document.createElement('input'));
         slider.type = 'range';
         slider.step = 'any';
         
-        var textEl = container.appendChild(document.createElement('span'));
+        const textEl = container.appendChild(document.createElement('span'));
         textEl.classList.add('widget-Slider-text');
         text = textEl.appendChild(document.createTextNode(''));
         
@@ -722,9 +722,9 @@ define([
         return slider;
       },
       function initSlider(slider, target) {
-        var format = function(n) { return n.toFixed(2); };
+        let format = function(n) { return n.toFixed(2); };
 
-        var type = target.type;
+        const type = target.type;
         if (type instanceof RangeT) {
           slider.min = getT(type.getMin());
           slider.max = getT(type.getMax());
@@ -748,7 +748,7 @@ define([
         slider.addEventListener('change', listener, false);
         slider.addEventListener('input', listener, false);  
         return function updateSlider(value) {
-          var sValue = getT(value);
+          let sValue = getT(value);
           if (!isFinite(sValue)) {
             sValue = 0;
           }
@@ -759,31 +759,31 @@ define([
         };
       });
   }
-  var LinSlider = exports.LinSlider = function(c) { return new Slider(c,
+  const LinSlider = exports.LinSlider = function(c) { return new Slider(c,
     function (v) { return v; },
     function (v) { return v; }); };
-  var LogSlider = exports.LogSlider = function(c) { return new Slider(c,
+  const LogSlider = exports.LogSlider = function(c) { return new Slider(c,
     function (v) { return Math.log(v) / Math.LN2; },
     function (v) { return Math.pow(2, v); }); };
 
   function Meter(config) {
-    var text;
+    let text;
     SimpleElementWidget.call(this, config, 'METER',
       function buildPanelForMeter(container) {
         // TODO: Reusing styles for another widget -- rename to suit
         container.classList.add('widget-Slider-panel');
         
         if (container.hasAttribute('title')) {
-          var labelEl = container.appendChild(document.createElement('span'));
+          const labelEl = container.appendChild(document.createElement('span'));
           labelEl.classList.add('widget-Slider-label');
           labelEl.appendChild(document.createTextNode(
               container.getAttribute('title') + '\u00A0'));
           container.removeAttribute('title');
         }
         
-        var meter = container.appendChild(document.createElement('meter'));
+        const meter = container.appendChild(document.createElement('meter'));
         
-        var textEl = container.appendChild(document.createElement('span'));
+        const textEl = container.appendChild(document.createElement('span'));
         textEl.classList.add('widget-Slider-text');
         text = textEl.appendChild(document.createTextNode(''));
         
@@ -792,9 +792,9 @@ define([
         return meter;
       },
       function initMeter(meter, target) {
-        var format = function(n) { return n.toFixed(2); };
+        let format = function(n) { return n.toFixed(2); };
         
-        var type = target.type;
+        const type = target.type;
         if (type instanceof RangeT) {
           meter.min = type.getMin();
           meter.max = type.getMax();
@@ -817,8 +817,8 @@ define([
   function Toggle(config) {
     SimpleElementWidget.call(this, config, 'INPUT',
       function buildPanelForToggle(container) {
-        var label = container.appendChild(document.createElement('label'));
-        var checkbox = label.appendChild(document.createElement('input'));
+        const label = container.appendChild(document.createElement('label'));
+        const checkbox = label.appendChild(document.createElement('input'));
         checkbox.type = 'checkbox';
         label.appendChild(document.createTextNode(container.getAttribute('title')));
         container.removeAttribute('title');
@@ -842,7 +842,7 @@ define([
     
     const seen = new Set();
     Array.prototype.forEach.call(container.querySelectorAll(selector), function (element) {
-      var value = element.value;
+      const value = element.value;
       seen.add(value);
       if (enumTable) {
         element.disabled = !enumTable.has(element.value);  // TODO: handle non-string values
@@ -872,7 +872,7 @@ define([
         
         // TODO: recurring pattern -- extract
         if (container.hasAttribute('title')) {
-          var labelEl = container.appendChild(document.createElement('span'));
+          const labelEl = container.appendChild(document.createElement('span'));
           labelEl.appendChild(document.createTextNode(container.getAttribute('title')));
           container.appendChild(document.createTextNode(' '));
           container.removeAttribute('title');
@@ -884,7 +884,7 @@ define([
         const numeric = target.type instanceof RangeT;  // TODO better test, provide coercion in the types
         select.disabled = !target.set;
         initEnumElements(select, 'option', target, function createOption(name, longDesc) {
-          var option = select.appendChild(document.createElement('option'));
+          const option = select.appendChild(document.createElement('option'));
           option.appendChild(document.createTextNode(name));
           if (longDesc !== null) {
             option.title = longDesc;  // TODO: This probably isn't visible.
@@ -904,15 +904,15 @@ define([
   exports.Select = Select;
   
   function Radio(config) {
-    var target = config.target;
+    const target = config.target;
     const numeric = target.type instanceof RangeT;  // TODO better test, provide coercion in the types
-    var container = this.element = config.element;
+    const container = this.element = config.element;
     container.classList.add('panel');
 
     initEnumElements(container, 'input[type=radio]', target, function createRadio(name, longDesc) {
-      var label = container.appendChild(document.createElement('label'));
-      var rb = label.appendChild(document.createElement('input'));
-      var textEl = label.appendChild(document.createElement('span'));  // styling hook
+      const label = container.appendChild(document.createElement('label'));
+      const rb = label.appendChild(document.createElement('input'));
+      const textEl = label.appendChild(document.createElement('span'));  // styling hook
       textEl.textContent = name;
       if (longDesc !== null) {
         label.title = longDesc;
@@ -928,7 +928,7 @@ define([
       }, false);
     });
     config.scheduler.startNow(function draw() {
-      var value = config.target.depend(draw);
+      const value = config.target.depend(draw);
       Array.prototype.forEach.call(container.querySelectorAll('input[type=radio]'), function (rb) {
         rb.checked = rb.value === '' + value;
       });
@@ -937,12 +937,12 @@ define([
   exports.Radio = Radio;
   
   function CommandButton(config) {
-    var commandCell = config.target;
-    var panel = this.element = config.element;
-    var isDirectlyButton = panel.tagName === 'BUTTON';
+    const commandCell = config.target;
+    const panel = this.element = config.element;
+    const isDirectlyButton = panel.tagName === 'BUTTON';
     if (!isDirectlyButton) panel.classList.add('panel');
     
-    var button = isDirectlyButton ? panel : panel.querySelector('button');
+    let button = isDirectlyButton ? panel : panel.querySelector('button');
     if (!button) {
       button = panel.appendChild(document.createElement('button'));
       if (panel.hasAttribute('title')) {
@@ -965,28 +965,28 @@ define([
   
   // widget for the shinysdr.telemetry.Track type
   function TrackWidget(config) {
-    var actions = config.actions;
+    const actions = config.actions;
     
     // TODO not _really_ a SimpleElementWidget
     SimpleElementWidget.call(this, config, 'TABLE',
       function buildPanelForTrack(container) {
         if (container.hasAttribute('title')) {
-          var labelEl = container.appendChild(document.createElement('div'));
+          const labelEl = container.appendChild(document.createElement('div'));
           labelEl.appendChild(document.createTextNode(container.getAttribute('title')));
           container.removeAttribute('title');
         }
         
-        var valueEl = container.appendChild(document.createElement('TABLE'));
+        const valueEl = container.appendChild(document.createElement('TABLE'));
         
         return valueEl;
       },
       function initEl(valueEl, target) {
         function addRow(label, linked) {
-          var rowEl = valueEl.appendChild(document.createElement('tr'));
+          const rowEl = valueEl.appendChild(document.createElement('tr'));
           rowEl.appendChild(document.createElement('th'))
             .appendChild(document.createTextNode(label));
-          var textNode = document.createTextNode('');
-          var textCell = rowEl.appendChild(document.createElement('td'));
+          const textNode = document.createTextNode('');
+          let textCell = rowEl.appendChild(document.createElement('td'));
           if (linked) {  // TODO: make this && actions.<can navigateMap>
             textCell = textCell.appendChild(document.createElement('a'));
             // TODO: Consider using an actual href and putting the map view state (as well as other stuff) into the fragment!
@@ -1003,9 +1003,9 @@ define([
             text: textNode
           };
         }
-        var posRow = addRow('Position', true);
-        var velRow = addRow('Velocity', false);
-        var vertRow = addRow('Vertical', false);
+        const posRow = addRow('Position', true);
+        const velRow = addRow('Velocity', false);
+        const vertRow = addRow('Vertical', false);
         
         function formatitude(value, p, n) {
           value = +value;
@@ -1020,14 +1020,14 @@ define([
           return Math.round(value) + '\u00B0';
         }
         function formatSigned(value, digits) {
-          var text = (+value).toFixed(digits);
+          let text = (+value).toFixed(digits);
           if (/^0-9/.test(text[0])) {
             text = '+' + text;
           }
           return text;
         }
         function formatGroup(row, f) {
-          var out = [];
+          const out = [];
           f(function write(telemetryItem, text) {
             if (telemetryItem.value !== null) out.push(text);
           });

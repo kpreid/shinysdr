@@ -1,4 +1,4 @@
-// Copyright 2014, 2015, 2016 Kevin Reid and the ShinySDR contributors
+// Copyright 2014, 2015, 2016, 2017, 2019, 2020 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -95,7 +95,7 @@ define([
     }))
   }));
   
-  var context = new Context({
+  const context = new Context({
     widgets: widgets,
     radioCell: root,  // TODO: 'radio' name is bogus
     clientState: clientState,
@@ -103,18 +103,18 @@ define([
     scheduler: scheduler
   });
   
-  var buffer = new ArrayBuffer(4+8+4+4 + binCount * 1);
-  var dv = new DataView(buffer);
+  const buffer = new ArrayBuffer(4+8+4+4 + binCount * 1);
+  const dv = new DataView(buffer);
   dv.setFloat64(4, 0, true); // freq
   dv.setFloat32(4+8, sampleRate, true);
   dv.setFloat32(4+8+4, -128 - minLevel, true); // offset
-  var bytearray = new Int8Array(buffer, 4+8+4+4, binCount);
+  const bytearray = new Int8Array(buffer, 4+8+4+4, binCount);
   
-  var frameCount = 0;
+  let frameCount = 0;
   function updateFFT() {
     frameCount++;
     
-    var i = 0;
+    let i = 0;
     // Variable slopes, for testing line drawing
     for (; i < binCount/4; i++) {
       bytearray[i] = Math.exp(i / binCount * 28) % ((maxLevel - minLevel) * 0.3) - 128;
@@ -125,7 +125,7 @@ define([
     }
     // Varying content, for testing averaging and scrolling
     for (; i < binCount; i++) {
-      var bit = Math.floor((i - binCount/2) / binCount * 32);
+      const bit = Math.floor((i - binCount/2) / binCount * 32);
       bytearray[i] = (frameCount >> bit) & 1 ? -30 : -120;
     }
     

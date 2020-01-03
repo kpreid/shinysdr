@@ -51,11 +51,11 @@ define([
     mapPluginConfig.addLayer('Aircraft', {
       featuresCell: mapPluginConfig.index.implementing('shinysdr.plugins.mode_s.IAircraft'),
       featureRenderer: function renderAircraft(aircraft, dirty) {
-        var trackCell = aircraft.track;
-        var callsign = aircraft.call.depend(dirty);
-        var ident = aircraft.ident.depend(dirty);
-        var altitude = trackCell.depend(dirty).altitude.value;
-        var labelParts = [];
+        const trackCell = aircraft.track;
+        const callsign = aircraft.call.depend(dirty);
+        const ident = aircraft.ident.depend(dirty);
+        const altitude = trackCell.depend(dirty).altitude.value;
+        const labelParts = [];
         if (callsign !== null) {
           labelParts.push(callsign.replace(/^ | $/g, ''));
         }
@@ -65,7 +65,7 @@ define([
         if (altitude !== null) {
           labelParts.push(altitude.toFixed(0) + ' m');
         }
-        var f = renderTrackFeature(dirty, trackCell,
+        const f = renderTrackFeature(dirty, trackCell,
           labelParts.join(' • '));
         f.iconURL = require.toUrl('./aircraft.svg');
         return f;

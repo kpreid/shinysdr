@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid and the ShinySDR contributors
+// Copyright 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -100,7 +100,7 @@ define([
   // Degree trig functions.
   // We use degrees in this module because degrees are standard for latitude and longitude, and are also useful for more exact calculations because 360 is exactly representable as a floating-point number whereas 2π is not.
   // TODO: Look at the edge cases and see if it would be useful to have dcos & dsin do modulo 360, so we get that exactness for them.
-  var RADIANS_PER_DEGREE = Math.PI / 180;
+  const RADIANS_PER_DEGREE = Math.PI / 180;
   function dcos(x) { return cos(RADIANS_PER_DEGREE * x); }
   function dsin(x) { return sin(RADIANS_PER_DEGREE * x); }
   function dasin(x) { return asin(x)/RADIANS_PER_DEGREE; }
@@ -111,16 +111,16 @@ define([
   }
 
   // Clock for position animations
-  var clock = new Clock(0.1);
+  const clock = new Clock(0.1);
   
   // Process touch events to implement one- and two-finger pan/zoom gestures
   // Moves as if the space is linear but can tolerate it not actually being.
   // Does not provide rotation or tilt.
   function TouchZoomHandler(targetElement, view, tapHandler) {
     // TODO: This was derived from the touch handling in SpectrumLayoutContext. Now that we've gener
-    var activeTouches = Object.create(null);
-    var touchCanBeTap = false;
-    var stateAtStart = null;
+    const activeTouches = Object.create(null);
+    let touchCanBeTap = false;
+    let stateAtStart = null;
     
     targetElement.addEventListener('touchstart', function (event) {
       // Prevent mouse-emulation handling
@@ -134,9 +134,9 @@ define([
 
       // Record the initial position the user has touched
       Array.prototype.forEach.call(event.changedTouches, function (touch) {
-        var rect = targetElement.getBoundingClientRect();
-        var localX = touch.clientX - rect.left;
-        var localY = touch.clientY - rect.top;
+        const rect = targetElement.getBoundingClientRect();
+        const localX = touch.clientX - rect.left;
+        const localY = touch.clientY - rect.top;
 
         activeTouches[touch.identifier] = {
           grabViewX: localX,  // fixed
@@ -148,11 +148,11 @@ define([
     }, {capture: true, passive: false});
 
     targetElement.addEventListener('touchmove', function (event) {
-      var rect = targetElement.getBoundingClientRect();
+      const rect = targetElement.getBoundingClientRect();
       
       Array.prototype.forEach.call(event.changedTouches, function (touch) {
-        var localX = touch.clientX - rect.left;
-        var localY = touch.clientY - rect.top;
+        const localX = touch.clientX - rect.left;
+        const localY = touch.clientY - rect.top;
 
         activeTouches[touch.identifier].nowViewX = localX;
         activeTouches[touch.identifier].nowViewY = localY;
@@ -179,12 +179,12 @@ define([
       }
       
       // Compute pan pos
-      var grabsX = [];
-      var grabsY = [];
-      var pansX = [];
-      var pansY = [];
+      const grabsX = [];
+      const grabsY = [];
+      const pansX = [];
+      const pansY = [];
       for (const idString in activeTouches) {
-        var info = activeTouches[idString];
+        const info = activeTouches[idString];
         grabsX.push(info.grabViewX - rect.width / 2);
         grabsY.push(info.grabViewY - rect.height / 2);
         pansX.push(info.nowViewX - info.grabViewX);
@@ -192,8 +192,8 @@ define([
       }
       
       if (!stateAtStart) throw new Error('shouldn\'t happen');
-      var grabPartX = -mean(grabsX);
-      var grabPartY = -mean(grabsY);
+      const grabPartX = -mean(grabsX);
+      const grabPartY = -mean(grabsY);
       view.setState(
         stateAtStart,
         grabPartX,
@@ -212,9 +212,9 @@ define([
       // Each time a touch goes away, lock in the current view mapping.
       stateAtStart = view.captureState();
       for (const idString in activeTouches) {
-        var info = activeTouches[idString];
-       info.grabViewX = info.nowViewX;
-       info.grabViewY = info.nowViewY;
+        const info = activeTouches[idString];
+        info.grabViewX = info.nowViewX;
+        info.grabViewY = info.nowViewY;
       }
     }
     targetElement.addEventListener('touchcancel', touchcancel, {capture: true, passive: true});
@@ -224,13 +224,13 @@ define([
       event.preventDefault();
 
       if (touchCanBeTap) {
-        var touch = event.changedTouches[0];  // known to be exactly one
+        const touch = event.changedTouches[0];  // known to be exactly one
 
-        var rect = targetElement.getBoundingClientRect();
-        var localX = touch.clientX - rect.left;
-        var localY = touch.clientY - rect.top;
+        const rect = targetElement.getBoundingClientRect();
+        const localX = touch.clientX - rect.left;
+        const localY = touch.clientY - rect.top;
 
-        var info = activeTouches[touch.identifier];
+        const info = activeTouches[touch.identifier];
         //console.log('maybe tap', localX, info.grabViewX, localY, info.grabViewY);
         if (Math.hypot(localX - info.grabViewX, localY - info.grabViewY) < 20) {  // TODO justify choice of slop
           //console.log('actually tap');
@@ -250,10 +250,10 @@ define([
     return minor + major * 4;
   }
   function setRotMat(mat, axis0, angle) {
-    var axis1 = (axis0 + 1) % 3;
-    var axis2 = (axis0 + 2) % 3;
-    var c = cos(angle);
-    var s = sin(angle);
+    const axis1 = (axis0 + 1) % 3;
+    const axis2 = (axis0 + 2) % 3;
+    const c = cos(angle);
+    const s = sin(angle);
     mat[matInd(axis0, axis0)] = 1;
     mat[matInd(axis1, axis0)] = 0;
     mat[matInd(axis2, axis0)] = 0;
@@ -274,7 +274,7 @@ define([
   function multMat(out, a, b) {
     for (let i = 0; i < 4; i++) {
       for (let j = 0; j < 4; j++) {
-        var sum = 0;
+        let sum = 0;
         for (let k = 0; k < 4; k++) {
           sum += a[matInd(i, k)] * b[matInd(k, j)];
         }
@@ -461,9 +461,9 @@ define([
     }
   }
   
-  var imageLoadCache = Object.create(null);
+  const imageLoadCache = Object.create(null);
   function loadImage(url, callback) {
-    var img;
+    let img;
     if (url in imageLoadCache) {
       img = imageLoadCache[url];
     } else {
@@ -484,9 +484,9 @@ define([
   
   class GLSphere {
     constructor(gl, redrawCallback) {
-      var program = buildProgram(gl, shader_sphere_v, shader_sphere_f);
-      var att_position = gl.getAttribLocation(program, 'position');
-      var att_lonlat = gl.getAttribLocation(program, 'lonlat');
+      const program = buildProgram(gl, shader_sphere_v, shader_sphere_f);
+      const att_position = gl.getAttribLocation(program, 'position');
+      const att_lonlat = gl.getAttribLocation(program, 'lonlat');
       gl.uniform1i(gl.getUniformLocation(program, 'texture'), 0);
     
       function fetchSun() {
@@ -503,7 +503,7 @@ define([
       fetchSun();
       setInterval(fetchSun, 1000 * 60 * 15);
     
-      var sphereTexture = gl.createTexture();
+      const sphereTexture = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, sphereTexture);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -511,7 +511,7 @@ define([
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       // placeholder image
-      var baseGray = Math.round(0.83 * 255);
+      const baseGray = Math.round(0.83 * 255);
       gl.texImage2D(
         gl.TEXTURE_2D,
         0, // level
@@ -608,7 +608,7 @@ define([
 
   class LabelTextureManager {
     constructor(gl, scheduler, maxHeight, redrawCallback) {
-      var labelsTexture = gl.createTexture();
+      const labelsTexture = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, labelsTexture);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -617,26 +617,30 @@ define([
       gl.bindTexture(gl.TEXTURE_2D, null);
 
       // Set up 2D context for rendering text labels and such
-      var labelRenderCanvas = document.createElement('canvas');
+      const labelRenderCanvas = document.createElement('canvas');
       labelRenderCanvas.width = 1024;
       // TODO: Set up height (and width) depending on number of records we need to show
       labelRenderCanvas.height = 1024;
       // debug: document.body.appendChild(labelRenderCanvas);
-      var labelRenderCtx = labelRenderCanvas.getContext('2d');
+      const labelRenderCtx = labelRenderCanvas.getContext('2d');
     
       // Whether the canvas has been drawn on but not copied to the texture.
-      var textureDirty = false;
-
-      var textureAllocator = new StripeAllocator(labelRenderCanvas.width, labelRenderCanvas.height, maxHeight + TEXTURE_BLEED_GUARD_INSET * 2);
-
+      let textureDirty = false;
+      
+      const textureAllocator = new StripeAllocator(labelRenderCanvas.width, labelRenderCanvas.height, maxHeight + TEXTURE_BLEED_GUARD_INSET * 2);
+      
       this.texture = function () { return labelsTexture; };
-
-      var labelCache = Object.create(null);
+      
+      // Singleton label with zero size, used whenever such a label is requested. Declared 'let' because refLabel() initializes it in circular fashion.
+      let invisibleLabel;
+      
+      const labelCache = Object.create(null);
       function refLabel(width, xoff, yoff, name, paintFn) {
         if (width === 0 && invisibleLabel) {
+          // Return the singleton invisible label, but only if we're not in the process of initializing it.
           return invisibleLabel.incRefCount();
         }
-        var cacheKey = [xoff, yoff, name].toString();  // unambiguous because xoff and yoff are always numbers
+        const cacheKey = [xoff, yoff, name].toString();  // unambiguous because xoff and yoff are always numbers
         if (cacheKey in labelCache) {
           return labelCache[cacheKey].incRefCount();
         }
@@ -687,11 +691,12 @@ define([
         });
       }
       this.refLabel = refLabel;
-    
-      var invisibleLabel = refLabel(0, 0, 0, "invisible", function () {});
+      
+      invisibleLabel = refLabel(0, 0, 0, "invisible", function () {});
       this.getInvisibleLabel = function () { return invisibleLabel; };
     
-      var errorMarkerLabel = refLabel(maxHeight * 2, 0, 0, "errorMarker", function (ctx, x, y) {
+      // Singleton label used when a label couldn't be allocated.
+      const errorMarkerLabel = refLabel(maxHeight * 2, 0, 0, "errorMarker", function (ctx, x, y) {
         ctx.lineWidth = 2;
         ctx.strokeStyle = 'red';
         ctx.beginPath();
@@ -703,7 +708,7 @@ define([
       });
     
       this.refTextLabel = function refTextLabel(xanchor, xoff, yoff, text) {
-        var textWidth = labelRenderCtx.measureText(text).width;
+        const textWidth = labelRenderCtx.measureText(text).width;
         xoff += textWidth / 2 * xanchor;
         function paintTextLabel(ctx, x, y) {
           // TODO save/restore state
@@ -745,7 +750,7 @@ define([
     }
   }
 
-  var NO_PICKING_COLOR = 0;
+  const NO_PICKING_COLOR = 0;
 
   // properties of feature renderer's return value:
   // position (latlon or null to temporarily hide)
@@ -757,7 +762,7 @@ define([
   // iconURL (string or falsy/absent for default): icon
   // labelSide: ('top', 'left', 'right', 'bottom', 'center')
   // opacity: 0..1
-  var expectedRenderedKeys = Object.create(null);
+  const expectedRenderedKeys = Object.create(null);
   expectedRenderedKeys['position'] = 1;
   expectedRenderedKeys['label'] = 1;
   expectedRenderedKeys['polylines'] = 1;
@@ -785,8 +790,8 @@ define([
 
   class GLFeatureLayers {
     constructor(gl, scheduler, primitive, pickingColorAllocator, specialization) {
-      var program = buildProgram(gl, shader_features_v, specialization.fragmentShader);
-      var attLayout = new AttributeLayout(gl, program, [
+      const program = buildProgram(gl, shader_features_v, specialization.fragmentShader);
+      const attLayout = new AttributeLayout(gl, program, [
         { name: 'position', components: 3 },
         { name: 'velocityAndTimestamp', components: 4 },
         { name: 'billboard', components: 3 },
@@ -795,60 +800,60 @@ define([
       ]);
 
       // buffer layout constants
-      var VERTS_PER_QUAD = specialization.VERTS_PER_INDEX;  // TODO use index buffers
-      var FLOATS_PER_VERT = attLayout.elementsPerVertex();
-      var FLOATS_PER_QUAD = VERTS_PER_QUAD * FLOATS_PER_VERT;
+      const VERTS_PER_QUAD = specialization.VERTS_PER_INDEX;  // TODO use index buffers
+      const FLOATS_PER_VERT = attLayout.elementsPerVertex();
+      const FLOATS_PER_QUAD = VERTS_PER_QUAD * FLOATS_PER_VERT;
     
       this.program = function () { return program; };  // TODO kludge
     
       this.createLayer = function (arrayCell, renderer, clickHandler, redrawCallback) {
-        var vertBuffer = gl.createBuffer();
-        var vertBufferInitialSize = 1;  // for documentation purposes
-        var vertBufferArray = new Float32Array(vertBufferInitialSize * FLOATS_PER_QUAD);
-        var numberOfVertices = vertBufferInitialSize * VERTS_PER_QUAD;
+        const vertBuffer = gl.createBuffer();
+        const vertBufferInitialSize = 1;  // for documentation purposes
+        let vertBufferArray = new Float32Array(vertBufferInitialSize * FLOATS_PER_QUAD);
+        let numberOfVertices = vertBufferInitialSize * VERTS_PER_QUAD;
         // indices are per quad
-        var indexFreeList = new FreeListAllocator(vertBufferInitialSize, function grow(newSize) {
-          var newArray = new Float32Array(newSize * FLOATS_PER_QUAD);
+        const indexFreeList = new FreeListAllocator(vertBufferInitialSize, function grow(newSize) {
+          const newArray = new Float32Array(newSize * FLOATS_PER_QUAD);
           newArray.set(vertBufferArray, 0);
           vertBufferArray = newArray;
           numberOfVertices = newSize * VERTS_PER_QUAD;
           vertBufferNeedsWrite = true; // make sure buffer is not smaller than numberOfVertices
         });
-        var layerState = specialization.createLayer();
+        const layerState = specialization.createLayer();
       
-        var currentAnimatedFeatures = new Set();
+        const currentAnimatedFeatures = new Set();
       
-        var o_position = attLayout.offsets.position;
-        var o_velocityAndTimestamp = attLayout.offsets.velocityAndTimestamp;
-        var o_billboard = attLayout.offsets.billboard;
-        var o_texcoordAndOpacity = attLayout.offsets.texcoordAndOpacity;
-        var o_pickingColor = attLayout.offsets.pickingColor;
+        const o_position = attLayout.offsets.position;
+        const o_velocityAndTimestamp = attLayout.offsets.velocityAndTimestamp;
+        const o_billboard = attLayout.offsets.billboard;
+        const o_texcoordAndOpacity = attLayout.offsets.texcoordAndOpacity;
+        const o_pickingColor = attLayout.offsets.pickingColor;
         function writeVertex(index, offset, label, rendered, xd, yd, pickingColor) {
           rendered = checkRendered(rendered);
-          var base = index * FLOATS_PER_QUAD + offset * FLOATS_PER_VERT;
-          var lat = (rendered.position || [0, 0])[0];
-          var lon = (rendered.position || [0, 0])[1];
-          var coslat = dcos(lat);
-          var coslon = dcos(lon);
-          var sinlat = dsin(lat);
-          var sinlon = dsin(lon);
-          var instant = clock.convertFromTimestampSeconds(rendered.timestamp || 0);
-          var radiansPerSecondSpeed = (rendered.speed || 0) * ((Math.PI * 2) / 40075e3);
-          var opacity = isFinite(rendered.opacity) ? rendered.opacity : 1.0;
-          var zFudge = -opacity;  // until we do proper depth sorting, this helps opaque things be in front of transparent things
+          const base = index * FLOATS_PER_QUAD + offset * FLOATS_PER_VERT;
+          const lat = (rendered.position || [0, 0])[0];
+          const lon = (rendered.position || [0, 0])[1];
+          const coslat = dcos(lat);
+          const coslon = dcos(lon);
+          const sinlat = dsin(lat);
+          const sinlon = dsin(lon);
+          const instant = clock.convertFromTimestampSeconds(rendered.timestamp || 0);
+          const radiansPerSecondSpeed = (rendered.speed || 0) * ((Math.PI * 2) / 40075e3);
+          const opacity = isFinite(rendered.opacity) ? rendered.opacity : 1.0;
+          const zFudge = -opacity;  // until we do proper depth sorting, this helps opaque things be in front of transparent things
         
           // Velocity in north=X east=Y tangent space
-          var planarXVel = dsin(rendered.vangle || 0) * radiansPerSecondSpeed;
-          var planarYVel = dcos(rendered.vangle || 0) * radiansPerSecondSpeed;
+          const planarXVel = dsin(rendered.vangle || 0) * radiansPerSecondSpeed;
+          const planarYVel = dcos(rendered.vangle || 0) * radiansPerSecondSpeed;
           // Rotate it according to the latitude
           // (rotation matrix is incomplete because radial velocity is always zero)
-          var latRotXVel = planarXVel;
-          var latRotYVel = planarYVel * coslat;
-          var latRotZVel = planarYVel * sinlat;
+          const latRotXVel = planarXVel;
+          const latRotYVel = planarYVel * coslat;
+          const latRotZVel = planarYVel * sinlat;
           // Rotate it according to the longitude
-          var finalXVel = latRotXVel * coslon - latRotZVel * sinlon;
-          var finalYVel = latRotYVel;
-          var finalZVel = latRotZVel * coslon + latRotXVel * sinlon;
+          const finalXVel = latRotXVel * coslon - latRotZVel * sinlon;
+          const finalYVel = latRotYVel;
+          const finalZVel = latRotZVel * coslon + latRotXVel * sinlon;
         
           vertBufferArray[base + o_position    ] = coslat * sinlon;
           vertBufferArray[base + o_position + 1] = sinlat;
@@ -873,14 +878,14 @@ define([
       
         const bufferAllocations = new AddKeepDrop({
           add(feature) {
-            var pickingColorAlloc = pickingColorAllocator.allocate();
-            var pickingColor = pickingColorAlloc.index;
+            const pickingColorAlloc = pickingColorAllocator.allocate();
+            const pickingColor = pickingColorAlloc.index;
             pickingColorAlloc.assign({
               feature: feature,
               clickOnFeature: function () { clickHandler(feature); }
             });
-            var spInfo = specialization.allocateFeature(vertBufferArray, indexFreeList, feature);
-            var indexAndFlag = {
+            const spInfo = specialization.allocateFeature(vertBufferArray, indexFreeList, feature);
+            const indexAndFlag = {
               spInfo: spInfo,
               dead: false,
               pickingColorAlloc: pickingColorAlloc
@@ -889,7 +894,7 @@ define([
         
             scheduler.startNow(function updateFeatureRendering() {
               if (indexAndFlag.dead) return;
-              var animated = specialization.updateFeatureRendering(layerState, updateFeatureRendering, indexFreeList, feature, writeVertex, spInfo, renderer, pickingColor);
+              const animated = specialization.updateFeatureRendering(layerState, updateFeatureRendering, indexFreeList, feature, writeVertex, spInfo, renderer, pickingColor);
               if (animated) {
                 currentAnimatedFeatures.add(feature);
               } else {
@@ -958,8 +963,8 @@ define([
   
   class GLPointLayers {
     constructor(gl, scheduler, globalRedrawCallback, pickingColorAllocator) {
-      var textRowHeight = 13;
-      var labelTextureManager = new LabelTextureManager(gl, scheduler, textRowHeight, globalRedrawCallback);
+      const textRowHeight = 13;
+      const labelTextureManager = new LabelTextureManager(gl, scheduler, textRowHeight, globalRedrawCallback);
     
       function writeQuad(labelsByIndex, writeVertex, index, rendered, label, pickingColor) {
         label.incRefCount();
@@ -981,7 +986,7 @@ define([
       function clearQuad(labelsByIndex, writeVertex, index) {
         writeQuad(labelsByIndex, writeVertex, index, {}, labelTextureManager.getInvisibleLabel(), NO_PICKING_COLOR);
       }
-      var base = new GLFeatureLayers(gl, scheduler, gl.TRIANGLES, pickingColorAllocator, {
+      const base = new GLFeatureLayers(gl, scheduler, gl.TRIANGLES, pickingColorAllocator, {
         VERTS_PER_INDEX: 6,  // TODO: use index buffers
         fragmentShader: shader_points_f,
         createLayer: function () {
@@ -995,8 +1000,8 @@ define([
           gl.bindTexture(gl.TEXTURE_2D, null);
         },
         allocateFeature: function (array, indexFreeList, feature) {
-          var iconIndex = indexFreeList.allocate();
-          var textIndex = indexFreeList.allocate();
+          const iconIndex = indexFreeList.allocate();
+          const textIndex = indexFreeList.allocate();
           //console.log('allocated feature', iconIndex, textIndex, feature);
           return {
             iconIndex: iconIndex,
@@ -1004,7 +1009,7 @@ define([
           };
         },
         deallocateFeature: function (layerState, writeVertex, indexFreeList, feature, info) {
-          var labelsByIndex = layerState.labelsByIndex;
+          const labelsByIndex = layerState.labelsByIndex;
           //console.log('deallocated feature', feature);
           clearQuad(labelsByIndex, writeVertex, info.iconIndex);
           clearQuad(labelsByIndex, writeVertex, info.textIndex);
@@ -1012,18 +1017,18 @@ define([
           indexFreeList.deallocate(info.textIndex);
         },
         updateFeatureRendering: function (layerState, dirty, indexFreeList, feature, writeVertex, info, renderer, pickingColor) {
-          var labelsByIndex = layerState.labelsByIndex;
-          var rendered = checkRendered(renderer(feature, dirty));
+          const labelsByIndex = layerState.labelsByIndex;
+          const rendered = checkRendered(renderer(feature, dirty));
           if (rendered.position) {
-            var iconURL = rendered.iconURL || require.toUrl('./icons/default.svg');
-            var anchor = rendered.labelSide || 'top';
-            var textLabel = labelTextureManager.refTextLabel(
+            const iconURL = rendered.iconURL || require.toUrl('./icons/default.svg');
+            const anchor = rendered.labelSide || 'top';
+            const textLabel = labelTextureManager.refTextLabel(
               anchor === 'left' ? -1 : anchor === 'right' ? 1 : 0,
               anchor === 'left' ? -textRowHeight : anchor === 'right' ? textRowHeight : 0,
               anchor === 'bottom' ? -textRowHeight : anchor === 'top' ? textRowHeight : 0,
               rendered.label);
-            var iconLabel = labelTextureManager.refIconLabel(0, 0, iconURL);
-            var animated = isRenderedAnimatedDirectly(rendered);
+            const iconLabel = labelTextureManager.refIconLabel(0, 0, iconURL);
+            const animated = isRenderedAnimatedDirectly(rendered);
             writeQuad(labelsByIndex, writeVertex, info.iconIndex, rendered, iconLabel, pickingColor);
             writeQuad(labelsByIndex, writeVertex, info.textIndex, rendered, textLabel, pickingColor);
             textLabel.decRefCount();  // balance ref (now retained by writeQuad)
@@ -1043,7 +1048,7 @@ define([
 
   class GLCurveLayers {
     constructor(gl, scheduler, pickingColorAllocator) {
-      var base = new GLFeatureLayers(gl, scheduler, gl.LINES, pickingColorAllocator, {
+      const base = new GLFeatureLayers(gl, scheduler, gl.LINES, pickingColorAllocator, {
         VERTS_PER_INDEX: 2,
         fragmentShader: shader_curves_f,
         createLayer: function () {
@@ -1056,32 +1061,32 @@ define([
           gl.lineWidth(1);  // reset
         },
         allocateFeature: function (array, indexFreeList, feature) {
-          var info = {
+          const info = {
             allocatedIndices: []
           };
           return info;
         },
         deallocateFeature: function (layerState, writeVertex, indexFreeList, feature, info) {
-          var indices = info.allocatedIndices;
+          const indices = info.allocatedIndices;
           for (let i = 0; i < indices.length; i++) {
-            var index = indices[i];
+            const index = indices[i];
             writeVertex(index, 0, {}, {}, 'n', 'n', NO_PICKING_COLOR);
             writeVertex(index, 1, {}, {}, 'p', 'p', NO_PICKING_COLOR);
             indexFreeList.deallocate(index);
           }
         },
         updateFeatureRendering: function (layerState, dirty, indexFreeList, feature, writeVertex, info, renderer, pickingColor) {
-          var rendered = checkRendered(renderer(feature, dirty));
-          var allocatedIndices = info.allocatedIndices;
+          const rendered = checkRendered(renderer(feature, dirty));
+          const allocatedIndices = info.allocatedIndices;
         
-          var isAnimated = false;
-          var bufferIndexAlloc = 0;  // allocation pointer into allocatedIndices
+          let isAnimated = false;
+          let bufferIndexAlloc = 0;  // allocation pointer into allocatedIndices
         
           // TODO per-line line width. That will probably have to wait for billboarded and join-aware line rendering, and won't that be a pain.
           // lineBrightness here is a poor representation too because it is overlaid on a _gray_ background. Which happens to work out currently but doesn't in general.
-          var lineWeight = rendered.lineWeight || 1;
-          var lineBrightness = Math.min(lineWeight, 1);
-          var dummyStyleLabel = {
+          const lineWeight = rendered.lineWeight || 1;
+          const lineBrightness = Math.min(lineWeight, 1);
+          const dummyStyleLabel = {
             // kludge! TODO: arrange to be able to override the texcoordAndOpacity mechanism for something more useful for GLCurveLayers -- it was designed for GLPointLayers first.
             tnx: lineBrightness,
             tpx: lineBrightness,
@@ -1098,12 +1103,12 @@ define([
           // TODO do enough type checking to not throw on bad data
         
           // In GeoJSON terms, polylines is a MultiLineString (but the coordinates are the general 'rendered' structure instead of lon-lat tuples.
-          var lineStrings = rendered.polylines || [];
+          const lineStrings = rendered.polylines || [];
           for (let lineStringIndex = 0; lineStringIndex < lineStrings.length; lineStringIndex++) {
-            var lineString = lineStrings[lineStringIndex];
+            const lineString = lineStrings[lineStringIndex];
             for (let lineIndex = 0; lineIndex < lineString.length - 1; lineIndex++) {
-              var bufferIndexIndex = bufferIndexAlloc++;
-              var bufferIndex = allocatedIndices[bufferIndexIndex];
+              const bufferIndexIndex = bufferIndexAlloc++;
+              let bufferIndex = allocatedIndices[bufferIndexIndex];
               if (bufferIndex === undefined) {
                 allocatedIndices.push(bufferIndex = indexFreeList.allocate());
               }
@@ -1116,7 +1121,7 @@ define([
         
           // Shorten allocation list if needed
           while (allocatedIndices.length > bufferIndexAlloc) {
-            var index = allocatedIndices.pop();
+            const index = allocatedIndices.pop();
             writeVertex(index, 0, {}, {}, 'n', 'n', pickingColor);
             writeVertex(index, 1, {}, {}, 'p', 'p', pickingColor);
             indexFreeList.deallocate(index);
@@ -1133,16 +1138,16 @@ define([
   // Not reusable, just a subdivision for sanity
   class MapCamera {
     constructor(scheduler, storage, redrawCallback, pickFromMouseEvent, positionedDevices, coordActions, elementForReveal) {
-      var w = 1;
-      var h = 1;
+      let w = 1;
+      let h = 1;
     
-      var viewCenterLat = storage && +(storage.getItem('viewCenterLat') || "NaN");
-      var viewCenterLon = storage && +(storage.getItem('viewCenterLon') || "NaN");
-      var viewZoom = storage && +(storage.getItem('viewZoom') || "NaN");
+      let viewCenterLat = storage && +(storage.getItem('viewCenterLat') || "NaN");
+      let viewCenterLon = storage && +(storage.getItem('viewCenterLon') || "NaN");
+      let viewZoom = storage && +(storage.getItem('viewZoom') || "NaN");
       if (!(isFinite(viewCenterLat) && isFinite(viewCenterLon) && viewZoom >= 1)) {
         // Saved coords are either nonexistent or invalid. Use a default.
         // TODO Use the device the user has actually selected. Be able to reset to this from the UI, too.
-        var pd = positionedDevices.get()[0];
+        const pd = positionedDevices.get()[0];
         if (pd) {
           viewCenterLat = +pd.track.get().latitude.value;
           viewCenterLon = +pd.track.get().longitude.value;
@@ -1151,10 +1156,10 @@ define([
       }
     
       // If not null, a cell holding a trackT object which we are locking the view to
-      var trackingCell = null;
+      let trackingCell = null;
     
       // TODO: No standard cell class is suitable (write side effects, goes to storage, doesn't reparse on every read); fix.
-      var latitudeCell = this.latitudeCell = new Cell(numberT);
+      const latitudeCell = this.latitudeCell = new Cell(numberT);
       this.latitudeCell.get = function () { return viewCenterLat; };
       this.latitudeCell.set = function (v) {
         if (viewCenterLat !== v) {
@@ -1162,7 +1167,7 @@ define([
           changedView();
         }
       };
-      var longitudeCell = this.longitudeCell = new Cell(numberT);
+      const longitudeCell = this.longitudeCell = new Cell(numberT);
       this.longitudeCell.get = function () { return viewCenterLon; };
       this.longitudeCell.set = function (v) {
         if (viewCenterLon !== v) {
@@ -1170,7 +1175,7 @@ define([
           changedView();
         }
       };
-      var zoomCell = this.zoomCell = new Cell(numberT);
+      const zoomCell = this.zoomCell = new Cell(numberT);
       this.zoomCell.get = function () { return viewZoom; };
       this.zoomCell.set = function (v) {
         if (viewZoom !== v) {
@@ -1211,9 +1216,9 @@ define([
 
       function getAngleScales() {
         // TODO: Should use scales based on what's under the cursor.
-        var pixelsPerWholeSphere = Math.min(w, h) * viewZoom;
-        var wholeSpherePerLinearDegrees = 0.5 * RADIANS_PER_DEGREE;
-        var pixelsPerDegree = pixelsPerWholeSphere * wholeSpherePerLinearDegrees;
+        const pixelsPerWholeSphere = Math.min(w, h) * viewZoom;
+        const wholeSpherePerLinearDegrees = 0.5 * RADIANS_PER_DEGREE;
+        const pixelsPerDegree = pixelsPerWholeSphere * wholeSpherePerLinearDegrees;
 
         return {
           x: 1 / -(pixelsPerDegree * Math.max(0.1, dcos(viewCenterLat))),
@@ -1225,7 +1230,7 @@ define([
         trackingCell = null;  // cancel tracking
       
         // TODO: Should use scales based on what's under the cursor.
-        var angleScales = getAngleScales();
+        const angleScales = getAngleScales();
       
         viewCenterLon += event.movementX * angleScales.x;
         viewCenterLat += event.movementY * angleScales.y;
@@ -1236,7 +1241,7 @@ define([
       }
     
       this.addDragListeners = function addDragListeners(targetElement) {
-        var viewChanger = {
+        const viewChanger = {
           captureState: function () {
             return {
               lat: viewCenterLat,
@@ -1248,10 +1253,10 @@ define([
             trackingCell = null;  // cancel tracking
           
             viewZoom = state.zoom;
-            var preAngleScales = getAngleScales();
+            const preAngleScales = getAngleScales();
             viewZoom = state.zoom * dzoom;  // done first to apply the change to scale
             clampZoom();
-            var postAngleScales = getAngleScales();
+            const postAngleScales = getAngleScales();
             viewCenterLon = state.lon + grabDX * preAngleScales.x + nowDX * postAngleScales.x;
             viewCenterLat = state.lat + grabDY * preAngleScales.y + nowDY * postAngleScales.y;
             changedView();
@@ -1296,7 +1301,7 @@ define([
         }, {capture: true, passive: false});
       
         new TouchZoomHandler(targetElement, viewChanger, function tapHandler(touch, docX, docY) {
-          var featureInfo = pickFromMouseEvent(touch);  // TODO undeclared type punning
+          const featureInfo = pickFromMouseEvent(touch);  // TODO undeclared type punning
           if (featureInfo) {
             featureInfo.clickOnFeature();
           }
@@ -1310,19 +1315,19 @@ define([
       };
     
       this.getCameraMatrix = function getCameraMatrix() {
-        var aspect = w / h;
-        var scale = viewZoom;
+        const aspect = w / h;
+        const scale = viewZoom;
       
-        var projMat = new Float32Array([
+        const projMat = new Float32Array([
           scale / (aspect > 1 ? aspect : 1), 0, 0, 0,
           0, scale * (aspect < 1 ? aspect : 1), 0, 0,
           0, 0, 1 /* no Z scale */, 1 /* translate so surface is 0,0,0 */,
           0, 0, 0, 1,
         ]);
-        var lonRotMat = newMat4(); setRotMat(lonRotMat, 1, viewCenterLon * RADIANS_PER_DEGREE);
-        var latRotMat = newMat4(); setRotMat(latRotMat, 0, -viewCenterLat * RADIANS_PER_DEGREE);
-        var tmpRotMat = newMat4();
-        var totalMat = newMat4();
+        const lonRotMat = newMat4(); setRotMat(lonRotMat, 1, viewCenterLon * RADIANS_PER_DEGREE);
+        const latRotMat = newMat4(); setRotMat(latRotMat, 0, -viewCenterLat * RADIANS_PER_DEGREE);
+        const tmpRotMat = newMat4();
+        const totalMat = newMat4();
         multMat(tmpRotMat, lonRotMat, latRotMat);
         multMat(totalMat, tmpRotMat, projMat);
         return totalMat;
@@ -1330,18 +1335,18 @@ define([
     
       // account for aspect ratio
       this.getEffectiveXZoom = function getEffectiveXZoom() {
-        var aspect = w / h;
+        const aspect = w / h;
         return viewZoom / (aspect > 1 ? aspect : 1);
       };
       this.getEffectiveYZoom = function getEffectiveYZoom() {
-        var aspect = w / h;
+        const aspect = w / h;
         return viewZoom * (aspect < 1 ? aspect : 1);
       };
     
       // tracking
       function updateFromCell() {
         if (trackingCell === null) return;
-        var track = trackingCell.depend(updateFromCell);
+        const track = trackingCell.depend(updateFromCell);
         viewCenterLat = track.latitude.value;
         viewCenterLon = track.longitude.value;
         // TODO initial zoom, interpolation, possible absence of actual lat/lon values
@@ -1360,20 +1365,20 @@ define([
   }
 
   function GeoMap(config) {
-    var containerElement = this.element = config.element;
-    var scheduler = config.scheduler;
-    var db = config.freqDB;
-    var radioCell = config.target;
-    var storage = config.storage;
+    const containerElement = this.element = config.element;
+    const scheduler = config.scheduler;
+    const db = config.freqDB;
+    const radioCell = config.target;
+    const storage = config.storage;
     
     containerElement.textContent = '';  // clear
     containerElement.classList.add('map-container');
 
-    var canvas = document.createElement('canvas');
+    const canvas = document.createElement('canvas');
     canvas.classList.add('map-canvas');
     
     // Abort if we can't do GL.
-    var gl = getGL(config, canvas, {
+    const gl = getGL(config, canvas, {
       powerPreference: 'low-power',
       alpha: false,  // not currently used
       depth: true,
@@ -1382,7 +1387,7 @@ define([
       preserveDrawingBuffer: false
     });
     if (!gl) {
-      var filler = containerElement.appendChild(document.createElement('div'));
+      const filler = containerElement.appendChild(document.createElement('div'));
       createWidgetExt(config.context, Banner, filler, new ConstantCell('Sorry, the map requires WebGL to be supported and enabled.'));
       return;
     }
@@ -1390,11 +1395,11 @@ define([
     
     // --- Non-GL UI ---
     
-    var coordinateDisplay = containerElement.appendChild(document.createElement('form'));
+    const coordinateDisplay = containerElement.appendChild(document.createElement('form'));
     coordinateDisplay.classList.add('map-coordinate-control');
     // filled later
     
-    var layerSwitcherContainer = containerElement.appendChild(document.createElement('details'));
+    const layerSwitcherContainer = containerElement.appendChild(document.createElement('details'));
     layerSwitcherContainer.classList.add('map-layer-switcher');
     layerSwitcherContainer.appendChild(document.createElement('summary')).textContent = 'Layers';
     
@@ -1405,10 +1410,10 @@ define([
     gl.enable(gl.CULL_FACE);
     
     // Framebuffer used for picking
-    var pickFramebuffer = gl.createFramebuffer();
+    const pickFramebuffer = gl.createFramebuffer();
     gl.bindFramebuffer(gl.FRAMEBUFFER, pickFramebuffer);
     // create and attach color texture (renderbuffer isn't guaranteed)
-    var pickColorTexture = gl.createTexture();
+    const pickColorTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, pickColorTexture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
@@ -1416,7 +1421,7 @@ define([
     gl.bindTexture(gl.TEXTURE_2D, null);
     // skip gl.bindRenderbuffer(gl.RENDERBUFFER, null);
     // create and attach depth renderbuffer
-    var pickDepthRenderbuffer = gl.createRenderbuffer();
+    const pickDepthRenderbuffer = gl.createRenderbuffer();
     gl.bindRenderbuffer(gl.RENDERBUFFER, pickDepthRenderbuffer);
     gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, pickDepthRenderbuffer);
     gl.bindRenderbuffer(gl.RENDERBUFFER, null);
@@ -1426,8 +1431,8 @@ define([
       gl.bindRenderbuffer(gl.RENDERBUFFER, pickDepthRenderbuffer);
       gl.bindTexture(gl.TEXTURE_2D, pickColorTexture);
 
-      var width = gl.drawingBufferWidth || 1;
-      var height = gl.drawingBufferHeight || 1;
+      const width = gl.drawingBufferWidth || 1;
+      const height = gl.drawingBufferHeight || 1;
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
       gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, width, height);
 
@@ -1439,7 +1444,7 @@ define([
     
     
     function draw() {
-      var w, h;
+      let w, h;
       // Fit current layout
       w = canvas.offsetWidth;
       h = canvas.offsetHeight;
@@ -1452,7 +1457,7 @@ define([
       gl.viewport(0, 0, w, h);
       mapCamera.setSize(w, h);
       
-      var cameraMatrix = mapCamera.getCameraMatrix();
+      const cameraMatrix = mapCamera.getCameraMatrix();
 
       gl.clearColor(0.5, 0.5, 0.5, 1);  // TODO justify color
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -1500,17 +1505,17 @@ define([
       scheduler.callNow(draw);
     });
     
-    var mapCamera = new MapCamera(scheduler, storage, draw, pickFromMouseEvent, config.index.implementing('shinysdr.devices.IPositionedDevice'), config.actions, canvas);
+    const mapCamera = new MapCamera(scheduler, storage, draw, pickFromMouseEvent, config.index.implementing('shinysdr.devices.IPositionedDevice'), config.actions, canvas);
     // TODO: Once we have overlays, put the listeners on the overlay container...?
     mapCamera.addDragListeners(canvas);
     
-    var pickingColorAllocatorBase = new FreeListAllocator(1, function() {});
+    const pickingColorAllocatorBase = new FreeListAllocator(1, function() {});
     pickingColorAllocatorBase.allocate();  // reserve 0 === NO_PICKING_COLOR for not-an-object
-    var pickingObjects = [null];
-    var pickingColorAllocator = {
+    const pickingObjects = [null];
+    const pickingColorAllocator = {
       allocate: function () {
-        var index = pickingColorAllocatorBase.allocate();
-        var dead = false;
+        const index = pickingColorAllocatorBase.allocate();
+        let dead = false;
         return {
           index: index,
           assign: function assign(object) {
@@ -1530,24 +1535,24 @@ define([
     };
     
     function pickFromMouseEvent(event) {
-      var localX = event.clientX - canvas.getBoundingClientRect().left;
-      var localY = -(event.clientY - canvas.getBoundingClientRect().bottom);
-      var array = new Uint8Array(4);
+      const localX = event.clientX - canvas.getBoundingClientRect().left;
+      const localY = -(event.clientY - canvas.getBoundingClientRect().bottom);
+      const array = new Uint8Array(4);
       gl.bindFramebuffer(gl.FRAMEBUFFER, pickFramebuffer);
       gl.readPixels(localX, localY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, array);
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      var unpacked = array[0] + (array[1] << 8) + (array[2] << 16) + (array[3] << 24);
-      var featureInfo = pickingObjects[unpacked];
+      const unpacked = array[0] + (array[1] << 8) + (array[2] << 16) + (array[3] << 24);
+      const featureInfo = pickingObjects[unpacked];
       if (featureInfo) {
         console.log(localX, localY, array, unpacked, featureInfo.feature);
       }
       return featureInfo;
     }
     
-    var sphere = new GLSphere(gl, draw);
-    var points = new GLPointLayers(gl, scheduler, draw, pickingColorAllocator);
-    var curves = new GLCurveLayers(gl, scheduler, pickingColorAllocator);
-    var layers = new Map();
+    const sphere = new GLSphere(gl, draw);
+    const points = new GLPointLayers(gl, scheduler, draw, pickingColorAllocator);
+    const curves = new GLCurveLayers(gl, scheduler, pickingColorAllocator);
+    const layers = new Map();
     
     function addLayer(label, lconfig) {
       // TODO: type-check the contents
@@ -1567,21 +1572,21 @@ define([
       }
       scheduler.claim(redrawLayer);
       
-      var layerInt = {
+      const layerInt = {
         glDrawPoints: points.createLayer(featuresCell, featureRenderer, clickHandler, redrawLayer),
         glDrawCurves: curves.createLayer(featuresCell, featureRenderer, clickHandler, redrawLayer),
         visibility: visibilityCell,
       };
-      var layerExt = {};
+      const layerExt = {};
       layers.set(layerExt, layerInt);
       
-      var checkboxOuter = layerSwitcherContainer.appendChild(document.createElement('label'));
-      var checkbox = checkboxOuter.appendChild(document.createElement('input'));
+      const checkboxOuter = layerSwitcherContainer.appendChild(document.createElement('label'));
+      const checkbox = checkboxOuter.appendChild(document.createElement('input'));
       checkbox.type = 'checkbox';
       checkboxOuter.appendChild(document.createTextNode(label));
       createWidgetExt(config.context, Toggle, checkbox, visibilityCell);
-      var controlsOuter = layerSwitcherContainer.appendChild(document.createElement('div'));
-      var controlsInner = controlsOuter.appendChild(document.createElement('div'));
+      const controlsOuter = layerSwitcherContainer.appendChild(document.createElement('div'));
+      const controlsInner = controlsOuter.appendChild(document.createElement('div'));
       createWidgetExt(config.context, PickWidget, controlsInner, controlsCell);
       
       scheduler.startNow(function layerControlsVisibilityHook() {
@@ -1628,7 +1633,7 @@ define([
     }
     
     // TODO provide an actually designed and sensible interface which is less export-our-stuff-for-them-to-go-wild-with.
-    var mapPluginConfig = Object.freeze({
+    const mapPluginConfig = Object.freeze({
       db: db,
       scheduler: scheduler,
       index: config.index,
@@ -1645,28 +1650,28 @@ define([
   }
   exports.GeoMap = GeoMap;
   
-  var plugins = [];
+  const plugins = [];
   exports.register = function(pluginFunc) {
     plugins.push(pluginFunc);
   };
   
   // TODO: Instead of making this global state, make track-valued cells keep the histories.
-  var trackPositionHistories = new WeakMap();
+  const trackPositionHistories = new WeakMap();
   
   function renderTrackFeature(dirty, trackCell, label) {
-    var history = trackPositionHistories.get(trackCell);
+    let history = trackPositionHistories.get(trackCell);
     if (!history) {
       trackPositionHistories.set(trackCell, history = []);
     }
     if (history.length > 1000) {  // TODO better implementation
       history = history.slice(500);
     }
-    var lastHistory = history[history.length - 1] || [null, null];
+    const lastHistory = history[history.length - 1] || [null, null];
     
-    var track = trackCell.depend(dirty);
-    var lat = track.latitude.value;
-    var lon = track.longitude.value;
-    var position;
+    const track = trackCell.depend(dirty);
+    const lat = track.latitude.value;
+    const lon = track.longitude.value;
+    let position;
     if (!(typeof lat === 'number' && typeof lon === 'number' && isFinite(lat) && isFinite(lon))) {
       position = null;
     } else {
@@ -1677,7 +1682,7 @@ define([
       history.push({position: position});
     }
     
-    var renderedFeature = {
+    const renderedFeature = {
       timestamp: track.longitude.timestamp,  // TODO verify other values match
       label: label,
       position: position,

@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid and the ShinySDR contributors
+// Copyright 2013, 2014, 2015, 2016, 2017, 2018, 2020 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -268,8 +268,8 @@ define([
   function retryingConnection(attemptFn, connectionStateCallback, callback) {
     if (!connectionStateCallback) connectionStateCallback = function () {};
 
-    var timeout = minRetryTime;
-    var succeeded = false;
+    let timeout = minRetryTime;
+    let succeeded = false;
     function go() {
       const ws = attemptFn();
       ws.addEventListener('open', function (event) {
@@ -296,7 +296,7 @@ define([
   
   function makeBlock(url, interfaces) {
     // TODO convert block operations to use state stream too
-    var block = {};
+    const block = {};
     // TODO kludges, should be properly facetized and separately namespaced somehow
     setNonEnum(block, '_url', url);
     setNonEnum(block, '_reshapeNotice', new Notifier());
@@ -324,7 +324,7 @@ define([
       // deliberately discarding persists field — shouldn't be used on client
       naming: desc.metadata.naming,
     };
-    var cell;
+    let cell;
     if (type === blockT) {
       // TODO eliminate bogus initial value by adding server support for reference initial values
       // TODO blocks should not need urls (switch http op to websocket)
@@ -381,7 +381,7 @@ define([
             const [,, url, desc, initialValue] = message;
             const pair = (function () {
               function setter(value, callback) {
-                var cbid = nextCallbackId++;
+                const cbid = nextCallbackId++;
                 callbackMap[cbid] = callback;
                 ws.send(JSON.stringify(['set', id, value, cbid]));
               }
@@ -444,9 +444,9 @@ define([
       
       function oneBinaryMessage(buffer) {
         // Currently, BulkDataCell updates are the only type of binary messages.
-        var view = new DataView(buffer);
-        var id = view.getUint32(0, true);
-        var cell_updater = updaterMap[id];
+        const view = new DataView(buffer);
+        const id = view.getUint32(0, true);
+        const cell_updater = updaterMap[id];
         // TODO: should go through the 'append' path but that is not properly generalized yet
         cell_updater(buffer);
       }

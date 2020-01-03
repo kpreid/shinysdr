@@ -1,4 +1,4 @@
-// Copyright 2013, 2014, 2015, 2016, 2017, 2018, 2019 Kevin Reid and the ShinySDR contributors
+// Copyright 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020 Kevin Reid and the ShinySDR contributors
 // 
 // This file is part of ShinySDR.
 // 
@@ -167,7 +167,7 @@ define([
       scheduler.claim(changeSampleRate);
       statusImpl.requestedSampleRateCell.n.listen(changeSampleRate);
       ws.onmessage = function(event) {
-        var wsDataValue = event.data;
+        const wsDataValue = event.data;
         if (wsDataValue instanceof ArrayBuffer) {
           // Audio data.
           if (!isInitializedFromStream) {
@@ -181,7 +181,7 @@ define([
         } else if (typeof wsDataValue === 'string') {
           // Metadata.
           
-          var message;
+          let message;
           try {
             message = JSON.parse(wsDataValue);
           } catch (e) {
