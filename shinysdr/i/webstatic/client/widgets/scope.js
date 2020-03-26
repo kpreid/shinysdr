@@ -258,7 +258,7 @@ define([
 
     const gl = getGL(config, canvas, {
       powerPreference: 'high-performance',
-      alpha: false,
+      alpha: true,  // unused but recommended always-on by https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices
       depth: false,
       stencil: false,
       antialias: false,

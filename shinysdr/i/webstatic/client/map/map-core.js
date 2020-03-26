@@ -1381,7 +1381,7 @@ define([
     // Abort if we can't do GL.
     const gl = getGL(config, canvas, {
       powerPreference: 'low-power',
-      alpha: false,  // not currently used
+      alpha: true,  // unused but recommended always-on by https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices
       depth: true,
       stencil: false,
       antialias: true,
