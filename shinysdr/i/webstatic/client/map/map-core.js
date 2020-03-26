@@ -49,6 +49,7 @@ define([
   shader_curves_f
 ) => {
   const {
+    lifecycleInit,
     pixelsFromWheelEvent,
     reveal,
   } = import_domtools;
@@ -1392,6 +1393,11 @@ define([
       return;
     }
     containerElement.appendChild(canvas);
+    
+    containerElement.addEventListener('shinysdr:lifecycleinit', event => {
+      // This enables later cleanup.
+      lifecycleInit(canvas);
+    });
     
     // --- Non-GL UI ---
     

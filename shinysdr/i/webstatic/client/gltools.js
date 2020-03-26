@@ -20,9 +20,21 @@
 define(() => {
   const exports = {};
   
+  // Set up a WebGL context according to ShinySDR-specific rules.
+  // Note: make sure that domtools.lifecycleInit is called on the canvas (this is automatic if it is directly a widget) to enable prompt cleanup of the context.
   exports.getGL = function getGL(config, canvas, options) {
     const useWebGL = config.clientState.opengl.depend(config.rebuildMe);
-    return !useWebGL ? null : canvas.getContext('webgl', options) || canvas.getContext('experimental-webgl', options);
+    const gl = !useWebGL ? null : canvas.getContext('webgl', options) || canvas.getContext('experimental-webgl', options);
+    
+    // Set up an automatic loseContext.
+    const loseContextExt = gl && gl.getExtension('WEBGL_lose_context');
+    if (loseContextExt) {
+      canvas.addEventListener('shinysdr:lifecycledestroy', event => {
+        loseContextExt.loseContext();
+      });
+    }
+    
+    return gl;
   };
   
   const buildProgram = exports.buildProgram =
