@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016, 2017, 2018, 2019 Kevin Reid and the ShinySDR contributors
+# Copyright 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020 Kevin Reid and the ShinySDR contributors
 # 
 # This file is part of ShinySDR.
 # 
@@ -23,6 +23,7 @@ import os
 
 import six
 from six.moves import urllib
+from six.moves.urllib.parse import urljoin
 
 from twisted.application.service import Service
 from twisted.internet import defer
@@ -62,17 +63,27 @@ def _make_static_resource(pathname):
 class WebService(Service):
     __log = Logger()
     
-    def __init__(self, reactor, cap_table, http_endpoint, ws_endpoint, root_cap, title):
+    def __init__(self,
+            reactor,
+            cap_table,
+            http_endpoint,
+            ws_endpoint,
+            http_base_url,
+            ws_base_url,
+            root_cap,
+            title):
         # Constants
         self.__http_endpoint_string = str(http_endpoint)
         self.__http_endpoint = endpoints.serverFromString(reactor, self.__http_endpoint_string)
         self.__ws_endpoint = endpoints.serverFromString(reactor, str(ws_endpoint))
         self.__visit_path = _make_cap_url(root_cap)
+        self.__http_base_url_if_explicit = http_base_url
         
         wcommon = WebServiceCommon(
             reactor=reactor,
             title=title,
-            ws_endpoint_string=ws_endpoint)
+            ws_endpoint_string=ws_endpoint,
+            ws_base_url=ws_base_url)
         # TODO: Create poller actually for the given reactor w/o redundancy -- perhaps there should be a one-poller-per-reactor map
         subscription_context = SubscriptionContext(reactor=reactor, poller=the_poller)
         
@@ -121,8 +132,15 @@ class WebService(Service):
         """Get the absolute URL of the service. Cannot be used before startService is called.
         
         This method exists primarily for testing purposes."""
-        # TODO: need to know canonical domain name (endpoint_string_to_url defaults to localhost); can we extract the information from the certificate when applicable?
-        return endpoint_string_to_url(self.__http_endpoint_string, listening_port=self.__http_port_obj, path=self.get_host_relative_url())
+        # TODO: This logic is duplicated with wcommon.make_websocket_url
+        if self.__http_base_url_if_explicit is not None:
+            return urljoin(self.__http_base_url_if_explicit, self.get_host_relative_url())
+        else:
+            # TODO: need to know canonical domain name (endpoint_string_to_url defaults to localhost); can we extract the information from the certificate when applicable?
+            return endpoint_string_to_url(
+                self.__http_endpoint_string,
+                listening_port=self.__http_port_obj,
+                path=self.get_host_relative_url())
 
     def announce(self, open_client):
         """interface used by shinysdr.main"""

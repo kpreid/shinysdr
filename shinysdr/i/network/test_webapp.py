@@ -47,6 +47,8 @@ class TestWebSite(unittest.TestCase):
             reactor=the_reactor,
             http_endpoint='tcp:0',
             ws_endpoint='tcp:3333',
+            http_base_url=None,
+            ws_base_url=None,
             root_cap=u'ROOT',
             cap_table={u'ROOT': SiteStateStub()},
             title='test title')
@@ -151,6 +153,8 @@ class TestSiteWithoutRootCap(TestWebSite):
             reactor=the_reactor,
             http_endpoint='tcp:0',
             ws_endpoint='tcp:3333',
+            http_base_url=None,
+            ws_base_url=None,
             root_cap=UNIQUE_PUBLIC_CAP,
             cap_table={UNIQUE_PUBLIC_CAP: SiteStateStub()},
             title='test title')

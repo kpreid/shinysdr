@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid and the ShinySDR contributors
+# Copyright 2013, 2014, 2015, 2016, 2017, 2018, 2020 Kevin Reid and the ShinySDR contributors
 #
 # This file is part of ShinySDR.
 # 
@@ -35,10 +35,12 @@ from six.moves import builtins
 
 from twisted.internet import defer
 from twisted.python.util import sibpath
+from twisted.web.http import urlparse
 
 # Note that gnuradio-dependent modules are loaded lazily, to avoid the startup time if all we're going to do is give a usage message
 from shinysdr.i.db import DatabaseModel, database_from_csv, databases_from_directory
 from shinysdr.i.network.base import UNIQUE_PUBLIC_CAP
+from shinysdr.i.pycompat import bytes_or_ascii, repr_no_string_tag
 from shinysdr.i.roots import CapTable, generate_cap
 
 
@@ -114,9 +116,18 @@ class Config(object):
             raise ConfigException('config.persist_to_file has already been done once')
         self._state_filename = str(filename)
 
-    def serve_web(self, http_endpoint, ws_endpoint, root_cap=None, title=u'ShinySDR'):
+    def serve_web(self, 
+            http_endpoint,
+            ws_endpoint,
+            http_base_url=None,
+            ws_base_url=None,
+            root_cap=None,
+            title=u'ShinySDR'):
         self._not_finished()
         # TODO: See if we're reinventing bits of Twisted service stuff here
+        
+        http_base_url = _coerce_and_validate_base_url(http_base_url, 'http_base_url', ('http', 'https'))
+        ws_base_url = _coerce_and_validate_base_url(ws_base_url, 'ws_base_url', ('ws', 'wss'))
         
         if root_cap is not None:
             root_cap = six.text_type(root_cap)
@@ -140,6 +151,8 @@ class Config(object):
                 cap_table=cap_table.as_unenumerable_collection(),
                 http_endpoint=http_endpoint,
                 ws_endpoint=ws_endpoint,
+                http_base_url=http_base_url,
+                ws_base_url=ws_base_url,
                 root_cap=root_cap_subst,
                 title=title)
         
@@ -177,6 +190,20 @@ class Config(object):
 
 
 __all__.append('Config')
+
+
+def _coerce_and_validate_base_url(url_value, label, allowed_schemes):
+    """Convert url_value to string or None and validate it is a suitable base URL."""
+    if url_value is not None:
+        url_value = str(url_value)
+        
+        scheme, _netloc, path_bytes, _params, _query_bytes, _fragment = urlparse(bytes_or_ascii(url_value))
+        if scheme.lower() not in allowed_schemes:
+            raise ConfigException('config.serve_web: {} must be a {} URL but was {}'.format(label, ' or '.join(repr_no_string_tag(s + ':') for s in allowed_schemes), repr_no_string_tag(url_value)))
+        if path_bytes != b'/':
+            raise ConfigException('config.serve_web: {} must not have any path components, but had {}'.format(label, repr_no_string_tag(path_bytes)))
+    
+    return url_value
 
 
 class _ConfigDict(object):

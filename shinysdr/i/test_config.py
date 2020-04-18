@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2014, 2015, 2016, 2018, 2019 Kevin Reid and the ShinySDR contributors
+# Copyright 2014, 2015, 2016, 2018, 2019, 2020 Kevin Reid and the ShinySDR contributors
 # 
 # This file is part of ShinySDR.
 # 
@@ -164,6 +164,38 @@ class TestConfigObject(unittest.TestCase):
         # Actually instantiating the service. We need to do this to check if the root_cap value was processed correctly.
         service = self.config._service_makers[0](DummyAppRoot())
         self.assertEqual('/public/', service.get_host_relative_url())
+    
+    def test_web_base_url_invalid_scheme(self):
+        e = self.assertRaises(ConfigException, lambda:
+            self.config.serve_web(http_endpoint='tcp:0', ws_endpoint='tcp:0', http_base_url='flibbertigibbet'))
+        self.assertEqual("config.serve_web: http_base_url must be a 'http:' or 'https:' URL but was 'flibbertigibbet'", str(e))
+        
+        e = self.assertRaises(ConfigException, lambda:
+            self.config.serve_web(http_endpoint='tcp:0', ws_endpoint='tcp:0', ws_base_url='flibbertigibbet'))
+        self.assertEqual("config.serve_web: ws_base_url must be a 'ws:' or 'wss:' URL but was 'flibbertigibbet'", str(e))
+        
+        self.assertEqual([], self.config._service_makers)
+        
+    def test_web_base_url_invalid_path(self):
+        e = self.assertRaises(ConfigException, lambda:
+            self.config.serve_web(http_endpoint='tcp:0', ws_endpoint='tcp:0', http_base_url='https://shinysdr.test/flibbertigibbet/'))
+        self.assertEqual("config.serve_web: http_base_url must not have any path components, but had '/flibbertigibbet/'", str(e))
+        
+        e = self.assertRaises(ConfigException, lambda:
+            self.config.serve_web(http_endpoint='tcp:0', ws_endpoint='tcp:0', ws_base_url='wss://shinysdr.test/flibbertigibbet/'))
+        self.assertEqual("config.serve_web: ws_base_url must not have any path components, but had '/flibbertigibbet/'", str(e))
+        
+        self.assertEqual([], self.config._service_makers)
+        
+    def test_web_base_url_http_root(self):
+        self.config.serve_web(http_endpoint='tcp:0', ws_endpoint='tcp:0', http_base_url='https://shinysdr.test:1234/')
+        self.assertEqual(1, len(self.config._service_makers))
+        # Actually instantiating the service to find out what its url is.
+        service = self.config._service_makers[0](DummyAppRoot())
+        self.assertEqual('https://shinysdr.test:1234/public/', service.get_url())
+        self.assertEqual('/public/', service.get_host_relative_url())
+    
+    # TODO: test WebSocket base url configuration (trickier)
     
     # --- serve_ghpsdr ---
     

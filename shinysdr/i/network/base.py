@@ -1,4 +1,4 @@
-# Copyright 2013, 2014, 2015, 2016, 2017 Kevin Reid and the ShinySDR contributors
+# Copyright 2013, 2014, 2015, 2016, 2017, 2020 Kevin Reid and the ShinySDR contributors
 # 
 # This file is part of ShinySDR.
 # 
@@ -20,8 +20,10 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from collections import namedtuple
+import re
 import six
 from six.moves import urllib
+from six.moves.urllib.parse import urljoin
 
 from twisted.web import http
 from twisted.web.resource import Resource
@@ -113,21 +115,35 @@ class WebServiceCommon(object):
     
     @classmethod
     def stub(cls, reactor):
+        """Make a minimal instance for tests which don't care about the contents."""
         return cls(
             reactor=reactor,
             title='[ShinySDR Test Server]',
             ws_endpoint_string='tcp:99999')  # parseable but nonsense
     
-    def __init__(self, reactor, title, ws_endpoint_string):
+    def __init__(self, reactor, title, ws_endpoint_string, ws_base_url=None):
         self.reactor = reactor
         self.title = six.text_type(title)
         self.__ws_endpoint_string = ws_endpoint_string
+        self.__ws_base_url_if_explicit = ws_base_url
     
     def make_websocket_url(self, request, path):
-        return endpoint_string_to_url(self.__ws_endpoint_string,
-            hostname=request.getRequestHostname(),
-            scheme=b'ws',
-            path=path)
+        assert path.startswith('/')
+        # TODO: This logic is essentially duplicated with the HTTP base logic in webapp.py
+        if self.__ws_base_url_if_explicit is not None:
+            return patched_urljoin(self.__ws_base_url_if_explicit, path)
+        else:
+            return endpoint_string_to_url(
+                self.__ws_endpoint_string,
+                hostname=request.getRequestHostname(),
+                scheme=b'ws',
+                path=path)
+
+
+def patched_urljoin(base, url):
+    # Python 2.7's urljoin does not recognize 'ws'/'wss' as a hierarchical URL scheme and has bad behavior. Hack it by replacing ws with http temporarily. We can remove this once we're Python 3-only.
+    return re.sub(r'(?i)^http(s?):', r'ws\1:', 
+      urljoin(re.sub(r'(?i)^ws(s?):', r'http\1:', base), url))
 
 
 class SiteWithDefaultHeaders(Site):
