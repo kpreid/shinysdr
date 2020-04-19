@@ -199,8 +199,14 @@ def _coerce_and_validate_base_url(url_value, label, allowed_schemes):
         url_value = str(url_value)
         
         scheme, _netloc, path_bytes, _params, _query_bytes, _fragment = urlparse(bytes_or_ascii(url_value))
+        
+        # Ensure that the protocol is compatible.
         if scheme.lower() not in allowed_schemes:
             raise ConfigException('config.serve_web: {} must be a {} URL but was {}'.format(label, ' or '.join(repr_no_string_tag(s + ':') for s in allowed_schemes), repr_no_string_tag(url_value)))
+        
+        # Ensure that there are no path components. There are two reasons for this:
+        # 1. The client makes use of host-relative URLs.
+        # 2. Because ShinySDR makes heavy use of localStorage, and may in the future use other origin-scoped features, it is not safe to run ShinySDR on the same origin as another web application as they might collide with each other. Trying to reverse-proxy with an added path component does not _necessarily_ indicate an attempt to do this, but it'd be more work to support it so let's not bother.
         if path_bytes != b'/':
             raise ConfigException('config.serve_web: {} must not have any path components, but had {}'.format(label, repr_no_string_tag(path_bytes)))
     
