@@ -138,48 +138,15 @@ for example, a receiver with an external downconverter or upconverter, or a devi
 
 <h4>SSL configuration</h4>
 
-<p>If you're using ShinySDR over the Internet, I highly recommend that you use HTTPS to prevent snooping on your connection and hence unauthorized access to your ShinySDR instance.</p>
-
-<p>If you already have a certificate for your domain name (lucky you!), the configuration looks like this:</p>
+<p>If you're using ShinySDR over the Internet, I highly recommend that you use HTTPS to prevent snooping on your connection and hence unauthorized access to your ShinySDR instance. In order to use HTTPS you will need a <em>certificate</em> for your domain name; if you do not have one you can get one for free through <a href="https://letsencrypt.org/">Let’s Encrypt</a>.
+  
+<p>Once you have the private key and certificate files — called <code>privkey.pem</code> and <code>fullchain.pem</code> in this example, as those are the names used by the <code>certbot</code> software used to obtain certificates from Let’s Encrypt — you can have ShinySDR use them like so:</p>
 <pre>config.serve_web(
-    http_endpoint='ssl:8100:privateKey=key.pem:certKey=cert.pem',
-    ws_endpoint='ssl:8101:privateKey=key.pem:certKey=cert.pem',
+    http_endpoint='ssl:8100:privateKey=/path/to/your/privkey.pem:certKey=/path/to/your/fullchain.pem',
+    ws_endpoint='ssl:8101:privateKey=/path/to/your/privkey.pem:certKey=/path/to/your/fullchain.pem',
     ...)</pre>
 
-<p>If you don't have a certificate, you can generate a &ldquo;self-signed&rdquo; certificate using OpenSSL.
-This will not be accepted as legitimate by web browsers unless you install it on your client machine (the details of this process vary widely, and may not be possible at all),
-but even without that you gain protections against <em>some</em> attacks that plain HTTP does not have.</p>
-
-<p><strong>This advice has not been reviewed by crypto experts! It is being provided only because it is slightly better than nothing! Make your own evaluation of the risks and get a second opinion!</strong></p>
-
-<ol>
-  
-  <li><p>Install the <code>openssl</code> command-line tool.</p></li>
-  
-  <li>
-  <p>Create a file with the following contents, and call it, say, <code>req.conf</code>.</p>
-  <blockquote><pre>[ req ]
-default_bits = 2048
-distinguished_name = req_distinguished_name
-x509_extensions = x509_extensions
-prompt = no
-[ req_distinguished_name ]
-CN=<var><strong>your domain name goes here</strong></var>
-[ x509_extensions ]
-basicConstraints=critical,CA:FALSE
-extendedKeyUsage=critical,serverAuth</pre></blockquote>
-  <p>(Note: The lines in the <code>x509_extensions</code> section restrict the generated certificate so that a client which has it installed does not trust it for any other purposes than authenticating the server; this limits the harm if your private key is stolen.)</p>
-  </li>
-  
-  <li>
-  <p>Run the command: <code>openssl req -new -x509 -days 365 -nodes -out cert.pem -keyout key.pem -config req.conf</code></p>
-  
-  <p>This will generate two new files, <code>cert.pem</code> and <code>key.pem</code>, which should be named in the endpoint specification of the ShinySDR config as described earlier. <code>key.pem</code> contains your server private key &mdash; keep it private! <code>cert.pem</code> contains the certificate; this is the file you install on the client to make it accepted as valid.</p>
-  
-  <p>The number after <code>-days</code> specifies the length of time (in days) for which the certificate is valid. When it expires, if you wish to generate a new certificate using the same key, replace the <code>-keyout</code> option with <code>-key</code> to read the key file instead of writing a new one.</p>
-  </li>
-
-</ol>
+<p>Another configuration option is to use an existing web server with HTTPS support (such as Apache or Nginx) as a <em>reverse proxy</em> to handle HTTPS and forward requests to ShinySDR running on the same machine. [TODO: Add some hints about how to get started with reverse proxy configuration.]</p>
 
 <h3>Frequency databases; <code>config.databases</code></h3>
 
