@@ -128,9 +128,13 @@ class WebServiceCommon(object):
         self.__ws_base_url_if_explicit = ws_base_url
     
     def make_websocket_url(self, request, path):
+        # The contract for the input is that the paths are "absolute", i.e. definitely not relative to any other resource (but sometimes we stick them "in a directory"; see below).
         assert path.startswith('/')
+        
         # TODO: This logic is essentially duplicated with the HTTP base logic in webapp.py
         if self.__ws_base_url_if_explicit is not None:
+            # Support locating the WebSocket service "in a directory" served by some reverse proxy, by making the path relative to the base URL's path.
+            path = path[1:]
             return patched_urljoin(self.__ws_base_url_if_explicit, path)
         else:
             return endpoint_string_to_url(

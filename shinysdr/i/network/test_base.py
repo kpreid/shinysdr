@@ -24,6 +24,11 @@ from shinysdr.i.network.base import WebServiceCommon
 
 
 class TestWebServiceCommon(unittest.TestCase):
+    def test_make_websocket_url_relative(self):
+        wcommon = WebServiceCommon.stub(the_reactor)
+        request = FakeRequest()
+        self.assertRaises(AssertionError, lambda: wcommon.make_websocket_url(request, 'boguspath'))
+        
     def test_make_websocket_url_without_base_url(self):
         wcommon = WebServiceCommon(
             reactor=the_reactor,
@@ -43,6 +48,17 @@ class TestWebServiceCommon(unittest.TestCase):
         request = FakeRequest()
         self.assertEqual(
             'wss://wshost:5678/testpath',
+            wcommon.make_websocket_url(request, '/testpath'))
+        
+    def test_make_websocket_url_with_base_url_with_path(self):
+        wcommon = WebServiceCommon(
+            reactor=the_reactor,
+            title='',
+            ws_endpoint_string='tcp:1234',
+            ws_base_url='wss://wshost:5678/ws/')
+        request = FakeRequest()
+        self.assertEqual(
+            'wss://wshost:5678/ws/testpath',
             wcommon.make_websocket_url(request, '/testpath'))
 
 

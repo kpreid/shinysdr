@@ -176,16 +176,20 @@ class TestConfigObject(unittest.TestCase):
         
         self.assertEqual([], self.config._service_makers)
         
-    def test_web_base_url_invalid_path(self):
+    def test_web_base_url_http_prohibits_path(self):
         e = self.assertRaises(ConfigException, lambda:
             self.config.serve_web(http_endpoint='tcp:0', ws_endpoint='tcp:0', http_base_url='https://shinysdr.test/flibbertigibbet/'))
         self.assertEqual("config.serve_web: http_base_url must not have any path components, but had '/flibbertigibbet/'", str(e))
         
-        e = self.assertRaises(ConfigException, lambda:
-            self.config.serve_web(http_endpoint='tcp:0', ws_endpoint='tcp:0', ws_base_url='wss://shinysdr.test/flibbertigibbet/'))
-        self.assertEqual("config.serve_web: ws_base_url must not have any path components, but had '/flibbertigibbet/'", str(e))
+    def test_web_base_url_ws_allows_path(self):
+        self.config.serve_web(http_endpoint='tcp:0', ws_endpoint='tcp:0', ws_base_url='wss://shinysdr.test/flibbertigibbet/')
+        self.assertEqual(1, len(self.config._service_makers))
+        # TODO: Actually validate the resulting path generation (hard to get at unless we add a method)
         
-        self.assertEqual([], self.config._service_makers)
+    def test_web_base_url_ws_requires_slash(self):
+        e = self.assertRaises(ConfigException, lambda:
+            self.config.serve_web(http_endpoint='tcp:0', ws_endpoint='tcp:0', ws_base_url='wss://shinysdr.test/flibbertigibbet'))
+        self.assertEqual("config.serve_web: ws_base_url's path must end in a slash, but had '/flibbertigibbet'", str(e))
         
     def test_web_base_url_http_root(self):
         self.config.serve_web(http_endpoint='tcp:0', ws_endpoint='tcp:0', http_base_url='https://shinysdr.test:1234/')
@@ -194,8 +198,6 @@ class TestConfigObject(unittest.TestCase):
         service = self.config._service_makers[0](DummyAppRoot())
         self.assertEqual('https://shinysdr.test:1234/public/', service.get_url())
         self.assertEqual('/public/', service.get_host_relative_url())
-    
-    # TODO: test WebSocket base url configuration (trickier)
     
     # --- serve_ghpsdr ---
     

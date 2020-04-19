@@ -128,7 +128,7 @@ class Config(object):
         # TODO: See if we're reinventing bits of Twisted service stuff here
         
         http_base_url = _coerce_and_validate_base_url(http_base_url, 'http_base_url', ('http', 'https'))
-        ws_base_url = _coerce_and_validate_base_url(ws_base_url, 'ws_base_url', ('ws', 'wss'))
+        ws_base_url = _coerce_and_validate_base_url(ws_base_url, 'ws_base_url', ('ws', 'wss'), allow_path=True)
         
         if root_cap is not None:
             root_cap = six.text_type(root_cap)
@@ -193,7 +193,7 @@ class Config(object):
 __all__.append('Config')
 
 
-def _coerce_and_validate_base_url(url_value, label, allowed_schemes):
+def _coerce_and_validate_base_url(url_value, label, allowed_schemes, allow_path=False):
     """Convert url_value to string or None and validate it is a suitable base URL."""
     if url_value is not None:
         url_value = str(url_value)
@@ -207,8 +207,13 @@ def _coerce_and_validate_base_url(url_value, label, allowed_schemes):
         # Ensure that there are no path components. There are two reasons for this:
         # 1. The client makes use of host-relative URLs.
         # 2. Because ShinySDR makes heavy use of localStorage, and may in the future use other origin-scoped features, it is not safe to run ShinySDR on the same origin as another web application as they might collide with each other. Trying to reverse-proxy with an added path component does not _necessarily_ indicate an attempt to do this, but it'd be more work to support it so let's not bother.
-        if path_bytes != b'/':
-            raise ConfigException('config.serve_web: {} must not have any path components, but had {}'.format(label, repr_no_string_tag(path_bytes)))
+        # However, neither reason applies to WebSocket addresses, so those are allowed to have directory paths.
+        if allow_path:
+            if not path_bytes.endswith(b'/'):
+                raise ConfigException('config.serve_web: {}\'s path must end in a slash, but had {}'.format(label, repr_no_string_tag(path_bytes)))
+        else:
+            if path_bytes != b'/':
+                raise ConfigException('config.serve_web: {} must not have any path components, but had {}'.format(label, repr_no_string_tag(path_bytes)))
     
     return url_value
 
