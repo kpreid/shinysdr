@@ -118,7 +118,7 @@ for example, a receiver with an external downconverter or upconverter, or a devi
     
     <p><code>ws_endpoint</code> specifies the port to use for the WebSocket service used to stream data to the client. This must be different from the HTTP port.</p>
     
-    <p><code>http_base_url</code> and <code>ws_base_url</code> allow overriding the address the server uses when generating links to itself, such as for operating ShinySDR behind a reverse proxy. The values should be complete URLs, like <code>http_base_url='https://shinysdr.example.com/'</code>, but must not have a path (for example, <code>http_base_url='https://example.com/shinysdr/'</code> is not allowed).
+    <p><code>http_base_url</code> and <code>ws_base_url</code> allow overriding the address the server uses when generating links to itself, such as for operating ShinySDR behind a <a href="https://en.wikipedia.org/wiki/Reverse_proxy">reverse proxy</a>. The values should be complete URLs, like <code>http_base_url='https://shinysdr.example.com/'</code>, but must not have a path (for example, <code>http_base_url='https://example.com/shinysdr/'</code> is not allowed).
     
     <p><code>root_cap</code> is a secret string value used for restricting access to the server, or <code>None</code> to disable it.
     If set, the URL of the web interface will include this secret, so that no one can use this ShinySDR instance without having been given that particular URL.</p>
@@ -146,7 +146,7 @@ for example, a receiver with an external downconverter or upconverter, or a devi
     ws_endpoint='ssl:8101:privateKey=/path/to/your/privkey.pem:certKey=/path/to/your/fullchain.pem',
     ...)</pre>
 
-<p>Another configuration option is to use an existing web server with HTTPS support (such as Apache or Nginx) as a <em>reverse proxy</em> to handle HTTPS and forward requests to ShinySDR running on the same machine. [TODO: Add some hints about how to get started with reverse proxy configuration.]</p>
+<p>Another configuration option is to use an existing web server with HTTPS support (such as Apache or Nginx) as a <em><a href="https://en.wikipedia.org/wiki/Reverse_proxy">reverse proxy</a></em> to handle HTTPS and forward requests to ShinySDR running on the same machine. [TODO: Add some hints about how to get started with reverse proxy configuration.]</p>
 
 <h3>Frequency databases; <code>config.databases</code></h3>
 
