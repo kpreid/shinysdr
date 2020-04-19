@@ -29,6 +29,7 @@ import importlib
 import os
 import os.path
 import traceback
+from textwrap import dedent
 
 import six
 from six.moves import builtins
@@ -421,50 +422,50 @@ def write_default_config(new_config_path):
     except ImportError:
         has_osmosdr = False
     
-    config_text = '''\
-# -*- coding: utf-8 -*-
+    config_text = dedent("""\
+        # -*- coding: utf-8 -*-
 
-# This is a ShinySDR configuration file. For more information about what can
-# be put here, read the manual section on it, available from the running
-# ShinySDR server at: http://localhost:8100/manual/configuration
+        # This is a ShinySDR configuration file. For more information about what can
+        # be put here, read the manual section on it, available from the running
+        # ShinySDR server at: http://localhost:8100/manual/configuration
 
-from shinysdr.devices import AudioDevice
-%(osmosdr_comment)sfrom shinysdr.plugins.osmosdr import OsmoSDRDevice
-from shinysdr.plugins.simulate import SimulatedDevice
+        from shinysdr.devices import AudioDevice
+        {osmosdr_comment}from shinysdr.plugins.osmosdr import OsmoSDRDevice
+        from shinysdr.plugins.simulate import SimulatedDevice
 
-# OsmoSDR generic driver; handles USRP, RTL-SDR, FunCube Dongle, HackRF, etc.
-# To select a specific device, replace '' with 'rtl=0' etc.
-%(osmosdr_comment)sconfig.devices.add(u'osmo', OsmoSDRDevice(''))
+        # OsmoSDR generic driver; handles USRP, RTL-SDR, FunCube Dongle, HackRF, etc.
+        # To select a specific device, replace '' with 'rtl=0' etc.
+        {osmosdr_comment}config.devices.add(u'osmo', OsmoSDRDevice(''))
 
-# For hardware which uses a sound-card as its ADC or appears as an
-# audio device.
-%(audio_comment)sconfig.devices.add(u'audio', AudioDevice(rx_device='%(audio_rx_name)s'))
+        # For hardware which uses a sound-card as its ADC or appears as an
+        # audio device.
+        {audio_comment}config.devices.add(u'audio', AudioDevice(rx_device={audio_rx_name_quoted}))
 
-# Locally generated RF signals for test purposes.
-config.devices.add(u'sim', SimulatedDevice())
+        # Locally generated RF signals for test purposes.
+        config.devices.add(u'sim', SimulatedDevice())
 
-config.serve_web(
-    # These are in Twisted endpoint description syntax:
-    # <http://twistedmatrix.com/documents/current/api/twisted.internet.endpoints.html#serverFromString>
-    # Note: ws_endpoint must currently be 1 greater than http_endpoint; if one
-    # is SSL then both must be. These restrictions will be relaxed later.
-    http_endpoint='tcp:8100',
-    ws_endpoint='tcp:8101',
+        config.serve_web(
+            # These are in Twisted endpoint description syntax:
+            # <http://twistedmatrix.com/documents/current/api/twisted.internet.endpoints.html#serverFromString>
+            # Note: ws_endpoint must currently be 1 greater than http_endpoint; if one
+            # is SSL then both must be. These restrictions will be relaxed later.
+            http_endpoint='tcp:8100',
+            ws_endpoint='tcp:8101',
 
-    # A secret placed in the URL as simple access control. Does not
-    # provide any real security unless using HTTPS. The default value
-    # in this file has been automatically generated from 128 random bits.
-    # Set to None to not use any secret.
-    root_cap='%(root_cap)s',
+            # A secret placed in the URL as simple access control. Does not
+            # provide any real security unless using HTTPS. The default value
+            # in this file has been automatically generated from 128 random bits.
+            # Set to None to not use any secret.
+            root_cap={root_cap_quoted},
     
-    # Page title / station name
-    title='ShinySDR')
-''' % {
-        'root_cap': generate_cap(),
-        'audio_comment': '' if has_audio else '# ',
-        'audio_rx_name': audio_rx_name,
-        'osmosdr_comment': '' if has_osmosdr else '# ',
-    }
+            # Page title / station name
+            title='ShinySDR')
+    """).format(
+        root_cap_quoted=repr_no_string_tag(generate_cap()),
+        audio_rx_name_quoted=repr_no_string_tag(audio_rx_name),
+        audio_comment='' if has_audio else '# ',
+        osmosdr_comment='' if has_osmosdr else '# ',
+    )
     
     os.mkdir(new_config_path)
     with open(os.path.join(new_config_path, 'config.py'), 'wb') as f:
