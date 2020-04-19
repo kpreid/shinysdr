@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  Copyright 2015, 2016, 2017, 2018 Kevin Reid and the ShinySDR contributors
+  Copyright 2015, 2016, 2017, 2018, 2020 Kevin Reid and the ShinySDR contributors
   
   This file is part of ShinySDR.
   
@@ -108,16 +108,17 @@ for example, a receiver with an external downconverter or upconverter, or a devi
 
 <dl class="major-dl">
   
-  <dt><code>config.serve_web(http_endpoint='...', ws_endpoint='...', root_cap=u'...', title=u'...')</code></dt>
+  <dt><code>config.serve_web(http_endpoint='...', ws_endpoint='...'<var>[</var>, root_cap=u'...', title=u'...', http_base_url='...', ws_base_url='...'<var>]</var>)</code></dt>
   <dd>
     <p>Enable and configure the web server.</p>
     
     <p><code>http_endpoint</code> specifies the port (and address) to use for HTTP access.
-    It should be a string in <a href="http://twistedmatrix.com/documents/current/api/twisted.internet.endpoints.html#serverFromString">Twisted endpoint syntax</a>;
+    It should be a string in <a href="https://twistedmatrix.com/documents/current/api/twisted.internet.endpoints.html#serverFromString">Twisted endpoint syntax</a>;
     for a quick example, <code>"tcp:8000"</code> specifies port 8000, and <code>"tcp:8000:interface=127.0.0.1"</code> does the same while also prohibiting access from other machines.</p>
     
-    <p><code>ws_endpoint</code> specifies the port to use for the WebSocket service used to stream data to the client.
-    It should be identical to the <code>http_endpoint</code> except for using a port number exactly one greater (this restriction will be removed in the future).</p>
+    <p><code>ws_endpoint</code> specifies the port to use for the WebSocket service used to stream data to the client. This must be different from the HTTP port.</p>
+    
+    <p><code>http_base_url</code> and <code>ws_base_url</code> allow overriding the address the server uses when generating links to itself, such as for operating ShinySDR behind a reverse proxy. The values should be complete URLs, like <code>http_base_url='https://shinysdr.example.com/'</code>, but must not have a path (for example, <code>http_base_url='https://example.com/shinysdr/'</code> is not allowed).
     
     <p><code>root_cap</code> is a secret string value used for restricting access to the server, or <code>None</code> to disable it.
     If set, the URL of the web interface will include this secret, so that no one can use this ShinySDR instance without having been given that particular URL.</p>
