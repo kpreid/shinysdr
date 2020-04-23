@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2013, 2014, 2015, 2016, 2017, 2018 Kevin Reid and the ShinySDR contributors
+# Copyright 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020 Kevin Reid and the ShinySDR contributors
 #
 # This file is part of ShinySDR.
 # 
@@ -24,6 +24,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import argparse
 import logging
+import os
 import sys
 
 from twisted.application.service import IService, MultiService
@@ -86,13 +87,18 @@ def _main_async(reactor, argv=None, _abort_for_test=False):
         print(version_report, file=sys.stderr)
         sys.exit(1)
 
-    # Write config file and exit if asked ...
+    # Write config file and exit, if asked to do so.
     if args.createConfig:
         write_default_config(args.config_path)
         _log.info('Created default configuration at: {config_path}', config_path=args.config_path)
         sys.exit(0)  # TODO: Consider using a return value or something instead
     
-    # ... else read config file
+    # Refuse to run as root.
+    if hasattr(os, 'getuid') and os.getuid() == 0:
+        print('Network services should not be run as root. Refusing to start ShinySDR.', file=sys.stderr)
+        sys.exit(1)
+    
+    # Read config file.
     config_obj = Config(reactor=reactor, log=_log)
     try:
         execute_config(config_obj, args.config_path)
