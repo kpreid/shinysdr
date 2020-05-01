@@ -211,7 +211,7 @@ def _put_plugin_resources(wcommon, client_resource):
         'js': load_list_js,
         'modes': mode_table,
     }
-    client_resource.putChild('client-configuration', ClientConfigurationResource(wcommon, plugin_index))
+    client_resource.putChild('client-configuration.json', ClientConfigurationResource(wcommon, plugin_index))
 
 
 class ClientConfigurationResource(Resource):

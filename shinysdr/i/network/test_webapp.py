@@ -132,7 +132,7 @@ class TestWebSite(unittest.TestCase):
     
     @defer.inlineCallbacks
     def test_client_configuration(self):
-        response, data = yield http_get(the_reactor, urljoin(self.url, defaultstr('/client/client-configuration')))
+        response, data = yield http_get(the_reactor, urljoin(self.url, defaultstr('/client/client-configuration.json')))
         self.assertEqual(response.code, http.OK)
         self.assertEqual(response.headers.getRawHeaders('Content-Type'), ['application/json'])
         configuration = json.loads(data)

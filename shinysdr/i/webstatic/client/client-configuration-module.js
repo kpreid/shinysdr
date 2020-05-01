@@ -19,7 +19,7 @@
 
 'use strict';
 
-define(['text!client-configuration'], (text) => {
+define(['text!client-configuration.json'], (text) => {
   const exports = {};
   
   const clientConfiguration = JSON.parse(text);
