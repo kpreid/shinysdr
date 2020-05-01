@@ -6,7 +6,7 @@
 	url = https://github.com/hessu/aprs-symbols
 [submodule "shinysdr/deps/jasmine"]
 	path = shinysdr/deps/jasmine
-	url = https://github.com/pivotal/jasmine
+	url = https://github.com/jasmine/jasmine
 [submodule "shinysdr/deps/measviz"]
 	path = shinysdr/deps/measviz
 	url = https://github.com/kpreid/measviz/
