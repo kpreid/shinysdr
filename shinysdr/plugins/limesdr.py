@@ -70,8 +70,11 @@ class _LimeSDRTuning(object):
             post_hook=self.__set_freq)
     
     def __set_freq(self, freq):
-        self.__lime_block.set_rf_freq(freq)
-        
+        try:
+            self.__lime_block.set_center_freq(freq)
+        except AttributeError:
+            self.__lime_block.set_rf_freq(freq)
+
     def get_vfo_cell(self):
         return self.__vfo_cell
 
@@ -90,6 +93,21 @@ def create_source(serial, device_type, lna_path, sample_rate, freq, if_bandwidth
     # TODO: Consider using NCO to avoid DC spur.
     # TODO: Support choosing the channel
     # TODO: Use sample_rate or if_bandwidth as calibr_bandw?
+    if hasattr(limesdr._limesdr_swig, 'source_set_antenna'):
+        # API changed drastically in gr-limesdr 3.0.1; this is the only way to detect the new API.
+        s = limesdr.source(serial, ch, '')
+        s.set_sample_rate(sample_rate)
+        s.set_center_freq(freq)
+        s.set_bandwidth(if_bandwidth, ch)
+        s.set_digital_filter(if_bandwidth, ch)
+        s.set_gain(gain, ch)
+        s.set_antenna(lna_path, ch)
+
+        if calibration:
+            s.calibrate(60e6, ch)
+
+        return s
+
     return limesdr.source(
         serial=serial,
         device_type=device_type,  # LimeSDR-USB
@@ -207,7 +225,10 @@ class _LimeSDRRXDriver(ExportedState, gr.hier_block2):
         source.set_gain(int(self.__track_gain), ch)
 
         self.__track_bandwidth = max(sample_rate / 2, 1.5e6)
-        source.set_analog_filter(True, self.__track_bandwidth, ch)
+        try:
+            source.set_bandwidth(self.__track_bandwidth, ch)
+        except AttributeError:
+            source.set_analog_filter(True, self.__track_bandwidth, ch)
 
         self.__lna_path_type = EnumT({
             LNANONE: 'None',
@@ -258,7 +279,11 @@ class _LimeSDRRXDriver(ExportedState, gr.hier_block2):
     @setter
     def set_lna_path(self, lna_path):
         self.__track_lna_path = int(lna_path)
-        self.__source.set_lna_path(int(lna_path), ch)
+        # set_lna_path was renamed to set_antenna in https://github.com/myriadrf/gr-limesdr/commit/e66962fe0e0778629c52270d9bc39fec9e512563
+        try:
+            self.__source.set_antenna(int(lna_path), ch)
+        except AttributeError:
+            self.__source.set_lna_path(int(lna_path), ch)
     
     @exported_value(
         type_fn=lambda self: RangeT([(0, 70)], unit=units.dB, strict=False),
@@ -287,13 +312,21 @@ class _LimeSDRRXDriver(ExportedState, gr.hier_block2):
     def set_bandwidth(self, value):
         self.__track_bandwidth = float(value)
         if value == self.__signal_type.get_sample_rate():
-            self.__source.set_analog_filter(False, 0, ch)
-            self.__source.set_digital_filter(False, 0, ch)
+            try:
+                self.__source.set_bandwidth(0, ch)
+                self.__source.set_digital_filter(0, ch)
+            except AttributeError:
+                self.__source.set_analog_filter(False, 0, ch)
+                self.__source.set_digital_filter(False, 0, ch)
             return
         # Analog filter goes down to 1.5e6, digital filter goes arbitrarily low.
         analog = max(value, 1.5e6)
-        self.__source.set_analog_filter(True, float(analog), ch)
-        self.__source.set_digital_filter(True, float(value), ch)
+        try:
+            self.__source.set_bandwidth(float(analog), ch)
+            self.__source.set_digital_filter(float(value), ch)
+        except AttributeError:
+            self.__source.set_analog_filter(True, float(analog), ch)
+            self.__source.set_digital_filter(True, float(value), ch)
     
     def notify_reconnecting_or_restarting(self):
         pass
